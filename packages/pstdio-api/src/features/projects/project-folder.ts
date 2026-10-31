@@ -3,7 +3,6 @@ import type { CreateProjectInput, ExtensionSetupWarning } from "pstdio-api-contr
 import { traceSetupPhase } from "../../lib/setup-phase";
 import { installRepoDefaultExtensions, resolveDefaultExtensionsConfig } from "../extensions/default-extensions";
 import { syncRepoExtensionsForProject } from "../extensions/repo-extensions";
-import { trackedSourceInstaller } from "../extensions/tracked-source-install";
 import { runWorkspaceProvisioning } from "../workspaces/provision-coordinator";
 import { ensureWorkspaceConfig } from "../workspaces/workspace-config";
 import { PROVIDER_READY_TIMEOUT_MS } from "../workspaces/workspace-provider-creation";
@@ -77,27 +76,31 @@ const initializeLocalProjectWorkspace = async (
     );
     await traceSetupPhase("project.repo_extensions", context, () =>
       installRepoDefaultExtensions({
-        installExtensionSource: trackedSourceInstaller(deps.extensionInstallations),
+        extensionInstallations: deps.extensionInstallations,
+        projectId,
         defaultExtensions: defaults.defaultExtensions,
         repoPath: rootPath,
         releaseRef: deps.extensionUpgradeService?.releaseRef,
+        afterInstall: async () => {
+          await traceSetupPhase("project.repo_sync", context, () =>
+            syncRepoExtensionsForProject({
+              extensionService: deps.extensionService,
+              installedExtensionSourcesService: deps.installedExtensionSourcesService,
+              projectId,
+              repoPath: rootPath,
+            }),
+          );
+          deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
+          await traceSetupPhase("project.files", context, () => restoreProjectArtifacts(deps, projectId, workspace.id));
+          const provisioned = await traceSetupPhase("project.provision", context, () =>
+            runWorkspaceProvisioning(deps, { projectId, workspace, repoPath: rootPath }),
+          );
+          await deps.extensionRuntimeCatalog.activate(projectId);
+          if (provisioned.setup_error) throw new Error(provisioned.setup_error);
+        },
       }),
     );
-    await traceSetupPhase("project.repo_sync", context, () =>
-      syncRepoExtensionsForProject({
-        extensionService: deps.extensionService,
-        installedExtensionSourcesService: deps.installedExtensionSourcesService,
-        projectId,
-        repoPath: rootPath,
-      }),
-    );
-    deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
-    await traceSetupPhase("project.files", context, () => restoreProjectArtifacts(deps, projectId, workspace.id));
-    const provisioned = await traceSetupPhase("project.provision", context, () =>
-      runWorkspaceProvisioning(deps, { projectId, workspace, repoPath: rootPath }),
-    );
-    await deps.extensionRuntimeCatalog.activate(projectId);
-    return provisioned;
+    return (await deps.workspaceService.getDefault(projectId)) ?? workspace;
   } catch (error) {
     return (
       (await deps.workspaceService.setSetupError(

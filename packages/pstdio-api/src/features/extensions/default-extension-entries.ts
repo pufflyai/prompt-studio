@@ -84,7 +84,7 @@ const readDefaultScope = (sourcePath: string) => {
 
 type SharedCheckout = Awaited<ReturnType<typeof createSharedNamedSourceCheckout>>;
 
-export const createDefaultCheckoutBatch = (
+export const createDefaultCheckoutPool = (
   entries: DefaultExtensionEntry[],
   prepareShared = createSharedNamedSourceCheckout,
 ) => {
@@ -94,23 +94,38 @@ export const createDefaultCheckoutBatch = (
     if (!isLocalExtensionSource(source))
       namesByRef.set(entryRef(entry), [...(namesByRef.get(entryRef(entry)) ?? []), source]);
   }
-  const pending = new Map<string | undefined, Promise<SharedCheckout>>();
+  const pending = new Map<string | undefined, { checkout: Promise<SharedCheckout>; users: number }>();
   const prepare: typeof createSharedNamedSourceCheckout = async (names, options) => {
     const ref = options?.ref;
-    let checkout = pending.get(ref);
-    if (!checkout) {
-      checkout = Promise.resolve().then(() => prepareShared(namesByRef.get(ref) ?? names, options));
-      pending.set(ref, checkout);
+    let lease = pending.get(ref);
+    if (!lease) {
+      lease = {
+        checkout: Promise.resolve().then(() => prepareShared(namesByRef.get(ref) ?? names, options)),
+        users: 0,
+      };
+      pending.set(ref, lease);
     }
-    const shared = await checkout;
-    return { ...shared, cleanup: () => {} };
-  };
-  const dispose = async () => {
-    for (const result of await Promise.allSettled([...pending.values()])) {
-      if (result.status === "fulfilled") result.value.cleanup();
+    const current = lease;
+    current.users++;
+    const release = () => {
+      if (--current.users) return false;
+      pending.delete(ref);
+      return true;
+    };
+    try {
+      const shared = await current.checkout;
+      return {
+        ...shared,
+        cleanup: () => {
+          if (release()) shared.cleanup();
+        },
+      };
+    } catch (error) {
+      release();
+      throw error;
     }
   };
-  return { prepare, dispose };
+  return { prepare };
 };
 
 const prepareDefaultCheckouts = async (

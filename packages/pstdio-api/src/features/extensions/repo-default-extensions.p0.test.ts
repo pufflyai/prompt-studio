@@ -2,6 +2,7 @@ import { describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createExtensionInstallations } from "../../services/extension-installations";
 import { installRepoDefaultExtensions } from "./default-extensions";
 import { writeExtension } from "./default-extensions-test-fixtures";
 
@@ -41,7 +42,7 @@ describe("installRepoDefaultExtensions", () => {
   });
 });
 
-test("does not fetch defaults that are already installed as user extensions", async () => {
+test.each([false, true])("does not fetch installed user defaults (tracked: %s)", async (tracked) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-repo-defaults-installed-"));
   const home = join(root, "home");
   const repo = join(root, "repo");
@@ -55,6 +56,7 @@ test("does not fetch defaults that are already installed as user extensions", as
       defaultExtensions: [{ source: "user-extension", installName: "user-extension" }],
       env: { PSTDIO_HOME: home },
       prepareSharedCheckout,
+      extensionInstallations: tracked ? createExtensionInstallations() : undefined,
     });
 
     expect(result).toMatchObject({ materialized: [], skipped: [] });

@@ -39,7 +39,7 @@ pst onboarding show
 
 Run `harnesses` and `complete` inside the linked project, or pass `--project-id`.
 `harnesses` with no `--harness` saves an empty selection. `complete` with no `--work`
-keeps only Base Themes and Prompt Studio Skills. `show` clears the visibility
+keeps the foundation defaults without optional tool bundles. `show` clears the visibility
 preference so setup opens again when you create a project. Skipping does not install choices
 that have not been submitted. Jobs already accepted by the runtime continue.
 

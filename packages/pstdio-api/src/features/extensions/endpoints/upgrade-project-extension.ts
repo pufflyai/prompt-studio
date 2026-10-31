@@ -63,10 +63,13 @@ export const upgradeProjectExtensionHandler = (
           extensionId: source.extension_id,
         },
         () => deps.extensionUpgradeService!.upgrade(projectId, instanceId),
+        source.install_name,
+        async (result) => {
+          if (result) await refreshProjectSkillsInRepos(deps, projectId);
+        },
       );
       if (!result) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-      await refreshProjectSkillsInRepos(deps, projectId);
       return c.json(
         {
           changed: result.changed,

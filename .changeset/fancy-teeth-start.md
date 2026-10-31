@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add first-launch setup, background extension installation tracking, and lazy harness package support.
+Add project onboarding, background extension installation tracking, and lazy harness package support.

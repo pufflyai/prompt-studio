@@ -38,7 +38,7 @@ Jobs report queued, running, completed, or failed state. Retrying a completed jo
 does nothing. An atomic published extension set retries together because it
 cannot partly activate.
 
-First-launch catalog jobs survive a runtime restart. Completed jobs are not
+Setup catalog jobs survive a runtime restart. Completed jobs are not
 replayed, so restarting does not re-enable an extension you later disabled.
 
 ## Share a package

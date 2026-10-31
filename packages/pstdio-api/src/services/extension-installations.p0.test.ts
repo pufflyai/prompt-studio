@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -165,4 +165,149 @@ describe("extension installation jobs", () => {
     await Promise.all([jobs.wait(first.id), jobs.wait(next.id)]);
     expect(order).toEqual(["other", "first", "next"]);
   });
+});
+
+test("a failed attempt cannot settle or release a running retry", async () => {
+  const failedWrite = Promise.withResolvers<void>();
+  const releaseWrite = Promise.withResolvers<void>();
+  const retryStarted = Promise.withResolvers<void>();
+  const releaseRetry = Promise.withResolvers<void>();
+  let attempts = 0;
+  const jobs = createExtensionInstallations({
+    installCatalog: async () => {
+      if (++attempts === 1) throw new Error("Download failed");
+      retryStarted.resolve();
+      await releaseRetry.promise;
+    },
+  });
+  // Hold the storage boundary after failure becomes visible, as a slow disk can do.
+  const storage = (jobs as unknown as { storage: { save: () => Promise<void> } }).storage;
+  const save = spyOn(storage, "save").mockImplementation(async () => {
+    if (jobs.list()[0]?.status === "failed") {
+      failedWrite.resolve();
+      await releaseWrite.promise;
+    }
+  });
+  const job = jobs.enqueueCatalog(extension("retry"));
+  let originalError: unknown;
+  const original = jobs.wait(job.id).catch((error) => {
+    originalError = error;
+  });
+  try {
+    await failedWrite.promise;
+    jobs.retry(job.id);
+    const retried = jobs.wait(job.id);
+    let retrySettled = false;
+    void retried.then(
+      () => {
+        retrySettled = true;
+      },
+      () => {
+        retrySettled = true;
+      },
+    );
+    await Bun.sleep(0);
+    releaseWrite.resolve();
+    await Bun.sleep(0);
+    expect(originalError).toBeInstanceOf(Error);
+    expect(retrySettled).toBe(false);
+    await retryStarted.promise;
+    let disposed = false;
+    const stopping = jobs.dispose().then(() => {
+      disposed = true;
+    });
+    await Bun.sleep(0);
+    expect(disposed).toBe(false);
+    releaseRetry.resolve();
+    await Promise.all([original, retried, stopping]);
+  } finally {
+    releaseWrite.resolve();
+    releaseRetry.resolve();
+    save.mockRestore();
+    await jobs.dispose();
+  }
+});
+
+test("empty installation groups complete post-processing and report its failures", async () => {
+  const jobs = createExtensionInstallations();
+  const results: number[] = [];
+  expect(
+    await jobs.runGroup(
+      [],
+      async () => 42,
+      [],
+      async (result) => {
+        results.push(result);
+      },
+    ),
+  ).toBe(42);
+  expect(results).toEqual([42]);
+  await expect(
+    jobs.runGroup(
+      [],
+      async () => 42,
+      [],
+      async () => {
+        throw new Error("Setup failed");
+      },
+    ),
+  ).rejects.toThrow("Setup failed");
+  await jobs.dispose();
+});
+
+test("shutdown waits for empty-group setup and refuses later work", async () => {
+  const jobs = createExtensionInstallations();
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const setup = jobs.runGroup(
+    [],
+    async () => 42,
+    [],
+    async () => {
+      started.resolve();
+      await release.promise;
+    },
+  );
+  await started.promise;
+  let disposed = false;
+  const stopping = jobs.dispose().then(() => {
+    disposed = true;
+  });
+  try {
+    await Bun.sleep(0);
+    expect(disposed).toBe(false);
+    await expect(jobs.runGroup([], async () => 0)).rejects.toThrow("shutting down");
+    expect(jobs.list()).toEqual([]);
+  } finally {
+    release.resolve();
+    await Promise.all([setup, stopping]);
+  }
+});
+
+test("an initially empty request can discover visible work and retry it", async () => {
+  const jobs = createExtensionInstallations();
+  const discovered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let attempts = 0;
+  const request = jobs.runGroup([], async (_signal, include) => {
+    include([extension("discovered")]);
+    discovered.resolve();
+    await release.promise;
+    if (++attempts === 1) throw new Error("Download interrupted");
+  });
+  void request.catch(() => {});
+  try {
+    await discovered.promise;
+    expect(jobs.list()).toMatchObject([{ installName: "discovered", status: "running" }]);
+    release.resolve();
+    await expect(request).rejects.toThrow("Download interrupted");
+    const job = jobs.list()[0]!;
+    jobs.retry(job.id);
+    await jobs.wait(job.id);
+    expect(jobs.list()).toMatchObject([{ id: job.id, installName: "discovered", status: "completed" }]);
+  } finally {
+    release.resolve();
+    await request.catch(() => {});
+    await jobs.dispose();
+  }
 });

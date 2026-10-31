@@ -275,7 +275,10 @@ test("a synced set that fails to activate keeps the current set and waits until 
   expect((await sourceFor(2)).installedSource.id).toBe(before.installedSource.id);
 });
 
-test("retry keeps project files unavailable until the published extension activates", async () => {
+test.each([
+  "connection",
+  "widget",
+])("%s retry keeps project files unavailable until the published extension activates", async (mode) => {
   const app = apps[2]!;
   const project = await app.deps.projectService.create({ name: "Activation retry" });
   const release = Promise.withResolvers<void>();
@@ -342,14 +345,23 @@ test("retry keeps project files unavailable until the published extension activa
     connection.wake();
     await downloaded.promise;
     expect((await connection.status()).downloaded).toBe(true);
-    connection.retry();
+    let jobCompletion: Promise<unknown> | undefined;
+    if (mode === "widget") {
+      const job = app.deps.extensionInstallations
+        .list()
+        .reverse()
+        .find((item) => item.projectId === project.id)!;
+      app.deps.extensionInstallations.retry(job.id);
+      jobCompletion = app.deps.extensionInstallations.wait(job.id);
+    } else connection.retry();
     await retried.promise;
     const pending = await connection.status();
     expect(pending.needsAttention).toBe(true);
     expect(projectSyncStatus([pending]).offlineReady).toBe(false);
     expect(await app.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(0);
     release.resolve();
-    await activated.promise;
+    if (jobCompletion) await jobCompletion;
+    else await activated.promise;
     expect(projectSyncStatus([await connection.status()]).offlineReady).toBe(true);
     expect(await app.deps.extensionService.listProjectExtensionInstances(project.id)).toHaveLength(1);
   } finally {

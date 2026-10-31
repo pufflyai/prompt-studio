@@ -20,6 +20,7 @@ import {
 import { AvailableExtensionDetail } from "./available-extension-detail";
 import { ExtensionDetailContainer } from "./extension-detail-container";
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
+import { findExtensionByResource } from "./extension-resource-selection";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 
 interface ExtensionsPanelProps {
@@ -75,7 +76,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     );
   }
 
-  const selected = extensions.find((extension) => extension.installName === selectedInstallName);
+  const selected = findExtensionByResource(extensions, selectedInstallName);
 
   const handleInstallMarketplace = async (extension: MarketplaceExtension, force = false) => {
     clearError();

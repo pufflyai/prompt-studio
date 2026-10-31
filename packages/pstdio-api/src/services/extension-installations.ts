@@ -3,8 +3,8 @@ import { createInstallationStorage } from "./extension-installations-storage";
 
 type InstallationIdentity = Pick<ExtensionInstallation, "installName" | "displayName" | "extensionId" | "projectId">;
 interface InstallationWork {
-  job: ExtensionInstallation;
-  related: (InstallationIdentity & { id: string })[];
+  job: Omit<ExtensionInstallation, keyof InstallationIdentity>;
+  identities: (InstallationIdentity & { id: string })[];
   targets: string[];
   request?: { kind: "catalog"; name: string };
   operation: (signal: AbortSignal) => Promise<unknown>;
@@ -22,7 +22,7 @@ const completion = () => {
 };
 const snapshot = (entry: InstallationWork, id: string) => ({
   ...entry.job,
-  ...entry.related.find((item) => item.id === id),
+  ...entry.identities.find((item) => item.id === id)!,
 });
 const retainSuccessfulOperation = (operation: InstallationWork["operation"]) => {
   let result: Promise<unknown> | undefined;
@@ -41,7 +41,7 @@ const retainSuccessfulOperation = (operation: InstallationWork["operation"]) => 
 class ExtensionInstallationService {
   private readonly work = new Map<string, InstallationWork>();
   private readonly owners = new Map<string, string>();
-  private readonly active = new Set<string>();
+  private readonly active = new Set<Promise<unknown>>();
   private readonly installing = new Set<string>();
   private readonly locked = new Set<string>();
   private readonly lifetime = new AbortController();
@@ -53,15 +53,15 @@ class ExtensionInstallationService {
     this.storage = createInstallationStorage(options?.path);
     for (const stored of this.storage.read()) {
       if (!options) throw new Error("Catalog installation is unavailable.");
-      const job = { ...stored.job };
+      const { installName, displayName, extensionId, projectId, ...job } = stored.job;
       if (job.status === "running") job.status = "queued";
       const pending = completion();
       this.work.set(job.id, {
         job,
-        related: [],
-        targets: [job.installName],
+        identities: [{ installName, displayName, extensionId, projectId, id: job.id }],
+        targets: [installName],
         request: stored.request,
-        operation: (signal) => options.installCatalog(stored.request.name, signal, job.projectId),
+        operation: (signal) => options.installCatalog(stored.request.name, signal, projectId),
         completion: pending,
       });
       this.owners.set(job.id, job.id);
@@ -71,9 +71,21 @@ class ExtensionInstallationService {
     this.schedule();
   }
 
+  private track<T>(operation: () => Promise<T>) {
+    this.lifetime.signal.throwIfAborted();
+    const pending = Promise.resolve().then(operation);
+    this.active.add(pending);
+    void pending.then(
+      () => this.active.delete(pending),
+      () => this.active.delete(pending),
+    );
+    return pending;
+  }
   private persist() {
     return this.storage.save(
-      [...this.work.values()].flatMap((entry) => (entry.request ? [{ job: entry.job, request: entry.request }] : [])),
+      [...this.work.values()].flatMap((entry) =>
+        entry.request ? [{ job: snapshot(entry, entry.job.id), request: entry.request }] : [],
+      ),
     );
   }
   private schedule() {
@@ -88,11 +100,10 @@ class ExtensionInstallationService {
       if (this.installing.size >= 2) break;
       const names = entry.targets;
       if (entry.job.status !== "queued" || names.some((name) => this.locked.has(name))) continue;
-      this.active.add(entry.job.id);
       this.installing.add(entry.job.id);
       for (const name of names) this.locked.add(name);
       entry.job = { ...entry.job, status: "running", startedAt: new Date().toISOString() };
-      void this.execute(entry, names);
+      void this.track(() => this.execute(entry, names));
     }
   }
   private releaseInstallation(entry: InstallationWork, names: string[]) {
@@ -101,6 +112,7 @@ class ExtensionInstallationService {
     this.schedule();
   }
   private async execute(entry: InstallationWork, names: string[]) {
+    const pending = entry.completion;
     try {
       await this.persist();
       const result = await entry.operation(this.lifetime.signal);
@@ -108,10 +120,12 @@ class ExtensionInstallationService {
       await entry.afterOperation?.();
       entry.job = { ...entry.job, status: "completed", completedAt: new Date().toISOString() };
       await this.persist();
-      entry.completion.resolve(result);
+      pending.resolve(result);
     } catch (error) {
       const interrupted = this.lifetime.signal.aborted && entry.request !== undefined;
       const message = error instanceof Error ? error.message : String(error);
+      // Release this attempt before publishing a retryable failure.
+      this.releaseInstallation(entry, names);
       entry.job = {
         ...entry.job,
         status: interrupted ? "queued" : "failed",
@@ -120,10 +134,12 @@ class ExtensionInstallationService {
       };
       // Storage failure must not replace the operation's error.
       await this.persist().catch(() => {});
-      entry.completion.reject(error);
+      pending.reject(error);
     } finally {
-      this.active.delete(entry.job.id);
-      this.releaseInstallation(entry, names);
+      if (!entry.identities.length) {
+        this.work.delete(entry.job.id);
+        this.owners.delete(entry.job.id);
+      }
     }
   }
   private enqueueGroup(
@@ -134,43 +150,46 @@ class ExtensionInstallationService {
     afterOperation?: InstallationWork["afterOperation"],
   ) {
     this.lifetime.signal.throwIfAborted();
-    const [identity, ...rest] = identities;
-    const job: ExtensionInstallation = {
-      ...identity,
+    const job: InstallationWork["job"] = {
       id: crypto.randomUUID(),
       status: "queued",
       queuedAt: new Date().toISOString(),
     };
-    const related = rest.map((identity) => ({ ...identity, id: crypto.randomUUID() }));
-    this.work.set(job.id, {
+    const members = identities.map((identity, index) => ({
+      ...identity,
+      id: index === 0 ? job.id : crypto.randomUUID(),
+    }));
+    const entry: InstallationWork = {
       job,
-      related,
+      identities: members,
       targets,
       request,
       afterOperation,
       operation: retainSuccessfulOperation(operation),
       completion: completion(),
-    });
-    for (const id of [job.id, ...related.map((item) => item.id)]) this.owners.set(id, job.id);
+    };
+    this.work.set(job.id, entry);
+    for (const id of [job.id, ...members.map((item) => item.id)]) this.owners.set(id, job.id);
     void this.persist().catch(() => {});
     this.schedule();
-    return { ...job };
+    return entry;
   }
   private find(id: string) {
     return this.work.get(this.owners.get(id) ?? id);
   }
 
   enqueue(identity: InstallationIdentity, operation: InstallationWork["operation"]) {
-    return this.enqueueGroup([identity], operation);
+    const entry = this.enqueueGroup([identity], operation);
+    return snapshot(entry, entry.job.id);
   }
   enqueueCatalog(identity: InstallationIdentity) {
     const options = this.options;
     if (!options) throw new Error("Catalog installation is unavailable.");
     const previous = [...this.work.values()].find(
-      (entry) => entry.request?.name === identity.installName && entry.job.projectId === identity.projectId,
+      (entry) => entry.request?.name === identity.installName && entry.identities[0]?.projectId === identity.projectId,
     );
-    if (previous) return { ...previous.job };
-    return this.enqueueGroup(
+    if (previous) return snapshot(previous, previous.job.id);
+    const entry = this.enqueueGroup(
       [identity],
       (signal) => options.installCatalog(identity.installName, signal, identity.projectId),
       {
@@ -178,30 +197,43 @@ class ExtensionInstallationService {
         name: identity.installName,
       },
     );
+    return snapshot(entry, entry.job.id);
   }
   wait(id: string) {
     const entry = this.find(id);
     if (!entry) throw new Error("Extension installation not found.");
     return entry.completion.promise;
   }
+  private includeIdentities(entry: InstallationWork, identities: InstallationIdentity[]) {
+    for (const identity of identities) {
+      const known = entry.identities.some(
+        (item) =>
+          item.projectId === identity.projectId &&
+          (item.extensionId ?? item.installName) === (identity.extensionId ?? identity.installName),
+      );
+      if (known) continue;
+      const member = { ...identity, id: entry.identities.length ? crypto.randomUUID() : entry.job.id };
+      entry.identities.push(member);
+      this.owners.set(member.id, entry.job.id);
+    }
+  }
   async runGroup<T>(
     identities: InstallationIdentity[],
-    operation: (signal: AbortSignal) => Promise<T>,
+    operation: (signal: AbortSignal, include: (identities: InstallationIdentity[]) => void) => Promise<T>,
     targets?: string[],
     afterOperation?: (result: T) => Promise<void>,
   ) {
-    if (!identities.length) return operation(this.lifetime.signal);
     let result!: T;
-    const job = this.enqueueGroup(
+    const entry = this.enqueueGroup(
       identities,
       async (signal) => {
-        result = await operation(signal);
+        result = await operation(signal, (identities) => this.includeIdentities(entry, identities));
       },
       undefined,
       targets,
       afterOperation ? () => afterOperation(result) : undefined,
     );
-    await this.wait(job.id);
+    await this.wait(entry.job.id);
     return result;
   }
   run<T>(
@@ -231,10 +263,7 @@ class ExtensionInstallationService {
     return snapshot(entry, id);
   }
   list() {
-    return [...this.work.values()].flatMap((entry) => [
-      { ...entry.job },
-      ...entry.related.map((item) => snapshot(entry, item.id)),
-    ]);
+    return [...this.work.values()].flatMap((entry) => entry.identities.map((item) => snapshot(entry, item.id)));
   }
   flush() {
     return this.storage.flush();
@@ -242,10 +271,9 @@ class ExtensionInstallationService {
   dispose() {
     if (this.closing) return this.closing;
     this.lifetime.abort(new Error("The runtime is shutting down."));
-    const pending = [...this.active].map((id) => this.work.get(id)!.completion.promise);
+    const pending = [...this.active];
     for (const entry of this.work.values()) {
-      if (!this.active.has(entry.job.id) && entry.job.status === "queued")
-        entry.completion.reject(this.lifetime.signal.reason);
+      if (entry.job.status === "queued") entry.completion.reject(this.lifetime.signal.reason);
     }
     this.closing = Promise.allSettled(pending).then(() => this.storage.flush());
     return this.closing;
