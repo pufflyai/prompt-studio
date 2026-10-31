@@ -1,7 +1,22 @@
 import { expect } from "bun:test";
+import { liveClientMessageSchema, syncRoute } from "pstdio-sync-contracts";
+import { createPackagedSyncIdentity } from "./packaged-sync-identity.fixture";
 import { packagedProjectKey } from "./packaged-sync-project-key.fixture";
 
 export { packagedProjectKey } from "./packaged-sync-project-key.fixture";
+
+const forwardLive = (socket: Bun.ServerWebSocket<{ deviceId: string; projectId: string }>, data: string | Buffer) => {
+  try {
+    if (typeof data !== "string") return socket.close(1008);
+    const parsed = liveClientMessageSchema.safeParse(JSON.parse(data));
+    if (!parsed.success || (parsed.data.spaceOwner !== null && parsed.data.spaceOwner !== "owner"))
+      return socket.close(1008);
+    // Live bytes travel only to the other connections in this project, never through document storage.
+    socket.publish(`live:${socket.data.projectId}`, JSON.stringify({ ...parsed.data, deviceId: socket.data.deviceId }));
+  } catch {
+    socket.close(1008);
+  }
+};
 
 const validateLeafBegin = async (request: Request) => {
   const input = (await request.json()) as { sha256: string; byteLength: number };
@@ -65,10 +80,9 @@ export const createPackagedSyncPeer = (
     string,
     { state: Record<string, unknown> | null; payload?: string; updates: Record<string, unknown>[] }
   >();
-  let deviceId = "";
+  const identity = createPackagedSyncIdentity();
   let storedStates = 0;
   const personalDocumentIds = new Set<string>();
-  const devices = new Map<string, string>();
   // While set, document reads fail, so a device cannot finish its first download. A function picks the
   // documents whose reads fail.
   let failReads: boolean | ((documentId: string) => boolean) = false;
@@ -110,39 +124,18 @@ export const createPackagedSyncPeer = (
     return json({ ok: true });
   };
   const managerRequest = async (request: Request, path: string, origin: string) => {
-    const input = async () => (await request.json()) as Record<string, unknown>;
-    if (path === "/api/auth/one-time-token/verify")
-      return json({
-        session: { token: "session", expiresAt: new Date(Date.now() + 60_000) },
-        user: { id: "owner", email: "owner@example.test" },
-      });
-    if (path === "/v1/device-login") {
-      const profile = await input();
-      deviceId = String(profile.deviceId);
-      devices.set(deviceId, String(profile.name));
-      return json({ accountId: "owner", deviceId, token: "device-credential", relayOrigin: origin });
-    }
-    if (path === "/v1/devices")
-      return json({
-        deviceId,
-        devices: [...devices].map(([id, name]) => ({
-          id,
-          name,
-          platform: "fixture",
-          createdAt: new Date().toISOString(),
-          lastSeenAt: new Date().toISOString(),
-          online: true,
-        })),
-      });
-    if (path === "/api/auth/sign-out") return json({ ok: true });
-    if (path === "/v1/environment-access")
-      return json({ token: "relay-access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
-    if (path === "/v1/account") return json({ features: { relay: true } });
+    const response = await identity.request(request, path, origin);
+    if (response) return response;
     if (path === "/v1/workbenches" || path.startsWith("/v1/workbenches/")) return workbenchRequest(path);
-
     return null;
   };
-  const documentRequest = async (request: Request, path: string, parts: string[], spaceOwner: string | null) => {
+  const documentRequest = async (
+    request: Request,
+    path: string,
+    parts: string[],
+    spaceOwner: string | null,
+    deviceId: string,
+  ) => {
     const id = parts[5]!;
     if (spaceOwner) personalDocumentIds.add(id);
     const input = async () => (await request.json()) as Record<string, unknown>;
@@ -193,9 +186,16 @@ export const createPackagedSyncPeer = (
     publishChange(id, spaceOwner);
     return json({ state: doc.state });
   };
+  const storedRequest = (request: Request, path: string, deviceId: string) => {
+    const parts = path.split("/");
+    const spaceOwner = privateSpaceOwner(parts);
+    if (spaceOwner !== null && spaceOwner !== "owner") return new Response(null, { status: 403 });
+    if (parts[4] === "blobs") return blobs.request(request, path, parts);
+    return documentRequest(request, path, parts, spaceOwner, deviceId);
+  };
   // Private project data lives under /spaces/~<owner>; the rest of the path matches project documents.
   const serve = (port: number) =>
-    Bun.serve({
+    Bun.serve<{ deviceId: string; projectId: string }>({
       hostname,
       port,
       tls,
@@ -205,23 +205,23 @@ export const createPackagedSyncPeer = (
         if (managed) return managed;
         if (!path.startsWith("/sync/")) return new Response(null, { status: 404 });
         expect(request.headers.get("pstdio-sync-protocol")).toBe("1");
-        expect(request.headers.get("authorization")).toBe("Bearer relay-access");
-        if (path.endsWith("/live")) {
-          if (server.upgrade(request)) return;
+        const route = syncRoute(path);
+        if (!route) return new Response(null, { status: 404 });
+        const access = identity.access(request, route.projectId);
+        if (!access) return new Response(null, { status: 403 });
+        if (route.kind === "live") {
+          if (server.upgrade(request, { data: access })) return;
           return new Response(null, { status: 426 });
         }
-        const parts = path.split("/");
-        const spaceOwner = privateSpaceOwner(parts);
-        if (spaceOwner !== null && spaceOwner !== "owner") return new Response(null, { status: 403 });
-        if (parts[4] === "blobs") return blobs.request(request, path, parts);
-        return documentRequest(request, path, parts, spaceOwner);
+        return storedRequest(request, path, access.deviceId);
       },
       websocket: {
         open(socket) {
           socket.subscribe("changed");
+          socket.subscribe(`live:${socket.data.projectId}`);
           socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
         },
-        message() {},
+        message: forwardLive,
       },
     });
   let server = serve(0);
@@ -254,7 +254,7 @@ export const createPackagedSyncPeer = (
           updateId: "invalidciphertext000000",
           payload: "AAAA",
           sequence: doc.updates.length + 1,
-          deviceId,
+          deviceId: "invalid-fixture-device",
           createdAt: new Date().toISOString(),
         });
         publishChange(documentId, null);
