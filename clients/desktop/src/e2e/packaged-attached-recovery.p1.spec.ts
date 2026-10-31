@@ -17,34 +17,50 @@ import { createPackagedProject, openPackagedProject } from "./packaged-project-h
 import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 
 test("automatically recovers a CLI-started backend and restores the open project", async () => {
+  // Cold extension installation, recovery, and shutdown share this allowance (approved 2026-10-31).
+  if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(60_000);
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
-    const original = await waitForDescriptor(home);
-    app = await launchPackagedApp(home);
-    expect(app.runtime.pid).toBe(original.pid);
-    const project = await createPackagedProject(app, "Attached backend recovery");
-    await openPackagedProject(app.page, project);
-    const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
-
-    crashPackagedRuntime(original.pid);
-    await waitForAutomaticRecovery(app);
-
-    expect(app.child.exitCode).toBeNull();
-    expect(await app.lifecyclePage.evaluate(() => performance.timeOrigin)).toBe(lifecycleStartedAt);
-    await expect(app.page.getByRole("tab", { name: project.name, exact: true })).toBeVisible();
-    expect(await runPackagedCli(home, ["projects", "list"])).toMatchObject({
-      exitCode: 0,
-      stdout: expect.stringContaining(project.name),
+    const original = await test.step("Start the CLI backend", async () => {
+      expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+      return waitForDescriptor(home);
     });
-    await app.finishTrace();
-    const close = runPackagedCli(home, ["close"]);
-    await waitForExit(app.child);
-    expect(await close).toMatchObject({ exitCode: 0 });
+    const desktop = await test.step("Attach the desktop to the CLI backend", () => launchPackagedApp(home));
+    app = desktop;
+    expect(desktop.runtime.pid).toBe(original.pid);
+    const project = await test.step("Create the project", () =>
+      createPackagedProject(desktop, "Attached backend recovery"));
+    await test.step("Open the project", () => openPackagedProject(desktop.page, project));
+    const lifecycleStartedAt = await desktop.lifecyclePage.evaluate(() => performance.timeOrigin);
+
+    await test.step("Crash the backend and wait for automatic recovery", async () => {
+      crashPackagedRuntime(original.pid);
+      await waitForAutomaticRecovery(desktop);
+    });
+
+    await test.step("Verify the restored project and original lifecycle page", async () => {
+      expect(desktop.child.exitCode).toBeNull();
+      expect(await desktop.lifecyclePage.evaluate(() => performance.timeOrigin)).toBe(lifecycleStartedAt);
+      await expect(desktop.page.getByRole("tab", { name: project.name, exact: true })).toBeVisible();
+    });
+    await test.step("Read the recovered project through the CLI", async () => {
+      expect(await runPackagedCli(home, ["projects", "list"])).toMatchObject({
+        exitCode: 0,
+        stdout: expect.stringContaining(project.name),
+      });
+    });
+    await test.step("Save the recovery trace", () => desktop.finishTrace());
+    await test.step("Close the recovered backend and desktop", async () => {
+      const close = runPackagedCli(home, ["close"]);
+      await waitForExit(desktop.child);
+      expect(await close).toMatchObject({ exitCode: 0 });
+    });
   } finally {
-    await disposePackagedApp(app);
-    await removePackagedHome(home);
+    await test.step("Release packaged resources", async () => {
+      await disposePackagedApp(app);
+      await removePackagedHome(home);
+    });
   }
 });
 
