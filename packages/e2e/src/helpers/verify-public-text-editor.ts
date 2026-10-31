@@ -14,3 +14,12 @@ export const verifyPublicTextEditor = async (page: Page, selected: boolean, init
   );
   return editor;
 };
+
+/** The default Markdown renderer must edit the same declared public source as its installed peer. */
+export const verifyNativePublicTextEditor = async (page: Page, initial: string) => {
+  const editor = page.getByRole("region", { name: "Main", exact: true }).getByTestId("content-editable");
+  await expect(editor).toHaveCount(1);
+  await expect(editor).toHaveAttribute("contenteditable", "true");
+  await expect(editor).toHaveText(initial);
+  return editor;
+};

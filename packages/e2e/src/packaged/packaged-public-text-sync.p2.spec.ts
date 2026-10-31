@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace, openUpdate } from "pstdio-sync/encryption";
 import { folderProjectInput } from "../helpers/folder-project";
-import { verifyPublicTextEditor } from "../helpers/verify-public-text-editor";
+import { verifyNativePublicTextEditor, verifyPublicTextEditor } from "../helpers/verify-public-text-editor";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, test as base, chromium, expect, type Route } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
@@ -60,7 +60,7 @@ test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
-test("installed public editors converge across encrypted hosts and recover edits made while the home host is stopped", async ({
+test("native Markdown and an installed public editor converge across encrypted hosts and recover edits made while the home host is stopped", async ({
   resources,
 }) => {
   const { root, children } = resources;
@@ -96,52 +96,58 @@ test("installed public editors converge across encrypted hosts and recover edits
 
   const browser = await chromium.launch({ headless: true, ...PROVISIONED_CHROMIUM });
   resources.browser = browser;
-  const open = async (device: PublicTextDevice, value: string) => {
+  const open = async (device: PublicTextDevice, value: string, native: boolean) => {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     await context.addInitScript(() => {
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
     const page = await context.newPage();
     await signInBrowser(page, device.host.descriptor);
-    await page.goto(`${device.host.baseUrl}/projects/${project.id}/extensions/paper.public-text-source/shared`);
-    const editor = await verifyPublicTextEditor(page, true, value);
-    return { context, page, editor };
+    const route = native ? "native" : "shared";
+    await page.goto(`${device.host.baseUrl}/projects/${project.id}/extensions/paper.public-text-source/${route}`);
+    const editor = native
+      ? await verifyNativePublicTextEditor(page, value)
+      : await verifyPublicTextEditor(page, true, value);
+    const readText = () => (native ? editor.textContent() : editor.inputValue());
+    return { context, page, editor, readText };
   };
-  let left = await open(first, "Shared source");
-  const right = await open(second, "Shared source");
+  let left = await open(first, "Shared source", true);
+  const right = await open(second, "Shared source", false);
   const gate = Promise.withResolvers<void>();
-  let held = 0;
-  const admit = async (route: Route) => {
-    if (route.request().postDataJSON()?.request?.operation === "submit" && held < 2) {
-      held++;
+  const held = new Set<string>();
+  const admit = (name: string) => async (route: Route) => {
+    if (route.request().postDataJSON()?.request?.operation === "submit" && !held.has(name)) {
+      held.add(name);
       await gate.promise;
     }
     await route.continue();
   };
-  await left.context.route("**/text-editing/request", admit);
-  await right.context.route("**/text-editing/request", admit);
+  const admitNative = admit("native");
+  const admitInstalled = admit("installed");
+  await left.context.route("**/text-editing/request", admitNative);
+  await right.context.route("**/text-editing/request", admitInstalled);
   try {
-    // Both hosts author from the same received history before either host admits its edit.
+    // Both presentations must submit through the public API against their common received history.
     await Promise.all([
       left.editor.fill("public-two-host-secret: Shared source"),
       right.editor.fill("Shared source: remote"),
     ]);
-    await expect.poll(() => held).toBe(2);
+    await expect.poll(() => held.size).toBe(2);
   } finally {
     gate.resolve();
   }
   const online = "public-two-host-secret: Shared source: remote";
-  await expect(left.editor).toHaveValue(online);
-  await expect(right.editor).toHaveValue(online);
-  await left.context.unroute("**/text-editing/request", admit);
-  await right.context.unroute("**/text-editing/request", admit);
+  await expect.poll(left.readText).toBe(online);
+  await expect.poll(right.readText).toBe(online);
+  await left.context.unroute("**/text-editing/request", admitNative);
+  await right.context.unroute("**/text-editing/request", admitInstalled);
 
   await fixture.peer.stop();
   for (const device of [first, second])
     await expect.poll(async () => (await device.client.account.projectSyncStatus(project.id)).state).toBe("offline");
   await Promise.all([left.editor.fill(`offline first: ${online}`), right.editor.fill(`${online}: offline second`)]);
-  await expect(left.editor).toHaveValue(`offline first: ${online}`);
-  await expect(right.editor).toHaveValue(`${online}: offline second`);
+  await expect.poll(left.readText).toBe(`offline first: ${online}`);
+  await expect.poll(right.readText).toBe(`${online}: offline second`);
   await expect
     .poll(() => readPublicTextCopy(firstFolder, "paper.public-text-source", "selected.md"))
     .toBe(`offline first: ${online}`);
@@ -150,8 +156,8 @@ test("installed public editors converge across encrypted hosts and recover edits
     .toBe(`${online}: offline second`);
   await fixture.peer.restart();
   const merged = `offline first: ${online}: offline second`;
-  await expect(left.editor).toHaveValue(merged);
-  await expect(right.editor).toHaveValue(merged);
+  await expect.poll(left.readText).toBe(merged);
+  await expect.poll(right.readText).toBe(merged);
   for (const folder of [firstFolder, secondFolder])
     await expect.poll(() => readPublicTextCopy(folder, "paper.public-text-source", "selected.md")).toBe(merged);
 
@@ -165,8 +171,8 @@ test("installed public editors converge across encrypted hosts and recover edits
   await expect.poll(async () => (await second.client.account.projectSyncStatus(project.id)).state).toBe("synced");
   first = await start("first-home");
   await expect.poll(async () => (await first.client.account.projectSyncStatus(project.id)).state).toBe("synced");
-  left = await open(first, stopped);
-  await expect(left.editor).toHaveValue(stopped);
+  left = await open(first, stopped, true);
+  await expect.poll(left.readText).toBe(stopped);
   await expect.poll(() => readPublicTextCopy(firstFolder, "paper.public-text-source", "selected.md")).toBe(stopped);
 
   for (const folder of [firstFolder, secondFolder]) {
