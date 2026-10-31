@@ -186,7 +186,10 @@ class ExtensionInstallationService {
     const options = this.options;
     if (!options) throw new Error("Catalog installation is unavailable.");
     const previous = [...this.work.values()].find(
-      (entry) => entry.request?.name === identity.installName && entry.identities[0]?.projectId === identity.projectId,
+      (entry) =>
+        entry.job.status !== "completed" &&
+        entry.request?.name === identity.installName &&
+        entry.identities[0]?.projectId === identity.projectId,
     );
     if (previous) return snapshot(previous, previous.job.id);
     const entry = this.enqueueGroup(

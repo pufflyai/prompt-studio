@@ -64,3 +64,57 @@ test("setup enables its selected tool without evaluating unrelated installed cod
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("submitting setup again re-enables a harness after its completed installation was disabled", async () => {
+  const root = await mkdtemp(join(tmpdir(), "onboarding-resubmission-"));
+  const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
+  process.env.PSTDIO_HOME = join(root, "home");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  writeExtension(join(root, "home/extensions/harness-codex"), "harness-codex");
+  const handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
+  try {
+    const created = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(folderProjectInput({ name: "Reselect harness" })),
+    });
+    expect(created.status).toBe(201);
+    const project = await created.json();
+    const choose = async () => {
+      const response = await handle.app.request(`/v1/onboarding?project_id=${project.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ step: "harnesses", harnesses: ["codex"] }),
+      });
+      expect(response.status).toBe(200);
+      await Promise.all(
+        handle.deps.extensionInstallations
+          .list()
+          .filter((job) => job.projectId === project.id)
+          .map((job) => handle.deps.extensionInstallations.wait(job.id)),
+      );
+    };
+    const selected = async () =>
+      (await handle.deps.extensionService.listProjectExtensionInstances(project.id)).find(
+        ({ installedSource }) => installedSource.extension_id === "pstdio.harness-codex",
+      )!.instance;
+    await choose();
+    expect((await selected()).enabled).toBe(true);
+    const disabled = await handle.app.request(`/v1/projects/${project.id}/extensions/${(await selected()).id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(disabled.status).toBe(200);
+    expect((await selected()).enabled).toBe(false);
+    await choose();
+    expect((await selected()).enabled).toBe(true);
+  } finally {
+    await handle.close();
+    if (previous.home === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previous.home;
+    if (previous.defaults === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+    else process.env.PSTDIO_DEFAULT_EXTENSIONS = previous.defaults;
+    await rm(root, { recursive: true, force: true });
+  }
+});

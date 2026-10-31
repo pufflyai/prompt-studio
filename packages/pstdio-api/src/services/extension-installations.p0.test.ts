@@ -71,11 +71,11 @@ describe("extension installation jobs", () => {
           resumed++;
         },
       });
-      third.enqueueCatalog({ ...extension("notes"), projectId: "project-1" });
       await Bun.sleep(0);
       expect(resumed).toBe(1);
       expect(projects).toEqual(["project-1"]);
       expect(third.list()).toHaveLength(1);
+      expect(third.list()[0]?.status).toBe("completed");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -308,6 +308,39 @@ test("an initially empty request can discover visible work and retry it", async 
   } finally {
     release.resolve();
     await request.catch(() => {});
+    await jobs.dispose();
+  }
+});
+
+test("catalog requests share pending work and require an explicit retry after failure", async () => {
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let attempts = 0;
+  const jobs = createExtensionInstallations({
+    installCatalog: async () => {
+      if (++attempts !== 1) return;
+      entered.resolve();
+      await release.promise;
+      throw new Error("Download failed");
+    },
+  });
+  const identity = { ...extension("codex"), projectId: "project-1" };
+  try {
+    const job = jobs.enqueueCatalog(identity);
+    expect(jobs.enqueueCatalog(identity).id).toBe(job.id);
+    await entered.promise;
+    expect(jobs.enqueueCatalog(identity).id).toBe(job.id);
+    release.resolve();
+    const error = await jobs.wait(job.id).catch((error: unknown) => error);
+    expect(error).toMatchObject({ message: "Download failed" });
+    expect(jobs.enqueueCatalog(identity)).toMatchObject({ id: job.id, status: "failed" });
+    expect(attempts).toBe(1);
+    jobs.retry(job.id);
+    await jobs.wait(job.id);
+    expect(attempts).toBe(2);
+    expect(jobs.list()[0]?.status).toBe("completed");
+  } finally {
+    release.resolve();
     await jobs.dispose();
   }
 });

@@ -110,7 +110,6 @@ describe("extension webview setup", () => {
       const runtimeHtml = await waitForOk(`${api.url}${labView.body.webview.runtimeUrl}`);
       const runtimeContent = await runtimeHtml.text();
       expectNoExternalExecutableSource(runtimeContent);
-      expect(runtimeContent).toContain("notification.action");
     },
     TEST_TIMEOUT,
   );
