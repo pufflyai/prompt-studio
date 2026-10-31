@@ -1,0 +1,50 @@
+name: Release readiness performance diagnostics
+on:
+  push:
+    branches: [test/release-046-performance]
+permissions:
+  contents: read
+jobs:
+  workloads:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: frontend, os: ubuntu-24.04, suite: workbench }
+          - { name: backend-linux, os: ubuntu-24.04, suite: backend }
+          - { name: backend-macos, os: macos-15, suite: backend }
+    env:
+      CI_PRIORITY: P3
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install native dependencies
+        run: bun scripts/ci/install-native-dependencies.ts
+      - name: Install browser system dependencies
+        if: matrix.suite == 'workbench'
+        run: npx --yes playwright@1.60.0 install-deps chromium
+      - name: Run the complete registered workbench workload once
+        if: matrix.suite == 'workbench'
+        run: bun packages/benchmarks/src/cli.ts run --checkout "$GITHUB_WORKSPACE=$GITHUB_SHA=combined-release-fixes" --suites workbench --samples 1 --cache "$RUNNER_TEMP/benchmark-cache" --out test-results/release-readiness
+      - name: Run the complete production backend plan
+        if: matrix.suite == 'backend'
+        run: bun scripts/ci/production-performance.ts backend
+      - name: Preserve measurements and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-readiness-${{ matrix.name }}
+          path: |
+            test-results
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
