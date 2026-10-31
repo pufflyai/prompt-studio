@@ -8,6 +8,7 @@ import { harness, navigate, openFile } from "../../core/controllers/composition/
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
 const fixtures: (() => Promise<void>)[] = [];
+const activityGate = () => ({ entered: Promise.withResolvers<void>(), release: Promise.withResolvers<void>() });
 afterEach(async () => {
   for (const stop of fixtures.splice(0)) await stop();
 });
@@ -17,6 +18,9 @@ const fixture = async () => {
   const scopes: unknown[] = [];
   const disconnected: string[] = [];
   const active: boolean[] = [];
+  const activeObservers = new Set<() => void>();
+  const activityGates = new Map<boolean, ReturnType<typeof activityGate>>();
+  let guests = 0;
   const requests: string[] = [];
   const connectionStarted = Promise.withResolvers<void>();
   const closeStarted = Promise.withResolvers<void>();
@@ -55,6 +59,17 @@ const fixture = async () => {
     }
     return reply();
   };
+  const applyParticipation = async (next: boolean) => {
+    const held = activityGates.get(next);
+    if (held) {
+      held.entered.resolve();
+      await held.release.promise;
+      if (activityGates.get(next) === held) activityGates.delete(next);
+    }
+    active.push(next);
+    for (const listener of activeObservers) listener();
+    return reply();
+  };
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -66,10 +81,7 @@ const fixture = async () => {
         request?: { operation: string };
       };
       if (path.endsWith("/text-editing")) return connect(input);
-      if (path.endsWith("/active")) {
-        active.push(input.active!);
-        return reply();
-      }
+      if (path.endsWith("/active")) return applyParticipation(input.active!);
       if (path.endsWith("/request")) {
         requests.push(input.request!.operation);
         return reply({ token: "selected" });
@@ -107,7 +119,19 @@ const fixture = async () => {
   const events = createHostEventPublisher();
   const delivered: unknown[] = [];
   events.bind((event) => delivered.push(event));
-  const transport = createClient({ baseUrl: server.url.href }).textEditing;
+  const clientTransport = createClient({ baseUrl: server.url.href }).textEditing;
+  const transport = {
+    async connect(input: Parameters<typeof clientTransport.connect>[0]) {
+      const connection = await clientTransport.connect(input);
+      return {
+        ...connection,
+        guest() {
+          guests++;
+          return connection.guest();
+        },
+      };
+    },
+  };
   const target = { fileRendererId: "paper.public-text-source.view.selected", resource: placement.resource };
   const frame = (
     currentPlacement = placement,
@@ -136,6 +160,23 @@ const fixture = async () => {
     target,
     scopes,
     active,
+    guests: () => guests,
+    holdActivity(active: boolean) {
+      const held = activityGate();
+      activityGates.set(active, held);
+      return held;
+    },
+    waitActive(next: boolean) {
+      if (active.at(-1) === next) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const observe = () => {
+          if (active.at(-1) !== next) return;
+          activeObservers.delete(observe);
+          resolve();
+        };
+        activeObservers.add(observe);
+      });
+    },
     disconnected,
     requests,
     connectionStarted: connectionStarted.promise,
@@ -167,6 +208,7 @@ const fixture = async () => {
         controller.enqueue(encoder.encode(`event: text\ndata: ${JSON.stringify(event)}\n\n`));
     },
     async stop() {
+      for (const held of activityGates.values()) held.release.resolve();
       releaseConnection.resolve();
       releaseClose.resolve();
       events.unbind();
@@ -199,6 +241,54 @@ test("one webview uses its captured public scope and forwards events across adap
   f.emit(event);
   await received.promise;
   expect(f.delivered).toEqual([{ scope: "editing.text", payload: event }]);
+});
+
+test("public text workbench participation follows project activation without closing its source", async () => {
+  const f = await fixture();
+  f.workbench.activation.setActive(false);
+  await f.frame()();
+  await f.streamReady;
+  expect(new Set(f.active)).toEqual(new Set([false]));
+  f.workbench.activation.setActive(true);
+  await f.waitActive(true);
+  f.workbench.activation.setActive(false);
+  await f.waitActive(false);
+  expect(f.scopes).toHaveLength(1);
+  expect(f.disconnected).toEqual([]);
+});
+
+test("public text workbench participation uses the current project activation after held admission", async () => {
+  const f = await fixture();
+  f.holdConnection();
+  const opening = f.frame()();
+  await f.connectionStarted;
+  f.workbench.activation.setActive(false);
+  f.resumeConnection();
+  await opening;
+  await f.streamReady;
+  expect(new Set(f.active)).toEqual(new Set([false]));
+});
+
+test("public text admission waits for current participation after an older activity acknowledgement", async () => {
+  const f = await fixture();
+  const first = f.holdActivity(true);
+  const current = f.holdActivity(false);
+  const opening = f.frame()();
+  try {
+    await first.entered.promise;
+    f.workbench.activation.setActive(false);
+    first.release.resolve();
+    await current.entered.promise;
+    expect(f.guests()).toBe(0);
+    expect(f.requests).toEqual([]);
+    current.release.resolve();
+    await opening;
+    expect(f.active.at(-1)).toBe(false);
+  } finally {
+    first.release.resolve();
+    current.release.resolve();
+    await opening.catch(() => {});
+  }
 });
 
 test("ordinary placement close waits for the public guest barrier before removing its view", async () => {

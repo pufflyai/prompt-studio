@@ -83,6 +83,12 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
     guest: connection.then(async (connection) => {
       try {
         assertCurrent();
+        let active: boolean;
+        do {
+          active = workbench.activation.isActive();
+          await connection.setActive(active);
+          assertCurrent();
+        } while (active !== workbench.activation.isActive());
       } catch (error) {
         await retire(state, owner);
         throw error;
@@ -106,6 +112,16 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
   };
   state.live.set(events, owner);
   cleanups.push(
+    workbench.activation.store.subscribe(() => {
+      void connection
+        .then((connection) => {
+          if (owner.current()) return connection.setActive(workbench.activation.isActive());
+        })
+        .catch((error) => {
+          if (owner.current() && error?.code !== "connection_reset")
+            workbench.notifications.captureActionError("Update text editor presence", placement.instanceId)(error);
+        });
+    }),
     events.onDisconnect(() => {
       // Losing a browsing context revokes admission; the host still owns admitted durability.
       void retire(state, owner).catch(report);

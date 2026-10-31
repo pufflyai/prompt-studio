@@ -8,7 +8,10 @@ const fixture = async () => {
   let lease = 0;
   let connections = 0;
   let loseInactive = false;
+  let refuseInactive = false;
+  const inactiveApplied = Promise.withResolvers<void>();
   const releases: string[] = [];
+  const participationErrors: string[] = [];
   let watchSignal: AbortSignal | undefined;
   const watchStarted = Promise.withResolvers<void>();
   let active = true;
@@ -53,6 +56,26 @@ const fixture = async () => {
     }
     return { ok: true };
   };
+  const applyParticipation = async (next: boolean) => {
+    if (!next && refuseInactive) {
+      refuseInactive = false;
+      return { ok: false, error: { code: "source_unavailable", message: "Participation refused", retryable: true } };
+    }
+    if (!next && inactiveGate) {
+      const held = inactiveGate;
+      inactiveGate = undefined;
+      held.entered.resolve();
+      await held.resume.promise;
+    }
+    active = next;
+    if (!active) inactiveApplied.resolve();
+    if (!active && loseInactive) {
+      loseInactive = false;
+      participationErrors.push("Participation acknowledgement lost");
+      throw new Error("Participation acknowledgement lost");
+    }
+    return { ok: true };
+  };
   const request = (async (path, options) => {
     if (path.endsWith("/text-editing")) {
       connections++;
@@ -72,19 +95,7 @@ const fixture = async () => {
     if (path.endsWith("/disconnect")) releases.push(body.token);
     if (body.token !== `lease-${lease}`)
       return { ok: false, error: { code: "connection_expired", message: "Lease expired", retryable: true } };
-    if (path.endsWith("/active")) {
-      if (!body.active && inactiveGate) {
-        const held = inactiveGate;
-        inactiveGate = undefined;
-        held.entered.resolve();
-        await held.resume.promise;
-      }
-      active = body.active;
-      if (!active && loseInactive) {
-        loseInactive = false;
-        throw new Error("Participation acknowledgement lost");
-      }
-    }
+    if (path.endsWith("/active")) return applyParticipation(body.active);
     return answer(body.request);
   }) as RequestFn;
   const connection = await createTextTransportClient(request).connect({
@@ -96,6 +107,12 @@ const fixture = async () => {
     connection,
     guest,
     connections: () => connections,
+    participating: () => active,
+    participationErrors,
+    inactiveApplied: inactiveApplied.promise,
+    refuseInactive: () => {
+      refuseInactive = true;
+    },
     releases,
     watched: async () => {
       await watchStarted.promise;
@@ -114,6 +131,44 @@ const fixture = async () => {
     holdInactive: () => (inactiveGate = gate()),
   };
 };
+
+test("a refused participation change reenters live watch recovery and applies the desired state", async () => {
+  const f = await fixture();
+  try {
+    const original = await f.watched();
+    f.refuseInactive();
+    await expect(f.connection.setActive(false)).rejects.toThrow("Participation refused");
+    expect(original.aborted).toBe(true);
+    await f.inactiveApplied;
+    expect(f.participating()).toBe(false);
+  } finally {
+    await f.connection.disconnect();
+  }
+});
+
+test.each([
+  false,
+  true,
+])("the latest requested participation wins after a held older call (lost acknowledgement: %s)", async (lost) => {
+  const f = await fixture();
+  const held = f.holdInactive();
+  if (lost) f.loseInactiveAck();
+  const inactive = f.connection.setActive(false);
+  try {
+    await held.entered.promise;
+    const active = f.connection.setActive(true);
+    // An independent request advances the controlled peer without waiting on activity serialization.
+    await f.connection.request({ operation: "current" });
+    held.resume.resolve();
+    const [, latest] = await Promise.allSettled([inactive, active]);
+    expect(latest.status).toBe("fulfilled");
+    expect(f.participationErrors).toHaveLength(lost ? 1 : 0);
+    expect(f.participating()).toBe(true);
+  } finally {
+    held.resume.resolve();
+    await f.connection.disconnect();
+  }
+});
 
 test("a held opening reply cannot install a handle from a replaced transport lease", async () => {
   const f = await fixture();

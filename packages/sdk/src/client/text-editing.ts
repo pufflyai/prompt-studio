@@ -37,6 +37,7 @@ export const createTextTransportClient = (request: RequestFn) => ({
     let generation = 0;
     let candidate: TextEditingConnectionInfo | undefined;
     let active = true;
+    let participation = Promise.resolve();
     let renewal: Promise<void> | undefined;
     let release: { work?: Promise<void> } | undefined;
     const streams = new Set<AbortController>();
@@ -94,6 +95,11 @@ export const createTextTransportClient = (request: RequestFn) => ({
         throw textEditingFailure("connection_reset", "The text host connection was renewed", true);
       }
     };
+    const syncParticipation = () => {
+      // Every caller owns its queued work, including a change arriving as the previous request settles.
+      participation = participation.catch(() => {}).then(() => call<void>("active", { active }));
+      return participation;
+    };
     const connection: TextEditingConnection = {
       request: async (input) => (await call("request", { request: input })) as never,
       watch: async (input) => {
@@ -101,7 +107,7 @@ export const createTextTransportClient = (request: RequestFn) => ({
         const signal = AbortSignal.any([input.signal, abort.signal]);
         streams.add(abort);
         try {
-          await call("active", { active });
+          await syncParticipation();
           const token = info.token;
           const stream = await request<ReadableStream<Uint8Array>>(`${base}/stream`, {
             method: "POST",
@@ -126,7 +132,13 @@ export const createTextTransportClient = (request: RequestFn) => ({
       },
       setActive: async (next) => {
         active = next;
-        await call("active", { active });
+        try {
+          await syncParticipation();
+        } catch (error) {
+          // The existing watch recovery reapplies this desired state before restoring its stream.
+          if (active === next) for (const stream of streams) stream.abort(error);
+          throw error;
+        }
       },
       disconnect: () => {
         release ??= {};
@@ -157,7 +169,7 @@ export const createTextTransportClient = (request: RequestFn) => ({
         createTextConnectionGuest(connection, {
           generation: () => generation,
           closed: () => release !== undefined,
-          ensure: () => call("active", { active }),
+          ensure: syncParticipation,
         }),
     };
     return connection;
