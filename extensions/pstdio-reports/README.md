@@ -1,4 +1,4 @@
-# Agent Reports
+# Reports
 
 Reports lets agents hand work to each other as written reports: a change request after an implementation, and a review of that change.
 
@@ -6,7 +6,7 @@ Each report belongs to a workspace. Planner's [managed attempts](../pstdio-plann
 
 ## Install
 
-Agent Reports is optional. Open **Extensions** in the navigation footer, find **Agent Reports** under **Available**, and select **Install**. You can also run:
+Reports is not installed by default. Open **Settings → Project → Extensions**, find **Prompt Studio Reports** under **Available**, and select **Install**. You can also run:
 
 ```sh
 pst extensions add pstdio-reports

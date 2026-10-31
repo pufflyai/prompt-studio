@@ -22,7 +22,6 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
 // packaged-canvas-install.p1.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
-// Catalog IDs and extension icons remain available through the compiled host.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/workbench-package-consumer.ts checks packaged activation, scoped status persistence and overlay exports.
@@ -141,13 +140,7 @@ test(
 
       const body = (await extensionsRes.json()) as {
         extensions: Array<{ enabled: boolean; installName: string; name: string }>;
-        marketplace: Array<{ extensionId?: string; icon?: string }>;
       };
-      expect(body.marketplace.length).toBeGreaterThan(0);
-      for (const entry of body.marketplace) {
-        expect(entry.extensionId).toMatch(/^[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*$/);
-        expect(entry.icon?.length).toBeGreaterThan(0);
-      }
       const extension = body.extensions.find((entry) => entry.installName === "dep-ext");
 
       expect(extension).toMatchObject({

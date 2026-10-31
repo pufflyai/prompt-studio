@@ -15,6 +15,5 @@
   "type": "module",
   "dependencies": {
     "@pstdio/sdk": "^0.25.0"
-  },
-  "icon": "Blocks"
+  }
 }

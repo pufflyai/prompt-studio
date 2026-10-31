@@ -33,6 +33,5 @@
   },
   "pstdio": {
     "scope": "repo"
-  },
-  "icon": "Type"
+  }
 }

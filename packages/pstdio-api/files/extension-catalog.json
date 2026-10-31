@@ -12,8 +12,7 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.harness-claude-code",
-      "icon": "Bot"
+      "extensionId": "pstdio.harness-claude-code"
     },
     {
       "installName": "harness-codex",
@@ -26,8 +25,7 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.harness-codex",
-      "icon": "CodeXml"
+      "extensionId": "pstdio.harness-codex"
     },
     {
       "installName": "harness-open-code",
@@ -40,8 +38,7 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.harness-open-code",
-      "icon": "SquareTerminal"
+      "extensionId": "pstdio.harness-open-code"
     },
     {
       "installName": "harness-pi",
@@ -54,13 +51,11 @@
         "ref": "{hostRelease}"
       },
       "publisher": "pstdio",
-      "default": false,
-      "extensionId": "pstdio.harness-pi",
-      "icon": "Terminal"
+      "default": false
     },
     {
       "installName": "pstdio-base-themes",
-      "displayName": "Themes",
+      "displayName": "Prompt Studio Base Themes",
       "description": "Color themes and the Seti file icon theme.",
       "origin": {
         "kind": "git",
@@ -69,8 +64,7 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.pstdio-base-themes",
-      "icon": "Palette"
+      "extensionId": "pstdio.pstdio-base-themes"
     },
     {
       "installName": "pstdio-artifacts",
@@ -83,8 +77,7 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-artifacts",
-      "icon": "AppWindow"
+      "extensionId": "pstdio.pstdio-artifacts"
     },
     {
       "installName": "pstdio-notes",
@@ -97,8 +90,7 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-notes",
-      "icon": "NotebookPen"
+      "extensionId": "pstdio.pstdio-notes"
     },
     {
       "installName": "pstdio-planner",
@@ -111,12 +103,11 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-planner",
-      "icon": "Kanban"
+      "extensionId": "pstdio.pstdio-planner"
     },
     {
       "installName": "pstdio-reports",
-      "displayName": "Agent Reports",
+      "displayName": "Prompt Studio Reports",
       "description": "Workspace reports for agent handoffs.",
       "origin": {
         "kind": "git",
@@ -125,8 +116,7 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-reports",
-      "icon": "FileChartColumn"
+      "extensionId": "pstdio.pstdio-reports"
     },
     {
       "installName": "pstdio-skills",
@@ -139,8 +129,7 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.pstdio-skills",
-      "icon": "BookOpen"
+      "extensionId": "pstdio.pstdio-skills"
     },
     {
       "installName": "pstdio-performance",
@@ -153,8 +142,7 @@
         "path": "extensions/pstdio-performance",
         "ref": "{hostRelease}"
       },
-      "default": true,
-      "icon": "Gauge"
+      "default": true
     },
     {
       "installName": "extension-lab",
@@ -167,8 +155,20 @@
         "path": "extensions/extension-lab",
         "ref": "{hostRelease}"
       },
-      "default": false,
-      "icon": "FlaskConical"
+      "default": false
+    },
+    {
+      "installName": "remote-workspaces",
+      "extensionId": "pstdio.remote-workspaces",
+      "displayName": "Remote Workspaces",
+      "description": "Run agent sessions in PocketCoder workspaces on another machine.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/remote-workspaces",
+        "ref": "{hostRelease}"
+      },
+      "default": false
     },
     {
       "installName": "canvas",
@@ -182,8 +182,7 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "bundleSource": false,
-      "icon": "PanelsTopLeft"
+      "bundleSource": false
     }
   ]
 }

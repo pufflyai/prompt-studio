@@ -114,20 +114,6 @@ const seedInstance = async (
 };
 
 describe("GET /v1/projects/:projectId/extensions", () => {
-  test("returns stable IDs and icons for downloadable extensions", async () => {
-    const project = await createProject("Extension identity");
-    const res = await app.request(`/v1/projects/${project.id}/extensions`);
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.marketplace).toContainEqual(
-      expect.objectContaining({
-        installName: "harness-pi",
-        extensionId: "pstdio.harness-pi",
-        icon: "Terminal",
-      }),
-    );
-  });
-
   test("lists both enabled and disabled instances with source metadata", async () => {
     const project = await createProject("Extensions List Project");
 

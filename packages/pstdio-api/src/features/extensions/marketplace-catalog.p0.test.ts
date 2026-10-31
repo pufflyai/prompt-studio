@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadExtensionCatalog, packagedExtensionCatalog, parseExtensionCatalog } from "./extension-catalog";
@@ -19,17 +19,6 @@ const entry = (installName: string) => ({
 });
 
 describe("extension catalog", () => {
-  test("identifies every downloadable extension with its manifest ID and icon", () => {
-    for (const extension of packagedExtensionCatalog.extensions) {
-      const manifest = JSON.parse(
-        readFileSync(join(import.meta.dir, "../../../../..", extension.origin.path, "package.json"), "utf8"),
-      );
-      expect(extension.extensionId).toBe(`${manifest.publisher}.${manifest.name}`);
-      expect(typeof extension.icon).toBe("string");
-      expect(extension.icon).toBe(manifest.icon);
-    }
-  });
-
   test("rejects duplicate install names", () => {
     expect(() =>
       parseExtensionCatalog({

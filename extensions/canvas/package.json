@@ -82,6 +82,5 @@
     "bunfig.toml",
     "tsconfig.json",
     "README.md"
-  ],
-  "icon": "PanelsTopLeft"
+  ]
 }

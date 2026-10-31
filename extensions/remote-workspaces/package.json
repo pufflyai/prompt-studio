@@ -22,6 +22,5 @@
   "devDependencies": {
     "typescript": "6.0.2",
     "@types/bun": "1.4.4"
-  },
-  "icon": "Cloud"
+  }
 }
