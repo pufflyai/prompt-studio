@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { nativeFileContentSchema } from "pstdio-api-contracts";
 import { textFailure } from "./errors";
 import type { TextConnection, TextEditingDeps, TextGrant } from "./types";
@@ -17,7 +18,9 @@ export const validateTextPresentation = async (deps: TextEditingDeps, connection
     throw textFailure("capability_denied", "This presentation cannot use text editing");
   connection.extensionId = view.extensionId;
 };
-const selectedPresentation = (loaded: Pick<Awaited<ReturnType<TextEditingDeps["load"]>>, "content" | "owner">) => {
+const selectedPresentation = (
+  loaded: Pick<Awaited<ReturnType<TextEditingDeps["documents"]["resolveSource"]>>, "content" | "owner">,
+) => {
   const content = nativeFileContentSchema.parse(loaded.content);
   if (content.textEditor && !content.textDocument)
     throw textFailure("grant_invalid", "A custom text editor needs a declared text source");
@@ -25,18 +28,25 @@ const selectedPresentation = (loaded: Pick<Awaited<ReturnType<TextEditingDeps["l
     ? `${content.textEditor.extensionId ?? loaded.owner.extensionId}.view.${content.textEditor.id}`
     : undefined;
 };
-export const grantTextSource = async (
-  deps: TextEditingDeps,
+export const validateTextSelection = (
   connection: TextConnection,
   target: TextGrant["target"],
+  loaded: Pick<Awaited<ReturnType<TextEditingDeps["documents"]["resolveSource"]>>, "owner" | "content">,
 ) => {
-  const loaded = await deps.load({ ...target, projectId: connection.projectId });
   if (
     "fileRendererId" in target &&
     connection.input.kind === "placement" &&
     selectedPresentation(loaded) !== connection.input.viewId
   )
     throw textFailure("capability_denied", "The source owner selected a different text presentation");
+};
+export const grantTextSource = async (
+  deps: TextEditingDeps,
+  connection: TextConnection,
+  target: TextGrant["target"],
+) => {
+  const loaded = await deps.documents.resolveSource({ ...target, projectId: connection.projectId });
+  validateTextSelection(connection, target, loaded);
   const grant: TextGrant = {
     token: crypto.randomUUID(),
     target,
@@ -59,13 +69,13 @@ export const validateTextGrant = async (
   const loaded = await deps.access({ ...grant.target, projectId: connection.projectId });
   if (loaded.documentKey !== grant.documentKey || loaded.owner.extensionId !== grant.ownerId)
     throw textFailure("source_retired", "This source lifetime has been retired");
-  if (
-    "fileRendererId" in grant.target &&
-    connection.input.kind === "placement" &&
-    selectedPresentation(loaded) !== connection.input.viewId
-  )
-    throw textFailure("capability_denied", "The source owner changed its text presentation");
+  validateTextSelection(connection, grant.target, loaded);
   if (writable && (!grant.editable || loaded.content.editable === false))
     throw textFailure("source_read_only", "The text source is read only");
   return loaded;
 };
+
+export const textSourceIdentity = (connection: TextConnection, grant: TextGrant) =>
+  createHash("sha256")
+    .update(JSON.stringify([connection.projectId, grant.ownerId, grant.documentKey]))
+    .digest("hex");

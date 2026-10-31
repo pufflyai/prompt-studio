@@ -43,6 +43,7 @@ export const createNativeFileProjector = (deps: {
     return result;
   };
   return {
+    read: serialize,
     initialize: async (address: Address, loaded: Loaded) => {
       if (await projections.read(address)) return;
       return serialize(address, async () => {

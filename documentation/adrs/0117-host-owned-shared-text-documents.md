@@ -256,7 +256,17 @@ Authenticated client consumers resolve a file or provider under ordinary project
 access and use the same grant/session service without impersonating an extension.
 
 Initial admission validates complete source bytes and observed revisions before
-binding a source. Ongoing operations re-run the owner's resolver to check access,
+binding a source. The room initializer checks the expected owner and authority against the source it
+actually resolves. It applies the shared admission predicate to that presentation
+before initialization or journaling; a source or selected editor changed between
+earlier checks cannot redirect a recovery update. Complete initial observations
+share the per-source projector queue, so they cannot straddle its own physical save.
+A registered authority joins or recovers directly from a validated canonical seed,
+with fresh access, lifetime and presentation checks. A projection row alone cannot
+bootstrap missing or invalid canonical history. Joining never reloads physical bytes
+or waits for projection. Its projection locator comes from the fresh resolver; a
+read-only member cannot replace the writable locator.
+Ongoing operations re-run the owner's resolver to check access,
 source identity and lifetime. They do not turn physical byte observations into a new
 text authority. Full byte validation during these checks would race the host's own
 background projection. The projection worker separately validates physical copies
@@ -277,6 +287,17 @@ with UI. Library code splitting does not install browser module-preload scaffold
 otherwise rebundling SDK helpers would break the classic opaque-iframe bootstrap.
 The runtime build parses its result as a classic script without executing it.
 
+A transport lease can expire when the host restarts. The authenticated adapter
+reconnects under its original scope. The SDK keeps the original opaque source
+identity as an admission precondition while it reopens logical members and sends
+retained causal frames. Replayed frames remain idempotent; a new member starts its
+own sequence. A changed authority fails before those frames can enter its journal.
+Only replies from the actual lease generation can install grants or handles. A
+renewed lease stays private until its active or retained participation state is
+restored. Concurrent renewal requests share the same operation. Explicit disposal
+is terminal: it stops streams, forbids new calls and renewal, and drains an already
+started renewal before releasing its resulting lease.
+
 A draft retains its original causal history. Commit freezes the admitted delta and
 retries that same delta until acknowledgement. Later mutations of a retained raw
 Yjs recovery copy cannot alter the frozen submission. Retired-source failures retain
@@ -291,7 +312,12 @@ rechecks edits authored during asynchronous opens before replacing a replica.
 Members register before opening, so an in-flight open participates in normal close.
 The host prepares every member, SDK finalizers commit or cancel local drafts, and
 close waits for all authored edits, including frames queued behind a held ACK.
-A failed member cancels the barrier and restores input for every member. Forced
+A member registered while preparation is waiting receives that same barrier.
+Readiness and failure can identify a registered logical member before it has a new
+room handle, so restart cannot bypass local draft finalizers. A failed member
+cancels the barrier and restores input for every member. A transport failure alone
+does not prove cancellation: only the host receipt for that exact barrier restores
+input. Re-emitting a live barrier does not rerun an already admitted finalizer. Forced
 revocation stops new admission and presence while draining already admitted work.
 The workbench/native binding adoption of these primitives remains a delivery gate.
 

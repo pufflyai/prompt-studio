@@ -13,9 +13,14 @@ import { createNativeFileProjector } from "./file-projection";
 import { type loadNativeMarkdownFile, NativeDocumentSourceError, type saveNativeMarkdownFile } from "./file-source";
 import { createNativeProjectionQueue } from "./projection-queue";
 import { watchNativeProjections } from "./projection-watch";
-import { validateReplaySource } from "./replay-source";
 import { integrateNativeRoom } from "./room-integration";
 import { createNativeRoomSnapshot, type Room, type RoomRequest } from "./room-snapshot";
+import {
+  initializeNativeRoomSource,
+  joinNativeRoomSource,
+  loadNativeRoomSource,
+  type NativeRoomOpenInput,
+} from "./room-source";
 import { createNativeSessionPresence } from "./session-presence";
 import { nativeAdmissionTarget, validateWritableSource } from "./validate-writable-source";
 
@@ -38,20 +43,6 @@ const recoverSource = async (documentKey: string, action: () => Promise<unknown>
       "Shared text recovery is pending. Saved edits and file copies were retained.",
     );
   }
-};
-
-const validateRecovery = (
-  input: { sourceState?: Uint8Array; pendingUpdate?: Uint8Array; access?: "read" | "write" },
-  loaded: Awaited<ReturnType<typeof loadNativeMarkdownFile>>,
-  editable: boolean,
-) => {
-  if (input.pendingUpdate && !input.sourceState)
-    throw new NativeDocumentRoomError("invalid_frame", "Pending editor frames need their original history");
-  if (input.access !== undefined && input.sourceState && !editable)
-    throw new NativeDocumentSourceError(403, "source_read_only", "A read-only session cannot supply recovery history");
-  validateReplaySource(input.sourceState, loaded.documentKey, loaded.lifetime);
-  if (input.pendingUpdate && !editable)
-    throw new NativeDocumentSourceError(403, "source_read_only", "The text source is read only");
 };
 
 /** Acknowledgements follow both room persistence and canonical integration. */
@@ -149,20 +140,22 @@ export const createNativeDocumentService = (deps: {
         });
       },
     },
-    open(
-      input: NativeTextTarget & {
-        projectId: string;
-        signal?: AbortSignal;
-        sourceState?: Uint8Array;
-        pendingUpdate?: Uint8Array;
-        access?: "read" | "write";
-      },
-    ) {
+    resolveSource(input: NativeTextTarget & { projectId: string; signal?: AbortSignal }) {
       return track(async () => {
-        const loaded = await deps.load(input);
-        const editable = loaded.content.editable !== false && input.access !== "read";
-        validateRecovery(input, loaded, editable);
-        await deps.initialize(loaded);
+        const expectedSource = await deps.access(input);
+        return projection.read(expectedSource, () => loadNativeRoomSource(deps, { ...input, expectedSource }));
+      });
+    },
+    open(input: NativeRoomOpenInput) {
+      return track(async () => {
+        const initialize = () => initializeNativeRoomSource(deps, input);
+        const joined = await joinNativeRoomSource(deps, input);
+        const {
+          loaded,
+          editable,
+          initial: initialized,
+        } = joined ??
+        (input.expectedSource ? await projection.read(input.expectedSource, initialize) : await initialize());
         const text = canonical(loaded);
         const { id: roomId } = await storage.nativeRooms.create({
           owner: loaded.owner,
@@ -179,7 +172,7 @@ export const createNativeDocumentService = (deps: {
           queue: Promise.resolve(),
           closeWatchers: new Set(),
         };
-        if (room.editable) await projection.initialize(room, loaded);
+        if (room.editable && initialized) await projection.initialize(room, initialized);
         if (input.pendingUpdate)
           await storage.nativeRooms.apply({ owner: room.owner, roomId, update: input.pendingUpdate });
         // A reconnect can carry edits from a retired source history. Preserve that history

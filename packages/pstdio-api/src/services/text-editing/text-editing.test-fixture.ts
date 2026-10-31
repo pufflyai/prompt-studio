@@ -9,7 +9,14 @@ import { resolveNativeTextAccess } from "../native-documents/source-access";
 import { initializeNativeSource } from "../native-documents/source-binding";
 import { createTextEditingService } from "./service";
 
-export const textEditingFixture = async () => {
+export const textEditingFixture = async (
+  options: {
+    beforeDocumentLoad?: () => Promise<void>;
+    beforeDocumentAccess?: () => Promise<void>;
+    beforeProjection?: () => Promise<void>;
+    afterProjection?: () => void;
+  } = {},
+) => {
   const extension = await createWorkspaceContextFixture();
   const database = await createDb({ path: ":memory:" });
   const timestamp = new Date().toISOString();
@@ -20,8 +27,11 @@ export const textEditingFixture = async () => {
     join(extension.root, "extension.ts"),
     `export default {
     textSources: [{ id: "body", ref: {kind: "text-source", id: "body"}, params: {},
-      resolve: async ctx => ({ source: {kind: "workspace", path: "notes.txt"}, content: await ctx.workspaceFiles.readText("notes.txt"), editable: !(await ctx.workspaceFiles.exists("read-only")) }),
-      project: async (ctx, {content}) => { if (await ctx.workspaceFiles.exists("fail-project")) throw new Error("Project paused"); await ctx.workspaceFiles.writeText("notes.txt", content); }
+      resolve: async ctx => {
+        const path = (await ctx.workspaceFiles.exists("alternate-source")) ? "replacement.txt" : "notes.txt";
+        return {source: {kind:"workspace",path},content:await ctx.workspaceFiles.readText(path),editable:!(await ctx.workspaceFiles.exists("read-only"))};
+      },
+      project: async (ctx, {content}) => { if (await ctx.workspaceFiles.exists("fail-project")) throw new Error("Project paused"); await ctx.workspaceFiles.writeText((await ctx.workspaceFiles.exists("alternate-source")) ? "replacement.txt" : "notes.txt", content); }
     }],
     views: [{id: "document", ref: {kind: "view", id: "document"}, title: "Document", body: {kind: "file", load: async ctx => ({textDocument: {sourceId: "body", params: {}}, textEditor: (await ctx.workspaceFiles.exists("native")) ? undefined : {extensionId: "thirdparty.editor",kind: "view",id: "code"}, fileName: "notes.md"})}}]
   };`,
@@ -72,17 +82,37 @@ export const textEditingFixture = async () => {
   const load = (input: Parameters<typeof loadNativeMarkdownFile>[1]) => loadNativeMarkdownFile(deps, input);
   const access = (input: Parameters<typeof resolveNativeTextAccess>[1]) => resolveNativeTextAccess(deps, input);
   const documents = createNativeDocumentService({
-    access,
+    access: async (input) => {
+      await options.beforeDocumentAccess?.();
+      return access(input);
+    },
     storage: deps.extensionStorageService,
-    load,
-    save: (input) => saveNativeMarkdownFile(deps, input),
+    load: async (input) => {
+      await options.beforeDocumentLoad?.();
+      return load(input);
+    },
+    save: async (input) => {
+      await options.beforeProjection?.();
+      try {
+        return await saveNativeMarkdownFile(deps, input);
+      } finally {
+        options.afterProjection?.();
+      }
+    },
     initialize: (loaded) => initializeNativeSource(deps, loaded),
     deviceId: "device",
     presenceIdentity: async () => ({ label: "Person", deviceName: "Device" }),
   });
-  const text = createTextEditingService({ documents, load, access, catalog: deps.extensionRuntimeCatalog });
+  const createText = () => createTextEditingService({ documents, access, catalog: deps.extensionRuntimeCatalog });
+  let text = createText();
   return {
-    text,
+    get text() {
+      return text;
+    },
+    async restartText() {
+      await text.dispose();
+      text = createText();
+    },
     documents,
     deps,
     root: extension.root,

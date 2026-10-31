@@ -13,6 +13,7 @@ const participants = (people: TextWireParticipant[]) =>
 
 export const createTextEditingReceiver = (input: {
   host: GuestHost;
+  memberId: string;
   handle: () => string;
   closed: () => boolean;
   prepareClose: () => Promise<void>;
@@ -26,6 +27,7 @@ export const createTextEditingReceiver = (input: {
   let presenceVersion = -1;
   let barrierId: string | undefined;
   const prepare = (active: string) => {
+    if (barrierId === active) return;
     barrierId = active;
     void input
       .prepareClose()
@@ -33,17 +35,18 @@ export const createTextEditingReceiver = (input: {
         if (barrierId === active)
           return input.host.call("editing.text", {
             operation: "closeReady",
-            handle: input.handle(),
+            memberId: input.memberId,
             barrierId: active,
           });
       })
       .catch((error) => {
+        const { code, message, retryable } = textEditingError(error);
         if (barrierId === active)
           return input.host.call("editing.text", {
             operation: "closeFailed",
-            handle: input.handle(),
+            memberId: input.memberId,
             barrierId: active,
-            error: textEditingError(error),
+            error: { code, message, retryable },
           });
       })
       .catch(() => {});

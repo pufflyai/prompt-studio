@@ -38,7 +38,7 @@ export const failTextClose = (connection: TextConnection, error: TextEditingErro
       error,
     });
   }
-  barrier.reject(textFailure(error.code, error.message, error.retryable));
+  barrier.reject(textFailure(error.code, error.message, error.retryable, barrier.id));
 };
 export const readyTextClose = async (connection: TextConnection, member: TextMember, barrierId: string) => {
   if (connection.barrier?.id !== barrierId)

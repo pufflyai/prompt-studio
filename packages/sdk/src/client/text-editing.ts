@@ -5,6 +5,7 @@ import type {
   TextEditingRequest,
   TextEditingResult,
 } from "pstdio-api-contracts/extension-kernel";
+import { textEditingFailure } from "../extensions/text-editing-codec";
 import type { RequestFn } from "./request";
 import { readSseStream } from "./sse";
 import { createTextConnectionGuest } from "./text-editing-guest";
@@ -19,42 +20,145 @@ export interface TextEditingConnection {
 type Reply<T> = { ok: true; value: T } | { ok: false; error: TextEditingError };
 const value = <T>(reply: Reply<T>) => {
   if (!reply.ok)
-    throw Object.assign(new Error(reply.error.message), reply.error, { data: { retryable: reply.error.retryable } });
+    throw Object.assign(new Error(reply.error.message), reply.error, {
+      data: {
+        retryable: reply.error.retryable,
+        ...(reply.error.cancelledBarrierId ? { cancelledBarrierId: reply.error.cancelledBarrierId } : {}),
+      },
+    });
   return reply.value ?? undefined;
 };
 export const createTextTransportClient = (request: RequestFn) => ({
   async connect(input: { projectId: string; scope: TextEditingConnectionInput }): Promise<TextEditingConnection> {
     const base = `/v1/projects/${encodeURIComponent(input.projectId)}/text-editing`;
-    const info = value(await request<Reply<TextEditingConnectionInfo>>(base, { method: "POST", body: input.scope }))!;
-    const call = async <T>(path: string, body = {}) =>
-      value(await request<Reply<T>>(`${base}/${path}`, { method: "POST", body: { token: info.token, ...body } }));
+    const connect = async () =>
+      value(await request<Reply<TextEditingConnectionInfo>>(base, { method: "POST", body: input.scope }))!;
+    let info = await connect();
+    let generation = 0;
+    let candidate: TextEditingConnectionInfo | undefined;
+    let active = true;
+    let renewal: Promise<void> | undefined;
+    let release: { work?: Promise<void> } | undefined;
+    const streams = new Set<AbortController>();
+    const renew = async (expired: string) => {
+      if (release) throw textEditingFailure("session_closed", "This text connection was disposed");
+      if (renewal) return renewal;
+      if (expired !== info.token) return;
+      renewal = (async () => {
+        candidate ??= await connect();
+        const next = candidate;
+        try {
+          let applied = active;
+          do {
+            applied = active;
+            value(
+              await request<Reply<void>>(`${base}/active`, {
+                method: "POST",
+                body: { token: next.token, active: applied },
+              }),
+            );
+          } while (applied !== active);
+        } catch (error) {
+          if ((error as TextEditingError)?.code === "connection_expired" && candidate === next) candidate = undefined;
+          throw error;
+        }
+        info = next;
+        candidate = undefined;
+        generation++;
+        for (const stream of streams)
+          stream.abort(textEditingFailure("connection_reset", "The text connection was renewed", true));
+      })().finally(() => {
+        renewal = undefined;
+      });
+      await renewal;
+    };
+    const call = async <T>(path: string, body = {}) => {
+      if (release) throw textEditingFailure("session_closed", "This text connection was disposed");
+      const token = info.token;
+      try {
+        const outcome = await Promise.resolve()
+          .then(() => request<Reply<T>>(`${base}/${path}`, { method: "POST", body: { token, ...body } }))
+          .then(
+            (reply) => ({ reply }),
+            (error: unknown) => ({ error }),
+          );
+        await renewal;
+        if (release) throw textEditingFailure("session_closed", "This text connection was disposed");
+        if (token !== info.token)
+          throw textEditingFailure("connection_reset", "This reply belongs to an earlier text connection", true);
+        if ("error" in outcome) throw outcome.error;
+        return value(outcome.reply);
+      } catch (error) {
+        if ((error as TextEditingError)?.code !== "connection_expired") throw error;
+        await renew(token);
+        throw textEditingFailure("connection_reset", "The text host connection was renewed", true);
+      }
+    };
     const connection: TextEditingConnection = {
       request: async (input) => (await call("request", { request: input })) as never,
       watch: async (input) => {
-        const stream = await request<ReadableStream<Uint8Array>>(`${base}/stream`, {
-          method: "POST",
-          body: { token: info.token },
-          signal: input.signal,
-          response: "stream",
-        });
-        await readSseStream(
-          stream,
-          (event) => {
-            if (event.event === "text") input.onEvent(JSON.parse(event.data));
-          },
-          { signal: input.signal },
-        );
+        const abort = new AbortController();
+        const signal = AbortSignal.any([input.signal, abort.signal]);
+        streams.add(abort);
+        try {
+          await call("active", { active });
+          const token = info.token;
+          const stream = await request<ReadableStream<Uint8Array>>(`${base}/stream`, {
+            method: "POST",
+            body: { token },
+            signal,
+            response: "stream",
+          });
+          await readSseStream(
+            stream,
+            (event) => {
+              if (event.event === "text" && !signal.aborted && token === info.token && !release)
+                input.onEvent(JSON.parse(event.data));
+            },
+            { signal },
+          );
+        } finally {
+          streams.delete(abort);
+        }
       },
       prepareClose: async () => {
         await call("prepare-close");
       },
-      setActive: async (active) => {
+      setActive: async (next) => {
+        active = next;
         await call("active", { active });
       },
-      disconnect: async () => {
-        await call("disconnect");
+      disconnect: () => {
+        release ??= {};
+        const ownership = release;
+        ownership.work ??= (async () => {
+          for (const stream of streams) stream.abort();
+          await renewal?.catch(() => {});
+          const tokens = new Set([info.token, candidate?.token]);
+          await Promise.all(
+            [...tokens]
+              .filter((token): token is string => !!token)
+              .map(async (token) => {
+                try {
+                  value(await request<Reply<void>>(`${base}/disconnect`, { method: "POST", body: { token } }));
+                } catch (error) {
+                  if ((error as TextEditingError)?.code !== "connection_expired") throw error;
+                }
+                if (candidate?.token === token) candidate = undefined;
+              }),
+          );
+        })().catch((error) => {
+          ownership.work = undefined;
+          throw error;
+        });
+        return ownership.work;
       },
-      guest: () => createTextConnectionGuest(connection),
+      guest: () =>
+        createTextConnectionGuest(connection, {
+          generation: () => generation,
+          closed: () => release !== undefined,
+          ensure: () => call("active", { active }),
+        }),
     };
     return connection;
   },

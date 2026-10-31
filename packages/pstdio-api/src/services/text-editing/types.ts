@@ -1,11 +1,9 @@
 import type { NativeTextTarget, TextEditingConnectionInput } from "pstdio-api-contracts";
-import type { TextEditingEvent, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
+import type { TextEditingEvent, TextEditingOpened, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import type { createNativeDocumentService } from "../native-documents/documents";
-import type { loadNativeMarkdownFile } from "../native-documents/file-source";
 export interface TextEditingDeps {
   documents: ReturnType<typeof createNativeDocumentService>;
-  load: (input: Parameters<typeof loadNativeMarkdownFile>[1]) => ReturnType<typeof loadNativeMarkdownFile>;
   access: (
     input: Parameters<typeof import("../native-documents/source-access").resolveNativeTextAccess>[1],
   ) => ReturnType<typeof import("../native-documents/source-access").resolveNativeTextAccess>;
@@ -29,7 +27,7 @@ export interface TextMember {
   lastAck?: TextWireSnapshot;
   version: number;
   ready?: string;
-  replay?: { identity: string; result: { handle: string; grant: { token: string }; snapshot: TextWireSnapshot } };
+  replay?: { identity: string; result: TextEditingOpened };
   stop?: () => void;
   refresh?: () => void;
   updatePresence?: () => Promise<void>;

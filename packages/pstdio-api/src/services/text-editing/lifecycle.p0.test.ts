@@ -224,3 +224,61 @@ test("ordinary close releases an acknowledged draft whose cleanup request never 
   await session.close();
   expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);
 });
+
+test("a member opened during a held close finalizer joins the active preparation", async () => {
+  const f = await setup();
+  const first = await f.open();
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  first.beforeClose(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  const preparing = f.text.prepareClose(f.address);
+  let second: Awaited<ReturnType<typeof f.open>> | undefined;
+  try {
+    await entered.promise;
+    second = await f.open();
+    expect(second.getSnapshot().closing).toBe(true);
+  } finally {
+    release.resolve();
+    await second?.close();
+    await preparing;
+    await first.close();
+  }
+});
+
+test("a late member does not repeat finalizers for members already ready for the same close barrier", async () => {
+  const f = await setup();
+  const first = await f.open();
+  const held = await f.open();
+  let finalized = 0;
+  const entered = Promise.withResolvers<void>();
+  const ready = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  first.beforeClose(() => {
+    finalized++;
+  });
+  held.beforeClose(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  f.hold(async (input) => {
+    if (input.operation === "closeReady") ready.resolve();
+  });
+  const preparing = f.text.prepareClose(f.address);
+  let late: Awaited<ReturnType<typeof f.open>> | undefined;
+  try {
+    await Promise.all([entered.promise, ready.promise]);
+    late = await f.open();
+    expect(late.getSnapshot().closing).toBe(true);
+    expect(finalized).toBe(1);
+  } finally {
+    release.resolve();
+    f.hold();
+    await late?.close();
+    await preparing;
+    await first.close();
+    await held.close();
+  }
+});

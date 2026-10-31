@@ -11,6 +11,7 @@ const resolveProviderAccess = async (deps: ExtensionsRouteDeps, input: ProviderT
     ...(await resolveNativeSource(deps, owner, resolved.source)),
     owner,
     content: { content: resolved.content, editable: resolved.editable, documentSource: resolved.source },
+    projectionTarget: { extensionId: input.extensionId, textDocument: input.textDocument },
   };
 };
 
@@ -47,5 +48,10 @@ export const resolveNativeTextAccess = async (
   if (presentation.kind !== "markdown" || !save || !content.documentSource)
     throw new NativeDocumentSourceError(400, "native_document_not_editable", "This file view does not use shared text");
   const owner = { workbenchId: input.projectId, extensionId: view.extensionId };
-  return { ...(await resolveNativeSource(deps, owner, content.documentSource)), owner, content };
+  return {
+    ...(await resolveNativeSource(deps, owner, content.documentSource)),
+    owner,
+    content,
+    projectionTarget: { fileRendererId: input.fileRendererId, resource: input.resource, pageParams: input.pageParams },
+  };
 };

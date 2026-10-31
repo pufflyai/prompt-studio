@@ -280,7 +280,6 @@ const buildApp = async (
     nativeDocuments,
     textEditing: createTextEditingService({
       documents: nativeDocuments,
-      load: (input) => loadNativeMarkdownFile(deps, input),
       access: (input) => resolveNativeTextAccess(deps, input),
       catalog: extensionRuntimeCatalog,
     }),

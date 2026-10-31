@@ -101,6 +101,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     host,
     memberId,
     source: input,
+    sourceIdentity: opened.sourceIdentity,
     replica: () => replica,
     fences,
     tickets: frameTickets,
@@ -137,6 +138,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
   const lifecycle = createTextEditingLifecycle({
     host,
     source: input,
+    sourceIdentity: opened.sourceIdentity,
     fences,
     sourceState: () => Y.encodeStateAsUpdate(replica.document),
     flush: flushPrefix,
@@ -159,6 +161,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
   });
   receiveEvent = createTextEditingReceiver({
     host,
+    memberId,
     handle: () => handle,
     closed: lifecycle.closed,
     prepareClose: lifecycle.prepareClose,
@@ -178,6 +181,9 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
       return flushPrefix(prefix);
     },
     projectionFailed: () => state.error?.code === "projection_failed",
+    settle: async () => {
+      await writing;
+    },
     publish,
     failed,
   });

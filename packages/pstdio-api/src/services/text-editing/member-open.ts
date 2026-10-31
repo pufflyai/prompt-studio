@@ -1,7 +1,13 @@
 import { createHash } from "node:crypto";
 import type { TextEditingRequest } from "pstdio-api-contracts/extension-kernel";
 import { validateTextEditorFrame, validateTextEditorState } from "pstdio-sync/text";
-import { grantTextSource, validateTextGrant, validateTextPresentation } from "./admission";
+import {
+  grantTextSource,
+  textSourceIdentity,
+  validateTextGrant,
+  validateTextPresentation,
+  validateTextSelection,
+} from "./admission";
 import { textFailure } from "./errors";
 import { textHandle } from "./handles";
 import { roomAddress, runTextMember, wireTextSnapshot } from "./members";
@@ -68,6 +74,7 @@ const currentRoom = async (
   requireCurrentMember(connection, member);
   if (snapshot.seedId === snapshot.sourceSeedId)
     return {
+      sourceIdentity: textSourceIdentity(connection, member.grant!),
       handle: member.handle,
       grant: { token: member.grant!.token },
       snapshot: wireTextSnapshot(member, snapshot),
@@ -86,6 +93,11 @@ const reopen = async (
     ...grant.target,
     projectId: connection.projectId,
     access: grant.editable ? "write" : "read",
+    validateLoaded: (loaded) => validateTextSelection(connection, grant.target, loaded),
+    expectedSource: {
+      owner: { workbenchId: connection.projectId, extensionId: grant.ownerId },
+      documentKey: grant.documentKey,
+    },
     sourceState: request.sourceState ? Buffer.from(request.sourceState, "base64") : undefined,
     pendingUpdate: request.pendingUpdate ? Buffer.from(request.pendingUpdate, "base64") : undefined,
   });
@@ -100,7 +112,12 @@ const reopen = async (
       documentKey: previous.documentKey,
     });
   requireCurrentMember(connection, member);
-  return { handle: member.handle, grant: { token: grant.token }, snapshot: wireTextSnapshot(member, joined) };
+  return {
+    sourceIdentity: textSourceIdentity(connection, grant),
+    handle: member.handle,
+    grant: { token: grant.token },
+    snapshot: wireTextSnapshot(member, joined),
+  };
 };
 export const openTextMember = (
   deps: TextEditingDeps,
@@ -113,6 +130,8 @@ export const openTextMember = (
     await validateTextPresentation(deps, connection);
     requireCurrentMember(connection, member);
     const grant = await memberGrant(deps, connection, member, request);
+    if (request.sourceIdentity && request.sourceIdentity !== textSourceIdentity(connection, grant))
+      throw textFailure("source_retired", "This source lifetime has changed since the session opened");
     const loaded = await validateTextGrant(deps, connection, grant);
     requireCurrentMember(connection, member);
     await validateRecovery(request);

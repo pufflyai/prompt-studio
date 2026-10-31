@@ -6,6 +6,8 @@ export interface TextSourceGrant {
 export type TextEditingErrorCode =
   | "capability_denied"
   | "grant_invalid"
+  | "connection_expired"
+  | "connection_reset"
   | "source_unavailable"
   | "source_read_only"
   | "source_retired"
@@ -20,6 +22,8 @@ export interface TextEditingError {
   code: TextEditingErrorCode;
   message: string;
   retryable: boolean;
+  /** Host confirmation that this exact close barrier was cancelled. */
+  cancelledBarrierId?: string;
 }
 export interface TextWireSnapshot {
   state: string;
@@ -39,14 +43,26 @@ export type TextOpenInput = TextDocumentRef | { grant: TextSourceGrant };
 export type TextEditingRequest =
   | { operation: "current" }
   | { operation: "register" | "abandon"; memberId: string }
-  | { operation: "open"; memberId: string; input: TextOpenInput; sourceState?: string; pendingUpdate?: string }
+  | {
+      operation: "open";
+      memberId: string;
+      input: TextOpenInput;
+      sourceState?: string;
+      pendingUpdate?: string;
+      sourceIdentity?: string;
+    }
   | { operation: "submit"; handle: string; sequence: number; update: string }
   | { operation: "snapshot" | "close"; handle: string }
   | { operation: "project"; handle: string; revision: number }
   | { operation: "presence"; handle: string; selection: { anchor: string; head: string } | null }
-  | { operation: "closeReady"; handle: string; barrierId: string }
-  | { operation: "closeFailed"; handle: string; barrierId: string; error: TextEditingError };
+  | ({ operation: "closeReady"; barrierId: string } & ({ handle: string } | { memberId: string }))
+  | ({ operation: "closeFailed"; barrierId: string; error: TextEditingError } & (
+      | { handle: string }
+      | { memberId: string }
+    ));
 export interface TextEditingOpened {
+  /** Stable opaque identity of the authorized source lifetime, independent of the host connection. */
+  sourceIdentity: string;
   handle: string;
   grant: TextSourceGrant;
   snapshot: TextWireSnapshot;

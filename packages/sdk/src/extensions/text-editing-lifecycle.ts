@@ -7,6 +7,7 @@ import type { createTextEditingFences } from "./text-editing-queue";
 interface LifecycleInput {
   host: GuestHost;
   source: TextOpenInput;
+  sourceIdentity: string;
   fences: ReturnType<typeof createTextEditingFences>;
   sourceState: () => Uint8Array;
   flush: (prefix: number) => Promise<number>;
@@ -91,6 +92,7 @@ export const createTextEditingLifecycle = (input: LifecycleInput) => {
               operation: "open",
               memberId,
               input: input.source,
+              sourceIdentity: input.sourceIdentity,
               sourceState: encodeTextBytes(source),
               pendingUpdate: encodeTextBytes(update),
             });

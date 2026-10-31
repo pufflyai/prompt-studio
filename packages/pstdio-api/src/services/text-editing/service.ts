@@ -3,7 +3,7 @@ import type { TextEditingRequest, TextEditingResult } from "pstdio-api-contracts
 import { z } from "zod";
 import { grantTextSource, validateTextGrant, validateTextPresentation } from "./admission";
 import { textFailure, throwTextError } from "./errors";
-import { failTextClose, prepareTextClose } from "./events";
+import { emitTextEvent, failTextClose, prepareTextClose } from "./events";
 import { textHandleMember } from "./handles";
 import { openTextMember } from "./member-open";
 import { roomAddress } from "./members";
@@ -20,8 +20,10 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
   });
   const connectionFor = (address: TextConnectionAddress) => {
     const connection = connections.get(address.token);
-    if (!connection || connection.disposed || connection.projectId !== address.projectId)
-      throw textFailure("grant_invalid", "This text connection belongs to another placement or project");
+    if (connection && connection.projectId !== address.projectId)
+      throw textFailure("grant_invalid", "This text connection belongs to another project");
+    if (!connection || connection.disposed)
+      throw textFailure("connection_expired", "This text connection is no longer available", true);
     return connection;
   };
   const releaseMember = async (connection: TextConnection, member: TextMember) => {
@@ -60,6 +62,7 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
     };
     connection.members.set(memberId, member);
     connection.barrier?.waiting.add(member);
+    if (connection.barrier) emitTextEvent(connection, { type: "prepareClose", barrierId: connection.barrier.id });
   };
   const request = async (connection: TextConnection, input: TextEditingRequest) => {
     switch (input.operation) {

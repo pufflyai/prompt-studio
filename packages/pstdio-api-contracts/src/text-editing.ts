@@ -6,6 +6,8 @@ export const textEditingErrorSchema = z.strictObject({
   code: z.enum([
     "capability_denied",
     "grant_invalid",
+    "connection_expired",
+    "connection_reset",
     "source_unavailable",
     "source_read_only",
     "source_retired",
@@ -19,6 +21,7 @@ export const textEditingErrorSchema = z.strictObject({
   ]),
   message: z.string(),
   retryable: z.boolean(),
+  cancelledBarrierId: z.uuid().optional(),
 });
 const id = z.string().min(1);
 const handle = { handle: id };
@@ -26,7 +29,7 @@ export const textOpenInputSchema = z.union([
   textDocumentRefSchema,
   z.strictObject({ grant: z.strictObject({ token: id }) }),
 ]);
-export const textEditingRequestSchema = z.discriminatedUnion("operation", [
+export const textEditingRequestSchema = z.union([
   z.strictObject({ operation: z.literal("current") }),
   z.strictObject({ operation: z.enum(["register", "abandon"]), memberId: z.uuid() }),
   z.strictObject({
@@ -35,6 +38,10 @@ export const textEditingRequestSchema = z.discriminatedUnion("operation", [
     input: textOpenInputSchema,
     sourceState: z.base64().optional(),
     pendingUpdate: z.base64().optional(),
+    sourceIdentity: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
   }),
   z.strictObject({
     operation: z.literal("submit"),
@@ -52,6 +59,13 @@ export const textEditingRequestSchema = z.discriminatedUnion("operation", [
     ),
   }),
   z.strictObject({ operation: z.literal("closeReady"), ...handle, barrierId: z.uuid() }),
+  z.strictObject({ operation: z.literal("closeReady"), memberId: z.uuid(), barrierId: z.uuid() }),
+  z.strictObject({
+    operation: z.literal("closeFailed"),
+    memberId: z.uuid(),
+    barrierId: z.uuid(),
+    error: textEditingErrorSchema,
+  }),
   z.strictObject({
     operation: z.literal("closeFailed"),
     ...handle,

@@ -3,14 +3,16 @@ import { validateTextGrant } from "./admission";
 import { textFailure } from "./errors";
 import { failTextClose, readyTextClose } from "./events";
 import { roomAddress, submitTextMember, textMember, wireTextSnapshot } from "./members";
-import type { TextConnection, TextEditingDeps } from "./types";
+import type { TextConnection, TextEditingDeps, TextMember } from "./types";
 export const requestOpenMember = async (
   deps: TextEditingDeps,
   connection: TextConnection,
   input: TextEditingRequest,
 ) => {
-  if (!("handle" in input)) throw textFailure("invalid_frame", "This operation needs an open text member");
-  const member = textMember(connection, input.handle);
+  let member: TextMember | undefined;
+  if ("memberId" in input) member = connection.members.get(input.memberId);
+  else if ("handle" in input) member = textMember(connection, input.handle);
+  if (!member) throw textFailure("session_closed", "This text membership has been released");
   switch (input.operation) {
     case "closeReady":
       return readyTextClose(connection, member, input.barrierId);

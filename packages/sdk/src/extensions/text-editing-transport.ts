@@ -1,7 +1,7 @@
 import type { TextOpenInput, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
 import type { createTextReplica } from "pstdio-sync/text";
 import type { GuestHost } from "./guest-host";
-import { decodeTextSnapshot, encodeTextBytes } from "./text-editing-codec";
+import { decodeTextSnapshot, encodeTextBytes, textEditingError } from "./text-editing-codec";
 import type { TextEditingSnapshot, TextSelection } from "./text-editing-types";
 
 export const createTextEditingOperations = (input: {
@@ -10,6 +10,7 @@ export const createTextEditingOperations = (input: {
   closed: () => boolean;
   flush: () => Promise<number>;
   projectionFailed: () => boolean;
+  settle: () => Promise<void>;
   publish: (patch: Partial<TextEditingSnapshot>) => void;
   failed: (error: unknown) => void;
 }) => {
@@ -32,6 +33,7 @@ export const createTextEditingOperations = (input: {
     project,
     async retry() {
       const projectionFailed = input.projectionFailed();
+      await input.settle();
       await input.flush();
       if (projectionFailed) await project();
     },
@@ -56,6 +58,7 @@ interface TextPumpInput {
   host: GuestHost;
   memberId: string;
   source: TextOpenInput;
+  sourceIdentity: string;
   replica: () => ReturnType<typeof createTextReplica>;
   fences: ReturnType<typeof createTextEditingFences>;
   tickets: number[];
@@ -71,8 +74,18 @@ interface TextPumpInput {
 export const createTextEditingPump = (input: TextPumpInput) => {
   let sequence = 0;
   let batch: { count: number; update: Uint8Array; sequence: number } | undefined;
-  const open = (recovery = {}) =>
-    input.host.call("editing.text", { operation: "open", memberId: input.memberId, input: input.source, ...recovery });
+  const open = async (recovery = {}) => {
+    const joined = await input.host.call("editing.text", {
+      operation: "open",
+      memberId: input.memberId,
+      input: input.source,
+      sourceIdentity: input.sourceIdentity,
+      ...recovery,
+    });
+    // The lifecycle and future draft children share this SDK-owned source selection.
+    if ("grant" in input.source) input.source.grant = joined.grant;
+    return joined;
+  };
   const adopt = async (replica: ReturnType<typeof createTextReplica>) => {
     const joined = await open();
     input.setHandle(joined.handle);
@@ -99,7 +112,25 @@ export const createTextEditingPump = (input: TextPumpInput) => {
     input.setHandle(joined.handle);
     input.receive(joined.snapshot);
   };
-  return async () => {
+  const recoverConnection = async () => {
+    const replica = input.replica();
+    const captured = replica.capture();
+    const recovery = captured.update
+      ? {
+          sourceState: encodeTextBytes(replica.receivedState()),
+          pendingUpdate: encodeTextBytes(captured.update),
+        }
+      : {};
+    const joined = await open(recovery);
+    input.setHandle(joined.handle);
+    replica.acknowledge(captured.count, decodeTextSnapshot(joined.snapshot));
+    for (const ticket of input.tickets.splice(0, captured.count))
+      input.fences.complete(ticket, joined.snapshot.revision);
+    batch = undefined;
+    sequence = 0;
+    input.receive(joined.snapshot);
+  };
+  const run = async () => {
     if (!input.snapshot().connected && !batch) await reconnect();
     while (!input.closed()) {
       const replica = input.replica();
@@ -120,6 +151,15 @@ export const createTextEditingPump = (input: TextPumpInput) => {
       }
       if (input.closing() || input.canonicalSeed() === replica.seedId) return;
       await adopt(replica);
+    }
+  };
+  return async () => {
+    try {
+      await run();
+    } catch (error) {
+      if (textEditingError(error).code !== "connection_reset") throw error;
+      await recoverConnection();
+      await run();
     }
   };
 };

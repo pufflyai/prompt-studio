@@ -1,6 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
 import * as Y from "yjs";
-import { loadNativeMarkdownFile } from "../native-documents/file-source";
 import { resolveNativeTextAccess } from "../native-documents/source-access";
 import { createTextEditingService } from "./service";
 import { editorView, selected, textEditingFixture } from "./text-editing.test-fixture";
@@ -14,7 +13,6 @@ const setup = async () => {
   let hold: (() => Promise<void>) | undefined;
   const text = createTextEditingService({
     documents: f.documents,
-    load: (input) => loadNativeMarkdownFile(f.deps, input),
     access: async (input) => {
       const result = await resolveNativeTextAccess(f.deps, input);
       await hold?.();
