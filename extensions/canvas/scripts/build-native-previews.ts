@@ -19,6 +19,9 @@ const nativeDeclaration = `const __UI_CANVAS_NATIVE__={${Object.entries(previews
 // module URLs otherwise repeat their loader work in every frame.
 const previewOutput = {
   minify: true,
+  // Shared chunks can form cycles. Initialize their modules in source order
+  // before another chunk calls an exported state-machine factory.
+  strictExecutionOrder: true,
   codeSplitting: {
     groups: [
       {
