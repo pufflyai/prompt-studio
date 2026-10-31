@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -40,11 +40,23 @@ export const expectPackagedGitFreeExtensions = async () => {
     const installed = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, { headers });
     expect(installed.status).toBe(200);
     const body = (await installed.json()) as {
-      extensions: { installName: string; enabled: boolean; canUpgrade: boolean }[];
+      extensions: { installName: string; enabled: boolean; canUpgrade: boolean; sourcePath: string }[];
     };
     expect(body.extensions).toContainEqual(
       expect.objectContaining({ installName: "pstdio-skills", enabled: true, canUpgrade: false }),
     );
+    const skills = body.extensions.find((extension) => extension.installName === "pstdio-skills")!;
+    const installedManifest = JSON.parse(readFileSync(join(skills.sourcePath, "package.json"), "utf8"));
+    const sourceManifest = JSON.parse(
+      readFileSync(join(import.meta.dirname, "../../../../extensions/pstdio-skills/package.json"), "utf8"),
+    );
+    expect(installedManifest).toMatchObject({
+      publisher: sourceManifest.publisher,
+      name: sourceManifest.name,
+      displayName: sourceManifest.displayName,
+      icon: sourceManifest.icon,
+    });
+    expect(installedManifest.icon.length).toBeGreaterThan(0);
     const providers = await fetch(`${started.baseUrl}/v1/projects/${project.id}/workspace-providers`, { headers });
     expect(providers.status).toBe(200);
     expect(await providers.json()).toEqual([]);

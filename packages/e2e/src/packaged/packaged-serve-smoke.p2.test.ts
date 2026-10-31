@@ -12,6 +12,7 @@ import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
 // packaged-native-settings.p2.spec.ts checks the Extensions nav page, direct routes, reload, native settings and scrolling.
+// Git-free installation preserves bundled extension IDs, names and icon metadata.
 // packaged-extension-settings-smoke.p2.test.ts checks device settings across projects and restarts.
 // packaged-independent-extensions-smoke.p2.test.ts checks stable and nightly extension package versions.
 // Native actions retain failed outcomes for the UI entry point to report.
