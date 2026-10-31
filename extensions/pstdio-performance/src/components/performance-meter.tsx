@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Text } from "@chakra-ui/react";
+import "./performance-meter.css";
 import type { PerformanceSnapshot } from "@pstdio/sdk/extensions";
 import { Gauge, TriangleAlert } from "lucide-react";
 import { formatBytes, formatCpu, formatMs } from "../format";
@@ -6,6 +6,7 @@ import { type PerformanceHistory, performanceHistory } from "../performance-hist
 import { useTranslations } from "../translations";
 import { FrameRateBars, frameRateColor } from "./frame-rate-bars";
 import { MetricBars } from "./metric-bars";
+import { performanceColor } from "./performance-color";
 
 // The last 12 seconds of frame rate, as before, beside the last 12 seconds of backend replies.
 const RECENT_SECONDS = 12;
@@ -18,8 +19,8 @@ const BackendReadout = (props: { history: PerformanceHistory }) => {
   const latest = history.response.at(-1);
   const backend = history.backend.at(-1);
   return (
-    <HStack gap="xs" data-testid="performance-status-backend">
-      <Box w="8">
+    <span className="performance-meter-backend" data-testid="performance-status-backend">
+      <span className="performance-meter-response-bars">
         <MetricBars
           series={[
             history.response.map((point) => ({
@@ -31,25 +32,15 @@ const BackendReadout = (props: { history: PerformanceHistory }) => {
           count={RECENT_SAMPLES}
           height="performance-meter"
         />
-      </Box>
+      </span>
       {history.connection === "reconnecting" ? (
-        <Text textStyle="mono/XS" color="fg.warning" whiteSpace="nowrap">
-          {t("popover.reconnecting", "Reconnecting")}
-        </Text>
+        <span className="performance-meter-warning">{t("popover.reconnecting", "Reconnecting")}</span>
       ) : (
-        <Text textStyle="mono/XS" whiteSpace="nowrap">
-          {latest?.durationMs == null ? "– ms" : formatMs(latest.durationMs)}
-        </Text>
+        <span>{latest?.durationMs == null ? "– ms" : formatMs(latest.durationMs)}</span>
       )}
-      {backend?.cpuPercent == null ? null : (
-        <Text textStyle="mono/XS" whiteSpace="nowrap">{`CPU ${formatCpu(backend.cpuPercent)}`}</Text>
-      )}
-      {backend?.memoryBytes == null ? null : (
-        <Text textStyle="mono/XS" whiteSpace="nowrap">
-          {formatBytes(backend.memoryBytes)}
-        </Text>
-      )}
-    </HStack>
+      {backend?.cpuPercent == null ? null : <span>{`CPU ${formatCpu(backend.cpuPercent)}`}</span>}
+      {backend?.memoryBytes == null ? null : <span>{formatBytes(backend.memoryBytes)}</span>}
+    </span>
   );
 };
 
@@ -67,22 +58,19 @@ export const PerformanceMeter = (props: PerformanceMeterProps) => {
 
   return (
     // The host's status item owns focus and opening; the button only shows that the meter is clickable.
-    <Button
-      variant="ghost"
-      size="2xs"
+    <button
+      type="button"
+      className="performance-meter"
       tabIndex={-1}
-      h="100dvh"
-      gap="xs"
-      color="fg.muted"
       data-testid="performance-status-item"
       aria-label={t("popover.statusLabel", "Frame rate {{fps}} fps. Show performance details.", {
         fps: current ?? "–",
       })}
     >
       {sustained || history.connection === "reconnecting" ? (
-        <Box as="span" display="inline-flex" color="fg.warning">
+        <span className="performance-meter-warning">
           <TriangleAlert size={14} />
-        </Box>
+        </span>
       ) : (
         <Gauge size={14} />
       )}
@@ -93,19 +81,12 @@ export const PerformanceMeter = (props: PerformanceMeterProps) => {
         width="performance-bar"
         gap="performance-bar-gap"
       />
-      <Text
-        textStyle="mono/XS"
-        color={frameRateColor(current)}
-        data-testid="performance-status-fps"
-        whiteSpace="nowrap"
-      >
+      <span style={{ color: performanceColor(frameRateColor(current)) }} data-testid="performance-status-fps">
         {current === undefined ? "– fps" : `${current} fps`}
-      </Text>
-      {sustained ? (
-        <Text textStyle="mono/XS" color="fg.warning" whiteSpace="nowrap">{`CPU ${sustained.averageCpuPercent}%`}</Text>
-      ) : null}
+      </span>
+      {sustained ? <span className="performance-meter-warning">{`CPU ${sustained.averageCpuPercent}%`}</span> : null}
       {history.connection === "unavailable" ? null : <BackendReadout history={history} />}
-    </Button>
+    </button>
   );
 };
 
@@ -113,20 +94,16 @@ export const PerformanceMeter = (props: PerformanceMeterProps) => {
 export const PerformanceMeterOff = () => {
   const { t } = useTranslations();
   return (
-    <Button
-      variant="ghost"
-      size="2xs"
+    <button
+      type="button"
+      className="performance-meter"
       tabIndex={-1}
-      h="100dvh"
-      gap="xs"
-      color="fg.subtle"
+      data-monitoring="off"
       data-testid="performance-status-item"
       aria-label={t("meter.offLabel", "Performance monitoring is off. Show performance details.")}
     >
       <Gauge size={14} />
-      <Text textStyle="mono/XS" whiteSpace="nowrap">
-        {t("meter.off", "Off")}
-      </Text>
-    </Button>
+      <span>{t("meter.off", "Off")}</span>
+    </button>
   );
 };

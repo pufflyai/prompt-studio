@@ -1,0 +1,62 @@
+/* The host sends its resolved tokens before the webview renders. Reuse them
+   instead of constructing another Chakra system for this small status item. */
+.performance-meter {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--chakra-spacing-xs);
+  height: 100dvh;
+  min-width: 1.5rem;
+  padding-block: 0;
+  padding-inline: 0.375rem;
+  border: 0;
+  border-radius: var(--chakra-radii-xs);
+  background: transparent;
+  color: var(--chakra-colors-fg-muted);
+  font-family: var(--chakra-fonts-mono);
+  font-size: var(--chakra-font-sizes-xs);
+  font-weight: 400;
+  line-height: 150%;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.1s ease-in-out;
+}
+
+.performance-meter:hover {
+  background: var(--chakra-colors-bg-hover);
+}
+
+.performance-meter:active {
+  background: var(--chakra-colors-bg-active);
+}
+
+.performance-meter:focus-visible {
+  outline: 2px solid var(--chakra-colors-border-accent-light);
+  outline-offset: 2px;
+}
+
+.performance-meter[data-monitoring="off"] {
+  color: var(--chakra-colors-fg-subtle);
+}
+
+.performance-meter-backend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--chakra-spacing-xs);
+}
+
+.performance-meter-response-bars {
+  width: var(--chakra-sizes-8);
+}
+
+.performance-meter-warning {
+  display: inline-flex;
+  color: var(--chakra-colors-fg-warning);
+}
+
+.performance-meter svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}

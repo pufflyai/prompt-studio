@@ -1,4 +1,5 @@
-import { Box, HStack } from "@chakra-ui/react";
+import "./performance-bars.css";
+import { performanceColor } from "./performance-color";
 
 export interface MetricBar {
   value: number | null;
@@ -25,10 +26,14 @@ export const MetricBars = (props: MetricBarsProps) => {
     return [...Array<MetricBar | undefined>(count - recent.length).fill(undefined), ...recent];
   });
   return (
-    <HStack h={height} gap="3xs" alignItems="end" aria-hidden>
+    <span
+      className="performance-bars"
+      style={{ height: `var(--chakra-sizes-${height})`, gap: "var(--chakra-spacing-3xs)" }}
+      aria-hidden
+    >
       {Array.from({ length: count }, (_, column) => (
         // Columns are positional; a sample has no identity of its own here.
-        <HStack key={column} flex="1" h="full" gap="performance-bar-gap" alignItems="end">
+        <span key={column} className="performance-metric-column">
           {padded.map((bars, index) => {
             const bar = bars[column];
             let color = bar?.value === null || !bar ? "border" : colors[index];
@@ -38,11 +43,15 @@ export const MetricBars = (props: MetricBarsProps) => {
             else if (bar?.value != null) size = Math.max(8, (bar.value / max) * 100);
             return (
               // Series are positional too: the first is always the backend.
-              <Box key={index} flex="1" h={`${size}%`} bg={color} borderTopRadius="2xs" />
+              <span
+                key={index}
+                className="performance-bar"
+                style={{ flex: 1, height: `${size}%`, backgroundColor: performanceColor(color) }}
+              />
             );
           })}
-        </HStack>
+        </span>
       ))}
-    </HStack>
+    </span>
   );
 };
