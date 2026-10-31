@@ -72,7 +72,9 @@ test("warm attach restores the workbench within budget", async () => {
             "workbench.action.changeTheme",
           ),
         );
-        await page.getByRole("option", { name: theme === "pstdio-light" ? "Prompt Light" : "Prompt Dark", exact: true }).click();
+        await page
+          .getByRole("option", { name: theme === "pstdio-light" ? "Prompt Light" : "Prompt Dark", exact: true })
+          .click();
         await expect.poll(workbenchState).toMatchObject({ values: { "theme-preference": theme } });
         expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
         await waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent");
