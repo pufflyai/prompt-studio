@@ -1,5 +1,5 @@
-import { rmSync } from "node:fs";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { type APIRequestContext, type CDPSession, expect, type Page, test } from "@playwright/test";
 import { workbenchBudgets } from "pstdio-benchmarks";
 import { createPlannerAttempt, createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
@@ -14,6 +14,27 @@ import {
   resetInteraction,
   waitForTicketsView,
 } from "./perf-helpers";
+
+let profileSession: CDPSession;
+test.beforeEach(async ({ page }) => {
+  profileSession = await page.context().newCDPSession(page);
+  await profileSession.send("Profiler.enable");
+  await profileSession.send("Profiler.start");
+});
+test.afterEach(async ({ page }) => {
+  const { profile } = await profileSession.send("Profiler.stop");
+  for (const node of profile.nodes) {
+    node.callFrame.url = node.callFrame.url.split(/[?#]/)[0].split("/").at(-1) ?? "";
+  }
+  mkdirSync("test-results/profile", { recursive: true });
+  writeFileSync("test-results/profile/project-switch.json", JSON.stringify(profile));
+  const requests = await page.evaluate(() =>
+    performance.getEntriesByType("resource").filter((entry) => /\/extensions\/(ui|appearance)$/.test(new URL(entry.name).pathname))
+      .map((entry) => ({ path: new URL(entry.name).pathname, start: entry.startTime, duration: entry.duration })),
+  );
+  writeFileSync("test-results/profile/requests.json", JSON.stringify(requests));
+  await profileSession.detach();
+});
 
 interface ProjectFixture {
   id: string;
@@ -172,6 +193,8 @@ test("switches projects once and within budget", async ({ page, request }) => {
       await switchProject(projectA, cycle, "b-to-a");
     }
 
+    mkdirSync("test-results/profile", { recursive: true });
+    writeFileSync("test-results/profile/samples.json", JSON.stringify(samples));
     const aToB = samples.filter((sample) => sample.direction === "a-to-b").map((sample) => sample.duration);
     const bToA = samples.filter((sample) => sample.direction === "b-to-a").map((sample) => sample.duration);
     expect(aToB).toHaveLength(10);
