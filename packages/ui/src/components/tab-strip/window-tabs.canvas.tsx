@@ -1,5 +1,5 @@
 import { Box, IconButton } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { BookOpen, Columns3, Folder, PenTool, Plus } from "lucide-react";
 import { useState } from "react";
 import { type WindowTab, WindowTabs } from "./window-tabs";
@@ -49,7 +49,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WindowTabs>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SeveralTabs: Story = {
   id: "components-navigation-window-tabs--several-tabs",
   render: () => <Example />,

@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { FileText, Folder } from "lucide-react";
 import { useState } from "react";
 import { TreeList } from "./tree-list";
@@ -10,7 +10,7 @@ const meta: CanvasMeta<typeof TreeList> = {
   component: TreeList,
 };
 export default meta;
-type Story = CanvasVariant<typeof TreeList>;
+type Story = CanvasFrame<typeof TreeList>;
 const MovableFilesStory = () => {
   const [fileParent, setFileParent] = useState<"" | "docs">("");
   const [folderParent, setFolderParent] = useState<"" | "docs">("");

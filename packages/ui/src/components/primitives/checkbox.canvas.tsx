@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { Checkbox } from "@/components/primitives/checkbox";
 
@@ -15,7 +15,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof Checkbox>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Default: Story = {
   id: "components-inputs-checkbox--default",
 };

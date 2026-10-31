@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ConversationBrowse, type ConversationBrowseItem } from "./conversation-browse";
 
 const items: ConversationBrowseItem[] = [
@@ -36,7 +36,7 @@ const meta: CanvasMeta<typeof ConversationBrowse> = {
   component: ConversationBrowse,
 };
 export default meta;
-type Story = CanvasVariant<typeof ConversationBrowse>;
+type Story = CanvasFrame<typeof ConversationBrowse>;
 export const Gutter: Story = {
   id: "patterns-chat-conversation-browse--gutter",
   render: () => (

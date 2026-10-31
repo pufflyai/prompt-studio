@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { CollectionViewsSource } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
@@ -101,7 +101,7 @@ const meta: CanvasMeta<typeof HeaderStory> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof HeaderStory>;
+type Story = CanvasFrame<typeof HeaderStory>;
 export const SavedViews: Story = {
   id: "extensions-planner-timeline-header--saved-views",
 };

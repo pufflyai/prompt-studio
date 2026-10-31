@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp } from "./message-types";
@@ -177,7 +177,7 @@ const meta = { title: "Patterns/Chat/Queued conversation", component: QueueHost 
   typeof QueueHost
 >;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const InlineEditor: Story = {
   id: "patterns-chat-queued-conversation--inline-editor",
 };

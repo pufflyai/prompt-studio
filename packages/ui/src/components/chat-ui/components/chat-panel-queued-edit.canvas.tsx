@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp } from "./message-types";
@@ -38,12 +38,12 @@ const meta = { title: "Patterns/Chat/Queued follow-up edit", component: QueuedEd
   typeof QueuedEditHost
 >;
 export default meta;
-export const EditingSurface: CanvasVariant<typeof meta> = {
+export const EditingSurface: CanvasFrame<typeof meta> = {
   id: "patterns-chat-queued-follow-up-edit--editing-surface",
 };
-export const KeepDraftAfterQueuedEdit: CanvasVariant<typeof meta> = {
+export const KeepDraftAfterQueuedEdit: CanvasFrame<typeof meta> = {
   id: "patterns-chat-queued-follow-up-edit--keep-draft-after-queued-edit",
 };
-export const KeepMatchingDraftAfterQueuedEdit: CanvasVariant<typeof meta> = {
+export const KeepMatchingDraftAfterQueuedEdit: CanvasFrame<typeof meta> = {
   id: "patterns-chat-queued-follow-up-edit--keep-matching-draft-after-queued-edit",
 };

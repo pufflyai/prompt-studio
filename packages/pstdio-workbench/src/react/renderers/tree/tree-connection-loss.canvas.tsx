@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { PstdioConnectionError } from "@pstdio/sdk/client";
 import { useState } from "react";
 import { createWorkbench } from "../../../core";
@@ -81,7 +81,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof NavigationConnection>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const RetainNavigation: Story = {
   id: "pstdio-workbench-guides-navigation-connection-loss--retain-navigation",
 };

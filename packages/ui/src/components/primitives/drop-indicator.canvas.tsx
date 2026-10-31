@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DropIndicator } from "./drop-indicator";
 
 const meta = {
@@ -12,7 +12,7 @@ const meta = {
   ),
 } satisfies CanvasMeta<typeof DropIndicator>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Horizontal: Story = {
   id: "components-drop-indicator--horizontal",
   args: { orientation: "horizontal", bottom: "0" },

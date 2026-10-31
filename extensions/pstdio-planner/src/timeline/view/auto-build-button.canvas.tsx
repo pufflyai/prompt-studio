@@ -1,6 +1,24 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { type ComponentProps, useState } from "react";
 import { autoBuildStoryConfiguration } from "./auto-build.story-fixture";
 import { AutoBuildButton } from "./auto-build-button";
+
+// Pause, resume and stop change the example's own state, so each frame can be tried.
+const InteractiveAutoBuildButton = (props: ComponentProps<typeof AutoBuildButton>) => {
+  const [state, setState] = useState(props);
+  const update = (change: Partial<ComponentProps<typeof AutoBuildButton>>) => {
+    setState((current) => ({ ...current, ...change }));
+    return Promise.resolve(true);
+  };
+  return (
+    <AutoBuildButton
+      {...state}
+      onPause={() => update({ enabled: false, paused: true })}
+      onResume={() => update({ enabled: true, paused: false })}
+      onStop={() => update({ enabled: false, paused: false, running: 0, sessions: [], supervisor: null })}
+    />
+  );
+};
 
 const meta: CanvasMeta<typeof AutoBuildButton> = {
   title: "Extensions/Planner/Auto Build Status",
@@ -17,9 +35,10 @@ const meta: CanvasMeta<typeof AutoBuildButton> = {
     onOpenSession: () => {},
     t: (_key, fallback) => fallback ?? _key,
   },
+  render: (args) => <InteractiveAutoBuildButton {...args} />,
 };
 export default meta;
-type Story = CanvasVariant<typeof AutoBuildButton>;
+type Story = CanvasFrame<typeof AutoBuildButton>;
 export const Off: Story = {
   id: "extensions-planner-auto-build-status--off",
 };

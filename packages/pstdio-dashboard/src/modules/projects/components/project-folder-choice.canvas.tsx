@@ -1,5 +1,5 @@
 import { Dialog } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ProjectFolderChoice } from "./project-folder-choice";
 
 const meta = {
@@ -30,7 +30,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof ProjectFolderChoice>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 /** A recorded git remote makes cloning the default. */
 export const CloneRemote: Story = {
   id: "projects-project-folder--clone-remote",

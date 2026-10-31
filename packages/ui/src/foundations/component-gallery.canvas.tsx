@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { TokenEditorOverlay, TokenPreviewScope } from "@/components/internal/style-guide";
 import { useTokenEditorValues } from "@/components/internal/token-editor-state";
@@ -20,7 +20,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const TokenizedGallery = (props: { children: ReactNode }) => {
   const { children } = props;
   const { themePreference, themePreferences } = useThemePreference();

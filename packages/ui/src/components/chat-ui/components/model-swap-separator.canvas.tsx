@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ModelSwapSeparator } from "./model-swap-separator";
 
 const meta: CanvasMeta<typeof ModelSwapSeparator> = {
@@ -7,7 +7,7 @@ const meta: CanvasMeta<typeof ModelSwapSeparator> = {
   component: ModelSwapSeparator,
 };
 export default meta;
-type Story = CanvasVariant<typeof ModelSwapSeparator>;
+type Story = CanvasFrame<typeof ModelSwapSeparator>;
 export const Default: Story = {
   id: "patterns-chat-model-swap-separator--default",
   render: (args) => (

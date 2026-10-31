@@ -1,5 +1,5 @@
 import { Dialog, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { createWorkbench } from "@pstdio/workbench";
 import type { CommandParamEntry, CommandParamValue } from "@pstdio/workbench/react";
@@ -91,7 +91,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceParamPreview>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 // The dialog opens without a choice; the field commits the first type and its defaults.
 export const AllWorkspaceTypes: Story = {
   id: "commandparams-workspaceparamfield--all-workspace-types",

@@ -1,5 +1,5 @@
 import { Box, Button, Icon, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { ChatPanel } from "./chat-panel";
@@ -11,7 +11,7 @@ const meta: CanvasMeta<typeof ChatPanel> = {
   component: ChatPanel,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 const container = {
   w: "960px",
   maxW: "100%",

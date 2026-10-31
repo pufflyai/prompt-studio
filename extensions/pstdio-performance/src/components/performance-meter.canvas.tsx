@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { PerformanceMeter } from "./performance-meter";
 import {
   backendSnapshot,
@@ -22,7 +22,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof PerformanceMeter>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Backend: Story = { id: "extensions-performance-meter--backend" };
 export const Reconnecting: Story = {
   id: "extensions-performance-meter--reconnecting",

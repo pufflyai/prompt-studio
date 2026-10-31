@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { storyFields, storyOptions } from "./collection-view-story-fixtures";
@@ -11,7 +11,7 @@ const meta: CanvasMeta<typeof FilterMenu> = {
   component: FilterMenu,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const Picker = (props: { filter?: ViewFilterGroup }) => {
   const [filter, setFilter] = useState(props.filter ?? EMPTY_VIEW_FILTER);
   const [picked, setPicked] = useState<string>();

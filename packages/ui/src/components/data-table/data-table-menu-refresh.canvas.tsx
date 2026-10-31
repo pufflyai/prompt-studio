@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { DataTable } from "./data-table";
 
@@ -28,6 +28,6 @@ export default {
   title: "Components/Data Display/Data Table/Menu refresh",
   component: RefreshingRowMenu,
 } satisfies CanvasMeta<typeof RefreshingRowMenu>;
-export const KeepsOpenDuringRefresh: CanvasVariant<typeof RefreshingRowMenu> = {
+export const KeepsOpenDuringRefresh: CanvasFrame<typeof RefreshingRowMenu> = {
   id: "components-data-display-data-table-menu-refresh--keeps-open-during-refresh",
 };

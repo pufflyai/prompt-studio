@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -91,7 +91,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ProgressiveSettings>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const IndependentCollections: Story = {
   id: "pstdio-workbench-reference-core-api-settings-progressive-loading--independent-collections",
 };

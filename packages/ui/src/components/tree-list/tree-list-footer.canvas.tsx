@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TreeList } from "./tree-list";
 
 const meta = {
@@ -7,7 +7,7 @@ const meta = {
   component: TreeList,
 } satisfies CanvasMeta<typeof TreeList>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const PinnedFooter: Story = {
   id: "components-data-display-tree-list-footer--pinned-footer",
   args: {

@@ -1,5 +1,5 @@
 import { Button, HStack, Input, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatInput } from "./chat-input";
@@ -47,7 +47,7 @@ const meta: CanvasMeta<typeof DelayedEnableComposer> = {
   component: DelayedEnableComposer,
 };
 export default meta;
-type Story = CanvasVariant<typeof DelayedEnableComposer>;
+type Story = CanvasFrame<typeof DelayedEnableComposer>;
 export const RestoresFocus: Story = {
   id: "patterns-chat-chat-input-delayed-enable--restores-focus",
   render: () => <DelayedEnableComposer />,

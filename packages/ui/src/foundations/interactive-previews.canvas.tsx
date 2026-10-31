@@ -1,8 +1,11 @@
-import { Box, Dialog, Field, Flex, Input, Link, Popover, Portal, Stack, Text } from "@chakra-ui/react";
-import { Checkbox, ScrollArea, Switch } from "@pstdio/ui";
+import { Box, Button, Dialog, Field, Flex, Input, Link, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { Button } from "../components/themed-primitives";
-import { controlsScrollViewportHeight } from "./preview-dimensions";
+import { Checkbox, ScrollArea, Switch } from "@/components/primitives";
+
+// This is the component viewport being demonstrated, not the surrounding documentation panel.
+const controlsScrollViewportHeight = 180;
+
+export default { title: "Design System/Interactive previews" };
 
 export const ProjectForm = () => {
   const [name, setName] = useState("My workspace");

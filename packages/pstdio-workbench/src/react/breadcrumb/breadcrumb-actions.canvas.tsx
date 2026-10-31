@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useRef, useState } from "react";
 import { createWorkbench } from "../../core";
 import { runResourceMutation } from "../../extensions/host/workbench-resource-mutation";
@@ -220,7 +220,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof NoteBreadcrumb>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SelectedNote: Story = {
   id: "pstdio-workbench-guides-breadcrumb-resource-actions--selected-note",
 };

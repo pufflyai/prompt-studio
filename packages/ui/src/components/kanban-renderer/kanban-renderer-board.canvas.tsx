@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Archive, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
@@ -8,7 +8,7 @@ const meta: CanvasMeta = {
   title: "Patterns/Kanban Renderer/Board",
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const runAttempt = () => {};
 const mockColumns: KanbanRendererBoardColumn[] = [
   {

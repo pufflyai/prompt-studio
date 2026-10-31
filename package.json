@@ -48,6 +48,7 @@
     "changeset": "changeset",
     "release": "bun run build && changeset publish",
     "dev:relay": "bun scripts/dev/relay-local.ts",
+    "canvas": "pstdio-canvas watch",
     "test:canvas": "bun run --cwd packages/canvas-tests test",
     "test:p0": "bun scripts/ci/run-priority-tests.ts p0",
     "test:p1": "bun scripts/ci/run-priority-tests.ts p1",
