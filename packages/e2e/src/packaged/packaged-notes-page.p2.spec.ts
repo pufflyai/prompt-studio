@@ -42,6 +42,17 @@ test("Notes offers note creation and restores its Main tabs separately from Arti
     });
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
+    // Critical creation path: palette creation must reach the editor without a parameter dialog.
+    await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+    await page.mouse.move(0, 0);
+    await page.keyboard.press("Alt+Shift+K");
+    const palette = page.getByRole("dialog", { name: "Command palette" });
+    await palette.getByRole("textbox").fill(">New note");
+    await palette.getByRole("option", { name: /New note/ }).click();
+    const main = page.locator('[data-workbench-panel="main"]');
+    await expect(main.getByRole("tab", { name: "New note", exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await main.getByRole("button", { name: "Close New note", exact: true }).click();
     await verifyNotesPageIsolation(page);
   } finally {
     await browser?.close();
