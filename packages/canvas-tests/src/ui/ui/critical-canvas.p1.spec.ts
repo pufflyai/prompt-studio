@@ -52,7 +52,9 @@ test("the populated camera workload retains 24 previews and batches saves", asyn
     });
   });
   try {
-    const surface = await openSurface(page, "populated", 8_000);
+    // Raised from 8,000 ms with the person's approval on 2026-10-31: package-built frames load more
+    // modules each (9.0–9.4 s for all 24 at 4x CPU throttling). PS-997 restores faster loading.
+    const surface = await openSurface(page, "populated", 12_000);
     await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(24);
     const maximum = Number(await surface.locator("html").getAttribute("data-canvas-startup-maximum"));
     expect(maximum).toBeGreaterThan(0);
