@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { FileIconThemePreferenceProvider } from "@pstdio/ui";
 import type { ProjectSkillDetails } from "../data/skills-api";
 import { SkillViewerContent } from "./skill-viewer";
@@ -6,7 +6,7 @@ import { SkillViewerContent } from "./skill-viewer";
 const meta: CanvasMeta<typeof SkillViewerContent> = {
   title: "ProjectSettings/SkillViewer",
   component: SkillViewerContent,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <FileIconThemePreferenceProvider>
@@ -18,7 +18,7 @@ const meta: CanvasMeta<typeof SkillViewerContent> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof SkillViewerContent>;
+type Story = CanvasFrame<typeof SkillViewerContent>;
 const baseSkill: ProjectSkillDetails = {
   deleted_at: null,
   id: "skill-1",

@@ -1,9 +1,9 @@
 import { IconButton, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { getWorkbenchRenderers } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
-import { createArrangementWorkbench } from "./panel-arrangement.canvas";
+import { createArrangementWorkbench } from "./panel-arrangement-workbench";
 
 const createPlacementWorkbench = (embeddedNavigation = false) => {
   const w = createArrangementWorkbench();
@@ -57,10 +57,10 @@ const PlacementStory = (props: {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Whole panel placement",
   component: PlacementStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof PlacementStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Interactive: Story = {
   id: "pstdio-workbench-reference-core-api-whole-panel-placement--interactive",
 };

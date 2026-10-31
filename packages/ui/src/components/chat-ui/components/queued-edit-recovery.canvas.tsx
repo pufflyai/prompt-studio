@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp } from "./message-types";
@@ -77,7 +77,7 @@ const meta = { title: "Patterns/Chat/Queued edit recovery", component: RecoveryH
   typeof RecoveryHost
 >;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const EmptyDraft: Story = {
   id: "patterns-chat-queued-edit-recovery--empty-draft",
 };

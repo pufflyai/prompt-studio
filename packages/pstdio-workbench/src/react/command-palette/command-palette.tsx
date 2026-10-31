@@ -185,19 +185,27 @@ export const createWorkbenchCommandPaletteEntries = (input: {
 export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   const { workbench, open, onClose } = props;
   const request = useWorkbenchStore(workbench.commandPalette.store, (state) => state.resourceSearch);
-  if (request && open) return <WorkbenchResourceSearch workbench={workbench} request={request} onClose={onClose} />;
-  return <WorkbenchMainCommandPalette {...props} />;
+  const { previewThemePreference } = useThemePreference();
+  useEffect(() => {
+    if (!open) previewThemePreference(null);
+  }, [open, previewThemePreference]);
+  let palette: ReactNode = null;
+  if (open)
+    palette = request ? (
+      <WorkbenchResourceSearch workbench={workbench} request={request} onClose={onClose} />
+    ) : (
+      <WorkbenchMainCommandPalette {...props} />
+    );
+  return (
+    <>
+      {palette}
+      <PaletteParamsDialog workbench={workbench} renderParamField={props.renderParamField} />
+    </>
+  );
 };
 
 const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
-  const {
-    workbench,
-    open,
-    menuPath = workbenchCommandPaletteMenuPath,
-    initialQuery = "",
-    renderParamField,
-    onClose,
-  } = props;
+  const { workbench, open, menuPath = workbenchCommandPaletteMenuPath, initialQuery = "", onClose } = props;
   const { chosenThemePreference, themePreferences, setThemePreference, previewThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
   const { hints } = useShortcutCatalog(workbench);
@@ -270,48 +278,45 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   }, [isThemeView, open, previewThemePreference]);
 
   return (
-    <>
-      <WorkbenchPaletteSurface>
-        <Palette
-          open={open}
-          entries={entries}
-          initialQuery={initialQuery}
-          initialActiveIndex={initialActiveIndex}
-          mode={activeViewMode}
-          modes={activeViewModes}
-          resetKey={`${requestId}:${view}:${initialQuery}`}
-          inputIcon={({ mode }) => getPaletteInputIcon({ view, mode })}
-          placeholder={({ mode }) => getPalettePlaceholder({ view, mode })}
-          emptyLabel="No results found."
-          footerStart={<WorkbenchActionErrors workbench={workbench} target="command-palette" />}
-          onActiveEntryChange={(entry) => {
-            if (!open || !isThemeView) return;
-            const themeEntry = entry as WorkbenchThemePaletteEntry | null;
-            if (!themeEntry?.themePreference) return;
-            previewThemePreference(
-              themeEntry.themePreference === chosenThemePreference ? null : themeEntry.themePreference,
-            );
-          }}
-          onQueryChange={setLiveQuery}
-          onClose={closePalette}
-          onEscape={(ctx) => {
-            if (isThemePaletteView(view)) {
-              exitPickerView();
-              return true;
-            }
-
-            if (ctx.query.length > 0) {
-              ctx.setQuery("");
-              ctx.setActiveIndex(0);
-              return true;
-            }
-
-            closePalette();
+    <WorkbenchPaletteSurface>
+      <Palette
+        open={open}
+        entries={entries}
+        initialQuery={initialQuery}
+        initialActiveIndex={initialActiveIndex}
+        mode={activeViewMode}
+        modes={activeViewModes}
+        resetKey={`${requestId}:${view}:${initialQuery}`}
+        inputIcon={({ mode }) => getPaletteInputIcon({ view, mode })}
+        placeholder={({ mode }) => getPalettePlaceholder({ view, mode })}
+        emptyLabel="No results found."
+        footerStart={<WorkbenchActionErrors workbench={workbench} target="command-palette" />}
+        onActiveEntryChange={(entry) => {
+          if (!open || !isThemeView) return;
+          const themeEntry = entry as WorkbenchThemePaletteEntry | null;
+          if (!themeEntry?.themePreference) return;
+          previewThemePreference(
+            themeEntry.themePreference === chosenThemePreference ? null : themeEntry.themePreference,
+          );
+        }}
+        onQueryChange={setLiveQuery}
+        onClose={closePalette}
+        onEscape={(ctx) => {
+          if (isThemePaletteView(view)) {
+            exitPickerView();
             return true;
-          }}
-        />
-      </WorkbenchPaletteSurface>
-      <PaletteParamsDialog workbench={workbench} renderParamField={renderParamField} />
-    </>
+          }
+
+          if (ctx.query.length > 0) {
+            ctx.setQuery("");
+            ctx.setActiveIndex(0);
+            return true;
+          }
+
+          closePalette();
+          return true;
+        }}
+      />
+    </WorkbenchPaletteSurface>
   );
 };

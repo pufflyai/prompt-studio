@@ -1,5 +1,7 @@
-import { Button, Icon as ChakraIcon, Flex, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, Icon as ChakraIcon, Flex, IconButton, Stack, Text } from "@chakra-ui/react";
 import { X } from "lucide-react";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { ListRow } from "../list-row/list-row";
 import type { DataTableSelectionAction, RowData } from "./types";
 

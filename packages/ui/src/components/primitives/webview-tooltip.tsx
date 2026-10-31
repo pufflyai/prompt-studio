@@ -18,7 +18,9 @@ export const WebviewTooltip = (props: {
   const id = useId();
   const onError = useWebviewOverlayError();
   const report = useRef(onError);
-  report.current = onError;
+  useEffect(() => {
+    report.current = onError;
+  });
   useEffect(() => {
     if (!api.open) return;
     const trigger = document.getElementById(triggerId);

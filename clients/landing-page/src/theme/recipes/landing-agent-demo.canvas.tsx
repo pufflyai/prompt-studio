@@ -1,5 +1,5 @@
 import { Box, Button, Code, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { SessionIndicator } from "@pstdio/ui";
 import { KanbanRendererBoard } from "@pstdio/ui/kanban-renderer";
 import { Check, CircleDashed } from "lucide-react";
@@ -106,10 +106,10 @@ const AgentDemo = () => {
 const meta = {
   title: "Theme/Landing Agent Demo",
   component: AgentDemo,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof AgentDemo>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Desktop: Story = {
   id: "theme-landing-agent-demo--desktop",
 };

@@ -81,7 +81,7 @@ export const ItemFrame = (props: ItemProps) => {
             {item.name}
           </Button>
         </Tooltip>
-        <FrameThemePicker id={item.id} name={item.name} runtime={runtime} />
+        <FrameThemePicker item={selectedItem} runtime={runtime} />
         {variant && <FrameVariantPicker item={item} selected={variant} onSelect={setVariantId} />}
         <Text role="status" aria-live="polite" textStyle="label/XS" color="fg.muted">
           {feedback}
@@ -103,7 +103,7 @@ export const ItemFrame = (props: ItemProps) => {
         data-canvas-preview={item.id}
       >
         <Box inert={!selected} pointerEvents={selected ? "auto" : "none"}>
-          <FramePreview key={variantId} item={selectedItem} runtime={runtime} />
+          <FramePreview key={variantId} item={selectedItem} runtime={runtime} container={wrapper} selected={selected} />
         </Box>
         {!selected && (
           <Button

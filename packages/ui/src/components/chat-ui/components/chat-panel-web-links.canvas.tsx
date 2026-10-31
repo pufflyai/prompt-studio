@@ -1,5 +1,5 @@
 import { Button, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { RichMessage } from "@/components/rich-text/rich-message/rich-message";
 import type { ChatLinkHandler } from "../links/chat-link";
@@ -26,11 +26,10 @@ const linkHandler: ChatLinkHandler = { resolveHref: () => null, resolveIcon, ope
 const meta = {
   title: "Chat/ChatPanel/Web links",
   component: RichMessage,
-  parameters: { layout: "padded" },
   args: { defaultState: MESSAGE, linkHandler },
 } satisfies CanvasMeta<typeof RichMessage>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SiteIcons: Story = {
   id: "chat-chatpanel-web-links--site-icons",
 };

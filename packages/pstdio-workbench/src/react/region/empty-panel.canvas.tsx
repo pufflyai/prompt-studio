@@ -1,5 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -57,7 +57,7 @@ const createEmptyWorkbench = (pageEntries = false) => {
         }))
       : [],
   });
-  workbench.pageLocations.setProject("storybook-empty-panels");
+  workbench.pageLocations.setProject("preview-empty-panels");
   workbench.pageLocations.navigate({ kind: "page", page });
   workbench.shell.setSidePanelPresentation("attached");
   workbench.shell.setRegionOpen("secondary", true);
@@ -66,10 +66,10 @@ const createEmptyWorkbench = (pageEntries = false) => {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Empty panel",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const AvailableTabs: Story = {
   id: "pstdio-workbench-reference-core-api-empty-panel--available-tabs",
   args: { workbench: createEmptyWorkbench() },
@@ -149,7 +149,6 @@ export const SelectingMode: Story = {
 };
 export const TabsDisabled: Story = {
   id: "pstdio-workbench-reference-core-api-empty-panel--tabs-disabled",
-  tags: ["panel-placeholder-policy"],
   args: {
     workbench: (() => {
       const workbench = createEmptyWorkbench();

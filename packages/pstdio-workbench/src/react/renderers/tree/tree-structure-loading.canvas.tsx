@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
@@ -40,7 +40,7 @@ const StructureLoading = () => {
     workbench.modes.registerMode({ id: "project", activate() {} });
     workbench.pages.registerPage({
       id: "ticket",
-      ref: { kind: "page", id: "ticket", extensionId: "storybook" },
+      ref: { kind: "page", id: "ticket", extensionId: "preview" },
       title: "Ticket",
       path: "ticket",
       modeId: "project",
@@ -57,7 +57,7 @@ const StructureLoading = () => {
       },
     });
     workbench.pageLocations.setProject("project");
-    workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id: "ticket", extensionId: "storybook" } });
+    workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id: "ticket", extensionId: "preview" } });
     return workbench;
   });
   return <WorkbenchStory workbench={workbench} />;
@@ -65,10 +65,10 @@ const StructureLoading = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Structure before contents",
   component: StructureLoading,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof StructureLoading>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const PendingContents: Story = {
   id: "pstdio-workbench-guides-structure-before-contents--pending-contents",
 };
@@ -110,6 +110,5 @@ const GroupMenuDuringLoading = () => {
 };
 export const GroupMenuWhileContentsArrive: Story = {
   id: "pstdio-workbench-guides-structure-before-contents--group-menu-while-contents-arrive",
-  tags: ["!manifest"],
   render: () => <GroupMenuDuringLoading />,
 };

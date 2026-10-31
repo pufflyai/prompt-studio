@@ -1,5 +1,5 @@
-import { Badge, Box, Button, HStack, Icon, IconButton, Input, Menu, Portal, Stack, Text } from "@chakra-ui/react";
-import { ScrollArea, Switch } from "@pstdio/ui";
+import { Badge, Box, Button, HStack, Icon, IconButton, Input, Stack, Text } from "@chakra-ui/react";
+import { ScopedMenu as Menu, Portal, ScrollArea, Switch } from "@pstdio/ui";
 import type {
   AttributeDescriptor,
   AttributeKind,

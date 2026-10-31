@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Ellipsis } from "lucide-react";
 import { useRef, useState } from "react";
 import { TreeList } from "./tree-list";
@@ -50,12 +50,11 @@ const MotionTree = (props: { draggable?: boolean; virtualize?: boolean }) => {
   );
 };
 const meta = {
-  tags: ["motion"],
   title: "Components/Tree List/Motion",
   component: MotionTree,
 } satisfies CanvasMeta<typeof MotionTree>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const NestedGroups: Story = {
   id: "components-tree-list-motion--nested-groups",
 };
@@ -70,6 +69,5 @@ export const InstantVirtual: Story = {
 };
 export const SortableKeyboard: Story = {
   id: "components-tree-list-motion--sortable-keyboard",
-  tags: ["!manifest"],
   args: { draggable: true },
 };

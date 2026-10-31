@@ -1,5 +1,5 @@
 import { Box, Flex, Icon, IconButton, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Bot, GitBranch, MoreHorizontal, PanelLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { Header } from "@/components/layout/header";
@@ -39,7 +39,7 @@ const PanelCard = (props: PanelCardProps) => {
 const meta = {
   title: "Components/Layout/Resizable Split Layout",
   component: ResizableSplitLayout,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: {
     resizablePanel: (
       <PanelCard title="Sidenav" description="Drag the grip. Double-click or press Home to collapse." bg="bg.subtle" />
@@ -61,7 +61,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof ResizableSplitLayout>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const LeftPanel: Story = {
   id: "components-layout-resizable-split-layout--left-panel",
 };
@@ -83,18 +83,13 @@ export const NotCollapsible: Story = {
 };
 export const CollapsedFrameStaysFixed: Story = {
   id: "components-layout-resizable-split-layout--collapsed-frame-stays-fixed",
-  tags: ["!manifest", "split-frame-scroll"],
   args: { collapsed: true, resizableSide: "right", p: "0" },
   render: (args) => <ResizableSplitLayout {...args} data-testid="split-frame" />,
 };
 export const ResponsivePanels: Story = {
   id: "components-layout-resizable-split-layout--responsive-panels",
   args: { layout: { base: "stacked", lg: "split" }, collapsible: false },
-  parameters: {
-    docs: {
-      description: { story: "Stack panels below the large breakpoint. CSS selects the layout before hydration." },
-    },
-  },
+  description: "Stack panels below the large breakpoint. CSS selects the layout before hydration.",
 };
 export const ContentFirstOnMobile: Story = {
   id: "components-layout-resizable-split-layout--content-first-on-mobile",
@@ -103,11 +98,7 @@ export const ContentFirstOnMobile: Story = {
 export const ResponsiveNavigation: Story = {
   id: "components-layout-resizable-split-layout--responsive-navigation",
   args: { layout: { base: "content", lg: "split" }, collapsible: false },
-  parameters: {
-    docs: {
-      description: { story: "Hide the resizable navigation panel on small screens while keeping content mounted." },
-    },
-  },
+  description: "Hide the resizable navigation panel on small screens while keeping content mounted.",
 };
 const ActivityRail = () => (
   <Flex as="nav" direction="column" align="center" flexShrink={0} w="3.5rem" py="xs" gap="2xs">

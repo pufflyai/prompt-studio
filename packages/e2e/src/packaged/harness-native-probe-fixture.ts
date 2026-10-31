@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 /** Match the upstream Windows npm layout so a private fallback cannot bypass the probe fixture. */
 export const installNativeProbeFixture = async (prefix: string, command: string, script: string) => {
   if (command === "pi") {
-    const entry = join(prefix, "node_modules", "@mariozechner", "pi-coding-agent", "dist", "cli.js");
+    const entry = join(prefix, "node_modules", "@earendil-works", "pi-coding-agent", "dist", "cli.js");
     mkdirSync(dirname(entry), { recursive: true });
     copyFileSync(script, entry);
     return;

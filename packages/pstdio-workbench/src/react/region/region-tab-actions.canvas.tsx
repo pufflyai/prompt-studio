@@ -1,5 +1,5 @@
 import { Button, Input, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useId, useState } from "react";
 import { createWorkbench, resourceContextMenuPath } from "../../core";
 import { PaletteParamsDialog } from "../command-palette/palette-params-dialog";
@@ -78,7 +78,6 @@ const NoteTabActions = () => {
 const meta = {
   title: "pstdio-workbench/Guides/Tab actions",
   component: NoteTabActions,
-  tags: ["!manifest"],
   decorators: [
     (Story) => (
       <WorkbenchThemeProvider>
@@ -88,6 +87,6 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof NoteTabActions>;
 export default meta;
-export const EditableTitleAndBoundResource: CanvasVariant<typeof meta> = {
+export const EditableTitleAndBoundResource: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-tab-actions--editable-title-and-bound-resource",
 };

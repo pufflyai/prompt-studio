@@ -1,6 +1,8 @@
-import { Button, Flex, Icon, IconButton, Menu, Portal } from "@chakra-ui/react";
+import { Button, Flex, Icon, IconButton } from "@chakra-ui/react";
 import { Check, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { ListRow } from "../../list-row/list-row";
 import { filterSearchableMenuItems, SearchableMenu, type SearchableMenuItem } from "../../overlays/searchable-menu";
 import { getIconComponent } from "../../primitives";

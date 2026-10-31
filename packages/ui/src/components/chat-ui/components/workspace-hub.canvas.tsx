@@ -1,17 +1,14 @@
 import { Button, IconButton, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const meta: CanvasMeta<typeof ChatWorkspaceHub> = {
   title: "Patterns/Chat/Workspace Hub",
   component: ChatWorkspaceHub,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatWorkspaceHub>;
+type Story = CanvasFrame<typeof ChatWorkspaceHub>;
 const workspaceControl = (
   <Button size="xs" variant="ghost" px="2xs">
     <GitBranch size={14} />

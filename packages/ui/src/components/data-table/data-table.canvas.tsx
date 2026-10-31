@@ -8,7 +8,7 @@ import {
   rowActions,
   selectionActions,
   singleValueRows,
-  withStoryPage,
+  storyPage,
 } from "./data-table-story";
 import {
   EditableSelectableRowsStory,
@@ -21,23 +21,24 @@ import {
 const meta = {
   title: "Components/Data Display/Data Table",
   component: DataTable,
-  decorators: [withStoryPage],
   args: {
     data: tableRows,
     hiddenColumns: ["id"],
     columnIcons,
-    toolbarStorageKey: "storybook-data-table-default",
+    toolbarStorageKey: "preview-data-table-default",
   },
 };
 export default meta;
 export const Default = {
   id: "components-data-display-data-table--default",
+  decorators: [storyPage()],
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="960px" height="420px" marginX="auto" />;
   },
 };
 export const ColumnStats = {
   id: "components-data-display-data-table--column-stats",
+  decorators: [storyPage()],
   args: {
     data: generateTableRows(96),
     initialPageSize: 50,
@@ -47,7 +48,7 @@ export const ColumnStats = {
       Status: { type: "top-values", limit: 2 },
       Region: { type: "top-values", limit: 2 },
     },
-    toolbarStorageKey: "storybook-data-table-column-stats",
+    toolbarStorageKey: "preview-data-table-column-stats",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
@@ -55,6 +56,7 @@ export const ColumnStats = {
 };
 export const SingleValueStats = {
   id: "components-data-display-data-table--single-value-stats",
+  decorators: [storyPage()],
   args: {
     data: singleValueRows,
     initialPageSize: 20,
@@ -62,7 +64,7 @@ export const SingleValueStats = {
       Amount: { type: "histogram", bins: 8 },
       Status: { type: "top-values", limit: 3 },
     },
-    toolbarStorageKey: "storybook-data-table-single-value-stats",
+    toolbarStorageKey: "preview-data-table-single-value-stats",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
@@ -70,10 +72,11 @@ export const SingleValueStats = {
 };
 export const ColumnDescriptions = {
   id: "components-data-display-data-table--column-descriptions",
+  decorators: [storyPage()],
   args: {
     data: generateTableRows(24),
     columnDescriptions,
-    toolbarStorageKey: "storybook-data-table-column-descriptions",
+    toolbarStorageKey: "preview-data-table-column-descriptions",
   },
   render: (args: DataTableProps) => (
     <DataTableStoryContainer args={args} maxWidth="1080px" height="480px" marginX="auto" />
@@ -81,13 +84,10 @@ export const ColumnDescriptions = {
 };
 export const FullHeight = {
   id: "components-data-display-data-table--full-height",
+  decorators: [storyPage(0, "100vh")],
   args: {
     data: thousandTableRows,
-    toolbarStorageKey: "storybook-data-table-full-height",
-  },
-  parameters: {
-    pagePadding: 0,
-    pageHeight: "100vh",
+    toolbarStorageKey: "preview-data-table-full-height",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} height="100%" />;
@@ -95,12 +95,13 @@ export const FullHeight = {
 };
 export const Paginated = {
   id: "components-data-display-data-table--paginated",
+  decorators: [storyPage()],
   args: {
     data: generateTableRows(96),
     initialPageSize: 10,
     pageSizeOptions: [10, 20, 50],
     compactHeaders,
-    toolbarStorageKey: "storybook-data-table-paginated",
+    toolbarStorageKey: "preview-data-table-paginated",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
@@ -108,13 +109,14 @@ export const Paginated = {
 };
 export const SelectableRows = {
   id: "components-data-display-data-table--selectable-rows",
+  decorators: [storyPage()],
   args: {
     data: generateTableRows(48),
     initialPageSize: 10,
     selectionMode: "multiple",
     selectionActions,
     compactHeaders,
-    toolbarStorageKey: "storybook-data-table-selectable-rows",
+    toolbarStorageKey: "preview-data-table-selectable-rows",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
@@ -122,12 +124,13 @@ export const SelectableRows = {
 };
 export const RowActions = {
   id: "components-data-display-data-table--row-actions",
+  decorators: [storyPage()],
   args: {
     data: generateTableRows(36),
     initialPageSize: 10,
     rowActions,
     compactHeaders,
-    toolbarStorageKey: "storybook-data-table-row-actions",
+    toolbarStorageKey: "preview-data-table-row-actions",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
@@ -135,6 +138,7 @@ export const RowActions = {
 };
 export const DynamicRowActions = {
   id: "components-data-display-data-table--dynamic-row-actions",
+  decorators: [storyPage()],
   args: {
     data: [
       { Invoice: "INV-001", Status: "Open" },
@@ -142,7 +146,7 @@ export const DynamicRowActions = {
     ],
     getRowActions: (row: RowData) => (row.Status === "Archived" ? [] : rowActions),
     compactHeaders,
-    toolbarStorageKey: "storybook-data-table-dynamic-row-actions",
+    toolbarStorageKey: "preview-data-table-dynamic-row-actions",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
@@ -150,12 +154,13 @@ export const DynamicRowActions = {
 };
 export const RowActivation = {
   id: "components-data-display-data-table--row-activation",
+  decorators: [storyPage()],
   args: {
     data: generateTableRows(36),
     initialPageSize: 10,
     compactHeaders,
     enableRowActivation: true,
-    toolbarStorageKey: "storybook-data-table-row-activation",
+    toolbarStorageKey: "preview-data-table-row-activation",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
@@ -163,26 +168,32 @@ export const RowActivation = {
 };
 export const EditMode = {
   id: "components-data-display-data-table--edit-mode",
+  decorators: [storyPage()],
   render: () => <EditModeStory />,
 };
 export const RichTextEditMode = {
   id: "components-data-display-data-table--rich-text-edit-mode",
+  decorators: [storyPage()],
   render: () => <RichTextEditModeStory />,
 };
 export const ModeToggle = {
   id: "components-data-display-data-table--mode-toggle",
+  decorators: [storyPage()],
   render: () => <ModeToggleStory />,
 };
 export const EditableSelectableRows = {
   id: "components-data-display-data-table--editable-selectable-rows",
+  decorators: [storyPage()],
   render: () => <EditableSelectableRowsStory />,
 };
 export const EditableWithViews = {
   id: "components-data-display-data-table--editable-with-views",
+  decorators: [storyPage()],
   render: () => <EditableWithViewsStory />,
 };
 export const TagRichRows = {
   id: "components-data-display-data-table--tag-rich-rows",
+  decorators: [storyPage()],
   args: {
     data: generateTableRows(48),
     initialPageSize: 10,
@@ -191,7 +202,7 @@ export const TagRichRows = {
     selectionActions,
     rowActions,
     compactHeaders,
-    toolbarStorageKey: "storybook-data-table-tag-rich-rows",
+    toolbarStorageKey: "preview-data-table-tag-rich-rows",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
@@ -199,6 +210,7 @@ export const TagRichRows = {
 };
 export const ColumnManagement = {
   id: "components-data-display-data-table--column-management",
+  decorators: [storyPage()],
   args: {
     data: columnManagementRows,
     initialPageSize: 10,
@@ -207,7 +219,7 @@ export const ColumnManagement = {
     selectionActions,
     rowActions,
     compactHeaders,
-    toolbarStorageKey: "storybook-data-table-column-management",
+    toolbarStorageKey: "preview-data-table-column-management",
   },
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;

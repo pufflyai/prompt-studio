@@ -1,5 +1,5 @@
 import { Box, Button, Icon, IconButton, Input, Stack, Tabs, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Minus, MoreHorizontal, Plus, SquareArrowOutUpRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { Header, type HeaderVariant } from "@/components/layout/header";
@@ -17,7 +17,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof Header>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const variants: HeaderVariant[] = ["main", "narrow", "input"];
 export const Variants: Story = {
   id: "components-navigation-header--variants",

@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import { SessionHarnessUnavailable } from "./session-harness-unavailable";
 
@@ -7,7 +7,6 @@ const meta = {
   title: "Modules/Sessions/Harness Unavailable",
   component: SessionHarnessUnavailable,
   args: { onReviewExtensions: () => {} },
-  parameters: { layout: "padded" },
   render: (args) => (
     <Box h="lg">
       <ChatPanel
@@ -33,13 +32,12 @@ const meta = {
   ),
 } satisfies CanvasMeta<typeof SessionHarnessUnavailable>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const NoHarnessAvailable: Story = {
   id: "modules-sessions-harness-unavailable--no-harness-available",
 };
 export const Dark: Story = {
   id: "modules-sessions-harness-unavailable--dark",
-  globals: { theme: "pstdio-dark" },
 };
 export const Narrow: Story = {
   id: "modules-sessions-harness-unavailable--narrow",

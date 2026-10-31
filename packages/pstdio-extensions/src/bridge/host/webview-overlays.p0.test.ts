@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { WebviewOverlayRequest } from "pstdio-api-contracts/extension-kernel";
 import { createHostCapabilityGate } from "../contract";
+import { capabilityReply } from "./capability-reply";
 import { createWebviewOverlayController, webviewOverlayAnchor } from "./webview-overlays";
 
 const menu = {
@@ -16,6 +17,15 @@ const menu = {
     ],
   },
 } as const;
+
+test("invalid overlay anchors return the capability validation error", async () => {
+  const overlays = createWebviewOverlayController(() => {});
+  const reply = await capabilityReply(() => overlays.call({ ...menu, anchor: { ...menu.anchor, width: 0 } }));
+  expect(reply).toMatchObject({
+    ok: false,
+    error: { code: "invalid_params", data: { capability: "overlays", issues: [{ path: ["anchor", "width"] }] } },
+  });
+});
 
 test("a host menu returns only enabled actions and follows its source anchor", async () => {
   let current: WebviewOverlayRequest | undefined;

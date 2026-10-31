@@ -15,7 +15,7 @@ const preferencesWidgetId = "preferences.schemas";
 const densityPreferenceName = "preferences.example.editorDensity";
 const defaultRegionPreferenceName = "preferences.example.defaultOpenRegion";
 const userScope = { scope: "user" } satisfies PreferenceScopeRef;
-const projectScope = { scope: "project", scopeId: "storybook-project" } satisfies PreferenceScopeRef;
+const projectScope = { scope: "project", scopeId: "preview-project" } satisfies PreferenceScopeRef;
 const preferenceNames = [densityPreferenceName, defaultRegionPreferenceName] as const;
 const preferenceSchema = {
   properties: {

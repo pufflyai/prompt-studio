@@ -11,7 +11,7 @@ import {
 } from "pstdio-diagnostics";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import type { PackagedRuntimeObservation } from "../packaged/packaged-serve-helpers";
-import { configuredContainer } from "./storage-scale-container";
+import { configuredContainer, readContainerProcess } from "./storage-scale-container";
 import { type ScaleRuntime, startScaleRuntime } from "./storage-scale-runtime";
 
 /** Each measured runtime uses the same bounded collector and evidence format as desktop. */
@@ -28,6 +28,8 @@ export const createObservedScaleRuntime = (root: string, emit: (row: object) => 
     const onError = (error: unknown) => failures.push(`Performance sampling failed: ${String(error)}`);
     const capture = await startNativePerformanceCapture({
       hostVersion,
+      // A container runtime is measured inside its own PID namespace, never through a host process.
+      readProcess: container ? (pid) => readContainerProcess(container, pid) : undefined,
       backend: () => {
         if (observed)
           return {
@@ -40,10 +42,10 @@ export const createObservedScaleRuntime = (root: string, emit: (row: object) => 
         return runtime
           ? {
               id: runtime.descriptor.instanceId,
-              pid: container ? null : runtime.descriptor.pid,
+              pid: runtime.descriptor.pid,
               origin: runtime.baseUrl,
               token: runtime.descriptor.token,
-              scope: container ? "remote" : "local",
+              scope: "local",
             }
           : null;
       },

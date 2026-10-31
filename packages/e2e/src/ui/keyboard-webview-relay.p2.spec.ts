@@ -1,6 +1,36 @@
 import { expect, test } from "@playwright/test";
 import { installWebviewKeyboardRelay, webviewKeyboardRelayDocument } from "@pstdio/sdk/extensions";
 
+// Critical: negotiated entry chords must preserve text input, including inputs in shadow roots.
+test("nested entry shortcuts leave ordinary and shadow text editing local", async ({ page }) => {
+  await page.setContent('<output aria-label="Requests">[]</output>');
+  const shortcuts = [
+    { id: "plain", entry: "panel", key: "H", allowInInputs: false },
+    { id: "modified", entry: "panel", key: "J", ctrlKey: true, allowInInputs: false },
+  ];
+  await page.addScriptTag({
+    content: `window.requests=[];(${installWebviewKeyboardRelay.toString()})({shortcuts:()=>${JSON.stringify(shortcuts)},dispatch:request=>{window.requests.push(request);document.querySelector('output').textContent=JSON.stringify(window.requests)}});`,
+  });
+  await page.evaluate((relay) => {
+    const frame = document.createElement("iframe");
+    frame.title = "Editor";
+    frame.sandbox.add("allow-scripts");
+    frame.srcdoc = `<html><head>${relay}<script>window.addEventListener('message',event=>{if(event.data?.type==='pstdio.keyboard.profile')document.documentElement.dataset.ready='true'});</script></head><body><input aria-label="Draft"><div id="shadow"></div><button>Canvas</button><script>document.querySelector('#shadow').attachShadow({mode:'open'}).innerHTML='<input aria-label="Shadow draft">';</script></body></html>`;
+    document.body.append(frame);
+  }, webviewKeyboardRelayDocument);
+  const editor = page.frameLocator('iframe[title="Editor"]');
+  await expect(editor.locator("html")).toHaveAttribute("data-ready", "true");
+  for (const name of ["Draft", "Shadow draft"]) {
+    const input = editor.getByRole("textbox", { name, exact: true });
+    await input.press("h");
+    await input.press("Control+j");
+    await expect(input).toHaveValue("h");
+    await expect(page.getByLabel("Requests")).toHaveText("[]");
+  }
+  await editor.getByRole("button", { name: "Canvas" }).press("h");
+  await expect(page.getByLabel("Requests")).toHaveText('[{"id":"plain","repeat":false,"nested":true}]');
+});
+
 test("opaque nested content relays only negotiated entry intents and restores local editing", async ({ page }) => {
   const inner = `<!doctype html><html><head>${webviewKeyboardRelayDocument}<script>window.addEventListener('message',event=>{if(event.data?.type==='pstdio.keyboard.profile')document.documentElement.dataset.ready='true'});</script></head><body><textarea aria-label="Nested draft">Local draft</textarea><dialog><input aria-label="Modal draft"></dialog></body></html>`;
   const wrapper = `<!doctype html><html><head>${webviewKeyboardRelayDocument}</head><body><script>const child=document.createElement('iframe');child.title='Inner';child.sandbox='allow-scripts';child.srcdoc=${JSON.stringify(inner).replaceAll("</", "<\\/")};document.body.append(child);</script></body></html>`;

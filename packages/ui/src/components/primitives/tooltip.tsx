@@ -1,14 +1,16 @@
-import { Tooltip as ChakraTooltip, Portal, useTooltipContext } from "@chakra-ui/react";
+import { useTooltipContext } from "@chakra-ui/react";
 import * as React from "react";
+import { ScopedTooltip as ChakraTooltip } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { useWebviewOverlayClient } from "./webview-overlay-provider";
 import { WebviewTooltip } from "./webview-tooltip";
 
-export interface TooltipProps extends ChakraTooltip.RootProps {
+export interface TooltipProps extends React.ComponentProps<typeof ChakraTooltip.Root> {
   children?: React.ReactElement;
   portalled?: boolean;
   portalRef?: React.RefObject<HTMLElement>;
   content: React.ReactNode;
-  contentProps?: ChakraTooltip.ContentProps;
+  contentProps?: React.ComponentProps<typeof ChakraTooltip.Content>;
   disabled?: boolean;
   /** Show the tooltip only while this label is clipped. */
   overflowRef?: React.RefObject<HTMLElement | null>;

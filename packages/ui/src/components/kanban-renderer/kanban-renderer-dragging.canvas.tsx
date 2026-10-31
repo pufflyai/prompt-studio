@@ -1,16 +1,15 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
 const meta: CanvasMeta = {
   title: "Patterns/Kanban Renderer/Dragging",
-  tags: ["!manifest"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const attributes: AttributeDescriptor[] = [
   {
     id: "status",
@@ -50,7 +49,7 @@ const DraggingBoard = (props: { grouped?: boolean; ungrouped?: boolean }) => {
       <KanbanRenderer
         rows={rows}
         attributes={attributes}
-        storageKey={`storybook-kanban-dragging-${grouped}-${ungrouped}`}
+        storageKey={`preview-kanban-dragging-${grouped}-${ungrouped}`}
         hideToolbar
         defaultSettings={{
           viewMode: "board",

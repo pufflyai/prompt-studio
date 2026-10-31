@@ -19,6 +19,24 @@ test("hosted overlays preserve actions, dismissal and focus", async ({ page }) =
   await expect(preview.getByText("Shared host content")).toBeHidden();
 });
 
+// Critical: highlighted menu labels and checkmarks must stay readable during keyboard selection.
+test("imported menu highlights keep their matching text and indicator colors", async ({ page }) => {
+  const preview = await openCanvasPreview(page, "ui-components-overlays-menu-selection--pale-selection");
+  await preview.getByRole("button", { name: "Layout options", exact: true }).click();
+  const menu = preview.getByRole("menu").first();
+  const pinned = preview.getByRole("menuitemcheckbox", { name: "Pinned", exact: true });
+  await expect(menu).toHaveCSS("background-color", "rgb(36, 36, 36)");
+  await pinned.hover();
+  await expect(pinned).toHaveCSS("background-color", "rgb(238, 238, 238)");
+  await expect(pinned).toHaveCSS("color", "rgb(17, 17, 17)");
+  await expect(pinned.locator("[data-part=item-indicator]")).toHaveCSS("color", "rgb(17, 17, 17)");
+  await menu.press("End");
+  await menu.press("Home");
+  await expect(pinned).toHaveAttribute("data-highlighted", "");
+  await expect(pinned).toHaveCSS("background-color", "rgb(238, 238, 238)");
+  await expect(pinned).toHaveCSS("color", "rgb(17, 17, 17)");
+});
+
 // Critical: a portalled menu must accept input without dismissing its owning dialog.
 test("menu selection and keyboard dismissal keep its dialog usable", async ({ page }) => {
   const preview = await openCanvasPreview(page, "ui-components-navigation-searchable-menu--portalled-inside-dialog");
@@ -62,10 +80,8 @@ test("preview setup failures are visible", async ({ page }) => {
   await expect(shell.getByRole("alert")).toContainText("Missing preview source");
 });
 
-// Critical: documentation must embed a working example, not a blank or broken block.
-test("documentation embeds interactive previews", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "docs-ab17fbcbc73c");
-  await expect(preview.getByRole("heading", { name: "Command parameters", exact: true })).toBeVisible();
-  await preview.getByRole("button", { name: "Open parameter form", exact: true }).first().click();
-  await expect(preview.getByRole("dialog")).toBeVisible();
+// Critical: extension examples must load the catalog's fallback provider rather than a missing module.
+test("extension examples load their fallback suite provider", async ({ page }) => {
+  const preview = await openCanvasPreview(page, "dashboard-motion-lab-study-status--deleted");
+  await expect(preview.getByText("This study was deleted or does not exist.", { exact: true })).toBeVisible();
 });

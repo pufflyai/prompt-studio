@@ -1,5 +1,6 @@
 import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { apiErrorPart, normalizeErrorPart, toolResultPart, toolUsePart } from "./message-parts";
+import { EXIT_PLAN_MODE, planPreview } from "./plan-mode";
 import type { ClaudeCodeContentBlock, ClaudeCodeToolResultBlock, ClaudeCodeToolUseBlock, RawLogEvent } from "./types";
 import { parseStdoutLine } from "./types";
 import { parseTimestamp } from "./utils";
@@ -8,7 +9,7 @@ type StreamContext = { index: number; toolMap: Map<string, string>; localReply?:
 
 const trackToolUse = (block: ClaudeCodeToolUseBlock, ctx: StreamContext) => {
   const part = toolUsePart(block);
-  ctx.toolMap.set(block.id, part.tool);
+  ctx.toolMap.set(block.id, block.name === EXIT_PLAN_MODE ? EXIT_PLAN_MODE : part.tool);
   return part;
 };
 
@@ -45,10 +46,13 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
   if (!block) return null;
 
   if (block.type === "tool_use") {
+    const part = trackToolUse(block as ClaudeCodeToolUseBlock, ctx);
+    // A plan becomes answerable only when its permission request supplies the preview.
+    if (block.name === EXIT_PLAN_MODE) return null;
     return {
       id: `stream-tool-${ctx.index}`,
       role: "assistant",
-      parts: [trackToolUse(block as ClaudeCodeToolUseBlock, ctx)],
+      parts: [part],
       index: ctx.index,
     };
   }
@@ -94,10 +98,12 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
   }
 
   if (block.type === "tool_use") {
+    const part = trackToolUse(block, ctx);
+    if (block.name === EXIT_PLAN_MODE) return null;
     return {
       id: `stream-assistant-tool-${ctx.index}`,
       role: "assistant",
-      parts: [trackToolUse(block, ctx)],
+      parts: [part],
       index: ctx.index,
     };
   }
@@ -207,6 +213,26 @@ const dispatchStdoutEvent = (parsed: Record<string, unknown>, ctx: StreamContext
     return msg ? [msg] : [];
   }
 
+  if (eventType === "control_request") {
+    const request = parsed.request as Record<string, unknown>;
+    if (request.tool_name !== EXIT_PLAN_MODE) return [];
+    const plan = planPreview(request.input);
+    if (!plan) return [];
+    const part = trackToolUse(
+      { type: "tool_use", id: request.tool_use_id as string, name: EXIT_PLAN_MODE, input: request.input },
+      ctx,
+    );
+    return [
+      {
+        id: `stream-plan-${request.tool_use_id}`,
+        role: "assistant",
+        parts: [{ type: "text", text: `\n\n${plan}\n\n` }],
+        index: ctx.index,
+      },
+      { id: `stream-assistant-tool-${ctx.index + 1}`, role: "assistant", parts: [part], index: ctx.index + 1 },
+    ];
+  }
+
   if (eventType === "assistant") {
     return handleAssistant(parsed, ctx);
   }
@@ -230,8 +256,15 @@ export async function* normalizeClaudeCodeStream(
   options: { compact?: boolean } = {},
 ): AsyncGenerator<SessionMessage> {
   const ctx: StreamContext = { index: 0, toolMap: new Map() };
+  let compact = options.compact;
 
   for await (const event of raw) {
+    if (event.type === "user_message") {
+      compact = false;
+      yield event.message;
+      ctx.index += 1;
+      continue;
+    }
     if (event.type === "stderr") {
       yield {
         id: `stream-error-${ctx.index}`,
@@ -248,7 +281,7 @@ export async function* normalizeClaudeCodeStream(
 
     const parsed = parseStdoutLine(event.data);
     if (!parsed) continue;
-    if (options.compact && parsed.type === "assistant") continue;
+    if (compact && parsed.type === "assistant") continue;
     if (parsed.local_command_source) ctx.localReply = true;
 
     const createdAt = parseTimestamp(parsed.timestamp) ?? Date.now();

@@ -19,17 +19,33 @@ export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatch
     createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }),
   );
   useEffect(() => {
-    const refresh = () => setRegistrations(createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }));
+    let disposed = false;
+    let pending = false;
+    // A project or panel transition updates several stores. Read its completed state once,
+    // instead of forcing DOM visibility checks in the middle of each store notification.
+    const refresh = () => {
+      if (pending) return;
+      pending = true;
+      queueMicrotask(() => {
+        pending = false;
+        if (!disposed) setRegistrations(createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }));
+      });
+    };
     const subscriptions = [
-      ...[workbench.keybindings.store, workbench.context.store, workbench.commands.store, workbench.layout.store].map(
-        (store) => store.subscribe(refresh),
-      ),
+      ...[
+        workbench.activation.store,
+        workbench.keybindings.store,
+        workbench.context.store,
+        workbench.commands.store,
+        workbench.layout.store,
+      ].map((store) => store.subscribe(refresh)),
       // Only the selected panel changes which shortcuts apply; previews and typed keys do not.
       workbench.keyboard.store.subscribeSelector((state) => state.selectedRegion, refresh),
     ];
     const preferences = workbench.preferences.onDidChangeValue(refresh);
     refresh();
     return () => {
+      disposed = true;
       for (const unsubscribe of subscriptions) unsubscribe();
       preferences.dispose();
     };

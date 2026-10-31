@@ -114,7 +114,9 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const chosenTheme = await test.step("Choose the theme opposite to the one shown", async () => {
       const page = first!.page;
       const theme =
-        (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark" ? "pstdio-light" : "pstdio-dark";
+        (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark"
+          ? { id: "pstdio-light", title: "Prompt Light" }
+          : { id: "pstdio-dark", title: "Prompt Dark" };
       await page.evaluate(() =>
         (
           window as unknown as {
@@ -122,12 +124,12 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
           }
         ).__pstdioDashboardWorkbench.commands.executeCommand("workbench.action.changeTheme"),
       );
-      await page.getByRole("option", { name: theme }).click();
-      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await page.getByRole("option", { name: theme.title, exact: true }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme.id);
       await expect
         .poll(() => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
-        .toMatchObject({ values: { "theme-preference": theme } });
-      return theme;
+        .toMatchObject({ values: { "theme-preference": theme.id } });
+      return theme.id;
     });
 
     const originalPid = first.runtime.pid;
@@ -203,6 +205,8 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
 test("restarts a crashed sidecar once and offers Retry after another crash in the same Electron process", async ({
   browserName: _browserName,
 }) => {
+  // Three real runtime starts share this allowance; 45s on macOS ARM64 was approved on 2026-10-30.
+  if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(45_000);
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {

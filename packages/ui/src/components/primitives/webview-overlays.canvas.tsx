@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WebviewOverlayRequest, WebviewOverlayResult, WebviewOverlaysClient } from "@pstdio/sdk/extensions";
 import { useRef, useState } from "react";
 import { Tooltip } from "./tooltip";
@@ -58,7 +58,9 @@ const HostedChrome = () => {
             }}
             onAction={setSelected}
           >
-            <Button size="xs">Tools</Button>
+            <Button size="xs" onClick={(event) => event.currentTarget.focus()}>
+              Tools
+            </Button>
           </WebviewOverlayTrigger>
           <WebviewOverlayTrigger
             content={{
@@ -69,7 +71,9 @@ const HostedChrome = () => {
             }}
             onAction={setSelected}
           >
-            <Button size="xs">Details</Button>
+            <Button size="xs" onClick={(event) => event.currentTarget.focus()}>
+              Details
+            </Button>
           </WebviewOverlayTrigger>
         </Box>
       </WebviewOverlayProvider>
@@ -93,15 +97,9 @@ const HostedChrome = () => {
 const meta = {
   title: "Components/Overlays/Webview chrome",
   component: HostedChrome,
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Use WebviewOverlayProvider with client.overlays inside an isolated webview. Plain-text Tooltips and WebviewOverlayTrigger content render in the host, outside the frame. The trigger keeps its accessible description; the host owns menu focus and dismissal.",
-      },
-    },
-  },
+  description:
+    "Use WebviewOverlayProvider with client.overlays inside an isolated webview. Plain-text Tooltips and WebviewOverlayTrigger content render in the host, outside the frame. The trigger keeps its accessible description; the host owns menu focus and dismissal.",
 } satisfies CanvasMeta<typeof HostedChrome>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const NarrowChrome: Story = { id: "components-overlays-webview-chrome--narrow-chrome" };

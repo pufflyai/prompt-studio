@@ -11,11 +11,10 @@ test("the catalog includes current indexed and new sources while ignoring unstag
     const directory = resolve(root, "packages/ui/src");
     await mkdir(directory, { recursive: true });
     execFileSync("git", ["init", "--quiet"], { cwd: root });
-    for (const name of ["kept.canvas.tsx", "removed.canvas.tsx", "removed.mdx"])
+    for (const name of ["kept.canvas.tsx", "removed.canvas.tsx"])
       await writeFile(resolve(directory, name), "export default {};");
     execFileSync("git", ["add", "."], { cwd: root });
     await rm(resolve(directory, "removed.canvas.tsx"));
-    await rm(resolve(directory, "removed.mdx"));
     await writeFile(resolve(directory, "new.canvas.tsx"), "export default {};");
     expect(await sourceFiles(root)).toEqual(["packages/ui/src/kept.canvas.tsx", "packages/ui/src/new.canvas.tsx"]);
   } finally {
@@ -23,14 +22,11 @@ test("the catalog includes current indexed and new sources while ignoring unstag
   }
 });
 
-test("every exported story and documentation page is reachable from UI Canvas", async () => {
+test("every exported story is reachable from UI Canvas", async () => {
   const source = await collectStoryCatalog();
   const generated = JSON.parse(await readFile(resolve(generatedRoot, "stories.json"), "utf8"));
   const identities = (stories: { source: string; exportName: string }[]) =>
     stories.map((story) => `${story.source}#${story.exportName}`).sort();
   expect(identities(generated.stories)).toEqual(identities(source.stories));
-  expect(generated.documents.map((document: { source: string }) => document.source).sort()).toEqual(
-    source.documents.map((document) => document.source).sort(),
-  );
   expect(new Set(generated.stories.map((story: { id: string }) => story.id)).size).toBe(source.stories.length);
 });

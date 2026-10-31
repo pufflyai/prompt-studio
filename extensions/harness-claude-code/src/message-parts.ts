@@ -5,6 +5,7 @@ import type {
   ToolPart,
   ToolPartActionType,
 } from "@pstdio/sdk/extensions";
+import { EXIT_PLAN_MODE, planQuestionInput } from "./plan-mode";
 import type { AskUserQuestionInput, ClaudeCodeToolResultBlock, ClaudeCodeToolUseBlock } from "./types";
 
 const READ_TOOLS = new Set(["Read", "Glob", "Grep"]);
@@ -45,7 +46,11 @@ const toQuestionInput = (input: unknown) => {
 };
 
 export const toolUsePart = (block: ClaudeCodeToolUseBlock): ToolPart => {
-  const isQuestion = block.name === ASK_USER_QUESTION;
+  const isPlan = block.name === EXIT_PLAN_MODE;
+  const isQuestion = block.name === ASK_USER_QUESTION || isPlan;
+  let input = block.input;
+  if (isPlan) input = planQuestionInput();
+  else if (isQuestion) input = toQuestionInput(input);
   const tool = isQuestion ? QUESTION_TOOL : block.name;
   return {
     type: "tool",
@@ -53,14 +58,15 @@ export const toolUsePart = (block: ClaudeCodeToolUseBlock): ToolPart => {
     callId: block.id,
     actionType: classifyToolAction(tool),
     status: "pending",
-    state: { input: isQuestion ? toQuestionInput(block.input) : block.input },
+    state: { input },
   };
 };
 
-/** `tool` is the name `toolUsePart` gave the call, so a question result stays a question. */
+/** Hidden plan calls acquire the same question input in live output and native history once they finish. */
 export const toolResultPart = (tool: string, block: ClaudeCodeToolResultBlock, toolUseResult?: unknown): ToolPart => {
   const isError = block.is_error === true;
-  const isQuestion = tool === QUESTION_TOOL;
+  const isPlan = tool === EXIT_PLAN_MODE;
+  const isQuestion = tool === QUESTION_TOOL || isPlan;
   // Claude stores an answer as `{ questions, answers }`, which the question form cannot read as a
   // reply. Claude's own text says what the person chose, or that they skipped, so keep that instead.
   const output =
@@ -69,11 +75,11 @@ export const toolResultPart = (tool: string, block: ClaudeCodeToolResultBlock, t
 
   return {
     type: "tool",
-    tool,
+    tool: isPlan ? QUESTION_TOOL : tool,
     callId: block.tool_use_id,
     actionType: classifyToolAction(tool),
     status: isError ? "failed" : "completed",
-    state: { output, errorText: isError ? errorText : undefined },
+    state: { ...(isPlan ? { input: planQuestionInput() } : {}), output, errorText: isError ? errorText : undefined },
   };
 };
 

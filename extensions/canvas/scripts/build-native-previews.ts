@@ -7,10 +7,7 @@ import { type NativeBuildOutput, publishNativeBuild } from "./native-build-outpu
 import { generatedRoot, generateStoryCatalog, repoRoot, suites } from "./story-catalog";
 
 const nativeSources = Object.fromEntries(
-  Object.entries(previews).map(([name, preview]) => [
-    name,
-    resolve(import.meta.dir, "../src/canvases", preview.source),
-  ]),
+  Object.entries(previews).map(([name, preview]) => [name, resolve(repoRoot, preview.source)]),
 );
 const nativeDeclaration = `const __UI_CANVAS_NATIVE__={${Object.entries(previews)
   .map(
@@ -18,35 +15,17 @@ const nativeDeclaration = `const __UI_CANVAS_NATIVE__={${Object.entries(previews
       `${JSON.stringify(name)}:()=>import(${JSON.stringify(nativeSources[name])}).then(module=>module[${JSON.stringify(preview.exportName)}])`,
   )
   .join(",")}};`;
-// Keep the shared rendering runtime together. Hundreds of tiny sandbox-local
-// module URLs otherwise repeat their loader work in every frame.
-const previewOutput = {
-  minify: true,
-  codeSplitting: {
-    groups: [
-      {
-        name: "preview-core",
-        test: /\/node_modules\/(?:react(?:-dom)?|scheduler|@chakra-ui|@emotion|@ark-ui|@zag-js)\//,
-        entriesAware: true,
-        entriesAwareMergeThreshold: 65_536,
-      },
-    ],
-  },
-};
-
-const buildPreviews = async (
-  stories: Awaited<ReturnType<typeof generateStoryCatalog>>["stories"],
-  documents: Awaited<ReturnType<typeof generateStoryCatalog>>["documents"],
-) => {
+const buildPreviews = async (stories: Awaited<ReturnType<typeof generateStoryCatalog>>["stories"]) => {
   const packageRoot = resolve(repoRoot, suites.ui);
   const uiRequire = createRequire(resolve(repoRoot, "packages/ui/package.json"));
   const { build } = await import(uiRequire.resolve("vite"));
-  const { compile } = await import(uiRequire.resolve("@mdx-js/mdx"));
   const scratch = resolve(packageRoot, "__test-tmp__/ui-canvas-native");
   await mkdir(scratch, { recursive: true });
-  const files = [...new Set([...stories, ...documents].map((entry) => entry.source))];
+  const files = [...new Set(stories.map((entry) => entry.source))];
   const declarations: string[] = [];
-  const { createThemePreferenceFromVsCodeTheme } = await import(resolve(repoRoot, "packages/ui/dist/theme.js"));
+  const { createThemePreferenceFromVsCodeTheme, defaultThemePreferences } = await import(
+    resolve(repoRoot, "packages/ui/dist/index.js")
+  );
   const { canvasVsCodeThemes } = await import(
     resolve(repoRoot, "packages/ui/src/theme/custom/vscode-theme.canvas-fixture.ts")
   );
@@ -65,7 +44,10 @@ const buildPreviews = async (
         .join(" "),
     })),
   );
-  await writeFile(resolve(generatedRoot, "frame-themes.json"), JSON.stringify([...frameThemes, ...canvasVsCodeThemes]));
+  await writeFile(
+    resolve(generatedRoot, "frame-themes.json"),
+    JSON.stringify([...defaultThemePreferences, ...frameThemes, ...canvasVsCodeThemes]),
+  );
   declarations.push(
     `const __UI_CANVAS_PROJECTS__={${Object.entries(suites)
       .map(
@@ -74,18 +56,17 @@ const buildPreviews = async (
       )
       .join(",")}};`,
   );
-  declarations.push(nativeDeclaration);
   declarations.push(
     `const __UI_CANVAS_MODULES__={${files.map((file) => `${JSON.stringify(file)}:()=>import(${JSON.stringify(resolve(repoRoot, file))})`).join(",")}};`,
   );
+  declarations.push(nativeDeclaration);
+  const lookup = resolve(scratch, "catalog-lookup.ts");
+  await writeFile(lookup, declarations.map((code) => `export ${code}`).join("\n"));
+  declarations.length = 0;
   declarations.push(
-    (await readFile(resolve(repoRoot, "packages/canvas/src/native-preview-runtime.tsx"), "utf8")).replace(
-      '"./story-canvas-theme"',
-      JSON.stringify(resolve(import.meta.dir, "story-canvas-theme.tsx")),
-    ),
-  );
-  declarations.push(
-    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(loadPreview, component=>__UI_CANVAS_NATIVE__[component]());`,
+    `import {__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__,__UI_CANVAS_NATIVE__} from ${JSON.stringify(lookup)};`,
+    `import {createPreviewLoader} from ${JSON.stringify(resolve(repoRoot, "packages/canvas/src/native-preview-runtime.tsx"))};`,
+    `import {mountPreviewRuntime} from ${JSON.stringify(resolve(import.meta.dir, "frame-runtime.tsx"))}; mountPreviewRuntime(createPreviewLoader(__UI_CANVAS_MODULES__,__UI_CANVAS_PROJECTS__),(component)=>__UI_CANVAS_NATIVE__[component]());`,
   );
   const entry = resolve(scratch, "entry.tsx");
   await writeFile(entry, declarations.join("\n"));
@@ -166,20 +147,6 @@ const buildPreviews = async (
               map: null,
             };
           }
-          if (id.endsWith(".mdx")) {
-            const code = String(
-              await compile(
-                source.replace(
-                  /from ["']@pstdio\/canvas["']/g,
-                  `from ${JSON.stringify(resolve(repoRoot, "packages/ui/.canvas/document-blocks.tsx"))}`,
-                ),
-              ),
-            ).replace("export default function MDXContent(", "function MDXContent(");
-            return {
-              code: `${code}\nimport {createElement as __createDocument} from "react";\nimport {Document as __Document} from ${JSON.stringify(resolve(repoRoot, "packages/ui/.canvas/document-blocks.tsx"))};\nexport default function UICanvasDocument(){return __createDocument(__Document,{component:MDXContent,annotations:${source.match(/<Meta\s[^>]*of=\{(\w+)\}/)?.[1] ?? "{}"}.default});}`,
-              map: null,
-            };
-          }
         },
       },
       {
@@ -201,6 +168,9 @@ const buildPreviews = async (
             return 'import {ChakraProvider} from "@chakra-ui/react"; import {landingTheme} from "../theme/theme"; export const RootProvider = ({children}) => <ChakraProvider value={landingTheme}>{children}</ChakraProvider>;';
           if (id === resolve(repoRoot, suites.website, "src/services/analytics.ts"))
             return "export const loadAnalytics = async () => ({capture: () => {}});";
+          // The design system's preview would load its sources next to `@pstdio/ui` and break this
+          // catalog's shared chunks; the runtime themes these frames itself.
+          if (id === resolve(repoRoot, suites.ui, ".canvas/preview.tsx")) return "export default {};";
           if (id === resolve(repoRoot, suites.ui, "src/utils/theme-preference.tsx"))
             return 'export {getInitialThemePreference, ThemePreferenceProvider, useThemePreference} from "@pstdio/ui";';
           if (id.endsWith("/catalog/generated/native-preview.ts"))
@@ -209,8 +179,6 @@ const buildPreviews = async (
             return `export * from ${JSON.stringify(resolve(import.meta.dir, "frame-storage-fixture.ts"))};`;
           if (id === resolve(repoRoot, suites.dashboard, "src/lib/api.ts"))
             return `export * from ${JSON.stringify(resolve(import.meta.dir, "native-api-fixture.ts"))};`;
-          if (id === resolve(repoRoot, suites.ui, ".canvas/preview.tsx"))
-            return 'export default {parameters:{layout:"padded"}};';
         },
       },
     ],
@@ -228,24 +196,24 @@ const buildPreviews = async (
       assetsInlineLimit: () => true,
       lib: { entry, name: "UICanvasPreview", formats: ["es"] },
       rollupOptions: {
-        output: previewOutput,
+        output: { minify: true },
       },
     },
   });
   const outputs = (Array.isArray(result) ? result : [result]).flatMap((result) => result.output) as NativeBuildOutput[];
   await publishNativeBuild(
     outputs,
-    { stories: stories.length, documents: documents.length },
+    { stories: stories.length },
     {
       repoRoot,
-      sources: Object.fromEntries([...stories, ...documents].map(({ source, suite }) => [source, suite])),
+      sources: Object.fromEntries(stories.map(({ source, suite }) => [source, suite])),
       projects: Object.fromEntries(
         Object.entries(suites).map(([name, path]) => [name, resolve(repoRoot, path, ".canvas/preview.tsx")]),
       ),
       nativeSources,
-      catalogSource: entry,
+      catalogSource: lookup,
     },
   );
 };
 const catalog = await generateStoryCatalog();
-await buildPreviews(catalog.stories, catalog.documents);
+await buildPreviews(catalog.stories);

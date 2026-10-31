@@ -18,6 +18,7 @@ import {
   putHarnessParamDefaultsRoute,
 } from "./endpoints/harness-param-defaults";
 import { listProjectsHandler, listProjectsRoute } from "./endpoints/list-projects";
+import { openProjectHandler, openProjectRoute } from "./endpoints/open-project";
 import { queryProjectsHandler, queryProjectsRoute } from "./endpoints/query-projects";
 import {
   listRecoveryPointsHandler,
@@ -40,6 +41,7 @@ export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   routes.openapi(attachWorkspaceRoute, attachWorkspaceHandler(deps));
   routes.openapi(getProjectFolderRoute, getProjectFolderHandler(deps));
   routes.openapi(chooseProjectFolderRoute, chooseProjectFolderHandler(deps));
+  routes.openapi(openProjectRoute, openProjectHandler(deps));
   routes.openapi(createProjectRoute, createProjectHandler(deps));
   routes.openapi(retryProjectSetupRoute, retryProjectSetupHandler(deps));
   routes.openapi(getProjectRoute, getProjectHandler(deps));

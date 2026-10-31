@@ -59,6 +59,16 @@ export const installWebviewKeyboardRelay = (host?: WebviewKeyboardRelayHost) => 
   };
   const keydown = (event: KeyboardEvent) => {
     if (host || event.isComposing || event.repeat || event.getModifierState("AltGraph")) return;
+    const editable = event
+      .composedPath()
+      .some(
+        (target) =>
+          target instanceof Element &&
+          target.closest(
+            'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"]',
+          ),
+      );
+    if (editable && !event.altKey && !event.ctrlKey && !event.metaKey) return;
     const ownsKeys = [
       ...document.querySelectorAll<HTMLElement>(
         'dialog[open], [role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"], [role="menu"][data-state="open"]',
@@ -69,6 +79,7 @@ export const installWebviewKeyboardRelay = (host?: WebviewKeyboardRelayHost) => 
       event.altKey && !/^[a-z]$/i.test(event.key) && /^Key[A-Z]$/.test(event.code) ? event.code.slice(3) : event.key;
     const shortcut = shortcuts().find(
       (candidate) =>
+        (!editable || candidate.allowInInputs !== false) &&
         (!ownsKeys || candidate.entry === "panel") &&
         (normalize(candidate.key) === normalize(key) ||
           (normalize(candidate.key) === "SPACE" && event.code === "Space") ||

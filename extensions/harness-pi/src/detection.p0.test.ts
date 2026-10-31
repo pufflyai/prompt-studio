@@ -3,9 +3,12 @@ import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { detectPi } from "./detection";
 
 test.each([
-  ["0.73.1", true],
-  ["0.74.0", true],
-  ["0.73.0", false],
+  ["0.79.0", true],
+  ["1.4.0", true],
+  ["0.78.1", false],
+  ["0.78.0", false],
+  ["0.74.0", false],
+  ["0.73.1", false],
   ["not pi", false],
 ])("checks Pi version %s", async (stdout, available) => {
   const ctx = { process: { run: async () => ({ exitCode: 0, stdout, stderr: "" }) } } as unknown as HarnessContext;

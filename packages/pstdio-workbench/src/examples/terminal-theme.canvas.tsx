@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { defaultThemePreferences, type ThemePreferenceOption, useThemePreference } from "@pstdio/ui";
 import { Workbench, WorkbenchThemeProvider } from "../react";
 import { createHostTerminalWorkbench } from "./host-terminal-story";
@@ -44,8 +44,7 @@ const ThemeControls = () => {
 };
 const meta = {
   title: "pstdio-workbench/Reference/Host terminal themes",
-  parameters: { layout: "fullscreen", controls: { disable: true } },
-  tags: ["!manifest"],
+  fullscreen: true,
   render: () => (
     <WorkbenchThemeProvider
       initialThemePreference={themes[0].id}
@@ -61,7 +60,7 @@ const meta = {
   ),
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const ThemeChangesKeepSession: Story = {
   id: "pstdio-workbench-reference-host-terminal-themes--theme-changes-keep-session",
 };

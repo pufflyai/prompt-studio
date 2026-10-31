@@ -1,3 +1,4 @@
+import { useUiScope } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import {
   getActiveWorkbenchSubPanel,
@@ -133,10 +134,11 @@ export const useWorkbenchPanelMenusPresent = (workbench: WorkbenchCore, panel: W
 };
 
 const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {
+  const root = useUiScope()?.root;
   const [width, setWidth] = useState(0);
 
   useEffect(() => {
-    const element = document.querySelector<HTMLElement>(`[data-workbench-panel="${panel}"]`);
+    const element = (root?.current ?? document).querySelector<HTMLElement>(`[data-workbench-panel="${panel}"]`);
     if (!element) return;
 
     const measure = () => setWidth(element.clientWidth);
@@ -144,7 +146,7 @@ const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [panel]);
+  }, [panel, root]);
 
   return width;
 };

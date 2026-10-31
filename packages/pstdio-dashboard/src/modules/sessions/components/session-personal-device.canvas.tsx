@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { SessionPersonalDevice } from "./session-personal-device";
 
@@ -26,11 +26,10 @@ const meta = {
   ),
 } satisfies CanvasMeta<typeof SessionPersonalDevice>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const OfflineSource: Story = {
   id: "modules-sessions-personal-device--offline-source",
 };
 export const Dark: Story = {
   id: "modules-sessions-personal-device--dark",
-  globals: { theme: "pstdio-dark" },
 };

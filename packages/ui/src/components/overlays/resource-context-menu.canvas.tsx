@@ -1,5 +1,5 @@
 import { Box, Icon, Input, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Eye } from "lucide-react";
 import { useState } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
@@ -19,7 +19,7 @@ const menuTarget = (
     <Text textStyle="label/S/regular">Right-click here</Text>
   </Box>
 );
-export const TicketActions: CanvasVariant<typeof ResourceContextMenu> = {
+export const TicketActions: CanvasFrame<typeof ResourceContextMenu> = {
   id: "components-overlays-resource-context-menu--ticket-actions",
   args: {
     children: menuTarget,
@@ -106,21 +106,13 @@ const LongVisibilityMenu = () => {
   );
 };
 const meta: CanvasMeta<typeof ResourceContextMenu> = {
-  tags: ["menu-selection"],
   title: "Components/Overlays/Resource Context Menu",
   component: ResourceContextMenu,
-  parameters: {
-    layout: "padded",
-    docs: {
-      description: {
-        component:
-          "Right-click menu for resource and Sidenav actions. Menus taller than the space left in the viewport scroll inside the menu.",
-      },
-    },
-  },
+  description:
+    "Right-click menu for resource and Sidenav actions. Menus taller than the space left in the viewport scroll inside the menu.",
 };
 export default meta;
-type Story = CanvasVariant<typeof ResourceContextMenu>;
+type Story = CanvasFrame<typeof ResourceContextMenu>;
 export const Default: Story = {
   id: "components-overlays-resource-context-menu--default",
   render: () => <ResourceContextMenu actions={createActions(4)}>{menuTarget}</ResourceContextMenu>,
@@ -169,7 +161,6 @@ export const LongMenuScrolls: Story = {
 };
 export const EscapeRespectsNewFocus: Story = {
   id: "components-overlays-resource-context-menu--escape-respects-new-focus",
-  tags: ["!manifest", "menu-escape-focus"],
   render: () => (
     <Stack>
       <ResourceContextMenu actions={createActions(1)}>
@@ -183,10 +174,9 @@ export const EscapeRespectsNewFocus: Story = {
 };
 export const LongSubmenuScrolls: Story = {
   id: "components-overlays-resource-context-menu--long-submenu-scrolls",
-  tags: ["!manifest"],
   render: () => <LongVisibilityMenu />,
 };
-export const ResourceAndSurfaceGroups: CanvasVariant<typeof meta> = {
+export const ResourceAndSurfaceGroups: CanvasFrame<typeof meta> = {
   id: "components-overlays-resource-context-menu--resource-and-surface-groups",
   args: {
     children: menuTarget,

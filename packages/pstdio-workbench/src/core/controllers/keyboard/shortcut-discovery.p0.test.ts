@@ -1,7 +1,29 @@
 import { expect, test } from "bun:test";
 import { getNavigationTargetKey } from "../../registries/navigation/navigation-target-key";
 import { createWorkbench } from "../../workbench-core";
+import { directShortcutHint } from "./shortcut-catalog";
 import { shortcutOpeningChord } from "./shortcut-menu";
+
+test("direct tooltip hints inspect only their action and follow its current availability", () => {
+  const core = createWorkbench();
+  const action = { kind: "command" as const, commandId: "hinted" };
+  core.commands.registerCommand({ id: "hinted", label: "Hinted" }, { execute() {} });
+  core.keybindings.registerKeybinding({ action, keybinding: "Alt+J", when: "available" });
+  core.context.set("available", true);
+  expect(directShortcutHint(core, action)).toBe(core.keyboard.hints().get(getNavigationTargetKey(action)));
+  core.commands.registerCommand(
+    { id: "unrelated", label: "Unrelated" },
+    {
+      execute() {},
+      isVisible: () => {
+        throw new Error("An unrelated action must not delay a tooltip");
+      },
+    },
+  );
+  expect(directShortcutHint(core, action)).toBe("Alt+J");
+  core.context.set("available", false);
+  expect(directShortcutHint(core, action)).toBeUndefined();
+});
 
 test("shortcut mode only lists groups with available actions", () => {
   const core = createWorkbench();

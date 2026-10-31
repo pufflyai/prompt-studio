@@ -42,7 +42,9 @@ export const WebviewOverlayTrigger = (props: {
   const trigger = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const latest = useRef({ content, onAction, reportError });
-  latest.current = { content, onAction, reportError };
+  useEffect(() => {
+    latest.current = { content, onAction, reportError };
+  });
   const contentKey = JSON.stringify(content);
   // biome-ignore lint/correctness/useExhaustiveDependencies: content changes replace the host overlay; parent object identity must not reopen it.
   useEffect(() => {

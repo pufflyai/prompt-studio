@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
@@ -28,7 +28,6 @@ const meta: CanvasMeta<typeof MeasuredChatStory> = {
   component: MeasuredChatStory,
 };
 export default meta;
-export const SendMessage: CanvasVariant<typeof meta> = {
+export const SendMessage: CanvasFrame<typeof meta> = {
   id: "patterns-chat-measurement--send-message",
-  tags: ["measurement-regression"],
 };

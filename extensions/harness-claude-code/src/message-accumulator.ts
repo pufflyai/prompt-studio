@@ -24,8 +24,8 @@ export const createMessageAccumulator = (sink: HarnessEventSink, options: Accumu
     const firstPart = message.parts[0];
     if (!firstPart) return;
 
-    // Tool result replaces pending tool_use at same index
-    if (firstPart.type === "tool" && firstPart.callId && firstPart.status !== "pending") {
+    // Updates and results replace the same tool call, including permission-enriched inputs.
+    if (firstPart.type === "tool" && firstPart.callId) {
       const existingIdx = toolCalls.get(firstPart.callId);
 
       if (existingIdx !== undefined) {
@@ -46,7 +46,12 @@ export const createMessageAccumulator = (sink: HarnessEventSink, options: Accumu
     const lastMessage = messages[lastIdx];
     const lastPart = lastMessage?.parts[0];
 
-    if (firstPart.type === "text" && lastPart?.type === "text" && message.role === lastMessage.role) {
+    if (
+      message.role !== "user" &&
+      firstPart.type === "text" &&
+      lastPart?.type === "text" &&
+      message.role === lastMessage.role
+    ) {
       const updated = { ...lastMessage, parts: [{ ...lastPart, text: lastPart.text + firstPart.text }] };
       messages[lastIdx] = updated;
       sink.push({ op: "replace", path: toPath(lastIdx), value: updated });

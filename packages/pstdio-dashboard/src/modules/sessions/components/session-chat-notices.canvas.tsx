@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { SessionChatNotices } from "./session-chat-notices";
 
 const meta = {
@@ -10,7 +10,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof SessionChatNotices>;
 export default meta;
-type Story = CanvasVariant<typeof SessionChatNotices>;
+type Story = CanvasFrame<typeof SessionChatNotices>;
 export const MessageNotSent: Story = {
   id: "sessions-chat-notices--message-not-sent",
   args: {

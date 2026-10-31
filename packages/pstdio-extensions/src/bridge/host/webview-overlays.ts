@@ -31,7 +31,16 @@ export const createWebviewOverlayController = (publish: (request?: WebviewOverla
     close,
     dispose: () => close(),
     call(input: unknown) {
-      const next = webviewOverlayParamsSchema.parse(input);
+      const result = webviewOverlayParamsSchema.safeParse(input);
+      if (!result.success)
+        throw Object.assign(new Error("Invalid parameters for overlays."), {
+          code: "invalid_params",
+          data: {
+            capability: "overlays",
+            issues: result.error.issues.map((issue) => ({ path: issue.path.map(String), message: issue.message })),
+          },
+        });
+      const next = result.data;
       if (next.op === "show") {
         close();
         current = next;

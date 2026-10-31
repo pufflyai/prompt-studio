@@ -12,10 +12,16 @@ export interface Status {
   description: string;
 }
 
+export interface PullRequestFile {
+  filename: string;
+  status: string;
+  previous_filename?: string;
+}
+
 interface PolicyApi {
   readPull: () => Promise<PullRequest>;
   publish: (sha: string, status: Status) => Promise<unknown>;
-  readChangedFiles: () => Promise<Array<{ filename: string; status: string }>>;
+  readChangedFiles: () => Promise<PullRequestFile[]>;
   readManifest: (path: string, ref: string) => Promise<Record<string, unknown>>;
   readMergeBase: (base: string, head: string) => Promise<string>;
 }
@@ -142,12 +148,14 @@ export async function finish(
     }
     status = { state: "success", description: "SDK and extension changes are separate" };
     if (labels.has("sdk") && labels.has("extensions")) {
-      status = (await isReleaseMetadata(api, current))
-        ? {
-            state: "success",
-            description: "Generated release metadata contains no SDK or extension implementation changes",
-          }
-        : { state: "failure", description: "Split SDK and extension changes into separate PRs" };
+      if (await isReleaseMetadata(api, current)) {
+        status = {
+          state: "success",
+          description: "Generated release metadata contains no SDK or extension implementation changes",
+        };
+      } else {
+        status = { state: "failure", description: "Split SDK and extension changes into separate PRs" };
+      }
       const latest = await api.readPull();
       if (latest.state !== "open" || !sameValue(snapshotOf(latest), snapshot))
         throw new Error("PR head or base changed during classification; rerun the workflow");
@@ -192,7 +200,7 @@ export function createApi(options: ApiOptions) {
       return comparison.merge_base_commit.sha as string;
     },
     readChangedFiles: async () => {
-      const files: Array<{ filename: string; status: string }> = [];
+      const files: PullRequestFile[] = [];
       for (let page = 1; page <= 30; page++) {
         const batch = await request(`pulls/${pullNumber}/files?per_page=100&page=${page}`);
         files.push(...batch);

@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useRef, useState } from "react";
 import { createWorkbench } from "../../core";
 import { runResourceMutation } from "../../extensions/host/workbench-resource-mutation";
@@ -20,7 +20,7 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
     optimistic ? new Promise<void>((resolve, reject) => (save.current = { resolve, reject })) : Promise.resolve();
   const [result, setResult] = useState("No action run");
   const [workbench] = useState(() => {
-    const page = { kind: "page" as const, extensionId: "storybook", id: "notes" };
+    const page = { kind: "page" as const, extensionId: "preview", id: "notes" };
     const instance = createWorkbench({ startPage: page });
     const listeners = new Set<() => void>();
     let title = "Research note";
@@ -28,8 +28,8 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
       type: "note",
       id: "note-1",
       label: title,
-      projectId: "storybook-notes",
-      extensionId: "storybook",
+      projectId: "preview-notes",
+      extensionId: "preview",
     };
     const mutation = (kind: "rename" | "remove") =>
       kind === "rename"
@@ -38,11 +38,11 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
     const run = (kind: "rename" | "remove", args: unknown, persist: () => Promise<void>) =>
       optimistic
         ? runResourceMutation(
-            { workbench: instance, projectId: "storybook-notes", executeCommand: () => undefined },
+            { workbench: instance, projectId: "preview-notes", executeCommand: () => undefined },
             {
               id: kind,
               title: kind === "remove" ? "Delete note" : "Rename note",
-              extensionId: "storybook",
+              extensionId: "preview",
               resourceMutation: mutation(kind),
             },
             args as Record<string, unknown>,
@@ -175,7 +175,7 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
         },
       ],
     });
-    instance.pageLocations.setProject("storybook-notes");
+    instance.pageLocations.setProject("preview-notes");
     instance.pageLocations.navigate({ kind: "page", page });
     instance.pages.openSlot({ pageId: page.id, slotId: "note", resource });
     return instance;
@@ -220,7 +220,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof NoteBreadcrumb>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SelectedNote: Story = {
   id: "pstdio-workbench-guides-breadcrumb-resource-actions--selected-note",
 };

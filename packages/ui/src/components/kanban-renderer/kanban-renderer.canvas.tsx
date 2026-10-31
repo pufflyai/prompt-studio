@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Plus } from "lucide-react";
 import { KanbanRenderer } from "./kanban-renderer";
 import { initialRows } from "./kanban-renderer-story-fixtures";
@@ -9,10 +9,10 @@ import type { KanbanRendererSavedView, ViewMode } from "./types";
 const meta: CanvasMeta<typeof KanbanRenderer> = {
   title: "Patterns/Kanban Renderer/Kanban Renderer",
   component: KanbanRenderer,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const CHROME_UUID = "550e8400-e29b-41d4-a716-446655440000";
 const chromeRows = initialRows.map((row, index) => {
   if (index === 0) return { ...row, id: CHROME_UUID, attributes: { ...row.attributes, id: "PS-1" } };
@@ -25,19 +25,13 @@ export const BoardView: Story = {
 };
 export const RendererChromeAndTicketMenu: Story = {
   id: "patterns-kanban-renderer-kanban-renderer--renderer-chrome-and-ticket-menu",
-  tags: ["renderer-chrome-regression"],
   render: () => (
-    <Wrapper
-      storageKey="storybook-kanban-renderer-chrome"
-      displayProperties={["id"]}
-      withTicketMenu
-      rows={chromeRows}
-    />
+    <Wrapper storageKey="preview-kanban-renderer-chrome" displayProperties={["id"]} withTicketMenu rows={chromeRows} />
   ),
 };
 export const ListView: Story = {
   id: "patterns-kanban-renderer-kanban-renderer--list-view",
-  render: () => <Wrapper storageKey="storybook-kanban-renderer-list-view" viewMode="list" />,
+  render: () => <Wrapper storageKey="preview-kanban-renderer-list-view" viewMode="list" />,
 };
 const viewSettings = (viewMode: ViewMode, displayProperties: string[] = []) => ({
   viewMode,
@@ -82,15 +76,14 @@ const SAVED_VIEWS: KanbanRendererSavedView[] = [
 export const SavedViews: Story = {
   id: "patterns-kanban-renderer-kanban-renderer--saved-views",
   render: () => (
-    <Wrapper storageKey="storybook-kanban-renderer-saved-views" defaultViews={SAVED_VIEWS} defaultActiveViewId="all" />
+    <Wrapper storageKey="preview-kanban-renderer-saved-views" defaultViews={SAVED_VIEWS} defaultActiveViewId="all" />
   ),
 };
 export const SavedFilteredView: Story = {
   id: "patterns-kanban-renderer-kanban-renderer--saved-filtered-view",
-  tags: ["saved-filter-row-regression"],
   render: () => (
     <Wrapper
-      storageKey="storybook-kanban-renderer-saved-filtered-view"
+      storageKey="preview-kanban-renderer-saved-filtered-view"
       defaultViews={SAVED_VIEWS}
       defaultActiveViewId="my-work"
     />

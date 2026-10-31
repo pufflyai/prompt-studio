@@ -1,5 +1,5 @@
 import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench, type WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -88,18 +88,12 @@ const ProjectSwitchStory = (props: { workbench: WorkbenchCore }) => {
 const meta = {
   title: "pstdio-workbench/Guides/Project switch",
   component: ProjectSwitchStory,
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "A project switch keeps the workbench shell mounted. Only views that belong to the project start fresh: open the Notes view, edit it, then open the other project.",
-      },
-    },
-  },
+  description:
+    "A project switch keeps the workbench shell mounted. Only views that belong to the project start fresh: open the Notes view, edit it, then open the other project.",
+  fullscreen: true,
 } satisfies CanvasMeta<typeof ProjectSwitchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const KeepsShellMounted: Story = {
   id: "pstdio-workbench-guides-project-switch--keeps-shell-mounted",
   args: { workbench: createProjectSwitchWorkbench() },

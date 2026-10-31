@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { Response } from "./ai-response";
 import type { SessionMessage } from "./message-types";
@@ -20,12 +20,9 @@ const assistantResponseForStory =
 const meta: CanvasMeta<typeof Response> = {
   title: "Patterns/Chat/AI Response",
   component: Response,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
-type Story = CanvasVariant<typeof Response>;
+type Story = CanvasFrame<typeof Response>;
 export const AssistantResponse: Story = {
   id: "patterns-chat-ai-response--assistant-response",
   args: {

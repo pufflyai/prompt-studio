@@ -1,5 +1,5 @@
 import { Box, Button, IconButton, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { PaperclipIcon } from "lucide-react";
 import { useState } from "react";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
@@ -9,10 +9,9 @@ import type { QueuedFollowUp } from "./message-types";
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Question interruptions",
   component: ChatPanel,
-  parameters: { layout: "centered" },
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 const questionPrompt: ChatInputQuestionPrompt = {
   questions: [{ id: "choice", question: "Choose a greeting", options: [{ label: "Hello" }], required: true }],
 };
@@ -85,16 +84,9 @@ export const AttachmentControlsDuringQuestion: Story = {
 };
 export const DraftSelectionAfterQuestion: Story = {
   id: "patterns-chat-question-interruptions--draft-selection-after-question",
-  tags: ["!manifest"],
   render: () => <QuestionPanel queued draft="Keep my draft" />,
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Select part of the draft, ask a question, answer it, then focus the draft. Its text and selection return.",
-      },
-    },
-  },
+  description:
+    "Select part of the draft, ask a question, answer it, then focus the draft. Its text and selection return.",
 };
 export const InheritedQuestionIds: Story = {
   id: "patterns-chat-question-interruptions--inherited-question-ids",

@@ -1,6 +1,9 @@
-import { Button, HStack, Menu, Popover, Portal, Text, Tooltip } from "@chakra-ui/react";
+import { Button, HStack, Text } from "@chakra-ui/react";
 import type { WebviewOverlayRequest } from "@pstdio/sdk/extensions";
 import { useLayoutEffect, useState } from "react";
+
+import { ScopedMenu as Menu, ScopedPopover as Popover, ScopedTooltip as Tooltip } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 
 export interface WebviewOverlaySurfaceProps {
   request: WebviewOverlayRequest;

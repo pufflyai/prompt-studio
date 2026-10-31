@@ -1,5 +1,5 @@
 import { Box, Button, Input, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { ChatPanel, type ChatPanelProps } from "./chat-panel";
@@ -43,13 +43,12 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof ChatPanel>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const RetainedDraft: Story = {
   id: "patterns-chat-composer-fallback--retained-draft",
 };
 export const Dark: Story = {
   id: "patterns-chat-composer-fallback--dark",
-  globals: { theme: "pstdio-dark" },
 };
 export const RetainedQueuedEdit: Story = {
   id: "patterns-chat-composer-fallback--retained-queued-edit",
@@ -60,7 +59,6 @@ export const RetainedQueuedEdit: Story = {
 };
 export const RetainedQuestionAnswers: Story = {
   id: "patterns-chat-composer-fallback--retained-question-answers",
-  tags: ["!manifest"],
   args: {
     chatInputQuestionPrompt: {
       callId: "release-checks",
@@ -80,7 +78,6 @@ export const RetainedQuestionAnswers: Story = {
 };
 export const RetainedConfirmation: Story = {
   id: "patterns-chat-composer-fallback--retained-confirmation",
-  tags: ["!manifest"],
   args: {
     composerDecision: {
       id: "release-approval",

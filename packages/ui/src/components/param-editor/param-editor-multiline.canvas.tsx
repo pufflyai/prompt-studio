@@ -1,5 +1,5 @@
 import { Box, Container, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ParamEditor } from "./param-editor";
 import type { Param, ParamValueMap } from "./param-editor.types";
@@ -42,10 +42,10 @@ const MultilinePreview = (props: { readOnly?: boolean; grouped?: boolean; varian
 const meta = {
   title: "Patterns/Param Editor/Multiline Text",
   component: MultilinePreview,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof MultilinePreview>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Editable: Story = {
   id: "patterns-param-editor-multiline-text--editable",
 };

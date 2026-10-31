@@ -21,7 +21,9 @@ export const writeWebviewOverlayFixture = (root: string) => {
   writeFileSync(
     join(source, "extension.ts"),
     `
-import { defineExtension, defineMode, definePage, defineView, packageAsset } from "@pstdio/sdk/extensions";
+import { defineCommand, defineExtension, defineKeybinding, defineMode, definePage, defineView, packageAsset } from "@pstdio/sdk/extensions";
+const hand = defineCommand({ id: "hand", title: "Hand tool", run() {} });
+const handBinding = defineKeybinding({ id: "hand", key: "H", action: { kind: "command", target: { command: hand.ref } } });
 const tools = defineView({ id: "tools", title: "Overlay tools", body: {
   kind: "webview", entry: packageAsset("./tools.ts", import.meta.url), capabilities: ["overlays"],
 } });
@@ -32,7 +34,7 @@ const mode = defineMode({ id: "overlay", label: "Overlay", icon: "Image", region
   chrome: { activity: tools.ref, sidenav: false } });
 const page = definePage({ id: "overlay", title: "Overlay", path: "overlay", mode: mode.ref,
   main: { kind: "view", view: main.ref, cardinality: "one", presentation: "page" }, slots: [] });
-export default defineExtension({ views: [tools, main], modes: [mode], pages: [page] });
+export default defineExtension({ commands: [hand], keybindings: [handBinding], views: [tools, main], modes: [mode], pages: [page] });
 `,
   );
   writeFileSync(
@@ -41,7 +43,10 @@ export default defineExtension({ views: [tools, main], modes: [mode], pages: [pa
 import { defineExtensionView } from "@pstdio/sdk/extensions";
 export default defineExtensionView({ render({ mount }) {
   const button = document.createElement("button"); button.textContent = "Outside overlay";
-  mount.append(button); return () => button.remove();
+  const input = document.createElement("input"); input.setAttribute("aria-label", "Draft");
+  const shadow = document.createElement("div");
+  shadow.attachShadow({ mode: "open" }).innerHTML = '<input aria-label="Shadow draft">';
+  mount.append(button, input, shadow); return () => mount.replaceChildren();
 } });
 `,
   );
@@ -56,9 +61,10 @@ export default defineExtensionView({ render({ mount, host }) {
   const show = async (button, content) => {
     stop();
     const result = overlays.show({ id: button.id, anchor: button.getBoundingClientRect(), placement: "right", content });
-    stop = observeWebviewOverlayAnchor(button, (anchor) => void overlays.move(button.id, anchor),
+    const release = observeWebviewOverlayAnchor(button, (anchor) => void overlays.move(button.id, anchor),
       () => void overlays.close(button.id));
-    const value = await result; stop(); status.textContent = value.actionId ?? "dismissed";
+    stop = release;
+    const value = await result; release(); status.textContent = value.actionId ?? "dismissed";
   };
   const add = (id, text, content) => {
     const button = document.createElement("button"); button.id = id; button.textContent = text;

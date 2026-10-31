@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ResizableSplitLayout } from "./resizable-split-layout";
 import type { ResizableSplitSide } from "./resizable-split-layout.geometry";
@@ -32,19 +32,12 @@ const MotionPanel = (props: { side?: ResizableSplitSide }) => {
   );
 };
 const meta = {
-  tags: ["motion"],
   title: "Components/Layout/Resizable Split Layout/Motion",
   component: MotionPanel,
-  parameters: {
-    docs: {
-      description: {
-        component: "Resize a divider, drag it closed, then reopen. The content should fill the restored panel.",
-      },
-    },
-  },
+  description: "Resize a divider, drag it closed, then reopen. The content should fill the restored panel.",
 } satisfies CanvasMeta<typeof MotionPanel>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Right: Story = {
   id: "components-layout-resizable-split-layout-motion--right",
 };

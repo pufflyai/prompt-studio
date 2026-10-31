@@ -1,12 +1,12 @@
 import { Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench, resourceContextMenuPath, workbenchBreadcrumbLocationMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 
-const boardPage = { kind: "page", extensionId: "storybook", id: "board" } as const;
-const ticketPage = { kind: "page", extensionId: "storybook", id: "ticket" } as const;
-const ticket = { type: "ticket", id: "PS-1", label: "PS-1 Fix header", extensionId: "storybook" };
+const boardPage = { kind: "page", extensionId: "preview", id: "board" } as const;
+const ticketPage = { kind: "page", extensionId: "preview", id: "ticket" } as const;
+const ticket = { type: "ticket", id: "PS-1", label: "PS-1 Fix header", extensionId: "preview" };
 const createBreadcrumbWorkbench = (target: {
   page: typeof boardPage | typeof ticketPage;
   resource?: typeof ticket;
@@ -82,7 +82,7 @@ const createBreadcrumbWorkbench = (target: {
     { execute: () => undefined },
   );
   workbench.layout.registerMenuItem(workbenchBreadcrumbLocationMenuPath, { commandId: "copy-link" });
-  workbench.pageLocations.setProject("storybook");
+  workbench.pageLocations.setProject("preview");
   workbench.pageLocations.navigate({ kind: "page", ...target });
   if (target.contributed) workbench.pages.openSlot({ pageId: "ticket", slotId: "panel", resource: ticket });
   return workbench;
@@ -90,7 +90,7 @@ const createBreadcrumbWorkbench = (target: {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Breadcrumb actions",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   render: (args) => (
     <WorkbenchThemeProvider>
       <WorkbenchStory {...args} />
@@ -98,7 +98,7 @@ const meta = {
   ),
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const ResourcePage: Story = {
   id: "pstdio-workbench-reference-core-api-breadcrumb-actions--resource-page",
   args: { workbench: createBreadcrumbWorkbench({ page: ticketPage, resource: ticket }) },

@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
 import { SelectionInput } from "@pstdio/ui/param-editor";
 import { ExtensionDetail } from "./extension-detail";
@@ -114,7 +114,7 @@ const settings = [
 const meta: CanvasMeta<typeof ExtensionDetail> = {
   title: "ProjectSettings/ExtensionDetail",
   component: ExtensionDetail,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: {
     extension,
     metadata,
@@ -132,7 +132,7 @@ const meta: CanvasMeta<typeof ExtensionDetail> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof ExtensionDetail>;
+type Story = CanvasFrame<typeof ExtensionDetail>;
 export const HarnessUnavailable: Story = {
   id: "projectsettings-extensiondetail--harness-unavailable",
   args: {

@@ -44,6 +44,13 @@ test("isolated narrow webviews show host overlays with actions, focus and dispos
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/test.overlay-probe/overlay`);
     const iframe = page.locator('iframe[title="Overlay tools"]');
     const tools = page.frameLocator('iframe[title="Overlay tools"]');
+    // Critical: shared editor shortcuts must not consume typing, including inside shadow roots.
+    const canvas = page.frameLocator('iframe[title="Overlay canvas"]');
+    for (const name of ["Draft", "Shadow draft"]) {
+      const input = canvas.getByRole("textbox", { name, exact: true });
+      await input.press("h");
+      await expect(input).toHaveValue("h");
+    }
     await tools.getByRole("button", { name: "Tip", exact: true }).click();
     const tooltip = page.getByRole("tooltip");
     await expect(tooltip).toBeVisible();

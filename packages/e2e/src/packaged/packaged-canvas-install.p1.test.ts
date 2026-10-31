@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium } from "@playwright/test";
-import { packExtension } from "pstdio-extensions/distribution";
+import { packExtension, readExtensionPackage } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -20,6 +20,11 @@ test(
   async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
     const packed = await packExtension(join(import.meta.dirname, "../../../../extensions/canvas"));
+    const { files } = await readExtensionPackage(packed.bytes);
+    expect(files.has("src/catalog/generated/native-manifest.json")).toBe(false);
+    for (const asset of ["frame-manifest.json", "frame-themes.json", "stories.json", "source-information.json"]) {
+      expect(files.get(`src/catalog/generated/${asset}`)?.size).toBeGreaterThan(0);
+    }
     const registry = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
@@ -64,7 +69,7 @@ test(
         headers,
         body: JSON.stringify({ source: { kind: "catalog", name: "canvas" } }),
       });
-      expect(installed.status).toBe(201);
+      expect(installed.status, await installed.text()).toBe(201);
       const after = await (await fetch(`${url}/extensions`, { headers })).json();
       expect(after.extensions).toContainEqual(
         expect.objectContaining({ installName: "canvas", enabled: true, extensionId: "pstdio.canvas" }),
@@ -89,6 +94,25 @@ test(
       const layout = cli(["canvas", "layout", "read", "--canvas", "shared-components"]);
       expect(layout.status).toBe(0);
       expect(JSON.parse(layout.stdout).camera.zoom).toBeGreaterThan(0);
+      // Critical: the installed package must supply the selected graph without a source checkout.
+      const assets = await fetch(`${url}/extensions/commands/pstdio.canvas.command.preview.assets/execute`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          source: "api",
+          params: { source: "packages/ui/src/components/primitives/button.canvas.tsx", cached: [] },
+        }),
+      });
+      expect(assets.status).toBe(200);
+      const result = await assets.json();
+      expect(result.outcome.ok).toBe(true);
+      const { entry, modules, files } = result.outcome.value;
+      expect(modules).toContain(entry);
+      expect(modules.length).toBeGreaterThan(0);
+      for (const name of modules) {
+        const code = Bun.gunzipSync(Buffer.from(files[name], "base64"));
+        expect(code.byteLength).toBeGreaterThan(0);
+      }
       const skills = await (await fetch(`${url}/skills`, { headers })).json();
       expect(skills).toContainEqual(
         expect.objectContaining({
@@ -99,7 +123,7 @@ test(
           ]),
         }),
       );
-      // Critical: a clean optional install must render a real frame from its packaged archive.
+      // Critical: packaged assets must also reach an opaque preview through the real webview command bridge.
       const button = listed.find((canvas: { id: string }) => canvas.id === "stories-ui-components-inputs-button");
       expect(button).toBeDefined();
       browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);

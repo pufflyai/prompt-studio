@@ -2,6 +2,18 @@ import type { WebviewKeyboardShortcut, WebviewKeyboardShortcutRequest } from "ps
 
 const normalizeKey = (key: string) => (key === " " ? "SPACE" : key.toUpperCase());
 
+export const isEditableKeyboardEvent = (event: KeyboardEvent) =>
+  typeof Element !== "undefined" &&
+  event
+    .composedPath()
+    .some(
+      (target) =>
+        target instanceof Element &&
+        target.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"]',
+        ),
+    );
+
 // Option can replace a letter with a symbol or dead key. Keep ordinary layout letters intact.
 const shortcutEventKey = (event: KeyboardEvent) =>
   event.altKey && !/^[a-z]$/i.test(event.key) && /^Key[A-Z]$/.test(event.code) ? event.code.slice(3) : event.key;
@@ -24,12 +36,7 @@ export const installKeyboardShortcuts = (
 ) => {
   const listener = (input: Event) => {
     const event = input as KeyboardEvent;
-    const editable =
-      typeof Element !== "undefined" &&
-      event.target instanceof Element &&
-      event.target.closest(
-        'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="combobox"]',
-      );
+    const editable = isEditableKeyboardEvent(event);
     // Global chords hold a modifier; plain editor chords remain available outside text fields.
     if (editable && !event.altKey && !event.ctrlKey && !event.metaKey) return;
     const shortcut = shortcuts().find(

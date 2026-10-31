@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench, type TreeViewSection } from "../../../core";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
@@ -88,7 +88,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof InstantMoves>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const DeferredPersistence: Story = {
   id: "pstdio-workbench-tree-instant-resource-moves--deferred-persistence",
 };

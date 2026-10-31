@@ -3,6 +3,22 @@ import { createWorkbench } from "../../core";
 import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
 import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
+test("shortcut requests keep each registration's input ownership", () => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand({ id: "editor.action", label: "Editor action" }, { execute() {} });
+  for (const allowInInputs of [false, true]) {
+    workbench.keybindings.registerKeybinding({
+      id: `editor-action-${allowInInputs}`,
+      action: { kind: "command", commandId: "editor.action" },
+      keybinding: "Ctrl+H",
+      allowInInputs,
+    });
+  }
+  const shortcuts = createWebviewKeyboardShortcuts(workbench).shortcuts.filter((entry) => entry.key === "H");
+  expect(shortcuts).toHaveLength(2);
+  expect(new Set(shortcuts.map((entry) => entry.id)).size).toBe(2);
+});
+
 test("editor shortcuts reach managed views without taking text input", async () => {
   const workbench = createWorkbench();
   let calls = 0;

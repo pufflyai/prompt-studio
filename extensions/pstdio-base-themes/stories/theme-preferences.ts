@@ -12,12 +12,5 @@ export const themePreferences = [
   { id: "monokai", mode: "dark", theme: monokai },
 ].map(({ id, mode, theme }) => {
   const preference = createThemePreferenceFromVsCodeTheme({ id, mode: mode as "light" | "dark", theme });
-  return {
-    ...preference,
-    title: theme.name,
-    tokens: {
-      ...preference.tokens,
-      ...Object.fromEntries(Object.entries(theme.pstdio.colors).map(([role, value]) => [`colors.${role}`, value])),
-    },
-  };
+  return { ...preference, title: theme.name };
 });

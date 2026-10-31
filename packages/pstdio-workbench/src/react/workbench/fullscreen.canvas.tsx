@@ -1,15 +1,14 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createFullscreenWorkbench } from "./fullscreen.fixture";
 
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Main fullscreen",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
-  tags: ["main-fullscreen"],
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const modePolicy = createFullscreenWorkbench();
 modePolicy.w.modes.registerMode({ id: "restricted", canFullscreen: false, activate() {} });
 export const ModePolicy: Story = {

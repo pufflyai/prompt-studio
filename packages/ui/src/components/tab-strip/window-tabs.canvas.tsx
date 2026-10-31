@@ -1,5 +1,5 @@
 import { Box, IconButton } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { BookOpen, Columns3, Folder, PenTool, Plus } from "lucide-react";
 import { useState } from "react";
 import { type WindowTab, WindowTabs } from "./window-tabs";
@@ -44,18 +44,12 @@ const Example = (props: { initialTabs?: WindowTab[]; platform?: string }) => {
 const meta = {
   title: "Components/Navigation/Window Tabs",
   component: WindowTabs,
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Native window title-bar tabs. The host owns selection, close behavior, and optional reordering. Drag a tab to the shared insertion line; the preview stays inside the strip and releasing outside cancels the move. Long labels ellipsize at the shared tab limit; crowded tabs shrink before scrolling. Focus a tab and use Alt+ArrowLeft or Alt+ArrowRight to reorder, or press Space, arrow keys, then Space to drop or Escape to cancel. Reordering keeps the selected tab. Native controls occupy the reserved area; stories do not draw them. The desktop host sets data-window-full-screen on the document in macOS full screen to release that space.",
-      },
-    },
-  },
+  description:
+    "Native window title-bar tabs. The host owns selection, close behavior, and optional reordering. Drag a tab to the shared insertion line; the preview stays inside the strip and releasing outside cancels the move. Long labels ellipsize at the shared tab limit; crowded tabs shrink before scrolling. Focus a tab and use Alt+ArrowLeft or Alt+ArrowRight to reorder, or press Space, arrow keys, then Space to drop or Escape to cancel. Reordering keeps the selected tab. Native controls occupy the reserved area; stories do not draw them. The desktop host sets data-window-full-screen on the document in macOS full screen to release that space.",
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WindowTabs>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SeveralTabs: Story = {
   id: "components-navigation-window-tabs--several-tabs",
   render: () => <Example />,
@@ -83,7 +77,6 @@ export const FullScreen: Story = {
 export const FullScreenDark: Story = {
   id: "components-navigation-window-tabs--full-screen-dark",
   ...FullScreen,
-  globals: { theme: "pstdio-dark" },
 };
 export const OneTab: Story = {
   id: "components-navigation-window-tabs--one-tab",
@@ -121,12 +114,10 @@ export const LongNames: Story = {
 export const Dark: Story = {
   id: "components-navigation-window-tabs--dark",
   render: () => <Example />,
-  globals: { theme: "pstdio-dark" },
 };
 export const Light: Story = {
   id: "components-navigation-window-tabs--light",
   render: () => <Example />,
-  globals: { theme: "pstdio-light" },
 };
 export const NativeOverlay: Story = {
   id: "components-navigation-window-tabs--native-overlay",

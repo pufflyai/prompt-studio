@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
 import type { AttributeDescriptor } from "./types";
@@ -37,7 +37,7 @@ const PagedBoard = () => {
         Finish read
       </Button>
       <KanbanRenderer
-        storageKey="storybook-paged-board"
+        storageKey="preview-paged-board"
         rows={rows.slice(0, loaded)}
         attributes={attributes}
         defaultSettings={{ viewMode: "board", columnGrouping: "status", rowGrouping: "none", displayProperties: [] }}
@@ -67,10 +67,10 @@ const PagedBoard = () => {
 const meta = {
   title: "Patterns/Kanban Renderer/Paged board",
   component: PagedBoard,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof PagedBoard>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const UnloadedColumn: Story = {
   id: "patterns-kanban-renderer-paged-board--unloaded-column",
 };
