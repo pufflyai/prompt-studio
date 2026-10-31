@@ -144,3 +144,17 @@ test("CI tooling edits check their owner and declared consumers while the queue 
     expect(resolveCiScope({ ...input, changedFiles: [file] }).affectedOwners).toHaveLength(input.packages.length);
   }
 });
+
+test("a queue entry runs dependency and public API checks only when its own diff touches them", () => {
+  const input = scopeFixture();
+  const source = resolveCiScope({ ...input, event: "merge_group" });
+  expect(source).toMatchObject({ license: false, publishedExtensions: false, sdkApiReport: false });
+  const ui = resolveCiScope({
+    ...input,
+    event: "merge_group",
+    changedFiles: ["packages/ui/src/index.ts", "packages/ui/package.json"],
+  });
+  expect(ui).toMatchObject({ license: true, publishedExtensions: true, sdkApiReport: true });
+  const nightly = resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" });
+  expect(nightly).toMatchObject({ license: true, publishedExtensions: true, sdkApiReport: true });
+});

@@ -80,3 +80,12 @@ test("full releases require Intel functional and performance proof while nightly
   expect(nightly).toContain("signed-functional-win32-x64");
   expect(nightly).toContain("performance-desktop-win32-x64");
 });
+
+test("certification requires storage and runtime measurements on Linux, macOS and Windows", () => {
+  for (const channel of ["stable", "nightly"]) {
+    const required = requiredProductionChecks(channel);
+    for (const suite of ["storage", "runtime"])
+      for (const os of ["ubuntu-24.04", "macos-15", "windows-2025"])
+        expect(required).toContain(`performance-${suite}-${os}`);
+  }
+});
