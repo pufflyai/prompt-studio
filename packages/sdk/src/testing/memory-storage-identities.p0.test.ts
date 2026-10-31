@@ -23,6 +23,35 @@ test("two devices import the same source records with the same migration IDs", a
   expect(imported[0]![0]).not.toBe(imported[0]![1]);
 });
 
+test("independent storage migrations preserve initial order and allow concurrent later moves", async () => {
+  const devices = [
+    createMemoryStorage({ workbenchId: "shared", deviceId: "first" }),
+    createMemoryStorage({ workbenchId: "shared", deviceId: "second" }),
+  ];
+  const imported = await Promise.all(
+    devices.map(async (storage) => {
+      const positions: string[] = [];
+      await storage.migrate(1, async (_, migration) => {
+        for (const [rank, key] of ["first", "middle", "last"].entries()) {
+          const position = migration.position(rank, key);
+          positions.push(position);
+          await storage.records.commit({
+            operationId: migration.id(`import:${key}`),
+            edits: [{ recordId: migration.id(key), replace: { key, position } }],
+          });
+        }
+      });
+      return positions;
+    }),
+  );
+  expect(imported[0]).toEqual(imported[1]);
+  const [first, middle, last] = imported[0]!;
+  expect(first! < middle! && middle! < last!).toBe(true);
+  const moved = devices.map((storage) => storage.positions.between(first, middle));
+  expect(moved[0]).not.toBe(moved[1]);
+  for (const position of moved) expect(first! < position && position < middle!).toBe(true);
+});
+
 test("migration IDs separate versions and scopes and stay stable after a failed attempt", async () => {
   const storage = createMemoryStorage();
   let first = "";
