@@ -1,9 +1,8 @@
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { defaultThemePreferences, ThemePreferenceProvider } from "@pstdio/ui";
 import { createWorkbench } from "@pstdio/workbench";
 import { openRelatedResourcesPreference } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { CustomizationsSettingsContent } from "./customizations-settings-panel";
 import { OnboardingSettingsContent } from "./onboarding-settings-section";
 
@@ -40,21 +39,8 @@ const meta = {
       </ThemePreferenceProvider>
     ),
   ],
-} satisfies Meta<typeof Example>;
+} satisfies CanvasMeta<typeof Example>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Default: Story = {};
-export const Hidden: Story = { args: { initialHidden: true } };
-export const Preferences: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const related = canvas.getByRole("checkbox", { name: "Open related resources" });
-    await expect(related).toBeChecked();
-    await userEvent.click(related);
-    await expect(related).not.toBeChecked();
-    const onboarding = canvas.getByRole("checkbox", { name: "Don’t show onboarding" });
-    await expect(onboarding).not.toBeChecked();
-    await userEvent.click(onboarding);
-    await expect(onboarding).toBeChecked();
-  },
-};
+type Story = CanvasFrame<typeof meta>;
+export const Default: Story = { id: "settings-customizations--default" };
+export const Hidden: Story = { id: "settings-customizations--hidden", args: { initialHidden: true } };

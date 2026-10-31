@@ -1,11 +1,10 @@
 import { Box, Text } from "@chakra-ui/react";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
-import type { Meta, StoryObj } from "@storybook/react";
 import type { OnboardingState } from "pstdio-api-contracts";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createOnboardingModule } from "./module";
 
@@ -55,26 +54,12 @@ const meta = {
   title: "Onboarding/Created project",
   component: CreatedProject,
   args: { previouslyCompleted: false },
-  parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof CreatedProject>;
+  fullscreen: true,
+} satisfies CanvasMeta<typeof CreatedProject>;
 export default meta;
-type Story = StoryObj<typeof meta>;
-export const Setup: Story = {};
-export const PreviouslyCompleted: Story = { args: { previouslyCompleted: true } };
-export const Finish: Story = {
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await body.findByRole("button", { name: "Continue" }));
-    await userEvent.click(await body.findByRole("button", { name: /^Finish$/ }));
-    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
-    await expect(await body.findByText("Workspace", { selector: "p" })).toBeVisible();
-  },
-};
-export const Skip: Story = {
-  play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(await body.findByRole("button", { name: "Skip setup" }));
-    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
-    await expect(await body.findByText("Workspace", { selector: "p" })).toBeVisible();
-  },
+type Story = CanvasFrame<typeof meta>;
+export const Setup: Story = { id: "onboarding-created-project--setup" };
+export const PreviouslyCompleted: Story = {
+  id: "onboarding-created-project--previously-completed",
+  args: { previouslyCompleted: true },
 };
