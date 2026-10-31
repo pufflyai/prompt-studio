@@ -43,6 +43,10 @@ const PSTDIO_CANVAS = join(import.meta.dirname, "../../../canvas/bin/pstdio-canv
 test(
   "installs Canvas from the catalog with working commands and its authoring skill",
   async () => {
+    // Each phase reports its elapsed time, so a timeout shows which step was slow.
+    const testStarted = performance.now();
+    const phase = (name: string) =>
+      console.log(`[canvas install] ${name}: ${Math.round(performance.now() - testStarted)} ms`);
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
     const packed = await packExtension(join(import.meta.dirname, "../../../../extensions/canvas"));
     const { files } = await readExtensionPackage(packed.bytes);
@@ -74,11 +78,13 @@ test(
     try {
       const started = await startPackagedServe(root, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.url.origin}` });
       child = started.child;
+      phase("runtime ready");
       const repo = join(root, "project");
       mkdirSync(repo);
       writeProject(repo);
       const build = spawnSync(process.execPath, [PSTDIO_CANVAS, "build", "--root", repo], { encoding: "utf8" });
       expect(build.status, build.stderr).toBe(0);
+      phase("pstdio-canvas build");
       const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
       const created = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
@@ -95,7 +101,8 @@ test(
         headers,
         body: JSON.stringify({ source: { kind: "catalog", name: "canvas" } }),
       });
-      expect(installed.status).toBe(201);
+      expect(installed.status, await installed.text()).toBe(201);
+      phase("extension installed");
       const after = await (await fetch(`${url}/extensions`, { headers })).json();
       expect(after.extensions).toContainEqual(
         expect.objectContaining({ installName: "canvas", enabled: true, extensionId: "pstdio.canvas" }),
@@ -120,6 +127,7 @@ test(
       const layout = cli(["canvas", "layout", "read", "--canvas", "src/button.canvas.tsx"]);
       expect(layout.status).toBe(0);
       expect(JSON.parse(layout.stdout).camera.zoom).toBeGreaterThan(0);
+      phase("CLI commands");
       // Critical: the installed extension must serve the project's build without a source checkout.
       const assets = await fetch(`${url}/extensions/commands/pstdio.canvas.command.preview.assets/execute`, {
         method: "POST",
@@ -135,6 +143,7 @@ test(
       const { entry, modules, files } = result.outcome.value;
       expect(modules).toContain(entry);
       expect(modules.length).toBeGreaterThan(0);
+      phase("preview assets");
       for (const name of modules) {
         const code = Bun.gunzipSync(Buffer.from(files[name], "base64"));
         expect(code.byteLength).toBeGreaterThan(0);
@@ -156,6 +165,7 @@ test(
       await page.goto(new URL(button.href, started.baseUrl).href);
       const viewer = page.frameLocator('iframe[title="UI Canvas"]');
       await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
+      phase("frame ready in the browser");
       expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
       await viewer
         .getByRole("button", { name: /^Theme for / })
@@ -167,6 +177,7 @@ test(
       const preview = (await element!.contentFrame())!;
       await preview.waitForSelector('[data-frame-theme="pstdio-dark"]');
       expect(await preview.getByRole("button", { name: "Save" }).count()).toBe(1);
+      phase("theme reached the decorator");
     } finally {
       await browser?.close();
       if (child) await stopProcess(child);
