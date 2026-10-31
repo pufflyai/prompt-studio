@@ -159,7 +159,18 @@ const useWorkbenchPanelMenuAttachment = (
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [panel, root, leftHas, leftCollapsed, leftCollapsible, leftMin, rightHas, rightCollapsed, rightCollapsible, rightMin]);
+  }, [
+    panel,
+    root,
+    leftHas,
+    leftCollapsed,
+    leftCollapsible,
+    leftMin,
+    rightHas,
+    rightCollapsed,
+    rightCollapsible,
+    rightMin,
+  ]);
 
   return attachment;
 };
