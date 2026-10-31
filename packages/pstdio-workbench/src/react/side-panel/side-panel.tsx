@@ -1,7 +1,7 @@
 import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import { AttachedPanel, BubbleButton, BubblePanel, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { MessageCircle, Minimize2, Minus, SquareArrowOutUpRight } from "lucide-react";
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
@@ -49,13 +49,6 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const attached = mode === "attached" && !fullscreen;
-  const [headerMounted, setHeaderMounted] = useState(attached);
-  useEffect(() => {
-    if (attached) setHeaderMounted(true);
-  }, [attached]);
-  // The split layout makes a closed panel inert. Keep its header mounted across
-  // close/reopen; floating and fullscreen presentations own their separate header.
-  const hasAttachedHeader = (attached || headerMounted) && mode !== "floating" && !fullscreen;
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
@@ -68,7 +61,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         bg={workbenchBackgrounds.main}
         layerStyle="panel"
         header={
-          hasAttachedHeader ? (
+          attached ? (
             <PanelHeader workbench={workbench} region="side" variant="main" flexShrink={0} gap="sm">
               <WorkbenchSidePanelHeader header={header} />
               <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
