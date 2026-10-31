@@ -22,15 +22,7 @@ const performanceChecks = (family: string) => {
       { id: "canvas-startup", command: ["bun", "run", "--cwd", "packages/canvas-tests", "perf:startup"] },
       {
         id: "frontend",
-        command: [
-          "bun",
-          "run",
-          "--cwd",
-          "packages/e2e",
-          "src/scripts/run-playwright.ts",
-          "-c",
-          "playwright.perf.config.ts",
-        ],
+        command: ["bun", "scripts/ci/run-workbench-benchmarks.ts"],
       },
       { id: "packaged-collections", command: ["bun", "run", "--cwd", "packages/e2e", "test:packaged:benchmark"] },
     ];

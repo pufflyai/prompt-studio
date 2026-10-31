@@ -570,5 +570,55 @@
       "https://github.com/pufflyai/prompt-studio/pull/1571"
     ],
     "removeWhen": "Identify and fix the delayed fixture phase on Apple Silicon, then use independent normal CI observations within the existing 5000 ms limit to restore the stable gate. Preserve every environment and argument assertion; do not retry or run reliability loops."
+  },
+  {
+    "runner": "workbench-benchmark",
+    "file": "packages/e2e/src/perf/project-switch.p3.bench.ts",
+    "name": "switches projects once and within budget",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-932 / workbench performance",
+    "reason": "User-authorized release quarantine on 2026-10-31. The complete twenty-switch workload still reaches 1885–1917 ms against its unchanged 1850 ms budget after the label/layout optimizations. Preserve every sample, request-count and stable-instance assertion; this remains product performance debt.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41234623888",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41245408313/job/124667798482"
+    ],
+    "removeWhen": "Optimize project switching and pass the complete twenty-switch workload in its first hosted Linux x64 execution below 1850 ms per switch and 525 ms per long task, with all correctness assertions intact."
+  },
+  {
+    "runner": "packaged-desktop-benchmark",
+    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
+    "name": "warm attach restores the workbench within budget",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-932 / desktop performance",
+    "reason": "User-authorized release quarantine on 2026-10-31. Intel warm attach measured 4225 ms against the unchanged 3000 ms budget; subsequent setup evidence also exposed the theme-picker race, now fixed. Retain the complete saved workbench workload and native CPU/memory evidence.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41243502506/job/124662175838",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41245408313"
+    ],
+    "removeWhen": "Fix Intel warm-attach latency and complete the unchanged saved-project, Sessions, theme and Side Panel workload with native evidence below the 3000 ms launch budget in its first native execution."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "starts without editors and serves both authenticated transport paths",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-932 / Windows desktop lifecycle",
+    "reason": "User-authorized release quarantine on 2026-10-31 with no execution allowance above 60 seconds. The signed Windows release candidate waits for cold Performance extension dependencies past the existing 60-second deadline. Retain the empty home, real default installs, transport/lifecycle assertions and cleanup.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/41234623888"],
+    "removeWhen": "Fix cold Windows default-extension installation and complete this entire lifecycle case in its first native execution within the unchanged 60000 ms allowance, without prewarming, fewer extensions or retries."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "promotes ownership, detaches, and preserves data through a warm relaunch",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-932 / Windows desktop lifecycle",
+    "reason": "User-authorized release quarantine on 2026-10-31 with no execution allowance above 60 seconds. The signed Windows release candidate waits for cold Performance extension dependencies past the existing 60-second deadline. Retain the empty home, real default installs, transport/lifecycle assertions and cleanup.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/41234623888"],
+    "removeWhen": "Fix cold Windows default-extension installation and complete this entire lifecycle case in its first native execution within the unchanged 60000 ms allowance, without prewarming, fewer extensions or retries."
   }
 ]

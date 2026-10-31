@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { type DesktopBenchmarkReport, desktopBenchmarkResults } from "./desktop-benchmark-results";
+import { type BrowserBenchmarkReport, browserBenchmarkResults } from "./browser-benchmark-results";
 
 const expected = [{ file: "clients/desktop/src/e2e/launch.bench.ts", name: "cold start" }];
-const report = (): DesktopBenchmarkReport => ({
+const report = (): BrowserBenchmarkReport => ({
   config: { rootDir: "/repo/clients/desktop/src/e2e" },
   suites: [
     {
@@ -17,38 +17,38 @@ const report = (): DesktopBenchmarkReport => ({
 
 test("one ordered execution retains quarantined failures and keeps stable failures blocking", () => {
   const input = report();
-  const result = desktopBenchmarkResults(input, expected, "/repo");
+  const result = browserBenchmarkResults(input, expected, "/repo");
   expect(result.executed).toBe(3);
   expect(result.quarantined).toEqual({ executed: 1, failures: 1 });
   expect(result.stableFailures).toEqual([]);
   expect(result.quarantineReport.suites[0]!.specs!.map((entry) => entry.title)).toEqual(["cold start"]);
   expect(input.suites[0]!.specs!.map((entry) => entry.title)).toEqual(["warm launch", "cold start", "renderer"]);
   input.suites[0]!.specs![2]!.tests[0]!.results[0]!.status = "timedOut";
-  expect(desktopBenchmarkResults(input, expected, "/repo").stableFailures).toHaveLength(1);
+  expect(browserBenchmarkResults(input, expected, "/repo").stableFailures).toHaveLength(1);
 });
 
 test("missing, skipped or repeated quarantine attempts cannot clear the gate", () => {
   for (const status of ["skipped", "interrupted"]) {
     const input = report();
     input.suites[0]!.specs![1]!.tests[0]!.results[0]!.status = status;
-    expect(() => desktopBenchmarkResults(input, expected, "/repo")).toThrow();
+    expect(() => browserBenchmarkResults(input, expected, "/repo")).toThrow();
   }
   const repeated = report();
   repeated.suites[0]!.specs![1]!.tests[0]!.results.push({ status: "passed" });
-  expect(() => desktopBenchmarkResults(repeated, expected, "/repo")).toThrow("execute once");
+  expect(() => browserBenchmarkResults(repeated, expected, "/repo")).toThrow("execute once");
   const missing = report();
   missing.suites[0]!.specs!.splice(1, 1);
-  expect(() => desktopBenchmarkResults(missing, expected, "/repo")).toThrow("exactly once");
+  expect(() => browserBenchmarkResults(missing, expected, "/repo")).toThrow("exactly once");
   const setup = report();
   setup.errors = ["browser unavailable"];
-  expect(() => desktopBenchmarkResults(setup, expected, "/repo")).toThrow("setup failed");
+  expect(() => browserBenchmarkResults(setup, expected, "/repo")).toThrow("setup failed");
 });
 
 test("duplicate stable cases and unexpected stable skips are rejected too", () => {
   const duplicate = report();
   duplicate.suites[0]!.specs!.push(duplicate.suites[0]!.specs![0]!);
-  expect(() => desktopBenchmarkResults(duplicate, expected, "/repo")).toThrow("repeated");
+  expect(() => browserBenchmarkResults(duplicate, expected, "/repo")).toThrow("repeated");
   const skipped = report();
   skipped.suites[0]!.specs![0]!.tests[0]!.results[0]!.status = "skipped";
-  expect(() => desktopBenchmarkResults(skipped, expected, "/repo")).toThrow("unexpectedly skipped");
+  expect(() => browserBenchmarkResults(skipped, expected, "/repo")).toThrow("unexpectedly skipped");
 });

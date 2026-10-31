@@ -59,7 +59,11 @@ if (runner === "bun" || runner === "packaged-bun") {
       ),
     );
   }
-} else if (["playwright", "playwright-ui", "packaged-desktop", "packaged-desktop-benchmark"].includes(runner)) {
+} else if (
+  ["playwright", "playwright-ui", "packaged-desktop", "packaged-desktop-benchmark", "workbench-benchmark"].includes(
+    runner,
+  )
+) {
   const groups = quarantineGroups(registry, readWorkspacePackages(root), runner, process.platform, process.arch, scope);
   if (!groups.length) {
     record(runner, { executed: 0, failures: 0 });

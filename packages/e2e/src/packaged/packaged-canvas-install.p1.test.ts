@@ -192,5 +192,6 @@ test(
       rmSync(root, { recursive: true, force: true });
     }
   },
-  PACKAGED_TEST_TIMEOUT,
+  // Approved 2026-10-31: cold Windows dependency installation and preview validation share 60 seconds.
+  process.platform === "win32" ? 60_000 : PACKAGED_TEST_TIMEOUT,
 );

@@ -44,6 +44,8 @@ const selectedProjectKey = "dashboard-wb2:selected-project:global";
 // Uses the same workload as the warm relaunch check in packaged-app.p1.spec.ts: a project on the
 // Sessions page, the non-default theme, and an attached Side Panel.
 test("warm attach restores the workbench within budget", async () => {
+  // Approved 2026-10-31 for cold fixture setup and post-launch sampling; launch budgets stay unchanged.
+  if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(45_000);
   const home = createPackagedHome();
   enableBenchmarkMonitoring(home);
   let first: PackagedApp | null = null;
@@ -58,27 +60,7 @@ test("warm attach restores the workbench within budget", async () => {
         first = await launchPackagedApp(home);
         const { page } = first;
         const workbenchState = () => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
-        // Global theme preparation is independent of the project's cold dependency install.
-        // Await both before opening the project so every restored-state check stays the same.
-        const [project, theme] = await Promise.all([
-          createPackagedProject(first, "Warm attach project"),
-          test.step("Save the non-default theme", async () => {
-            const theme =
-              (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark"
-                ? "pstdio-light"
-                : "pstdio-dark";
-            await page.evaluate(() =>
-              (window as unknown as WorkbenchHandle).__pstdioDashboardWorkbench.commands.executeCommand(
-                "workbench.action.changeTheme",
-              ),
-            );
-            await page
-              .getByRole("option", { name: theme === "pstdio-light" ? "Prompt Light" : "Prompt Dark", exact: true })
-              .click();
-            await expect.poll(workbenchState).toMatchObject({ values: { "theme-preference": theme } });
-            return theme;
-          }),
-        ]);
+        const project = await createPackagedProject(first, "Warm attach project");
         await openPackagedProject(page, project);
         await page.getByRole("option", { name: "Sessions", exact: true }).click();
         await expect(page.getByLabel("Main").getByRole("log")).toBeVisible();
@@ -89,6 +71,18 @@ test("warm attach restores the workbench within budget", async () => {
             return [values[selectedProjectKey], JSON.parse(values[pageLocationKey] ?? "null")?.location?.page?.id];
           })
           .toEqual([project.id, "session-composer"]);
+        // Initial project selection closes overlays. Open the theme picker after that transition.
+        const theme =
+          (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark" ? "pstdio-light" : "pstdio-dark";
+        await page.evaluate(() =>
+          (window as unknown as WorkbenchHandle).__pstdioDashboardWorkbench.commands.executeCommand(
+            "workbench.action.changeTheme",
+          ),
+        );
+        await page
+          .getByRole("option", { name: theme === "pstdio-light" ? "Prompt Light" : "Prompt Dark", exact: true })
+          .click();
+        await expect.poll(workbenchState).toMatchObject({ values: { "theme-preference": theme } });
         return { projectId: project.id, theme };
       });
     await test.step("Attach the Side Panel and quit the first desktop window", async () => {
