@@ -1,5 +1,6 @@
 ---
 "pstdio": patch
+"@pstdio/ui": patch
 ---
 
-Keep unchanged extension theme and schema data intact while resolving labels during project switches.
+Reduce repeated label resolution and row layout during workbench interactions, and start the desktop metrics helper without loading unrelated CLI commands.

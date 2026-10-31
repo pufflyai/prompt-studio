@@ -1,4 +1,4 @@
-import { rmSync } from "node:fs";
+import { rmSync, writeFileSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { workbenchBudgets } from "pstdio-benchmarks";
 import { createPlannerAttempt, createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
@@ -140,6 +140,7 @@ test("switches projects once and within budget", async ({ page, request }) => {
     ).toBeVisible();
 
     const samples: ProjectSwitchSample[] = [];
+    const samplePath = test.info().outputPath("project-switch-samples.json");
     const switchProject = async (
       target: ProjectFixture,
       cycle: number,
@@ -165,6 +166,7 @@ test("switches projects once and within budget", async ({ page, request }) => {
         requests: [...requests],
         stableInstances: await stableInstances(page),
       });
+      writeFileSync(samplePath, JSON.stringify(samples, null, 2));
     };
 
     for (let cycle = 0; cycle < 10; cycle += 1) {
@@ -173,7 +175,7 @@ test("switches projects once and within budget", async ({ page, request }) => {
     }
     await test.info().attach("project-switch-samples", {
       contentType: "application/json",
-      body: JSON.stringify(samples),
+      path: samplePath,
     });
 
     const aToB = samples.filter((sample) => sample.direction === "a-to-b").map((sample) => sample.duration);

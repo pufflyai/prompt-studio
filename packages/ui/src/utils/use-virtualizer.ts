@@ -23,7 +23,10 @@ export const useVirtualizer = <TScrollElement extends Element, TItemElement exte
     // Keep its known size, or the list draws the wrong rows when it is shown again. A row hidden on
     // purpose therefore keeps its height; no caller hides single rows.
     measureElement: (element, entry, instance) => {
-      if (element.getClientRects().length > 0) return measure(element, entry, instance);
+      // ResizeObserver already measured visible rows. Reading their rects again during
+      // split-panel motion forces another layout for every row on every animation frame.
+      const observedSize = instance.options.horizontal ? entry?.contentRect.width : entry?.contentRect.height;
+      if ((observedSize ?? 0) > 0 || element.getClientRects().length > 0) return measure(element, entry, instance);
       const index = instance.indexFromElement(element);
       return instance.itemSizeCache.get(instance.options.getItemKey(index)) ?? instance.options.estimateSize(index);
     },
