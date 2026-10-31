@@ -1,5 +1,5 @@
 import { Container } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ParamEditor } from "./param-editor";
 import type { ParamValueMap } from "./param-editor.types";
@@ -10,7 +10,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const RunAttemptForm: Story = {
   id: "patterns-param-editor-searchable-grouped-selection--run-attempt-form",
   render: (props) => {

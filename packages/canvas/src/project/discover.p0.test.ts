@@ -21,11 +21,16 @@ const files = {
   "src/forms/.canvas/preview.tsx": "export default {};\n",
   "src/forms/text-field.canvas.tsx": `import { TextField } from "./text-field";
 
-const meta = { title: "Design System/Forms/Text field", component: TextField, description: "Single-line input." };
+const meta = {
+  title: "Design System/Forms/Text field",
+  component: TextField,
+  description: "Single-line input.",
+  defaultTheme: "pstdio-dark",
+};
 export default meta;
 
 export const WithLabel = { args: { label: "Name" } };
-export const ReadOnly = { name: "Read only value", fullscreen: true };
+export const ReadOnly = { name: "Read only value", fullscreen: true, defaultTheme: "prompt-contrast-light" };
 export function FullWidth() {
   return null;
 }
@@ -65,10 +70,35 @@ test("reads titles, groups and frames, and finds the nearest preview file", asyn
     description: "Single-line input.",
     preview: "src/forms/.canvas/preview.tsx",
     frames: [
-      { exportName: "WithLabel", name: "With label", description: undefined, fullscreen: undefined },
-      { exportName: "ReadOnly", name: "Read only value", description: undefined, fullscreen: true },
-      { exportName: "FullWidth", name: "Full width", description: undefined, fullscreen: undefined },
-      { exportName: "Invalid", name: "Invalid", description: "Shows the error message.", fullscreen: undefined },
+      // A frame's own default theme wins over the canvas file's.
+      {
+        exportName: "WithLabel",
+        name: "With label",
+        description: undefined,
+        fullscreen: undefined,
+        defaultTheme: "pstdio-dark",
+      },
+      {
+        exportName: "ReadOnly",
+        name: "Read only value",
+        description: undefined,
+        fullscreen: true,
+        defaultTheme: "prompt-contrast-light",
+      },
+      {
+        exportName: "FullWidth",
+        name: "Full width",
+        description: undefined,
+        fullscreen: undefined,
+        defaultTheme: "pstdio-dark",
+      },
+      {
+        exportName: "Invalid",
+        name: "Invalid",
+        description: "Shows the error message.",
+        fullscreen: undefined,
+        defaultTheme: "pstdio-dark",
+      },
     ],
   });
   expect(canvases["status.canvas.tsx"]).toMatchObject({

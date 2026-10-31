@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench, headerTrailingMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -82,7 +82,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SingleAvailableFixedPanel: Story = {
   id: "pstdio-workbench-reference-core-api-panel-header-visibility--single-available-fixed-panel",
   args: { workbench: createPanelWorkbench() },

@@ -1,5 +1,5 @@
 import { Box, Dialog, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { NotificationCenter } from "./notification-center";
 import type { NotificationCenterItem } from "./notification-center.types";
 
@@ -68,7 +68,7 @@ const meta: CanvasMeta<typeof NotificationCenter> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof NotificationCenter>;
+type Story = CanvasFrame<typeof NotificationCenter>;
 export const Default: Story = {
   id: "components-feedback-notification-center--default",
   args: {

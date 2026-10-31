@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
@@ -44,7 +44,7 @@ const meta: CanvasMeta<typeof ChatPanel> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 export const WidePane: Story = {
   id: "patterns-chat-chat-panel-width--wide-pane",
   render: (args) => (

@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
@@ -53,7 +53,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof StreamingOnOpen>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const OpensDuringContinuousStream: Story = {
   id: "patterns-chat-chat-panel-streaming-ready--opens-during-continuous-stream",
 };

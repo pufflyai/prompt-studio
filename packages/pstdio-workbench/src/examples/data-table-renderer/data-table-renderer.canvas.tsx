@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../workbench-story";
 import { createDataTableRendererStoryModule } from "./module";
@@ -15,7 +15,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const MultipleSelection: Story = {
   id: "pstdio-workbench-reference-core-api-native-data-table--multiple-selection",
   name: "Multiple selection",

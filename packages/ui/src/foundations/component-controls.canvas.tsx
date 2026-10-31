@@ -1,7 +1,8 @@
-import { Field, Flex, Input, NumberInput, Stack, Text, Textarea } from "@chakra-ui/react";
-import { Checkbox, Radio, RadioGroup, SegmentedControl, Slider, Switch } from "@pstdio/ui";
+import { Button, Field, Flex, Input, NumberInput, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useState } from "react";
-import { Button } from "../components/themed-primitives";
+import { Checkbox, Radio, RadioGroup, SegmentedControl, Slider, Switch } from "@/components/primitives";
+
+export default { title: "Design System/Component controls" };
 
 export const ButtonStates = () => (
   <Stack p="md" gap="lg">

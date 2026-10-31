@@ -125,7 +125,7 @@ Clearly describe it as a temporary workaround, not the intended design.
 ## Visual design rules
 
 - For UI tickets, follow Planner's `updateCanvasDesign` policy. When enabled and Canvas is available, update the relevant design before creating or implementing the ticket and follow the `canvas` skill. Link the canvas page, exact preview names, and source paths in the ticket. If disabled or unavailable, follow the project's existing design workflow and record why the Canvas step was skipped. Explicit user instructions take precedence.
-- Canvas source lives in `extensions/canvas/src/canvases/`. Preserve existing designs and stable IDs.
+- Canvas sources are `*.canvas.tsx` files next to the components they show. Design pages live in `packages/ui/src/foundations/`. Preserve existing designs and stable IDs.
 - Read [design/DESIGN.md](design/DESIGN.md) before working on UI or design. Follow its shared interaction patterns.
 - Live canvases define appearance, component states, and example prop usage. When following the Canvas workflow, update the design first and make the implementation match it.
 

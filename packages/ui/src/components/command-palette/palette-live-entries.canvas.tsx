@@ -1,5 +1,5 @@
 import { Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { Palette, type PaletteEntry } from "./palette";
 
@@ -26,7 +26,7 @@ const meta: CanvasMeta<typeof LiveEntriesPalette> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof LiveEntriesPalette>;
+type Story = CanvasFrame<typeof LiveEntriesPalette>;
 export const PreservesHighlight: Story = {
   id: "components-overlays-palette-live-entries--preserves-highlight",
   render: () => <LiveEntriesPalette />,

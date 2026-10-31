@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ThemePreferenceProvider } from "@pstdio/ui";
 import { DesktopQuitConfirmationDialog } from "./desktop-quit-confirmation";
 
@@ -20,7 +20,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof DesktopQuitConfirmationDialog>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Light: Story = {
   id: "desktop-quitconfirmation--light",
   decorators: [

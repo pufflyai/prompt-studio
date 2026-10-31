@@ -1,5 +1,5 @@
 import { Box, VStack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 
 const meta: CanvasMeta<typeof WorkspaceBadge> = {
@@ -17,7 +17,7 @@ const meta: CanvasMeta<typeof WorkspaceBadge> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof WorkspaceBadge>;
+type Story = CanvasFrame<typeof WorkspaceBadge>;
 export const ProjectFolder: Story = {
   id: "components-data-display-workspace-badge--project-folder",
   args: {

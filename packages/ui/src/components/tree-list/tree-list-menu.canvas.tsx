@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { HelpCircle, Plus } from "lucide-react";
 import { useState } from "react";
 import { TreeList } from "./tree-list";
@@ -38,10 +38,10 @@ const MenuTree = () => {
 };
 const meta = { title: "Components/Tree List/Menu rows", component: MenuTree } satisfies CanvasMeta<typeof MenuTree>;
 export default meta;
-export const MenuAndBranch: CanvasVariant<typeof meta> = {
+export const MenuAndBranch: CanvasFrame<typeof meta> = {
   id: "components-tree-list-menu-rows--menu-and-branch",
 };
-export const FooterMenu: CanvasVariant<typeof meta> = {
+export const FooterMenu: CanvasFrame<typeof meta> = {
   id: "components-tree-list-menu-rows--footer-menu",
   render: () => (
     <Box h="20rem" display="flex" alignItems="flex-end" p="md">

@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { type ComponentProps, useState } from "react";
 import type { Command, RegisteredCommand } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -127,7 +127,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof CommandParamsDialog>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const NumberParameter: Story = {
   id: "pstdio-workbench-guides-command-parameters--number-parameter",
   render: (args) => <CommandParameterExample {...args} />,

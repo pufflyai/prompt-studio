@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 
 const meta = {
@@ -26,7 +26,7 @@ const meta = {
 } satisfies CanvasMeta<typeof ChatPanel>;
 
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 
 export const Light: Story = { id: "patterns-chat-message-surfaces--light", defaultTheme: "pstdio-light" };
 export const Dark: Story = { id: "patterns-chat-message-surfaces--dark", defaultTheme: "pstdio-dark" };

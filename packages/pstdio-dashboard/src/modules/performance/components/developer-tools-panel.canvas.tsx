@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID, Workbench } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ const meta = {
   component: DeveloperToolsPanel,
 } satisfies CanvasMeta<typeof DeveloperToolsPanel>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 // The real modules with a browser host: the panel opens under Workbench in the settings navigation.
 const DeveloperToolsNavigation = () => {
   const [client] = useState(() => {

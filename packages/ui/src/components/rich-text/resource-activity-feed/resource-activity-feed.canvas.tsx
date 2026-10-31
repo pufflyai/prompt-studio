@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ComponentProps } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ResourceActivityFeed, type ResourceActivityFeedItem } from "./resource-activity-feed";
@@ -118,7 +118,7 @@ const meta = {
   render: feedFrame("820px"),
 } satisfies CanvasMeta<typeof ResourceActivityFeed>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const MixedActivity: Story = {
   id: "components-data-display-resource-activity-feed--mixed-activity",
   args: {

@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { Radio, RadioGroup } from "@/components/primitives/radio";
 
@@ -17,7 +17,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof Radio>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const WithLabel: Story = {
   id: "components-inputs-radio--with-label",
   args: {

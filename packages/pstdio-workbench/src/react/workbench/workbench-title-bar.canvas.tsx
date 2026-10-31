@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WindowTitleBar } from "@pstdio/ui";
 import { createWorkbench } from "../../core";
 import { createPolicyWorkbench } from "../region/panel-policy.fixture";
@@ -25,7 +25,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof Workbench>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const HostTitle: Story = {
   id: "pstdio-workbench-reference-core-api-title-bar--host-title",
   args: {

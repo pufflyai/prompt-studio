@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { buildAnalysis } from "../analysis";
 import { channelNames } from "../sites";
 import { storyAnalysis } from "../webview/story-fixtures";
@@ -18,7 +18,7 @@ const meta: CanvasMeta<typeof AnalysisSections> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof AnalysisSections>;
+type Story = CanvasFrame<typeof AnalysisSections>;
 export const FourteenDays: Story = {
   id: "extensions-social-radar-analysis--fourteen-days",
 };

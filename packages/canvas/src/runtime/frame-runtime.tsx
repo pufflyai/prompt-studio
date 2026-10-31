@@ -1,12 +1,8 @@
 import { Component, type ReactNode, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  type CanvasMeta,
-  type CanvasProject,
-  CanvasThemeContext,
-  type CanvasVariant,
-  composePreview,
-} from "../compose";
+import { type CanvasFrame, type CanvasMeta, type CanvasPreview, CanvasThemeContext, composePreview } from "../compose";
+import { createFrameAssetBridge } from "./assets";
+import { LiveFrame } from "./live-frame";
 import { installFrameNavigation } from "./navigation";
 import { type FrameItem, type FrameMessage, type FrameRequest, type FrameTheme, frameProtocol } from "./protocol";
 
@@ -15,6 +11,13 @@ export interface FrameSource {
   load: () => Promise<Record<string, unknown>>;
   preview?: () => Promise<{ default?: unknown }>;
 }
+
+// Zag and Ark components mark open overlays with `data-state`; plain ARIA dialogs mark themselves modal.
+const MODAL_SELECTOR = [
+  ...["dialog", "popover", "menu"].map((scope) => `[data-scope="${scope}"][data-state="open"]`),
+  '[role="dialog"][aria-modal="true"]',
+  '[role="alertdialog"]',
+].join(", ");
 
 type LoadedFrame = Awaited<ReturnType<typeof composePreview>> & { timings: Record<string, number> };
 
@@ -41,6 +44,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
   let nonce = "";
   const send = (message: Omit<FrameMessage, "protocol" | "nonce">) =>
     window.parent.postMessage({ protocol: frameProtocol, nonce, ...message }, "*");
+  const assets = createFrameAssetBridge(send);
 
   class Boundary extends Component<{ children: ReactNode }, { error?: string }> {
     state: { error?: string } = {};
@@ -77,13 +81,18 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
         cancelAnimationFrame(second);
       };
     }, [loaded]);
-    const Frame = loaded.Component;
     return (
       <div
         data-preview-content
-        style={{ display: "grid", minHeight: minimumHeight ? `${minimumHeight}px` : undefined }}
+        // `alignSelf` keeps the content at its own height when project CSS stretches `#root`.
+        style={{
+          display: "grid",
+          alignSelf: "start",
+          width: "100%",
+          minHeight: minimumHeight ? `${minimumHeight}px` : undefined,
+        }}
       >
-        <Frame />
+        <LiveFrame Frame={loaded.Component} args={loaded.args} />
       </div>
     );
   };
@@ -99,10 +108,10 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     if (frame === undefined) throw new Error(`Missing preview: ${preview.source}#${preview.exportName}`);
     send({ type: "imports-ready" });
     const importedAt = performance.now();
-    const composed = await composePreview(
-      frame as CanvasVariant,
+    const composed = composePreview(
+      frame as CanvasFrame,
       (module.default ?? {}) as CanvasMeta,
-      (project?.default ?? {}) as CanvasProject,
+      (project?.default ?? {}) as CanvasPreview,
     );
     return { ...composed, timings: { importMs: importedAt - started, setupMs: performance.now() - importedAt } };
   };
@@ -117,7 +126,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     if (!active || !loaded || !item) return;
     const minimumHeight = loaded.fullscreen ? (item.preview?.viewportHeight ?? 960) : 0;
     reactRoot.render(
-      <CanvasThemeContext.Provider value={theme.mode}>
+      <CanvasThemeContext.Provider value={theme}>
         <Boundary>
           <Ready loaded={loaded} minimumHeight={minimumHeight} />
         </Boundary>
@@ -130,12 +139,13 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     if (nonce && message.nonce !== nonce) return;
     nonce = message.nonce;
     if (message.theme) theme = message.theme;
+    if (message.type === "assets") assets.receive(message);
     if (message.type === "theme") render();
     if (message.type !== "render" || !message.item || item) return;
     item = message.item;
     void load(message.item)
       .then((result) => {
-        if (!active) return result.dispose();
+        if (!active) return;
         loaded = result;
         render();
       })
@@ -153,7 +163,15 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
   const measure = () => {
     cancelAnimationFrame(scheduled);
     scheduled = requestAnimationFrame(() => {
-      const height = Math.ceil(Math.max(root.offsetHeight, root.scrollHeight, 1));
+      // An open dialog, popover or menu is positioned outside the content's height, so the frame
+      // grows to the viewport while one is open.
+      const modal = document.querySelector(MODAL_SELECTOR) ? (item?.preview?.viewportHeight ?? 960) : 1;
+      // Measure the frame's content, not `#root`: project CSS often sizes `#root` to the viewport,
+      // and a frame as tall as its viewport could never shrink again.
+      const content = root.querySelector<HTMLElement>("[data-preview-content]");
+      if (content) resizeObserver.observe(content);
+      const measured = content ?? root;
+      const height = Math.ceil(Math.max(measured.offsetHeight, measured.scrollHeight, modal));
       if (height === previous) return;
       previous = height;
       send({ type: "height", height });
@@ -171,12 +189,12 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     () => {
       active = false;
       window.removeEventListener("message", receive);
-      loaded?.dispose();
       cancelAnimationFrame(scheduled);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
       document.fonts.removeEventListener("loadingdone", measure);
       reactRoot.unmount();
+      assets.dispose();
     },
     { once: true },
   );

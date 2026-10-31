@@ -7,6 +7,7 @@ export {
   type FrameManifest,
   MANIFEST_FORMAT,
 } from "./project/manifest";
+export { type FrameBootstrap, frameBootstrap } from "./runtime/assets";
 export {
   type FrameItem,
   type FrameMessage,

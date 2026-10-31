@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench, type WorkbenchModuleContribution } from "../../core";
 import { ResourceTabsExample } from "../api/resource-tabs-example";
 import { createHostTerminalWorkbench } from "../host-terminal-story";
@@ -24,7 +24,7 @@ const meta = {
   title: "pstdio-workbench/Guides/Onboarding",
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const createModuleWorkbench = (createModule: () => WorkbenchModuleContribution) => {
   const workbench = createWorkbench();
   workbench.registerModule(createModule());

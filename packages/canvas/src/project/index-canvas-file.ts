@@ -108,11 +108,13 @@ export const indexCanvasFile = (path: string, source: string) => {
   const index = readSource(path, source);
   const meta = resolveValue(index, index.file.statements.find(ts.isExportAssignment)?.expression);
   const metaFullscreen = flag(property(index, meta, "fullscreen"));
+  const metaTheme = text(property(index, meta, "defaultTheme"));
   const frames = frameExports(index).map(({ exportName, value }) => ({
     exportName,
     name: text(property(index, value, "name")) ?? sentenceCase(exportName),
     description: text(property(index, value, "description")),
     fullscreen: flag(property(index, value, "fullscreen")) ?? metaFullscreen,
+    defaultTheme: text(property(index, value, "defaultTheme")) ?? metaTheme,
   }));
   const fileName = path
     .split("/")

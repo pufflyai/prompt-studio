@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { storyTrends } from "../webview/story-fixtures";
 import { type TrendsMode, TrendsView, type TrendsViewProps } from "./trends-view";
@@ -39,7 +39,7 @@ const meta: CanvasMeta<typeof InteractiveTrends> = {
   args: { versions: storyTrends.versions, metrics: storyTrends.metrics },
 };
 export default meta;
-type Story = CanvasVariant<typeof InteractiveTrends>;
+type Story = CanvasFrame<typeof InteractiveTrends>;
 export const AcrossVersions: Story = {
   id: "extensions-prompt-studio-dev-performance-trends--across-versions",
   args: { mode: "versions" },

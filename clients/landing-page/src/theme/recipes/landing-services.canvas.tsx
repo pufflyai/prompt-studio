@@ -1,5 +1,5 @@
 import { Badge, Box, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ListRow, Switch } from "@pstdio/ui";
 import { Bot, FileCode, Shapes, Star } from "lucide-react";
 import { useState } from "react";
@@ -120,7 +120,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof SharedFeatures>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Desktop: Story = {
   id: "theme-landing-services--desktop",
 };

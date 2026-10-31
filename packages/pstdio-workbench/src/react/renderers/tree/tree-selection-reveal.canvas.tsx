@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TreeList } from "@pstdio/ui";
 import { useState } from "react";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
@@ -143,18 +143,18 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof RevealNewNote>;
 export default meta;
-export const NewNoteInCollapsedFolder: CanvasVariant<typeof meta> = {
+export const NewNoteInCollapsedFolder: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-tree-selection-reveal--new-note-in-collapsed-folder",
 };
-export const RefreshKeepsUserCollapse: CanvasVariant<typeof meta> = {
+export const RefreshKeepsUserCollapse: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-tree-selection-reveal--refresh-keeps-user-collapse",
   render: () => <RefreshSelectedNote />,
 };
-export const RefreshResourceFreePage: CanvasVariant<typeof meta> = {
+export const RefreshResourceFreePage: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-tree-selection-reveal--refresh-resource-free-page",
   render: () => <RefreshSelectedNote resourceFree />,
 };
-export const RevisitResourceAlias: CanvasVariant<typeof meta> = {
+export const RevisitResourceAlias: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-tree-selection-reveal--revisit-resource-alias",
   render: () => <RefreshSelectedNote aliases />,
 };

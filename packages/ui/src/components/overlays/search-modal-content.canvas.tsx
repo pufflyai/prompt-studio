@@ -1,5 +1,5 @@
 import { Button, Dialog, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchModalContent } from "./search-modal-content";
@@ -47,7 +47,7 @@ const meta = {
   args: { showSearch: true },
 } satisfies CanvasMeta<typeof ProjectListDialog>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Searchable: Story = {
   id: "overlays-search-modal-content--searchable",
 };

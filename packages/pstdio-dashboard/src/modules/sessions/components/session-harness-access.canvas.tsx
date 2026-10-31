@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { useState } from "react";
 import { SessionHarnessSignIn } from "./session-harness-sign-in";
@@ -38,7 +38,7 @@ const meta: CanvasMeta<typeof AccessStory> = {
   args: { installed: true, signedIn: false },
 };
 export default meta;
-type Story = CanvasVariant<typeof AccessStory>;
+type Story = CanvasFrame<typeof AccessStory>;
 export const SignedOut: Story = {
   id: "sessions-harness-access--signed-out",
 };
