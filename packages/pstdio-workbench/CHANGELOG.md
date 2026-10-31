@@ -1,5 +1,53 @@
 # @pstdio/workbench
 
+## 0.46.0
+
+_2026-10-31_
+
+### Minor Changes
+
+- 1d59445: Show closable tabs, page-scoped headers, compact tab cards with explicit creation actions, freely movable and pinnable tabs, and collection tab restoration across navigation.
+- 856afcf: Keep retained workbenches isolated while switching between projects.
+- 85a84ff: Keep pages and reusable viewers independent, derive headers from page presentation, and preserve navigation and focus.
+- 7116e1b: Let collection badges open panels and other navigation actions.
+- 85a84ff: Support independent resource viewers in tabbed collections and safe replacement from resource-free landing pages.
+- 34f8998: Expose device-owned performance captures, recording exports, and Developer settings controls.
+- dd5f406: Add optional bounded table and board queries with indexed page navigation and aggregate counts.
+- e68ddda: Open workspace files without diff computation, preload Monaco alongside file reads, save workspace edits explicitly, and keep compact file trees within their viewport.
+- ec820b7: Use hosted Cloud login by default while preserving self-hosted account service overrides.
+- 85a84ff: Preserve each viewer's navigation context and prevent stale actions from crossing project or deletion boundaries.
+- 4212050: Add shared keyboard actions, global panel/fullscreen toggles, Ctrl+Tab and numbered tab selection, automatic exit after completed actions, and a grouped palette reference with one default shortcut per action.
+- 35226d1: Let extension status items open detail views in a host popover.
+- 85a84ff: Support page-owned Main content, non-rendering page groups, and independent panel views with mode-owned fullscreen policy.
+
+### Patch Changes
+
+- b86f345: Add Home above Sessions, keep project navigation stable when entering and leaving tickets, place the mode return first in subnavigation content, and remove the desktop project breadcrumb button.
+- cbafa28: Keep a closed collection landing tab, such as the Artifacts library, closed after reload.
+- 4a7e459: Allow cards to move between every board column and remove drag permission settings.
+- b85d464: Open the Side Panel without an error when its bubble is clicked while a project is still loading, and offer mode panels only in their own mode.
+- b5d3e2c: Replace Storybook preview tooling with native Canvas composition and critical Playwright checks; limit visual verification guidance to critical risks; distribute UI Canvas as an optional extension with a working-with-Canvas skill and dependency-scoped frame startup.
+- d2d73b8: Preserve live webviews and unsaved state when switching session previews.
+- 85a84ff: Scope Main tabs and choices to their page, preserve viewer context and safe history replay, and resolve declared breadcrumb icons.
+- fff7222: Restore page resources through history when a related preview closes and preserve legacy page headers.
+- 0c308d9: Reuse installed default extensions and preserve hidden collection page state while deferring rendering until the page is visible.
+- e3b8456: Move the performance meter and its details to the Prompt Studio Performance Monitoring extension, measure while that extension is loaded, remove the connection status badge, and keep status widget popover headers fixed with the scrollbar at the edge.
+- fc61aec: Keep project switching and panel controls responsive, and preserve native performance sampling while a backend reply is pending.
+- b393779: Hold Alt to preview keyboard shortcuts, select numbered tabs without entering shortcut mode, add G → H for Home, show Mod+P on Search, deprecate the Help shortcut layer, and stop looking up shortcuts while typing plain keys.
+- e9ddc6b: Reduce shortcut discovery, unrelated region renders, and panel menu updates during resizing.
+- d363d4b: Close a deleted resource's tab when deleting it returns to its parent collection page.
+- c37aad4: Version core extensions independently, store extension data under full `<publisher>.<name>` IDs where each extension starts fresh, and add opt-in PSX registry installs.
+- bf6b2d1: Use a 380 ms first-hover tooltip delay, show harness setting labels, reveal clipped tab titles, and keep full prompt history navigable while drafts are saved.
+- 2cd86db: Match content panel surfaces and keep elapsed activity in the workspace header.
+- 85a84ff: Scope static Main browsers to their page, offer resource viewers across pages, and preserve native navigation ownership and current resource breadcrumbs.
+- 8729077: Keep host-required extensions enabled across projects and add app-wide panels with device settings.
+- c241f7d: Keep the workbench panels, navigation header and status bar mounted when switching projects; only the previous project's views are released.
+- 597ee3b: Keep navigation group drags from activating panel dropzones.
+- 300f514: Show Settings in the project picker, hide background controls, and reuse installed defaults when opening the first project without reloading.
+- b988745: Show navigation section groups without icons.
+- d54da21: Show a minimal, borderless Main header with view menu openers on tabless pages, and keep those menus with their page content.
+- ccefd1d: Render native view toolbar actions as xs buttons with a leading separator.
+
 ## 0.45.0
 
 _2026-10-22_
