@@ -35,7 +35,7 @@ test("keeps Extensions reachable in the pinned navigation footer", async () => {
 test("offers a direct keyboard shortcut that opens Extensions", async () => {
   const workbench = setup();
   try {
-    const shortcut = workbench.keyboard.catalog().find((entry) => entry.keys.join(" ") === "MOD+SHIFT+X");
+    const shortcut = workbench.keyboard.catalog().find((entry) => entry.keys.join(" ") === "ALT+SHIFT+O");
     expect(shortcut).toBeDefined();
     expect(shortcut!.binding.action).toEqual({ kind: "page", page: dashboardExtensionsPage });
     await workbench.navigation.openTarget(shortcut!.binding.action);

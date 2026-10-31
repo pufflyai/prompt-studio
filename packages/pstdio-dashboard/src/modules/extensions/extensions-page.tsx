@@ -44,7 +44,7 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
   });
   ctx.keybindings.registerKeybinding({
     action: { kind: "page", page: dashboardExtensionsPage },
-    keybinding: "Mod+Shift+X",
+    keybinding: "Alt+Shift+O",
     label: "Open extensions",
   });
   ctx.keybindings.registerKeybinding({
