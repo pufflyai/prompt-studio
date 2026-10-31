@@ -3,19 +3,22 @@ import { cpus, platform, release, totalmem } from "node:os";
 import { runCiChecks } from "./run-ci-checks";
 
 const performanceChecks = (family: string) => {
-  if (family === "backend")
-    return ["storage", "runtime"].map((suite) => ({
-      id: suite,
-      command: [
-        "bun",
-        "packages/benchmarks/src/cli.ts",
-        "sample",
-        "--suite",
-        suite,
-        "--out",
-        `test-results/production-performance/backend/${suite}.jsonl`,
-      ],
-    }));
+  // Backend suites run as separate jobs: together they exceed the release's critical path on Windows.
+  if (family === "storage" || family === "runtime")
+    return [
+      {
+        id: family,
+        command: [
+          "bun",
+          "packages/benchmarks/src/cli.ts",
+          "sample",
+          "--suite",
+          family,
+          "--out",
+          `test-results/production-performance/${family}/${family}.jsonl`,
+        ],
+      },
+    ];
   if (family === "browser")
     return [
       { id: "chat-rendering", command: ["bun", "run", "--cwd", "packages/ui", "perf:chat"] },
@@ -54,7 +57,8 @@ if (import.meta.main) {
   const checks = performanceChecks(family);
   const directory = `test-results/production-performance/${family}`;
   mkdirSync(directory, { recursive: true });
-  if (family === "backend") for (const check of checks) await Bun.write(`${directory}/${check.id}.jsonl`, "");
+  if (family === "storage" || family === "runtime")
+    for (const check of checks) await Bun.write(`${directory}/${check.id}.jsonl`, "");
   const metadata = {
     sourceSha: process.env.SOURCE_SHA,
     versionSha: process.env.VERSION_SHA,

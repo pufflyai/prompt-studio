@@ -95,9 +95,10 @@ jobs:
       database_matrix: ${{ steps.scope.outputs.databaseMatrix }}
       edited_matrix: ${{ steps.scope.outputs.editedMatrix }}
     steps:
+      # Scope compares the candidate with its first parent only.
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 2
           ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -295,7 +296,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
   integration_contracts:
-    name: integration_contracts_${{ matrix.priority }} (${{ matrix.package }})
+    name: integration_contracts_${{ matrix.priority }} (${{ matrix.shard }})
     needs: scope
     if: needs.scope.outputs.integration_matrix != '[]'
     runs-on: ubuntu-latest
@@ -322,13 +323,13 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
       - name: Build selected contract owners
         env:
-          LERNA_FILTER: --scope ${{ matrix.package }}
+          LERNA_FILTER: ${{ matrix.lernaFilter }}
         shell: bash
         run: |
           read -r -a filters <<< "$LERNA_FILTER"
           bun run build -- "${filters[@]}" --include-dependencies
       - name: Test selected isolated integration contracts
-        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun scripts/ci/run-priority-tests.ts "$CI_PRIORITY" --runner integration --scope "${{ matrix.package }}" --prebuilt
+        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun scripts/ci/run-priority-tests.ts "$CI_PRIORITY" --runner integration --scope '${{ join(matrix.packages, ',') }}' --prebuilt
       - name: Preserve execution evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -1402,7 +1403,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          fetch-depth: 0
       - *a1
       - name: Require complete selected validation
         env:
@@ -1508,7 +1508,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: "24"

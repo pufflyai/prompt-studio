@@ -39,6 +39,11 @@ const prioritiesFor = (stage: ReturnType<typeof stageFor>): TestPriority[] => {
   return stage === "merge_queue" ? ["P0", "P1"] : ["P0"];
 };
 
+// These checks depend only on the files they read. A queue entry diffs against the entry ahead
+// of it, which already checked its own changes, so PRs and the queue check only their own diff.
+const runsFileCheck = (stage: ReturnType<typeof stageFor>, touched: boolean) =>
+  stage === "full" || (stage !== "main" && touched);
+
 export const resolveCiScope = (input: CiScopeInput) => {
   const { event, labels, changedFiles, packages, tests, profile, releaseChannel = "stable" } = input;
   for (const file of tests) priorityFromFile(file);
@@ -49,6 +54,8 @@ export const resolveCiScope = (input: CiScopeInput) => {
   let affectedOwners = affectedPackages(packages, code);
   if (shared || stage !== "pull_request") affectedOwners = packages.map((pkg) => pkg.name).sort();
   if (stage === "main") affectedOwners = [];
+  const publicApi = code.some((file) => /^packages\/(sdk|ui|pstdio-api-contracts)\//.test(file));
+  const extensions = code.some((file) => file.startsWith("extensions/"));
   const matrices = createTestMatrices(tests, packages, affectedOwners, prioritiesFor(stage));
   const componentMatrix = stage === "merge_queue" ? [] : matrices.componentMatrix;
   const browserSmoke = stage === "main" || stage === "merge_queue";
@@ -84,19 +91,12 @@ export const resolveCiScope = (input: CiScopeInput) => {
     lernaFilter: affectedOwners.map((name) => `--scope ${name}`).join(" "),
     dockerBuild: production,
     harnessCli: production,
-    license:
-      stage !== "main" &&
-      (stage !== "pull_request" || changedFiles.some((file) => ["package.json", "bun.lock"].includes(basename(file)))),
-    publishedExtensions:
-      stage !== "main" &&
-      (shared ||
-        stage !== "pull_request" ||
-        code.some((file) => /^(extensions|packages\/(sdk|ui|pstdio-api-contracts))\//.test(file))),
-    sdkApiReport:
-      stage !== "main" &&
-      (shared ||
-        stage !== "pull_request" ||
-        code.some((file) => /^packages\/(sdk|ui|pstdio-api-contracts)\//.test(file))),
+    license: runsFileCheck(
+      stage,
+      changedFiles.some((file) => ["package.json", "bun.lock"].includes(basename(file))),
+    ),
+    publishedExtensions: runsFileCheck(stage, shared || publicApi || extensions),
+    sdkApiReport: runsFileCheck(stage, shared || publicApi),
     browserSmoke,
     deepDiagnostics: labels.includes("ci:full"),
   };
