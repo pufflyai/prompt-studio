@@ -31,7 +31,11 @@ if (isRuntimePidAlive(child.pid)) { process.exitCode = 1; console.error("Runtime
   try {
     const built = await Bun.build({ entrypoints: [script], target: "node", outdir: root, naming: "cleanup.mjs" });
     expect(built.success).toBe(true);
-    const runner = Bun.spawn([node, join(root, "cleanup.mjs")], { stdout: "pipe", stderr: "pipe" });
+    const runner = Bun.spawn([node, join(root, "cleanup.mjs")], {
+      env: { ...process.env, FORCE_COLOR: undefined },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     const [code, stderr] = await Promise.all([runner.exited, new Response(runner.stderr).text()]);
     expect(stderr).toBe("");
     expect(code).toBe(0);
