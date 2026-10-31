@@ -1,5 +1,5 @@
 import { Button, Icon, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Check, GitBranch, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
@@ -77,12 +77,16 @@ const SelectionMenus = () => {
   );
 };
 const meta = {
-  tags: ["menu-selection"],
   title: "Components/Overlays/Menu Selection",
   component: SelectionMenus,
 } satisfies CanvasMeta<typeof SelectionMenus>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const CheckmarksAndAlignment: Story = {
   id: "components-overlays-menu-selection--checkmarks-and-alignment",
+};
+
+export const PaleSelection: Story = {
+  id: "components-overlays-menu-selection--pale-selection",
+  defaultTheme: "vscode-flat-dark",
 };

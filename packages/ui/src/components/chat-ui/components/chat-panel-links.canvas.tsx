@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { RichMessage } from "@/components/rich-text/rich-message/rich-message";
@@ -94,7 +94,7 @@ const EditableLinkMessage = () => {
 const meta = {
   title: "Chat/ChatPanel/Links",
   component: LinkConversation,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <Box h="100vh">
@@ -104,7 +104,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof LinkConversation>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const FileLinks: Story = {
   id: "chat-chatpanel-links--file-links",
 };

@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "./tree-list";
@@ -48,10 +48,9 @@ const VirtualSortableTree = () => {
 const meta = {
   title: "Components/Data Display/Tree List/Virtual Sortable",
   component: VirtualSortableTree,
-  tags: ["!manifest"],
 } satisfies CanvasMeta<typeof VirtualSortableTree>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const LargeSessions: Story = {
   id: "components-data-display-tree-list-virtual-sortable--large-sessions",
 };

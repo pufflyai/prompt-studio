@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { WorkbenchOverlayLayer } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
@@ -23,7 +23,7 @@ const SearchOverlayStory = (props: SearchOverlayStoryProps) => {
     if (overlay === "Projects") {
       getWriter("projects")?.truncateAndWrite(
         Array.from({ length: projectCount }, (_, index) => ({
-          id: `storybook-project-${index}`,
+          id: `preview-project-${index}`,
           name: `Project ${index + 1}`,
           created_at: "2026-10-16T09:00:00.000Z",
         })),
@@ -32,7 +32,7 @@ const SearchOverlayStory = (props: SearchOverlayStoryProps) => {
     receiveSettings({ notifications_enabled: true, machine_tokens_enabled: false, max_concurrent_sessions: null });
     const projects = workbench.registerModule(createProjectsModule());
     const notifications = workbench.registerModule(createNotificationsModule());
-    selectDashboardProject(workbench, { id: "storybook-search-overlays", name: "Prompt Studio" });
+    selectDashboardProject(workbench, { id: "preview-search-overlays", name: "Prompt Studio" });
     const command = overlay === "Projects" ? dashboardCommandIds.openProjects : dashboardCommandIds.openNotifications;
     void workbench.commands.executeCommand(command);
     return () => {
@@ -55,18 +55,11 @@ const meta = {
       </ProjectStoryFixture>
     ),
   ],
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Search overlays use the shared dialog close position to center the control beside the search field.",
-      },
-    },
-  },
+  description: "Search overlays use the shared dialog close position to center the control beside the search field.",
+  fullscreen: true,
 } satisfies CanvasMeta<typeof SearchOverlayStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Projects: Story = {
   id: "dashboard-search-overlays--projects",
   args: { overlay: "Projects" },

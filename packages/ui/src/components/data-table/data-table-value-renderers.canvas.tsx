@@ -61,19 +61,13 @@ const StoryFrame = (args: DataTableProps) => (
 );
 export const ValueRenderers = {
   id: "components-data-display-data-table--value-renderers",
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Relative dates refresh every minute while the table stays open. Hover or focus a date to read its full timestamp.",
-      },
-    },
-  },
+  description:
+    "Relative dates refresh every minute while the table stays open. Hover or focus a date to read its full timestamp.",
   args: {
     data: workspaceRows,
     fullWidth: true,
     columnRenderers: valueRenderers,
-    toolbarStorageKey: "storybook-data-table-value-renderers",
+    toolbarStorageKey: "preview-data-table-value-renderers",
   },
   render: StoryFrame,
 };
@@ -85,7 +79,7 @@ export const DefaultDisplay = {
     columnRenderers: valueRenderers,
     columnStats: { Type: { type: "top-values", limit: 3 }, Provider: { type: "top-values", limit: 3 } },
     defaultSettings: { showStats: false, hiddenColumns: ["Provider"] },
-    toolbarStorageKey: "storybook-data-table-default-display",
+    toolbarStorageKey: "preview-data-table-default-display",
   },
   render: StoryFrame,
 };
@@ -102,7 +96,7 @@ export const SearchCellValues = {
     ],
     columnRenderers: { Created: { type: "date" }, Diff: { type: "diff" } },
     fullWidth: true,
-    toolbarStorageKey: "storybook-data-table-search-cell-values",
+    toolbarStorageKey: "preview-data-table-search-cell-values",
     defaultSettings: { showStats: false },
   },
   render: StoryFrame,

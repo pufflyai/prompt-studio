@@ -105,6 +105,7 @@ describe("extension catalog", () => {
       "harness-open-code",
       "pstdio-base-themes",
       "pstdio-skills",
+      "pstdio-performance",
     ]);
   });
 });

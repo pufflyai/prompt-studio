@@ -1,5 +1,5 @@
 import { CloseButton } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { ParamEditorLabel } from "./param-editor-label";
 
@@ -13,7 +13,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof ParamEditorLabel>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const WithInformation: Story = {
   id: "patterns-param-editor-label--with-information",
 };

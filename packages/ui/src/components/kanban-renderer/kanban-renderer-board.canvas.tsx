@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Archive, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
@@ -8,7 +8,7 @@ const meta: CanvasMeta = {
   title: "Patterns/Kanban Renderer/Board",
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const runAttempt = () => {};
 const mockColumns: KanbanRendererBoardColumn[] = [
   {
@@ -125,14 +125,8 @@ export const Default: Story = {
 };
 export const WideBoard: Story = {
   id: "patterns-kanban-renderer-board--wide-board",
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Hold the primary mouse button and drag empty space or a column heading to pan horizontally. Cards still open and drag between columns. Column controls keep their normal actions. Touch and scrollbars use native scrolling.",
-      },
-    },
-  },
+  description:
+    "Hold the primary mouse button and drag empty space or a column heading to pan horizontally. Cards still open and drag between columns. Column controls keep their normal actions. Touch and scrollbars use native scrolling.",
   render: () => (
     <Box maxW="lg" height="md">
       <Wrapper />
@@ -141,13 +135,7 @@ export const WideBoard: Story = {
 };
 export const EdgeScrolling: Story = {
   id: "patterns-kanban-renderer-board--edge-scrolling",
-  parameters: {
-    docs: {
-      description: {
-        story: "Hold a dragged card near either side of the board to scroll. Moving closer to the edge scrolls faster.",
-      },
-    },
-  },
+  description: "Hold a dragged card near either side of the board to scroll. Moving closer to the edge scrolls faster.",
   render: () => (
     <Box maxW="lg" height="md">
       <Wrapper />

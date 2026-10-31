@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -59,6 +59,6 @@ export default {
   title: "pstdio-workbench/Workbench/Mode view retention",
   render: () => <RetainedModeViews />,
 } satisfies CanvasMeta;
-export const NavigateAndReturn: CanvasVariant = {
+export const NavigateAndReturn: CanvasFrame = {
   id: "pstdio-workbench-workbench-mode-view-retention--navigate-and-return",
 };

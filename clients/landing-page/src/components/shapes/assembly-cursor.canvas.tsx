@@ -1,5 +1,5 @@
 import { Box, chakra, useSlotRecipe } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { landingAssemblySlotRecipe } from "../../theme/recipes/landing-assembly";
 import { AssemblyCursor } from "./assembly-cursor";
 
@@ -18,10 +18,9 @@ const CursorModes = () => {
 const meta = {
   title: "Landing/Agent Cursors",
   component: CursorModes,
-  parameters: { layout: "centered" },
 } satisfies CanvasMeta<typeof CursorModes>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const PointerGrabAndText: Story = {
   id: "landing-agent-cursors--pointer-grab-and-text",
 };

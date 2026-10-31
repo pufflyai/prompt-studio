@@ -61,6 +61,7 @@
     "typescript": "6.0.2",
     "vite": "7.3.7",
     "workbench-fixture": "workspace:*",
+    "pstdio-performance": "workspace:*",
     "pstdio-scripts": "workspace:*",
     "@pstdio/canvas": "workspace:*",
     "pstdio-benchmarks": "workspace:*"

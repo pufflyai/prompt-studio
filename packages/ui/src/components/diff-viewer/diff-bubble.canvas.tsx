@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DiffBubble } from "./diff-bubble";
 
 const meta: CanvasMeta<typeof DiffBubble> = {
@@ -11,7 +11,7 @@ const meta: CanvasMeta<typeof DiffBubble> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof DiffBubble>;
+type Story = CanvasFrame<typeof DiffBubble>;
 export const Default: Story = {
   id: "patterns-diff-diff-bubble--default",
 };

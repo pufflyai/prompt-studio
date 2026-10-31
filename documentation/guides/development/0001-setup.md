@@ -315,7 +315,6 @@ Use the live Canvas extension for designs and component examples. See the [autho
 
 ```sh
 bun run --cwd scripts canvas:build
-bun run --cwd scripts canvas:coverage
 pst canvas list
 pst canvas open --canvas foundations
 ```

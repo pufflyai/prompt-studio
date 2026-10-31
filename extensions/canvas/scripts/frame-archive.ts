@@ -22,7 +22,7 @@ const bindSources = (manifest: FrameManifest, sources: Map<string, string>, inpu
     const project = inputs.projects[suite];
     manifest.sources[source] = {
       script: chunkFor(source),
-      ...(!source.endsWith(".mdx") && project ? { project: chunkFor(project) } : {}),
+      ...(project ? { project: chunkFor(project) } : {}),
     };
   }
   for (const [name, source] of Object.entries(inputs.nativeSources))

@@ -1,5 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -37,7 +37,7 @@ const createPageWorkbench = (
     },
     slots: [],
   });
-  workbench.pageLocations.setProject("storybook-page-content");
+  workbench.pageLocations.setProject("preview-page-content");
   workbench.pageLocations.navigate({ kind: "page", page });
   const tab = workbench.layout.getActivePanel("main")!;
   if (empty === "moved") workbench.movePanel(tab.instanceId, "side");
@@ -47,22 +47,20 @@ const createPageWorkbench = (
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Page content",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SinglePageTab: Story = {
   id: "pstdio-workbench-reference-core-api-page-content--single-page-tab",
   args: { workbench: createPageWorkbench() },
 };
 export const SingleViewPage: Story = {
   id: "pstdio-workbench-reference-core-api-page-content--single-view-page",
-  tags: ["page-header-policy"],
   args: { workbench: createPageWorkbench(undefined, true, "page") },
 };
 export const PageHeaderDefault: Story = {
   id: "pstdio-workbench-reference-core-api-page-content--page-header-default",
-  tags: ["page-header-policy"],
   args: { workbench: createPageWorkbench(undefined, false) },
 };
 export const ReopenContent: Story = {
@@ -101,7 +99,7 @@ const createFilteredEmptyWorkbench = () => {
     main: { kind: "panels", empty: { kind: "view", id: "empty-tree" } },
     slots: [],
   });
-  workbench.pageLocations.setProject("storybook-filtered-empty");
+  workbench.pageLocations.setProject("preview-filtered-empty");
   workbench.pageLocations.navigate({ kind: "page", page, params: { filter: "route-filter" } });
   return workbench;
 };

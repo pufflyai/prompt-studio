@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TimelineDisplayMenu } from "./timeline-display-menu";
 import { TimelinePresentationProvider } from "./timeline-presentation";
 
@@ -25,7 +25,7 @@ const meta: CanvasMeta<typeof TimelineDisplayMenu> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof TimelineDisplayMenu>;
+type Story = CanvasFrame<typeof TimelineDisplayMenu>;
 export const Properties: Story = {
   id: "extensions-planner-timeline-display--properties",
 };

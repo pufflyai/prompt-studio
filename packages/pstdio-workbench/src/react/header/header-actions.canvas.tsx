@@ -1,11 +1,11 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench, resourceContextMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 
-const page = { kind: "page", extensionId: "storybook", id: "library" } as const;
-const artifact = { type: "artifact", id: "prototype", extensionId: "storybook", projectId: "storybook" };
+const page = { kind: "page", extensionId: "preview", id: "library" } as const;
+const artifact = { type: "artifact", id: "prototype", extensionId: "preview", projectId: "preview" };
 const openArtifact = (workbench: ReturnType<typeof createWorkbench>) =>
   workbench.navigation.openTarget({
     kind: "panel",
@@ -61,17 +61,17 @@ const createHeaderWorkbench = () => {
   });
   workbench.commands.registerCommand({ id: "rename-artifact", label: "Rename artifact" }, { execute: () => undefined });
   workbench.layout.registerMenuItem(resourceContextMenuPath("artifact"), { commandId: "rename-artifact" });
-  workbench.pageLocations.setProject("storybook");
+  workbench.pageLocations.setProject("preview");
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Header actions",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const FocusedResourceInLibrary: Story = {
   id: "pstdio-workbench-reference-core-api-header-actions--focused-resource-in-library",
   args: { workbench: createHeaderWorkbench() },

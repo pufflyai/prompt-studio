@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createGlyphIcon, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import { useState } from "react";
 import { landingStorySlotRecipe } from "./landing-story";
@@ -107,10 +107,10 @@ const VisualTool = () => {
 const meta = {
   title: "Theme/Landing Tool Demo",
   component: VisualTool,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof VisualTool>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Desktop: Story = {
   id: "theme-landing-tool-demo--desktop",
 };

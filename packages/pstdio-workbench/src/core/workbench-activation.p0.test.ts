@@ -106,3 +106,51 @@ test("retained workbenches traverse their own history after several switches and
   expect(b.pages.store.getState().location?.page.id).toBe("editor");
   await Promise.all([a.dispose(), b.dispose()]);
 });
+
+test("reloaded workbench controls traverse history from before reload", async () => {
+  const browser = createMemoryWorkbenchPageLocationBrowser();
+  const ref = (id: string) => ({ kind: "page", extensionId: "example", id }) as const;
+  const open = (active: boolean) => {
+    const workbench = createWorkbench({ active, startPage: ref("start"), pageLocationBrowser: browser });
+    workbench.modes.registerMode({ id: "project", activate() {} });
+    for (const id of ["start", "editor"])
+      workbench.pages.registerPage({
+        id,
+        ref: ref(id),
+        path: id,
+        modeId: "project",
+        main: { kind: "panels" },
+        slots: [],
+      });
+    expect(workbench.pageLocations.boot("a").ok).toBe(true);
+    return workbench;
+  };
+  const original = open(true);
+  const hidden = open(false);
+  original.pageLocations.navigate({ kind: "page", page: ref("editor") });
+  await Promise.all([original.dispose(), hidden.dispose()]);
+
+  const reloaded = open(true);
+  const inactive = open(false);
+  try {
+    expect(reloaded.pageLocations.historyStore.getState().canGoBack).toBe(true);
+    reloaded.pageLocations.goBack();
+    expect(reloaded.pages.store.getState().location?.page.id).toBe("start");
+    expect(reloaded.pageLocations.historyStore.getState().canGoForward).toBe(true);
+    expect(reloaded.pageLocations.boot("a").ok).toBe(true);
+    reloaded.pageLocations.goForward();
+    expect(reloaded.pages.store.getState().location?.page.id).toBe("editor");
+    reloaded.pageLocations.navigate({ kind: "page", page: ref("start") });
+    browser.back();
+    expect(reloaded.pages.store.getState().location?.page.id).toBe("editor");
+    browser.back();
+    expect(reloaded.pages.store.getState().location?.page.id).toBe("start");
+    browser.forward();
+    expect(reloaded.pages.store.getState().location?.page.id).toBe("editor");
+    browser.forward();
+    expect(reloaded.pages.store.getState().location?.page.id).toBe("start");
+    expect(inactive.pages.store.getState().location?.page.id).toBe("editor");
+  } finally {
+    await Promise.all([reloaded.dispose(), inactive.dispose()]);
+  }
+});

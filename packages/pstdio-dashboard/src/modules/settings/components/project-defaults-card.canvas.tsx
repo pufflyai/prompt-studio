@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProjectDefaultsCard } from "./project-defaults-card";
 
@@ -8,7 +8,6 @@ const queryClient = new QueryClient({
 const meta: CanvasMeta<typeof ProjectDefaultsCard> = {
   title: "ProjectSettings/ProjectDefaultsCard",
   component: ProjectDefaultsCard,
-  parameters: { layout: "padded" },
   decorators: [
     (Story) => (
       <QueryClientProvider client={queryClient}>
@@ -18,7 +17,7 @@ const meta: CanvasMeta<typeof ProjectDefaultsCard> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof ProjectDefaultsCard>;
+type Story = CanvasFrame<typeof ProjectDefaultsCard>;
 export const Default: Story = {
   id: "projectsettings-projectdefaultscard--default",
   args: {

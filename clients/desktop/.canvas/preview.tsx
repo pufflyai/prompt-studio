@@ -1,12 +1,17 @@
 import "@pstdio/ui/style.css";
-import type { CanvasProject } from "@pstdio/canvas";
-import { ChakraProvider, psTheme } from "@pstdio/ui";
+import type { CanvasPreview } from "@pstdio/canvas";
+import { ChakraProvider, psTheme, ThemePreferenceProvider } from "@pstdio/ui";
 
-const preview: CanvasProject = {
+// The host picks each frame's theme, so frames never store a theme choice.
+const storage = { getItem: () => null, setItem: () => {} };
+
+const preview: CanvasPreview = {
   decorators: [
-    (Story) => (
+    (Frame, { theme }) => (
       <ChakraProvider value={psTheme}>
-        <Story />
+        <ThemePreferenceProvider initialPreference={theme.id} themePreferences={[theme]} storage={storage}>
+          <Frame />
+        </ThemePreferenceProvider>
       </ChakraProvider>
     ),
   ],

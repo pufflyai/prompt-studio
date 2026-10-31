@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { Slider } from "@/components/primitives/slider";
 
@@ -19,7 +19,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof Slider>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SquareTrack: Story = {
   id: "components-inputs-slider--square-track",
 };

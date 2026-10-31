@@ -38,7 +38,9 @@ for (const [project, core] of [["first", first], ["second", second]] as const) {
   });
   if (!core.pageLocations.boot(project).ok) throw new Error("Consumer page did not open");
 }
+const nativeStart = nativeEntry;
 first.pageLocations.navigate({ kind: "page", page: { ...startPage, id: "editor" } });
+const nativeEditor = nativeEntry;
 for (const entry of [nativeEntry, { url: "/outside", state: null }]) {
   nativeEntry = entry;
   popstate?.(entry);
@@ -56,6 +58,26 @@ void [Portal, ScopedDialog, ScopedMenu, ScopedPopover, useScopedMenu, useToaster
 }
 await first.dispose();
 await second.dispose();
+nativeEntry = nativeEditor;
+const reloaded = createWorkbench({ startPage, pageLocationBrowser: browser });
+const hidden = createWorkbench({ startPage, pageLocationBrowser: browser, active: false });
+for (const core of [reloaded, hidden]) {
+  core.modes.registerMode({ id: "project", activate() {} });
+  for (const id of ["start", "editor"]) core.pages.registerPage({
+    id, ref: { ...startPage, id }, path: id, modeId: "project", main: { kind: "panels" }, slots: [],
+  });
+  if (!core.pageLocations.boot("first").ok) throw new Error("Reloaded consumer page did not open");
+}
+for (const [entry, expected] of [[nativeStart, "start"], [nativeEditor, "editor"]] as const) {
+  nativeEntry = entry;
+  popstate?.(entry);
+  if (reloaded.pages.store.getState().location?.page.id !== expected)
+    throw new Error("Native history from before reload did not restore its page");
+  if (hidden.pages.store.getState().location?.page.id !== "editor")
+    throw new Error("Native history changed the inactive workbench after reload");
+}
+await reloaded.dispose();
+await hidden.dispose();
 `,
   );
 };

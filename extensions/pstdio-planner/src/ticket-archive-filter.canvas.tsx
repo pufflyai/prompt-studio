@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { isLocalizedString } from "@pstdio/sdk/extensions";
 import { type AttributeDescriptor, KanbanRenderer } from "@pstdio/ui/kanban-renderer";
 import { buildTicketAttributes } from "./data/mappers";
@@ -6,17 +6,17 @@ import { buildTicketAttributes } from "./data/mappers";
 const meta: CanvasMeta<typeof KanbanRenderer> = {
   title: "Extensions/Planner/Ticket Archive Filter",
   component: KanbanRenderer,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const attributes = JSON.parse(JSON.stringify(buildTicketAttributes([])), (_key, value) =>
   isLocalizedString(value) ? value.default : value,
 ) as AttributeDescriptor[];
 const archiveFilterStory = (state: "active" | "archived") =>
   ({
     args: {
-      storageKey: `storybook-ticket-archive-${state}`,
+      storageKey: `preview-ticket-archive-${state}`,
       attributes,
       rows: [
         { id: "active", title: "Active ticket", attributes: { archived: "active" } },

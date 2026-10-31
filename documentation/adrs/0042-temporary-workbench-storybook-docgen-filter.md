@@ -4,7 +4,7 @@ Proposed: 2026-09-27
 
 ## Status
 
-Accepted as a temporary workaround.
+Removed on 2026-10-30. Storybook was retired, and the filter in `packages/pstdio-workbench/.canvas/main.ts` no longer exists. UI Canvas does not run Storybook docgen. The rest of this record describes the workaround as it was.
 
 ## Intended design
 

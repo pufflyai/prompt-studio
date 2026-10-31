@@ -176,6 +176,70 @@ test("transport status follows the socket through offline and back and signals e
   }
 });
 
+test.each([false, true])("retry reconnects before backoff, including during teardown: %s", async (duringTeardown) => {
+  const controller = new AbortController();
+  const first = Promise.withResolvers<void>();
+  const disconnected = Promise.withResolvers<void>();
+  const reconnected = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let socket: Bun.ServerWebSocket<unknown> | undefined;
+  let attempts = 0;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(client) {
+        socket = client;
+        client.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+      },
+      message() {},
+    },
+  });
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    access: async () => ({ token: "access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+    signal: controller.signal,
+    synchronize: async (signal) => {
+      if (++attempts > 1) {
+        reconnected.resolve();
+        return;
+      }
+      first.resolve();
+      await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+      if (duringTeardown) await release.promise;
+    },
+    onStatusChange: () => {
+      if (attempts === 1 && !connection.status().connected) {
+        disconnected.resolve();
+        if (duringTeardown) connection.retry();
+      }
+    },
+  });
+  try {
+    await first.promise;
+    socket?.close();
+    await disconnected.promise;
+    if (!duringTeardown) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      connection.retry();
+    }
+    release.resolve();
+    const result = await Promise.race([reconnected.promise.then(() => true), Bun.sleep(500).then(() => false)]);
+    expect(result).toBe(true);
+    expect(attempts).toBe(2);
+  } finally {
+    release.resolve();
+    controller.abort();
+    await connection.done;
+    await server.stop(true);
+  }
+});
+
 test("a planned access renewal reconnects at once without reporting the connection offline", async () => {
   const controller = new AbortController();
   let opens = 0;
@@ -212,5 +276,64 @@ test("a planned access renewal reconnects at once without reporting the connecti
     controller.abort();
     await server.stop(true);
     await connection.done;
+  }
+});
+
+test("retry during access renewal synchronizes after the renewed socket is ready", async () => {
+  const controller = new AbortController();
+  const synchronized = Promise.withResolvers<void>();
+  let firstSignal: AbortSignal | undefined;
+  let retried = false;
+  let accesses = 0;
+  let opens = 0;
+  let synchronizations = 0;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 426 });
+    },
+    websocket: {
+      open(socket) {
+        opens++;
+        socket.send(JSON.stringify({ protocolVersion: 1, type: "ready" }));
+      },
+      message() {},
+    },
+  });
+  const connection = createRelayConnection({
+    origin: server.url.origin,
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    access: async () => ({
+      token: "renewal-access",
+      expiresAt: new Date(Date.now() + (++accesses === 1 ? 100 : 30_000)).toISOString(),
+    }),
+    signal: controller.signal,
+    synchronize: async (signal) => {
+      if (++synchronizations > 1) {
+        synchronized.resolve();
+        return;
+      }
+      firstSignal = signal;
+      await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+    },
+    onStatusChange: () => {
+      if (firstSignal?.aborted && connection.status().connected && !retried) {
+        retried = true;
+        connection.retry();
+      }
+    },
+  });
+  try {
+    const result = await Promise.race([synchronized.promise.then(() => true), Bun.sleep(500).then(() => false)]);
+    expect(opens).toBe(2);
+    expect(retried).toBe(true);
+    expect(result).toBe(true);
+    expect(synchronizations).toBe(2);
+  } finally {
+    controller.abort();
+    await connection.done;
+    await server.stop(true);
   }
 });

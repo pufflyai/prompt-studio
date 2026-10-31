@@ -1,5 +1,5 @@
 import { Box, Button, ChakraProvider, HStack, Input, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import {
   ScopedDialog as Dialog,
   ScopedMenu as Menu,
@@ -205,10 +205,10 @@ const MultipleWorkbenches = (props: { richText?: boolean }) => {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Multiple workbenches",
   component: MultipleWorkbenches,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof MultipleWorkbenches>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 
 export const RetainedProjects: Story = {
   id: "pstdio-workbench-reference-core-api-multiple-workbenches--retained-projects",

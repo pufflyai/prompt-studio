@@ -1,13 +1,12 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TimelineFromJSON } from "./timeline";
 
 const meta = {
   title: "Patterns/Chat/Timeline",
   component: TimelineFromJSON,
-  parameters: { layout: "padded" },
 } satisfies CanvasMeta<typeof TimelineFromJSON>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Diff: Story = {
   id: "patterns-chat-timeline--diff",
   args: {

@@ -45,7 +45,7 @@ test("queue native owners provide delivered integrity while production requires 
     ).outcome,
   ).toBe("failure");
   const production = plannedCiJobs(resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" }));
-  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(7);
+  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(8);
 });
 
 test("production cannot pass without native UI quarantine execution", () => {

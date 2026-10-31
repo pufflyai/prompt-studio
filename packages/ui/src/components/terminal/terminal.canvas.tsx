@@ -1,5 +1,5 @@
 import { Button, Input, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import { createScriptedTerminalBridge, type ScriptedTerminalStep } from "./scripted-bridge";
 import { Terminal } from "./terminal";
@@ -8,10 +8,9 @@ import type { TerminalBridge } from "./types";
 const meta: CanvasMeta<typeof Terminal> = {
   title: "Components/Terminal",
   component: Terminal,
-  parameters: { layout: "centered" },
 };
 export default meta;
-type Story = CanvasVariant<typeof Terminal>;
+type Story = CanvasFrame<typeof Terminal>;
 const TerminalFrame = ({ children }: { children: React.ReactNode }) => (
   <div style={{ width: "min(720px, 90vw)", height: "320px" }}>{children}</div>
 );
@@ -52,7 +51,6 @@ const DeferredFocusFixture = () => {
 };
 export const DeferredFocusRespectsNewChoice: Story = {
   id: "components-terminal--deferred-focus-respects-new-choice",
-  tags: ["!manifest", "terminal-deferred-focus"],
   render: () => <DeferredFocusFixture />,
 };
 const PopupRestoreFocusFixture = () => {
@@ -89,7 +87,6 @@ const PopupRestoreFocusFixture = () => {
 };
 export const DeferredFocusIgnoresPopupRestore: Story = {
   id: "components-terminal--deferred-focus-ignores-popup-restore",
-  tags: ["!manifest", "terminal-deferred-focus"],
   render: () => <PopupRestoreFocusFixture />,
 };
 export const Default: Story = {

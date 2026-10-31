@@ -1,5 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
@@ -126,7 +126,7 @@ const meta: CanvasMeta<typeof HarnessParamEditorStory> = {
   component: HarnessParamEditorStory,
 };
 export default meta;
-type Story = CanvasVariant<typeof HarnessParamEditorStory>;
+type Story = CanvasFrame<typeof HarnessParamEditorStory>;
 export const Defaults: Story = {
   id: "components-param-editor-harness-run-options--defaults",
 };
@@ -175,7 +175,7 @@ export const Narrow: Story = {
 export const InsideDialog: Story = {
   id: "components-param-editor-harness-run-options--inside-dialog",
   args: { showCommandParams: false },
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <Dialog.Root open modal size="lg">

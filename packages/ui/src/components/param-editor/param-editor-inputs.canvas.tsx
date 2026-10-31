@@ -1,5 +1,5 @@
 import { Box, Container, HStack, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ParamEditor } from "./param-editor";
 import type { ParamValueMap } from "./param-editor.types";
@@ -45,12 +45,10 @@ const InputPreview = (props: { fixture: ParamEditorInputFixture }) => {
 };
 const meta = {
   title: "Patterns/Param Editor",
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const inputStory = (fixture: ParamEditorInputFixture): Story => ({
   render: () => <InputPreview fixture={fixture} />,
 });

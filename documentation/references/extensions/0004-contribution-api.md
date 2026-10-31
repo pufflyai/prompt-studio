@@ -368,14 +368,36 @@ export default defineExtension({ themes: [monokai] });
 The runtime qualifies the ref with the extension owner. For publisher `acme` and
 package `planner`, the theme ID is `acme.planner.theme.monokai`.
 
-Pressed and selected controls, such as an open panel's toggle, use
-`editor.selectionBackground`. When a theme sets `editor.background` but not
-`editor.selectionBackground`, the app mixes the theme's text color into its
-background instead, so pressed controls stand out from the main background.
+The runtime and public UI importer share one pure theme converter.
+It supplies application roles from VS Code colors, then applies `pstdio.colors`
+overrides. Editor colors and syntax rules go to Monaco separately.
 
-Subtle surfaces, such as user chat messages, use `sideBar.background`. Most
-themes set `input.background` to `editor.background`, so it cannot separate
-these surfaces from the main background.
+Normal control selection uses a tint of the app foreground over its background.
+`editor.selectionBackground` remains an editor text-selection color; it does not
+set pressed buttons or selected navigation rows. Primary buttons derive missing
+hover and pressed colors from their own palette, with readable text in each state.
+
+Subtle surfaces, such as user messages, prefer `sideBar.background`. If it is absent
+or blends into the canvas, the converter derives a visible surface. Transparent
+colors are compared after compositing. Hover fallbacks account for both canvas
+and panel backgrounds. Explicit application overrides remain authoritative.
+
+Mapping precedence is explicit: app text prefers `foreground` over
+`editor.foreground`; panels prefer `editorWidget.background`, then
+`panel.background`, then `sideBar.background`. Menu state colors prefer their
+`menu.*` pair over the corresponding `list.*` pair. Input and badge foregrounds
+do not replace global text roles. `text.selection` supplies readable app text
+selection over `bg.accent-secondary.blue-medium`.
+
+Theme assets support hexadecimal colors (including alpha), inline `tokenColors`,
+scope arrays and comma-separated scopes. Set the contribution's `mode` explicitly
+when possible; otherwise the asset's `type` and background luminance determine it.
+External `include` files and file-based TextMate syntax definitions are unsupported.
+Inline their content before importing. Invalid or unsupported assets produce a
+diagnostic and are omitted without preventing healthy themes from registering.
+Semantic token rules are not imported. Validate text contrast, interactive states,
+transparent and identical surfaces, portals, terminal colors, and theme changes
+while project contributions load or are removed.
 
 ## Views: filter, sort, and display
 

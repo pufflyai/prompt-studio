@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { RichMessage } from "./rich-message";
 
@@ -8,10 +8,9 @@ const source =
 const meta: CanvasMeta<typeof RichMessage> = {
   title: "Patterns/Chat/Rich Message Editing",
   component: RichMessage,
-  tags: ["!manifest"],
 };
 export default meta;
-type Story = CanvasVariant<typeof RichMessage>;
+type Story = CanvasFrame<typeof RichMessage>;
 function EditingTransition() {
   const [editable, setEditable] = useState(false);
   const [value, setValue] = useState(source);

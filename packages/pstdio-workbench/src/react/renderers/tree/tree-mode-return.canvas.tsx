@@ -1,5 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createLevelNavigation, createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
@@ -89,11 +89,11 @@ const ModeReturnStory = (props: { modeLabel: string; showHeader: boolean }) => {
 const meta = {
   title: "pstdio-workbench/Guides/Fixed mode return",
   component: ModeReturnStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { modeLabel: "Project", showHeader: true },
 } satisfies CanvasMeta<typeof ModeReturnStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Project: Story = {
   id: "pstdio-workbench-guides-fixed-mode-return--project",
 };

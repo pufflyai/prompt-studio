@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ProjectSetupStatus } from "./project-setup-status";
 
 const meta = {
@@ -11,7 +11,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof ProjectSetupStatus>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 /** First run without Git or a network: the default extensions, including every agent harness, did not install. */
 export const MissingGit: Story = {
   id: "projects-project-setup-status--missing-git",

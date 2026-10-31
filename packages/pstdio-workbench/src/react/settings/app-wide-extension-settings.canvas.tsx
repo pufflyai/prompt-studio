@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { workbenchSlots } from "@pstdio/sdk/extensions";
 import { useEffect, useState } from "react";
@@ -88,10 +88,10 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof AppWideSettings>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const FirstProject: Story = {
   id: "pstdio-workbench-reference-core-api-app-wide-extension-settings--first-project",
 };

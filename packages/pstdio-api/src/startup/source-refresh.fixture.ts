@@ -55,6 +55,8 @@ const assertExistingProjectSourceRefresh = async (tempRoot: string) => {
 };
 
 const tempRoot = mkdtempSync(join(tmpdir(), "startup-refresh-"));
+// Runtime validation reads the process home before the test app replaces it.
+process.env.PSTDIO_HOME = tempRoot;
 try {
   if (process.argv[2] === "existing") {
     await assertExistingProjectSourceRefresh(tempRoot);

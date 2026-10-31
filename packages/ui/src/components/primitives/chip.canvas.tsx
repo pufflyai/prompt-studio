@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Chip } from "./chip";
 
 const meta = {
@@ -9,7 +9,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof Chip>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Default: Story = {
   id: "components-data-display-chip--default",
 };

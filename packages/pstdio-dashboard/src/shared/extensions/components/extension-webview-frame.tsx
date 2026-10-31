@@ -18,7 +18,6 @@ import {
 } from "../extension-webview-broadcast";
 import { createDashboardExtensionWebviewAdapters } from "../extension-webview-capabilities";
 import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
-import { openExtensionViews } from "../open-extension-views";
 import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
 import { useWebviewPageProps } from "../use-webview-page-props";
@@ -69,13 +68,6 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     ? parseExtensionWebviewPath(webview.runtimeUrl)?.scope.installedExtensionId
     : undefined;
   const isPaused = installedExtensionId ? paused.has(installedExtensionId) : false;
-  const loads = Boolean(webview?.runtimeUrl && webview.moduleUrl);
-  // The performance popover lists every extension with a loaded view.
-  useEffect(() => {
-    if (!installedExtensionId || isPaused || !loads) return;
-    return openExtensionViews.open(installedExtensionId, webviewId);
-  }, [installedExtensionId, webviewId, isPaused, loads]);
-
   useEffect(() => subscribeToExtensionCommandFeed((event) => setLastCommand(event)), []);
   useEffect(() => subscribeWebviewExtensionEvents(hostEvents, projectId), [hostEvents, projectId]);
   useEffect(() => {

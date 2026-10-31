@@ -1,5 +1,5 @@
 import { Box, Button, HStack, IconButton, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Folder, ListTree, PanelBottom, PanelRight, Plus } from "lucide-react";
 import { useState } from "react";
 import { ResourceActionMenu, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
@@ -97,18 +97,12 @@ const meta = {
   title: "Components/Navigation/Window Title Bar",
   component: WindowTitleBar,
   args: { platform: "darwin" },
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Place project tabs and their open-project button in children. Use actions for trailing panel controls. The title bar reserves native control bounds and adds a subtle separator before Windows and Linux controls. Empty actions collapse. macOS full screen releases the leading control reservation. Open menus and popovers pause window dragging so title-bar clicks can dismiss them.",
-      },
-    },
-  },
+  description:
+    "Place project tabs and their open-project button in children. Use actions for trailing panel controls. The title bar reserves native control bounds and adds a subtle separator before Windows and Linux controls. Empty actions collapse. macOS full screen releases the leading control reservation. Open menus and popovers pause window dragging so title-bar clicks can dismiss them.",
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WindowTitleBar>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const MacOS: Story = {
   id: "components-navigation-window-title-bar--mac-os",
   render: () => <Example />,
@@ -147,22 +141,18 @@ export const EmptyActions: Story = {
 };
 export const DismissMenus: Story = {
   id: "components-navigation-window-title-bar--dismiss-menus",
-  tags: ["!manifest"],
   render: () => <MenuExample />,
 };
 export const DismissPopovers: Story = {
   id: "components-navigation-window-title-bar--dismiss-popovers",
-  tags: ["!manifest"],
   render: () => <MenuExample />,
 };
 export const WindowsDark: Story = {
   id: "components-navigation-window-title-bar--windows-dark",
   ...Windows,
-  globals: { theme: "pstdio-dark" },
 };
 export const EmbeddedNativeGeometry: Story = {
   id: "components-navigation-window-title-bar--embedded-native-geometry",
-  tags: ["!manifest"],
   render: () => (
     <Box css={{ "--pstdio-title-bar-area-x": "10%", "--pstdio-title-bar-area-width": "80%" }}>
       <Example platform="linux" />

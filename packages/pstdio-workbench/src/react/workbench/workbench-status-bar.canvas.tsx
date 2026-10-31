@@ -1,5 +1,5 @@
 import { Box, Button, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ComponentProps } from "react";
 import { createWorkbench } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -30,64 +30,18 @@ const registerItem = (input: { id: string; label: string; order: number; slot: "
 registerItem({ id: "planner.branch", label: "main", order: 20, slot: "leading" });
 registerItem({ id: "sync.connection", label: "Connected", order: 10, slot: "leading" });
 registerItem({ id: "tasks.progress", label: "3 tasks", order: 10, slot: "trailing" });
-const statusBarSource = `import { Box, Text } from "@chakra-ui/react";
-import { createWorkbench } from "@pstdio/workbench";
-import {
-  WorkbenchStatusBar,
-  WorkbenchThemeProvider,
-} from "@pstdio/workbench/react";
-
-const workbench = createWorkbench();
-
-const registerItem = (id, label, order, slot) => {
-  workbench.views.registerView({
-    id,
-    title: label,
-    body: { kind: "react", render: () => (
-      <Text textStyle="xs" px="sm">{label}</Text>
-    ) },
-  });
-  workbench.statusBar.registerItem({
-    id: id + ".status-bar-item",
-    viewId: id,
-    slot,
-    order,
-  });
-};
-
-registerItem("planner.branch", "main", 20, "leading");
-registerItem("sync.connection", "Connected", 10, "leading");
-registerItem("tasks.progress", "3 tasks", 10, "trailing");
-
-export const App = () => (
-  <WorkbenchThemeProvider>
-    <Box h="2rem">
-      <WorkbenchStatusBar workbench={workbench} />
-    </Box>
-  </WorkbenchThemeProvider>
-);`;
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Status bar",
   component: WorkbenchStatusBar,
-  tags: ["autodocs"],
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "The host status-bar registry places registered views on its leading or trailing side and centers each item vertically. Extensions reach it through defineStatusBarItem.",
-      },
-    },
-  },
+  description:
+    "The host status-bar registry places registered views on its leading or trailing side and centers each item vertically. Extensions reach it through defineStatusBarItem.",
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStatusBar>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SeveralOwnersInOrder: Story = {
   id: "pstdio-workbench-reference-core-api-status-bar--several-owners-in-order",
   args: { workbench },
-  parameters: {
-    docs: { source: { code: statusBarSource, language: "tsx", type: "code" } },
-  },
   decorators: [
     (Story) => (
       <WorkbenchThemeProvider>
@@ -118,14 +72,8 @@ export const ReorderableItems: Story = {
   id: "pstdio-workbench-reference-core-api-status-bar--reorderable-items",
   ...SeveralOwnersInOrder,
   args: { workbench: reorderWorkbench },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Drag a widget directly, like a tab, to reorder it. Focus a widget or its control and use Alt+Left or Alt+Right to reorder with the keyboard. Items keep their leading or trailing slot.",
-      },
-    },
-  },
+  description:
+    "Drag a widget directly, like a tab, to reorder it. Focus a widget or its control and use Alt+Left or Alt+Right to reorder with the keyboard. Items keep their leading or trailing slot.",
 };
 const mixedWorkbench = createWorkbench();
 for (const slot of ["leading", "trailing"] as const) {
@@ -155,13 +103,7 @@ export const MixedItemHeights: Story = {
   id: "pstdio-workbench-reference-core-api-status-bar--mixed-item-heights",
   ...SeveralOwnersInOrder,
   args: { workbench: mixedWorkbench },
-  parameters: {
-    docs: {
-      description: {
-        story: "Text and buttons in both slots share the vertical center without layout wrappers in the views.",
-      },
-    },
-  },
+  description: "Text and buttons in both slots share the vertical center without layout wrappers in the views.",
 };
 // Items often appear later, for example when a setting turns a feature on.
 const lateWorkbench = createWorkbench();

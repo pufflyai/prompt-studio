@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { ResourceLinkPicker } from "./resource-link-picker";
 
@@ -34,7 +34,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof ResourceLinkPicker>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Search: Story = {
   id: "workbench-resource-link-picker--search",
 };

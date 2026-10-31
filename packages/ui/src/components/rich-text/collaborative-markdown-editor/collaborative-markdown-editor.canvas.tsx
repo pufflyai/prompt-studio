@@ -8,7 +8,7 @@ import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import type { Provider } from "@lexical/yjs";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protocols/awareness";
 import * as Y from "yjs";
@@ -177,14 +177,11 @@ function SplitViewDemo() {
 const meta: CanvasMeta<typeof CollaborativeMarkdownEditor> = {
   title: "Patterns/Editors/Collaborative Markdown Editor",
   component: CollaborativeMarkdownEditor,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
-type Story = CanvasVariant<typeof CollaborativeMarkdownEditor>;
+type Story = CanvasFrame<typeof CollaborativeMarkdownEditor>;
 /** Two editors syncing in real-time via in-memory Yjs. Type in one pane to see changes in the other. */
-export const SplitView: CanvasVariant = {
+export const SplitView: CanvasFrame = {
   id: "patterns-editors-collaborative-markdown-editor--split-view",
   render: () => <SplitViewDemo />,
 };
@@ -194,7 +191,7 @@ export const SingleEditor: Story = {
   args: {
     roomId: "todo:story-demo",
     wsUrl: "ws://localhost:3000/v1/docs",
-    userName: "Storybook User",
+    userName: "Canvas User",
     userColor: "#30bced",
     placeholder: "Start typing collaboratively...",
   },

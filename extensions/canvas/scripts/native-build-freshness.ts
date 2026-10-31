@@ -8,7 +8,6 @@ export const checkNativeBuildFreshness = async () => {
     hashes: Record<string, string>;
     outputs: Record<string, string>;
     stories: number;
-    documents: number;
     bytes: number;
   };
   const stale: string[] = [];

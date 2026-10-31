@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
 import { RichMessage } from "./rich-message";
 
@@ -30,12 +30,11 @@ const StreamingMessage = () => {
   );
 };
 const meta = {
-  tags: ["motion"],
   title: "Patterns/Editors/RichMessage/Streaming Motion",
   component: StreamingMessage,
 } satisfies CanvasMeta<typeof StreamingMessage>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const ChunkFade: Story = {
   id: "patterns-editors-richmessage-streaming-motion--chunk-fade",
 };

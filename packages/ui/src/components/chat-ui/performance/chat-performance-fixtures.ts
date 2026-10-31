@@ -98,7 +98,7 @@ const buildToolState = (sessionId: string, turn: number, tool: (typeof toolNames
       return {
         input: { cwd: `/tmp/${sessionId}`, command: "bun run --cwd packages/ui test" },
         output: {
-          stdout: ["139 tests passed", "storybook build complete", "chat perf fixture generated"].join("\n"),
+          stdout: ["139 tests passed", "preview build complete", "chat perf fixture generated"].join("\n"),
           exitCode: 0,
         },
       };

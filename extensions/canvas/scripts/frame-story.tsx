@@ -4,9 +4,11 @@ import { type ComponentType, useState } from "react";
 export interface LoadedStory {
   Component: ComponentType<Record<string, unknown>>;
   args?: Record<string, unknown>;
-  argTypes?: Record<string, unknown>;
-  parameters?: Record<string, unknown>;
+  description?: string;
+  fullscreen?: boolean;
   dispose?: () => void;
+  /** Passes the frame's theme to preview decorators; absent when the frame has none. */
+  ThemeProvider?: import("react").Provider<import("@pstdio/ui").ThemePreferenceOption>;
   timings?: Record<string, number>;
 }
 export const inspect = (value: unknown) => {

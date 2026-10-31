@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DesktopLifecycleView } from "./desktop-lifecycle-app";
 
 const actions = {
@@ -12,7 +12,7 @@ const actions = {
 const meta = {
   title: "Patterns/Desktop/Lifecycle",
   component: DesktopLifecycleView,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   decorators: [
     (Story) => (
       <Flex>
@@ -23,7 +23,7 @@ const meta = {
   args: { actions },
 } satisfies CanvasMeta<typeof DesktopLifecycleView>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const StartingDiscovery: Story = {
   id: "patterns-desktop-lifecycle--starting-discovery",
   args: { state: { kind: "starting", phase: "discovery" } },
@@ -42,7 +42,6 @@ export const WaitingForWorkbench: Story = {
 };
 export const Workbench: Story = {
   id: "patterns-desktop-lifecycle--workbench",
-  tags: ["!manifest"],
   args: {
     state: {
       kind: "workbench",
@@ -52,7 +51,6 @@ export const Workbench: Story = {
 };
 export const ActiveWorkInWorkbench: Story = {
   id: "patterns-desktop-lifecycle--active-work-in-workbench",
-  tags: ["!manifest"],
   args: {
     state: {
       kind: "confirming_active_work",

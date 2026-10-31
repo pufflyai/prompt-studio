@@ -20,13 +20,16 @@ layer-map change.
    consumes its identity and exact-target schemas for local environment bindings;
    it adds no host or provider dependency to the synchronization package.
 
-   `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
+   `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-theme`, `pstdio-paths`,
    `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, `pstdio-db`, and
    `pstdio-storage` define stable contracts, file-type metadata, paths, logging,
    scheduling, git, persistence, and filesystem storage primitives.
    `pstdio-storage` reuses asset reference types from `pstdio-sync-contracts`
    and does not depend on `pstdio-db`. They do not
    depend on SDK, UI, workbench, dashboard, or API host packages.
+   `pstdio-theme` owns browser-free palette conversion for the extension runtime
+   and UI importer. UI bundles its implementation and public types; it is not
+   a published SDK contract.
    `pstdio-db` also consumes synchronization contracts for the durable extension
    journal and accepted state. It does not import the test-only conformance entry.
    The private `pstdio-sync` package owns the production, runtime-neutral record
@@ -134,6 +137,10 @@ layer-map change.
    on `main`, or on a pull request labeled `ci:full`; see
    [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
 
+   Its manual relay reference workload also composes the public `pstdio-db` and
+   `pstdio-sync-contracts` exports. These are development dependencies for isolated
+   fixture databases and transport measurements. It never opens the user's database.
+
    The private `canvas-tests` package owns component browser interactions and
    their Canvas servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
    `pstdio-dashboard` as development dependencies because it loads their stories.
@@ -235,4 +242,4 @@ The database uses the contract-layer `ResourceRef` type for persisted resource v
 
 ## Canvas authoring tooling
 
-The private `@pstdio/canvas` package owns preview composition, documentation blocks, and source indexing. UI packages and repository preview builds may use it as development tooling; it has no application-layer dependencies. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; the repository Canvas type-check command checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.
+The published `@pstdio/canvas` package owns the canvas file format, preview composition, source indexing, and the `pstdio-canvas` command that builds and watches a project's canvases. It has no application-layer dependencies; React is a peer dependency. Projects, UI packages and repository preview builds use it as development tooling. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; the repository Canvas type-check command checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.

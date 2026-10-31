@@ -174,7 +174,7 @@ const baseRows = [
   },
   {
     id: "DR-8",
-    title: "Storybook smoke test",
+    title: "Canvas smoke test",
     status: "in-progress",
     assignee: "Aure",
     priority: "low",

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { mermaidFixtures } from "@/components/mermaid-renderer/mermaid-fixtures";
 import { ScrollArea } from "@/components/primitives/scroll-area";
@@ -190,31 +190,14 @@ const meta: CanvasMeta<typeof MarkdownEditor> = {
       </ScrollArea>
     ),
   ],
-  parameters: {
-    layout: "padded",
-  },
   args: {
     debug: false,
     isEditable: true,
     defaultState: message,
   },
-  argTypes: {
-    defaultState: {
-      control: "text",
-      description: "Markdown source to render",
-    },
-    placeholder: {
-      control: "text",
-      description: "Placeholder text shown when the editor is empty",
-    },
-    debug: {
-      control: "boolean",
-      description: "Show Lexical tree for debugging",
-    },
-  },
 };
 export default meta;
-type Story = CanvasVariant<typeof MarkdownEditor>;
+type Story = CanvasFrame<typeof MarkdownEditor>;
 export const Basic: Story = {
   id: "patterns-editors-markdown-editor--basic",
 };
@@ -234,7 +217,6 @@ export const MermaidPreviewAndEdit: Story = {
 };
 export const MermaidEditPreviewWorkflow: Story = {
   id: "patterns-editors-markdown-editor--mermaid-edit-preview-workflow",
-  tags: ["!manifest"],
   render: () => <MermaidEditWorkflowStory />,
 };
 export const MermaidSyntaxError: Story = {
@@ -295,12 +277,10 @@ export const EditableCodeBlocks: Story = {
 };
 export const LiveMarkdownShortcuts: Story = {
   id: "patterns-editors-markdown-editor--live-markdown-shortcuts",
-  tags: ["!manifest"],
   render: () => <LiveShortcutsStory />,
 };
 export const SelectionToolbarEditorScroll: Story = {
   id: "patterns-editors-markdown-editor--selection-toolbar-editor-scroll",
-  tags: ["!manifest", "markdown-selection-scroll"],
   args: { defaultState: scrollingMarkdown },
   render: (args) => (
     <Box height="360px">
@@ -310,7 +290,6 @@ export const SelectionToolbarEditorScroll: Story = {
 };
 export const SelectionToolbarAncestorScroll: Story = {
   id: "patterns-editors-markdown-editor--selection-toolbar-ancestor-scroll",
-  tags: ["!manifest", "markdown-selection-scroll"],
   args: { defaultState: scrollingMarkdown, scrollable: false },
 };
 /** Empty documents and their placeholder share the larger document inset. */

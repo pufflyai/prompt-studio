@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../module";
 import { seedWorkspaceViewsStory } from "./workspace-views-story";
 
-const PROJECT_ID = "storybook-workspace-list";
+const PROJECT_ID = "preview-workspace-list";
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 const workspaceRow = (
   row: {
@@ -63,7 +63,7 @@ const seedWorkspaces = () =>
       created_at: hoursAgo(2),
     }),
   ]);
-// Storybook has no API server. Only diff summaries are answered, and only while the story is mounted.
+// Canvas previews have no API server. Only diff summaries are answered, and only while the story is mounted.
 const useDiffSummaryResponses = () => {
   useEffect(() => {
     const originalFetch = globalThis.fetch;
@@ -106,10 +106,10 @@ const WorkspaceListStory = (props: WorkspaceListStoryProps) => {
 const meta = {
   title: "Dashboard/Workspace list",
   component: WorkspaceListStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceListStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Defaults: Story = {
   id: "dashboard-workspace-list--defaults",
 };
