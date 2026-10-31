@@ -1,10 +1,11 @@
 import { expect } from "@playwright/test";
+import type { BenchmarkMetric } from "pstdio-benchmarks";
+import { rendererBudgets } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
-import type { BenchmarkMetric } from "../testing/benchmark-budget";
 import { test } from "../testing/packaged-fixture";
 import { recordBenchmark } from "./benchmark-record";
 import { disposePackagedApp, type PackagedApp } from "./packaged-app-helpers";
-import { launchProject, openLabPreview, readSnapshot, setMonitoring } from "./packaged-performance-helpers";
+import { launchProject, openLabPreview, readSnapshot } from "./packaged-performance-helpers";
 import {
   IDLE_WINDOW_MS,
   measureRenderers,
@@ -17,18 +18,23 @@ import {
 // Idle budgets catch a constant render loop. The 2026-10-10 release rehearsals measured the
 // streaming replay at up to 69% script and 99% task time; the approved budgets sit about 20%
 // above that. A task share above 1 no longer limits anything, so script time is the guard.
-const IDLE_BUDGET: RendererBudget = { scriptShare: 0.02, taskShare: 0.05 };
-const STREAMING_BUDGET: RendererBudget = { scriptShare: 0.85, taskShare: 1.2 };
+const IDLE_BUDGET: RendererBudget = {
+  scriptShare: rendererBudgets.idleScript.value,
+  taskShare: rendererBudgets.idleTask.value,
+};
+const STREAMING_BUDGET: RendererBudget = {
+  scriptShare: rendererBudgets.streamingScript.value,
+  taskShare: rendererBudgets.streamingTask.value,
+};
 // Monitoring runs in Electron main, which renderer CDP metrics cannot see.
-const MONITORING_MAIN_CPU_BUDGET = 10;
+const MONITORING_MAIN_CPU_BUDGET = rendererBudgets.monitoringMainCpu.value;
 
 for (const monitoring of [false, true]) {
   const state = monitoring ? "on" : "off";
   test(`idle workbench stays quiet with monitoring ${state}`, async () => {
     let app: PackagedApp | null = null;
     try {
-      ({ app } = await launchProject("Idle"));
-      if (monitoring) await setMonitoring(app.page, true);
+      ({ app } = await launchProject("Idle", { monitoring }));
       const workbench = await openRendererSession(app.page);
       await app.page.waitForTimeout(SETTLE_MS);
 
@@ -105,9 +111,8 @@ test("idle extension preview stays quiet", async () => {
 test("long tool-heavy stream stays within budget", async () => {
   let app: PackagedApp | null = null;
   try {
-    const launched = await launchProject("Streaming");
+    const launched = await launchProject("Streaming", { monitoring: true });
     app = launched.app;
-    await setMonitoring(app.page, true);
     const session = await app.page.evaluate(async (projectId) => {
       const response = await fetch("/v1/sessions", {
         method: "POST",

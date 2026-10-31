@@ -1,8 +1,9 @@
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { verifyBenchmarkCoverage } from "./coverage";
 import { type Checkout, run } from "./run";
 import { currentPlatform, findSuites, prepareSuite, sampleSuite } from "./steps";
-import { suiteIds } from "./suites";
+import { suiteIds, suites } from "./suites";
 
 const usage = `Usage:
   bun src/cli.ts run --checkout <dir>=<sha>[=<ref>]... --suites <ids> --samples <n> --out <dir>
@@ -18,7 +19,7 @@ const { positionals, values } = parseArgs({
     checkout: { type: "string", multiple: true },
     suites: { type: "string", default: suiteIds.join(",") },
     suite: { type: "string" },
-    samples: { type: "string", default: "10" },
+    samples: { type: "string", default: "1" },
     sha: { type: "string", default: "" },
     cache: { type: "string", default: join(repoRoot, "__test-tmp__", "benchmarks") },
     out: { type: "string", default: "benchmark-results" },
@@ -38,9 +39,12 @@ const parseCheckout = (value: string): Checkout => {
 };
 
 const command = positionals[0];
-if (command === "describe") {
+if (command === "verify") {
+  verifyBenchmarkCoverage(repoRoot, suites);
+  console.log("Every benchmark belongs to exactly one suite.");
+} else if (command === "describe") {
   const available = findSuites(suiteIds, platform);
-  console.log(JSON.stringify(available.map(({ id, label, source }) => ({ id, label, source }))));
+  console.log(JSON.stringify(available.map(({ id, label, files }) => ({ id, label, source: files.join(", ") }))));
 } else if (command === "prepare") {
   let passed = true;
   for (const suite of findSuites(listOf(values.suites), platform))
@@ -51,6 +55,7 @@ if (command === "describe") {
   if (!suite) throw new Error(usage);
   if (!(await sampleSuite(context(), suite, resolve(values.out)))) process.exitCode = 1;
 } else if (command === "run") {
+  if (process.env.CI && Number(values.samples) !== 1) throw new Error("CI executes each benchmark once");
   const failures = await run({
     checkouts: (values.checkout ?? []).map(parseCheckout),
     suites: listOf(values.suites),

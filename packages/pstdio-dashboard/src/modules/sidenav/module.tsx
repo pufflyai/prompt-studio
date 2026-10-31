@@ -1,10 +1,12 @@
 import type { TreeViewSection, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
-import { dashboardCommandIds } from "@/shared/app/commands";
 import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,
 } from "@/shared/workbench/dashboard-navigation-contribution";
 import { registerDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
+
+// The row runs the command that owns Mod+P, so keyboard hints show that chord.
+const SEARCH_COMMAND_ID = "workbench.toggleCommandPalette";
 
 const registerSearchSection = (ctx: WorkbenchModuleContext) => {
   const sections: TreeViewSection[] = [
@@ -16,8 +18,8 @@ const registerSearchSection = (ctx: WorkbenchModuleContext) => {
           label: "Search",
           icon: "Search",
           canHide: true,
-          commandId: dashboardCommandIds.openCommandPalette,
-          target: { kind: "command", commandId: dashboardCommandIds.openCommandPalette },
+          commandId: SEARCH_COMMAND_ID,
+          target: { kind: "command", commandId: SEARCH_COMMAND_ID },
         },
       ],
     },

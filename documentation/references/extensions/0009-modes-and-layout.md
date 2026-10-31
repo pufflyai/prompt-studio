@@ -184,7 +184,7 @@ Declare `floatingPanels: "hidden"` on the mode to prevent floating side panels. 
 
 `alwaysShowTabs` is deprecated. Use `main.presentation` to choose page-owned content or a tabbed Main panel, and `showHeader` to show or hide a tab tray. Until its removal, `alwaysShowTabs: false` hides the tab tray when `showHeader` is omitted. Tab support does not affect panel visibility or floating permission.
 
-The host's Project mode and the workbench's [showcase examples](../../../packages/pstdio-workbench/src/examples/showcases/showcases.stories.tsx) use these policies:
+The host's Project mode and the workbench's [showcase examples](../../../packages/pstdio-workbench/src/examples/showcases/showcases.canvas.tsx) use these policies:
 
 | Mode | Panel policy |
 | --- | --- |

@@ -24,6 +24,7 @@ import { subscribeCoreViewDataEvents } from "@/shared/extensions/core-view-data-
 import {
   localizeExtensionMetadata,
   type ResolvedWorkbenchExtensionMetadata,
+  registerExtensionTranslationBundles,
 } from "@/shared/extensions/extension-localization";
 import {
   clearDashboardExtensionsReadyProject,
@@ -38,7 +39,7 @@ import {
 } from "@/shared/extensions/workbench-extension-contributions";
 import { syncActiveResourceContext } from "./active-resource-context";
 import { registerDashboardActivityRail } from "./extension-activity-rail";
-import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
+import { registerExtensionAppearance, resolveExtensionAppearancePreferences } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { omitExtensionMetadata, registerHealthyExtensions } from "./extension-contribution-isolation";
 import {
@@ -89,7 +90,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       let rawMetadata: DashboardExtensionMetadata | undefined;
       let metadata: ResolvedWorkbenchExtensionMetadata | undefined;
       let projectGeneration = 0;
-      let appearanceDisposable: Disposable | undefined;
+      let appearanceDisposable: ReturnType<typeof registerExtensionAppearance> | undefined;
+      let translationDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
       let displacedPageLocation: PageLocation | undefined;
 
@@ -98,15 +100,28 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         contributionDisposables = [];
       };
 
+      const clearTranslations = () => {
+        translationDisposable?.dispose();
+        translationDisposable = undefined;
+      };
+
       const clearAppearance = () => {
+        clearTranslations();
         appearanceDisposable?.dispose();
         appearanceDisposable = undefined;
       };
 
       const applyAppearance = (nextAppearance: ListExtensionAppearanceResponse) => {
+        clearTranslations();
+        translationDisposable = registerExtensionTranslationBundles(nextAppearance, owner);
         rawAppearance = nextAppearance;
-        clearAppearance();
-        appearanceDisposable = registerExtensionAppearance(ctx, nextAppearance, owner);
+        const preferences = resolveExtensionAppearancePreferences(nextAppearance, owner);
+        // Theme sources can move between projects while their resolved visuals stay
+        // identical. Retain that catalog so every theme consumer need not rerender.
+        batchWorkbenchChanges(() => {
+          if (appearanceDisposable) appearanceDisposable.update(preferences);
+          else appearanceDisposable = registerExtensionAppearance(ctx, preferences);
+        });
       };
 
       const registrationError = (projectId: string, error: unknown, extensionId?: string) =>
@@ -184,17 +199,18 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
       const metadataRefresh = createExtensionRefreshQueue({
         apply: applyMetadata,
-        fallback: emptyDashboardExtensionMetadata,
+        fallback: () => emptyDashboardExtensionMetadata,
         getGeneration: () => projectGeneration,
         getProjectId: () => projectId,
         load: loadMetadata,
       });
-      const appearanceRefresh = createExtensionRefreshQueue({
+      const appearanceRefresh = createExtensionRefreshQueue<ListExtensionAppearanceResponse | undefined>({
         apply: (nextProjectId, nextAppearance) => {
+          if (!nextAppearance) return;
           applyAppearance(nextAppearance);
           if (rawMetadata) applyMetadata(nextProjectId, rawMetadata);
         },
-        fallback: emptyDashboardExtensionAppearance,
+        fallback: () => undefined,
         getGeneration: () => projectGeneration,
         getProjectId: () => projectId,
         load: loadAppearance,
@@ -212,8 +228,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           projectGeneration += 1;
           metadataRefresh.clear();
           appearanceRefresh.clear();
-          rawAppearance = undefined;
           rawMetadata = undefined;
+          rawAppearance = undefined;
           metadata = undefined;
           displacedPageLocation = undefined;
           clearCachedDashboardExtensionMetadata(previousProjectId, owner);
@@ -221,7 +237,10 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           ctx.context.delete(dashboardEditableTemplatesContextKey);
           clearDashboardExtensionsReadyProject(ctx);
           clearContributions();
-          clearAppearance();
+          // Labels belong to this project; resolved visual themes can survive its loading gap.
+          clearTranslations();
+          // Appearance stays live until the destination catalog settles. Unlike tools,
+          // colors carry no project actions and must not flash a default while loading.
         }
 
         if (!projectId) return;

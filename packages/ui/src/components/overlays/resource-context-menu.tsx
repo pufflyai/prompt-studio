@@ -1,6 +1,8 @@
-import { chakra, Menu, Portal, useMenu, useMenuContext } from "@chakra-ui/react";
+import { chakra, useMenuContext } from "@chakra-ui/react";
 import { type ComponentProps, type ReactElement, type ReactNode, useRef } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { ScopedMenu as Menu, useScopedMenu as useMenu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { ResourceMenuItems } from "./resource-menu-items";
 
 type MenuRootProps = ComponentProps<typeof Menu.Root>;

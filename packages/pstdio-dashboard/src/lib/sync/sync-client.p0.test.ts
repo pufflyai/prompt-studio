@@ -90,15 +90,15 @@ it("delivers committed anchor changes to views of both endpoints", async () => {
   }
 });
 
-it("refreshes ordinary extension views after a committed storage change without extension-specific listeners", async () => {
+it("refreshes the changed project's views after a committed storage change without extension-specific listeners", async () => {
   const collections = createRuntimeCollections();
-  let resets = 0;
-  const stop = subscribeToExtensionEventReset(() => resets++, collections);
+  const resets: unknown[] = [];
+  const stop = subscribeToExtensionEventReset((reset) => resets.push(reset), collections);
   try {
     createDashboardSyncWriterProvider(collections)
       .getWriter("extension_events")!
       .upsert({ id: "committed", eventId: "pstdio.event.storage-changed", projectId: "workbench" });
-    expect(resets).toBe(1);
+    expect(resets).toEqual([{ projectId: "workbench" }]);
   } finally {
     stop();
     await collections.dispose();

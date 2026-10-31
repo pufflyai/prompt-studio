@@ -9,7 +9,10 @@ export const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
   const statusChrome = useModeChrome(workbench, "status");
   const statusBarItems = useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
   const hasSystemErrors = useHasSystemErrors(workbench);
-  useWorkbenchStore(workbench.context.store, (state) => state.values);
+  const hasVisibleStatusItems = useWorkbenchStore(
+    workbench.context.store,
+    () => workbench.statusBar.listVisibleItems().length > 0,
+  );
   const activeModeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   return {
     hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
@@ -27,6 +30,6 @@ export const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
         ? statusChrome !== false
         : activeModeId === workbench.modes.getActiveModeId() &&
           Object.keys(statusBarItems).length > 0 &&
-          workbench.statusBar.listVisibleItems().length > 0),
+          hasVisibleStatusItems),
   };
 };

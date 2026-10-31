@@ -4,6 +4,7 @@ import type {
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
 import { createWorkbench } from "@pstdio/workbench";
+import i18n from "@/i18n";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
@@ -13,19 +14,40 @@ import {
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "./module-test-fixtures";
 
+const translatedAppearance = (label?: string) => ({
+  ...emptyAppearance,
+  themes: [
+    {
+      id: "pstdio.extension-lab.theme.ink",
+      extensionId: "pstdio.extension-lab",
+      title: { $l10n: "label", default: "Theme fallback" },
+      mode: "dark" as const,
+      format: "vscode-color-theme" as const,
+      source: { kind: "package-asset" as const, path: "./theme.json", baseUrl: "file:///palette/extension.ts" },
+      tokens: { "colors.bg": "#282A36" },
+      monacoTheme: { base: "vs-dark" as const, inherit: true as const, rules: [], colors: {} },
+    },
+  ],
+  translations: label ? [{ extensionId: "pstdio.extension-lab", defaultLocale: "en", bundles: { en: { label } } }] : [],
+});
+
 interface Deferred<TValue> {
   promise: Promise<TValue>;
   resolve: (value: TValue) => void;
+  reject: (error: Error) => void;
 }
 
 const deferred = <TValue>(): Deferred<TValue> => {
   let resolve: ((value: TValue) => void) | undefined;
-  const promise = new Promise<TValue>((nextResolve) => {
+  let reject: ((error: Error) => void) | undefined;
+  const promise = new Promise<TValue>((nextResolve, nextReject) => {
     resolve = nextResolve;
+    reject = nextReject;
   });
   return {
     promise,
     resolve: (value) => resolve?.(value),
+    reject: (error) => reject?.(error),
   };
 };
 
@@ -117,6 +139,122 @@ const createBaselineHarness = () => {
 };
 
 describe("project-switch extension refresh", () => {
+  test("retains an identical visual catalog across projects and applies changed tokens", async () => {
+    const harness = createBaselineHarness();
+    try {
+      const appearance = translatedAppearance("Shared theme");
+      harness.appearanceRequests.get("project-a")?.resolve(appearance);
+      await flushMicrotasks();
+      const catalog = harness.workbench.themes.listThemes();
+      selectDashboardProject(harness.workbench, { id: "project-b", name: "Project B" });
+      harness.appearanceRequests.get("project-b")?.resolve({
+        ...appearance,
+        themes: appearance.themes.map((theme) => ({
+          ...theme,
+          source: { ...theme.source, baseUrl: "file:///another-project/extension.ts" },
+        })),
+      });
+      await flushMicrotasks();
+      expect(harness.workbench.themes.listThemes()).toBe(catalog);
+      selectDashboardProject(harness.workbench, { id: "project-c", name: "Project C" });
+      harness.appearanceRequests.get("project-c")?.resolve({
+        ...appearance,
+        themes: appearance.themes.map((theme) => ({ ...theme, tokens: { "colors.bg": "#111111" } })),
+      });
+      await flushMicrotasks();
+      expect(harness.workbench.themes.listThemes()).not.toBe(catalog);
+      expect(harness.workbench.themes.listThemes()[0]?.tokens).toEqual({ "colors.bg": "#111111" });
+    } finally {
+      harness.dispose();
+    }
+    expect(harness.workbench.themes.listThemes()).toEqual([]);
+  });
+
+  test("localizes a destination theme without the previous catalog's bundles", async () => {
+    const harness = createBaselineHarness();
+    try {
+      harness.appearanceRequests.get("project-a")?.resolve(translatedAppearance("Previous"));
+      await flushMicrotasks();
+      selectDashboardProject(harness.workbench, { id: "project-b", name: "Project B" });
+      harness.appearanceRequests.get("project-b")?.resolve(translatedAppearance());
+      await flushMicrotasks();
+      expect(harness.workbench.themes.listThemes()[0]?.title).toBe("Theme fallback");
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("clears project translations while retaining appearance through a failed load", async () => {
+    const harness = createBaselineHarness();
+    try {
+      harness.appearanceRequests.get("project-a")?.resolve(translatedAppearance("Previous"));
+      await flushMicrotasks();
+      selectDashboardProject(harness.workbench, { id: "project-b", name: "Project B" });
+      harness.metadataRequests.get("project-b")?.resolve({
+        ...metadataWithResourceExtension,
+        commands: metadataWithResourceExtension.commands.map((command) => ({
+          ...command,
+          title: { $l10n: "label", default: "Destination command" },
+        })),
+      });
+      await flushMicrotasks();
+      expect(getCachedDashboardExtensionMetadata("project-b")?.commands[0]?.title).toBe("Destination command");
+      harness.appearanceRequests.get("project-b")?.reject(new Error("Appearance unavailable"));
+      await flushMicrotasks();
+      await i18n.changeLanguage("en");
+      expect(getCachedDashboardExtensionMetadata("project-b")?.commands[0]?.title).toBe("Destination command");
+      expect(harness.workbench.themes.listThemes()[0]?.id).toBe("pstdio.extension-lab.theme.ink");
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("keeps resolved appearance until the destination catalog arrives", async () => {
+    const harness = createBaselineHarness();
+    const theme = {
+      id: "acme.palette.theme.ink",
+      extensionId: "acme.palette",
+      title: "Ink",
+      mode: "dark" as const,
+      format: "vscode-color-theme" as const,
+      source: { kind: "package-asset" as const, path: "./theme.json", baseUrl: "file:///palette/extension.ts" },
+      tokens: { "colors.bg": "#282A36" },
+      monacoTheme: { base: "vs-dark" as const, inherit: true as const, rules: [], colors: {} },
+    };
+    try {
+      harness.appearanceRequests.get("project-a")?.resolve({ ...emptyAppearance, themes: [theme] });
+      await flushMicrotasks();
+      expect(harness.workbench.themes.listThemes().map((item) => item.id)).toEqual([theme.id]);
+      const catalogs: string[][] = [];
+      const unsubscribe = harness.workbench.themes.store.subscribe((state) => {
+        catalogs.push(state.themes.map((item) => item.id));
+      });
+      selectDashboardProject(harness.workbench, { id: "project-b", name: "Project B" });
+      expect(harness.workbench.themes.listThemes().map((item) => item.id)).toEqual([theme.id]);
+      selectDashboardProject(harness.workbench, { id: "project-c", name: "Project C" });
+      harness.appearanceRequests.get("project-b")?.resolve(emptyAppearance);
+      await flushMicrotasks();
+      expect(harness.workbench.themes.listThemes().map((item) => item.id)).toEqual([theme.id]);
+      harness.appearanceRequests.get("project-c")?.resolve({ ...emptyAppearance, themes: [theme] });
+      await flushMicrotasks();
+      expect(catalogs.every((ids) => ids.includes(theme.id))).toBe(true);
+      expect(catalogs.every((ids) => new Set(ids).size === ids.length)).toBe(true);
+      selectDashboardProject(harness.workbench, { id: "project-b", name: "Project B" });
+      harness.appearanceRequests.get("project-b")?.reject(new Error("Appearance unavailable"));
+      await flushMicrotasks();
+      expect(harness.workbench.themes.listThemes().map((item) => item.id)).toEqual([theme.id]);
+      // A settled empty catalog represents removal, rather than temporary loading.
+      selectDashboardProject(harness.workbench, { id: "project-c", name: "Project C" });
+      selectDashboardProject(harness.workbench, { id: "project-b", name: "Project B" });
+      harness.appearanceRequests.get("project-b")?.resolve(emptyAppearance);
+      await flushMicrotasks();
+      expect(harness.workbench.themes.listThemes()).toEqual([]);
+      unsubscribe();
+    } finally {
+      harness.dispose();
+    }
+  });
+
   for (const order of ["metadata-first", "appearance-first"] as const) {
     test(`applies switched-project contributions once when ${order}`, async () => {
       const harness = createBaselineHarness();

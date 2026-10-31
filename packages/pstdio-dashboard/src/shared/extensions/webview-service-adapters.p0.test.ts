@@ -16,6 +16,7 @@ test("dashboard notification adapters resolve an empty dedupe key by presence", 
   try {
     runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
     const adapter = createDashboardWebviewNotificationsAdapter({
+      showNotice: () => {},
       projectId: "project-1",
       extensionId: "notes",
       showError: () => {},
@@ -35,10 +36,14 @@ test("dashboard notification adapters resolve an empty dedupe key by presence", 
 
 test("webview errors are returned to the originating view", () => {
   const errors: unknown[] = [];
+  const notices: unknown[] = [];
   const adapter = createDashboardWebviewNotificationsAdapter({
     extensionId: "notes",
+    showNotice: (notice) => notices.push(notice),
     showError: (error) => errors.push(error),
   });
   adapter.show!({ type: "error", title: "Save failed", message: "Read-only file" });
   expect(errors).toEqual([{ title: "Save failed", description: "Read-only file" }]);
+  adapter.show!({ type: "success", title: "Saved", message: "Saved in this view" });
+  expect(notices).toEqual([{ type: "success", title: "Saved", description: "Saved in this view" }]);
 });

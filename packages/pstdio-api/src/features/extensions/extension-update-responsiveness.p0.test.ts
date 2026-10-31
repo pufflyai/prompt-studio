@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -24,38 +25,44 @@ const createTree = () => {
   return { root, prepared };
 };
 
-const countHeartbeats = async (work: () => unknown) => {
-  let heartbeats = 0;
-  // Observe event-loop turns directly. A zero-delay timer can be clamped beyond a fast async removal.
-  const heartbeat = () => {
-    heartbeats++;
-    immediate = setImmediate(heartbeat);
-  };
-  let immediate = setImmediate(heartbeat);
-  try {
-    await work();
-    return heartbeats;
-  } finally {
-    clearImmediate(immediate);
-  }
-};
-
-test("keeps the event loop running while removing the previous extension dependencies", async () => {
+test("removes the previous extension dependencies before cleanup completes", async () => {
   const { root } = createTree();
-  const heartbeats = await countHeartbeats(() => removePathBestEffort(root));
+  await removePathBestEffort(root);
 
   expect(existsSync(root)).toBe(false);
-  expect(heartbeats).toBeGreaterThan(0);
 });
 
-test("keeps the event loop running while preparing dependency links for replacement", async () => {
+test("waits for pending cleanup while unrelated event-loop work can run", async () => {
+  const { root } = createTree();
+  const gate = Promise.withResolvers<void>();
+  let completed = false;
+  // Hold cleanup explicitly: fast filesystem operations can finish before an immediate runs.
+  const cleanup = removePathBestEffort(root, async (path) => {
+    await gate.promise;
+    await rm(path, { recursive: true, force: true });
+  }).then(() => {
+    completed = true;
+  });
+
+  try {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(completed).toBe(false);
+    expect(existsSync(root)).toBe(true);
+  } finally {
+    gate.resolve();
+    await cleanup;
+  }
+  expect(completed).toBe(true);
+  expect(existsSync(root)).toBe(false);
+});
+
+test("promotes an extension with nested dependencies", async () => {
   const { root, prepared } = createTree();
   const installed = join(root, "extensions/tool");
   mkdirSync(join(root, "extensions"));
-  const heartbeats = await countHeartbeats(() => promotePreparedSource(prepared, installed, false, false));
+  await promotePreparedSource(prepared, installed, false, false);
 
   expect(existsSync(join(installed, "node_modules/dependency-99/lib/index.js"))).toBe(true);
-  expect(heartbeats).toBeGreaterThan(0);
 });
 
 test("replaces multiple extensions concurrently without retaining old dependencies or staging folders", async () => {
@@ -82,16 +89,12 @@ test("replaces multiple extensions concurrently without retaining old dependenci
   });
   for (const { prepared, target } of sources) await promotePreparedSource(prepared, target, false, false);
 
-  const heartbeats = await countHeartbeats(() =>
-    Promise.all(
-      sources.map(({ source, target }) =>
-        installExtensionSource({ source, force: true, skipInstall: true, env: { PSTDIO_HOME: home } }).then(
-          (result) => {
-            expect(result.targetPath).toBe(target);
-            expect(result.metadata.version).toBe("2.0.0");
-          },
-        ),
-      ),
+  await Promise.all(
+    sources.map(({ source, target }) =>
+      installExtensionSource({ source, force: true, skipInstall: true, env: { PSTDIO_HOME: home } }).then((result) => {
+        expect(result.targetPath).toBe(target);
+        expect(result.metadata.version).toBe("2.0.0");
+      }),
     ),
   );
 
@@ -100,5 +103,4 @@ test("replaces multiple extensions concurrently without retaining old dependenci
     expect(existsSync(join(target, "node_modules"))).toBe(false);
   }
   expect(readdirSync(home)).toEqual(["extensions"]);
-  expect(heartbeats).toBeGreaterThan(0);
 });

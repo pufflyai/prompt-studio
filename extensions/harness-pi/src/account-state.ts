@@ -1,4 +1,4 @@
-import type { AgentSessionServices } from "@mariozechner/pi-coding-agent";
+import type { AgentSessionServices } from "@earendil-works/pi-coding-agent";
 import {
   chooseHarnessAuthentication,
   type HarnessAuthentication,
@@ -59,6 +59,9 @@ export const authenticatePiAccount = async (
       signal: channel.signal,
       onAuth: (info) => {
         void channel.emit({ type: "browser", url: info.url, message: info.instructions });
+      },
+      onDeviceCode: (info) => {
+        void channel.emit({ type: "browser", url: info.verificationUri, message: `Enter code: ${info.userCode}` });
       },
       onPrompt: (prompt) =>
         channel.request({ type: "input", title: prompt.message, placeholder: prompt.placeholder, secret: true }),

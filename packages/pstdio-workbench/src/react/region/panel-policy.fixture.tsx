@@ -3,7 +3,7 @@ import { createWorkbench } from "../../core";
 import type { WorkbenchRegionSettings } from "../../core/registries/layout/layout-types";
 
 export const createPolicyWorkbench = (settings: WorkbenchRegionSettings = {}, legacy = false) => {
-  const page = { kind: "page", extensionId: "storybook", id: "policy" } as const;
+  const page = { kind: "page", extensionId: "preview", id: "policy" } as const;
   const w = createWorkbench({ startPage: page, initialSidePanelMode: "attached" });
   w.modes.registerMode({
     id: "policy",
@@ -42,7 +42,7 @@ export const createPolicyWorkbench = (settings: WorkbenchRegionSettings = {}, le
   for (const region of ["side", "secondary"] as const) {
     w.modePlacements.registerPlacement({
       id: region,
-      ref: { kind: "placement", extensionId: "storybook", id: region },
+      ref: { kind: "placement", extensionId: "preview", id: region },
       modeId: "policy",
       region,
       item: { kind: "view", view: { kind: "view", id: region }, presence: "open" },

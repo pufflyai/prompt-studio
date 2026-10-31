@@ -397,20 +397,31 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.source_sha || github.sha }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+      - name: Install dependencies and restore build cache
+        uses: ./.github/actions/setup-ci-cache
+      # Canvas is the only extension with build output: its preview catalog is built from
+      # this repo's UI, so it must exist before the extension is copied out and checked.
+      - name: Build the Canvas preview catalog
+        run: bun run build -- --scope canvas --include-dependencies
       - name: Check extensions against published SDK and UI packages
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
         env:
+          GH_TOKEN: ${{ github.token }}
           CI_CHECK_COMMAND: bun run --cwd scripts verify:published-extensions
         shell: bash
     env:
       CI_PRIORITY: P0
       TEST_PRIORITIES: P0
-      GH_TOKEN: ${{ github.token }}
       CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
       CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
   harness_cli_support:
@@ -559,8 +570,8 @@ jobs:
       CI_PRIORITY: P2
       CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
       GH_TOKEN: ${{ github.token }}
-  storybooks:
-    name: storybooks_${{ matrix.priority }} (${{ matrix.package }})
+  components:
+    name: components_${{ matrix.priority }} (${{ matrix.package }})
     needs: scope
     if: needs.scope.outputs.component_checks == 'true'
     runs-on: ubuntu-latest
@@ -575,7 +586,7 @@ jobs:
     env:
       CI_PRIORITY: ${{ matrix.priority }}
       TEST_PRIORITIES: ${{ matrix.priority }}
-      STORYBOOK_PACKAGES: ${{ matrix.package }}
+      CANVAS_TEST_PACKAGES: ${{ matrix.package }}
       COMPONENT_TEST_FILES: ${{ matrix.files }}
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       GH_TOKEN: ${{ github.token }}
@@ -594,24 +605,24 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           profile: playwright
-      - name: Build selected Storybook owner
-        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun x --no-install lerna run build-storybook --scope '${{ matrix.project }}'
+      - name: Build native Canvas preview harness
+        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun x --no-install lerna run build:previews --scope canvas-tests
       - name: Test selected component contracts
-        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun run --cwd packages/storybook-tests test:browser
+        run: bun scripts/ci/run-ci-checks.ts --priority "$CI_PRIORITY" --observe-peers -- bun run --cwd packages/canvas-tests test:browser
       - name: Preserve component evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: component-results-${{ matrix.package }}-${{ matrix.priority }}-attempt-${{ github.run_attempt }}
           path: |
-            packages/storybook-tests/test-results
-            packages/storybook-tests/playwright-report
+            packages/canvas-tests/test-results
+            packages/canvas-tests/playwright-report
           if-no-files-found: warn
       - name: Preserve owner build archives for certified main promotion
         if: ${{ !cancelled() && needs.scope.outputs.stage == 'merge_queue' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ci-build-playwright-storybook-${{ matrix.package }}-attempt-${{ github.run_attempt }}
+          name: ci-build-playwright-components-${{ matrix.package }}-attempt-${{ github.run_attempt }}
           path: .cache/ci-build
           include-hidden-files: true
           compression-level: 0

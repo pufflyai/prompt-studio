@@ -28,7 +28,7 @@
     ]
   },
   "targetDefaults": {
-    "build-storybook": {
+    "build:preview-tests": {
       "cache": true,
       "dependsOn": ["^build"],
       "inputs": [
@@ -44,7 +44,7 @@
           "env": "PSTDIO_TERMINAL_WEBSOCKET_URL"
         }
       ],
-      "outputs": ["{projectRoot}/storybook-static"]
+      "outputs": ["{projectRoot}/canvas-test-static"]
     },
     "build": {
       "cache": true,

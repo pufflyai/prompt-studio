@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "jsx": "react-jsx", "lib": ["ESNext", "DOM"], "types": ["bun"] },
+  "include": ["src", "bin", "scripts"]
+}

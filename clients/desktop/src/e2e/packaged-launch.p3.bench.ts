@@ -1,4 +1,5 @@
 import { expect } from "@playwright/test";
+import { desktopBudgets } from "pstdio-benchmarks";
 import { test } from "../testing/packaged-fixture";
 import { enableBenchmarkMonitoring } from "./benchmark-performance-evidence";
 import { recordBenchmark } from "./benchmark-record";
@@ -17,17 +18,12 @@ import { createPackagedProject, openPackagedProject } from "./packaged-project-h
 import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 import { waitForVisibleElement } from "./visible-element-timing";
 
-// Hosted Intel Mac runners start the packaged app two to three times slower than Apple Silicon,
-// and the first launch of a freshly signed app waits for macOS launch checks.
 const isIntelMac = process.platform === "darwin" && process.arch === "x64";
-// Budgets sit about 20% above the slowest 2026-10-10 release rehearsal (Intel 23.3 s,
-// Windows 8.2 s), as approved on 2026-10-10. See the testing guide.
-const platformColdStartBudgetMs = process.platform === "win32" ? 10_000 : 8_000;
-const coldStartBudgetMs = isIntelMac ? 28_000 : platformColdStartBudgetMs;
-const macStartupWindowBudgetMs = isIntelMac ? 10_000 : 1_500;
-const startupWindowBudgetMs = process.platform === "darwin" ? macStartupWindowBudgetMs : 1_000;
-const warmAttachBudgetMs = 3_000;
-const recoveryBudgetMs = 500;
+const limits = desktopBudgets();
+const coldStartBudgetMs = limits.coldStartMs.value;
+const startupWindowBudgetMs = limits.startupWindowMs.value;
+const warmAttachBudgetMs = limits.warmAttachMs.value;
+const recoveryBudgetMs = limits.recoveryMs.value;
 
 const startupWindowMetric = (value: number) => ({
   name: "startup-window",
@@ -76,7 +72,9 @@ test("warm attach restores the workbench within budget", async () => {
             "workbench.action.changeTheme",
           ),
         );
-        await page.getByRole("option", { name: theme }).click();
+        await page
+          .getByRole("option", { name: theme === "pstdio-light" ? "Prompt Light" : "Prompt Dark", exact: true })
+          .click();
         await expect.poll(workbenchState).toMatchObject({ values: { "theme-preference": theme } });
         expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
         await waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent");

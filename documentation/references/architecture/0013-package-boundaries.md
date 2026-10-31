@@ -20,13 +20,16 @@ layer-map change.
    consumes its identity and exact-target schemas for local environment bindings;
    it adds no host or provider dependency to the synchronization package.
 
-   `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
+   `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-theme`, `pstdio-paths`,
    `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, `pstdio-db`, and
    `pstdio-storage` define stable contracts, file-type metadata, paths, logging,
    scheduling, git, persistence, and filesystem storage primitives.
    `pstdio-storage` reuses asset reference types from `pstdio-sync-contracts`
    and does not depend on `pstdio-db`. They do not
    depend on SDK, UI, workbench, dashboard, or API host packages.
+   `pstdio-theme` owns browser-free palette conversion for the extension runtime
+   and UI importer. UI bundles its implementation and public types; it is not
+   a published SDK contract.
    `pstdio-db` also consumes synchronization contracts for the durable extension
    journal and accepted state. It does not import the test-only conformance entry.
    The private `pstdio-sync` package owns the production, runtime-neutral record
@@ -45,10 +48,12 @@ layer-map change.
    it imports no Electron, UI, database or client code. Desktop, CLI and E2E
    declare their own dependency on it. Native sampling stays in the host.
 
-   The private `pstdio-benchmarks` package writes benchmark measurements in the shared
-   result format and runs benchmark suites. It has no workspace dependencies. Packages
-   with benchmarks declare it as a development dependency; only benchmark and
-   performance test files import it.
+   The private `pstdio-benchmarks` package owns benchmark measurements, suite membership,
+   sampling, budget policy and shared browser helpers. It has no workspace dependencies.
+   Packages with benchmarks declare it as a development dependency. `pstdio-scripts`
+   also declares it as a development dependency so priority dispatch and CI coverage
+   use the same suite registry. Production entry points do not import it. Its root
+   export provides shared tooling; the writer-only entry avoids loading other helpers.
 
    `storage-scale-fixture` is a private test utility with no workspace dependencies.
    The scale benchmarks in `pstdio-sync`, `pstdio-db` and `e2e` declare it as a
@@ -132,11 +137,16 @@ layer-map change.
    on `main`, or on a pull request labeled `ci:full`; see
    [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
 
-   The private `storybook-tests` package owns component browser interactions and
-   their Storybook servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
+   Its manual relay reference workload also composes the public `pstdio-db` and
+   `pstdio-sync-contracts` exports. These are development dependencies for isolated
+   fixture databases and transport measurements. It never opens the user's database.
+
+   The private `canvas-tests` package owns component browser interactions and
+   their Canvas servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
    `pstdio-dashboard` as development dependencies because it loads their stories.
    Story sources stay with those owners. It does not depend on the API, database,
-   CLI, or `e2e`. App E2E never starts or builds Storybook.
+   CLI, or `e2e`. It uses `pstdio-benchmarks` for startup measurements and sample counts.
+   App E2E never starts or builds Canvas.
 
    `e2e` and `@pstdio/desktop` declare the private `pstdio-scripts` workspace as a
    development dependency. Their Playwright configs use its `./test-quarantine`
@@ -229,3 +239,7 @@ access check must preserve that authority boundary. See the
   import.
 
 The database uses the contract-layer `ResourceRef` type for persisted resource values. The UI library imports the SDK's public serializable control types and adds separate React-node and browser-file variants. These are type dependencies; the UI library still owns no routing, query, or extension-host policy. The SDK declaration rollup includes the private contract types, so installed UI declarations resolve through public packages.
+
+## Canvas authoring tooling
+
+The published `@pstdio/canvas` package owns the canvas file format, preview composition, source indexing, and the `pstdio-canvas` command that builds and watches a project's canvases. It has no application-layer dependencies; React is a peer dependency. Projects, UI packages and repository preview builds use it as development tooling. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; the repository Canvas type-check command checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.

@@ -16,7 +16,7 @@ export type EditingDocument = typeof initialDocument;
 // publisher, host-owned documents and save queue are the production implementations.
 export const createEditingSessionsFixture = () => {
   const workbench = createWorkbench();
-  const extensionId = "storybook.editing";
+  const extensionId = "preview.editing";
   const commandId = `${extensionId}.command.save`;
   const listeners = new Set<() => void>();
   const waiting = new Set<{ resolve(): void; reject(error: Error): void }>();

@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import { type ReactNode, useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
-import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
+import { attributes, boardColumnColors, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
 import type {
   KanbanRendererCreateSubmission,
   KanbanRendererSavedView,
@@ -10,8 +10,7 @@ import type {
 } from "./types";
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
-const STORYBOOK_STORAGE_KEY = "storybook-kanban-renderer";
-const boardColumnColors: Record<string, string> = { done: "green", in_progress: "blue" };
+const PREVIEW_STORAGE_KEY = "preview-kanban-renderer";
 
 const reorderRows = (items: StoryRow[], rowId: string, beforeRowId?: string) => {
   const currentIndex = items.findIndex((row) => row.id === rowId);
@@ -75,7 +74,7 @@ export const Wrapper = (props: {
     : undefined;
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [rows, setRows] = useState<StoryRow[]>(props.rows ?? initialRows);
-  const storageKey = props.storageKey ?? STORYBOOK_STORAGE_KEY;
+  const storageKey = props.storageKey ?? PREVIEW_STORAGE_KEY;
   const defaultSettings = {
     viewMode: props.viewMode ?? "board",
     columnGrouping: props.columnGrouping ?? "status",
@@ -156,7 +155,7 @@ export const CreateFormWrapper = () => {
     <Box p="sm" height="560px">
       <KanbanRenderer<StoryRow>
         rows={rows}
-        storageKey="storybook-kanban-renderer-create-form"
+        storageKey="preview-kanban-renderer-create-form"
         attributes={createAttributes}
         defaultSettings={{
           viewMode: "board",

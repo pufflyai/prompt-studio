@@ -16,14 +16,19 @@ export interface ExtensionRefreshEvent extends FileRendererRefreshEnvelope {
   projectId?: string;
 }
 
+/** Asks views to reload everything. A reset without a project, as after reconnecting, reaches every project. */
+export interface ExtensionResetEvent {
+  projectId?: string;
+}
+
 const eventFeed = createRuntimeFeed<ExtensionRefreshEvent>();
-const resetFeed = createRuntimeFeed<void>();
+const resetFeed = createRuntimeFeed<ExtensionResetEvent>();
 const commandTicks = createRuntimeState(() => ({ tick: 0 }));
 export const subscribeToExtensionCommandFeed = commandFeed.subscribe;
 export const subscribeToExtensionEventFeed = eventFeed.subscribe;
 export const publishExtensionEvent = eventFeed.publish;
 export const subscribeToExtensionEventReset = resetFeed.subscribe;
-export const publishExtensionEventReset = (owner = getRuntimeCollections()) => resetFeed.publish(undefined, owner);
+export const publishExtensionEventReset = resetFeed.publish;
 
 export const publishExtensionCommandEvent = (
   response: CommandExecutionResult,

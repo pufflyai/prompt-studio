@@ -120,21 +120,21 @@ export const createApi = (options: { apiUrl: string; graphqlUrl: string; reposit
     return result.data;
   };
   const readFailedJobs = async (id: number) => {
-    const failedJobs: string[] = [];
+    const observed: Array<{ conclusion: string | null; name: string }> = [];
     for (let jobPage = 1; ; jobPage++) {
       const { jobs } = await rest(`actions/runs/${id}/jobs?per_page=100&filter=latest&page=${jobPage}`);
-      failedJobs.push(
-        ...jobs
-          .filter(
-            (job: { conclusion: string; name: string }) =>
-              ["failure", "timed_out", "action_required", "startup_failure"].includes(job.conclusion) &&
-              job.name !== "ci_passed",
-          )
-          .map((job: { name: string }) => job.name),
-      );
+      observed.push(...jobs);
       if (jobs.length < 100) break;
     }
-    return failedJobs;
+    const failed = observed.filter((job) =>
+      ["failure", "timed_out", "action_required", "startup_failure"].includes(job.conclusion ?? ""),
+    );
+    const causes = failed.filter((job) => job.name !== "ci_passed");
+    if (causes.length) return causes.map((job) => job.name);
+    if (!failed.length) return [];
+    // A timed-out monitor can be cancelled while its final gate fails. Keep that
+    // evidence with this run instead of blaming an unrelated older failure.
+    return [...observed.filter((job) => job.conclusion === "cancelled"), ...failed].map((job) => job.name);
   };
   return {
     readPull: async (number) => {

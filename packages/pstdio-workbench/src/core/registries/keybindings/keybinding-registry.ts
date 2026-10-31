@@ -1,3 +1,4 @@
+import { parseHotkey } from "@tanstack/hotkeys";
 import type { ContextKeyService } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,
@@ -89,13 +90,18 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     const assigned = override?.layer === "direct" ? undefined : (override?.layer ?? binding.layer);
     const layer = assigned ? sharedShortcutLayer(assigned) : undefined;
     let defaultScope: Keybinding["targetScope"];
-    if (assigned === "extensions") defaultScope = "project";
+    if (assigned === "extensions" || assigned === "help") defaultScope = "project";
     else if (layer === "current") defaultScope = "panel";
+    const keybinding = override?.keybinding ?? binding.keybinding;
+    const first = getKeybindingSteps(keybinding)[0];
+    const held = first ? parseHotkey(first) : undefined;
     return {
       ...binding,
       id: getId(binding),
       targetScope: binding.targetScope ?? defaultScope,
-      keybinding: override?.keybinding ?? binding.keybinding,
+      keybinding,
+      // Plain keys belong to the editor, so only Alt, Ctrl or Cmd chords may act while typing.
+      allowInInputs: binding.allowInInputs === true && Boolean(held?.alt || held?.ctrl || held?.meta),
       layer,
       disabled: override?.disabled === true,
     };
@@ -170,7 +176,23 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     },
 
     listActiveKeybindings() {
-      return listCatalog()
+      const bindings = [...store.getState().keybindings].sort(byContributionPriority);
+      const declared = new Set(bindings.map(getId));
+      const assigned = new Set(
+        Object.entries(readShortcutPreferences(deps.preferences?.()).overrides)
+          .filter(
+            ([id, value]) =>
+              !declared.has(id) &&
+              !value.disabled &&
+              (!value.layer || value.layer === "direct") &&
+              Boolean(value.keybinding?.trim()),
+          )
+          .map(([id]) => id),
+      );
+      // Generated discovery actions have no chord until a person assigns one.
+      // Input dispatch must not enumerate page/menu providers on every layout change.
+      if (assigned.size) bindings.push(...listCatalog().filter((binding) => assigned.has(getId(binding))));
+      return bindings
         .map(resolve)
         .filter(
           (binding) =>

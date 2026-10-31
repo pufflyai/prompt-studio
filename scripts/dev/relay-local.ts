@@ -197,10 +197,24 @@ if (process.argv.includes("--down")) {
     }
     if (enroll) {
       const device = JSON.parse(
-        await run([...compose, "exec", "-T", "authority", "bun", "/app/enroll-local.js"], {
-          capture: true,
-          input: JSON.stringify({ deviceId: identity.environmentId, name: app, workbenchId: scope.workbenchId }),
-        }),
+        // Fixture enrollment ships only in the relay fixture image, never in the production manager image.
+        await run(
+          [
+            ...compose,
+            "run",
+            "--rm",
+            "-T",
+            "--no-deps",
+            "initialize",
+            "sh",
+            "-c",
+            'DATABASE_URL="$MANAGER_DATABASE_URL" exec bun /app/enroll-local.js',
+          ],
+          {
+            capture: true,
+            input: JSON.stringify({ deviceId: identity.environmentId, name: app, workbenchId: scope.workbenchId }),
+          },
+        ),
       ) as { accountId: string; deviceId: string; token: string };
       const account: LocalAccountFile = {
         login: { managerOrigin: "https://authority:8443", relayOrigin: "https://relay:8080", ...device },

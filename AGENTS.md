@@ -14,6 +14,34 @@ Use [NONFUNCTIONAL_REQUIREMENTS.md](NONFUNCTIONAL_REQUIREMENTS.md) as planning g
 - A task is not complete until the relevant tests and checks for the change pass.
 - A PR is not complete until all applicable CI checks pass on its latest commit. See [CI completion](#ci-completion).
 - If you get stuck, read the relevant [lessons learned](documentation/lessons-learned/) before trying another approach.
+- **NEVER commit generated files** unless they are listed as an exception in [Generated files](#generated-files).
+- **Changes of 5,000 or more added lines need a person's approval first.** See [Large changes](#large-changes).
+
+## Generated files
+
+**NEVER commit generated files.** A generated file is any file a tool, script or build writes: build output, bundles, compiled previews, reports, snapshots, caches and type stubs that a command recreates. Commit the source and the command instead. Only the exceptions below may be committed, and only when the change requires them.
+
+Before every commit, run `git status` and `git diff --cached --stat`. If generated files appear that are not an exception, unstage them, and remove them from the branch if they were already committed. If a check fails because a generated file is missing or stale, report it instead of committing the file. Adding a new exception requires the user's explicit approval in the same conversation and an update to this list.
+
+| Exception | Files | Commit only when |
+| --- | --- | --- |
+| Bun lockfiles | `bun.lock` and `extensions/*/bun.lock` | Dependencies change. Sync extension lockfiles with `bun run --cwd scripts release:extension-lockfiles:sync`. |
+| Database migrations | `packages/pstdio-db/drizzle/**`, `services/account-manager/drizzle/**`, `services/relay/drizzle/**`, `services/psx/drizzle/**` | The schema changes. Generate them with the package's `db:generate` script; see [Database migrations](#database-migrations). |
+| Release output | `CHANGELOG.md` files and `package.json` versions | Only the Changesets release process writes them. Feature PRs add `.changeset/*.md` files instead. |
+| Webview runtime bundle | `packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js` | Its source in `packages/pstdio-extensions/src/bridge` changes. Rebuild it from that source. |
+| Codex protocol types | `extensions/harness-codex/src/protocol/**` | The supported Codex app-server protocol changes. They are copied from Codex's ts-rs output; do not edit them by hand. |
+
+The UI Canvas preview catalog is never committed; Canvas and CI build it from source.
+
+## Large changes
+
+If a change will add 5,000 or more lines to a PR, or commits the project to adding that much later, a person must approve it before you write it. Examples: a new package or extension, vendored or copied code, generated output, a large fixture, or a design that keeps adding files with every change. Count every added line, including lockfiles, translations and tests.
+
+1. Stop before writing the code.
+2. Create a review request with `pst pstdio-planner request-human --request '{"kind":"decision"}'`. Explain why the change needs that much code, the expected size, and the smaller alternatives you considered.
+3. Wait for the answer. Write the change only if the person approves it, and link the request in the PR description.
+
+When a change grows past 5,000 added lines while you work, stop and ask the same way. Check the size with `git diff --shortstat origin/main...HEAD`.
 
 # Language
 
@@ -96,12 +124,10 @@ Clearly describe it as a temporary workaround, not the intended design.
 
 ## Visual design rules
 
+- For UI tickets, follow Planner's `updateCanvasDesign` policy. When enabled and Canvas is available, update the relevant design before creating or implementing the ticket and follow the `canvas` skill. Link the canvas page, exact preview names, and source paths in the ticket. If disabled or unavailable, follow the project's existing design workflow and record why the Canvas step was skipped. Explicit user instructions take precedence.
+- Canvas sources are `*.canvas.tsx` files next to the components they show. Design pages live in `packages/ui/src/foundations/`. Preserve existing designs and stable IDs.
 - Read [design/DESIGN.md](design/DESIGN.md) before working on UI or design. Follow its shared interaction patterns.
-- Pencil `.pen` designs define how the `@pstdio/ui` component library must look. This includes colors, text styles, spacing, corner roundness, component states, and layout. Make the code match the design.
-- The main design system file is [`design/prompt-studio-design-system.pen`](design/prompt-studio-design-system.pen). Open and edit `.pen` files only with the Pencil CLI. Never edit them by hand.
-- Website and landing page frames live in [`design/prompt-studio-website.pen`](design/prompt-studio-website.pen). Pencil cannot share components between files, so this file keeps copies of the design-system components it uses. Update those copies when the design system changes.
-- If the design and code do not match, update the code to match the design. If the design is wrong, fix it in Pencil first, then update the code.
-- Storybook defines component **APIs and props**. Pencil defines how components **look**.
+- Live canvases define appearance, component states, and example prop usage. When following the Canvas workflow, update the design first and make the implementation match it.
 
 ## Styling rules
 
@@ -109,7 +135,7 @@ Build the UI with the design system. Do not create one-off styles.
 
 - Build screens with exported `@pstdio/ui` components. Use a basic Chakra component directly only when `@pstdio/ui` has no matching component.
 - Apply styles with Chakra recipes and theme tokens in `packages/ui/src/theme`. Use recipe `variant` and `size` props, semantic color tokens, `textStyles`, and `layerStyles`.
-- If the current recipes and tokens cannot create a visual from the `.pen` design, add the missing variant or token to `packages/ui/src/theme`. This makes it available to every caller.
+- If the current recipes and tokens cannot create a visual from the live canvas, add the missing variant or token to `packages/ui/src/theme`. This makes it available to every caller.
 
 Do not use:
 
@@ -130,7 +156,7 @@ Follow these steps **every time**:
 
 Do not write:
 
-- Tests for UI changes. Use storybook stories instead.
+- Exhaustive UI permutations and cosmetic-only assertions. Keep Canvas examples for exploration; add automated browser checks only for critical behavior, with the risk identified in the test.
 - Tests for changes that only affect configuration.
 - Tests for changes that only affect documentation.
 - Tests that assert literal bundled copy.
@@ -162,13 +188,15 @@ Choose the smallest test scope that covers the changed behavior. Include affecte
 
 Tests must stay green.
 
+CI executes each test once per applicable platform. Never repeat tests, retry failures, or create repeated reliability runs to obtain a pass. Quarantine confirmed flakes with evidence, an owner, and removal criteria; run them once in their separate lane and require its execution report.
+
 ### 4. Prove it works (required)
 
 For code changes, run targeted tests and the relevant package checks, such as type checking, linting, or a build. Match the checks to the affected behavior and dependencies. Fix reported issues, then rerun only the failed or affected checks. Do not repeat passing checks without a new change or unresolved concern.
 
 For documentation-only changes, check the content, links, paths, and formatting. Do not run application tests or full validation merely because a documentation path appears in a source comment, prompt, or test fixture.
 
-Always validate UI changes using Playwright.
+Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies.
 
 ### 5. Test packaged files
 
@@ -201,8 +229,8 @@ A pull request may contain only one migration entry. If the tools create more th
 ## Fixing bugs
 
 - Always reproduce a bug before fixing it.
-- Always write a test that proves the bug stays fixed.
-- Always validate UI changes using Playwright.
+- Add a regression test when it protects meaningful supported behavior. Visual-only bugs follow the critical browser-check policy below.
+- Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies.
 
 ## Git
 
@@ -241,14 +269,14 @@ A pull request may contain only one migration entry. If the tools create more th
 - Run one group with `bun test:p0`, `bun test:p1`, `bun test:p2`, or `bun test:p3`. Use `--scope <workspace>` and `--runner <kind>` for targeted work. Discovery owns membership; do not add test filename lists to workflows.
 - Put each test **next to the file it tests**.
 - Avoid mocks. Test real behavior when possible.
-- For a bug fix, add a test that reproduces the bug before changing the code.
+- For a meaningful behavioral bug, add a reproducing regression test before changing code. Visual-only changes follow the critical-check policy.
 - Test behavior that users can use and rules the product still supports.
 - When removing a feature, delete or update its tests. Do not add tests that only prove the feature is gone.
 - Write failure-case tests only for rules the product still supports, such as validation, permissions, and error handling. Never use them to prove deleted code stays gone.
 
 Do not write:
 
-- Tests for UI changes. Use storybook stories instead.
+- Exhaustive UI permutations and cosmetic-only assertions. Keep Canvas examples for exploration; add automated browser checks only for critical behavior, with the risk identified in the test.
 - Tests for changes that only affect configuration.
 - Tests for changes that only affect documentation.
 - Tests that assert literal bundled copy.
@@ -270,9 +298,9 @@ Run `bun run dev:playwright`. Open the dashboard URL printed by the command with
 Build each feature with the [test-driven workflow](#required-workflow-test-driven-development). While you develop, run only the tests relevant to your change. When the feature is ready:
 
 1. **Open the PR.** Push the branch and open a draft PR, as described in [Git](#git).
-2. **Run all tests.** Run `bun run test`. It runs every package's tests, builds what the E2E suites need, then runs the E2E script, CLI, UI and Vite terminal suites. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure your PR causes and push the fix.
+2. **Run required tests.** For behavioral features and meaningful regressions, run `bun run test`. It runs every package's tests, builds what the E2E suites need, then runs the E2E script, CLI, UI, Vite terminal and critical Canvas suites. Routine copy, spacing, cosmetic and documentation changes use the scoped verification policy above; they do not require this full command or browser runs. Explicit user-requested validation still applies. Run it again after merging `main` into the branch, because a merge can combine changes that each passed alone. Fix every failure your PR causes and push the fix.
    - If a test fails for a reason unrelated to your PR, check that it also fails on `main`. Then look for an open PR that already fixes it. If there is none, open a separate PR that fixes it. Link that PR in your PR's description. Do not fix unrelated failures in your PR.
-3. **Mark the PR ready.** Run `gh pr ready` only when CI is green on the latest commit and all tests pass, apart from unrelated failures that have a linked fix PR. See [CI completion](#ci-completion).
+3. **Mark the PR ready.** Run `gh pr ready` only when CI is green on the latest commit and all required local tests pass, apart from unrelated failures that have a linked fix PR. See [CI completion](#ci-completion).
 4. **Answer review comments.** Read every review comment on the PR, including inline comments on the code. `gh pr view <number> --comments` shows the conversation, and `gh api repos/pufflyai/prompt-studio/pulls/<number>/comments` shows the inline comments. Fix the valid ones and reply to each comment. After a fix, rerun the affected tests and wait for CI on the new commit.
 
 Documentation-only PRs skip step 2.

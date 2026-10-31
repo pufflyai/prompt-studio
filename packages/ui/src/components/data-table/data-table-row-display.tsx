@@ -1,6 +1,8 @@
-import { Box, Icon, IconButton, Popover, Portal, Text } from "@chakra-ui/react";
+import { Box, Icon, IconButton, Text } from "@chakra-ui/react";
 import { Settings2 } from "lucide-react";
 import { Switch } from "@/components/primitives/switch";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 
 interface DataTableRowDisplaySwitchProps {
   showDivider?: boolean;

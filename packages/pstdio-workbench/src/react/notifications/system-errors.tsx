@@ -1,5 +1,5 @@
-import { Button, HStack, Icon, Popover, Portal, Stack, Tag, Text } from "@chakra-ui/react";
-import { AlertMessage, ScrollArea } from "@pstdio/ui";
+import { Button, HStack, Icon, Stack, Tag, Text } from "@chakra-ui/react";
+import { AlertMessage, ScopedPopover as Popover, Portal, ScrollArea } from "@pstdio/ui";
 import { TriangleAlert } from "lucide-react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -16,7 +16,7 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
   const latest = errors.at(-1)!;
 
   return (
-    <Popover.Root positioning={{ placement: "top-start", offset: { mainAxis: 4 } }}>
+    <Popover.Root variant="widget" positioning={{ placement: "top-start", offset: { mainAxis: 4 } }}>
       <Popover.Trigger asChild>
         <Button
           size="2xs"
@@ -41,8 +41,9 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
             maxH="70dvh"
             overflow="hidden"
           >
-            <Popover.Body display="flex" flexDirection="column" gap="sm" minH="0">
-              <HStack gap="xs" flexShrink="0">
+            <Popover.Body display="flex" flexDirection="column" minH="0">
+              {/* The header stays put while the list scrolls, with its scrollbar at the popover edge. */}
+              <HStack gap="xs" flexShrink="0" paddingX="sm" paddingY="xs">
                 <Icon as={TriangleAlert} boxSize="4" />
                 <Popover.Title>System errors</Popover.Title>
                 <Tag.Root size="sm" variant="subtle" colorPalette="red" aria-label={`${errors.length} system errors`}>
@@ -61,6 +62,7 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
               </HStack>
               <ScrollArea
                 minH="0"
+                contentProps={{ paddingX: "sm", paddingBottom: "xs" }}
                 viewportProps={{ role: "region", "aria-label": "System error list", overscrollBehavior: "contain" }}
               >
                 <Stack gap="sm" minW="0">

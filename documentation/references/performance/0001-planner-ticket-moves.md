@@ -10,8 +10,8 @@ Run from the repository root:
 
 ```sh
 bun run dev:playwright -- --desktop
-bun run --cwd packages/e2e src/perf/planner-moves.stress.ts
-bun run --cwd extensions/pstdio-planner src/commands/reorder-ticket.stress.fixture.ts
+bun run --cwd packages/e2e src/perf/planner-moves.diagnostic.ts
+bun run --cwd extensions/pstdio-planner src/commands/reorder-ticket.diagnostic.ts
 bun run dev:playwright:down
 ```
 
@@ -22,6 +22,8 @@ The browser test covers 50 tickets with one view, 500 with one view, 500 with fi
 The default browser CPU throttle is 4. Use `CPU_THROTTLE=1` for normal browser speed. `--resume` continues from synthetic stress data and skips smaller ticket counts. Use a fresh stack for a full comparison.
 
 The script writes samples, screenshots, and Chromium CPU profiles under `__test-tmp__/planner-stress/<run-id>/`. It checks persisted status and relative order after moves. It has no performance pass/fail budget. Existing timeouts are unchanged.
+
+Both move diagnostics remain the maintained way to measure moves. The `planner` benchmark suite's [board cold open](0002-planner-board-cold-open.md) measures only the first card after a restart, and no benchmark moves a card or counts reorder writes. See [diagnostics with unique evidence](../../guides/development/0016-writing-benchmarks.md#keep-a-diagnostic-only-for-unique-evidence).
 
 ## Results
 

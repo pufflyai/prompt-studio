@@ -1,0 +1,47 @@
+{
+  "name": "canvas-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun ../../scripts/ci/run-ci-checks.ts --plan checks.json",
+    "test:browser": "bun src/scripts/run-browser.ts",
+    "perf:startup": "bun x --no-install lerna run build:previews --scope canvas-tests && bun run test:browser --config playwright.startup-perf.config.ts",
+    "typecheck": "bun check",
+    "lint": "bun run typecheck && biome check .",
+    "report": "playwright show-report",
+    "build:previews": "bun src/scripts/build-previews.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@pstdio/ui": "workspace:*",
+    "@pstdio/workbench": "workspace:*",
+    "pstdio-dashboard": "workspace:*",
+    "pstdio-benchmarks": "workspace:*"
+  },
+  "nx": {
+    "targets": {
+      "test": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
+      "test:browser": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
+      "build:previews": {
+        "cache": true,
+        "dependsOn": [
+          "^build"
+        ],
+        "outputs": [
+          "{workspaceRoot}/__test-tmp__/native-canvas-verification/dist"
+        ]
+      }
+    },
+    "implicitDependencies": [
+      "canvas"
+    ]
+  }
+}

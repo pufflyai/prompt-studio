@@ -187,7 +187,7 @@ clients/desktop/.sidecar
 clients/desktop/out
 clients/desktop/test-results
 
-*/**/storybook-static
+*/**/canvas-test-static
 
 packages/pstdio/README.md
 packages/pstdio/.readme.generated
@@ -209,3 +209,6 @@ infra/terraform/**/*.tfvars
 infra/terraform/**/*.tfvars.json
 infra/terraform/**/*.tfplan
 infra/terraform/**/crash*.log
+
+# UI Canvas builds its preview catalog from source; it is never committed (AGENTS.md "Generated files").
+extensions/canvas/src/catalog/generated/

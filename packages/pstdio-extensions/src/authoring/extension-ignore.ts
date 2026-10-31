@@ -80,7 +80,7 @@ const devOnlyDirectories = new Set([
   "__tests__",
   "__fixtures__",
   "mocks",
-  "storybook-static",
+  "canvas-test-static",
   "__test-tmp__",
 ]);
 const devOnlySourcePattern = /\.(?:spec|test|fixture)\.[cm]?[jt]sx?$/;

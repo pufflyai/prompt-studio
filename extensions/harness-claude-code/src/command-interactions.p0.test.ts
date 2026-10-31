@@ -21,7 +21,7 @@ test.each([
     questions: {
       ask: async (request) => {
         asked.push(request.id);
-        return { answers: [["Hello"]] };
+        return { answers: [[request.id === "plan" ? "Approve and implement" : "Hello"]] };
       },
     },
     approvals: {
@@ -43,12 +43,16 @@ test.each([
     },
   });
   await waitForStreamIo();
-  emit({ type: "control_request", request_id: "plan", request: { tool_name: "ExitPlanMode", input: {} } });
+  emit({
+    type: "control_request",
+    request_id: "plan",
+    request: { tool_name: "ExitPlanMode", tool_use_id: "plan-tool", input: { plan: "Add a greeting." } },
+  });
   await waitForStreamIo();
   child.exit();
   if (result.kind === "started") await result.session.done;
-  expect(asked).toEqual(["question"]);
-  expect(approvals).toEqual(["plan"]);
+  expect(asked).toEqual(["question", "plan"]);
+  expect(approvals).toEqual([]);
   const replies = written().filter((item) => item.type === "control_response");
   expect(replies).toHaveLength(2);
   expect(replies.every((item) => item.response.response.behavior === "allow")).toBe(true);

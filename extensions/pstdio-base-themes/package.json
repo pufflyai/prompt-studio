@@ -17,10 +17,7 @@
   "type": "module",
   "scripts": {
     "test": "bun ../../scripts/ci/run-bun-tests.ts --pass-with-no-tests",
-    "typecheck": "bun check && bun check -p tsconfig.storybook.json",
-    "storybook": "storybook dev -p 6009",
-    "build-storybook": "storybook build",
-    "test-storybook": "test-storybook --url http://127.0.0.1:6009"
+    "typecheck": "bun check && bun check -p tsconfig.canvas.json"
   },
   "dependencies": {
     "@pstdio/sdk": "^0.35.0"
@@ -28,16 +25,12 @@
   "devDependencies": {
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
-    "@pstdio/ui": "^0.43.1",
-    "@storybook/react-vite": "10.6.0",
-    "@storybook/test-runner": "^0.24.5",
+    "@pstdio/ui": "0.46.0-preview.sha-0c1d165b4b8dddb6e102640f6a66c7624764b839",
     "@types/bun": "1.4.4",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "storybook": "10.6.0",
-    "typescript": "6.0.2",
-    "vite": "^8.3.1"
+    "typescript": "6.0.2"
   }
 }

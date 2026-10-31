@@ -72,7 +72,7 @@ Electron's `DesktopProjectTabsStore` persists only `{ projectIds: string[] }` in
 
 A failed write shows an error through the workbench notification system. Tabs remain usable. The next tab change saves the full current order and dismisses the error after a successful write.
 
-`@pstdio/ui` owns the title-bar and tab recipes. Pencil node `V3OnvZ` defines the workbench; `iGFTr` shows normal and full-screen desktop title bars. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
+`@pstdio/ui` owns the title-bar and tab recipes. The live Canvas examples define normal and full-screen desktop title bars. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
 
 ## Theme
 
@@ -95,7 +95,7 @@ bun run --cwd clients/desktop package
 bun run --cwd clients/desktop test:packaged --grep 'opens, switches, closes'
 ```
 
-The flow opens two projects through the picker and restores a different page in each, including an extension page. It reorders tabs with the pointer and keyboard, cancels a move, closes the active tab without stopping its terminal, and restores the page and tab order after relaunch. It checks the expected lifecycle and workbench renderers and an unchanged runtime ID and PID, then attaches `desktop-project-tabs.png` while two tabs are visible. Source Electron checks also verify that both renderers share one native window. Storybook's `Components/Navigation/Window Tabs` covers light and dark themes, overflow, long names, keyboard selection and reordering, and close hover/focus.
+The flow opens two projects through the picker and restores a different page in each, including an extension page. It reorders tabs with the pointer and keyboard, cancels a move, closes the active tab without stopping its terminal, and restores the page and tab order after relaunch. It checks the expected lifecycle and workbench renderers and an unchanged runtime ID and PID, then attaches `desktop-project-tabs.png` while two tabs are visible. Source Electron checks also verify that both renderers share one native window. Canvas's `Components/Navigation/Window Tabs` covers light and dark themes, overflow, long names, keyboard selection and reordering, and close hover/focus.
 
 BrowserWindow enables sandboxing, context isolation, web security, and disables Node integration and webviews. The bundled lifecycle renderer is served from the privileged `pstdio://lifecycle/` protocol, restricted to files under its renderer root. It does not use the broader `file://` protocol. The shell:
 
@@ -109,7 +109,7 @@ The lifecycle and workbench renderers use the same hardened web preferences and 
 
 ## Performance monitoring
 
-The Developer tools settings panel has one desktop-backed switch, **Enable performance monitoring**. It is off by default. Electron main saves it as `{ "enabled": boolean }` in `performance-monitoring.json` under its user data, next to the other host-state files. The runtime database never stores it, so a remote runtime cannot turn it on for this device. Browser dashboards save their own switch in `localStorage`. See the [Developer tools guide](../../guides/0003-developer-tools.md) for the person-facing behavior.
+The Prompt Studio Performance Monitoring extension (`extensions/pstdio-performance`) contributes the trailing status bar meter and its details popover. Its meter holds a capture with the public `performance.read` capability. The dashboard turns monitoring on when the first extension capture starts and off when the last one ends, so monitoring runs exactly while a monitoring extension is loaded. The device switch is desktop-backed and off by default. Electron main saves it as `{ "enabled": boolean }` in `performance-monitoring.json` under its user data, next to the other host-state files. The runtime database never stores it, so a remote runtime cannot turn it on for this device. Browser dashboards save their own switch in `localStorage`. See the [Developer tools guide](../../guides/0003-developer-tools.md) for the person-facing behavior.
 
 Measurement has one owner per process:
 
@@ -119,7 +119,7 @@ Measurement has one owner per process:
 - The dashboard owns its slow-frame observer. It observes `long-animation-frame` entries, or `longtask` entries when that is all the renderer supports, sanitizes script attribution to file names, and sends at most one report per second. Main validates each report with the bounded `slowFrameReportSchema` and keeps the newest 50 frames.
 - The dashboard owns its frame counter and the list of paused extensions. The counter counts `requestAnimationFrame` callbacks in 1-second buckets, keeps 30 seconds, and stops while the window is hidden. The dashboard sends both values to main with `reportRendererState` when a second completes or a pause changes. Main validates each report with the bounded `rendererStateReportSchema` and keeps only the latest one. The snapshot returns them as `frameRate` and `pausedExtensionIds`.
 
-Nothing runs while the switch is off: no timer, observer, metrics IPC, or endpoint. Turning it on starts the collector, the slow-frame observer, and the frame counter; turning it off stops all three and clears every kept sample. The monitor applies switch changes one at a time, so an endpoint never opens while the previous one is closing. The dashboard registers the frame-rate meter as a trailing status bar item only while the switch is on. Like every status bar item, it shows only in modes that do not draw their own status bar or hide it. The meter reads a snapshot every 2 seconds while it is mounted.
+Nothing runs while the switch is off: no timer, observer, metrics IPC, or endpoint. Turning it on starts the collector, the slow-frame observer, and the frame counter; turning it off stops all three and clears every kept sample. The monitor applies switch changes one at a time, so an endpoint never opens while the previous one is closing. The extension's meter is always registered as a trailing status bar item. While the switch is off it shows a muted **Off** gauge that opens the switch; a status webview must never be empty, because Chromium stops laying out a hidden zero-width cross-origin frame and the host would never learn its new width. Like every status bar item, it shows only in modes that do not draw their own status bar or hide it. The meter and its details add listeners to the host's single snapshot poller, which runs every 2 seconds only while the switch is on.
 
 Pausing an extension from the meter's popover unmounts every webview of that extension in the window. When no other extension view uses its renderer process, Chromium ends that process. The pause lives only in the dashboard's memory and does not reach the runtime, so the extension's commands, hooks, and schedules keep running.
 
@@ -169,7 +169,7 @@ on Linux, and a signed Squirrel Setup installer and update package on Windows.
 The DMG opens a Finder window with a static background,
 `assets/dmg-background.png` and its `@2x` Retina copy. Both are exported from
 the `Desktop · macOS installer · Background` frame in
-`design/prompt-studio-website.pen`. Forge places the real app icon and the
+the Landing Page canvas. Forge places the real app icon and the
 Applications link in the clear areas on each side of the painted arrow. Finder
 owns the copy, its progress, and replace prompts. No Prompt Studio code runs
 while Finder copies the app, so the window cannot report that the copy finished.

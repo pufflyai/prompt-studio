@@ -196,3 +196,225 @@ failure must stop the upgrade. Do not automatically run older images against a n
 schema: database rollback requires a tested restore or a compatible forward fix.
 
 Keep backups of every database and test a recovery before relying on it.
+
+## Reference workload measurement
+
+PS-787 adds a manual [reference workload](../../../packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts).
+It uses this guide's Compose relay, migration job, PostgreSQL and real RustFS object
+storage. It replaces public ingress with loopback ports and uses disposable signed
+identities. It does not create cloud resources or open the user's local database.
+The three clients use independent new fixture databases and digest-checked file stores.
+The account manager and Google login are outside this local measurement.
+
+Build the relay image from the revision you want to measure, then run from the repository root:
+
+```sh
+docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:measurement .
+bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts \
+  .pstdio/extension-storage/pstdio.pstdio-artifacts/relay-measurement \
+  pstdio-relay:measurement
+```
+
+The run keeps these workloads fixed:
+
+- Reference: two projects with 5,000 records each, three devices, and 5 GiB of
+  distinct files: one 1 GiB file and eight 512 MiB files. A second account syncs
+  during the first file's actual multipart transfer. Each project receives 10,000
+  record edits in groups of 100. A joined device catches up, then a fresh device
+  downloads the result. Every record value and every file digest is checked.
+- Scale: ten extension owners with 10,000 records each on three devices. Each
+  owner also receives 10,000 edits. This separate account runs on the same relay
+  after the reference workload; raw server totals are cumulative, and the output
+  reports the scale workload's additional object and table storage separately.
+- Large save: one grouped save of eight 150,002-byte record values after a small
+  founding state. It must use a blob-backed update frame, replace the latest state
+  using the default trigger, and produce the same values on three devices. Pass
+  `large-save` as the final command argument to run only this focused check.
+
+The runner keeps the normal relay limits, seven-day grace period, and production
+latest-state trigger. R23 counts the encrypted state envelope, chunk blobs, large-save
+frame blobs and retained updates. File blobs have a separate bound so the large files
+cannot hide record-history growth. Covered frame blobs count once in the grace copy.
+Physical object keys and lengths must match the database; unclassified blobs,
+unmatched objects and unfinished uploads prevent a passing result.
+
+Output includes per-owner limits, every relay table's row count and allocated bytes,
+object listings, first-download/catch-up request counts, source hashes and raw HTTP
+observations. Request counts cover calls made by the production client. Response
+bytes count application bodies consumed by the client; cancelled acknowledgments and
+HTTP/TLS overhead are excluded. They are a traffic lower bound, not billed wire bytes.
+Keep explicit overhead headroom when estimating monthly traffic.
+
+Allow roughly 30 GiB of free disk for the full file workload. The runner discards a
+verified follower's fixture files before downloading the third device's copy. It
+removes only its named Compose project, volumes and temporary device files, including
+on SIGINT/SIGTERM. Result files remain. A forced process kill can require manual
+cleanup using the exact Compose project and configuration printed by Docker.
+
+Local results establish a measured workload, not unlimited capacity, a hosted SLA,
+or Spaces compatibility. A host with a large shared Docker memory limit does not
+establish that the cheapest App Platform instance can sustain the same workload.
+
+### Local results, 2026-10-30
+
+The corrected reference run passed on an Apple M5 with 32 GiB RAM, Bun 1.4.4 and
+Docker Desktop. It took 553.533 seconds. Three independent fixture clients verified
+all record values and complete file digests. The second account synced in 163.360 ms
+inside the 1 GiB file's 7.413-second, 205-part transfer window.
+
+| Encrypted payload unit | Stored bytes | R23 limit bytes |
+| --- | ---: | ---: |
+| Project 1 record stream | 87,115,658 | 102,101,101 |
+| Project 2 record stream | 87,129,586 | 102,122,815 |
+| Project 1 files | 3,221,225,637 | 6,442,451,274 |
+| Project 2 files | 2,147,483,780 | 4,294,967,560 |
+
+Each project received 10,000 edits. The second account's small stream also passed.
+All 217 physical objects reconciled to 5,542,956,490 bytes, with no unknown,
+missing or mismatched objects, missing mappings or unfinished uploads. This uses the
+existing storage-bound benchmark's encrypted-payload interpretation of R23. SQL
+allocation is reported separately: 1,507,328 table/index bytes and a 9,567,255-byte
+PostgreSQL database at the reference endpoint. These local allocations do not prove
+hosted instance capacity. Raw evidence is attached to PS-787's change request report.
+
+The separate ten-owner run also passed in 3,114.578 seconds. It verified all 100,000
+records after 100,000 edits on each of three devices. Every owner retained two state
+rows, 68 update rows and 31 chunk objects. Per-owner stored record bytes ranged from
+154,831,287 to 154,906,469, below the corresponding limits of 202,891,835 to
+203,000,987 bytes. Scale added 1,010 objects and 1,548,790,489 bytes. Cumulative
+physical storage was 1,227 objects and 7,091,746,979 bytes, all reconciled. Cumulative
+table/index allocation was 3,588,096 bytes; database size was 11,951,127 bytes.
+
+| Client phase | Reference requests | Reference response-body bytes | Scale requests | Scale response-body bytes |
+| --- | ---: | ---: | ---: | ---: |
+| Initial follower download | 25 | 5,385,472,201 | 100 | 167,709,191 |
+| Joined device catch-up | 26 | 96,302,278 | 200 | 711,587,637 |
+| Fresh device download after edits | 39 | 5,465,013,053 | 220 | 711,594,447 |
+
+These are complete relay client-call counts for each phase, including state and blob
+reads. They are not S3 operation counts. No client request failed in either run.
+
+The reference and scale runs used relay source base `48b14bc13` and the recorded
+measurement-source hashes. They exercised inline grouped updates. A later focused
+large-save run verified the client compaction fixes: one blob-backed frame, three
+devices, six physical objects and 2,404,755 stored bytes below its 3,607,028-byte limit.
+It passed in 1.261 seconds on the same relay image. Regression tests also verify
+compaction when a new device inherits a large update tail after an interrupted
+latest-state upload. Each result retains its own source and image provenance.
+
+The combined fixture-client process reached a peak physical footprint reported as
+`14.2G` by macOS `sample`. That process holds several simulated devices; it is not a measurement
+of one production device. The run used a shared Docker VM with a 15.6 GiB limit and
+no exclusive timing window. It proves this finite workload's local correctness and
+storage figures, without a general memory, latency or hosted-capacity acceptance claim.
+
+## Existing deployment and monthly estimate, verified 2026-10-30
+
+The existing production deployment is active at `https://base.prompt.studio` in
+Amsterdam. Read-only provider API inspection confirmed two `basic-xxs` services,
+each with one shared CPU and 512 MiB RAM. The active deployment was created on
+2026-10-28. Its immutable service images match the Cloud repository's production inputs:
+
+| Service | Active image digest |
+| --- | --- |
+| Relay | `sha256:1da1a81261d1e440be84945a7804be6a8695e7683512cc2d30141b0a4f1e5187` |
+| Account manager | `sha256:a835ea6009d228daf5e27e96d84c05047f5fee7b0057a4dfab74a4d32d7852b1` |
+
+The database is an online PostgreSQL 16 server in `ams3`, size
+`db-s-1vcpu-1gb`, with one node and 10 GiB disk. The existing landing app is a
+static site. Its October invoice preview shows it inside the free allowance.
+The September invoice and October preview both charge zero added tax. This is
+observed billing treatment, not a claim about a legal exemption or future tax rules.
+
+The relay bucket listing contained 15,033 objects and 17,871,016,297 bytes across
+16 pages. This is a live listing observed during the inspection, not an atomic
+relay/SQL reconciliation. The local workload audits above provide that separate
+correctness evidence. No object content was read, no deployment was changed and no
+paid resource was created. Sanitized provider and billing evidence is attached to
+PS-787's revision report. Credentials remain in private operator configuration.
+
+### Finite monthly workload
+
+Budget traffic for thirty complete reference runs plus one ten-owner scale run per
+month. Repeated transfers do not imply thirty users or thirty retained datasets.
+The reference profile uses one primary account with two projects. The separate scale
+profile uses ten extension owners on one account; it is not a ten-user benchmark.
+
+| Storage observation | GiB | Scope |
+| --- | ---: | --- |
+| Reference test endpoint | 5.162 | 10,000 records, 5 GiB of files and retained record history. |
+| Ten-owner scale increment | 1.442 | 100,000 records after 100,000 edits; no additional file payload. |
+| Both isolated test endpoints together | 6.605 | Measured test storage, separate from production. |
+| Existing production bucket | 16.644 | Live metadata listing at the inspection time. |
+
+The 180 GiB figure below is an optional fixture-retention stress ceiling. It counts
+thirty independent full reference copies, the existing production inventory, the
+scale increment and 1 GiB backup allowance: 173.955 GiB rounded up. That amount was
+not stored, provisioned or required by the ten-owner test. It is not expected user
+storage. The current Spaces subscription costs the same US$5 while retained data
+stays within its included 250 GiB, whether the test footprint is 6.605 GiB or the
+larger retention stress case is used.
+
+The recorded calls total 60,830 for this scenario. Budget traffic as follows:
+
+- App Platform outbound: consumed response bodies plus all offered request bodies,
+  times 1.25, plus 1 KiB per call: 585.714 GiB/month. Count both client downloads and
+  relay-to-Spaces upload forwarding; assume no upload-transfer exemption.
+- Spaces outbound: consumed response bodies plus all offered request bodies, times
+  1.25, plus 1 KiB per call: 585.714 GiB/month. The offered bodies reserve an extra
+  durable verification read for uploads. The relay verifies uploaded objects by
+  reading them back. Count client downloads as well; assume no transfer exemption.
+
+These are explicit planning allowances from the measured bodies, not provider wire
+counters or a proven upper bound on internal reads. Cancelled acknowledgements and
+HTTP/TLS overhead are absent from the raw body counters. Reprice if actual traffic,
+retention, read amplification or monthly repetition exceeds these allowances.
+
+Reserve US$1/month for migration jobs. At the inspected per-second price, thirty
+deployments with two ten-minute jobs each cost about US$0.075 before any minimum
+charges; the reserve also covers sixty US$0.01 job minimums. The current invoice
+preview charges US$0.01 for manager migration jobs and zero for relay migration
+jobs. Standard managed database backups are part of the database plan; existing
+backup objects share the storage allowance. This estimate creates no backup job.
+
+PostHog is priced within one analytics project's published free allowance: at most
+one million analytics events and 5,000 recordings per month, with no paid platform
+package or other paid product. Landing transfer stays within its 1 GiB free tier.
+These are finite reference-workload limits, not an audit of unrelated subscriptions.
+
+### Inclusive cost model
+
+The first column allocates the two services' API-confirmed 80 GiB App Platform transfer
+pool and the Spaces subscription's 250 GiB storage/1,024 GiB transfer allowances.
+The combined stress column credits none of those shared allowances and charges
+the optional 180 GiB fixture-retention ceiling again at the overage rate. It combines
+exhausted shared allowances with deliberately excessive fixture retention; it is
+not a forecast of normal user storage.
+
+| Item | With allocated allowances, USD/month | Combined allowance/retention stress, USD/month | Basis |
+| --- | ---: | ---: | --- |
+| Relay | 5.00 | 5.00 | Verified single `basic-xxs` container; [App Platform pricing](https://docs.digitalocean.com/products/app-platform/details/pricing/). |
+| Account manager | 5.00 | 5.00 | Same verified container size and price. |
+| Databases and standard backups | 15.15 | 15.15 | Verified basic 1 GiB node/10 GiB disk; [database pricing](https://www.digitalocean.com/pricing/managed-databases). |
+| Object and backup storage | 5.00 | 8.60 | Full subscription plus, in the second column, 180 GiB at US$0.02/GiB; [Spaces pricing](https://docs.digitalocean.com/products/spaces/details/pricing/). |
+| Traffic | 10.11 | 17.57 | App Platform US$0.02/GiB; Spaces US$0.01/GiB; both transfer paths counted. |
+| Migration-job reserve | 1.00 | 1.00 | Monthly job limits above; actual running jobs are billed per second. |
+| Landing page | 0.00 | 0.00 | Existing static app is in its free allowance; maintain the stated transfer limit. |
+| PostHog | 0.00 | 0.00 | Stated event/recording limits within the [free allowance](https://posthog.com/pricing). |
+| Added taxes | 0.00 | 0.00 | Observed zero charge on inspected invoices; [billing tax rules](https://docs.digitalocean.com/platform/billing/taxes/). |
+| **Total** | **41.26** | **52.32** | Uses unrounded values before rounding the final total. |
+
+The allocated-allowance model leaves US$8.74 below the US$50 target for this finite
+workload under the observed tax treatment. It includes a job reserve, backup
+storage and both traffic paths. The no-credit stress case exceeds the target by
+US$2.32: exhausted shared allowances combined with the optional 180 GiB
+fixture-retention stress ceiling exceed the budget. At a hypothetical 25% added
+tax, the two models become US$51.58 and US$65.40, so neither passes. Actual
+PostHog paid features, extra containers, larger database plans or higher usage also
+require repricing.
+
+The deployed versions and prices are verified facts. Monthly traffic repetition,
+headroom and analytics limits are explicit operating assumptions. The optional
+180 GiB fixture-retention ceiling is a separate stress case. Local correctness
+and timing measurements do not prove that hosted 512 MiB instances meet a latency,
+memory or availability target.

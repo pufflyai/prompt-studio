@@ -26,7 +26,7 @@ const priorities: Record<string, TestPriority> = {
   quarantined_browser_tests: "P2",
   performance: "P3",
   database_tests: "P1",
-  storybooks: "P1",
+  components: "P1",
   sdk_api_report: "P0",
   published_extensions: "P0",
   e2e: "P1",

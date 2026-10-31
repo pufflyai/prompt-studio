@@ -1,19 +1,10 @@
-import {
-  Box,
-  chakra,
-  Flex,
-  HStack,
-  type HTMLChakraProps,
-  IconButton,
-  Portal,
-  Spacer,
-  useRecipe,
-} from "@chakra-ui/react";
+import { Box, chakra, Flex, HStack, type HTMLChakraProps, IconButton, Spacer, useRecipe } from "@chakra-ui/react";
 import { Minus, SquareArrowOutUpRight } from "lucide-react";
 import { forwardRef, type ReactNode } from "react";
 import { Header } from "@/components/layout/header";
 import { PANEL_HEADER_CONTROL_SIZE } from "@/components/layout/panel-header.constants";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { Portal } from "@/utils/ui-scope";
 
 interface BubblePanelContainerProps extends HTMLChakraProps<"section"> {
   [attribute: `data-${string}`]: string | number | boolean | undefined;

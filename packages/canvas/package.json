@@ -1,0 +1,46 @@
+{
+  "name": "@pstdio/canvas",
+  "version": "0.45.0",
+  "description": "Build and watch a project's .canvas.tsx files for UI Canvas.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pufflyai/prompt-studio",
+    "directory": "packages/canvas"
+  },
+  "type": "module",
+  "bin": {
+    "pstdio-canvas": "./bin/pstdio-canvas.ts"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./indexer": "./src/indexer.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": ".publish"
+  },
+  "scripts": {
+    "build": "bun ../../scripts/release/stage-package.ts . && bun scripts/prune-tests.ts",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
+    "typecheck": "bun check",
+    "lint": "bun run typecheck && biome check ."
+  },
+  "dependencies": {
+    "typescript": "6.0.2"
+  },
+  "peerDependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  }
+}

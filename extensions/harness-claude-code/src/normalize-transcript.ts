@@ -1,6 +1,7 @@
 import type { SessionMessage, SessionMessageRole } from "@pstdio/sdk/extensions";
 import { visibleClaudePrompt } from "./literal-prompt";
 import { apiErrorPart, mergeToolResultMessage, toolResultPart, toolUsePart } from "./message-parts";
+import { EXIT_PLAN_MODE } from "./plan-mode";
 import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./types";
 import { parseTimestamp } from "./utils";
 
@@ -39,7 +40,8 @@ const transcriptBlockToMessage = (
 
   if (block.type === "tool_use") {
     const part = toolUsePart(block);
-    toolMap.set(block.id, part.tool);
+    toolMap.set(block.id, block.name === EXIT_PLAN_MODE ? EXIT_PLAN_MODE : part.tool);
+    if (block.name === EXIT_PLAN_MODE) return null;
     return { id, role: "assistant", createdAt, parts: [part] };
   }
 
@@ -87,6 +89,21 @@ const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<str
 
   if (!Array.isArray(content)) return [];
 
+  // A person's multi-block input is one submission, with the native delivery identity.
+  if (role === "user" && content.length > 0 && content.every((block) => block.type === "text")) {
+    return [
+      {
+        id: entry.uuid,
+        role,
+        parts: content.map((block) => ({
+          type: "text" as const,
+          text: visibleClaudePrompt((block as { text: string }).text),
+        })),
+        createdAt,
+      },
+    ];
+  }
+
   const messages: SessionMessage[] = [];
   for (let i = 0; i < content.length; i++) {
     const msg = transcriptBlockToMessage(
@@ -122,7 +139,13 @@ const pushTranscriptMessage = (messages: SessionMessage[], message: SessionMessa
   const lastMessage = messages.at(-1);
   const lastPart = lastMessage?.parts[0];
 
-  if (lastMessage && firstPart.type === "text" && lastPart?.type === "text" && lastMessage.role === message.role) {
+  if (
+    message.role !== "user" &&
+    lastMessage &&
+    firstPart.type === "text" &&
+    lastPart?.type === "text" &&
+    lastMessage.role === message.role
+  ) {
     const updated = {
       ...lastMessage,
       parts: [{ ...lastPart, text: lastPart.text + firstPart.text }],

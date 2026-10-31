@@ -1,6 +1,6 @@
 import { Center, Text } from "@chakra-ui/react";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { getThemePreferenceMode, toaster, useThemePreference } from "@pstdio/ui";
+import { getThemePreferenceMode, useThemePreference, useToaster } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
 import { createExtensionWebviewHostCapabilities } from "@pstdio/workbench/extensions";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
@@ -18,7 +18,6 @@ import {
 } from "../extension-webview-broadcast";
 import { createDashboardExtensionWebviewAdapters } from "../extension-webview-capabilities";
 import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
-import { openExtensionViews } from "../open-extension-views";
 import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
 import { useWebviewPageProps } from "../use-webview-page-props";
@@ -49,6 +48,7 @@ interface ExtensionWebviewFrameProps {
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
+  const toaster = useToaster();
   const owner = getRuntimeCollections();
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
@@ -68,13 +68,6 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     ? parseExtensionWebviewPath(webview.runtimeUrl)?.scope.installedExtensionId
     : undefined;
   const isPaused = installedExtensionId ? paused.has(installedExtensionId) : false;
-  const loads = Boolean(webview?.runtimeUrl && webview.moduleUrl);
-  // The performance popover lists every extension with a loaded view.
-  useEffect(() => {
-    if (!installedExtensionId || isPaused || !loads) return;
-    return openExtensionViews.open(installedExtensionId, webviewId);
-  }, [installedExtensionId, webviewId, isPaused, loads]);
-
   useEffect(() => subscribeToExtensionCommandFeed((event) => setLastCommand(event)), []);
   useEffect(() => subscribeWebviewExtensionEvents(hostEvents, projectId), [hostEvents, projectId]);
   useEffect(() => {
@@ -131,7 +124,12 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
           : undefined,
         commandCompleted: (response) => publishExtensionCommandEvent(response, { projectId }, owner),
         settings: createDashboardWebviewSettingsAdapter({ projectId, extensionInstanceId, installName }),
-        notifications: createDashboardWebviewNotificationsAdapter({ projectId, extensionId, showError }),
+        notifications: createDashboardWebviewNotificationsAdapter({
+          projectId,
+          extensionId,
+          showError,
+          showNotice: (notice) => toaster.create(notice),
+        }),
       },
       extensionId,
       extensionInstanceId,

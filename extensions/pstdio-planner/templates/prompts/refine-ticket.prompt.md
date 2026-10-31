@@ -3,6 +3,6 @@ Refine ticket {{ticket}}.
 {{#additionalContext}}Use this added context:
 {{additionalContext}}{{/additionalContext}}
 
-Follow the refine-ticket skill. Read the project policy with `pst pstdio-planner refinement-policy` and check `pst --help` for `pstdio-artifacts`.
-If the ticket adds a new feature with UX changes, `generateArtifactPrototype` is enabled, and Artifacts is installed and enabled for this project, create and publish an interactive HTML prototype before completing refinement. Use the publish-artifact skill and link the returned dashboard URL in the ticket. Reuse that URL when updating an existing prototype.
-If the policy disables prototypes or Artifacts is unavailable, record why the prototype was skipped. Do not install an extension automatically. If the policy cannot be read, resolve or report the failure before completing refinement.
+Follow the refine-ticket skill. Read the project policy with `pst pstdio-planner refinement-policy`.
+For tickets that add or change UI, when `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant canvas design before completing refinement. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Reuse existing canvases and preserve unrelated designs and alternatives.
+The canvas design replaces the artifact prototype step. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked; do not install an extension automatically. If the option is off, record why the design step was skipped. Resolve or report policy-read failures before completing refinement.

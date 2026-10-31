@@ -132,6 +132,19 @@
       "extensionId": "pstdio.pstdio-skills"
     },
     {
+      "installName": "pstdio-performance",
+      "extensionId": "pstdio.pstdio-performance",
+      "displayName": "Prompt Studio Performance Monitoring",
+      "description": "Frame rate, backend response time, CPU and memory in the status bar while monitoring is on.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-performance",
+        "ref": "{hostRelease}"
+      },
+      "default": true
+    },
+    {
       "installName": "extension-lab",
       "extensionId": "pstdio.extension-lab",
       "displayName": "Extension Lab",
@@ -156,6 +169,20 @@
         "ref": "{hostRelease}"
       },
       "default": false
+    },
+    {
+      "installName": "canvas",
+      "extensionId": "pstdio.canvas",
+      "displayName": "UI Canvas",
+      "description": "Explore interactive UI examples, variants and independently themed canvas frames.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/canvas",
+        "ref": "{hostRelease}"
+      },
+      "default": false,
+      "bundleSource": false
     }
   ]
 }

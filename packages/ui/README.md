@@ -4,40 +4,26 @@ Shared React UI package for Prompt Studio apps. This package owns:
 
 - reusable components
 - design tokens and Chakra theme configuration
-- Storybook stories used as UI test cases
+- Canvas examples used as UI test cases
 
-## Run Locally
+## Work with the live catalog
 
-From repo root:
+Browse Design System in the Canvas extension. Open a component canvas and use Variant, Theme, and Props and source to inspect its states and public API.
 
-```bash
-bun run storybook:ui
-```
-
-From `packages/ui`:
-
-```bash
-bun run storybook
-```
-
-Build distributable package:
-
-```bash
+```sh
 bun run --cwd packages/ui build
+bun run --cwd scripts canvas:build
+bun run --cwd extensions/canvas test
 ```
 
-Run Storybook tests:
-
-```bash
-bun run --cwd packages/ui test-storybook
-```
+See [Canvas coverage](../../documentation/guides/development/0003-canvas-coverage.md) for authoring and isolated browser checks.
 
 ## Package Layout
 
-- `src/components/*`: components and colocated stories (`*.stories.tsx`)
+- `src/components/*`: components and colocated examples (`*.canvas.tsx`)
 - `src/theme/*`: theme, recipes, tokens, and theme helpers
 - `src/index.ts`: public exports for `@pstdio/ui`
-- `.storybook/*`: Storybook configuration and Vitest setup
+- `.canvas/*`: suite providers and test-only preview configuration
 
 The root entry holds the light, widely reused components. A feature that pulls a
 heavy dependency, such as the Lexical editor, Monaco, Mermaid, or the terminal,
@@ -57,14 +43,13 @@ column with a maximum width of `52rem`, defined by the `chat-content` size token
 and `chatContent` layer style. Narrow panes use their available width. Keep the
 scroll area at the full pane width so its scrollbar stays at the pane edge.
 
-The [chat width stories](src/components/chat-ui/components/chat-panel-width.stories.tsx)
-cover wide, narrow, and empty panes. The matching Pencil frame is `Oc0qI` in
-[the design system](../../design/prompt-studio-design-system.pen).
+The [chat width stories](src/components/chat-ui/components/chat-panel-width.canvas.tsx)
+cover wide, narrow, and empty panes. Use these live previews as the design reference.
 
 ## Contributor Workflow
 
 1. Implement or update the component in `src/components`.
-2. Add or update stories next to the component to cover important user-visible states.
+2. Add or update Canvas examples next to the component to cover important user-visible states.
 3. If the component is public, export it from `src/index.ts`, or from the entry that owns its heavy dependency.
 4. If you add a new package entrypoint, update `package.json#exports`.
 5. Run validations before opening a PR.
@@ -83,12 +68,12 @@ bun run test
 UI-specific check:
 
 ```bash
-bun run --cwd packages/ui test-storybook
+bun run --cwd scripts canvas:verify
 ```
 
-## Story Guidelines
+## Example guidelines
 
-- Treat each story as a reproducible test case for a real UI state.
+- Treat each example as a reproducible test case for a real UI state.
 - Include states like default, loading, empty, error, long content, and disabled where relevant.
-- For non-visual behavior, add `play` interactions and assertions in the story.
-- Keep stories deterministic: avoid real network calls.
+- For non-visual behavior, add `play` interactions and assertions in the example.
+- Keep examples deterministic: avoid real network calls.

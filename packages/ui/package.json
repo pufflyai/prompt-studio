@@ -94,18 +94,13 @@
     "typegen:tokens": "chakra typegen ./src/theme/theme.ts && rm -f chakra-config.json",
     "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --silent",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage",
-    "typecheck": "bun check -p tsconfig.build.json",
+    "typecheck": "bun check -p tsconfig.build.json && bun check -p tsconfig.examples.json",
     "perf:chat": "bunx playwright test -c playwright.chat-perf.config.ts",
     "perf:chat:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.chat-perf.config.ts",
-    "test-storybook": "test-storybook",
-    "prestorybook": "bun run build:monaco",
-    "storybook": "storybook dev -p 6006",
-    "prebuild-storybook": "bun run build:monaco",
-    "build-storybook": "storybook build",
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@chakra-ui/react": "^3.0.0",
+    "@chakra-ui/react": "^3.21.0",
     "@emotion/react": "^11.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -164,12 +159,6 @@
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
     "@playwright/test": "^1.60.0",
-    "@storybook/addon-docs": "^10.6.0",
-    "@storybook/addon-mcp": "^0.6.0",
-    "@storybook/addon-themes": "^10.6.0",
-    "@storybook/react": "^10.6.0",
-    "@storybook/react-vite": "^10.6.0",
-    "@storybook/test-runner": "^0.24.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
@@ -183,8 +172,9 @@
     "react-test-renderer": "19.2.4",
     "rolldown": "^1.2.11",
     "rolldown-plugin-dts": "^0.28.6",
-    "storybook": "^10.6.0",
     "typescript": "6.0.2",
-    "vite": "^8.3.1"
+    "vite": "^8.3.1",
+    "@pstdio/canvas": "workspace:*",
+    "pstdio-theme": "workspace:*"
   }
 }

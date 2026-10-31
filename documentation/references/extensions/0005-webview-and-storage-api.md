@@ -350,7 +350,7 @@ The low-level `commands.stream` bridge accepts `start`, `cancel`, and `ack` oper
 
 ## Local editing sessions
 
-To try the API, run `bun run --cwd packages/pstdio-workbench storybook` and open
+To try the API, run `bun run --cwd packages/pstdio-workbench canvas` and open
 **Reference → Extension API → Shared editing sessions → Playground**. Hold and release saves,
 edit either shared view, preview or cancel a move, and fail a held save to test retrying.
 The story uses the real SDK and host session with in-memory transport and persistence.

@@ -385,5 +385,162 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/40547961144/job/122343761978"
     ],
     "removeWhen": "Identify and fix the cold Claude dependency install delay, then pass this complete case in ten independent Linux x64 runs within its existing 30000 ms allowance, without retries, prewarming or fewer extensions."
+  },
+  {
+    "runner": "packaged-desktop-benchmark",
+    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
+    "name": "warm attach restores the workbench within budget",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop performance",
+    "reason": "The original nightly and focused final-source run intermittently leave initial Sessions Main empty. Identical-source diagnosis passed; a separate baseline also exceeded the unchanged 3000 ms attach budget.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41025270739",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41026983012"
+    ],
+    "removeWhen": "Fix initial Sessions view mounting and warm attach timing, then verify the unchanged workload in the first Windows execution before restoring the stable gate."
+  },
+  {
+    "runner": "packaged-desktop-benchmark",
+    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
+    "name": "cold start with an empty home shows the workbench within budget",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop performance",
+    "reason": "Intermittently misses the required settling sample or fails cleanup with EBUSY on Windows; other executions of the same source pass. Preserve all startup, evidence and cleanup assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41025270739",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41026983012"
+    ],
+    "removeWhen": "Fix native settling collection and Windows process/file-handle cleanup, then verify the unchanged cold workload in the first Windows execution before restoring the stable gate."
+  },
+  {
+    "runner": "playwright-ui",
+    "file": "packages/e2e/src/ui/tree-resource-actions.p2.spec.ts",
+    "name": "session row menus keep their subject across Sessions, workspace and ticket navigation",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-907 / resource context menus",
+    "reason": "After touch-hold and right-click menu dismissal, the next Session B row click intermittently leaves Session A selected in the Side Panel. The unchanged case and context-menu action sources passed the main-branch nightly; preserve the complete Sessions/workspace/ticket workload and existing assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329/job/123869212960",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41039156248/job/124007476594"
+    ],
+    "removeWhen": "Repair context-menu dismissal and session-row activation, then verify the complete subject-preservation workload in a first-attempt Linux x64 execution without retries or increasing the existing timeout."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-navigation-customization.p2.spec.ts",
+    "name": "restores each project's navigation order, placement, and visibility after relaunch",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop navigation customization",
+    "reason": "The identical packaged navigation-restore case passed on Intel macOS in the initial full battery, then exhausted its existing 60-second allowance waiting for a runtime descriptor in the revised battery. Production app and case sources are unchanged between these revisions. Preserve both launches and every navigation assertion.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41039156248/job/124007475195",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754056"
+    ],
+    "removeWhen": "Identify and fix the variable startup/descriptor phase, then verify the full two-launch navigation workload in a first-attempt Intel macOS execution within its existing allowance."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-board-panning-smoke.p2.test.ts",
+    "name": "packaged Planner board pans with a mouse and keeps ticket and column actions",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-907 / packaged Planner gestures",
+    "reason": "The unchanged board-panning case exhausted its 30-second allowance on Intel macOS in the initial full battery, then passed in the revised full battery with identical runtime/case code and the same allowance. Keep runtime setup, panning, edge scrolling, ticket creation and column actions intact; the slow phase remains unidentified.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41039156248/job/124007476657",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754962"
+    ],
+    "removeWhen": "Identify and fix the variable slow phase, then verify the complete packaged board workload in a first-attempt Intel macOS execution within the unchanged allowance."
+  },
+  {
+    "runner": "installed-harness",
+    "file": "extensions/harness-pi/src/installed-cli.p0.test.ts",
+    "name": "detects the installed CLI and discovers a configured model",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "cliVersion": "0.73.1",
+    "owner": "PS-907 / Pi CLI compatibility",
+    "reason": "The cold Windows Pi 0.73.1 detection probe returned no version in the latest lane while the identical minimum version passed in the same full battery. Preserve the existing 3000 ms probe and all detection/model assertions; native tool execution and session resume remain blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41047163361/job/124034054717",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41047163361/job/124034054751"
+    ],
+    "removeWhen": "Fix Windows cold CLI version discovery, then verify the complete detection/model case in a first-attempt native Windows x64 execution within the unchanged probe deadline."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-harness-detection.p2.spec.ts",
+    "name": "selects installed harnesses after a desktop launch with /bin/zsh",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-907 / desktop harness menu",
+    "reason": "The unchanged Intel macOS case passed in the earlier complete battery, then the harness submenu stayed visible after clicking the conversation heading in the final full battery. Preserve every installed-harness, model-selection and new-session assertion.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754115",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41047163361/job/124034053920"
+    ],
+    "removeWhen": "Fix intermittent harness-submenu dismissal, then verify the complete zsh launch and selection workload in a first-attempt Intel macOS execution with the existing assertions and deadlines."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-board-views-smoke.p2.test.ts",
+    "name": "packaged collection views include native Workspaces and survive a runtime restart",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-907 / packaged collection views",
+    "reason": "The unchanged Intel macOS case passed in 23672 ms in the revised full battery, then exhausted its unchanged 30000 ms allowance in the final full battery. The variable phase remains unidentified; retain CLI operations, native Workspaces and restart/persistence assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754962",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41047163361/job/124034054688"
+    ],
+    "removeWhen": "Identify and fix the variable slow phase, then verify the complete collection views and runtime restart workload in a first-attempt Intel macOS execution within the unchanged allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/features/extensions/extension-detached-process.p1.test.ts",
+    "name": "a detached extension command outlives its host after 1500ms startup",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-907 / detached extension process lifetime",
+    "reason": "The unchanged delayed-start Windows case passed in both prior complete batteries (1966 ms in the revised run), then exhausted its existing 30000 ms allowance after the host-exit assertions in the final battery. The immediate-start variant passed and remains blocking. Preserve child lifetime and post-exit heartbeat assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754479",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41052259182/job/124051161177"
+    ],
+    "removeWhen": "Fix the delayed child post-host-exit progress or observation race, then verify this complete Windows x64 workload in a first attempt within its existing 30000 ms allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "extensions/harness-pi/src/authentication.p0.test.ts",
+    "name": "native Pi browser completion wins over a pending manual-code prompt",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-907 / Pi browser authentication",
+    "reason": "The unchanged Windows case passed in 1906 ms in the revised full battery, then exhausted its existing 15000 ms allowance with no assertions reached in the final battery. Preserve native browser completion, pending manual input, saved credentials and signed-in status checks; login cancellation remains blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41052259182/job/124051160816"
+    ],
+    "removeWhen": "Identify and fix native account-worker startup/completion variance, then verify the complete Windows x64 authentication case in a first attempt within its unchanged 15000 ms allowance."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio/scripts/local-pstdio-install.p0.test.ts",
+    "name": "installs a dev-server wrapper that runs the local CLI with dev server env",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-980 / local CLI wrapper fixture",
+    "reason": "On Apple Silicon the unchanged POSIX shell fixture passed in 4775.62 ms in a complete source run, then exceeded its existing 5000 ms limit at 5009.11 ms in the merged-source run. The fixture checks wrapper environment and arguments through a fake Bun executable; it does not start the application. The slow phase is not yet established.",
+    "evidence": [
+      "RP-85: local full-suite pass and first failure, unchanged wrapper/test source hashes",
+      "https://github.com/pufflyai/prompt-studio/pull/1571"
+    ],
+    "removeWhen": "Identify and fix the delayed fixture phase on Apple Silicon, then use independent normal CI observations within the existing 5000 ms limit to restore the stable gate. Preserve every environment and argument assertion; do not retry or run reliability loops."
   }
 ]

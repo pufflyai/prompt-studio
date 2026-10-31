@@ -1,6 +1,6 @@
 import { Button, HStack } from "@chakra-ui/react";
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { AlertMessage, toaster } from "@pstdio/ui";
+import { AlertMessage, useToaster } from "@pstdio/ui";
 import { ArrowUpCircle, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { loadErrorClipboardText, loadErrorField } from "./extension-load-error";
@@ -12,6 +12,7 @@ export interface ExtensionDetailHealthProps {
 }
 
 export const ExtensionDetailHealth = (props: ExtensionDetailHealthProps) => {
+  const toaster = useToaster();
   const { extension, upgrading, onUpgrade } = props;
   const { t } = useTranslation("projects");
   const code = loadErrorField(extension.lastError, "code");

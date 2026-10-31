@@ -8,7 +8,7 @@ const RECOVERY_TIMEOUT_MS = 30_000;
 
 /**
  * Creates a cloud project of the account on a device that does not have it yet. Its data needs no
- * folder, so the project starts without one. The first view that needs files asks for a folder.
+ * folder, so discovery starts without one. Opening the project prepares its local folder.
  */
 export const recoverCloudProject = async (deps: ProjectsRouteDeps, connection: RelayWorkbench, signal: AbortSignal) => {
   const { info, state } = await readCloudProjectInfo(

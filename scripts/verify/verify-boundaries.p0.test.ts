@@ -25,7 +25,11 @@ const createWorkspace = (files: Record<string, unknown>) => {
   write(root, "package.json", { private: true, workspaces: workspaces.map((dir) => `${dir}/*`) });
   write(root, "packages/sdk/package.json", { name: "@pstdio/sdk", dependencies: {} });
   write(root, "packages/sdk/src/extensions/index.ts", "export const sdk = 1;\n");
-  write(root, "packages/ui/package.json", { name: "@pstdio/ui", dependencies: { "@pstdio/sdk": "workspace:*" } });
+  write(root, "packages/ui/package.json", {
+    name: "@pstdio/ui",
+    dependencies: { "@pstdio/sdk": "workspace:*" },
+    devDependencies: { "@pstdio/canvas": "workspace:*" },
+  });
   write(root, "bun.lock", { packages: {} });
   for (const [file, content] of Object.entries(files)) write(root, file, content);
   return root;
@@ -212,5 +216,20 @@ test("a relay outside packages is discovered and obeys package boundaries", () =
   });
   expect(verifyBoundaries(root)).toContainEqual(
     expect.stringContaining('services/relay: declares workspace dependency "@pstdio/sdk" not allowed by the layer map'),
+  );
+});
+
+test("repository examples may use Canvas authoring types without a published runtime dependency", () => {
+  const root = createWorkspace({
+    "packages/canvas/package.json": { name: "@pstdio/canvas", private: true, exports: { ".": "./src/index.ts" } },
+    "extensions/example/package.json": { name: "example", engines: { pstdio: "*" } },
+    "extensions/example/view.canvas.tsx":
+      'import type { CanvasMeta } from "@pstdio/canvas"; export const example: CanvasMeta = {};',
+    "extensions/example/runtime.ts": 'import { composePreview } from "@pstdio/canvas"; composePreview({});',
+  });
+  const errors = verifyBoundaries(root);
+  expect(errors.some((error) => error.includes("view.canvas.tsx"))).toBe(false);
+  expect(errors).toContainEqual(
+    expect.stringContaining('runtime.ts: imports undeclared workspace package "@pstdio/canvas"'),
   );
 });

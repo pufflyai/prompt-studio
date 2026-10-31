@@ -1,5 +1,6 @@
 import { Tabs } from "@chakra-ui/react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
+import { numberedTargetShortcut } from "../keybindings/numbered-target-shortcut";
 import { useKeyboardTabs } from "../keybindings/use-keyboard-tabs";
 import { WorkbenchRegionTab } from "./workbench-region-tab";
 
@@ -12,7 +13,7 @@ interface RegionTabListProps {
 }
 export const RegionTabList = (props: RegionTabListProps) => {
   const { activeWidgetId, disabled, panelRegion, placements, workbench } = props;
-  const { active, selectedId, tabs } = useKeyboardTabs(workbench);
+  const { keyboard, tabs } = useKeyboardTabs(workbench);
   const numbers = new Map(tabs.map((tab) => [tab.id, tab.number]));
   return (
     <Tabs.List h="full" minH="0" w="full" alignItems="center" gap="2xs" justifyContent="flex-start">
@@ -21,8 +22,8 @@ export const RegionTabList = (props: RegionTabListProps) => {
           key={placement.widgetId}
           workbench={workbench}
           placement={placement}
-          shortcutNumber={active ? numbers.get(placement.widgetId) : undefined}
-          keyboardSelected={active && selectedId === placement.widgetId}
+          shortcut={numberedTargetShortcut(keyboard, numbers.get(placement.widgetId))}
+          keyboardSelected={keyboard.active && keyboard.selectedId === placement.widgetId}
           activeWidgetId={activeWidgetId}
           disabled={disabled}
           region={panelRegion}

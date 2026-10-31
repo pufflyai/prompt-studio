@@ -57,7 +57,7 @@ if (runner === "bun" || runner === "packaged-bun") {
       ),
     );
   }
-} else if (["playwright", "playwright-ui", "packaged-desktop"].includes(runner)) {
+} else if (["playwright", "playwright-ui", "packaged-desktop", "packaged-desktop-benchmark"].includes(runner)) {
   const groups = quarantineGroups(
     quarantineRegistry,
     readWorkspacePackages(root),
@@ -76,4 +76,4 @@ if (runner === "bun" || runner === "packaged-bun") {
   const report = await Bun.file(browserQuarantineReportPath(runner)).json();
   verifyQuarantineAttempt(attempt, bunRunIdentity(root), report.config.metadata?.quarantineAttempt);
   record(runner, verifyPlaywrightQuarantineReport(report, expected, root));
-} else throw new Error("Choose bun, packaged-bun, playwright, playwright-ui or packaged-desktop");
+} else throw new Error("Choose a registered quarantine runner");

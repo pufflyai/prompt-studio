@@ -115,7 +115,7 @@ Keybindings bind app-level keyboard shortcuts to a navigation `action`. The acti
 
 Help → Keyboard shortcuts manages assigned, inactive, disabled, and unassigned actions. It supports personal bindings, disabling, resetting, Leader, and extension aliases. Menus, the command palette, and navigation items supply readable action labels. Repeated placements of the same target and parameters share one row. Different parameters remain separate. The reference updates when extensions change. Hidden row actions release label space; labels truncate only when visible content needs that space. Navigation rows show effective shortcut hints while keyboard mode is active. Row actions use the existing hover fade and remain visible while keyboard focus is inside the row. Command shortcuts without supplied parameters open the shared parameter form before execution.
 
-Layered bindings add `layer` (`view`, `go`, `create`, `current`, `extensions`, `settings`, or `help`) and `targetScope` (`project`, `resource`, or `panel`). Their keys are letters or numbers relative to the group. Shared keys open an action or target chooser. Completed actions exit shortcut mode; tab navigation remains active until Enter or Escape. The deprecated `sticky` field is accepted for older declarations but no longer retains mode after completion. Existing direct bindings can declare `allowInInputs`; use it only for explicit workbench chords that must be consumed before editors. See [Keyboard shortcuts](../workbench/0006-keyboard.md) for navigation, target rules, preferences, and nested webviews.
+Layered bindings add `layer` (`view`, `go`, `create`, `current`, or `settings`; `extensions` and `help` are deprecated and join `current`) and `targetScope` (`project`, `resource`, or `panel`). Their keys are letters or numbers relative to the group. Shared keys open an action or target chooser. Completed actions exit shortcut mode; tab navigation remains active until Enter or Escape. The deprecated `sticky` field is accepted for older declarations but no longer retains mode after completion. Existing direct bindings can declare `allowInInputs`; use it only for explicit workbench chords that must be consumed before editors. It applies only to chords that hold Alt, Ctrl, or Cmd; plain keys always reach the editor. See [Keyboard shortcuts](../workbench/0006-keyboard.md) for navigation, target rules, preferences, and nested webviews.
 
 The main destinations use `Alt+Shift`: Sessions `S`, Workspaces `W`, Notes `O`, Tickets `P`, and Artifacts `A`. Notes uses `O` because notifications already uses `N`. Creation uses `Mod+Alt`: session `S`, workspace `W`, note `N`, and ticket `P`. Settings uses `Mod+,`. Command palette placements use their source command and exact parameters to resolve shortcut hints. Sessions, Workspaces, and Tickets bind their existing open commands so the command palette shows their navigation shortcuts. These extension defaults live in their own contributions; the host does not assign shortcuts to third-party tools.
 
@@ -368,10 +368,36 @@ export default defineExtension({ themes: [monokai] });
 The runtime qualifies the ref with the extension owner. For publisher `acme` and
 package `planner`, the theme ID is `acme.planner.theme.monokai`.
 
-Pressed and selected controls, such as an open panel's toggle, use
-`editor.selectionBackground`. When a theme sets `editor.background` but not
-`editor.selectionBackground`, the app mixes the theme's text color into its
-background instead, so pressed controls stand out from the main background.
+The runtime and public UI importer share one pure theme converter.
+It supplies application roles from VS Code colors, then applies `pstdio.colors`
+overrides. Editor colors and syntax rules go to Monaco separately.
+
+Normal control selection uses a tint of the app foreground over its background.
+`editor.selectionBackground` remains an editor text-selection color; it does not
+set pressed buttons or selected navigation rows. Primary buttons derive missing
+hover and pressed colors from their own palette, with readable text in each state.
+
+Subtle surfaces, such as user messages, prefer `sideBar.background`. If it is absent
+or blends into the canvas, the converter derives a visible surface. Transparent
+colors are compared after compositing. Hover fallbacks account for both canvas
+and panel backgrounds. Explicit application overrides remain authoritative.
+
+Mapping precedence is explicit: app text prefers `foreground` over
+`editor.foreground`; panels prefer `editorWidget.background`, then
+`panel.background`, then `sideBar.background`. Menu state colors prefer their
+`menu.*` pair over the corresponding `list.*` pair. Input and badge foregrounds
+do not replace global text roles. `text.selection` supplies readable app text
+selection over `bg.accent-secondary.blue-medium`.
+
+Theme assets support hexadecimal colors (including alpha), inline `tokenColors`,
+scope arrays and comma-separated scopes. Set the contribution's `mode` explicitly
+when possible; otherwise the asset's `type` and background luminance determine it.
+External `include` files and file-based TextMate syntax definitions are unsupported.
+Inline their content before importing. Invalid or unsupported assets produce a
+diagnostic and are omitted without preventing healthy themes from registering.
+Semantic token rules are not imported. Validate text contrast, interactive states,
+transparent and identical surfaces, portals, terminal colors, and theme changes
+while project contributions load or are removed.
 
 ## Views: filter, sort, and display
 

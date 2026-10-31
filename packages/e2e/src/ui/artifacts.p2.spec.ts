@@ -147,7 +147,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(preview.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
     await expect(breadcrumbs.getByText("First page", { exact: true })).toBeVisible();
     await page.evaluate(() => {
-      const root = document.documentElement;
+      const root = document.querySelector<HTMLElement>("[data-ui-scope]:not([hidden])")!;
       root.classList.replace("light", "dark");
       root.setAttribute("data-theme", "dark");
       root.setAttribute("data-color-mode", "dark");
@@ -161,7 +161,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
       .poll(() => preview.locator("body").evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches))
       .toBe(true);
     await page.evaluate(() => {
-      const root = document.documentElement;
+      const root = document.querySelector<HTMLElement>("[data-ui-scope]:not([hidden])")!;
       root.classList.replace("dark", "light");
       root.setAttribute("data-theme", "light");
       root.setAttribute("data-color-mode", "light");

@@ -1,0 +1,115 @@
+import { Box, HStack, Text } from "@chakra-ui/react";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { ChatPanel } from "./chat-panel";
+import type { SessionMessage } from "./message-types";
+
+const completedTurnMessages: SessionMessage[] = [
+  {
+    id: "completed-user-1",
+    role: "user",
+    createdAt: Date.UTC(2026, 7, 6, 12),
+    parts: [{ type: "text", text: "Make the change." }],
+  },
+  {
+    id: "completed-commentary",
+    role: "assistant",
+    createdAt: Date.UTC(2026, 7, 6, 12, 1),
+    parts: [{ type: "text", text: "I will inspect it." }],
+  },
+  {
+    id: "completed-tool",
+    role: "assistant",
+    createdAt: Date.UTC(2026, 7, 6, 12, 2),
+    parts: [{ type: "tool", tool: "read", status: "completed" }],
+  },
+  {
+    id: "completed-final",
+    role: "assistant",
+    createdAt: Date.UTC(2026, 7, 6, 12, 3),
+    parts: [{ type: "text", text: "The change is complete." }],
+  },
+  {
+    id: "completed-user-2",
+    role: "user",
+    createdAt: Date.UTC(2026, 7, 6, 12, 4),
+    parts: [{ type: "text", text: "Thanks." }],
+  },
+];
+const incompleteTurnMessages: SessionMessage[] = [
+  {
+    id: "incomplete-user",
+    role: "user",
+    createdAt: Date.UTC(2026, 7, 6, 13),
+    parts: [{ type: "text", text: "Make the change." }],
+  },
+  {
+    id: "incomplete-commentary-1",
+    role: "assistant",
+    createdAt: Date.UTC(2026, 7, 6, 13, 1),
+    parts: [{ type: "text", text: "First update." }],
+  },
+  {
+    id: "incomplete-commentary-2",
+    role: "assistant",
+    createdAt: Date.UTC(2026, 7, 6, 13, 2),
+    parts: [{ type: "text", text: "Second update." }],
+  },
+  {
+    id: "incomplete-tool-1",
+    role: "assistant",
+    createdAt: Date.UTC(2026, 7, 6, 13, 3),
+    parts: [{ type: "tool", tool: "read", status: "completed" }],
+  },
+  {
+    id: "incomplete-tool-2",
+    role: "assistant",
+    createdAt: Date.UTC(2026, 7, 6, 13, 4),
+    parts: [{ type: "tool", tool: "grep", status: "completed" }],
+  },
+  {
+    id: "incomplete-commentary-3",
+    role: "assistant",
+    createdAt: Date.UTC(2026, 7, 6, 13, 5),
+    parts: [{ type: "text", text: "Third update." }],
+  },
+  {
+    id: "incomplete-tool-3",
+    role: "assistant",
+    createdAt: Date.UTC(2026, 7, 6, 13, 6),
+    parts: [{ type: "tool", tool: "shell", status: "running" }],
+  },
+];
+const meta: CanvasMeta<typeof ChatPanel> = {
+  title: "Patterns/Chat/Message Actions",
+  component: ChatPanel,
+};
+export default meta;
+type Story = CanvasFrame<typeof ChatPanel>;
+const panelProps = {
+  emptyStateTitle: "No messages yet",
+  emptyStateDescription: "Send a message to start this session.",
+  chatInputPlaceholder: "Type a message...",
+};
+export const TurnBoundaries: Story = {
+  id: "patterns-chat-message-actions--turn-boundaries",
+  render: () => (
+    <HStack alignItems="flex-start" gap="md">
+      <Box data-message-action-example="completed" width="480px">
+        <Text textStyle="label/S/medium" mb="xs">
+          Completed turn
+        </Text>
+        <Box height="480px" borderWidth="1px" borderRadius="md" overflow="hidden">
+          <ChatPanel {...panelProps} messages={completedTurnMessages} />
+        </Box>
+      </Box>
+      <Box data-message-action-example="incomplete" width="480px">
+        <Text textStyle="label/S/medium" mb="xs">
+          Incomplete turn
+        </Text>
+        <Box height="480px" borderWidth="1px" borderRadius="md" overflow="hidden">
+          <ChatPanel {...panelProps} messages={incompleteTurnMessages} streaming />
+        </Box>
+      </Box>
+    </HStack>
+  ),
+};

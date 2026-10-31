@@ -14,7 +14,7 @@ export interface KilnObject {
 }
 
 export const kilnPage: PageRef = {
-  extensionId: "storybook.showcases",
+  extensionId: "preview.showcases",
   kind: "page",
   id: "kiln",
 };

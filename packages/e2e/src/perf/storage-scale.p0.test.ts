@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { closeSync, mkdtempSync, openSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runScaleLayerCase } from "./storage-scale";
+import { runScaleLayerCase } from "./storage-scale.diagnostic";
 
 const runController = async (code: string) => {
   const root = mkdtempSync(join(tmpdir(), "database-layer-controller-"));
