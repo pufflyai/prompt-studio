@@ -3,12 +3,11 @@ import { dirname, resolve } from "node:path";
 
 // Canvas files are type-checked by the package that owns them, with its canvas configuration.
 const repoRoot = resolve(import.meta.dir, "../../../..");
-const sources = Bun.spawnSync(["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.canvas.tsx"], {
+const listing = Bun.spawnSync(["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.canvas.tsx"], {
   cwd: repoRoot,
-})
-  .stdout.toString()
-  .split("\n")
-  .filter(Boolean);
+});
+if (!listing.success) throw new Error(`Could not list canvas files: ${listing.stderr.toString()}`);
+const sources = listing.stdout.toString().split("\n").filter(Boolean);
 const owners = new Set<string>();
 for (const source of sources) {
   let directory = dirname(resolve(repoRoot, source));

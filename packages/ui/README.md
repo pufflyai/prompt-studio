@@ -12,9 +12,10 @@ Browse Design System in the Canvas extension. Open a component canvas and use Th
 
 ```sh
 bun run --cwd packages/ui build
-bun run canvas
 bun run --cwd extensions/canvas test
 ```
+
+Keep `bun run canvas` running in its own terminal while you work; UI Canvas shows what it builds.
 
 See [Canvas coverage](../../documentation/guides/development/0003-canvas-coverage.md) for authoring and isolated browser checks.
 
