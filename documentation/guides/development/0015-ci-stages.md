@@ -109,7 +109,7 @@ Causes of unreliable queue failures we have fixed before:
 
 - **A check that changes shared installed files.** Lint and unit checks run in parallel on one runner. A package script that rewrites files in `node_modules` (for example `chakra typegen`) can let another package read a half-written file. Only the CI setup step writes generated declarations; checks only read them.
 - **A test that polls for a file its child process writes.** `writeFileSync` creates the file before it writes the content, so the test can read an empty file. Write to a temporary name, then rename it: the rename is atomic.
-- **GitHub API limits.** Up to five queue runs and every P1 job read the Actions API. `validation_results` waits through rate limits and GitHub server errors instead of failing; its job time limit bounds the wait.
+- **GitHub API limits.** Up to five queue runs and every P1 job read the Actions API. `validation_results` starts after execution jobs finish, so runner queue time does not consume its allowance. It waits through rate limits and GitHub server errors; its existing job time limit bounds those result reads.
 - **A corrupt build-cache archive.** See [Builds and caches](#builds-and-caches).
 
 ## Main
@@ -174,7 +174,7 @@ None of these replace the real queue run or release certification.
 - **P1 stops early.** When a P1 job fails, other P1 jobs stop their own work. They never cancel the whole workflow. [ADR 0108](../../adrs/0108-temporary-cooperative-p1-cancellation.md) explains this temporary design.
 - **P0, P2 and P3 finish.** They run all their selected work and report every failure. Matrices with mixed priorities do not use GitHub's fail-fast.
 - **A failed setup step blocks the jobs that need it.** It can never let them pass.
-- **`validation_results`** reads the job list from the GitHub API. Missing, duplicated, skipped, cancelled or failed selected jobs fail it. Unselected jobs may skip. If GitHub refuses a read because of a rate limit or a server error, it waits and reads again.
+- **`validation_results`** starts after all execution jobs finish, then reads the job list from the GitHub API. This avoids occupying a runner and exhausting its allowance while other jobs wait for runners. Individual P1 failures and cooperative stopping remain immediate; the aggregate required result waits for the remaining diagnostics. Missing, duplicated, skipped, cancelled or failed selected jobs fail it. Unselected jobs may skip. If GitHub refuses a read because of a rate limit or a server error, it waits and reads again.
 - **`ci_passed`** turns that result into the required check.
 
 ### Evidence
