@@ -38,11 +38,9 @@ const validateRoomSource = (input: NativeRoomOpenInput, loaded: RoomSource) => {
   const editable = loaded.content.editable !== false && input.access !== "read";
   if (input.pendingUpdate && !input.sourceState)
     throw new NativeDocumentRoomError("invalid_frame", "Pending editor frames need their original history");
-  if (input.access !== undefined && input.sourceState && !editable)
+  if (input.sourceState && !editable)
     throw new NativeDocumentSourceError(403, "source_read_only", "A read-only session cannot supply recovery history");
   validateReplaySource(input.sourceState, loaded.documentKey, loaded.lifetime);
-  if (input.pendingUpdate && !editable)
-    throw new NativeDocumentSourceError(403, "source_read_only", "The text source is read only");
   return editable;
 };
 export const initializeNativeRoomSource = async (deps: SourceDeps, input: NativeRoomOpenInput) => {

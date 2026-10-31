@@ -148,14 +148,19 @@ export const createNativeDocumentService = (deps: {
     },
     open(input: NativeRoomOpenInput) {
       return track(async () => {
-        const initialize = () => initializeNativeRoomSource(deps, input);
-        const joined = await joinNativeRoomSource(deps, input);
+        // Legacy callers supply only the presentation target. Resolve its authority
+        // before admitting them to the same source queue used by public sessions.
+        const source = input.expectedSource ?? (await deps.access(input));
+        const request = { ...input, expectedSource: { owner: source.owner, documentKey: source.documentKey } };
+        const initialize = () => initializeNativeRoomSource(deps, request);
+        // Public admission already validated the full source. Legacy presentations
+        // must still prove their complete bytes inside the projection queue.
+        const joined = input.expectedSource ? await joinNativeRoomSource(deps, request) : undefined;
         const {
           loaded,
           editable,
           initial: initialized,
-        } = joined ??
-        (input.expectedSource ? await projection.read(input.expectedSource, initialize) : await initialize());
+        } = joined ?? (await projection.read(request.expectedSource, initialize));
         const text = canonical(loaded);
         const { id: roomId } = await storage.nativeRooms.create({
           owner: loaded.owner,

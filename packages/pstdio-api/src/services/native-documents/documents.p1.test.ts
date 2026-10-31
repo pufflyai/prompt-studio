@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
@@ -10,6 +11,7 @@ import { createWorkspaceContextFixture } from "../../features/extensions/workspa
 import { createNativeDocumentRoutes } from "../../features/native-documents/routes";
 import { createNativeDocumentService } from "./documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
+import { resolveNativeTextAccess } from "./source-access";
 import { initializeNativeSource, resolveNativeLoadedSource } from "./source-binding";
 
 let extension: Awaited<ReturnType<typeof createWorkspaceContextFixture>>;
@@ -18,11 +20,12 @@ const createService = (
   options: Omit<
     Parameters<typeof createNativeDocumentService>[0],
     "deviceId" | "presenceIdentity" | "initialize" | "access"
-  >,
+  > &
+    Partial<Pick<Parameters<typeof createNativeDocumentService>[0], "access">>,
 ) => {
   const service = createNativeDocumentService({
     ...options,
-    access: options.load,
+    access: options.access ?? options.load,
     initialize: (loaded) =>
       initializeNativeSource({ ...extension.deps, extensionStorageService: options.storage }, loaded),
     deviceId: "fixture-device",
@@ -56,7 +59,10 @@ beforeEach(async () => {
     join(extension.root, "extension.ts"),
     `export default { views: [{
     id: "document", ref: { kind: "view", id: "document" }, title: "Document",
-    body: { kind: "file", load: async (ctx) => ({ documentSource: { kind: "workspace", path: "notes.txt" }, content: await ctx.workspaceFiles.readText("notes.txt"), fileName: "notes.md" }),
+    body: { kind: "file", load: async (ctx, { renderer }) => {
+      const content = await ctx.workspaceFiles.readText("notes.txt");
+      return { documentSource: { kind: "workspace", path: "notes.txt" }, content: renderer.pageParams?.snippet ? "snippet" : content, editable: renderer.pageParams?.readOnly ? false : undefined, fileName: "notes.md" };
+    },
       save: async (ctx, params) => {
         if (await ctx.workspaceFiles.exists("pause-save")) throw new Error("File save paused");
         await ctx.workspaceFiles.writeText("notes.txt", params.content);
@@ -192,6 +198,9 @@ test("a read-only source cannot accept a reconnect frame or replace a writable l
   author.getText("content").insert(0, "forbidden ");
   const pendingUpdate = Y.encodeStateAsUpdate(author, vector);
   try {
+    await expect(service.open({ ...readOnly, sourceState: Y.encodeStateAsUpdate(author) })).rejects.toMatchObject({
+      code: "source_read_only",
+    });
     await expect(service.open({ ...readOnly, sourceState: reader.state, pendingUpdate })).rejects.toMatchObject({
       code: "source_read_only",
     });
@@ -383,20 +392,151 @@ test("durable acknowledgements and peer snapshots do not wait for a file save", 
   expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("EDITOR selected folder LATER");
 });
 
+test("an existing authority does not admit a legacy presentation returning a snippet", async () => {
+  const { deps } = setup();
+  const service = createService({
+    storage: storage.svc,
+    access: (input) => resolveNativeTextAccess(deps, input),
+    load: (input) => loadNativeMarkdownFile(deps, input),
+    save: (input) => saveNativeMarkdownFile(deps, input),
+  });
+  const room = await open(service);
+  await expect(
+    service.open({ ...target, projectId: storage.projectAId, pageParams: { snippet: true } }),
+  ).rejects.toMatchObject({ code: "native_document_source_invalid" });
+  expect(await storage.svc.nativeRooms.source(room)).toEqual({ ...target, pageParams: undefined });
+  expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("selected folder");
+});
+
+test("a legacy read-only presentation cannot introduce edits inside recovery history", async () => {
+  const { deps } = setup();
+  const service = createService({
+    storage: storage.svc,
+    access: (input) => resolveNativeTextAccess(deps, input),
+    load: (input) => loadNativeMarkdownFile(deps, input),
+    save: (input) => saveNativeMarkdownFile(deps, input),
+  });
+  const room = await open(service);
+  const author = new Y.Doc();
+  try {
+    Y.applyUpdate(author, room.state);
+    author.getText("content").insert(0, "REFUSED ");
+    await expect(
+      service.open({
+        ...target,
+        projectId: storage.projectAId,
+        pageParams: { readOnly: true },
+        sourceState: Y.encodeStateAsUpdate(author),
+      }),
+    ).rejects.toMatchObject({ code: "native_document_not_editable" });
+    expect(await storage.svc.openNativeTextDocument({ owner: room.owner, fileId: room.documentKey }).read()).toBe(
+      "selected folder",
+    );
+    expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("selected folder");
+  } finally {
+    author.destroy();
+  }
+});
+
+test("legacy reconnect owns a coherent source observation while its file projection completes", async () => {
+  const deps = { ...extension.deps, extensionStorageService: storage.svc };
+  const saving = Promise.withResolvers<void>();
+  const save = Promise.withResolvers<void>();
+  const written = Promise.withResolvers<void>();
+  const observing = Promise.withResolvers<void>();
+  const observe = Promise.withResolvers<void>();
+  const admitted = Promise.withResolvers<void>();
+  const reconnectLoad = new AsyncLocalStorage<boolean>();
+  const getDefault = deps.workspaceService.getDefault.bind(deps.workspaceService);
+  let reopening = false;
+  let lookups = 0;
+  deps.workspaceService = {
+    ...deps.workspaceService,
+    async getDefault(projectId) {
+      const workspace = await getDefault(projectId);
+      // The legacy load resolves its command workspace, reads the file, then resolves
+      // the physical source again. Let the real projection finish at that boundary.
+      if (reconnectLoad.getStore() && ++lookups === 2) {
+        observing.resolve();
+        await observe.promise;
+      }
+      return workspace;
+    },
+  };
+  const service = createService({
+    storage: storage.svc,
+    access: async (input) => {
+      const source = await resolveNativeTextAccess(deps, input);
+      if (reopening) admitted.resolve();
+      return source;
+    },
+    load: (input) =>
+      reconnectLoad.run("fileRendererId" in input && input.pageParams?.reconnecting === true, () =>
+        loadNativeMarkdownFile(deps, input),
+      ),
+    save: async (input) => {
+      saving.resolve();
+      await save.promise;
+      const result = await saveNativeMarkdownFile(deps, input);
+      written.resolve();
+      return result;
+    },
+  });
+  const room = await open(service);
+  const author = new Y.Doc();
+  Y.applyUpdate(author, room.state);
+  const before = Y.encodeStateVector(author);
+  author.getText("content").insert(0, "DURABLE ");
+  try {
+    await service.submit({
+      projectId: storage.projectAId,
+      roomId: room.roomId,
+      update: Y.encodeStateAsUpdate(author, before),
+    });
+    await saving.promise;
+    reopening = true;
+    const next = service.open({ ...target, projectId: storage.projectAId, pageParams: { reconnecting: true } }).then(
+      (joined) => ({ joined, error: undefined }),
+      (error: unknown) => ({ joined: undefined, error }),
+    );
+    await Promise.race([observing.promise, admitted.promise, next]);
+    save.resolve();
+    await written.promise;
+    observe.resolve();
+    const result = await next;
+    expect(result.error).toBeUndefined();
+    expect(result.joined?.documentKey).toBe(room.documentKey);
+    await service.flush({ projectId: storage.projectAId, roomId: room.roomId });
+    const received = new Y.Doc();
+    try {
+      Y.applyUpdate(received, result.joined!.state);
+      expect(received.getText("content").toString()).toBe("DURABLE selected folder");
+      expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("DURABLE selected folder");
+    } finally {
+      received.destroy();
+    }
+  } finally {
+    save.resolve();
+    observe.resolve();
+    author.destroy();
+  }
+});
+
 test("opening during a file projection cannot import a stale load as an outside edit", async () => {
   const deps = { ...extension.deps, extensionStorageService: storage.svc };
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
-  const loaded = Promise.withResolvers<void>();
+  const admitted = Promise.withResolvers<void>();
   let hold = true;
   let reopening = false;
   const service = createService({
     storage: storage.svc,
-    load: async (input) => {
-      const result = await loadNativeMarkdownFile(deps, input);
-      if (reopening) loaded.resolve();
+    access: async (input) => {
+      const result = await resolveNativeTextAccess(deps, input);
+      if (reopening) admitted.resolve();
       return result;
     },
+    load: (input) => loadNativeMarkdownFile(deps, input),
     save: async (input) => {
       if (hold) {
         hold = false;
@@ -427,7 +567,7 @@ test("opening during a file projection cannot import a stale load as an outside 
     });
     reopening = true;
     const next = open(service);
-    await loaded.promise;
+    await admitted.promise;
     release.resolve();
     const joined = await next;
     const received = new Y.Doc();
