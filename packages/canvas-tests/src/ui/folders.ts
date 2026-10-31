@@ -3,6 +3,8 @@ import { expect, type Frame, type Page } from "@playwright/test";
 export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   const item = page.locator('[data-canvas-item="Folders"]');
   await item.getByRole("button", { name: "Select Folders", exact: true }).click();
+  // The other examples keep loading; only this frame gates its controls.
+  await expect(item.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
   const preview = item.frameLocator("iframe");
   await preview.getByRole("button", { name: "New folder", exact: true }).click();
   await preview.getByRole("textbox", { name: "New folder name" }).fill("canvas-interactive");
