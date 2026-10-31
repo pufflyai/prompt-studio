@@ -45,6 +45,10 @@ export const popoverRecipe = defineSlotRecipe({
       responsive: {
         content: { width: "unset" },
       },
+      // Status bar widget details: the parts own their padding, so a scroll area reaches the right edge.
+      widget: {
+        content: { px: "0", py: "0", gap: "0" },
+      },
     },
     size: {
       "2xl": {

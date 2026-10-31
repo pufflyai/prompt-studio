@@ -18,6 +18,8 @@ export interface CanvasFrameEntry {
   name: string;
   description?: string;
   fullscreen?: boolean;
+  /** The theme the host shows this frame in until the person picks another. */
+  defaultTheme?: string;
 }
 
 export interface CanvasEntry {

@@ -43,6 +43,7 @@ describe("isolated development paths", () => {
         ["harness-open-code", "extensions/harness-open-code"],
         ["pstdio-base-themes", "extensions/pstdio-base-themes"],
         ["pstdio-notes", "extensions/pstdio-notes"],
+        ["pstdio-performance", "extensions/pstdio-performance"],
         ["pstdio-planner", "extensions/pstdio-planner"],
         ["pstdio-reports", "extensions/pstdio-reports"],
         ["pstdio-skills", "extensions/pstdio-skills"],

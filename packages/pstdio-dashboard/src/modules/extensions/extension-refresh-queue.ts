@@ -6,7 +6,7 @@ interface ExtensionRefreshRequest {
 
 interface CreateExtensionRefreshQueueInput<TValue> {
   apply: (projectId: string, value: TValue) => void;
-  fallback: TValue;
+  fallback: () => TValue;
   getGeneration: () => number;
   getProjectId: () => string | undefined;
   load: (projectId: string) => Promise<TValue>;
@@ -38,7 +38,7 @@ export const createExtensionRefreshQueue = <TValue>(input: CreateExtensionRefres
         },
         () => {
           if (!isCurrentRequest(request) || hasSuccessfulValue) return;
-          input.apply(request.projectId, input.fallback);
+          input.apply(request.projectId, input.fallback());
         },
       )
       .finally(() => {

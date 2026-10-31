@@ -12,6 +12,7 @@ export interface StoryPreview {
   component?: string;
   componentImport?: string;
   viewportHeight: number;
+  defaultTheme?: string;
 }
 export type CatalogPreview = StoryPreview;
 const groups = new Map<string, CanvasDefinition>();
@@ -40,6 +41,7 @@ for (const story of catalog.stories) {
     component: story.component,
     componentImport: story.componentImport,
     viewportHeight: 960,
+    defaultTheme: story.defaultTheme,
   };
   let item = canvas.items.find((item) => item.preview?.source === story.source);
   if (!item) {

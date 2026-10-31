@@ -11,13 +11,11 @@ import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
 import { createDesktopWorkbenchStorage } from "@/lib/desktop-workbench-storage";
-import { createConnectionStatusSettings } from "@/lib/sync/connection-status-settings";
 import { SyncProvider } from "@/lib/sync/sync-provider";
 import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirmation";
 import { DesktopStartupAppearance } from "@/modules/desktop/desktop-startup-appearance";
 import { DesktopProjectTabs } from "@/modules/projects/components/desktop-project-tabs";
 import { openDashboardSidePanel } from "@/modules/sessions/bubble/open-side-panel";
-import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 import { BrowserSignInRequired } from "@/shared/components/browser-sign-in-required";
 
@@ -69,7 +67,6 @@ const renderDashboard = async () => {
   }
 
   const storage = await createDesktopWorkbenchStorage(window.promptStudioDesktop);
-  const connectionStatusSettings = createConnectionStatusSettings(resolveDashboardStorage(storage));
   const projectTabs = await createDesktopProjectTabs(window.promptStudioDesktop);
   const desktopLifecycle = resolveDesktopLifecycleBridge(window.promptStudioDesktop);
   const dashboardWorkbench = createDashboardWorkbench({
@@ -91,7 +88,7 @@ const renderDashboard = async () => {
   root.render(
     <StrictMode>
       <HostStorageProvider storage={storage}>
-        <SyncProvider workbench={dashboardWorkbench} connectionStatusSettings={connectionStatusSettings}>
+        <SyncProvider>
           <Workbench
             panelControlsPlacement={projectTabs ? "host" : "nav"}
             workbench={dashboardWorkbench}

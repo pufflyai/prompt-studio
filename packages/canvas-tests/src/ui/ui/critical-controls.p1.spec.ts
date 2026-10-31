@@ -1,6 +1,24 @@
 import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
+// Critical: highlighted menu labels and checkmarks must stay readable during keyboard selection.
+test("imported menu highlights keep their matching text and indicator colors", async ({ page }) => {
+  const preview = await openCanvasPreview(page, "ui-components-overlays-menu-selection--pale-selection");
+  await preview.getByRole("button", { name: "Layout options", exact: true }).click();
+  const menu = preview.getByRole("menu").first();
+  const pinned = preview.getByRole("menuitemcheckbox", { name: "Pinned", exact: true });
+  await expect(menu).toHaveCSS("background-color", "rgb(36, 36, 36)");
+  await pinned.hover();
+  await expect(pinned).toHaveCSS("background-color", "rgb(238, 238, 238)");
+  await expect(pinned).toHaveCSS("color", "rgb(17, 17, 17)");
+  await expect(pinned.locator("[data-part=item-indicator]")).toHaveCSS("color", "rgb(17, 17, 17)");
+  await menu.press("End");
+  await menu.press("Home");
+  await expect(pinned).toHaveAttribute("data-highlighted", "");
+  await expect(pinned).toHaveCSS("background-color", "rgb(238, 238, 238)");
+  await expect(pinned).toHaveCSS("color", "rgb(17, 17, 17)");
+});
+
 // Critical: a portalled menu must accept input without dismissing its owning dialog.
 test("menu selection and keyboard dismissal keep its dialog usable", async ({ page }) => {
   const preview = await openCanvasPreview(page, "ui-components-navigation-searchable-menu--portalled-inside-dialog");
