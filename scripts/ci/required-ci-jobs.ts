@@ -16,6 +16,12 @@ export const plannedCiJobs = (scope: Scope) => {
     jobs.push({ id, priority, count: names.length, names });
   add("scope");
   add("static_checks");
+  if (scope.editedMatrix.length)
+    add(
+      "edited_tests",
+      scope.editedMatrix.map((row) => `edited_tests (${row.name})`),
+      "P0",
+    );
   if (scope.packageChecks)
     add(
       "package_checks",

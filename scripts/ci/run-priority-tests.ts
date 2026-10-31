@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { bunRunIdentity } from "./bun-test-evidence";
 import { createPriorityPlan } from "./priority-plan";
+import { priorityPlanSetup } from "./priority-plan-setup";
+import { requestedTestFiles } from "./requested-test-files";
 import { runCiChecks } from "./run-ci-checks";
 import { discoverTestFiles, testPriorities } from "./test-discovery";
 import type { TestPriority } from "./test-policy";
@@ -22,7 +24,7 @@ const packages = readWorkspacePackages(root).map((pkg) => ({
   ...pkg,
   scripts: JSON.parse(readFileSync(join(root, pkg.dir, "package.json"), "utf8")).scripts ?? {},
 }));
-const plan = createPriorityPlan(discoverTestFiles(root), packages, priority, {
+const plan = createPriorityPlan(requestedTestFiles(args, discoverTestFiles(root)), packages, priority, {
   scope: option("--scope"),
   runner: option("--runner"),
 });
@@ -33,44 +35,7 @@ if (args.includes("--list")) {
   process.env.TEST_PRIORITIES = priority;
   process.env.CI_PRIORITY = priority;
   const prebuilt = args.includes("--prebuilt");
-  const buildScopes = [
-    ...new Set(
-      plan
-        .map((run) => {
-          if (run.componentOwner) return packages.find((pkg) => pkg.dir === `packages/${run.componentOwner}`)!.name;
-          return run.owner;
-        })
-        .filter((owner) => owner !== "repository"),
-    ),
-  ];
-  const setup = [];
-  if (!prebuilt) {
-    if (buildScopes.length)
-      setup.push({
-        id: "build-test-dependencies",
-        cwd: root,
-        command: [
-          "bun",
-          "run",
-          "build",
-          "--",
-          ...buildScopes.flatMap((owner) => ["--scope", owner]),
-          "--include-dependencies",
-        ],
-      });
-    if (plan.some((run) => run.componentOwner))
-      setup.push({
-        id: "build-canvas-previews",
-        cwd: root,
-        command: ["bun", "x", "--no-install", "lerna", "run", "build:previews", "--scope", "canvas-tests"],
-      });
-    if (plan.some((run) => run.runner.startsWith("packaged") || (run.runner === "performance" && run.owner === "e2e")))
-      setup.push({ id: "build-packaged-cli", cwd: root, command: ["bun", "run", "--cwd", "scripts", "build:host"] });
-    if (
-      plan.some((run) => run.runner === "desktop" || (run.owner === "@pstdio/desktop" && run.runner === "performance"))
-    )
-      setup.push({ id: "package-desktop", cwd: root, command: ["bun", "run", "--cwd", "clients/desktop", "package"] });
-  }
+  const setup = prebuilt ? [] : priorityPlanSetup(root, plan, packages);
   const prepared = setup.length ? await runCiChecks(setup, { priority, concurrency: 1 }) : { outcome: "success" };
   if (prepared.outcome !== "success") process.exitCode = 1;
   else {

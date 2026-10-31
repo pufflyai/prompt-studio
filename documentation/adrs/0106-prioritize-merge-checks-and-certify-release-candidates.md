@@ -16,7 +16,7 @@ Use four priorities. P0 contains fast static, focused unit, type, lint, and publ
 
 | Stage | Required proof | Target wall time |
 | --- | --- | --- |
-| Pull request | Affected P0 rules, types, lint and public contracts | Less than 180 seconds |
+| Pull request | Affected P0 rules, types, lint and public contracts, plus added or edited tests at every priority | Less than 180 seconds for the baseline; edited tests add normal setup and execution |
 | Merge queue | Complete Linux/macOS P0/P1 contracts on the actual merge candidate | Less than 480 seconds |
 | Main | Matching successful queue provenance and a small app smoke run | No repeated full suite |
 | Production candidate | Exact-candidate P0/P1, all required P2 platforms and permutations, and P3 measurements | Less than 2,400 seconds |
@@ -28,6 +28,8 @@ These targets measure active execution, including installation, builds, artifact
 Read workspace manifests before installation. Follow dependency names and explicit Nx dependencies, including consumers that declare released SDK/UI ranges. Each test filename declares one priority: `.p0.test.ts`, `.p1.spec.ts`, `.p2.integration.ts`, or `.p3.bench.ts`, for example. Discovery selects affected P0 contracts through owning packages and their consumers for PRs. The required queue runs every P0/P1 contract. This keeps fast local rules in PR feedback and integrated product checks before merging. It rejects unclassified test files. Runner adapters own setup, so workflow files need no test filename lists. The same discovery powers `bun test:p0` through `bun test:p3`. It never drops tests because time has elapsed.
 
 Keep API tests in fresh per-file processes under [ADR 0018](0018-temporary-api-test-process-isolation.md), with at most two active files and the existing 30-second per-test limit. Optional timing metadata balances complete files across shards; it does not reduce the workload.
+
+PR selection uses the complete base-to-candidate diff. Added or edited tests also run as required PR checks at their declared priority, using their registered runners and setup. Test-support edits select their owner's tests. P0 work already covered by the baseline is not duplicated. Native desktop and packaged checks keep their platform matrices; an edited benchmark runs its registered suite once to preserve cold-start order and fixed workloads. Edited-test jobs finish independent selected files after a failure and preserve their execution evidence. Existing quarantine policy, limits and performance budgets remain in force. This exception gives test edits immediate feedback without moving the complete queue or production suites into every PR.
 
 App E2E has up to two critical P1 queue shards and no Storybook dependency. Production adds up to six P2 shards. Component browser checks build and test one source owner and priority together in a browser container. Critical interactions are P1; comprehensive component permutations are P2. Component specs live in `packages/canvas-tests/src/ui/<owner>/`. Story source stays with its UI, dashboard, or workbench owner. The queue also retains native Linux/macOS source checks and essential built CLI, desktop startup, and delivered-default integrity. Production owns the full six native CLI targets and Windows breadth.
 
