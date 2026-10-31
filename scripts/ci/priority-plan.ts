@@ -75,6 +75,7 @@ const runCommand = (runner: string, files: string[], owner: TestPackage, compone
   if (
     owner.scripts.test &&
     owner.scripts.test.trim() !== "bun test" &&
+    !owner.scripts.test.trim().startsWith("bun test ") &&
     owner.name !== "e2e" &&
     owner.name !== "canvas-tests" &&
     runner !== "browser-helper"

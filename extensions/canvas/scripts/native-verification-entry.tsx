@@ -38,7 +38,7 @@ const starting = new Set<MessageEventSource>();
 window.addEventListener("message", (event) => {
   if (!event.source || event.data?.protocol !== frameProtocol) return;
   if (event.data.type === "bootstrap") starting.add(event.source);
-  if (["boot", "loaded", "error"].includes(event.data.type)) starting.delete(event.source);
+  if (["imports-ready", "loaded", "error"].includes(event.data.type)) starting.delete(event.source);
   maximumStarting = Math.max(maximumStarting, starting.size);
   document.documentElement.dataset.canvasStartupMaximum = String(maximumStarting);
 });
