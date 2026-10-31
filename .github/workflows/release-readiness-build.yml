@@ -1,0 +1,44 @@
+name: Release readiness build qualification
+on:
+  push:
+    branches: [test/release-046-build-qualification]
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CI_PRIORITY: P3
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install native dependencies
+        run: bun scripts/ci/install-native-dependencies.ts
+      - name: Install Chromium with the production bootstrap
+        run: bunx playwright@1.60.0 install chromium --with-deps
+      - name: Run the complete registered workbench workload once
+        run: bun packages/benchmarks/src/cli.ts run --checkout "$GITHUB_WORKSPACE=$GITHUB_SHA=combined-release-fixes" --suites workbench --samples 1 --cache "$RUNNER_TEMP/benchmark-cache" --out test-results/release-readiness
+      - name: Preserve measurements and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-readiness-frontend
+          path: |
+            test-results
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
+  landing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the clean landing-page image
+        run: docker build -f clients/landing-page/Dockerfile -t pstdio-release-046-landing-check .
