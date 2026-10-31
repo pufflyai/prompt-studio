@@ -1,5 +1,5 @@
-import { rmSync } from "node:fs";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { type APIRequestContext, type CDPSession, expect, type Page, test } from "@playwright/test";
 import { workbenchBudgets } from "pstdio-benchmarks";
 import { createPlannerAttempt, createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
@@ -14,6 +14,21 @@ import {
   resetInteraction,
   waitForTicketsView,
 } from "./perf-helpers";
+
+let profileSession: CDPSession;
+test.beforeEach(async ({ page }) => {
+  profileSession = await page.context().newCDPSession(page);
+  await profileSession.send("Profiler.enable");
+
+});
+test.afterEach(async ({ page }) => {
+  const requests = await page.evaluate(() =>
+    performance.getEntriesByType("resource").filter((entry) => /\/extensions\/(ui|appearance)$/.test(new URL(entry.name).pathname))
+      .map((entry) => ({ path: new URL(entry.name).pathname, start: entry.startTime, duration: entry.duration })),
+  );
+  writeFileSync("test-results/profile/requests.json", JSON.stringify(requests));
+  await profileSession.detach();
+});
 
 interface ProjectFixture {
   id: string;
@@ -140,6 +155,8 @@ test("switches projects once and within budget", async ({ page, request }) => {
     ).toBeVisible();
 
     const samples: ProjectSwitchSample[] = [];
+    let maximumLongTask = -1;
+    mkdirSync("test-results/profile", { recursive: true });
     const switchProject = async (
       target: ProjectFixture,
       cycle: number,
@@ -156,8 +173,19 @@ test("switches projects once and within budget", async ({ page, request }) => {
       await resetInteraction(page);
       await prepareSwitch(page, target.name);
       requests.length = 0;
+      await profileSession.send("Profiler.start");
+      const profileBegin = await page.evaluate(() => performance.now());
       await targetRow.click();
       const result = await readInteraction(page);
+      const { profile } = await profileSession.send("Profiler.stop");
+      const longest = Math.max(0, ...result.longTasks);
+      if (longest > maximumLongTask) {
+        maximumLongTask = longest;
+        for (const node of profile.nodes) node.callFrame.url = node.callFrame.url.split(/[?#]/)[0].split("/").at(-1) ?? "";
+        writeFileSync("test-results/profile/project-switch.json", JSON.stringify(profile));
+        const clock = await page.evaluate(() => ({ start: window.__perfStart, settled: window.__perfSettled, longTasks: window.__longTasks }));
+        writeFileSync("test-results/profile/worst-switch.json", JSON.stringify({cycle, direction, profileBegin, ...result, ...clock}));
+      }
       samples.push({
         cycle,
         direction,

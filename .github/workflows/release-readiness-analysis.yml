@@ -1,0 +1,80 @@
+name: Release readiness performance analysis
+on:
+  push:
+    branches: [test/release-046-switch-profile]
+permissions:
+  contents: read
+  checks: write
+jobs:
+  profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CI_PRIORITY: P3
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: bun scripts/ci/install-native-dependencies.ts
+      - run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - run: bunx playwright@1.60.0 install chromium --with-deps
+      - name: Profile the complete project-switch workload for diagnosis
+        working-directory: packages/e2e
+        run: bun run src/scripts/run-playwright.ts -c playwright.perf.config.ts src/perf/project-switch.p3.bench.ts
+      - name: Retain a compact CPU and request profile
+        if: always()
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          import json, pathlib, collections, os, subprocess
+          path = pathlib.Path("packages/e2e/test-results/profile/project-switch.json")
+          sections = []
+          if path.exists():
+              profile = json.loads(path.read_text())
+              nodes = {node["id"]: node for node in profile["nodes"]}
+              parents = {child: node["id"] for node in profile["nodes"] for child in node.get("children", [])}
+              own, inclusive = collections.Counter(), collections.Counter()
+              for node, delta in zip(profile.get("samples", []), profile.get("timeDeltas", [])):
+                  own[node] += delta / 1000
+                  while node:
+                      inclusive[node] += delta / 1000
+                      node = parents.get(node)
+              for title, values in [("Exclusive CPU", own), ("Inclusive CPU", inclusive)]:
+                  rows = []
+                  for node, milliseconds in values.most_common():
+                      frame = nodes[node]["callFrame"]
+                      url = frame.get("url", "")
+                      if not url.endswith(".js"):
+                          continue
+                      source = pathlib.Path("packages/pstdio-dashboard/dist/assets") / url
+                      excerpt = ""
+                      if source.exists():
+                          lines = source.read_text().split("\n")
+                          if frame["lineNumber"] < len(lines):
+                              line = lines[frame["lineNumber"]]
+                              col = frame["columnNumber"]
+                              excerpt = line[max(0, col - 60):col + 220].replace("|", "/")
+                      rows.append(f'{milliseconds:.1f} ms / {frame["functionName"]} / {url}:{frame["lineNumber"]+1}:{frame["columnNumber"]+1} / {excerpt}')
+                      if len(rows) == 20:
+                          break
+                  sections.append("### " + title + "\n\n" + "\n\n".join(rows))
+              requests = json.loads(path.with_name("requests.json").read_text())
+              sections.append("### Requests\n\n" + json.dumps(requests[:8] + requests[-8:]))
+              sections.append("### Worst measured switch\n\n" + path.with_name("worst-switch.json").read_text())
+          else:
+              sections.append("No CPU profile was written; inspect setup failures.")
+          payload = {"name": "Project switch diagnostic profile", "head_sha": os.environ["GITHUB_SHA"], "status": "completed", "conclusion": "neutral", "output": {"title": "Profiling evidence; benchmark verdict remains separate", "summary": "\n\n".join(sections)[:60000]}}
+          output = json.loads(subprocess.check_output(["gh", "api", "--method", "POST", "repos/pufflyai/prompt-studio/check-runs", "--input", "-"], input=json.dumps(payload).encode()))
+          print("Profile check:", output["id"])
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-readiness-project-profile
+          path: packages/e2e/test-results
+          if-no-files-found: warn
