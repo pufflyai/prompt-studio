@@ -2,6 +2,29 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "../../core";
 import { createWorkbenchHotkeyRegistrations, normalizeWorkbenchKeybinding } from "./workbench-keybinding-dispatcher";
 
+test("excluded shortcuts do not evaluate command availability", () => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand(
+    { id: "other-dispatcher", label: "Owned by another dispatcher" },
+    {
+      execute() {},
+      isEnabled: () => {
+        throw new Error("This dispatcher must not measure another dispatcher's command");
+      },
+    },
+  );
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "other-dispatcher" },
+    keybinding: "Alt+J",
+    allowInInputs: true,
+  });
+  expect(
+    createWorkbenchHotkeyRegistrations({ workbench, filterKeybinding: (binding) => !binding.allowInInputs }).map(
+      (entry) => entry.id,
+    ),
+  ).not.toContain("other-dispatcher");
+});
+
 test("direct shortcuts do not inspect unrelated actions without an assigned chord", async () => {
   const workbench = createWorkbench();
   workbench.commands.registerCommand(
