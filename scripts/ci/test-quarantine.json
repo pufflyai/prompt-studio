@@ -545,20 +545,6 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-api/src/features/extensions/extension-detached-process.p1.test.ts",
-    "name": "a detached extension command outlives its host after 1500ms startup",
-    "platforms": ["win32"],
-    "arch": "x64",
-    "owner": "PS-907 / detached extension process lifetime",
-    "reason": "The unchanged delayed-start Windows case passed in both prior complete batteries (1966 ms in the revised run), then exhausted its existing 30000 ms allowance after the host-exit assertions in the final battery. The immediate-start variant passed and remains blocking. Preserve child lifetime and post-exit heartbeat assertions.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754479",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41052259182/job/124051161177"
-    ],
-    "removeWhen": "Fix the delayed child post-host-exit progress or observation race, then verify this complete Windows x64 workload in a first attempt within its existing 30000 ms allowance."
-  },
-  {
-    "runner": "bun",
     "file": "extensions/harness-pi/src/authentication.p0.test.ts",
     "name": "native Pi browser completion wins over a pending manual-code prompt",
     "platforms": ["win32"],
