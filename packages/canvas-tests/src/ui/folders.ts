@@ -57,7 +57,8 @@ export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   await browserPage.mouse.up({ button: "middle" });
   await expect(preview.getByRole("textbox", { name: "New folder name" })).toHaveCount(0);
   await viewport.press("f");
-  await preview.getByRole("button", { name: "Open folder", exact: true }).click();
+  // Fit makes twelve sibling frames small; finish by keyboard after the pointer gestures.
+  await preview.getByRole("button", { name: "Open folder", exact: true }).press("Enter");
   await expect(preview.getByRole("status")).toContainText("Example closed");
   await item.getByRole("button", { name: "Reset frame", exact: true }).click();
   await expect(preview.getByRole("dialog")).toBeVisible();
