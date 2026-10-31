@@ -34,6 +34,8 @@ export interface TextEditingSession {
   subscribe(listener: () => void): () => void;
   transact(change: (text: Y.Text) => void): void;
   createDraft(): TextEditingDraft;
+  /** Synchronously drain queued renderer edits before receiving text. Never await or author a new edit per notification. */
+  beforeReceive(handler: () => void): () => void;
   beforeClose(handler: () => void | Promise<void>): () => void;
   flush(): Promise<void>;
   project(): Promise<void>;

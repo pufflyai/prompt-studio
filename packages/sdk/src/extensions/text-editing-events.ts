@@ -67,8 +67,8 @@ export const createTextEditingReceiver = (input: {
       presenceVersion = -1;
     }
     if (event.type === "snapshot" && event.version > snapshotVersion) {
-      snapshotVersion = event.version;
       input.receive(event.snapshot);
+      snapshotVersion = event.version;
     }
     if (event.type === "presence" && event.version > presenceVersion) {
       presenceVersion = event.version;

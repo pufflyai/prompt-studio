@@ -6,7 +6,7 @@ import type { GuestHost } from "./guest-host";
 import { createTextEditingClient } from "./text-editing-client";
 import { encodeTextBytes } from "./text-editing-codec";
 
-test("edits authored during both asynchronous history adoption opens retain their causal intent", async () => {
+test("queued renderer edits and edits during both history adoption opens retain their causal intent", async () => {
   const old = new Y.Doc({ gc: false });
   let canonical = new Y.Doc({ gc: false });
   await seedTextDocument(old, "source");
@@ -84,6 +84,12 @@ test("edits authored during both asynchronous history adoption opens retain thei
     },
   } as GuestHost;
   const session = await createTextEditingClient(host).open({ sourceId: "body", params: {} });
+  let queuedRenderer = true;
+  const stopReceive = session.beforeReceive(() => {
+    if (!queuedRenderer) return;
+    queuedRenderer = false;
+    session.transact((text) => text.insert(0, "renderer "));
+  });
   const adopted = Promise.withResolvers<void>();
   const stop = session.subscribe(() => {
     const state = session.getSnapshot();
@@ -101,11 +107,12 @@ test("edits authored during both asynchronous history adoption opens retain thei
     recoverRelease.resolve();
     await session.flush();
     await adopted.promise;
-    expect(session.getSnapshot().text.toString()).toBe("during rejoin source during recovery");
+    expect(session.getSnapshot().text.toString()).toBe("during rejoin renderer source during recovery");
     expect(canonical.getText("content").toString()).toBe(session.getSnapshot().text.toString());
     expect(session.getSnapshot().pending).toBe(false);
     await session.close();
   } finally {
+    stopReceive();
     stop();
     for (const document of histories) document.destroy();
   }

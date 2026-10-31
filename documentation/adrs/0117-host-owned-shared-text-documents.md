@@ -287,6 +287,13 @@ with UI. Library code splitting does not install browser module-preload scaffold
 otherwise rebundling SDK helpers would break the classic opaque-iframe bootstrap.
 The runtime build parses its result as a classic script without executing it.
 
+A synchronous public `beforeReceive` hook lets a renderer drain already queued
+local edits while their original history still owns them. Every SDK snapshot ingress,
+including durable and recovery receipts, runs that hook before changing the replica
+or acknowledging its captured frames. Hook failure cannot advance event versions
+or received revisions. Late-frame capture precedes incompatible history replacement;
+the binding then resets undo and selection anchors while the SDK retains its drafts.
+
 A transport lease can expire when the host restarts. The authenticated adapter
 reconnects under its original scope. The SDK keeps the original opaque source
 identity as an admission precondition while it reopens logical members and sends

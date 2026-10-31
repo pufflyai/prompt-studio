@@ -1,16 +1,17 @@
 import type { TextEditingEvent, TextOpenInput, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
-import { createTextReplica } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { GuestHost } from "./guest-host";
 import { decodeTextSnapshot, textEditingError, textEditingFailure } from "./text-editing-codec";
 import { createTextEditingReceiver } from "./text-editing-events";
 import { createTextEditingLifecycle } from "./text-editing-lifecycle";
 import { createTextEditingFences } from "./text-editing-queue";
+import { createTextEditingReplica, createTextReceiveHandlers } from "./text-editing-replica";
 import { createTextEditingOperations, createTextEditingPump } from "./text-editing-transport";
 import type { TextEditingSession, TextEditingSnapshot } from "./text-editing-types";
 export const openTextEditingSession = async (host: GuestHost, input: TextOpenInput, memberId: string) => {
   const origin = {};
   const listeners = new Set<() => void>();
+  const receiveHandlers = createTextReceiveHandlers();
   const early: TextEditingEvent[] = [];
   let receiveEvent: ((event: TextEditingEvent) => void) | undefined;
   const stopEvents = host.onEvent("editing.text", (value) => {
@@ -25,7 +26,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
   });
   input = { grant: opened.grant };
   let handle = opened.handle;
-  let replica = createTextReplica(decodeTextSnapshot(opened.snapshot));
+  let replica = createTextEditingReplica(decodeTextSnapshot(opened.snapshot), receiveHandlers.run);
   const fences = createTextEditingFences(opened.snapshot.revision);
   const frameTickets: number[] = [];
   let revision = opened.snapshot.revision;
@@ -66,7 +67,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     if (failure.retryable && !lifecycle.closed() && !retryTimer)
       retryTimer = setTimeout(() => {
         retryTimer = undefined;
-        void session.retry().catch(() => {});
+        void operations.retry().catch(() => {});
       }, 1000);
   };
   const localChanged = () => {
@@ -81,18 +82,19 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
   let stopLocal = replica.subscribe(localChanged);
   const receive = (snapshot: TextWireSnapshot) => {
     if (snapshot.revision < revision) return;
+    const same = replica.receive(decodeTextSnapshot(snapshot));
     revision = snapshot.revision;
     canonicalSeed = snapshot.seedId;
-    const same = replica.receive(decodeTextSnapshot(snapshot));
     publish({ editable: snapshot.editable, connected: true, error: undefined });
     if (!same) drive();
   };
   const install = (snapshot: TextWireSnapshot) => {
+    if (replica.pending() || snapshot.revision < revision || snapshot.seedId !== canonicalSeed) return;
     revision = snapshot.revision;
     canonicalSeed = snapshot.seedId;
     const previous = replica;
     stopLocal();
-    replica = createTextReplica(decodeTextSnapshot(snapshot));
+    replica = createTextEditingReplica(decodeTextSnapshot(snapshot), receiveHandlers.run);
     stopLocal = replica.subscribe(localChanged);
     publish({ participants: [], editable: snapshot.editable, error: undefined, connected: true });
     previous.dispose();
@@ -157,6 +159,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
       stopLocal();
       replica.dispose();
       listeners.clear();
+      receiveHandlers.clear();
     },
   });
   receiveEvent = createTextEditingReceiver({
@@ -187,7 +190,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     publish,
     failed,
   });
-  const session: TextEditingSession = {
+  return {
     origin,
     getSnapshot: () => state,
     subscribe(listener) {
@@ -204,6 +207,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
       replica.document.transact(() => change(replica.document.getText("content")), origin);
     },
     createDraft: lifecycle.createDraft,
+    beforeReceive: receiveHandlers.add,
     beforeClose: lifecycle.beforeClose,
     async flush() {
       const prefix = fences.prefix();
@@ -212,6 +216,5 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     },
     ...operations,
     close: lifecycle.close,
-  };
-  return session;
+  } satisfies TextEditingSession;
 };
