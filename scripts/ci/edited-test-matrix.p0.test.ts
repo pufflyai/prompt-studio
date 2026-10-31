@@ -40,6 +40,25 @@ test("edited benchmarks select their registered suite once and preserve its cold
   );
 });
 
+test("edited native benchmarks check platform-specific behavior before the PR can pass", () => {
+  const desktop = createEditedTestMatrix(
+    ["clients/desktop/src/e2e/packaged-launch.p3.bench.ts"],
+    scopeFixture().packages,
+  );
+  expect(desktop.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual([
+    "darwin-arm64",
+    "darwin-x64",
+    "linux-x64",
+    "win32-x64",
+  ]);
+  expect(desktop.find((row) => row.platform === "win32")?.quarantine).toBe(true);
+  const backend = createEditedTestMatrix(
+    ["packages/pstdio-api-runtime-host/src/harness-session-resources.p3.bench.ts"],
+    scopeFixture().packages,
+  );
+  expect(backend.map((row) => row.platform).sort()).toEqual(["darwin", "linux", "win32"]);
+});
+
 test("test fixture edits select their owner tests and deleted tests are not scheduled", () => {
   const input = scopeFixture();
   const selected = editedTestFiles(

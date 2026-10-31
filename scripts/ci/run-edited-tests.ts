@@ -31,6 +31,18 @@ const execute = async (command: string[], env: Record<string, string | undefined
   return child.exited;
 };
 let failed = false;
+const checkQuarantine = async (file: string, runner: string, owner: string, env: Record<string, string>) => {
+  const quarantined = quarantineRegistry.some(
+    (entry) => entry.runner === runner && entry.file === file && matchesPlatform(entry, process.platform, process.arch),
+  );
+  if (!quarantined) return;
+  await Bun.write(selectionPath, JSON.stringify([file]));
+  const args = [runner, "--scope", owner, "--files-from", selectionPath];
+  const code = await execute(["bun", "scripts/ci/run-quarantined-tests.ts", ...args, "--prebuilt"], env);
+  const verified = await execute(["bun", "scripts/ci/verify-quarantine-reports.ts", ...args], env);
+  results.push({ files: [file], lane: "quarantine", exitCode: code });
+  failed ||= verified !== 0;
+};
 if (row.suite) {
   // Suites own cold-start order and their fixed workloads. An edit checks the complete suite once.
   const code = await execute([
@@ -50,6 +62,14 @@ if (row.suite) {
   ]);
   results.push({ files, lane: "performance", exitCode: code });
   failed = code !== 0;
+  const packages = readWorkspacePackages(root);
+  for (const file of files) {
+    const owner = packages.find((pkg) => file.startsWith(`${pkg.dir}/`))?.name ?? "repository";
+    await checkQuarantine(file, row.suite === "desktop" ? "packaged-desktop-benchmark" : "bun", owner, {
+      TEST_PRIORITIES: row.priority,
+      PSTDIO_EXTENSION_RELEASE_REF: sha,
+    });
+  }
 } else {
   const packages = readWorkspacePackages(root).map((pkg) => ({
     ...pkg,
@@ -94,17 +114,7 @@ if (row.suite) {
       results.push({ files: [file], lane: "stable", exitCode: code });
       failed ||= code !== 0;
     }
-    const quarantined = quarantineRegistry.some(
-      (entry) =>
-        entry.runner === runner && entry.file === file && matchesPlatform(entry, process.platform, process.arch),
-    );
-    if (quarantined) {
-      const args = [runner, "--scope", row.owner, "--files-from", selectionPath];
-      const code = await execute(["bun", "scripts/ci/run-quarantined-tests.ts", ...args, "--prebuilt"], env);
-      const verified = await execute(["bun", "scripts/ci/verify-quarantine-reports.ts", ...args], env);
-      results.push({ files: [file], lane: "quarantine", exitCode: code });
-      failed ||= verified !== 0;
-    }
+    await checkQuarantine(file, runner, row.owner, env);
     const owner = packages.find((pkg) => pkg.name === row.owner);
     if (owner && owner.dir !== ".") {
       const output = join(root, owner.dir, "test-results");

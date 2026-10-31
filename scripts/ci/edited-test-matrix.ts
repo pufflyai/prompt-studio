@@ -98,8 +98,10 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
     });
   });
   for (const [id, files] of performance) {
-    const platforms = id === "desktop" ? [{ os: "macos-15", platform: "darwin", arch: "arm64" }] : [linux];
-    if (id === "runtime") platforms.push({ os: "macos-15", platform: "darwin", arch: "arm64" });
+    let platforms = [linux];
+    if (id === "desktop") platforms = productionDesktopPlatforms("stable");
+    if (["runtime", "storage"].includes(id))
+      platforms = productionDesktopPlatforms("stable").filter((row) => row.target !== "darwin-x64");
     for (const platform of platforms)
       rows.push({
         name: `${id} P3 ${platform.os}`,
@@ -109,9 +111,11 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
         priority: "P3",
         files: JSON.stringify(files),
         stable: true,
-        quarantine: false,
+        quarantine: quarantineRegistry.some(
+          (entry) => files.includes(entry.file) && matchesPlatform(entry, platform.platform, platform.arch),
+        ),
         suite: id,
-        browser: true,
+        browser: ["desktop", "workbench", "canvas", "chat", "subnav", "planner"].includes(id),
         desktop: false,
       });
   }
