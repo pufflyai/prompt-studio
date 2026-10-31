@@ -208,6 +208,38 @@ describe("createWorkbenchCommandPaletteEntries", () => {
       "extension-lab.demo.try-awaken",
     );
   });
+});
+describe("command palette execution", () => {
+  test.each([
+    {},
+    { title: "Meeting notes" },
+  ])("executes palette actions with bound parameters %j immediately", async (args) => {
+    const workbench = createWorkbench();
+    const executions: unknown[] = [];
+    const requests: string[] = [];
+    workbench.commands.registerCommand(
+      { id: "notes.create", label: "New note", params: { title: { type: "text" } } },
+      { execute: (input) => executions.push(input) },
+    );
+    workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+      commandId: "notes.create",
+      args,
+    });
+    workbench.commandPalette.open();
+    const entry = createWorkbenchCommandPaletteEntries({
+      workbench,
+      menuPath: workbenchCommandPaletteMenuPath,
+      onClose: () => workbench.commandPalette.close(),
+      onRequestParams: (request) => requests.push(request.record.command.id),
+    }).find((entry) => entry.commandId === "notes.create");
+
+    entry?.onActivate();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(requests).toEqual([]);
+    expect(executions).toEqual([args]);
+    expect(workbench.commandPalette.isOpen()).toBe(false);
+  });
   test("requests params instead of executing parameterized commands immediately", () => {
     const workbench = createWorkbench();
     let executions = 0;
