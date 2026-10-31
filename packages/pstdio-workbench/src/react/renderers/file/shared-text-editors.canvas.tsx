@@ -11,6 +11,8 @@ const modes = [
   "Saving",
   "Reconnecting",
   "Restoring editing",
+  "Draft recovery",
+  "Draft waiting",
   "Read only",
   "Close blocked",
   "Retired source",
@@ -21,6 +23,8 @@ const messages: Partial<Record<Mode, string>> = {
   Saving: "Saving changes…",
   Reconnecting: "Changes are waiting to be saved.",
   "Restoring editing": "Finishing your text…",
+  "Draft recovery": "Your draft is kept here.",
+  "Draft waiting": "Your draft is waiting to be saved.",
   "Read only": "This document is read only.",
   "Close blocked": "Finish or cancel your text draft before closing.",
   "Retired source": "This source was removed. Your unsaved text is still available here.",
@@ -35,20 +39,41 @@ export const SharedTextEditors = () => {
     return document;
   });
   const [content, setContent] = useState(initial);
+  const [draft] = useState(() => new Y.Doc());
   useEffect(() => {
     const changed = () => setContent(document.getText("content").toString());
     document.on("update", changed);
     return () => {
       document.off("update", changed);
       document.destroy();
+      draft.destroy();
     };
-  }, [document]);
+  }, [document, draft]);
   const [closed, setClosed] = useState(false);
-  const editable = mode !== "Read only" && mode !== "Retired source" && mode !== "Restoring editing";
+  const recovering = mode === "Draft recovery" || mode === "Draft waiting";
+  const preview = recovering ? draft : document;
+  const editable = mode !== "Read only" && mode !== "Retired source" && mode !== "Restoring editing" && !recovering;
   const message = messages[mode];
   const select = (next: Mode) => {
+    if (next === "Draft recovery" || next === "Draft waiting") {
+      const text = draft.getText("content");
+      draft.transact(() => {
+        text.delete(0, text.length);
+        text.insert(0, `${document.getText("content").toString()}\n\nUnsent draft…`);
+      });
+    }
     setMode(next);
     setClosed(false);
+  };
+  const retry = () => {
+    if (recovering) {
+      const text = document.getText("content");
+      document.transact(() => {
+        text.delete(0, text.length);
+        text.insert(0, draft.getText("content").toString());
+      });
+    }
+    setMode("Editing");
   };
   return (
     <Stack gap="md" p="md">
@@ -76,7 +101,18 @@ export const SharedTextEditors = () => {
           size="xs"
           variant="ghost"
           onClick={() => {
-            if (!(["Close blocked", "Reconnecting", "Saving", "Restoring editing"] as Mode[]).includes(mode))
+            if (
+              !(
+                [
+                  "Close blocked",
+                  "Reconnecting",
+                  "Saving",
+                  "Restoring editing",
+                  "Draft recovery",
+                  "Draft waiting",
+                ] as Mode[]
+              ).includes(mode)
+            )
               setClosed(true);
           }}
         >
@@ -93,19 +129,35 @@ export const SharedTextEditors = () => {
             <Text textStyle="label/S/regular" color="fg.muted">
               Markdown
             </Text>
-            {message && <EditorNotice mode={mode} message={message} retry={() => setMode("Editing")} />}
+            {message && (
+              <EditorNotice
+                key={mode}
+                mode={mode}
+                message={message}
+                retry={retry}
+                discard={() => setMode("Read only")}
+              />
+            )}
             <Box h="lg" bg="bg">
-              <LazyMarkdownEditor defaultState="" collaboration={{ document }} isEditable={editable} />
+              <LazyMarkdownEditor defaultState="" collaboration={{ document: preview }} isEditable={editable} />
             </Box>
           </Stack>
           <Stack flex="1" minW="0" gap="xs">
             <Text textStyle="label/S/regular" color="fg.muted">
               Installed text editor
             </Text>
-            {message && <EditorNotice mode={mode} message={message} retry={() => setMode("Editing")} />}
+            {message && (
+              <EditorNotice
+                key={mode}
+                mode={mode}
+                message={message}
+                retry={retry}
+                discard={() => setMode("Read only")}
+              />
+            )}
             <Textarea
               aria-label="Installed editor source"
-              value={content}
+              value={recovering ? draft.getText("content").toString() : content}
               readOnly={!editable}
               onChange={(event) =>
                 document.transact(() => {
@@ -123,29 +175,53 @@ export const SharedTextEditors = () => {
     </Stack>
   );
 };
-const EditorNotice = (props: { mode: Mode; message: string; retry: () => void }) => {
-  const { mode, message, retry } = props;
+const EditorNotice = (props: { mode: Mode; message: string; retry: () => void; discard: () => void }) => {
+  const { mode, message, retry, discard } = props;
+  const [discardError, setDiscardError] = useState(false);
+  const recovering = mode === "Draft recovery" || mode === "Draft waiting";
   return (
-    <Flex gap="sm" align="center" justify="space-between" bg="bg.muted" px="sm" py="xs">
-      <Flex align="center" gap="xs">
-        {(mode === "Saving" || mode === "Reconnecting" || mode === "Restoring editing") && (
-          <Spinner size="xs" color="fg.muted" aria-label={mode} />
+    <Stack gap="xs" bg="bg.muted" px="sm" py="xs">
+      <Flex gap="sm" align="center" justify="space-between">
+        <Flex align="center" gap="xs">
+          {(mode === "Saving" ||
+            mode === "Reconnecting" ||
+            mode === "Restoring editing" ||
+            mode === "Draft waiting") && <Spinner size="xs" color="fg.muted" aria-label={mode} />}
+          <Text color="fg.muted" textStyle="label/S/regular">
+            {message}
+          </Text>
+        </Flex>
+        {(mode === "Reconnecting" || mode === "Projection failed" || recovering) && (
+          <Flex gap="xs">
+            {recovering && (
+              <Button
+                size="2xs"
+                variant="ghost"
+                onClick={() => {
+                  if (mode === "Draft waiting") setDiscardError(true);
+                  else discard();
+                }}
+              >
+                Discard draft
+              </Button>
+            )}
+            <Button size="2xs" variant="subtle" onClick={retry}>
+              Retry
+            </Button>
+          </Flex>
         )}
-        <Text color="fg.muted" textStyle="label/S/regular">
-          {message}
-        </Text>
+        {mode === "Close blocked" && (
+          <Button size="2xs" variant="subtle" onClick={retry}>
+            Keep editing
+          </Button>
+        )}
       </Flex>
-      {(mode === "Reconnecting" || mode === "Projection failed") && (
-        <Button size="2xs" variant="subtle" onClick={retry}>
-          Retry
-        </Button>
+      {discardError && (
+        <Text textStyle="label/S/regular" color="fg.error">
+          Wait for this save before discarding the draft.
+        </Text>
       )}
-      {mode === "Close blocked" && (
-        <Button size="2xs" variant="subtle" onClick={retry}>
-          Keep editing
-        </Button>
-      )}
-    </Flex>
+    </Stack>
   );
 };
 
