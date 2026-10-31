@@ -25,6 +25,7 @@
 3. Only the Changesets release process writes committed `CHANGELOG.md` files and `package.json` versions. Feature PRs add `.changeset/*.md` files.
 4. Commit `packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js` only when its source in `packages/pstdio-extensions/src/bridge` changes. Rebuild it from that source.
 5. Commit `extensions/harness-codex/src/protocol/**` only when the supported Codex app-server protocol changes. Copy these types from Codex's ts-rs output; do not edit them by hand.
+6. For the Prompt Studio 0.46 and UI Canvas posts, commit final PNG banners and JSON recipes under `clients/landing-page/src/content/blog/images/blog-prompt-studio-0-46*` and `blog-ui-canvas*`, plus GIF workflows and SVG screenshots under `documentation/images/prompt-studio-0-46-*` and `ui-canvas-*`. Raw captures, preview catalogs, and site build output remain excluded.
 
 ## 4. Large changes
 

@@ -1,0 +1,25 @@
+{
+  "seed": "open-tools-046",
+  "width": 1600,
+  "height": 400,
+  "layout": "scatter",
+  "kinds": [
+    "page",
+    "command",
+    "editor",
+    "skill",
+    "hook",
+    "automation"
+  ],
+  "count": 12,
+  "scale": 0.65,
+  "offsetX": -0.037224476700648663,
+  "offsetY": -0.056499028247781094,
+  "backgroundTop": "#0A0C10",
+  "backgroundBottom": "#141A28",
+  "bleed": 0.3770402636611834,
+  "layers": 37,
+  "texture": 0.7113600333803334,
+  "gradient": 0.7346723356400616,
+  "grain": 0.4040667072637007
+}
