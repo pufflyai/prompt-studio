@@ -48,6 +48,10 @@ jobs:
               sections.append("### " + label + "\n\n" + "\n".join(clean(item.get("message", "")) for item in annotations))
               try:
                   logs = subprocess.check_output(["gh", "api", "--allow-escape-sequences", f"repos/pufflyai/prompt-studio/actions/jobs/{job}/logs"], text=True, stderr=subprocess.STDOUT)
+                  marker = "##[group]Run bun packages/benchmarks/src/cli.ts run" if label.startswith("Frontend") else "##[group]Run bun scripts/ci/production-performance.ts backend"
+                  start = logs.find(marker)
+                  if start >= 0:
+                      logs = logs[start:]
                   lines = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", logs).splitlines()
                   indices = [index for index, line in enumerate(lines) if re.search(r"Error:|ERROR:|error:|Cannot find|not found|\\(fail\\)|Expected:|Received:|budget|metric|failed", line)]
                   selected = sorted({index for match in indices for index in range(max(0, match - 4), min(len(lines), match + 14))})
