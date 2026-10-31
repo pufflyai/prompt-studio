@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04]
+        os: [ubuntu-24.04, macos-15-intel]
     env:
       PSTDIO_EXTENSION_RELEASE_REF: ${{ github.sha }}
       CI_PRIORITY: P2
@@ -25,26 +25,29 @@ jobs:
           node-version: "24"
       - run: bun scripts/ci/install-native-dependencies.ts
       - run: bun run build -- --scope @pstdio/desktop --include-dependencies
+      - name: Test native runtime cleanup
+        run: bun test ./clients/desktop/src/testing/stop-packaged-runtime.p0.test.ts
       - run: bun run --cwd clients/desktop package
       - name: Configure native Chromium sandboxes
         if: runner.os == 'Linux'
         run: |
-          (cd clients/desktop && bun -e 'require("electron")')
-          for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox clients/desktop/node_modules/electron/dist/chrome-sandbox; do
+          for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox; do
             sudo chown root:root "$sandbox"
             sudo chmod 4755 "$sandbox"
           done
-      - name: Verify the source Electron group after correcting its sandbox prerequisite
+      - name: Verify the observed reload task and corrected cleanup
         shell: bash
         env:
           TEST_PRIORITIES: P2
         run: |
           bun scripts/ci/run-priority-tests.ts p2 --scope @pstdio/desktop --runner desktop --list > "$RUNNER_TEMP/desktop-plan.json"
-          xvfb-run -a bun -e '
+          bun -e '
             const plan = await Bun.file(process.argv[1]).json();
-            const source = plan.find((run) => run.id.endsWith(":source"));
-            if (!source) throw new Error("Missing registered source Electron group");
-            const child = Bun.spawn(source.command, { cwd: source.cwd, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+            const packaged = plan.find((run) => run.id.endsWith(":packaged"));
+            if (!packaged) throw new Error("Missing registered packaged desktop group");
+            const command = [...packaged.command, "--grep", "keeps reporting slow frames"];
+            const launch = process.platform === "linux" ? ["xvfb-run", "-a", ...command] : command;
+            const child = Bun.spawn(launch, { cwd: packaged.cwd, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
             process.exitCode = await child.exited;
           ' "$RUNNER_TEMP/desktop-plan.json"
       - uses: actions/upload-artifact@v4
