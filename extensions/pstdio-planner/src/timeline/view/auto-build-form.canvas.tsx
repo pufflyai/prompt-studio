@@ -1,5 +1,5 @@
 import { Dialog, HStack, Portal } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { autoBuildStoryConfiguration } from "./auto-build.story-fixture";
 import { AutoBuildForm } from "./auto-build-form";
@@ -39,7 +39,7 @@ const meta: CanvasMeta<typeof AutoBuildForm> = {
   args: { ...autoBuildStoryConfiguration, onClose: () => {}, t: (_key, fallback) => fallback ?? _key },
 };
 export default meta;
-type Story = CanvasVariant<typeof AutoBuildForm>;
+type Story = CanvasFrame<typeof AutoBuildForm>;
 export const SupervisorAndEligibleTickets: Story = {
   id: "extensions-planner-auto-build-form--supervisor-and-eligible-tickets",
 };

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { storyCommits, storyComparison } from "../webview/story-fixtures";
 import { CompareView, type ResultFilter } from "./compare-view";
@@ -42,7 +42,7 @@ const meta: CanvasMeta<typeof InteractiveCompare> = {
   args: { base: "3d7f5766b0", head: "65d36f4490" },
 };
 export default meta;
-type Story = CanvasVariant<typeof InteractiveCompare>;
+type Story = CanvasFrame<typeof InteractiveCompare>;
 export const BothMeasured: Story = {
   id: "extensions-prompt-studio-dev-compare-commits--both-measured",
 };

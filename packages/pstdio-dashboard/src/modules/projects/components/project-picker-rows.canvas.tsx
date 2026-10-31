@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { standardResourceIcons } from "@pstdio/workbench";
 import { createDashboardResource } from "@/shared/app/resources";
 import type { DashboardProject } from "../data/project-data";
@@ -39,7 +39,7 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof ProjectPickerRows>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 /** Right after signing in on a new device, cloud projects download without a folder. */
 export const NotOnThisDeviceYet: Story = {
   id: "projects-project-picker-rows--not-on-this-device-yet",

@@ -1,5 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatMessage } from "./ai-message";
 import { MessagePartsRenderer } from "./message-parts-renderer";
@@ -40,7 +40,7 @@ const meta: CanvasMeta<typeof MessagePartsRenderer> = {
   component: MessagePartsRenderer,
 };
 export default meta;
-type Story = CanvasVariant<typeof MessagePartsRenderer>;
+type Story = CanvasFrame<typeof MessagePartsRenderer>;
 const MessagePreview = (props: { message: SessionMessage }) => {
   const { message } = props;
   const from = getMessageOrigin(message.role);

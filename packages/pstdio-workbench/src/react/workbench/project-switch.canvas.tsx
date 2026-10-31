@@ -1,5 +1,5 @@
 import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench, type WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -93,7 +93,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ProjectSwitchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const KeepsShellMounted: Story = {
   id: "pstdio-workbench-guides-project-switch--keeps-shell-mounted",
   args: { workbench: createProjectSwitchWorkbench() },

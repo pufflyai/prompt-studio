@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createLevelNavigation, createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
@@ -111,7 +111,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ChromeContinuityStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const OpenTicket: Story = {
   id: "pstdio-workbench-guides-navigation-chrome-continuity--open-ticket",
 };

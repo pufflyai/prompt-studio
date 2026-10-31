@@ -1,58 +1,75 @@
 import { expect, test } from "bun:test";
-import { createElement, type ReactElement } from "react";
-import { composePreview } from "./index";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { type CanvasTheme, CanvasThemeContext, composePreview } from "./index";
 
-test("each preview owns its setup, args, and cleanup", async () => {
-  let created = 0;
-  let disposed = 0;
-  const variant = {
-    setup: () => ({
-      args: { value: ++created },
-      dispose: () => {
-        disposed++;
-      },
-    }),
-  };
-  const meta = { component: () => null, args: { label: "Default", value: 0 } };
-  const first = await composePreview(variant, meta);
-  const second = await composePreview(variant, meta);
-  expect(first.args).toEqual({ label: "Default", value: 1 });
-  expect(second.args.value).toBe(2);
-  first.dispose();
-  first.dispose();
-  expect(disposed).toBe(1);
-  second.dispose();
-  expect(disposed).toBe(2);
-});
-
-test("providers wrap in project, module, variant order and failed setup is reported", async () => {
-  const wrap = (name: string) => (Preview: () => unknown) => createElement(name, null, Preview() as never);
-  const result = await composePreview(
-    { decorators: [wrap("variant")] },
-    { render: () => createElement("content"), decorators: [wrap("module")] },
+test("decorators wrap in preview, canvas, frame order and args merge", () => {
+  const wrap = (name: string) => (Preview: () => unknown) => createElement("section", { id: name }, Preview() as never);
+  const result = composePreview(
+    { args: { value: 1 }, decorators: [wrap("variant")] },
+    { render: () => createElement("content"), args: { label: "Default", value: 0 }, decorators: [wrap("module")] },
     { decorators: [wrap("project")] },
   );
-  const tree = result.Component({}) as ReactElement<any>;
-  expect(tree.type).toBe("project");
-  expect(tree.props.children.type).toBe("module");
-  expect(tree.props.children.props.children.type).toBe("variant");
-  await expect(
-    composePreview(
-      {
-        setup: async () => {
-          throw new Error("fixture failed");
-        },
-      },
-      {},
-    ),
-  ).rejects.toThrow("fixture failed");
+  expect(result.args).toEqual({ label: "Default", value: 1 });
+  expect(renderToStaticMarkup(createElement(result.Component, {}))).toBe(
+    '<section id="project"><section id="module"><section id="variant"><content></content></section></section></section>',
+  );
 });
 
-test("a frame's description and full-page height come from plain fields", async () => {
-  const framed = await composePreview({ description: "Wide layout" }, { fullscreen: true });
+test("a frame's description and full-page height come from plain fields", () => {
+  const framed = composePreview({ description: "Wide layout" }, { fullscreen: true });
   expect(framed.description).toBe("Wide layout");
   expect(framed.fullscreen).toBe(true);
-  const plain = await composePreview({ fullscreen: false }, {}, { fullscreen: true });
+  const plain = composePreview({ fullscreen: false }, { fullscreen: true });
   expect(plain.description).toBeUndefined();
   expect(plain.fullscreen).toBe(false);
+});
+
+test("decorators receive the frame's theme", () => {
+  const preview = composePreview(() => createElement("p", null, "body"), {
+    decorators: [
+      (Frame, { theme }) =>
+        createElement(
+          "main",
+          { "data-theme": theme.id, "data-mode": theme.mode, "data-bg": theme.tokens?.bg },
+          Frame(),
+        ),
+    ],
+  });
+  const markup = (theme?: CanvasTheme) => {
+    const frame = createElement(preview.Component, {});
+    return renderToStaticMarkup(theme ? createElement(CanvasThemeContext.Provider, { value: theme }, frame) : frame);
+  };
+  expect(markup()).toBe('<main data-theme="light" data-mode="light"><p>body</p></main>');
+  // A host theme reaches decorators unchanged, including its own tokens.
+  expect(markup({ id: "dracula", mode: "dark", tokens: { bg: "#282a36" } })).toBe(
+    '<main data-theme="dracula" data-mode="dark" data-bg="#282a36"><p>body</p></main>',
+  );
+});
+
+test("decorators get the same inner component across renders, so frame state survives new args and themes", () => {
+  const seen = new Set<unknown>();
+  const preview = composePreview(
+    { render: (args: { label: string }) => createElement("button", null, args.label) },
+    {},
+    {
+      decorators: [
+        (Frame, { theme }) => {
+          seen.add(Frame);
+          return createElement("main", { "data-theme": theme.id }, createElement(Frame));
+        },
+      ],
+    },
+  );
+  const markup = (label: string, theme: CanvasTheme) =>
+    renderToStaticMarkup(
+      createElement(CanvasThemeContext.Provider, { value: theme }, createElement(preview.Component, { label })),
+    );
+
+  expect(markup("Save", { id: "light", mode: "light" })).toBe('<main data-theme="light"><button>Save</button></main>');
+  expect(markup("Saved", { id: "dracula", mode: "dark" })).toBe(
+    '<main data-theme="dracula"><button>Saved</button></main>',
+  );
+  // React remounts a subtree whose component type changes; one inner component means no remount.
+  expect(seen.size).toBe(1);
 });

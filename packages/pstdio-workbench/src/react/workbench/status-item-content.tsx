@@ -1,5 +1,4 @@
 import { Box, Popover, Portal } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchWidgetHost } from "../region/widget-host";
@@ -28,6 +27,7 @@ export const StatusItemContent = (props: {
     <Popover.Root
       open={visible && open}
       onOpenChange={(event) => setOpen(event.open)}
+      variant="widget"
       lazyMount
       unmountOnExit
       positioning={{ placement: item.slot === "trailing" ? "top-end" : "top-start", offset: { mainAxis: 4 } }}
@@ -57,10 +57,9 @@ export const StatusItemContent = (props: {
             maxH="70dvh"
             overflow="hidden"
           >
-            <Popover.Body minH="0" display="flex" flexDirection="column">
-              <ScrollArea minH="0">
-                <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="content-height" />
-              </ScrollArea>
+            {/* The webview scrolls itself, so it can keep its own header in place and its scrollbar at the edge. */}
+            <Popover.Body minH="0" display="flex" flexDirection="column" css={{ "& iframe": { maxHeight: "70dvh" } }}>
+              <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="content-height" />
             </Popover.Body>
           </Popover.Content>
         </Popover.Positioner>

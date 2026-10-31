@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { DownloadPanel } from "../downloads/download-panel";
 import { AssemblyFrame } from "./assembly-frame";
@@ -27,7 +27,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof AssemblyFrame>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const BeforeJavaScript: Story = {
   id: "landing-initial-editor-frame--before-java-script",
 };

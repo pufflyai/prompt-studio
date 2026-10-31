@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import {
   createWorkbenchSettingsModule,
@@ -64,7 +64,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ProjectSelectionStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Browser: Story = {
   id: "dashboard-project-selection--browser",
 };

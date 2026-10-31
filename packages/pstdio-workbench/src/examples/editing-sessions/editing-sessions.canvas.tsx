@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { EditingSessionsPlayground } from "./editing-sessions-playground.fixture";
 
 const meta = {
@@ -9,7 +9,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof EditingSessionsPlayground>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Playground: Story = {
   id: "pstdio-workbench-reference-extension-api-shared-editing-sessions--playground",
 };

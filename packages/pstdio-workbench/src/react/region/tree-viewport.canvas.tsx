@@ -1,5 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -61,7 +61,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const InPanelMenu: Story = {
   id: "pstdio-workbench-file-tree-viewport--in-panel-menu",
   args: { workbench: createTreeWorkbench(true) },

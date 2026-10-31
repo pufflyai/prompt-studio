@@ -13,6 +13,7 @@ import { ProjectFolderWidget } from "./components/project-folder-widget";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
 import { createDashboardProjects } from "./data/project-data";
 import type { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
+import { registerProjectOpening } from "./project-opening";
 import {
   clearSelectedProject,
   type DashboardProjectSelectionContext,
@@ -80,7 +81,7 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
   });
 };
 
-// A project without a folder on this device asks for one the first time something needs its files.
+// Explicit folder selection remains available before automatic project opening.
 const registerProjectFolder = (ctx: WorkbenchModuleContext) => {
   ctx.views.registerView({
     id: dashboardWidgetIds.projectFolder,
@@ -220,6 +221,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
+      registerProjectOpening(ctx);
       const initialProjectSelection = registerInitialProjectSelection(
         ctx,
         selectedProjectContext,

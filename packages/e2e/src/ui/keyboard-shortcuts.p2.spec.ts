@@ -250,8 +250,8 @@ test("the theme picker opens on the current theme and Escape keeps it", { tag: "
   await page.mouse.move(0, 0);
   for (let attempt = 0; attempt < 2; attempt += 1) {
     await page.keyboard.press("Alt+Shift+T");
-    const picker = page.getByRole("dialog");
-    await expect(picker.getByRole("option", { selected: true })).toHaveText(/pstdio-dark/);
+    const picker = page.getByRole("dialog", { name: "Command palette" });
+    await expect(picker.getByRole("option", { selected: true })).toHaveText(/Prompt Dark/);
     await expect(html).toHaveAttribute("data-theme", "pstdio-dark");
 
     // Moving the highlight previews a theme without saving it.

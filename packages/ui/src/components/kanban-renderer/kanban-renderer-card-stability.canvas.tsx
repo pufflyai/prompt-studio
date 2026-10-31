@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
 const meta: CanvasMeta = { title: "Patterns/Kanban Renderer/Card Stability" };
@@ -23,7 +23,7 @@ const column: KanbanRendererBoardColumn = {
     },
   ],
 };
-export const DragRetainsCardContent: CanvasVariant = {
+export const DragRetainsCardContent: CanvasFrame = {
   id: "patterns-kanban-renderer-card-stability--drag-retains-card-content",
   render: () => (
     <Box height="lg">

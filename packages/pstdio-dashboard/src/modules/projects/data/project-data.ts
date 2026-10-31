@@ -1,6 +1,7 @@
 import { type ResourceRef, standardResourceIcons } from "@pstdio/workbench";
 import { getCollection, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
+import { isDefaultWorkspaceOnThisDevice } from "@/shared/workspaces/workspace-state";
 
 export interface DashboardProject {
   id: string;
@@ -41,7 +42,7 @@ export const readDashboardProjectRows = (): DashboardProjectRows => ({
 export const buildDashboardProjectsFromRows = (rows: DashboardProjectRows) => {
   const folderPathByProjectId = new Map(
     rows.workspaces
-      .filter((row) => row.is_default && !row.deleted_at)
+      .filter(isDefaultWorkspaceOnThisDevice)
       .map((row) => [row.project_id as string, (row.root_path ?? row.display_path ?? "") as string]),
   );
   return rows.projects

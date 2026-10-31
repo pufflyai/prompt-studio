@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Ellipsis } from "lucide-react";
 import { useRef, useState } from "react";
 import { TreeList } from "./tree-list";
@@ -54,7 +54,7 @@ const meta = {
   component: MotionTree,
 } satisfies CanvasMeta<typeof MotionTree>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const NestedGroups: Story = {
   id: "components-tree-list-motion--nested-groups",
 };

@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkbenchThemeProvider } from "../../react";
 import { ResourceMenuSlotsExample } from "./module";
 
@@ -10,7 +10,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ResourceMenuSlotsExample>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const TwoResourceKinds: Story = {
   id: "pstdio-workbench-guides-resource-menu-slots--two-resource-kinds",
   render: () => (

@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
 import type { AttributeDescriptor } from "./types";
@@ -70,7 +70,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof PagedBoard>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const UnloadedColumn: Story = {
   id: "patterns-kanban-renderer-paged-board--unloaded-column",
 };

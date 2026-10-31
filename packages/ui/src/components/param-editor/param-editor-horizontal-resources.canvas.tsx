@@ -1,5 +1,5 @@
 import { Container } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { FileUploadValue, InputGroup, Param } from "./param-editor.types";
 import { ParamEditorHorizontal } from "./param-editor-horizontal";
 
@@ -89,7 +89,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditorHorizontal>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const ResourceControls: Story = {
   id: "patterns-param-editor-param-editor-horizontal--resource-controls",
   render: (props) => (

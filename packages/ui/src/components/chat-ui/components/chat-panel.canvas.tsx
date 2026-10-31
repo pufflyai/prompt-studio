@@ -1,5 +1,5 @@
 import { Box, Button, HStack, IconButton, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
@@ -81,7 +81,7 @@ const meta: CanvasMeta<typeof ChatPanel> = {
   component: ChatPanel,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 type ChatPanelProps = ComponentProps<typeof ChatPanel>;
 const panelContainerStyles = {
   w: "960px",

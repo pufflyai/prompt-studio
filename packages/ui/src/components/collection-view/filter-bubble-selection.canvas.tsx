@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Bar } from "./collection-view-bar-story";
 
 const meta: CanvasMeta = {
@@ -6,7 +6,7 @@ const meta: CanvasMeta = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 export const CompleteNumberEntry: Story = {
   id: "patterns-collection-view-filter-bubble-selection--complete-number-entry",
   render: () => <Bar storageKey="preview-complete-number" />,

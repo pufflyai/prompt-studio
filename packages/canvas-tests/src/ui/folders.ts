@@ -7,7 +7,7 @@ export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   await preview.getByRole("button", { name: "New folder", exact: true }).click();
   await preview.getByRole("textbox", { name: "New folder name" }).fill("canvas-interactive");
   await item.getByRole("button", { name: "Theme for" }).click();
-  await page.getByRole("menuitem", { name: "Dark", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Prompt Dark", exact: true }).click();
   await expect(preview.getByRole("textbox", { name: "New folder name" })).toHaveValue("canvas-interactive");
   await expect(item.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
   await expect.poll(() => preview.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe(true);

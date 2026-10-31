@@ -33,11 +33,11 @@ Canvases use the diamond icon in navigation, resource search, breadcrumbs, and t
 
 Frames show a shared loading panel and spinner while their compiled preview starts. Each canvas starts at most four frames at once, prioritizing selected and visible frames. A slot is released when the preview runtime boots, before asynchronous fixture setup. Offscreen frames continue loading and loaded frames stay mounted to retain drafts.
 
-Each frame has a **Theme** menu: Follow app, Light, Dark, Solarized Light, Solarized Dark, Dracula, or Monokai. Its choice is saved independently. Theme changes preserve mounted inputs and local state. The canvas shell follows the workbench. Physical touch and trackpad behavior depends on the browser; automation does not prove those device behaviors.
+Each frame has a **Theme** menu with Follow app, Prompt Light, Prompt Dark, Prompt Contrast Light, Prompt Contrast Dark, Solarized Light, Solarized Dark, Dracula, and Monokai. Its choice is saved independently. Theme changes preserve mounted inputs and local state. The canvas shell follows the workbench. Physical touch and trackpad behavior depends on the browser; automation does not prove those device behaviors.
 
 ## Edit source
 
-`src/canvases/definitions.ts` owns canvas IDs, unique readable names, preview membership, component keys, initial positions, and intended dimensions. `src/canvases/previews.tsx` maps component keys to source files and named React exports. The compiler creates a lazy lookup so frames import only their native component group. Add another canvas to the definitions array and another preview component when needed. Camera and gesture code do not need to change.
+`src/canvases/definitions.ts` owns canvas IDs, unique readable names, preview membership, component keys, initial positions, and intended dimensions. `src/canvases/previews.tsx` maps component keys to the design pages in `packages/ui/src/foundations/` and their named React exports. The compiler creates a lazy lookup so frames import only their native component group. Add another canvas to the definitions array and another preview component when needed. Camera and gesture code do not need to change.
 
 Preserve IDs and names in follow-up edits. Add a new named entry for another version. Keep unrelated designs. Place new entries in nearby empty space and reveal them through the camera. Use the `canvas` skill for the full authoring and validation rules.
 

@@ -1,6 +1,8 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 import { menuAnatomy } from "@chakra-ui/react/anatomy";
 
+const highlightedItem = { bg: "bg.menu-item.hover", color: "fg.menu-item.hover" };
+
 export const menuSlotRecipe = defineSlotRecipe({
   slots: menuAnatomy.keys(),
   base: {
@@ -33,12 +35,12 @@ export const menuSlotRecipe = defineSlotRecipe({
       textDecoration: "none",
       _hover: {
         bg: "bg.menu-item.hover",
+        color: "fg.menu-item.hover",
       },
-      _highlighted: {
-        bg: "bg.menu-item.hover",
-      },
+      _highlighted: highlightedItem,
       _focusVisible: {
         bg: "bg.menu-item.focus",
+        color: "fg.menu-item.focus",
       },
       "&[data-type]": { ps: "sm" },
       _disabled: {
@@ -54,7 +56,6 @@ export const menuSlotRecipe = defineSlotRecipe({
       insetStart: "auto",
       top: "auto",
       transform: "none",
-      color: "fg",
       marginInlineStart: "auto",
       order: 1,
       flexShrink: 0,
@@ -80,7 +81,7 @@ export const menuSlotRecipe = defineSlotRecipe({
       p: "0",
       px: "0",
       py: "0",
-      bg: "bg",
+      bg: "bg.menu-item.default",
       borderWidth: "1px",
       borderStyle: "solid",
       borderColor: "border.subtle",
@@ -93,6 +94,9 @@ export const menuSlotRecipe = defineSlotRecipe({
       md: { item: { px: "sm" } },
     },
     variant: {
+      // Chakra's inherited variants otherwise replace the base highlight background.
+      subtle: { item: { _highlighted: highlightedItem } },
+      solid: { item: { _highlighted: highlightedItem } },
       panel: {
         content: {
           width: "64",

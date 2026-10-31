@@ -23,8 +23,7 @@
     "perf:storage-scale": "bun src/perf/storage-scale.diagnostic.ts",
     "perf:storage-scale:build": "bun build src/perf/storage-scale-extension.ts --target bun --external @pstdio/sdk/extensions --outfile dist/storage-scale/scale.js",
     "perf:timing-window": "bun src/perf/storage-timing-window.ts",
-    "test:packaged:benchmark": "playwright test --config playwright.packaged-benchmark.config.ts",
-    "bench:planner-stress": "bun src/perf/planner-stress.diagnostic.ts --packaged"
+    "test:packaged:benchmark": "playwright test --config playwright.packaged-benchmark.config.ts"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "3.1152.0",
@@ -55,6 +54,7 @@
     "pstdio-diagnostics": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "pstdio-notes": "workspace:*",
+    "pstdio-performance": "workspace:*",
     "pstdio-planner": "workspace:*",
     "pstdio-reports": "workspace:*",
     "pstdio-scripts": "workspace:*",

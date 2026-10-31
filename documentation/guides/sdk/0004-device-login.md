@@ -41,11 +41,15 @@ The second line of each cloud project in the picker says where it is on this com
 | Cloud · needs attention | Some synced data could not be read. |
 | The folder path | The project has a folder on this computer. |
 
-A project opens before its download finishes. After the first download, opening it reads the downloaded data directly.
+When you select the project, Prompt Studio waits for its content to download, creates a local folder, and restores its notes and declared artifact files. The opening dialog shows progress and offers Retry if setup fails. Opening the project again uses the same folder and keeps your local edits. After its content is downloaded, the project can open offline.
 
-The project's files come later. The first time something needs them, such as opening Files, creating a workspace or starting a session with an agent that works on files, Prompt Studio asks for a folder. It offers to clone the project's recorded git remote, or to use a folder that already holds the same repository. Work that needs files on a computer without the project's folder fails with the error "This project's files are not on this device."
+This managed folder lives under `PSTDIO_HOME/projects/project-<project-id>`. It holds the project's synced extension content. Opening does not clone its Git remote or copy unrelated source files from another computer, and it works for projects without Git. Existing local folder bindings are preserved.
 
-To use a folder you already have from the command line, bind the project ID to it:
+Agents can use the same operation with `client.projects.open(projectId)`. This prepares the local folder and restores content already downloaded on the device. Read `client.account.projectSyncStatus(projectId)` to check download readiness before opening a recovered cloud project.
+
+If a download or extension activation failed, `client.account.retryProjectSync(projectId)` retries discovery and wakes the project's sync owners immediately. It also clears the extension activation retry delay. The opening dialog uses this operation for Retry while waiting for content.
+
+To use a folder you already have instead, bind the project ID before opening it on the new machine:
 
 ```sh
 pst projects environment

@@ -1,5 +1,5 @@
 import { Box, chakra, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Slider } from "@pstdio/ui";
 import { useState } from "react";
 import { landingStorySlotRecipe } from "./landing-story";
@@ -70,7 +70,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof FormulaDemo>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Interactive: Story = {
   id: "theme-landing-formula-demo--interactive",
 };

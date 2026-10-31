@@ -1,5 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatMessage } from "./ai-message";
 import { Response } from "./ai-response";
@@ -24,7 +24,7 @@ const meta: CanvasMeta<typeof ChatMessage.Root> = {
   component: ChatMessage.Root,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatMessage.Root>;
+type Story = CanvasFrame<typeof ChatMessage.Root>;
 const MessagePreview = () => {
   return (
     <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">

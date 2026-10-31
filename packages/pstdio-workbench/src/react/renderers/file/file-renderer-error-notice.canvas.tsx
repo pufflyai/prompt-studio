@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 
@@ -14,7 +14,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof FileRendererErrorNotice>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const RetainedDraft: Story = {
   id: "pstdio-workbench-file-editor-resource-removed--retained-draft",
   args: {

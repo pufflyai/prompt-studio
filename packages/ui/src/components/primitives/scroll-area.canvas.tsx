@@ -1,5 +1,5 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
@@ -28,7 +28,7 @@ const meta: CanvasMeta<typeof ScrollArea> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof ScrollArea>;
+type Story = CanvasFrame<typeof ScrollArea>;
 export const Vertical: Story = {
   id: "components-layout-scroll-area--vertical",
   render: (args) => (

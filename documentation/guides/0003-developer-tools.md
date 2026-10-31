@@ -1,33 +1,28 @@
 # Developer tools
 
-Developer tools helps you find out which part of Prompt Studio is using your computer's CPU. Use it when the app feels slow, a fan spins up, or an extension seems to do too much work.
+Developer tools helps you find out which part of Prompt Studio is using your computer's CPU and memory, and whether the backend still answers. Use it when the app feels slow, a fan spins up, or an extension seems to do too much work.
 
-## Show connection status
-
-Open **Settings → Workbench → Developer tools** and turn on **Show connection status**. A badge with a green dot appears at the trailing end of the status bar while connected. When the app loses contact with the backend, the badge shows a red dot and **Backend unavailable**. Hover or focus the indicator for an explanation, including automatic reconnection. Loaded navigation stays visible, and the indicator returns to a green dot when the connection recovers.
-
-The switch is off by default and is saved on this device. Turning it off hides the indicator. Live sync, retained navigation, and automatic recovery stay active.
+The **Prompt Studio Performance Monitoring** extension (`pstdio.pstdio-performance`) provides the status bar meter and its details. It is installed by default and uses only the public extension API. The host keeps the measurements: process sampling, the frame counter, the slow-frame observer, recordings and `pst performance`. Monitoring runs while the extension is loaded, so enabling the extension turns it on and disabling or removing it turns it off. There is no separate switch.
 
 ## Reorder status bar items
 
 When a side has several items, drag a widget directly, like a tab, to place it before or after another widget. You can also focus a widget or its control and press **Alt+Left** or **Alt+Right**. A normal click still opens the widget's controls. Items stay on their leading or trailing side.
 
-The order is saved on this device. It survives reloads, connection recovery, and turning an indicator off and on.
+The order is saved on this device. It survives reloads and connection recovery.
 
 ## Turn on performance monitoring
 
-1. Open **Settings** and select **Workbench → Developer tools**.
-2. Turn on **Enable performance monitoring**.
+Enable **Prompt Studio Performance Monitoring** in **Settings → Project → Extensions**. It is enabled by default. A meter appears at the trailing end of the status bar and starts measuring. The status bar shows in modes that use it, such as the project view. A mode that draws its own status bar, or hides it, does not show the meter.
 
-A frame-rate meter appears at the trailing end of the status bar. The status bar shows in modes that use it, such as the project view. A mode that draws its own status bar, or hides it, does not show the meter.
+Monitoring belongs to this device. A remote runtime never turns it on, and measurements are never sent anywhere. If the host cannot measure yet, the meter shows **Off**.
 
-The switch is off by default. It belongs to this device: Prompt Studio desktop saves it in its own user data, and a browser saves it in that browser. A remote runtime never turns it on, and turning it on never sends measurements anywhere.
-
-The command palette has two commands. **Show performance** opens the meter's popover. While monitoring is off, or the current mode hides the meter, it opens the setting instead. **Copy performance snapshot** copies the current snapshot as JSON.
+Select the meter to open its details. The details keep their header in place while the measurements scroll.
 
 ## Read the meter
 
-The meter shows a gauge icon, the last 12 seconds of frame rate as small bars, and the current frames per second (fps). The workbench window counts the frames it draws in each second. It keeps the last 30 seconds and pauses the count while the window is hidden.
+The meter shows a gauge icon, the last 12 seconds of frame rate as small bars, and the current frames per second (fps). The workbench window counts the frames it draws in each second. It keeps the last 30 seconds and pauses the count while the window is hidden. The meter updates every 2 seconds.
+
+In the desktop app the meter also shows the backend: its last 12 seconds of response times as small bars, the latest response time, and the backend's CPU and memory. When the backend stops answering after it has answered before, the response time changes to an amber **Reconnecting** and the gauge icon becomes a warning icon. It returns to a response time when the backend answers again. A backend this host cannot measure, such as in a browser tab, shows no backend part.
 
 The meter uses color only when something needs attention:
 
@@ -45,7 +40,10 @@ Select the meter to open the popover. It has these parts, from top to bottom:
 
 - **Frame rate**: the current value, the 30-second average and minimum, and one bar for each of the last 30 seconds.
 - **Sustained high CPU**: a warning that names the busy process. It appears only while the warning above is active.
+- **Backend** (desktop only): three charts over the last 30 seconds, one column per 2-second sample. **Response time** shows each reply, with the average, the maximum, and the number of missed replies. A missed reply is a full-height amber bar; it never counts as a response time. **CPU** and **Memory** show the backend and the workbench side by side, with their latest values. A backend restart is a full-height amber bar in both charts. Hover the memory values to see which measurement each one uses: macOS physical footprint including compressed memory, Windows private memory, or resident memory including shared pages. A missing reading draws a flat line and reads **Unavailable**, never zero. A remote backend is labeled **Remote backend**; local readings never stand in for it.
 - **CPU**: the Workbench row first, then one row for each process that runs extension views.
+
+The copy button beside the title copies the current snapshot as JSON.
 
 ### The CPU list
 
@@ -55,11 +53,11 @@ The detail line under each name shows how many views are open and the process's 
 
 **Workbench** is the window you work in. It is listed because the workbench itself can be the busy part, for example while a long chat streams. Extensions are sorted by CPU, busiest first.
 
-Chromium usually runs all extension views in one process. That row names every extension it hosts and shows the process total once, because the CPU of one process cannot be split between extensions.
+A row is named by the views its process hosts, such as `lab-page`, because the public snapshot identifies an extension only by its install id. Chromium usually runs all extension views in one process. That row names every view it hosts and shows the process total once, because the CPU of one process cannot be split between extensions.
 
 Only the 5 busiest extensions are shown. The rest fold into one row, **N more extensions**, with their combined CPU. Select it to show every extension, and select it again to fold them.
 
-An extension with an open view but no measured process is listed without a number. This happens in a browser tab and before the first sample of a new process.
+An extension appears once its process has been sampled. A browser tab cannot measure processes, so it lists no extension rows.
 
 The popover does not list Electron's main process, the GPU process, or other helper processes. The copied snapshot and `pst performance` include them.
 
@@ -71,7 +69,7 @@ A row with exactly one extension has a **Pause** button. Pausing an extension:
 - shows **<Extension> is paused** with a **Resume** button in each place where a view was open. In a view less than 160 px tall, this is one line;
 - lets Chromium end the extension's process soon after, when no other extension view uses it.
 
-The paused row stays in the CPU list with a **Resume** button.
+The paused row stays in the CPU list as **Paused extension** with a **Resume** button.
 
 A pause does not stop the extension's runtime work. Its commands, hooks, and schedules keep running in the runtime. To stop those, disable the extension.
 
@@ -79,7 +77,7 @@ The pause lives only in this window's memory. It lasts until you select **Resume
 
 ## Share a snapshot
 
-Run **Copy performance snapshot** to copy the current snapshot as JSON. The snapshot contains process roles, CPU, memory, slow frames (frames of 50 ms or longer in the workbench window, with only script file names; addresses, query strings, and capability links are removed), the workbench frame rate for each of the last 30 seconds (`frameRate`), the ids of paused extensions (`pausedExtensionIds`), and what this device can measure. It never contains chat content, tokens, workspace paths, or full script addresses.
+Select the copy button in the details to copy the current snapshot as JSON. The snapshot contains process roles, CPU, memory, slow frames (frames of 50 ms or longer in the workbench window, with only script file names; addresses, query strings, and capability links are removed), the workbench frame rate for each of the last 30 seconds (`frameRate`), the ids of paused extensions (`pausedExtensionIds`), and what this device can measure. It never contains chat content, tokens, workspace paths, or full script addresses.
 
 An agent on the same computer reads the same snapshot with:
 
@@ -91,22 +89,23 @@ The command talks to the desktop app directly. It does not start or call a runti
 
 ## Turn it off
 
-Turn off the switch. The meter and its popover disappear. Sampling, the frame counter, the slow-frame observer, and the `pst performance` endpoint stop at once, and every kept sample is cleared. Nothing runs while the switch is off, including after a restart.
+Disable the extension. The meter and its details disappear. Sampling, the frame counter, the slow-frame observer, and the `pst performance` endpoint stop at once, and every kept sample is cleared. Nothing runs while no monitoring extension is loaded.
 
 ## Limits
 
-- **Browser tabs** cannot read process CPU or memory. The popover shows **CPU is measured in the desktop app**, lists open extensions without numbers, and still shows frame rate. Pause still works. `pst performance` reads only the desktop app.
+- **Browser tabs** cannot read process CPU or memory. The details show **CPU is measured in the desktop app**, still show frame rate, and list no extension rows. A paused extension can still be resumed. `pst performance` reads only the desktop app.
 - **GPU work** stays in Chromium's shared GPU process. An extension's number does not include the drawing work it causes there. GPU utilization and paint cost are not measured.
 - **Shared processes:** when several extensions share one process, their row names all of them and shows the process total once. That row has no Pause button, and its number cannot tell which extension is busy.
-- **Frame names are not proof.** Extension names come from the addresses of the frames each process hosts. An extension that navigates its own frame can change the name shown for it.
+- **Frame names are not proof.** Row names come from the addresses of the frames each process hosts. An extension that navigates its own frame can change the name shown for it.
+- **Needs an open project.** Extension controls load with a project. With no project open, or in a project where the extension is disabled, the status bar shows no meter, even while monitoring is on. Open a project with the extension to see or change it.
+- **No palette commands.** Extension commands run in the runtime, which cannot read this device's measurements. Open the details from the meter instead.
 - **Windows** reports no idle wakeups; the snapshot marks them unavailable. Private memory is reported only on Windows.
 - **Long tasks only:** a renderer without long-animation-frame support reports long tasks without script names.
-- **Agents cannot turn monitoring on.** The switch stays a person's choice on their own device.
-- The runtime is a separate program and is not listed. Use your operating system's activity monitor for it.
+- **Agents cannot turn monitoring on.** Only a loaded monitoring extension on this device turns it on.
 
 ## Cost
 
-Monitoring samples Electron's process metrics every 2 seconds. It keeps at most 30 seconds of CPU history per live process and the latest 50 slow frames. The workbench counts frames with `requestAnimationFrame` and reports its frame rate and paused extensions to the desktop app about once per second. Renderers send slow frames at most once per second. The meter reads a new snapshot every 2 seconds.
+Monitoring samples Electron's process metrics every 2 seconds. It keeps at most 30 seconds of CPU history per live process and the latest 50 slow frames. The workbench counts frames with `requestAnimationFrame` and reports its frame rate and paused extensions to the desktop app about once per second. Renderers send slow frames at most once per second. The meter and its details share the host's snapshot polling every 2 seconds; they add listeners and never start their own sampling.
 
 The packaged desktop benchmarks measure the idle workbench with monitoring off and on; see [Tests](development/0002-testing.md#desktop-benchmarks).
 

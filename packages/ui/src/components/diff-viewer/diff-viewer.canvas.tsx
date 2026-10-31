@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Profiler, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   formatPerformanceMs,
@@ -197,7 +197,7 @@ const meta: CanvasMeta<typeof DiffViewer> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof DiffViewer>;
+type Story = CanvasFrame<typeof DiffViewer>;
 export const Default: Story = {
   id: "patterns-diff-diff-viewer--default",
 };

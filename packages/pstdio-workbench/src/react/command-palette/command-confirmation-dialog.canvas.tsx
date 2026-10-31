@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandConfirmationDialog } from "./palette-params-dialog";
 
@@ -14,7 +14,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof CommandConfirmationDialog>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const DeleteSession: Story = {
   id: "pstdio-workbench-commands-confirmation--delete-session",
   args: {

@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { AttachmentList } from "./attachment-list";
 
 const meta: CanvasMeta<typeof AttachmentList> = {
@@ -6,7 +6,7 @@ const meta: CanvasMeta<typeof AttachmentList> = {
   component: AttachmentList,
 };
 export default meta;
-type Story = CanvasVariant<typeof AttachmentList>;
+type Story = CanvasFrame<typeof AttachmentList>;
 const sampleAttachments = ["workspace/analysis/report.md", "workspace/data/users.csv"];
 export const Default: Story = {
   id: "patterns-chat-attachment-list--default",

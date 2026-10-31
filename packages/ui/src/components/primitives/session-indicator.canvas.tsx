@@ -1,5 +1,5 @@
 import { HStack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { SessionIndicator, sessionCompletionStatuses } from "@/components/primitives/session-indicator";
 
 const meta: CanvasMeta<typeof SessionIndicator> = {
@@ -7,7 +7,7 @@ const meta: CanvasMeta<typeof SessionIndicator> = {
   component: SessionIndicator,
 };
 export default meta;
-type Story = CanvasVariant<typeof SessionIndicator>;
+type Story = CanvasFrame<typeof SessionIndicator>;
 export const InProgress: Story = {
   id: "components-feedback-session-indicator--in-progress",
   args: { status: "in_progress" },

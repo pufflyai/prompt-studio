@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
 
@@ -8,7 +8,7 @@ const meta: CanvasMeta<typeof ChatPanel> = {
   component: ChatPanel,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 const questionPrompt: ChatInputQuestionPrompt = {
   questions: [
     {

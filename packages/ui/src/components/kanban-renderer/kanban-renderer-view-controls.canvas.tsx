@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
@@ -12,7 +12,7 @@ const meta: CanvasMeta<typeof KanbanRenderer> = {
   fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 interface ViewControlsBoardProps {
   storageKey: string;
   defaultFilter?: ViewFilterGroup;
