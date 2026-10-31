@@ -1,0 +1,58 @@
+name: Release 0.46 final qualification
+on:
+  push:
+    branches: [test/ci-reliability/release-046-final]
+permissions:
+  contents: read
+jobs:
+  benchmarks:
+    name: P3 ${{ matrix.suite }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { suite: workbench, os: ubuntu-24.04 }
+          - { suite: canvas, os: ubuntu-24.04 }
+          - { suite: chat, os: ubuntu-24.04 }
+          - { suite: runtime, os: ubuntu-24.04 }
+          - { suite: runtime, os: macos-15 }
+          - { suite: desktop, os: macos-15 }
+    env:
+      UI_PERF_ASSERT_BUDGETS: "1"
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install native dependencies
+        run: bun scripts/ci/install-native-dependencies.ts
+      - name: Install browser system dependencies
+        if: runner.os == 'Linux' && matrix.suite != 'runtime'
+        run: bunx playwright@1.60.0 install chromium --with-deps
+      - name: Run the registered workload once with its existing budgets
+        shell: bash
+        run: >-
+          bun packages/benchmarks/src/cli.ts run
+          --checkout "$GITHUB_WORKSPACE=$GITHUB_SHA=combined-release-fixes"
+          --suites "${{ matrix.suite }}" --samples 1
+          --cache "$RUNNER_TEMP/benchmark-cache" --out test-results/release-readiness
+      - name: Preserve measurements and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-046-final-${{ matrix.suite }}-${{ matrix.os }}
+          path: |
+            test-results/release-readiness
+            packages/e2e/test-results
+            packages/ui/test-results
+            packages/canvas-tests/test-results
+            clients/desktop/test-results
+          if-no-files-found: warn
