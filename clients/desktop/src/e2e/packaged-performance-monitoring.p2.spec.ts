@@ -142,17 +142,23 @@ test("names the process that hosts an extension and ends its frames when paused"
       .getByTestId("performance-cpu-row")
       .filter({ hasText: "workbench-fixture" });
     await expect(row).toBeVisible();
+    const pause = row.getByRole("button", { name: "Pause workbench-fixture", exact: true });
+    // Enter the live CPU list before clicking: pointer entry freezes its order,
+    // which can otherwise move the target between Playwright's stability check and input.
+    await pause.hover();
     // Pausing and resuming must never show the extension twice or drop its row.
     let rows = rowCountsWhile(app.page, fixtureId, 4_000);
-    await row.getByRole("button", { name: "Pause workbench-fixture", exact: true }).click();
+    await pause.click();
     expect(await rows).toEqual([1]);
     await expect(app.page.locator('iframe[title="Lab"]')).toHaveCount(0);
     await expect.poll(async () => (await readSnapshot(app!.page))?.pausedExtensionIds).toEqual([fixtureId]);
     await expect.poll(async () => (await processes()).some((process) => hostedIds(process).has(fixtureId))).toBe(false);
 
     // A paused row keeps the name it had while its views ran.
+    const resume = row.getByRole("button", { name: "Resume workbench-fixture", exact: true });
+    await resume.hover();
     rows = rowCountsWhile(app.page, fixtureId, 4_000);
-    await row.getByRole("button", { name: "Resume workbench-fixture", exact: true }).click();
+    await resume.click();
     expect(await rows).toEqual([1]);
     await expect(app.page.locator('iframe[title="Lab"]')).toHaveCount(1);
   } finally {
