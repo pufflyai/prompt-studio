@@ -93,10 +93,11 @@ jobs:
       app_matrix: ${{ steps.scope.outputs.appMatrix }}
       packaged_matrix: ${{ steps.scope.outputs.packagedMatrix }}
       database_matrix: ${{ steps.scope.outputs.databaseMatrix }}
+      edited_matrix: ${{ steps.scope.outputs.editedMatrix }}
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -117,6 +118,64 @@ jobs:
     env:
       CI_PRIORITY: P0
       GH_TOKEN: ${{ github.token }}
+  edited_tests:
+    name: edited_tests (${{ matrix.name }})
+    needs: scope
+    if: needs.scope.outputs.edited_matrix != '[]'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.scope.outputs.edited_matrix) }}
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EDITED_TEST_ROW: ${{ toJSON(matrix) }}
+      UI_PERF_ASSERT_BUDGETS: "1"
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install native dependencies and restore host build cache
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Set up Windows desktop recovery tools
+        if: runner.os == 'Windows' && (matrix.desktop || matrix.suite == 'desktop')
+        uses: ./.github/actions/setup-windows-desktop-tests
+      - name: Install browser engines
+        if: matrix.browser
+        run: bunx playwright@1.60.0 install --with-deps
+      - name: Check edited tests with their registered runners
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" && '${{ matrix.browser }}' == 'true' ]]; then
+            xvfb-run -a bun scripts/ci/run-edited-tests.ts
+          else
+            bun scripts/ci/run-edited-tests.ts
+          fi
+      - name: Preserve selected files, execution reports, traces and measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edited-tests-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results
+            packages/e2e/test-results
+            packages/ui/test-results
+            packages/canvas-tests/test-results
+            clients/desktop/test-results
+          if-no-files-found: error
   static_checks:
     permissions:
       contents: read

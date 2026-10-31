@@ -210,7 +210,8 @@ test("restarts a crashed sidecar once and offers Retry after another crash in th
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
-    app = await launchPackagedApp(home);
+    // Sidecar restarts do not use an agent harness, so default extension downloads stay out of this deadline.
+    app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
     const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
     crashPackagedRuntime(app.runtime.pid);
     await waitForAutomaticRecovery(app);

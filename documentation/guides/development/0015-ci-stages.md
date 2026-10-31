@@ -4,14 +4,14 @@ This guide explains how a change moves from a pull request to a stable release, 
 
 ```text
 pull request ──► merge queue ──► main ──► nightly (daily) ──► stable release (manual)
-   P0 (fast)      P0 + P1        smoke     P0–P3, all hosts     P0–P3, signed apps
+ P0 + edited     P0 + P1        smoke     P0–P3, all hosts     P0–P3, signed apps
 ```
 
 Each stage checks more than the one before it. A later stage never trusts a result from a different commit: the queue tests the exact merged commit, and a release tests the exact files it will publish.
 
 ## Test priorities
 
-Every test file names its priority before the runner suffix, for example `session-state.p0.test.ts` or `startup.p1.spec.ts`. The priority decides when the test runs. Test discovery reads the filename; workflows never list test files. A test filename without a priority fails CI.
+Every test file names its priority before the runner suffix, for example `session-state.p0.test.ts` or `startup.p1.spec.ts`. The priority decides when the complete suite runs. Added or edited tests also run on their PR, at every priority. Test discovery reads the filename; workflows never list test files. A test filename without a priority fails CI.
 
 | Priority | What it protects | Runs in | Examples |
 | --- | --- | --- | --- |
@@ -48,7 +48,7 @@ A local run only proves your own machine. It does not prove other platforms or s
 
 | Stage | Trigger | Workflow | What runs | Success means | Target time |
 | --- | --- | --- | --- | --- | --- |
-| Pull request | Push to a PR branch | Test and Build (`pull_request`) | P0, lint, types and public contracts for the changed workspaces and the workspaces that depend on them | The fast checks passed for this PR | under 3 min |
+| Pull request | Push to a PR branch | Test and Build (`pull_request`) | Affected P0, lint, types and public contracts, plus added or edited tests at every priority | The baseline and edited tests passed for this PR | under 3 min for the baseline; edited tests add their normal setup and execution |
 | Merge queue | Add to queue | Test and Build (`merge_group`) | All P0 and P1, plus Linux and Apple Silicon desktop builds and startup | The exact merged commit is safe to land | under 8 min |
 | Main | Queue merges a commit | Test and Build (`push`) | Checks that main matches the tested queue commit, publishes the build cache, runs a startup smoke test | Main is the commit the queue tested, and it still starts | a few min |
 | Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on all hosts including Windows, P3 performance, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | under 40 min of work |
@@ -60,10 +60,14 @@ Target times count real work: install, build, artifact transfer, tests, reports 
 
 ## Pull requests
 
-- CI picks the changed workspaces, then adds every workspace that depends on them, including extensions that use released SDK or UI ranges.
+- CI uses the complete diff from the PR base to the checked-out candidate, so tests edited in earlier commits remain selected after another push. It picks the changed workspaces, then adds every workspace that depends on them, including extensions that use released SDK or UI ranges.
 - A change to shared repository files (root `package.json`, `bun.lock`, CI scripts and similar) selects every workspace.
 - A documentation-only change runs only the static checks.
-- P1 does not run on PRs. Integration problems first show up in the queue. Run the relevant `bun test:p1 --scope <workspace>` before you queue a PR. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
+- Added or edited P1, P2 and P3 tests run immediately in required `edited_tests` jobs, alongside the affected P0 checks. P0 tests already covered by the baseline do not run twice. Deleted tests are not executed; their removal still selects affected workspace checks.
+- Changes to support files in the E2E or Canvas test workspaces, fixture files, `testing/`, `test-utils/`, `__fixtures__/`, or desktop Playwright configs select their owning workspace's tests. This conservative selection also checks tests affected by shared fixture edits.
+- Edited tests use their registered runners and setup. Native desktop checks retain all four desktop platforms; packaged CLI and browser checks retain all six toolchain targets. An edited benchmark runs its complete registered suite once per applicable host, preserving its workload and cold-start order. Desktop benchmarks use all four desktop platforms; backend suites use Linux, Apple Silicon and Windows; browser and relay suites use Linux. Existing test limits and performance budgets apply.
+- Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.
+- Unedited P1 tests still run in the queue, and the complete P2/P3 matrices still run in production validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
 - A new push cancels the PR's older run.
 
 ## Merge queue

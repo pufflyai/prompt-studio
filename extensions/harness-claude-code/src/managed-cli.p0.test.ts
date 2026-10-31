@@ -40,8 +40,18 @@ test("detects the installed private CLI without PATH tools", async () => {
   const context = {
     process: {
       run: async (input: Parameters<HarnessContext["process"]["run"]>[0]) => {
-        const result = Bun.spawnSync(input.command, { timeout: input.timeoutMs });
-        return { exitCode: result.exitCode, stdout: result.stdout.toString(), stderr: result.stderr.toString() };
+        const child = Bun.spawn(input.command, {
+          env: { ...process.env, ...input.env },
+          timeout: input.timeoutMs,
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+        const [exitCode, stdout, stderr] = await Promise.all([
+          child.exited,
+          new Response(child.stdout).text(),
+          new Response(child.stderr).text(),
+        ]);
+        return { exitCode, stdout, stderr };
       },
     },
     logger: { warn() {} },
