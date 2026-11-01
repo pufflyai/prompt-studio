@@ -1,4 +1,36 @@
 export const previews = {
+  "cloud-status-states": {
+    source: "extensions/canvas/src/canvases/cloud-status-previews.tsx",
+    exportName: "CloudStatusStates",
+  },
+  "cloud-popover-synced": {
+    source: "extensions/canvas/src/canvases/cloud-status-previews.tsx",
+    exportName: "CloudPopoverSynced",
+  },
+  "cloud-popover-offline": {
+    source: "extensions/canvas/src/canvases/cloud-status-previews.tsx",
+    exportName: "CloudPopoverOffline",
+  },
+  "cloud-popover-coming-soon": {
+    source: "extensions/canvas/src/canvases/cloud-status-previews.tsx",
+    exportName: "CloudPopoverComingSoon",
+  },
+  "cloud-settings-connected": {
+    source: "extensions/canvas/src/canvases/cloud-settings-previews.tsx",
+    exportName: "CloudSettingsConnected",
+  },
+  "cloud-settings-local": {
+    source: "extensions/canvas/src/canvases/cloud-settings-previews.tsx",
+    exportName: "CloudSettingsLocal",
+  },
+  "cloud-settings-coming-soon": {
+    source: "extensions/canvas/src/canvases/cloud-settings-previews.tsx",
+    exportName: "CloudSettingsComingSoon",
+  },
+  "cloud-make-local": {
+    source: "extensions/canvas/src/canvases/cloud-settings-previews.tsx",
+    exportName: "CloudMakeLocalConfirmation",
+  },
   "long-documentation": {
     source: "packages/ui/src/foundations/documentation.canvas.tsx",
     exportName: "LongDocumentation",
