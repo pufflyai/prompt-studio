@@ -2,7 +2,7 @@
 name: create-ticket
 description: "Create a planner ticket or bug report. Use when asked to make changes unrelated to an existing ticket, to create a new ticket, or to report a bug."
 metadata:
-  version: 0.0.7
+  version: 0.0.8
 ---
 
 Manage Planner tickets with the `pst tickets` commands.
@@ -22,7 +22,7 @@ Name what gets better for the person, not the code change. Someone should unders
 
 ## UI designs
 
-Before saving a new ticket that adds or changes UI, read `pst pstdio-planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and add named variations when comparing alternatives. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Complete the canvas skill's source handoff before saving: in Git projects, push the reviewed design sources and record their branch and commit SHA so the implementation workspace can retrieve them. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
+Before saving a new ticket that adds or changes UI, read `pst pstdio-planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and add named variations when comparing alternatives. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Complete the canvas skill's source handoff before saving: record where the implementation workspace finds the reviewed design sources, either a proposal folder merged to the default branch or, in Git projects, a pushed branch and commit SHA. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
 
 ## Workflow
 
