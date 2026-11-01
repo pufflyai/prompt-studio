@@ -13,7 +13,6 @@ const blobIdsSchema = z
   .array(syncIdSchema)
   .max(100_000)
   .refine((ids) => new Set(ids).size === ids.length, "Blob IDs must be unique");
-const spaceOwnerSchema = identitySchema.nullable();
 
 export const updateEnvelopeSchema = z.strictObject({
   updateId: syncIdSchema,
@@ -75,28 +74,6 @@ export const blobStatusSchema = z.strictObject({
 });
 export const blobReadSchema = z.strictObject({ offset: byteLengthSchema });
 
-export const liveClientMessageSchema = z.strictObject({
-  type: z.literal("live"),
-  spaceOwner: spaceOwnerSchema,
-  payload: payloadSchema,
-});
-export const liveServerMessageSchema = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("ready"), protocolVersion: z.number().int().positive() }),
-  z.strictObject({
-    type: z.literal("live"),
-    spaceOwner: spaceOwnerSchema,
-    deviceId: identitySchema,
-    payload: payloadSchema,
-  }),
-  z.strictObject({
-    type: z.literal("changed"),
-    spaceOwner: spaceOwnerSchema,
-    documentId: syncIdSchema,
-    lastSequence: sequenceSchema,
-    stateId: syncIdSchema.nullable(),
-  }),
-]);
-
 export const syncErrorSchema = z.discriminatedUnion("error", [
   z.strictObject({
     error: z.literal("protocol-unsupported"),
@@ -128,6 +105,4 @@ export type StoredUpdate = z.infer<typeof storedUpdateSchema>;
 export type ReadResult = z.infer<typeof readResultSchema>;
 export type BlobBegin = z.infer<typeof blobBeginSchema>;
 export type BlobStatus = z.infer<typeof blobStatusSchema>;
-export type LiveClientMessage = z.infer<typeof liveClientMessageSchema>;
-export type LiveServerMessage = z.infer<typeof liveServerMessageSchema>;
 export type SyncError = z.infer<typeof syncErrorSchema>;

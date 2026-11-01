@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { liveClientMessageSchema, stateEnvelopeSchema, updateEnvelopeSchema } from "./envelopes";
+import { stateEnvelopeSchema, updateEnvelopeSchema } from "./envelopes";
 
 const update = { updateId: "update_0123456789abcdef", payload: "AAEC", blobIds: [] };
 
@@ -22,12 +22,5 @@ test("a latest state names the state it replaces and the last update it includes
   expect(stateEnvelopeSchema.safeParse({ ...state, through: -1 }).success).toBe(false);
   expect(
     stateEnvelopeSchema.safeParse({ ...state, blobIds: ["blob_0123456789abcdef", "blob_0123456789abcdef"] }).success,
-  ).toBe(false);
-});
-
-test("a live message has no fields besides its space and encrypted bytes", () => {
-  expect(liveClientMessageSchema.safeParse({ type: "live", spaceOwner: null, payload: "AA==" }).success).toBe(true);
-  expect(
-    liveClientMessageSchema.safeParse({ type: "live", spaceOwner: null, payload: "AA==", cursor: 3 }).success,
   ).toBe(false);
 });

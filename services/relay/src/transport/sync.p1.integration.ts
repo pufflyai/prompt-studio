@@ -4,6 +4,8 @@ import { openUpdate, sealUpdate, UnreadableSyncData } from "pstdio-sync";
 import { fetchSyncSpaces } from "pstdio-sync/relay";
 import {
   type LiveServerMessage,
+  liveProtocolHeader,
+  liveProtocolVersion,
   liveServerMessageSchema,
   readResultSchema,
   type SyncRoute,
@@ -57,7 +59,11 @@ const open = async (options: Parameters<typeof fixture.context>[0] = {}) => {
       const url = new URL(syncPath({ kind: "live", projectId: context.scope.workbenchId }), server.url);
       url.protocol = "ws:";
       const socket = new WebSocket(url, {
-        headers: { authorization: `Bearer ${token}`, [syncProtocolHeader]: String(syncProtocolVersion) },
+        headers: {
+          authorization: `Bearer ${token}`,
+          [syncProtocolHeader]: String(syncProtocolVersion),
+          [liveProtocolHeader]: String(liveProtocolVersion),
+        },
       });
       const messages: LiveServerMessage[] = [];
       const waiting: ((message: LiveServerMessage) => void)[] = [];
@@ -199,6 +205,7 @@ test("projects of different accounts with the same ID stay separate", async () =
   try {
     const listener = relay.connect(other.token);
     expect(await listener.next()).toMatchObject({ type: "ready" });
+    listener.socket.send(JSON.stringify({ type: "discover", spaceOwner: null }));
     const route = (documentId: string, operation: "updates" | "read") =>
       ({ kind: "document", projectId, spaceOwner: null, documentId, operation }) as const;
     const update = { updateId: randomId("update"), payload: encode(new Uint8Array([5])), blobIds: [] };
@@ -210,7 +217,7 @@ test("projects of different accounts with the same ID stay separate", async () =
     const written = await relay.post(route(second, "updates"), update, other.token);
     expect(await written.json()).toEqual({ sequence: 1, duplicate: false });
     // The other account's device hears only about its own project, never about the first write.
-    expect(await listener.next()).toMatchObject({ type: "changed", documentId: second, lastSequence: 1 });
+    expect(await listener.next()).toMatchObject({ type: "discovered", documentId: second, lastSequence: 1 });
     listener.socket.close();
   } finally {
     await Promise.all([relay.close(), other.close()]);
@@ -223,17 +230,27 @@ test("live messages reach the project's other devices and are never stored", asy
     const other = await relay.device();
     const sender = relay.connect();
     const receiver = relay.connect(other.token);
-    expect(await sender.next()).toEqual({ type: "ready", protocolVersion: syncProtocolVersion });
-    expect(await receiver.next()).toEqual({ type: "ready", protocolVersion: syncProtocolVersion });
+    expect(await sender.next()).toEqual({ type: "ready", protocolVersion: liveProtocolVersion });
+    expect(await receiver.next()).toEqual({ type: "ready", protocolVersion: liveProtocolVersion });
     const payload = encode(crypto.getRandomValues(new Uint8Array(48)));
-    sender.socket.send(JSON.stringify({ type: "live", spaceOwner: null, payload }));
+    const topic = randomId("topic");
+    receiver.socket.send(JSON.stringify({ type: "subscribe", spaceOwner: null, topic }));
+    // The round trip to follow confirms the subscription reached the relay before publishing.
+    receiver.socket.send(JSON.stringify({ type: "follow", spaceOwner: null, topic }));
+    await receiver.next();
+    sender.socket.send(JSON.stringify({ type: "publish", spaceOwner: null, topic, payload }));
     expect(await receiver.next()).toEqual({
-      type: "live",
+      type: "event",
+      topic,
       spaceOwner: null,
       deviceId: relay.context.environmentId,
       payload,
     });
     const documentId = randomId("doc");
+    receiver.socket.send(JSON.stringify({ type: "subscribe", spaceOwner: null, topic: documentId }));
+    sender.socket.send(JSON.stringify({ type: "subscribe", spaceOwner: null, topic: documentId }));
+    sender.socket.send(JSON.stringify({ type: "follow", spaceOwner: null, topic: documentId }));
+    await sender.next();
     await relay.post(
       {
         kind: "document",
@@ -266,7 +283,7 @@ test("live messages reach the project's other devices and are never stored", asy
       await database.end();
     }
     // A device cannot write into another user's personal space.
-    sender.socket.send(JSON.stringify({ type: "live", spaceOwner: randomId("user"), payload }));
+    sender.socket.send(JSON.stringify({ type: "publish", spaceOwner: randomId("user"), topic, payload }));
     expect((await sender.closed).code).toBe(1008);
     receiver.socket.close();
   } finally {

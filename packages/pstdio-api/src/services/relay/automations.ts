@@ -1,3 +1,4 @@
+import type { LiveConnection } from "pstdio-sync/relay";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { deviceAutomationsOwnerId } from "../../features/extensions/device-automations";
@@ -6,6 +7,7 @@ import type { RelayWorkbench } from "./runtime";
 
 // Automations are ordinary encrypted project records, independent of extension enablement.
 export const startAutomationSync = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
@@ -17,6 +19,7 @@ export const startAutomationSync = (input: {
   const owner = { workbenchId: input.config.workbenchId, extensionId: deviceAutomationsOwnerId };
   const documents = createExtensionDocumentSync({ ...input, owner });
   const connection = createDocumentRelayConnection({
+    live: input.live,
     origin: input.config.relayOrigin,
     projectId: owner.workbenchId,
     signal,

@@ -1,4 +1,6 @@
 import { expect } from "bun:test";
+import { liveProtocolHeader, liveProtocolVersion } from "pstdio-sync-contracts";
+import { createPeerLive, type PeerLiveData } from "./packaged-live.fixture";
 
 const validateLeafBegin = async (request: Request) => {
   const input = (await request.json()) as { sha256: string; byteLength: number };
@@ -59,6 +61,7 @@ export const createPackagedSyncPeer = (
   tls: { key: Bun.BunFile; cert: Bun.BunFile } | undefined,
   hostname = "127.0.0.1",
 ) => {
+  const live = createPeerLive();
   const projects = new Set<string>();
   const blobs = createBlobStore();
   const documents = new Map<
@@ -84,18 +87,15 @@ export const createPackagedSyncPeer = (
   };
   const json = (body: unknown) => Response.json(body);
   // Like the relay, tell connected devices that a document changed so they read it again.
-  const publishChange = (documentId: string, spaceOwner: string | null) => {
+  const publishChange = (documentId: string, spaceOwner: string | null, created = false) => {
     const doc = document(documentId);
-    server.publish(
-      "changed",
-      JSON.stringify({
-        type: "changed",
-        spaceOwner,
-        documentId: documentId.slice(1),
-        lastSequence: doc.updates.length,
-        stateId: doc.state?.stateId ?? null,
-      }),
-    );
+    const notice = {
+      spaceOwner,
+      documentId: documentId.slice(1),
+      lastSequence: doc.updates.length,
+      stateId: doc.state?.stateId ?? null,
+    };
+    live.changed(notice, created);
   };
   const workbenchRequest = (path: string) => {
     if (path.endsWith("/keys"))
@@ -164,6 +164,7 @@ export const createPackagedSyncPeer = (
     }
     if (parts[6] === "states") return new Response(Buffer.from(String(doc.payload), "base64"));
     const body = await input();
+    const created = doc.updates.length === 0 && doc.state === null;
     for (const blobId of body.blobIds as string[]) expect(blobs.complete(`~${blobId}`)).toBe(true);
     expect(String(body.payload)).not.toContain("packaged-secret");
     if (path.endsWith("/updates")) {
@@ -175,7 +176,7 @@ export const createPackagedSyncPeer = (
         deviceId,
         createdAt: new Date().toISOString(),
       });
-      publishChange(id, spaceOwner);
+      publishChange(id, spaceOwner, created);
       return json({ sequence, duplicate: false });
     }
     expect(body.summary).toBeString();
@@ -190,12 +191,12 @@ export const createPackagedSyncPeer = (
       deviceId,
       createdAt: new Date().toISOString(),
     };
-    publishChange(id, spaceOwner);
+    publishChange(id, spaceOwner, created);
     return json({ state: doc.state });
   };
   // Private project data lives under /spaces/~<owner>; the rest of the path matches project documents.
   const serve = (port: number) =>
-    Bun.serve({
+    Bun.serve<PeerLiveData>({
       hostname,
       port,
       tls,
@@ -207,7 +208,8 @@ export const createPackagedSyncPeer = (
         expect(request.headers.get("pstdio-sync-protocol")).toBe("1");
         expect(request.headers.get("authorization")).toBe("Bearer relay-access");
         if (path.endsWith("/live")) {
-          if (server.upgrade(request)) return;
+          expect(request.headers.get(liveProtocolHeader)).toBe(String(liveProtocolVersion));
+          if (server.upgrade(request, { data: { discovery: new Set() } })) return;
           return new Response(null, { status: 426 });
         }
         const parts = path.split("/");
@@ -216,13 +218,7 @@ export const createPackagedSyncPeer = (
         if (parts[4] === "blobs") return blobs.request(request, path, parts);
         return documentRequest(request, path, parts, spaceOwner);
       },
-      websocket: {
-        open(socket) {
-          socket.subscribe("changed");
-          socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
-        },
-        message() {},
-      },
+      websocket: live.handlers,
     });
   let server = serve(0);
   const port = server.port;
