@@ -112,6 +112,25 @@ const github = () => {
     const fixed = ANSWERS[`${command} ${path}`];
     if (fixed !== undefined) return fixed;
     if (command === "run" && path === "view") return runView(args[2]);
+    if (command === "api" && path === "repos/{owner}/{repo}/actions/runs/9/artifacts")
+      return {
+        artifacts: [
+          { id: 90, name: "benchmark-results-linux-x64-storage", expired: false },
+          { id: 91, name: "benchmark-results-win32-x64-storage", expired: false },
+        ],
+      };
+    if (command === "run" && path === "download" && args[2] === "9") {
+      // A release run measures the tag's SHA; Windows runners used to append a CR to the ref.
+      const dir = args[args.indexOf("--dir") + 1];
+      const platform = args[args.indexOf("--name") + 1].includes("win32") ? "win32-x64" : "linux-x64";
+      const file = {
+        ...result("tag-sha"),
+        platform,
+        commit: { sha: "tag-sha", ref: platform === "win32-x64" ? "tag-sha\r" : "tag-sha" },
+      };
+      await writeFile(join(dir, `tag-sha-${platform}.json`), JSON.stringify(file));
+      return "";
+    }
     if (command === "run" && path === "download") {
       const dir = args[args.indexOf("--dir") + 1];
       const suite = args[args.indexOf("--name") + 1].split("-").at(-1);
@@ -213,6 +232,27 @@ describe("benchmark result cache", () => {
     const downloads = gh.calls.filter((args) => args[0] === "run" && args[1] === "download");
     expect(downloads.map((args) => args[args.indexOf("--name") + 1])).toEqual(["benchmark-results-linux-x64-runtime"]);
     expect((await readRuns(ctx)).find((run) => run.id === "7")?.complete).toBe(true);
+  });
+
+  test("a release run titled by its tag takes the one SHA its results measured", async () => {
+    const { ctx } = setup();
+    await writeRuns(ctx, [
+      {
+        id: "9",
+        title: "Benchmarks pstdio@0.46.0 on linux-x64,win32-x64",
+        status: "failed",
+        commits: [{ ref: "pstdio@0.46.0" }],
+        platforms: ["linux-x64", "win32-x64"],
+        url: "https://github.com/runs/9",
+        createdAt: "2026-11-01T02:42:00Z",
+        updatedAt: "2026-11-01T03:42:00Z",
+        synced: false,
+      },
+    ]);
+    await syncAll(ctx);
+    expect((await readRuns(ctx)).find((run) => run.id === "9")?.commits).toEqual([
+      { ref: "pstdio@0.46.0", sha: "tag-sha" },
+    ]);
   });
 
   test("a run that cannot sync does not stop the others", async () => {

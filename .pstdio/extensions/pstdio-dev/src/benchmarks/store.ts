@@ -236,7 +236,9 @@ const syncRun = async (ctx: StoreContext, run: RunRecord) => {
   try {
     const shas = await cacheRunArtifacts(ctx, run.id);
     // A release run is titled by its tag but records the SHA it measured, so a lone commit takes the lone SHA.
-    const only = run.commits.length === 1 && shas.size === 1 ? [...shas.values()][0] : undefined;
+    // Count SHAs, not refs: one commit can arrive under several refs, such as Windows refs ending in a CR.
+    const distinct = [...new Set(shas.values())];
+    const only = run.commits.length === 1 && distinct.length === 1 ? distinct[0] : undefined;
     run.commits = run.commits.map((commit) => ({ ...commit, sha: shas.get(commit.ref) ?? commit.sha ?? only }));
     run.synced = true;
     run.complete = true;
