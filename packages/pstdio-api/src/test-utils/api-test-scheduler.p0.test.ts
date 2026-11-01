@@ -147,3 +147,15 @@ test("a file that never finishes is stopped as stalled while the other files sti
     ["quick", "success", undefined],
   ]);
 });
+
+test("a file that finishes as its stall limit passes is not reported as stalled", async () => {
+  const results = await runApiTestFiles(
+    ["slow"],
+    async (_file, signal) => {
+      await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+      return 0;
+    },
+    { priority: "P2", stallMs: 20 },
+  );
+  expect(results.map((result) => [result.outcome, result.error])).toEqual([["success", undefined]]);
+});

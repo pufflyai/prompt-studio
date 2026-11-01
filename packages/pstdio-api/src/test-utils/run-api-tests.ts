@@ -3,7 +3,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { createApiTestPlan } from "./api-test-plan";
 import { runApiTestFiles } from "./api-test-scheduler";
-import { recordStalledProcesses, stopStalledProcesses } from "./api-test-stall";
+import { recordStalledProcesses, stopProcessTree } from "./api-test-stall";
 
 const packageRoot = resolve(import.meta.dirname, "../..");
 const root = resolve(packageRoot, "../..");
@@ -75,10 +75,16 @@ const runFile = async (file: string, signal: AbortSignal) => {
     },
   );
   const abort = () => {
-    if (signal.reason !== "stalled") return child.kill();
-    const report = resolve(directory, "files", String(index), "stall.txt");
-    console.error(`API test file stalled: ${file}. Process states: ${report}`);
-    stopStalledProcesses(recordStalledProcesses(child.pid, report));
+    try {
+      if (signal.reason !== "stalled") return;
+      const report = resolve(directory, "files", String(index), "stall.txt");
+      console.error(`API test file stalled: ${file}. Process states: ${report}`);
+      recordStalledProcesses(child.pid, report);
+    } catch (error) {
+      console.error(`Could not record the stalled processes of ${file}: ${error}`);
+    } finally {
+      stopProcessTree(child.pid);
+    }
   };
   signal.addEventListener("abort", abort, { once: true });
   if (signal.aborted) abort();

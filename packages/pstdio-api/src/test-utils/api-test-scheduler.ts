@@ -50,7 +50,7 @@ export const runApiTestFiles = async (
       controller.signal.removeEventListener("abort", stop);
       result.durationMs = performance.now() - started;
     }
-    if (fileController.signal.reason === "stalled" && !controller.signal.aborted) {
+    if (fileController.signal.reason === "stalled" && !controller.signal.aborted && result.exitCode !== 0) {
       result.outcome = "failure";
       result.error = `stalled for ${options.stallMs! / 1000} s`;
       console.error(`${file}: ${result.error}`);
