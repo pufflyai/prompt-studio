@@ -2,7 +2,7 @@ import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { useEffect, useRef, useState } from "react";
 import type { CanvasItem } from "../canvas-model";
 import type { commands } from "../commands";
-import type { FrameParameters, Values } from "./model";
+import { type FrameParameters, playbackRange, type Values } from "./model";
 
 export interface PlaybackSettings {
   time: number;
@@ -51,8 +51,11 @@ export const useMotionReview = (props: {
             time: review.frame / 60,
             rate: review.rate,
             loop: review.loop,
-            start: (review.loopRange?.[0] ?? 0) / 60,
-            end: review.loopRange ? review.loopRange[1] / 60 : parameters.motion!.duration,
+            ...playbackRange(
+              parameters.motion!.duration,
+              parameters.motion!.fps,
+              review.loopRange ? [review.loopRange[0] / 60, review.loopRange[1] / 60] : undefined,
+            ),
           });
           if (review.legacy) callbacks.current.restoreTheme?.(`pstdio-${review.settings.theme}`);
         },

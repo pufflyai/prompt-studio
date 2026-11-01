@@ -1,7 +1,16 @@
 import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { readLegacyComparison } from "../legacy";
+import { selectionKey } from "../parameters/commands";
 import { readCatalog } from "./catalog";
-import { addShader, deleteConfig, duplicateConfig, listShaders, readConfig, updateConfig } from "./configs";
+import {
+  addShader,
+  deleteConfig,
+  duplicateConfig,
+  listShaders,
+  readConfig,
+  shadersRoot,
+  updateConfig,
+} from "./configs";
 import { shadersChanged } from "./events";
 
 const findShader = async (ctx: CommandContext, id: string) => {
@@ -116,22 +125,34 @@ const remove = defineCommand({
 });
 
 // The comparison choice is review state, not design data, so it stays in extension storage.
+const comparisonKey = (shader: string) => {
+  if (!/^[a-z0-9-]+$/.test(shader)) throw new Error("Invalid shader ID");
+  return selectionKey({ canvas: `${shadersRoot}/${shader}/shader.canvas.tsx`, frame: "Compare" });
+};
+const versionExists = async (ctx: CommandContext, shader: string, file: string) =>
+  /^[a-z0-9][a-z0-9-]*\.json$/.test(file) && (await projectFiles(ctx).exists(`${shadersRoot}/${shader}/${file}`));
 const compareRead = defineCommand({
   id: "compare.read",
   title: l10n("compare.read", "Read the compared version"),
   params: { shader: params.text({ required: true }) },
   async run(ctx, input) {
-    const collection = ctx.storage.collection<string>("compare");
-    let version = await collection.get(input.shader);
-    if (!version && !(await ctx.storage.collection("legacy-imports").get(`shader:${input.shader}`))) {
+    const collection = ctx.storage.collection<string>("parameter-versions");
+    const key = comparisonKey(input.shader);
+    let file = await collection.get(key);
+    if (!file && !(await ctx.storage.collection("legacy-imports").get(`shader:${input.shader}`))) {
       const previous = await readLegacyComparison(ctx, input.shader);
       if (typeof previous === "string") {
-        version = previous;
-        await collection.put(input.shader, version);
+        file = `${previous}.json`;
+        await collection.put(key, file);
         await ctx.storage.collection<boolean>("legacy-imports").put(`shader:${input.shader}`, true);
       }
     }
-    return { version: version ?? null };
+    if (file && !(await versionExists(ctx, input.shader, file))) {
+      await collection.delete(key);
+      await ctx.storage.collection<boolean>("legacy-imports").put(`shader:${input.shader}`, true);
+      file = undefined;
+    }
+    return { version: file?.replace(/\.json$/, "") ?? null };
   },
 });
 
@@ -141,10 +162,14 @@ const compareUpdate = defineCommand({
   title: l10n("compare.update", "Choose the compared version"),
   params: { shader: params.text({ required: true }), version: params.text() },
   async run(ctx, input) {
-    const collection = ctx.storage.collection<string>("compare");
+    const collection = ctx.storage.collection<string>("parameter-versions");
+    const key = comparisonKey(input.shader);
+    if (input.version) {
+      const file = `${input.version}.json`;
+      if (!(await versionExists(ctx, input.shader, file))) throw new Error("That shader version does not exist");
+      await collection.put(key, file);
+    } else await collection.delete(key);
     await ctx.storage.collection<boolean>("legacy-imports").put(`shader:${input.shader}`, true);
-    if (input.version) await collection.put(input.shader, input.version);
-    else await collection.delete(input.shader);
     await ctx.events.emit(shadersChanged, {});
     return { version: input.version ?? null };
   },

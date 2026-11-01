@@ -49,7 +49,7 @@ const target = async (ctx: CommandContext, input: { canvas: string; frame: strin
   return { files: ctx.projectFiles, file, key, path, folder, read: readVersion };
 };
 const frameParams = { canvas: params.text({ required: true }), frame: params.text({ required: true }) };
-const selectionKey = (input: { canvas: string; frame: string }) => `${input.canvas}#${input.frame}`;
+export const selectionKey = (input: { canvas: string; frame: string }) => `${input.canvas}#${input.frame}`;
 const displayName = async (
   ctx: CommandContext,
   source: Awaited<ReturnType<typeof target>>,

@@ -95,3 +95,9 @@ export const nextPlaybackTime = (time: number, delta: number, start: number, end
   if (end <= start) return start;
   return loop ? start + ((next - start) % (end - start)) : Math.min(end, next);
 };
+
+export const playbackRange = (duration: number, fps = 60, range?: [number, number]) => {
+  const step = Math.min(duration, 1 / fps);
+  const start = Math.max(0, Math.min(duration - step, range?.[0] ?? 0));
+  return { start, end: Math.min(duration, Math.max(start + step, range?.[1] ?? duration)) };
+};

@@ -105,6 +105,19 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
     await expect(parameters.getByRole("textbox", { name: "Version name" })).toHaveValue("");
     await expect(parameters.getByRole("alert")).toHaveCount(0);
     await expect.poll(() => readValues("alternate.json")).toEqual({ label: "Archive" });
+    const selectVersion = async (file: string) => {
+      const response = await request.post(
+        `${baseURL}/v1/projects/${project.id}/extensions/commands/pstdio.canvas.command.parameters.select/execute`,
+        {
+          data: { source: "api", params: { canvas: "src/button.canvas.tsx", frame: "Primary", file } },
+        },
+      );
+      expect(response.ok()).toBe(true);
+    };
+    await selectVersion("default.json");
+    await expect(frame.getByRole("button", { name: "Version 2: Save" })).toBeVisible();
+    await selectVersion("alternate.json");
+    await expect(frame.getByRole("button", { name: "Version 2: Archive" })).toBeVisible();
     await page.reload();
     await expect(frame.getByRole("button", { name: "Version 2: Archive" })).toBeVisible();
     await viewer.locator("[data-canvas-select]").click();
