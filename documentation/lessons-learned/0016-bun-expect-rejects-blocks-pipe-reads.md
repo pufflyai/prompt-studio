@@ -2,7 +2,7 @@
 
 ## 1. When to use
 
-- Testing promises that need child-process output, socket input, or another I/O callback.
+- Testing promises that compile extension sources, read child-process output or socket input, or need another I/O callback.
 
 ## 2. Failure
 
@@ -13,6 +13,7 @@
 
 - Await the operation normally, then assert on its result or captured error.
 - Attach rejection handlers immediately when starting work before another await.
+- Extension installation can compile source before rejecting a conflicting contribution. Await the installation normally before checking its error and retained state.
 
 ```ts
 const error = await operation().catch((error: unknown) => error);
@@ -27,3 +28,4 @@ expect(error).toMatchObject({ message: "Steer rejected" });
 - [Testing isolation guidance](../guides/development/0002-testing.md#isolation)
 - [Question rejection tests](../../extensions/harness-codex/src/async-question-session.p0.test.ts)
 - [RPC EOF regression](../../extensions/harness-codex/src/app-server-rpc.p0.test.ts)
+- [Resource-prefix rejection and cleanup](../../packages/pstdio-api/src/features/extensions/command-environment/resource-prefix-scenarios.p1.test.ts)
