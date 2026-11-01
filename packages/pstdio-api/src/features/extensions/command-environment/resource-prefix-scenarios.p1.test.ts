@@ -6,9 +6,13 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createResourcesApi } from "./resources";
 
+const phase = (name: string) => console.error(`[prefix diagnostic ${process.pid} ${Date.now()}] ${name}`);
+
 const createHarness = async () => {
   const root = mkdtempSync(join(tmpdir(), "resource-prefix-scenarios-"));
+  phase("createTestApp:start");
   const app = await createTestApp();
+  phase("createTestApp:done");
 
   const writeSource = (name: string, prefix: unknown) => {
     const sourcePath = join(root, name);
@@ -50,7 +54,9 @@ const createHarness = async () => {
     app,
     install,
     close: async () => {
+      phase("app.close:start");
       await app.close();
+      phase("app.close:done");
       rmSync(root, { recursive: true, force: true });
     },
   };
@@ -59,11 +65,17 @@ const createHarness = async () => {
 test("a project whose derived shorthand collides with a reserved prefix can still allocate", async () => {
   const harness = await createHarness();
   try {
+    phase("project.create:start");
     const project = await harness.app.deps.projectService.create({ name: "Work Space" });
+    phase("project.create:done");
     expect(project.shorthand).not.toBe("WS");
+    phase("install:start");
     await harness.install(project.id, "planner", { $prefix: "project" });
+    phase("install:done");
 
+    phase("allocate:start");
     const allocated = await harness.allocate(project.id, "planner");
+    phase("allocate:done");
 
     expect(allocated.shorthand).toBe(`${project.shorthand}-1`);
   } finally {
