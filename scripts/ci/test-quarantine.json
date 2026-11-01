@@ -648,5 +648,19 @@
     "reason": "User-authorized release quarantine on 2026-10-31 with no execution allowance above 60 seconds. The signed Windows release candidate waits for cold Performance extension dependencies past the existing 60-second deadline. Retain the empty home, real default installs, transport/lifecycle assertions and cleanup.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/41234623888"],
     "removeWhen": "Fix cold Windows default-extension installation and complete this entire lifecycle case in its first native execution within the unchanged 60000 ms allowance, without prewarming, fewer extensions or retries."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "promotes ownership, detaches, and preserves data through a warm relaunch",
+    "platforms": ["darwin"],
+    "owner": "PS-932 / macOS desktop lifecycle",
+    "reason": "Times out intermittently on both hosted macOS architectures (Intel 4 and Apple Silicon 3 failures from 2026-10-28 to 2026-11-01, with 30, 45 and 60 second allowances). Identical test code passed on both architectures in earlier runs of the same PR. Preserve ownership promotion, detach, data preservation and relaunch assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41263904557/job/124722745543",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41227243185/job/124614013916",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41200165464/job/124538114747"
+    ],
+    "removeWhen": "Find the slow relaunch phase on macOS, fix it, then pass this complete case in ten independent runs on each macOS architecture within its existing allowance, without retries."
   }
 ]
