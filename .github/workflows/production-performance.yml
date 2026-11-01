@@ -42,9 +42,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { family: backend, os: ubuntu-24.04 }
-          - { family: backend, os: macos-15 }
-          - { family: backend, os: windows-2025 }
+          - { family: storage, os: ubuntu-24.04 }
+          - { family: storage, os: macos-15 }
+          - { family: storage, os: windows-2025 }
+          - { family: runtime, os: ubuntu-24.04 }
+          - { family: runtime, os: macos-15 }
+          - { family: runtime, os: windows-2025 }
           - { family: browser, os: ubuntu-24.04 }
           - { family: relay, os: ubuntu-24.04 }
           - { family: navigation, os: ubuntu-24.04 }
