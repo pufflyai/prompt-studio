@@ -65,6 +65,11 @@ export const ParameterMenu = (props: ParameterMenuProps) => {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const dirty = Object.keys(parameters.controls).some((key) => values[key] !== defaults[key]);
+  const local = useRef({ dirty, file });
+  useEffect(() => {
+    local.current = { dirty, file };
+  }, [dirty, file]);
   const edits = useRef(0);
   const send = useRef(onChange);
   useEffect(() => {
@@ -91,24 +96,24 @@ export const ParameterMenu = (props: ParameterMenuProps) => {
     const refresh = () => {
       const revision = ++request;
       const generation = edits.current;
+      const current = () => active && revision === request;
       void savedVersions(host, item, shader).then(
         (result) => {
-          if (!active || revision !== request) return;
+          if (!current()) return;
           setVersions(result.versions);
           if (generation !== edits.current) return;
-          const selected = result.versions.find((version) => version.file === result.file);
-          if (selected) {
-            setFile(selected.file);
-            const next = editableValues(parameters, selected.values);
-            setDefaults(next);
-            if (!edits.current) {
-              setValues((current) => ({ ...current, ...next }));
-              send.current(next);
-            }
-          }
+          const selectedFile = local.current.dirty ? local.current.file : result.file;
+          const selected = result.versions.find((version) => version.file === selectedFile);
+          if (!selected) return;
+          setFile(selected.file);
+          const next = editableValues(parameters, selected.values);
+          setDefaults(next);
+          if (local.current.dirty) return;
+          setValues((current) => ({ ...current, ...next }));
+          send.current(next);
         },
         (error) => {
-          if (active && revision === request) setError(String(error));
+          if (current()) setError(String(error));
         },
       );
     };
@@ -139,13 +144,6 @@ export const ParameterMenu = (props: ParameterMenuProps) => {
     if (host)
       void createWebviewClient<typeof commands>(host)
         .commands["parameters.select"]({ ...target, file: version.file })
-        .then(async () => {
-          if (shader && item.preview.exportName === "Compare")
-            await createWebviewClient<typeof commands>(host).commands["compare.update"]({
-              shader,
-              version: version.file.replace(/\.json$/, ""),
-            });
-        })
         .catch((error) => setError(String(error)));
   };
   const manage = async (remove: boolean) => {
@@ -198,7 +196,6 @@ export const ParameterMenu = (props: ParameterMenuProps) => {
       setSaving(false);
     }
   };
-  const dirty = Object.keys(parameters.controls).some((key) => values[key] !== defaults[key]);
   return (
     <>
       <Popover.Root positioning={{ placement: "bottom-end" }}>
