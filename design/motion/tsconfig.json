@@ -8,10 +8,7 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["bun"],
-    "paths": {
-      "motion-lab/kit": ["./kit/index.ts"]
-    }
+    "types": ["bun"]
   },
   "include": ["."]
 }

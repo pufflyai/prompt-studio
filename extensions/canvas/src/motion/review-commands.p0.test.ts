@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { CommandContext } from "@pstdio/sdk/extensions";
 import {
   createMemoryRepoFiles,
   createMemoryResources,
@@ -20,6 +21,30 @@ const fixture = async () => {
   );
   return { storage, projectFiles };
 };
+
+test("imports a legacy review once and keeps subsequent Canvas review changes", async () => {
+  const context = await fixture();
+  const input = { study: "tabs" };
+  const args = makeCommandArgs({ ...context, overrides: { projectFiles: context.projectFiles }, params: input });
+  const initial = await commands["review.read"].run(...args);
+  const legacy = {
+    ...initial,
+    frame: 90,
+    rate: 0.5,
+    loop: true,
+    settings: { ...initial.settings, theme: "light" as const },
+  };
+  let exports = 0;
+  args[0].commands.execute = (async () => {
+    exports += 1;
+    return { ok: true, status: "success", value: legacy };
+  }) as CommandContext["commands"]["execute"];
+  const imported = await commands["review.read"].run(...args);
+  expect(imported).toMatchObject({ frame: 90, rate: 0.5, loop: true, legacy: true, restored: true });
+  await commands["review.update"].run(args[0], { study: "tabs", change: { frame: 120 } });
+  expect((await commands["review.read"].run(...args)).frame).toBe(120);
+  expect(exports).toBe(1);
+});
 test("public playback actions update the chosen study's shared review state", async () => {
   const context = await fixture();
   const playing = await commands["review.playback"].run(

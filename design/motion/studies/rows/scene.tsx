@@ -1,5 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { SceneProps } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
 import {
   duration,
   FileRow,
@@ -11,7 +11,7 @@ import {
   timings,
   track,
   WorkbenchFrame,
-} from "motion-lab/kit";
+} from "../../kit";
 
 export const Rows = (props: SceneProps) => {
   const { time } = props;

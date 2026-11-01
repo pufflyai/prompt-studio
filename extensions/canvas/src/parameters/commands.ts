@@ -1,5 +1,6 @@
-import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { buildFiles, readBuild } from "../build-mount";
+import { parametersChanged } from "../events";
 import type { Values } from "./model";
 
 const filename = (value: unknown) => {
@@ -25,19 +26,43 @@ const target = async (ctx: CommandContext, input: { canvas: string; frame: strin
     const values = object(key ? data[key] : data);
     if (
       !Object.keys(values).length ||
-      Object.values(values).some((value) => !["string", "number", "boolean"].includes(typeof value))
+      Object.values(values).some(
+        (value) =>
+          !["string", "number", "boolean"].includes(typeof value) ||
+          (typeof value === "number" && !Number.isFinite(value)),
+      )
     )
       throw new Error("This version has no editable values");
     return { data, values: values as Values };
   };
-  return { files: ctx.projectFiles, file, key, path, folder, read };
+  const original = await read(file);
+  const readVersion = async (name: string) => {
+    const version = await read(name);
+    const expected = Object.keys(original.values);
+    if (
+      Object.keys(version.values).length !== expected.length ||
+      expected.some((key) => typeof original.values[key] !== typeof version.values[key])
+    )
+      throw new Error("This file is not a version of the frame's parameters");
+    return version;
+  };
+  return { files: ctx.projectFiles, file, key, path, folder, read: readVersion };
 };
 const frameParams = { canvas: params.text({ required: true }), frame: params.text({ required: true }) };
 const selectionKey = (input: { canvas: string; frame: string }) => `${input.canvas}#${input.frame}`;
+const displayName = async (
+  ctx: CommandContext,
+  source: Awaited<ReturnType<typeof target>>,
+  file: string,
+  data: Record<string, unknown>,
+) => {
+  const stored = await ctx.storage.collection<string>("parameter-version-names").get(source.path(file));
+  return stored ?? (source.key && typeof data.name === "string" ? data.name : file.replace(/\.json$/, ""));
+};
 const versions = defineCommand({
   id: "parameters.versions",
   cli: true,
-  title: "Read saved frame parameters",
+  title: l10n("parameters.versions", "Read saved frame parameters"),
   params: frameParams,
   async run(ctx, input) {
     const source = await target(ctx, input);
@@ -47,7 +72,7 @@ const versions = defineCommand({
       const file = entry.path.split("/").at(-1)!;
       try {
         const { data, values } = await source.read(file);
-        versions.push({ file, name: typeof data.name === "string" ? data.name : file.replace(/\.json$/, ""), values });
+        versions.push({ file, name: await displayName(ctx, source, file, data), values });
       } catch {
         /* Other JSON files beside the canvas are not saved parameter versions. */
       }
@@ -61,7 +86,7 @@ const save = defineCommand({
   id: "parameters.save",
   cli: true,
   mutating: true,
-  title: "Save frame parameters",
+  title: l10n("parameters.save", "Save frame parameters"),
   params: {
     ...frameParams,
     file: params.text(),
@@ -92,41 +117,49 @@ const save = defineCommand({
       if (!slug) throw new Error("Enter a version name");
       file = filename(`${slug}.json`);
       if (await source.files.exists(source.path(file))) throw new Error("That version already exists");
-      data.name = input.name.trim();
+      if (source.key) data.name = input.name.trim();
     }
     const saved = source.key ? { ...data, [source.key]: values } : values;
     await source.files.writeText(source.path(file), `${JSON.stringify(saved, null, 2)}\n`);
+    if (!source.key && input.name)
+      await ctx.storage.collection<string>("parameter-version-names").put(source.path(file), input.name.trim());
     await ctx.storage.collection<string>("parameter-versions").put(selectionKey(input), file);
-    return { file, name: typeof data.name === "string" ? data.name : file, values };
+    await ctx.events.emit(parametersChanged, {});
+    return { file, name: await displayName(ctx, source, file, data), values };
   },
 });
 const select = defineCommand({
   id: "parameters.select",
   mutating: true,
   cli: true,
-  title: "Choose a saved frame version",
+  title: l10n("parameters.select", "Choose a saved frame version"),
   params: { ...frameParams, file: params.text({ required: true }) },
   async run(ctx, input) {
     const source = await target(ctx, input);
     const { data, values } = await source.read(filename(input.file));
     await ctx.storage.collection<string>("parameter-versions").put(selectionKey(input), input.file);
-    return { file: input.file, name: typeof data.name === "string" ? data.name : input.file, values };
+    await ctx.events.emit(parametersChanged, {});
+    return { file: input.file, name: await displayName(ctx, source, input.file, data), values };
   },
 });
 const rename = defineCommand({
   id: "parameters.rename",
   mutating: true,
   cli: true,
-  title: "Rename a saved frame version",
+  title: l10n("parameters.rename", "Rename a saved frame version"),
   params: { ...frameParams, file: params.text({ required: true }), name: params.text({ required: true }) },
   async run(ctx, input) {
     const source = await target(ctx, input);
     const { data } = await source.read(filename(input.file));
     if (!input.name.trim()) throw new Error("Enter a version name");
-    await source.files.writeText(
-      source.path(input.file),
-      `${JSON.stringify({ ...data, name: input.name.trim() }, null, 2)}\n`,
-    );
+    if (source.key)
+      await source.files.writeText(
+        source.path(input.file),
+        `${JSON.stringify({ ...data, name: input.name.trim() }, null, 2)}\n`,
+      );
+    else
+      await ctx.storage.collection<string>("parameter-version-names").put(source.path(input.file), input.name.trim());
+    await ctx.events.emit(parametersChanged, {});
     return { file: input.file, name: input.name.trim() };
   },
 });
@@ -134,14 +167,17 @@ const remove = defineCommand({
   id: "parameters.delete",
   mutating: true,
   cli: true,
-  title: "Delete a saved frame version",
+  title: l10n("parameters.delete", "Delete a saved frame version"),
   params: { ...frameParams, file: params.text({ required: true }) },
   async run(ctx, input) {
     const source = await target(ctx, input);
     const file = filename(input.file);
     if (file === source.file) throw new Error("The authored frame still uses this version");
+    await source.read(file);
     await source.files.delete(source.path(file));
+    await ctx.storage.collection("parameter-version-names").delete(source.path(file));
     await ctx.storage.collection<string>("parameter-versions").put(selectionKey(input), source.file);
+    await ctx.events.emit(parametersChanged, {});
     return { file: source.file };
   },
 });

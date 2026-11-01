@@ -109,3 +109,20 @@ test("reads titles, groups and frames, and finds the nearest preview file", asyn
     frames: [{ exportName: "Ready", name: "Ready" }],
   });
 });
+
+test("indexes literal save declarations without executing project code", async () => {
+  const root = project(
+    {
+      "shader.canvas.tsx": `
+    throw new Error("Never execute while discovering");
+    export default { save: { file: "default.json", key: "values" } };
+    export const First = {};
+    export const Second = { save: { file: "soft.json" } };
+  `,
+    },
+    true,
+  );
+  const [canvas] = await discoverCanvases(root);
+  expect(canvas.frames[0].save).toEqual({ file: "default.json", key: "values" });
+  expect(canvas.frames[1].save).toEqual({ file: "soft.json", key: undefined });
+});

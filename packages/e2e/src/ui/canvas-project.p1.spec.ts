@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -13,9 +13,13 @@ const writeProject = (root: string, label: string, color = "rgb(0, 128, 0)") => 
     "package.json": `{ "name": "canvas-project", "private": true }\n`,
     "src/button.css": `.button { color: ${color}; }\n`,
     "src/button.tsx": `import "./button.css";\nexport const Button = (props: { label: string }) => <button className="button">${label}: {props.label}</button>;\n`,
+    "src/default.json": '{"name":"Default","values":{"label":"Save"}}',
     "src/button.canvas.tsx": `import { Button } from "./button";
-export default { title: "Components/Button", component: Button };
-export const Primary = { args: { label: "Save" } };
+import config from "./default.json";
+export default { title: "Components/Button", component: Button, args: config.values,
+ controls: { label: { type: "select", label: "Label", options: [{ value: "Save", label: "Save" }, { value: "Archive", label: "Archive" }] } },
+ save: { file: "default.json", key: "values" } };
+export const Primary = {};
 `,
   };
   for (const [path, content] of Object.entries(files)) {
@@ -86,6 +90,35 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
       timeout: 30_000,
     });
     await expect(viewer.locator("[data-ui-canvas-error]")).toHaveCount(0);
+
+    // Critical: saving is explicit, durable, and failures retain the frame's edits for retry.
+    await viewer.locator("[data-canvas-select]").click();
+    await viewer.getByRole("button", { name: "Parameters", exact: true }).click();
+    const parameters = viewer.getByRole("dialog", { name: "Parameters" });
+    await parameters.getByRole("button", { name: "Save", exact: true }).first().click();
+    await viewer.getByRole("menuitemradio", { name: "Archive", exact: true }).click();
+    await expect(frame.getByRole("button", { name: "Version 2: Archive" })).toBeVisible();
+    const readValues = (file: string) => JSON.parse(readFileSync(join(root, "src", file), "utf8")).values;
+    expect(readValues("default.json")).toEqual({ label: "Save" });
+    await parameters.getByRole("textbox", { name: "Version name" }).fill("Alternate");
+    await parameters.getByRole("button", { name: "Save as new version", exact: true }).click();
+    await expect(parameters.getByRole("textbox", { name: "Version name" })).toHaveValue("");
+    await expect(parameters.getByRole("alert")).toHaveCount(0);
+    await expect.poll(() => readValues("alternate.json")).toEqual({ label: "Archive" });
+    await page.reload();
+    await expect(frame.getByRole("button", { name: "Version 2: Archive" })).toBeVisible();
+    await viewer.locator("[data-canvas-select]").click();
+    await viewer.getByRole("button", { name: "Parameters", exact: true }).click();
+    await parameters.getByRole("button", { name: "Archive", exact: true }).click();
+    await viewer.getByRole("menuitemradio", { name: "Save", exact: true }).click();
+    writeFileSync(join(root, "src/alternate.json"), "{}");
+    await parameters.getByRole("button", { name: "Save", exact: true }).last().click();
+    await expect(parameters.getByRole("alert")).toBeVisible();
+    await expect(frame.getByRole("button", { name: "Version 2: Save" })).toBeVisible();
+    writeFileSync(join(root, "src/alternate.json"), '{"name":"Alternate","values":{"label":"Archive"}}');
+    await parameters.getByRole("button", { name: "Save", exact: true }).last().click();
+    await expect.poll(() => readValues("alternate.json")).toEqual({ label: "Save" });
+    expect(readValues("default.json")).toEqual({ label: "Save" });
   } finally {
     await stopChildProcess(watcher);
     rmSync(root, { recursive: true, force: true });

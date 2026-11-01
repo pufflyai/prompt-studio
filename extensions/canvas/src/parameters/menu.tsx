@@ -6,7 +6,9 @@ import { useContext, useEffect, useRef, useState } from "react";
 import type { CanvasItem } from "../canvas-model";
 import type { commands } from "../commands";
 import { Button } from "../components/themed-primitives";
+import { parametersChanged } from "../events";
 import { FrameHostContext } from "../frames/frame-loader";
+import { shadersChanged } from "../shaders/events";
 import type { FrameParameters, Values } from "./model";
 import { Playback } from "./playback";
 import { editableValues, useMotionReview } from "./review";
@@ -85,28 +87,40 @@ export const ParameterMenu = (props: ParameterMenuProps) => {
   useEffect(() => {
     if (!host || !item.preview.save) return;
     let active = true;
-    void savedVersions(host, item, shader).then(
-      (result) => {
-        if (!active) return;
-        setVersions(result.versions);
-        if (!active) return;
-        const selected = result.versions.find((version) => version.file === result.file);
-        if (selected) {
-          setFile(selected.file);
-          const next = editableValues(parameters, selected.values);
-          setDefaults(next);
-          if (!edits.current) {
-            setValues((current) => ({ ...current, ...next }));
-            send.current(next);
+    let request = 0;
+    const refresh = () => {
+      const revision = ++request;
+      const generation = edits.current;
+      void savedVersions(host, item, shader).then(
+        (result) => {
+          if (!active || revision !== request) return;
+          setVersions(result.versions);
+          if (generation !== edits.current) return;
+          const selected = result.versions.find((version) => version.file === result.file);
+          if (selected) {
+            setFile(selected.file);
+            const next = editableValues(parameters, selected.values);
+            setDefaults(next);
+            if (!edits.current) {
+              setValues((current) => ({ ...current, ...next }));
+              send.current(next);
+            }
           }
-        }
-      },
-      (error) => {
-        if (active) setError(String(error));
-      },
-    );
+        },
+        (error) => {
+          if (active && revision === request) setError(String(error));
+        },
+      );
+    };
+    const client = createWebviewClient<typeof commands>(host);
+    const stop = [
+      client.events.subscribe(parametersChanged, refresh),
+      client.events.subscribe(shadersChanged, refresh),
+    ];
+    refresh();
     return () => {
       active = false;
+      for (const unsubscribe of stop) unsubscribe();
     };
   }, [host, item, parameters, shader]);
   const change = (next: Values) => {

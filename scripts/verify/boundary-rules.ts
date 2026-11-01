@@ -161,7 +161,8 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-scripts",
   ],
   "@pstdio/landing-page": ["@pstdio/canvas", "@pstdio/ui"],
-  "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],
+  "motion-lab": ["@pstdio/sdk"],
+  "design-studies": ["@pstdio/canvas", "@pstdio/ui"],
 };
 
 // Extensions may only consume the public authoring surface.

@@ -6,7 +6,7 @@ Status: Accepted for PS-620. The streaming decision is recorded in Planner reque
 
 ## Context
 
-Motion Lab studies define how the app should move. They render with Remotion, and the timings live in the private extension's kit. The Motion Lab guide (`design/motion/README.md`) says production UI and the host do not depend on Motion Lab or Remotion. Production has no motion system today: no tokens, no animation library, and no reduced motion handling.
+Motion Lab studies define how the app should move. They render in UI Canvas through project-owned canvas files, and the timings live in `design/motion/kit`. The Motion Lab guide (`design/motion/README.md`) says production UI and the host do not depend on Motion Lab or Remotion. Production has no motion system today: no tokens, no animation library, and no reduced motion handling.
 
 Each motion in PS-620 needs four things:
 

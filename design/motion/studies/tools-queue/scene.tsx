@@ -1,17 +1,7 @@
 import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import { GripVertical, Pencil, Trash2 } from "lucide-react";
-import type { SceneProps } from "motion-lab/kit";
-import {
-  Activity,
-  Composer,
-  duration,
-  Message,
-  reveal,
-  SessionWindow,
-  ToolTimeline,
-  timings,
-  track,
-} from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { Activity, Composer, duration, Message, reveal, SessionWindow, ToolTimeline, timings, track } from "../../kit";
 
 const QueueRow = (props: SceneProps & { start: number; end: number; text: string }) => {
   const { time, start, end, text } = props;

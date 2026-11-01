@@ -1,8 +1,8 @@
 import { Box, Button, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import { Header } from "@pstdio/ui";
 import { Copy, FileText, MoreHorizontal, Pencil, Trash2, X } from "lucide-react";
-import type { SceneProps } from "motion-lab/kit";
-import { duration, FileRow, SceneWindow, timings, tooltipDelaySeconds, track } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { duration, FileRow, SceneWindow, timings, tooltipDelaySeconds, track } from "../../kit";
 
 export const Surfaces = (props: SceneProps) => {
   const { time, reducedMotion } = props;
