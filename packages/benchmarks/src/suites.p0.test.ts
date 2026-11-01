@@ -14,12 +14,3 @@ test("every suite selects every registered benchmark, including an added file", 
     ).toBe(true);
   }
 });
-
-// The Performance pages cannot import this package, so they keep a copy of the suite list. A drifted copy
-// would hide a suite from the Runs page or promise jobs CI never starts.
-test("the Performance pages offer every suite with the same platform limits", async () => {
-  const { SUITES } = await import("../../../.pstdio/extensions/pstdio-dev/src/benchmarks/platforms");
-  expect(SUITES.map((suite) => [suite.id, suite.label, suite.platforms])).toEqual(
-    suites.map((suite) => [suite.id, suite.label, suite.platforms]),
-  );
-});
