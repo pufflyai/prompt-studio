@@ -1,31 +1,31 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
-import { storyTrends } from "../webview/story-fixtures";
-import { type TrendsMode, TrendsView, type TrendsViewProps } from "./trends-view";
+import type { ReleaseStatus } from "../benchmarks/analysis";
+import { PLATFORMS } from "../benchmarks/platforms";
+import { ReleasePending } from "../webview/result-notices";
+import { storyPlatformTrends, storyTrends } from "../webview/story-fixtures";
+import { TrendsView, type TrendsViewProps } from "./trends-view";
 
-type InteractiveTrendsProps = Pick<TrendsViewProps, "mode" | "versions" | "metrics"> & {
+type InteractiveTrendsProps = Pick<TrendsViewProps, "versions" | "trends"> & {
   showTable?: boolean;
+  platforms?: string[];
+  pending?: ReleaseStatus;
 };
 const InteractiveTrends = (props: InteractiveTrendsProps) => {
-  const [mode, setMode] = useState<TrendsMode>(props.mode);
-  const [versionIndex, setVersionIndex] = useState(props.versions.length - 1);
   const [chosenVersions, setChosenVersions] = useState<string[]>();
   const [showTable, setShowTable] = useState(props.showTable ?? false);
-  const [platform, setPlatform] = useState("linux-x64");
+  const [platforms, setPlatforms] = useState(props.platforms ?? PLATFORMS.map((platform) => platform.id));
   return (
     <Box h="100dvh">
       <TrendsView
         versions={props.versions}
-        metrics={props.metrics}
-        platform={platform}
-        mode={mode}
-        versionIndex={versionIndex}
+        trends={props.trends}
+        platforms={platforms}
         chosenVersions={chosenVersions}
         showTable={showTable}
-        onPlatformChange={setPlatform}
-        onModeChange={setMode}
-        onVersionChange={setVersionIndex}
+        notice={props.pending ? <ReleasePending status={props.pending} /> : undefined}
+        onPlatformsChange={setPlatforms}
         onChosenVersionsChange={setChosenVersions}
         onShowTableChange={setShowTable}
       />
@@ -36,23 +36,38 @@ const meta: CanvasMeta<typeof InteractiveTrends> = {
   title: "Extensions/Prompt Studio Dev/Performance trends",
   component: InteractiveTrends,
   fullscreen: true,
-  args: { versions: storyTrends.versions, metrics: storyTrends.metrics },
+  args: { versions: storyTrends.versions, trends: storyPlatformTrends },
 };
 export default meta;
 type Story = CanvasFrame<typeof InteractiveTrends>;
-export const AcrossVersions: Story = {
-  id: "extensions-prompt-studio-dev-performance-trends--across-versions",
-  args: { mode: "versions" },
+export const AllPlatforms: Story = {
+  id: "extensions-prompt-studio-dev-performance-trends--all-platforms",
+};
+export const OnePlatform: Story = {
+  id: "extensions-prompt-studio-dev-performance-trends--one-platform",
+  args: { platforms: ["linux-x64"] },
 };
 export const AsTable: Story = {
   id: "extensions-prompt-studio-dev-performance-trends--as-table",
-  args: { mode: "versions", showTable: true },
+  args: { showTable: true },
 };
-export const OneVersion: Story = {
-  id: "extensions-prompt-studio-dev-performance-trends--one-version",
-  args: { mode: "version" },
+export const ReleasePendingTrends: Story = {
+  id: "extensions-prompt-studio-dev-performance-trends--release-pending",
+  description: "A published release whose benchmarks are still running is named instead of drawn as zero.",
+  args: {
+    pending: {
+      version: "0.52.0",
+      finished: ["linux-x64"],
+      running: ["darwin-arm64", "darwin-x64", "win32-x64"],
+      missing: [],
+    },
+  },
 };
 export const NoReleaseResults: Story = {
   id: "extensions-prompt-studio-dev-performance-trends--no-release-results",
-  args: { mode: "versions", versions: [], metrics: [] },
+  args: {
+    versions: [],
+    trends: [],
+    pending: { version: "0.45.0", finished: [], running: [], missing: PLATFORMS.map((platform) => platform.id) },
+  },
 };

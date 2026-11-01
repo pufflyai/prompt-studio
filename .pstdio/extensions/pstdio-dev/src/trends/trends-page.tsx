@@ -1,48 +1,44 @@
 import { useCommandQuery } from "@pstdio/sdk/extensions/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useState } from "react";
-import { DEFAULT_PLATFORM } from "../benchmarks/platforms";
+import { PLATFORMS } from "../benchmarks/platforms";
 import { useBenchmarks, useBenchmarksRefresh } from "../webview/client";
+import { ReleasePending, SyncFailed } from "../webview/result-notices";
 import { useSyncOnOpen } from "../webview/use-sync";
-import { type TrendsMode, TrendsView } from "./trends-view";
+import { TrendsView } from "./trends-view";
 
 export const TrendsPage = () => {
   const { client } = useBenchmarks();
-  useSyncOnOpen();
-  const [platform, setPlatform] = useState(DEFAULT_PLATFORM);
-  const [mode, setMode] = useState<TrendsMode>("versions");
-  const [versionIndex, setVersionIndex] = useState<number>();
+  const sync = useSyncOnOpen();
+  const [platforms, setPlatforms] = useState<string[]>(PLATFORMS.map((platform) => platform.id));
   const [chosenVersions, setChosenVersions] = useState<string[]>();
   const [showTable, setShowTable] = useState(false);
   useBenchmarksRefresh();
-  const trends = useCommandQuery({
-    queryKey: ["trends", platform],
-    command: () => client.commands["benchmarks.trends"]({ platform }),
-  });
+  // Every platform loads at once, so choosing platforms only changes which lines show.
+  const trends = useCommandQuery({ queryKey: ["trends"], command: () => client.commands["benchmarks.trends"]() });
   if (trends.error)
     return (
       <AlertMessage status="error" title="Benchmark results could not be read">
         {trends.error.message}
       </AlertMessage>
     );
-  const versions = trends.data?.versions ?? [];
+  const pending = trends.data?.pendingRelease;
   return (
     <TrendsView
-      versions={versions}
-      metrics={trends.data?.metrics ?? []}
-      platform={platform}
-      mode={mode}
-      versionIndex={versionIndex ?? versions.length - 1}
+      versions={trends.data?.versions ?? []}
+      trends={trends.data?.trends ?? []}
+      platforms={platforms}
       chosenVersions={chosenVersions}
       showTable={showTable}
-      onPlatformChange={(next) => {
-        // Another platform can have other releases, so the version choices start over.
-        setPlatform(next);
-        setVersionIndex(undefined);
-        setChosenVersions(undefined);
-      }}
-      onModeChange={setMode}
-      onVersionChange={setVersionIndex}
+      notice={
+        <>
+          {sync.error ? (
+            <SyncFailed error={sync.error} syncedAt={sync.syncedAt} retrying={sync.retrying} onRetry={sync.retry} />
+          ) : null}
+          {pending ? <ReleasePending status={pending} /> : null}
+        </>
+      }
+      onPlatformsChange={setPlatforms}
       onChosenVersionsChange={setChosenVersions}
       onShowTableChange={setShowTable}
     />

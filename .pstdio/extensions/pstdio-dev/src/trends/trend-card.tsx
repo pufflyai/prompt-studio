@@ -1,27 +1,38 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useState } from "react";
-import type { TrendMetric, TrendPoint } from "../benchmarks/analysis";
+import { platformLabel } from "../benchmarks/platforms";
 import { formatChangeRange, formatRange, formatValue, verdictText } from "../webview/format";
-import { TrendChart } from "./trend-chart";
+import { type FocusedPoint, type PlatformSeries, TrendChart } from "./trend-chart";
 
 interface TrendCardProps {
-  metric: TrendMetric;
+  series: PlatformSeries[];
   versions: string[];
 }
 
-const pointDetail = (point: TrendPoint, metric: TrendMetric) =>
+// One sample has no spread, so it shows no interval and its change no range.
+const changeText = (point: FocusedPoint, series: PlatformSeries) => {
+  if (!point.change) return "first result";
+  const text = verdictText(point.change, series.metric.unit);
+  return point.change.verdict === "inconclusive" ? text : `${text} (${formatChangeRange(point.change)})`;
+};
+
+const pointDetail = (point: FocusedPoint, series: PlatformSeries) =>
   [
     point.version,
-    `median ${formatValue(point.median, metric.unit)}`,
-    `95% CI ${formatRange(point.low, point.high, metric.unit)}`,
-    point.change ? `${verdictText(point.change, metric.unit)} (${formatChangeRange(point.change)})` : "first result",
+    platformLabel(point.platform),
+    `median ${formatValue(point.median, series.metric.unit)}`,
+    point.samples > 1 ? `95% CI ${formatRange(point.low, point.high, series.metric.unit)}` : "1 sample",
+    changeText(point, series),
   ].join(" · ");
 
-// One time series per benchmark: median line, 95% interval band, and the budget when it has one.
+// One time series per benchmark: a median line per platform, and the budget when it has one.
 export const TrendCard = (props: TrendCardProps) => {
-  const { metric, versions } = props;
-  const [focused, setFocused] = useState<TrendPoint | null>(null);
+  const { series, versions } = props;
+  const [focused, setFocused] = useState<FocusedPoint | null>(null);
+  const [first] = series;
+  if (!first) return null;
+  const { metric } = first;
   return (
     <SimpleCard minW="0">
       <SimpleCardBody display="flex" flexDirection="column" gap="xs">
@@ -36,9 +47,9 @@ export const TrendCard = (props: TrendCardProps) => {
           )}
         </HStack>
         <Stack gap="2xs">
-          <TrendChart metric={metric} versions={versions} height={180} onFocusPoint={setFocused} />
+          <TrendChart series={series} versions={versions} height={180} onFocusPoint={setFocused} />
           <Text textStyle="label/XS" color="fg.muted" minH="4" aria-live="polite" truncate>
-            {focused ? pointDetail(focused, metric) : ""}
+            {focused ? pointDetail(focused, first) : ""}
           </Text>
         </Stack>
       </SimpleCardBody>

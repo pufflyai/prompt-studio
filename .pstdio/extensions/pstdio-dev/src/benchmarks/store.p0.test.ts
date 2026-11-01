@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import type { BenchmarkResultFile } from "./result-file";
-import { readResults, readRuns, syncAll, writeRuns } from "./store";
+import { readReleases, readResults, readRuns, readSyncedAt, syncAll, writeRuns } from "./store";
 
 const result = (sha: string, suite = "storage"): BenchmarkResultFile => ({
   format: 1,
@@ -15,6 +15,29 @@ const result = (sha: string, suite = "storage"): BenchmarkResultFile => ({
   suites: [{ id: suite, label: suite, source: `packages/${suite}` }],
   metrics: [{ suite, metric: `${suite}-metric`, label: suite, unit: "ms", values: [9, 8.8, 8.9] }],
 });
+
+// Run 8 is still running its runtime job; every other run has finished.
+const runView = (runId: string) => {
+  const running = runId === "8";
+  return {
+    status: running ? "in_progress" : "completed",
+    conclusion: running ? null : "success",
+    jobs: [
+      {
+        name: "linux-x64 · storage",
+        status: "completed",
+        conclusion: "success",
+        steps: [{ name: "Run benchmarks", status: "completed", conclusion: "success" }],
+      },
+      {
+        name: "linux-x64 · runtime",
+        status: running ? "in_progress" : "completed",
+        conclusion: running ? null : "success",
+        steps: [{ name: "Run benchmarks", status: running ? "in_progress" : "completed", conclusion: null }],
+      },
+    ],
+  };
+};
 
 // gh is the boundary to GitHub, so the test answers its commands the way GitHub does.
 const github = () => {
@@ -47,7 +70,7 @@ const github = () => {
       return [
         {
           databaseId: 7,
-          displayTitle: "Benchmarks a,b",
+          displayTitle: "Benchmarks a,b on linux-x64",
           status: "completed",
           conclusion: "success",
           url: "https://github.com/runs/7",
@@ -56,7 +79,7 @@ const github = () => {
         },
         {
           databaseId: 8,
-          displayTitle: "Benchmarks c",
+          displayTitle: "Benchmarks c on linux-x64,win32-x64",
           status: "in_progress",
           conclusion: null,
           url: "https://github.com/runs/8",
@@ -71,6 +94,7 @@ const github = () => {
           { id: 71, name: "benchmark-results-linux-x64-runtime", expired: false },
         ],
       };
+    if (command === "run" && path === "view") return runView(args[2]);
     if (command === "run" && path === "download") {
       const dir = args[args.indexOf("--dir") + 1];
       const suite = args[args.indexOf("--name") + 1].split("-").at(-1);
@@ -123,6 +147,22 @@ describe("benchmark result cache", () => {
     ]);
   });
 
+  test("records what each run measures, its suites' outcomes, releases, and the sync time", async () => {
+    const { ctx } = setup();
+    await syncAll(ctx);
+    const [running, done] = await readRuns(ctx);
+    expect(running).toMatchObject({
+      commits: [{ ref: "c" }],
+      platforms: ["linux-x64", "win32-x64"],
+      detail: "Storage finished\nRuntime running",
+    });
+    expect(done.commits).toEqual([{ ref: "a" }, { ref: "b" }]);
+    expect(await readReleases(ctx)).toEqual([
+      { version: "0.46.0", publishedAt: "2026-10-22", platforms: ["linux-x64"] },
+    ]);
+    expect(await readSyncedAt(ctx)).toBeString();
+  });
+
   test("does not download cached results again", async () => {
     const { ctx, gh } = setup();
     await syncAll(ctx);
@@ -139,16 +179,21 @@ describe("benchmark result cache", () => {
     await writeRuns(ctx, [
       {
         id: "6",
-        title: "Benchmarks old",
+        title: "Benchmarks old on linux-x64",
         status: "succeeded",
+        commits: [{ ref: "old" }],
+        platforms: ["linux-x64"],
         url: "https://github.com/runs/6",
         createdAt: "2026-10-20T09:00:00Z",
         updatedAt: "2026-10-20T10:00:00Z",
         synced: false,
       },
     ]);
-    await expect(syncAll(ctx)).rejects.toThrow("Run 6");
+    // The run keeps its error on its own row; the sync still succeeds for everything else.
+    await syncAll(ctx);
+    expect(await readSyncedAt(ctx)).toBeString();
     const runs = await readRuns(ctx);
+    expect(runs.find((run) => run.id === "6")?.syncError).toStartWith("Results could not be downloaded");
     expect(runs.map((run) => [run.id, run.synced])).toEqual([
       ["8", false],
       ["7", true],

@@ -16,7 +16,7 @@ on:
         description: Platforms separated by commas (linux-x64, darwin-arm64, darwin-x64, win32-x64).
         default: linux-x64
       samples:
-        description: Samples per commit and suite. Must be 1; CI never repeats tests.
+        description: Executions per commit and suite. Must be 1; CI never repeats tests.
         default: "1"
       release_tag:
         description: Release to attach the results to. The release workflow sets it after publishing.
@@ -78,6 +78,10 @@ jobs:
               exit 1
             fi
             available=$(bun packages/benchmarks/src/cli.ts describe --platform "$platform")
+            # A chosen suite this platform cannot run starts no job, so the run says so instead of dropping it quietly.
+            for suite in $(jq -r --argjson available "$available" '($ENV.SUITES | split(",")) - [$available[].id] | .[] | select(. != "")' <<< 'null'); do
+              echo "::warning title=Suite skipped::$suite does not run on $platform"
+            done
             include=$(jq -c --argjson available "$available" --arg suites "$SUITES" --arg platform "$platform" --arg os "$os" \
               '. + [$available[] | select($suites == "" or (.id | IN($suites | split(",")[]))) | {platform: $platform, os: $os, suite: .id}]' \
               <<< "$include")

@@ -1,6 +1,8 @@
+import { finished } from "./github";
+import { runsOn, SUITES } from "./platforms";
 import type { BenchmarkMetricResult, BenchmarkResultFile, BenchmarkUnit } from "./result-file";
-import { compareSamples, summarize } from "./stats";
-import type { CachedResult } from "./store";
+import { compareSamples, median, summarize } from "./stats";
+import type { CachedResult, ReleaseRecord, RunRecord } from "./store";
 
 export type Summary = ReturnType<typeof summarize>;
 export type Change = ReturnType<typeof compareSamples>;
@@ -63,62 +65,80 @@ const collectKeys = (files: BenchmarkResultFile[]) => {
   return keys;
 };
 
-export const buildTrends = (results: CachedResult[], platform: string) => {
+export interface PlatformTrend {
+  platform: string;
+  metrics: TrendMetric[];
+}
+
+// Every platform shares one version axis, so their lines can share a chart. A release a platform did not
+// measure is a gap on that platform's line, never a zero.
+export const buildTrends = (results: CachedResult[], platforms: string[]) => {
   const releases = results
     .flatMap((result) =>
-      result.source.kind === "release" && result.file.platform === platform
-        ? [{ version: result.source.version, file: result.file }]
-        : [],
+      result.source.kind === "release" ? [{ version: result.source.version, file: result.file }] : [],
     )
-    .sort((a, b) => compareVersions(a.version, b.version));
-  // Metrics measured only on other platforms stay listed, so the page can say they are not measured here.
-  // This platform's files come last, so their budgets win.
-  const elsewhere = results.filter((result) => result.source.kind === "release" && result.file.platform !== platform);
-  const files = [...elsewhere.map((result) => result.file), ...releases.map((release) => release.file)];
-  const metrics = [...collectKeys(files)].map(([key, info]): TrendMetric => {
-    let previous: number[] | undefined;
-    const points = releases.map((release) => {
-      const values = release.file.metrics.find((metric) => keyOf(metric) === key)?.values;
-      if (!values?.length) {
-        previous = undefined;
-        return null;
-      }
-      const point: TrendPoint = { version: release.version, ...summarize(values) };
-      if (previous) point.change = compareSamples(previous, values);
-      previous = values;
-      return point;
+    .sort((a, b) => compareVersions(a.version, b.version) || a.file.platform.localeCompare(b.file.platform));
+  const versions = [...new Set(releases.map((release) => release.version))];
+  const trends = platforms.map((platform): PlatformTrend => {
+    const own = releases.filter((release) => release.file.platform === platform);
+    // Every platform lists every metric in the same order, so charts line up and a metric measured only
+    // elsewhere can say it is not measured here. This platform's files come last, so their budgets win.
+    const keys = collectKeys([...releases, ...own].map((release) => release.file));
+    const metrics = [...keys].map(([key, info]): TrendMetric => {
+      let previous: number[] | undefined;
+      const points = versions.map((version) => {
+        const values = own
+          .find((release) => release.version === version)
+          ?.file.metrics.find((metric) => keyOf(metric) === key)?.values;
+        if (!values?.length) {
+          previous = undefined;
+          return null;
+        }
+        const point: TrendPoint = { version, ...summarize(values) };
+        if (previous) point.change = compareSamples(previous, values);
+        previous = values;
+        return point;
+      });
+      return { ...info, points };
     });
-    return { ...info, points };
+    return { platform, metrics };
   });
-  return { versions: releases.map((release) => release.version), metrics };
+  return { versions, trends };
 };
 
 const runIdOf = (result: CachedResult) => (result.source.kind === "run" ? result.source.runId : undefined);
 
-// A run that measured both commits side by side is the fairest comparison, so it wins over the
-// newest separate measurements of each commit.
-const pickFiles = (results: CachedResult[], base: string, head: string) => {
-  const newestFirst = [...results].sort((a, b) => Number(runIdOf(b) ?? 0) - Number(runIdOf(a) ?? 0));
-  const baseRuns = new Set(newestFirst.filter((result) => result.file.commit.sha === base).map(runIdOf));
-  const shared = newestFirst.find(
-    (result) => result.file.commit.sha === head && runIdOf(result) && baseRuns.has(runIdOf(result)),
-  );
-  const fileFor = (sha: string) =>
-    newestFirst.find((result) => result.file.commit.sha === sha && (!shared || runIdOf(result) === runIdOf(shared)))
-      ?.file;
-  return { base: fileFor(base), head: fileFor(head) };
-};
+const valuesOf = (result: CachedResult | undefined, key: string) =>
+  result?.file.metrics.find((metric) => keyOf(metric) === key)?.values;
 
+// Each metric comes from the newest result that measured it, so a newer run of a few suites does not hide
+// older results of the others. A run that measured the metric on both commits wins, being the fairest pair.
 export const buildComparison = (results: CachedResult[], base: string, head: string, platform: string) => {
-  const files = pickFiles(
-    results.filter((result) => result.file.platform === platform),
-    base,
-    head,
-  );
-  const present = [files.base, files.head].filter((file): file is BenchmarkResultFile => Boolean(file));
+  const newestFirst = results
+    .filter((result) => result.file.platform === platform)
+    .sort((a, b) => Number(runIdOf(b) ?? 0) - Number(runIdOf(a) ?? 0));
+  const baseResults = newestFirst.filter((result) => result.file.commit.sha === base);
+  const headResults = newestFirst.filter((result) => result.file.commit.sha === head);
+  const present = [...baseResults, ...headResults].map((result) => result.file);
   const rows = [...collectKeys(present)].map(([key, info]): CompareRow => {
-    const baseValues = files.base?.metrics.find((metric) => keyOf(metric) === key)?.values;
-    const headValues = files.head?.metrics.find((metric) => keyOf(metric) === key)?.values;
+    const pairedHead = headResults.find(
+      (result) =>
+        runIdOf(result) &&
+        valuesOf(result, key)?.length &&
+        baseResults.some((entry) => runIdOf(entry) === runIdOf(result) && valuesOf(entry, key)?.length),
+    );
+    const pick = (side: CachedResult[]) =>
+      pairedHead
+        ? valuesOf(
+            side.find((result) => runIdOf(result) === runIdOf(pairedHead)),
+            key,
+          )
+        : valuesOf(
+            side.find((result) => valuesOf(result, key)?.length),
+            key,
+          );
+    const baseValues = pick(baseResults);
+    const headValues = pick(headResults);
     return {
       ...info,
       base: baseValues?.length ? { ...summarize(baseValues), values: baseValues } : null,
@@ -126,9 +146,75 @@ export const buildComparison = (results: CachedResult[], base: string, head: str
       change: baseValues?.length && headValues?.length ? compareSamples(baseValues, headValues) : null,
     };
   });
-  return { hasBase: Boolean(files.base), hasHead: Boolean(files.head), rows };
+  return { hasBase: baseResults.length > 0, hasHead: headResults.length > 0, rows };
 };
 
-// Commits with results, so the picker can say which ones are ready to compare on this platform.
-export const measuredCommits = (results: CachedResult[], platform: string) =>
-  new Set(results.filter((result) => result.file.platform === platform).map((result) => result.file.commit.sha));
+// Commits with results on every given platform. With suites, each platform must have measured every suite that
+// runs there, so a run can skip the commit and reuse its results.
+export const measuredCommits = (results: CachedResult[], platforms: string[], suites: string[] = []) => {
+  const measured = new Map<string, Set<string>>();
+  for (const result of results) {
+    const key = `${result.file.commit.sha}|${result.file.platform}`;
+    const seen = measured.get(key) ?? new Set<string>();
+    for (const suite of result.file.suites) seen.add(suite.id);
+    measured.set(key, seen);
+  }
+  const shas = new Set(results.map((result) => result.file.commit.sha));
+  return new Set(
+    [...shas].filter((sha) =>
+      platforms.every((platform) => {
+        const seen = measured.get(`${sha}|${platform}`);
+        const expected = SUITES.filter((suite) => suites.includes(suite.id) && runsOn(suite, platform));
+        return seen && expected.every((suite) => seen.has(suite.id));
+      }),
+    ),
+  );
+};
+
+// One run's measurements per commit and platform, so agents can read a run without choosing commits.
+export const buildRunResults = (results: CachedResult[], runId: string, platforms: string[]) => {
+  const own = results.filter((result) => runIdOf(result) === runId);
+  const measured = new Set(own.map((result) => result.file.platform));
+  return {
+    results: own.map(({ file }) => ({
+      commit: file.commit,
+      platform: file.platform,
+      suites: file.suites.map((suite) => suite.id),
+      metrics: file.metrics.map((metric) => ({
+        ...metricKey(file, metric),
+        ...summarize(metric.values),
+        values: metric.values,
+        ...(metric.budget === undefined ? {} : { overBudget: median(metric.values) > metric.budget }),
+      })),
+    })),
+    // Platforms the run covered without results: failed, cancelled, still running, or not downloaded yet.
+    missingPlatforms: platforms.filter((platform) => !measured.has(platform)),
+  };
+};
+
+export interface ReleaseStatus {
+  version: string;
+  finished: string[];
+  running: string[];
+  missing: string[];
+}
+
+// The newest stable release, when some platforms have no results. Its release run is still going, failed,
+// or never started; either way the page names it instead of drawing it as zero.
+export const latestReleaseStatus = (
+  releases: ReleaseRecord[],
+  runs: RunRecord[],
+  platforms: string[],
+): ReleaseStatus | undefined => {
+  const [latest] = [...releases].sort((a, b) => compareVersions(b.version, a.version));
+  if (!latest) return undefined;
+  const done = platforms.filter((platform) => latest.platforms.includes(platform));
+  if (done.length === platforms.length) return undefined;
+  const tag = `pstdio@${latest.version}`;
+  const active = runs.filter((run) => !finished(run.status) && run.commits.some((commit) => commit.ref === tag));
+  const running = platforms.filter(
+    (platform) => !done.includes(platform) && active.some((run) => run.platforms.includes(platform)),
+  );
+  const missing = platforms.filter((platform) => !done.includes(platform) && !running.includes(platform));
+  return { version: latest.version, finished: done, running, missing };
+};

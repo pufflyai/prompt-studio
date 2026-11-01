@@ -74,7 +74,7 @@ BENCHMARK_SAMPLES=10 bun run --cwd packages/e2e perf:subnav
 BENCHMARK_SAMPLES=3 bun run --cwd packages/ui perf:chat -- chat-rendering.p3.bench.ts
 ```
 
-Choose committed CI runs for comparisons; local runs validate the harness but competing work can distort their measurements. Start a paired run through the Performance Runs page or the [Benchmarks workflow](../../../.github/workflows/benchmarks.yml). See the [runner commands and result schema](../../references/performance/0006-benchmark-results.md).
+Choose committed CI runs for comparisons; local runs validate the harness but competing work can distort their measurements. CI runs each benchmark once, so a CI comparison shows the difference and budget outcome but no interval or improved/regressed verdict. Start a paired run through the Performance Runs page or the [Benchmarks workflow](../../../.github/workflows/benchmarks.yml). See the [runner commands and result schema](../../references/performance/0006-benchmark-results.md).
 
 ## Share browser helpers
 

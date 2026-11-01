@@ -29,26 +29,43 @@ export const formatChangeRange = (change: Change) => `${formatPercent(change.low
 
 // Memory is not faster or slower, so its verdicts name the direction instead.
 const verdictWords: Record<"time" | "memory", Record<Verdict, string>> = {
-  time: { improved: "faster", regressed: "slower", unchanged: "no change" },
-  memory: { improved: "less memory", regressed: "more memory", unchanged: "no change" },
+  time: { improved: "faster", regressed: "slower", unchanged: "no change", inconclusive: "too little evidence" },
+  memory: {
+    improved: "less memory",
+    regressed: "more memory",
+    unchanged: "no change",
+    inconclusive: "too little evidence",
+  },
 };
 
 export const verdictWord = (verdict: Verdict, unit: BenchmarkUnit) =>
   verdictWords[unit === "bytes" ? "memory" : "time"][verdict];
 
-export const verdictArrow: Record<Verdict, string> = { improved: "↓", regressed: "↑", unchanged: "≈" };
+export const verdictArrow: Record<Verdict, string> = {
+  improved: "↓",
+  regressed: "↑",
+  unchanged: "≈",
+  inconclusive: "",
+};
 
 // Status colors carry an arrow and a word, never color alone.
-export const verdictPalette: Record<Verdict, string> = { improved: "green", regressed: "red", unchanged: "gray" };
+export const verdictPalette: Record<Verdict, string> = {
+  improved: "green",
+  regressed: "red",
+  unchanged: "gray",
+  inconclusive: "gray",
+};
 export const verdictColor: Record<Verdict, string> = {
   improved: "fg.success",
   regressed: "fg.error",
   unchanged: "fg.muted",
+  inconclusive: "fg.muted",
 };
 
 export const verdictText = (change: Change, unit: BenchmarkUnit) => {
   const word = verdictWord(change.verdict, unit);
   if (change.verdict === "unchanged") return `${verdictArrow.unchanged} ${word}`;
+  if (change.verdict === "inconclusive") return `${formatPercent(change.change)}, ${word}`;
   if (!Number.isFinite(change.change)) return `${verdictArrow[change.verdict]} ${word}, up from 0`;
   return `${verdictArrow[change.verdict]} ${Math.abs(change.change * 100).toFixed(1)}% ${word}`;
 };
