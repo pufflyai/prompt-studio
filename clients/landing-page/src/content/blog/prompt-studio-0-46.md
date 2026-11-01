@@ -1,7 +1,7 @@
 ---
 title: "Prompt Studio 0.46"
 description: "A breaking reset of local data, keyboard navigation across tools, live UI canvases, easier agent setup, and continued preparation for cross-device sync."
-published: 2026-10-31
+published: 2026-11-01T02:42:20Z
 author: aurelien-franky
 category: release
 image:
@@ -32,7 +32,7 @@ After the update, find the matching `backups/pre-0.46-*` folder in the Prompt St
 
 Inspect the current projects and installed extensions with `pst --help` and each extension's command help. Map old projects and extension owners to their current equivalents. Use supported CLI commands or public extension APIs to import the recoverable tickets, notes, reports, settings, and other records. Skip records marked `deleted: true` and their leftover files unless I ask to recover deleted items. Check for existing matches before creating anything so running this prompt again does not duplicate my work. Preserve relationships and attachments, and record any changed IDs or ticket numbers. Store large document bodies as files when the current extension requires it.
 
-Recover extension-owned files too. Inspect each project's older `.pstdio/extension-storage/<name>/` and `.pstdio/extension-storage/.publishers/<publisher>/` folders, plus the backups. Confirm ownership from the installed extension manifests; copy needed files into `.pstdio/extension-storage/<publisher>.<name>/`. Preserve existing files and keep both versions when they differ. Restore file references through the owning extension's supported commands. Do not copy caches, compiled code, or old configuration blindly, and do not move project source files into extension storage.
+Recover extension-owned files too. Inspect each project's older `.pstdio/extension-storage/<name>/` folders, including publisher-specific files in `.pstdio/extension-storage/<name>/.publishers/<publisher>/`, and the 0.43 `.pstdio/ext/<publisher>.<name>/` folders, plus the backups. Confirm ownership from the installed extension manifests; copy needed files into `.pstdio/extension-storage/<publisher>.<name>/`. Preserve existing files and keep both versions when they differ. Restore file references through the owning extension's supported commands. Do not copy caches, compiled code, or old configuration blindly, and do not move project source files into extension storage.
 
 Keep all backups and write down what you recovered, what you skipped, and why. Do not invent missing content or claim that unsupported session history has been restored. Check record counts, relationships, attachments, and a sample of opened items in each recovered project. Finish with a plain-language summary and anything I still need to check.
 ```
@@ -125,7 +125,7 @@ Keep a long report outside its record while retaining a small reference you can 
 ```ts
 const report = ctx.storage.scope({
   type: "resource",
-  id: "report-release-review",
+  resource: { type: "report", id: "report-release-review" },
 });
 const file = await report.files.put({
   name: "review.md",
@@ -135,7 +135,7 @@ const file = await report.files.put({
 await report.records.commit({
   operationId: crypto.randomUUID(),
   edits: [{
-    recordId: "summary",
+    recordId: report.records.id("summary"),
     replace: {
       title: "Release review",
       bodyFileId: file.id,
@@ -166,10 +166,10 @@ See the [API 0.3 migration guidance](../../../../../documentation/references/ext
 
 ## Release sources
 
-This post covers merged work and [changesets](https://github.com/pufflyai/prompt-studio/tree/db7145c34ab7cc56ae4c1a97ebdcb0332ef7cfc4/.changeset) through commit [`db7145c`](https://github.com/pufflyai/prompt-studio/commit/db7145c34ab7cc56ae4c1a97ebdcb0332ef7cfc4).
+See the [0.46.0 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.46.0) and [core changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.46.0/packages/pstdio/CHANGELOG.md) for the shipped changes.
 
-- Upgrade: [database baseline](https://github.com/pufflyai/prompt-studio/pull/1405), [extension ownership and independent releases](https://github.com/pufflyai/prompt-studio/blob/db7145c34ab7cc56ae4c1a97ebdcb0332ef7cfc4/documentation/adrs/0106-independent-core-extension-delivery.md).
+- Upgrade: [database baseline](https://github.com/pufflyai/prompt-studio/pull/1405), [extension ownership and independent releases](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.46.0/documentation/adrs/0106-independent-core-extension-delivery.md).
 - Workbench: [shared shortcuts](https://github.com/pufflyai/prompt-studio/pull/1377), [Alt previews](https://github.com/pufflyai/prompt-studio/pull/1557), [themes](https://github.com/pufflyai/prompt-studio/pull/1566), [UI Canvas](https://github.com/pufflyai/prompt-studio/pull/1381), [project Canvas builder](https://github.com/pufflyai/prompt-studio/pull/1597).
 - Agents and Planner: [Codex steering](https://github.com/pufflyai/prompt-studio/pull/1351), [Claude plan approval](https://github.com/pufflyai/prompt-studio/pull/1531), [Auto Build pause and resume](https://github.com/pufflyai/prompt-studio/pull/1347).
 - Sync preparation: [new-device recovery](https://github.com/pufflyai/prompt-studio/pull/1317), [extension packages](https://github.com/pufflyai/prompt-studio/pull/1333), [recovery points](https://github.com/pufflyai/prompt-studio/pull/1328).
-- API: [version and migration reference](https://github.com/pufflyai/prompt-studio/blob/db7145c34ab7cc56ae4c1a97ebdcb0332ef7cfc4/documentation/references/extensions/0014-api-versioning.md), [SDK changes](https://github.com/pufflyai/prompt-studio/tree/db7145c34ab7cc56ae4c1a97ebdcb0332ef7cfc4/packages/sdk).
+- API: [version and migration reference](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.46.0/documentation/references/extensions/0014-api-versioning.md), [SDK changes](https://github.com/pufflyai/prompt-studio/tree/pstdio%400.46.0/packages/sdk).

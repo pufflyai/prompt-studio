@@ -1,7 +1,7 @@
 ---
 title: "UI Canvas: work on the interface together"
 description: "A shared place to try real components, compare their states, and give an agent a precise design to work from."
-published: 2026-10-31
+published: 2026-11-01T02:42:20Z
 author: aurelien-franky
 category: tool showcase
 image:
@@ -23,7 +23,7 @@ UI Canvas gives those conversations a place inside Prompt Studio. It puts runnin
 
 ## Work with the real controls
 
-Open UI Canvas in a project and choose a canvas from the navigation. Each frame contains a working example: you can open menus, type into fields, and try the states the example provides.
+Install the optional extension with `pst extensions add canvas`. Then open UI Canvas in a project and choose a canvas from the navigation. Each frame contains a working example: you can open menus, type into fields, and try the states the example provides.
 
 ![Comparing live component examples in UI Canvas](../../../../../documentation/images/prompt-studio-0-46-canvas-light.svg)
 
