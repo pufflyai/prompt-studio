@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-02
 
+Status: Accepted.
+
 ## Decision
 
 Keep explicit native command input separate from ordinary prompt input inside the Claude extension. Wrap an ordinary prompt beginning with a slash command in a `user-message` text element before sending it to Claude. Keep the original text in the visible conversation. Native command operations send the original command directly.

@@ -1,8 +1,20 @@
 # Prompt Studio documentation
 
-Prompt Studio is a workbench where people and agents build and use tools through extensions. Core owns shared execution, workspaces, state, sync, trust, and workbench contracts. Planner, Notes, and Reports own their domain workflows. Read the [mission](../../MISSION.md) before changing product boundaries.
+Prompt Studio is a workbench where people and agents build and use tools through extensions. Core owns shared execution, workspaces, state, sync, trust, and workbench contracts. Planner, Notes, and Reports own their domain workflows. Read the [mission](../guidance/0001-mission.md) before changing product boundaries.
 
-The [design rules](../../design/DESIGN.md) guide interactions. The [nonfunctional requirements](../../NONFUNCTIONAL_REQUIREMENTS.md) describe resource and performance targets, nightly checks, and guidance on local benchmarks.
+The [design rules](../guidance/0002-design.md) guide interactions. The [nonfunctional requirements](../guidance/0003-nonfunctional-requirements.md) set mandatory resource and performance targets and describe nightly checks and local benchmark guidance.
+
+## Guidance
+
+- [Mission](../guidance/0001-mission.md)
+- [Design rules](../guidance/0002-design.md)
+- [Nonfunctional requirements](../guidance/0003-nonfunctional-requirements.md)
+- [Pull requests and CI](../guidance/0004-ci.md)
+- [Testing and validation](../guidance/0005-testing.md)
+- [Engineering](../guidance/0006-engineering.md)
+- [Contributing](../guidance/0007-contributing.md)
+- [Planning and documentation](../guidance/0008-planning.md)
+- [Troubleshooting](../guidance/0009-troubleshooting.md)
 
 ## Start here
 
@@ -31,6 +43,7 @@ The API and dashboard share an authenticated runtime. Core sync uses SSE. There 
 
 | Category | Purpose |
 | --- | --- |
+| `guidance` | Shared rules for mission, design, performance, testing, engineering, contributions, planning, CI, and troubleshooting |
 | `guides` | Setup, development, testing, and task walkthroughs |
 | `references` | API contracts, CLI commands, schemas, and architecture |
 | `requirements` | PRDs (product requirements documents), with current or proposed status |
@@ -39,9 +52,9 @@ The API and dashboard share an authenticated runtime. Core sync uses SSE. There 
 
 Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group getting started, concepts, development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
 
-Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Canvas design guidance stay beside their owners.
+Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Consolidate superseded ADRs and remove obsolete workarounds under the [ADR cleanup rules](../guidance/0008-planning.md#3-architecture-decisions). Package and extension READMEs, extension-owned product docs, and Canvas design guidance stay beside their owners.
 
-Repository-wide governing documents keep their stable names and paths: `MISSION.md`, `NONFUNCTIONAL_REQUIREMENTS.md`, `AGENTS.md`, and `design/DESIGN.md`.
+Repository-wide guidance lives in `documentation/guidance/` and uses the same numbered filenames. The root `AGENTS.md` is an index: the mission comes first, followed by work guidance, including design and mandatory nonfunctional requirements. Reference rules by document, section, and numbered item, such as `001.1.1` (Mission → Purpose → rule 1); see [rule references](../guidance/0008-planning.md#5-rule-references).
 
 Treat source-linked type declarations as the signature authority. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Preserve the remaining numbers when a PRD is removed; gaps do not need to be filled.
 
@@ -81,7 +94,7 @@ Public pages and bundled skills reach readers who do not have the repository. Fo
 
 These checks run in the `static_checks` job of Test and Build on every pull request, in the merge queue, and on `main`. They work offline and finish in a few seconds. They run on every change because renaming a source file can break a documentation link.
 
-- `bun run --cwd scripts verify:docs-links` checks relative links and heading anchors in `documentation/`, every `README.md`, extension docs, and skills. It also checks website docs URLs against the routes the website generates from the allow-list, GitHub links to `main`, the rules above, and exported skill folders.
+- `bun run --cwd scripts verify:docs-links` checks relative links and heading anchors in `documentation/`, every `README.md`, extension docs, and skills. It also checks unique ADR numbers, website docs URLs against the routes the website generates from the allow-list, GitHub links to `main`, the rules above, and exported skill folders.
 - `bun run --cwd scripts verify:sdk-reference` checks that the SDK references name every public method group and method. It reads `PstdioClient` from `@pstdio/sdk/client` for `references/sdk/`, and the extension context, view context, and webview client from the source files that declare them ([context](../../packages/pstdio-api-contracts/src/extension-kernel/types/context.ts), [view context](../../packages/sdk/src/extensions/define-extension-view.ts), and [webview client](../../packages/sdk/src/extensions/webview-client.ts)) for `references/extensions/` and `references/sdk/`. Generated API reports are not checked in, so the check reads source. A name counts as documented when a code span or code block names it in the same section or table row as its group or type, or as `group.method`. Deprecated methods are skipped.
 
 The weekly **Documentation links** workflow checks external URLs. It never runs on pull requests, so another site's outage cannot fail unrelated work. Failed URLs and the files that link to them appear in its job summary. Sites that refuse scripted requests (HTTP 401 or 403) are listed for a manual check but do not fail the run. Run it with `bun run --cwd scripts verify:docs-external-links`.
@@ -94,6 +107,7 @@ Each canonical page has an owner. The owner reviews changes to it and keeps it t
 
 | Documentation | Owner |
 | --- | --- |
+| `guidance/` | Project maintainers |
 | `guides/getting-started/`, `guides/concepts/`, `references/cli/` | CLI and runtime maintainers (`pstdio`) |
 | `guides/extensions/`, `references/extensions/` | Extension platform maintainers (`pstdio-extensions`, `@pstdio/sdk/extensions`) |
 | `guides/sdk/`, `references/sdk/` | SDK maintainers (`@pstdio/sdk`) |
@@ -326,19 +340,16 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 ## ADRs
 
 - [0001 — ADR: Unified Test Runner — bun test](../adrs/0001-unified-bun-test.md)
-- [0002 — ADR: `PSTDIO_DRY_RUN` Environment Variable (Superseded)](../adrs/0002-superseded-dry-run-flag.md)
-- [0003 — ADR: Replace `PSTDIO_DRY_RUN` With Fake Agent](../adrs/0003-replace-dry-run-with-fake-agent.md)
+- [0003 — Test agent sessions through the real lifecycle](../adrs/0003-replace-dry-run-with-fake-agent.md)
 - [0004 — ADR: Test Environment Isolation via Bun Preload](../adrs/0004-test-env-isolation.md)
 - [0005 — ADR: Run the Backend Dev Server Without `bun --watch`](../adrs/0005-no-watch-backend-dev-server.md)
-- [0006 — ADR: Temporary Desktop Lifecycle Implementation Without Pencil](../adrs/0006-superseded-temporary-desktop-lifecycle-without-pencil.md)
 - [0007 — ADR: Temporary Direct Terminal WebSocket Endpoint](../adrs/0007-temporary-direct-terminal-websocket-endpoint.md)
 - [0008 — ADR: Capability-Secured Extension Webview Assets](../adrs/0008-capability-secured-extension-webview-assets.md)
 - [0009 — ADR: Temporary Non-Blocking Bun Shutdown](../adrs/0009-temporary-non-blocking-bun-shutdown.md)
-- [0010 — ADR: Temporary E2E Ubuntu Mirror Override](../adrs/0010-superseded-temporary-e2e-ubuntu-mirror.md)
 - [0012 — ADR 0012: Temporary webview client type source](../adrs/0012-temporary-webview-client-type-source.md)
 - [0013 — ADR: Temporary Windows Desktop Release Deferral](../adrs/0013-temporary-windows-desktop-release-deferral.md)
 - [0014 — ADR 0014: Extension catalog as data](../adrs/0014-extension-catalog-as-data.md)
-- [0015 — ADR 0015: Template content belongs to extensions — Temporary legacy migration](../adrs/0015-template-content-belongs-to-extensions-temporary-migration.md)
+- [0015 — Template content belongs to extensions — Temporary legacy migration](../adrs/0015-template-content-belongs-to-extensions-temporary-migration.md)
 - [0016 — ADR 0016: keep the grouped collection renderer in core](../adrs/0016-collection-renderer-stays-in-core.md)
 - [0017 — Temporary local dependency install context](../adrs/0017-temporary-local-dependency-install-context.md)
 - [0018 — Temporary API test process isolation](../adrs/0018-temporary-api-test-process-isolation.md)
@@ -352,8 +363,6 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0026 — Temporary Bun bootstrap for browser CI containers](../adrs/0026-temporary-container-bun-bootstrap.md)
 - [0028 — Temporary native build tool selection](../adrs/0028-temporary-native-build-tool-selection.md)
 - [0029 — Temporary Chromium-only Playwright bundle](../adrs/0029-temporary-chromium-only-playwright-bundle.md)
-- [0030 — Temporary workspace contract release bridge](../adrs/0030-temporary-workspace-contract-release-bridge.md)
-- [0031 — ADR 0031: Release all core packages under one version](../adrs/0031-release-all-core-packages-under-one-version.md)
 - [0032 — Temporary macOS desktop CI indexing isolation](../adrs/0032-temporary-macos-ci-indexing.md)
 - [0033 — Temporary terminal foreground probe](../adrs/0033-temporary-terminal-foreground-probe.md)
 - [0034 — Temporary file-backed extension connection secrets](../adrs/0034-temporary-file-connection-secret-store.md)
@@ -364,54 +373,55 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0039 — Temporary Node Windows directory removal](../adrs/0039-temporary-node-windows-directory-removal.md)
 - [0040 — Temporary export marker for bundled type files](../adrs/0040-temporary-dts-export-marker.md)
 - [0041 — Temporary Windows extension dependency links](../adrs/0041-temporary-windows-extension-dependency-links.md)
-- [0042 — Temporary docgen filter in the workbench Storybook (removed)](../adrs/0042-temporary-workbench-storybook-docgen-filter.md)
 - [0043 — Temporary CI Docker Hub mirror](../adrs/0043-temporary-ci-docker-hub-mirror.md)
 - [0044 — Temporary CI limits for heavy-setup tests](../adrs/0044-temporary-ci-limits-for-heavy-setup-tests.md)
-- [0045 — Temporary Remotion React subpath alias](../adrs/0045-temporary-remotion-react-subpath-alias.md)
 - [0046 — Let extension webviews write to the clipboard when they declare it](../adrs/0046-declared-webview-clipboard-writes.md)
 - [0047 — Semantic versioning for the extension API](../adrs/0047-semantic-versioning-for-the-extension-api.md)
 - [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
 - [0049 — Temporary scroll content width override for panel tabs](../adrs/0049-temporary-scroll-content-width-override.md)
 - [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
-- [0051 — Temporary Motion Lab scene link pass (Superseded)](../adrs/0051-superseded-temporary-motion-scene-link-pass.md)
 - [0052 — Temporary Codex question delivery confirmation](../adrs/0052-temporary-codex-question-delivery-confirmation.md)
 - [0053 — Temporary webview move fallback](../adrs/0053-temporary-webview-move-fallback.md)
-- [0054 — Browser sessions for the local runtime](../adrs/0054-browser-sessions-for-the-local-runtime.md)
 - [0055 — Temporary webview guest message filter](../adrs/0055-temporary-webview-guest-message-filter.md)
 - [0056 — Temporary KaTeX security override](../adrs/0056-temporary-katex-security-override.md)
-- [0060 — Board views are core project data](../adrs/0060-shared-project-board-views.md)
 - [0057 — Browser sessions in per-origin storage](../adrs/0057-browser-sessions-in-per-origin-storage.md)
-
+- [0060 — Board views are core project data](../adrs/0060-shared-project-board-views.md)
 - [0061 — Project resource anchors](../adrs/0061-project-resource-anchors.md)
-
 - [0062 — Temporary Codex history identity migration](../adrs/0062-temporary-codex-history-identity-migration.md)
 - [0063 — Temporary Claude literal slash input](../adrs/0063-temporary-claude-literal-slash-input.md)
 - [0064 — Codex App Server runtime](../adrs/0064-codex-app-server-runtime.md)
 - [0065 — Stream command results over the shared client stream](../adrs/0065-stream-command-results-over-the-shared-client-stream.md)
-- [0076 — Separate account authority from content](../adrs/0076-separate-account-authority-from-content.md)
+- [0067 — Separate performance budgets from execution allowances](../adrs/0067-separate-performance-budgets-from-execution-allowances.md)
+- [0072 — Publish releases from one verified commit](../adrs/0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md)
+- [0077 — Extension-owned data migrations](../adrs/0077-extension-owned-data-migrations.md)
+- [0083 — Temporary runtime Planner write guards](../adrs/0083-temporary-runtime-planner-write-guards.md)
 - [0088 — Temporary tooltip hover reset](../adrs/0088-temporary-tooltip-hover-reset.md)
 - [0099 — Durable record query projections](../adrs/0099-durable-record-query-projections.md)
 - [0100 — One document per resource](../adrs/0100-one-document-per-resource.md)
+- [0101 — Temporary flaky test quarantine](../adrs/0101-temporary-flaky-test-quarantine.md)
+- [0103 — A database baseline replaces in-place upgrades](../adrs/0103-database-baseline-replaces-in-place-upgrades.md)
 - [0106 — Deliver core extension releases independently through PSX](../adrs/0106-independent-core-extension-delivery.md)
 - [0107 — Publish SDK and UI previews without a host release](../adrs/0107-independent-sdk-ui-previews.md)
+- [0124 — Separate account authority from content](../adrs/0124-separate-account-authority-from-content.md)
+- [0129 — Prioritize merge checks and certify release candidates](../adrs/0129-prioritize-merge-checks-and-certify-release-candidates.md)
 
 ## Lessons learned
 
-- [0001 — Check runtime support before using browser APIs](../lessons-learned/0001-no-bun-eventsource.md)
-- [0002 — PGlite WAL Corruption](../lessons-learned/0002-pglite-wal-corruption.md)
-- [0003 — Strict Query Validation on API Endpoints](../lessons-learned/0003-strict-query-validation.md)
-- [0004 — TanStack DB `.select()` proxy strips fields](../lessons-learned/0004-tanstack-db-select-proxy.md)
-- [0005 — Use diff summaries in list views](../lessons-learned/0005-diff-cpu-spike-on-kanban.md)
-- [0006 — Keep session status side effects in one service](../lessons-learned/0006-session-status-hooks-missing-on-secondary-paths.md)
-- [0007 — Claude Code Follow-up Resume Requires EOF](../lessons-learned/0007-claude-code-follow-up-resume-requires-eof.md)
-- [0008 — Load conversation history before applying follow-up patches](../lessons-learned/0008-follow-up-message-ordering-in-claude-code-sessions.md)
-- [0009 — Background work can keep a green test process alive](../lessons-learned/0009-execfilesync-blocks-bun-test-exit.md)
-- [0010 — Session model selection contract regressions](../lessons-learned/0010-session-model-selection-contract-regressions.md)
-- [0011 — `bun --watch` Corrupts the Dev Database](../lessons-learned/0011-bun-watch-corrupts-dev-db.md)
-- [0012 — Recursive `fs.watch` on Linux crawls node_modules symlinks and hangs CI](../lessons-learned/0012-linux-recursive-fs-watch-crawls-node-modules.md)
-- [0013 — Manually check installed user flows with an agent](../lessons-learned/0013-manually-check-installed-user-flows.md)
-- [0014 — Fatal exit skips async cleanup](../lessons-learned/0014-fatal-exit-skips-async-cleanup.md)
-- [0015 — Anchor context menus in their viewport](../lessons-learned/0015-anchor-context-menus-in-their-viewport.md)
-- [0016 — Bun promise assertions can deadlock Windows pipe reads](../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md)
-- [0017 — Unreaped processes look alive](../lessons-learned/0017-unreaped-processes-look-alive.md)
-- [0019 — Generated files bury pull requests](../lessons-learned/0019-generated-files-bury-pull-requests.md)
+Lessons cover failures that can recur in current development. Follow the [maintenance rules](../guidance/0008-planning.md#6-lessons-learned).
+
+| Lesson | When to use |
+| --- | --- |
+| [0001 — Check runtime support before using browser APIs](../lessons-learned/0001-no-bun-eventsource.md) | Shared browser and CLI code. |
+| [0002 — Protect database ownership and clean shutdown](../lessons-learned/0002-pglite-wal-corruption.md) | Database ownership, restarts, or inspection. |
+| [0005 — Use summaries in list views](../lessons-learned/0005-diff-cpu-spike-on-kanban.md) | Lists and aggregate data. |
+| [0006 — Keep status changes and their side effects together](../lessons-learned/0006-session-status-hooks-missing-on-secondary-paths.md) | Session transitions, queues, or hooks. |
+| [0007 — Respect streaming CLI input and completion boundaries](../lessons-learned/0007-claude-code-follow-up-resume-requires-eof.md) | Harness input, steering, or completion. |
+| [0008 — Load history before applying follow-up patches](../lessons-learned/0008-follow-up-message-ordering-in-claude-code-sessions.md) | Conversation resume, snapshots, or reconnects. |
+| [0009 — Background work can keep a green test process alive](../lessons-learned/0009-execfilesync-blocks-bun-test-exit.md) | Schedulers, timers, or test-process hangs. |
+| [0010 — Separate model selection, session memory, and provider payloads](../lessons-learned/0010-session-model-selection-contract-regressions.md) | Agent and model selection. |
+| [0012 — Bound watcher registration on each platform](../lessons-learned/0012-linux-recursive-fs-watch-crawls-node-modules.md) | File watchers and extension reloads. |
+| [0014 — Await cleanup and drain work before closing resources](../lessons-learned/0014-fatal-exit-skips-async-cleanup.md) | Startup, shutdown, or background callbacks. |
+| [0015 — Anchor context menus in their viewport](../lessons-learned/0015-anchor-context-menus-in-their-viewport.md) | Context menus in scrolled or embedded views. |
+| [0016 — Await I/O before using Bun promise assertions](../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md) | Bun tests that await process or socket I/O. |
+| [0017 — Distinguish an exited process from an existing PID](../lessons-learned/0017-unreaped-processes-look-alive.md) | Detached processes and Linux containers. |
+| [0018 — Exercise realistic data sizes before rewriting storage](../lessons-learned/0018-in-place-upgrades-meet-real-data-last.md) | Storage formats, imports, or bulk writes. |

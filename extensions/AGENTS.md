@@ -5,7 +5,7 @@
 - Do not duplicate SDK behavior inside an extension. If the SDK is missing a needed capability, add it to the SDK first.
 - Use `PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions dev <source>` as the active first-party extension authoring loop. Use `pst extensions add <source> --force` for a production-like install smoke test. Do not copy or sync extension installs by hand.
 - Do not pass `--skip-install`. Installed extensions must have package-local dependencies, not `node_modules` symlinks back into the repo checkout.
-- Never commit generated files, such as build output or the Canvas preview catalog in `canvas/src/catalog/generated/`. Only the exceptions in [Generated files](../AGENTS.md#generated-files) may be committed.
+- Never commit generated files, such as build output or the Canvas preview catalog in `canvas/src/catalog/generated/`. Only the exceptions in [Generated files](../documentation/guidance/0007-contributing.md#2-generated-files) may be committed.
 
 ## SDK and Extension Changes
 

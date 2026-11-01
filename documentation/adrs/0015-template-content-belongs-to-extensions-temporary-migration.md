@@ -1,44 +1,24 @@
-# ADR 0015: Template content belongs to extensions — Temporary legacy migration
+# Template content belongs to extensions — Temporary legacy migration
 
 Proposed: 2026-08-28
 
-## Status
-
-Superseded by [ADR 0077: Extension-owned data migrations](0077-extension-owned-data-migrations.md). The template storage decision remains. The temporary core migration and installation repair are removed; the sections below record the original workaround.
+Status: Accepted for template ownership. [ADR 0077](0077-extension-owned-data-migrations.md) replaced the temporary core migration; [ADR 0103](0103-database-baseline-replaces-in-place-upgrades.md) later retired in-place upgrades.
 
 ## Context
 
-Core owned template tables, REST endpoints, SDK and CLI clients, prompt resolution, and a dashboard editor. A template is extension content, not shared platform plumbing. Extension storage already provides collections and file attachments, and extension commands already provide a generic host boundary.
-
-Core also gave a hardcoded set of first-party extensions precedence over user templates. That privilege was unavailable to third-party extensions and broke the mission rule that first-party extensions use the same public interfaces as every other extension.
+Templates are extension content. Core template storage and privileged first-party precedence duplicated public extension capabilities and violated equal treatment of external extensions.
 
 ## Decision
 
-The extension that declares a template type owns its shipped template assets and project overrides. It stores override metadata in an extension collection named `templates` and stores content as an attachment to that item. A user override wins over the shipped package asset in the owning extension.
+1. The extension declaring a template type owns its shipped assets and project overrides. Store override metadata in its `templates` collection and content as an attachment. User overrides win over shipped assets.
+2. Expose list, read, save, and delete commands through generic workbench metadata. Core renders the editor through those commands; it neither stores nor resolves template content.
+3. Reading another extension's template requires its declared command. First-party and external extensions use the same contract.
+4. Core template tables, endpoints, clients, and session resolution are removed. Skills are a separate subsystem.
 
-Template types expose generic list, read, save, and delete command references. Workbench metadata carries those references, labels, and ordering to the dashboard. Core renders the editor by invoking those commands. Core does not resolve or store template content.
+## External limitation
 
-The core template tables, service, routes, contracts, SDK client, CLI namespace, command parameter type, and session template resolver are removed.
-
-## Limitations
-
-Ideally, the owning extension would migrate its old rows after the extension runtime loads. Database migrations run before that runtime exists, while the old tables must still exist. A clean runtime-owned migration is therefore impossible in the current startup order.
-
-## Migration workaround
-
-As a temporary, isolated workaround, the database startup migration maps the existing built-in template types to their current owners: `prompt`, `ticket`, and `document` to planner, and `report` to reports. It moves each live row into that extension instance's `templates` collection without copying the underlying file. The migration stops with a clear error if any live row has no owner, so content is never dropped silently. It is idempotent and runs immediately before the generated schema migration drops the old tables.
-
-For a database older than extension storage, startup first runs the generated migrations through migration 0017. It then creates the missing owner identity, moves the data, and continues through the table-drop migration. If the real owner package is not installed, the imported source uses a migration-only path. Startup attempts to install that owner and adopts the same source and instance when installation succeeds. If the package or catalog is unavailable, startup preserves the sentinel owner and migrated data, continues without those template commands, and retries on a later start. This keeps offline upgrades usable without detaching the migrated storage namespace from its eventual extension owner.
+Historically, schema migrations ran before extension code could load. Core temporarily mapped legacy template types to owners and repaired missing installations so content could survive table removal. That startup ordering prevented an extension-owned conversion at the required boundary.
 
 ## Removal
 
-The core migration and startup repair are removed with ADR 0077. Core retains opaque table snapshots before removal, so supported upgrades no longer need domain rules in core. Planner and Reports import those snapshots through the same public helpers as other extensions. The original source records and extension import code remain subject to the 90-day [database upgrade window](../references/architecture/0025-database-upgrades.md); the table-drop migration first shipped on 2026-08-28.
-
-## Consequences
-
-- Every extension gets the same template storage and dashboard behavior.
-- User changes consistently override shipped assets.
-- Reading another extension's template requires invoking that extension's declared command.
-- Existing supported template rows retain their file content and become editable extension data.
-- Unknown or unowned legacy types block the upgrade instead of losing content.
-- Skills remain a separate core subsystem and are not changed by this decision.
+The domain-specific migration and installation repair were removed in favor of extension-owned migrations. Release 0.46 subsequently replaced retained table archives with baseline exports. Keep the template ownership decision; do not restore the retired core mapping or installation repair.

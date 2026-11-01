@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-22
 
+Status: Accepted.
+
 ## Intended design
 
 Extensions can select and compare stored strings without limiting record size.

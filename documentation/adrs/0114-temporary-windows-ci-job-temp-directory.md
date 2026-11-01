@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-26
 
+Status: Accepted.
+
 ## Intended design
 
 Hosted Windows jobs should put temporary runtime homes, databases and installation caches in a temporary directory that the job owns, on storage that suits many small files. The runner owns its lifetime. Applications and local tests should keep using the operating system's normal temp API.

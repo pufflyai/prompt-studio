@@ -4,7 +4,7 @@ Use this reference only when working in a Prompt Studio source checkout. Install
 
 # Canvas designs
 
-Use the Canvas extension for UI exploration and ticket designs. Read repository rules and `design/DESIGN.md` first.
+Use the Canvas extension for UI exploration and ticket designs. Read repository rules and `documentation/guidance/0002-design.md` first.
 
 1. Run `pst canvas list`. Reuse the relevant canvas for follow-up requests.
 2. Edit `extensions/canvas/src/canvases/definitions.ts`. This typed registry owns canvas IDs, names, item membership, readable names, component keys, initial positions, and intended dimensions. Implement previews as design pages in `packages/ui/src/foundations/*.canvas.tsx` and register their source paths and named exports in `src/canvases/previews.tsx`. Keep native preview groups lazy so a form does not initialize unrelated design or documentation modules. Keep the controller independent of preview content.

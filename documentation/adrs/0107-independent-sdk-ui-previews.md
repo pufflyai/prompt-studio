@@ -2,12 +2,7 @@
 
 Proposed: 2026-10-25
 
-## Status
-
-Accepted. Adds a packages-only preview channel to the release policy in
-[ADR 0072](0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md).
-Stable versions keep the fixed group from
-[ADR 0106](0106-independent-core-extension-delivery.md).
+Status: Accepted. Adds a packages-only preview channel to the release policy in [ADR 0072](0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md). Stable versions keep the fixed group from [ADR 0106](0106-independent-core-extension-delivery.md).
 
 ## Context
 

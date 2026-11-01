@@ -2,9 +2,7 @@
 
 Proposed: 2026-09-27
 
-## Status
-
-Accepted and implemented. The dashboard delegates `clipboard-write` only for declared `clipboard.write`; desktop permission checks allow the matching runtime webview frames and continue to deny clipboard reads.
+Status: Accepted and implemented. The dashboard delegates `clipboard-write` only for declared `clipboard.write`; desktop permission checks allow the matching runtime webview frames and continue to deny clipboard reads.
 
 ## Context at proposal time
 

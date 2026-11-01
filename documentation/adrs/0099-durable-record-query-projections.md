@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-22
 
+Status: Accepted; partially superseded by [ADR 0100](0100-one-document-per-resource.md).
+
 [ADR 0100](0100-one-document-per-resource.md) moves each record into its own document. The
 owner-wide type-to-record mapping and the stale-projection rules below no longer apply. The
 projection, its indexes and its query rules remain.

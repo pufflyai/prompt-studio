@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-16
 
+Status: Accepted.
+
 ## Intended design
 
 Saved views need a collection's field definitions independently of its rendered rows. Timeline should read its ticket snapshot once, then use those same fields for its filters and saved views.

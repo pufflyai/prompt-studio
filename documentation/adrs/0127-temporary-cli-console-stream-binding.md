@@ -2,9 +2,7 @@
 
 Proposed: 2026-10-18
 
-## Status
-
-Accepted as a temporary workaround. It is not the intended design; see [Removal](#removal).
+Status: Accepted as a temporary workaround. It is not the intended design; see [Removal](#removal).
 
 ## Intended design
 

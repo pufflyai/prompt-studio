@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-23
 
+Status: Accepted.
+
 ## Context
 
 Extension records live in one Yjs document per extension owner (`document_id = "records"`).

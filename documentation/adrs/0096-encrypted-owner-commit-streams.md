@@ -2,9 +2,7 @@
 
 Proposed: 2026-10-23
 
-## Status
-
-Proposed implementation for PS-902, PS-905 and PS-906. The approved performance repair permits changing document boundaries when whole-owner work fails its fixed acceptance workloads. This decision extends the existing relay's storage representation; it does not replace the relay, add a recovery feature or change retention policy. Deployment and production cutover remain gated by the proofs below.
+Status: Proposed implementation for PS-902, PS-905 and PS-906. The approved performance repair permits changing document boundaries when whole-owner work fails its fixed acceptance workloads. This decision extends the existing relay's storage representation; it does not replace the relay, add a recovery feature or change retention policy. Deployment and production cutover remain gated by the proofs below.
 
 The host storage work in PS-905 and PS-906 owns the Temporary adapter for original owner-wide Yjs history. This decision owns durable transport groups and bounded manifest storage. It does not make sparse legacy fragments independently executable documents.
 

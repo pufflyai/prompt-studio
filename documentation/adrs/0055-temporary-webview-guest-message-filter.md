@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-06
 
+Status: Accepted.
+
 ## Intended behavior
 
 An extension webview talks to the dashboard through a bridge. Only the host page that embeds the webview iframe may connect to it and call it. The transport library should enforce this on both ends. The host end already does: it accepts messages only from the iframe's own window.

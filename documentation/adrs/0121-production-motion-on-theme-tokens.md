@@ -2,9 +2,7 @@
 
 Proposed: 2026-10-11
 
-## Status
-
-Accepted for PS-620. The streaming decision is recorded in Planner request `d587c90b-e186-4166-96a0-4e6d7e48e36d`.
+Status: Accepted for PS-620. The streaming decision is recorded in Planner request `d587c90b-e186-4166-96a0-4e6d7e48e36d`.
 
 ## Context
 
