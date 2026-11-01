@@ -4,7 +4,7 @@ import { parametersChanged } from "../events";
 import type { Values } from "./model";
 
 const filename = (value: unknown) => {
-  if (typeof value !== "string" || !/^[a-z0-9][a-z0-9-]*\.json$/.test(value))
+  if (typeof value !== "string" || !/^[a-z0-9-]+\.json$/.test(value))
     throw new Error("Use a JSON version file beside the canvas");
   return value;
 };

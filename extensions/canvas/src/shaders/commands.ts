@@ -130,7 +130,7 @@ const comparisonKey = (shader: string) => {
   return selectionKey({ canvas: `${shadersRoot}/${shader}/shader.canvas.tsx`, frame: "Compare" });
 };
 const versionExists = async (ctx: CommandContext, shader: string, file: string) =>
-  /^[a-z0-9][a-z0-9-]*\.json$/.test(file) && (await projectFiles(ctx).exists(`${shadersRoot}/${shader}/${file}`));
+  /^[a-z0-9-]+\.json$/.test(file) && (await projectFiles(ctx).exists(`${shadersRoot}/${shader}/${file}`));
 const compareRead = defineCommand({
   id: "compare.read",
   title: l10n("compare.read", "Read the compared version"),

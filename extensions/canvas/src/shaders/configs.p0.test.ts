@@ -161,8 +161,24 @@ test("adding an existing shader and unsafe version IDs never replace design data
 test("unsupported version filenames do not break the shader list or version edits", async () => {
   const { files, mount } = memoryFiles();
   await addShader(mount, hatch);
-  files.set("design/shaders/section-hatch/-draft.json", "{}");
+  files.set("design/shaders/section-hatch/invalid_name.json", "{}");
   expect((await listShaders(mount)).map((shader) => shader.id)).toEqual(["section-hatch"]);
   await duplicateConfig(mount, hatch, "default", "Alternative");
   expect((await listConfigs(mount, hatch)).map((version) => version.id)).toEqual(["default", "alternative"]);
+});
+
+test("legacy leading-hyphen versions remain editable and keep the shader Canvas alive", async () => {
+  const { files, mount } = memoryFiles();
+  const canvas = "design/shaders/section-hatch/shader.canvas.tsx";
+  await addShader(mount, hatch);
+  files.set("design/shaders/section-hatch/-draft.json", JSON.stringify({ name: "Draft", values: { spacing: 12 } }));
+  expect((await listConfigs(mount, hatch)).map((version) => version.id)).toContain("-draft");
+  await updateConfig(mount, hatch, "-draft", { values: { spacing: 14 } });
+  expect((await readConfig(mount, hatch, "-draft")).values.spacing).toBe(14);
+  await deleteConfig(mount, hatch, "default");
+  expect(files.get(canvas)).toContain("./-draft.json");
+  expect(files.get(canvas)).toContain('file: "-draft.json"');
+  expect((await listShaders(mount))[0]?.versions[0]?.id).toBe("-draft");
+  await deleteConfig(mount, hatch, "-draft");
+  expect(files.has(canvas)).toBe(false);
 });
