@@ -189,11 +189,23 @@ test("health compares each stage with its target and counts queue runs, reruns a
     p90Ms: 720_000,
     withinTarget: 2,
     firstAttemptFailures: 1,
-    runnerMinutes: 36,
+    runnerMinutes: 41,
   });
   expect(health.stages.find((stage) => stage.stage === "pull_request")).toMatchObject({
     p50Ms: 120_000,
     withinTarget: 1,
   });
   expect(health).toMatchObject({ queueRuns: 4, mergedPulls: 2, queueRunsPerMerge: 2, failedJobs: 1, passedOnRerun: 1 });
+});
+
+test("health leaves out runs whose gate did not finish", () => {
+  const jobs = [
+    job({ runId: 1, event: "pull_request", branch: "feature", conclusion: "cancelled" }),
+    job({ runId: 2, event: "pull_request", branch: "feature", conclusion: "skipped", started: null, completed: null }),
+    job({ runId: 3, event: "pull_request", branch: "feature" }),
+  ];
+  const pull = summarizeCiHealth(summarizeCiTiming(jobs), jobs, [], null).stages.find(
+    (stage) => stage.stage === "pull_request",
+  );
+  expect(pull).toMatchObject({ runs: 1, measured: 1, firstAttemptFailures: 0 });
 });

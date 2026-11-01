@@ -1,4 +1,4 @@
-import { type CiJob, isFailedJob, isSummaryJob, passedOnRerun } from "./ci-failures";
+import { type CiJob, countedJobs, isFailedJob, passedOnRerun } from "./ci-failures";
 
 export interface CiStepTiming {
   name: string;
@@ -125,6 +125,7 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
       attempt: 1,
       sha: sample.sha,
       stage: stageForRun(sample),
+      gate: gate?.conclusion ?? null,
       wallMs: elapsed(sample.runCreated, final),
       initialWaitMs: elapsed(sample.runCreated, started),
       elapsedAfterStartMs: elapsed(started, final),
@@ -165,12 +166,17 @@ export const summarizeCiHealth = (
   timing: ReturnType<typeof summarizeCiTiming>,
   jobs: CiJob[],
   observedRuns: CiRunTiming[],
-  mergedPulls: number,
+  mergedPulls: number | null,
 ) => {
+  const counted = countedJobs(jobs);
   const stages = Object.entries(stageTargetsMs).map(([stage, targetMs]) => {
-    const runs = timing.runs.filter((run) => run.stage === stage);
+    // Superseded, approval-pending and gate-less runs (version PR updates, package previews) validated nothing.
+    const runs = timing.runs.filter((run) => run.stage === stage && (run.gate === "success" || run.gate === "failure"));
     const walls = runs.map((run) => run.wallMs).filter((wall): wall is number => wall !== null);
-    const runnerMs = runs.reduce((sum, run) => sum + (run.totalRunnerMs ?? 0), 0);
+    // Reruns are repeated cost, so runner time counts every attempt.
+    const runnerMs = jobs
+      .filter((job) => stageForRun(job) === stage)
+      .reduce((sum, job) => sum + (elapsed(job.started, job.completed) ?? 0), 0);
     return {
       stage,
       targetMs,
@@ -187,7 +193,7 @@ export const summarizeCiHealth = (
   const queueRuns = observedRuns
     .filter((run) => run.event === "merge_group")
     .reduce((sum, run) => sum + (run.run_attempt ?? 1), 0);
-  const failed = jobs.filter((job) => isFailedJob(job) && !isSummaryJob(job));
+  const failed = counted.filter(isFailedJob);
   return {
     stages,
     queueRuns,
@@ -196,6 +202,6 @@ export const summarizeCiHealth = (
     failedJobs: failed.length,
     // A queue entry that fails is removed and gets a new commit when added again, so
     // same-commit reruns undercount flakes there.
-    passedOnRerun: failed.filter((job) => passedOnRerun(job, jobs)).length,
+    passedOnRerun: failed.filter((job) => passedOnRerun(job, counted)).length,
   };
 };

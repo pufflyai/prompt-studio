@@ -43,6 +43,11 @@ release:
           - .github/workflows/publish-*.yml
           - .github/workflows/production-*.yml
           - .github/workflows/verify-*.yml
+          - .github/actions/build-release/**
+          - .github/actions/create-pstdio-release/**
+          - .github/actions/publish-release/**
+          - .github/actions/setup-windows-signing/**
+          - scripts/ci/production-*.ts
           - scripts/build/**
           - scripts/release/**
           - scripts/embed.json

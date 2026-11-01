@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from "bun:test";
 import type { HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { recordingSink } from "./opencode-session-poller.test-helpers";
@@ -148,7 +148,7 @@ const createQuestionReplyFetcher = (handlers: QuestionReplyFetcherInput) => {
     const sessionId = getSessionMessageId(request);
     if (request.method === "GET" && sessionId) {
       // Each poll stands for one production poll interval, so idle grace periods still span the same number of polls.
-      setSystemTime(Date.now() + 1_000);
+      if (advanceClock) setSystemTime(Date.now() + 1_000);
       return new Response(JSON.stringify(handlers.getSessionMessages(sessionId)));
     }
 
@@ -161,8 +161,16 @@ const createQuestionReplyFetcher = (handlers: QuestionReplyFetcherInput) => {
   };
 };
 
+// A poller that outlives a failed test must not freeze the clock for later files in this process.
+let advanceClock = false;
+
 describe("OpenCode question replies", () => {
+  beforeEach(() => {
+    advanceClock = true;
+  });
+
   afterEach(() => {
+    advanceClock = false;
     setSystemTime();
   });
 

@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { type CiJob, deduplicateJobs, isFailedJob, isSummaryJob, parseFailedTests } from "./ci-failures";
+import { type CiJob, countedJobs, deduplicateJobs, isFailedJob, parseFailedTests } from "./ci-failures";
 
 interface WorkflowRun {
   id: number;
@@ -32,22 +32,27 @@ const gh = async (args: string[]) => {
   return { stdout, stderr, code };
 };
 
-// A week of runs needs more requests than the workflow token's 1,000 per hour, and one
-// server error used to end the whole report. Wait for the limit to reset and retry errors.
+// Every workflow in the repository shares the workflow token's 1,000 requests per hour, and a
+// week of runs needs more. Leave a reserve for the others and wait for the reset instead.
+const reserve = 300;
+let resumeAt = 0;
+
 export const githubText = async (endpoint: string) => {
   for (let attempt = 1; ; attempt += 1) {
-    const { stdout, stderr, code } = await gh(["api", "--allow-escape-sequences", endpoint]);
-    if (code === 0) return stdout;
+    await Bun.sleep(Math.max(0, resumeAt - Date.now()));
+    const { stdout, stderr, code } = await gh(["api", "--include", "--allow-escape-sequences", endpoint]);
+    const end = stdout.search(/\r?\n\r?\n/);
+    const headers = end < 0 ? stdout : stdout.slice(0, end);
+    const remaining = Number(headers.match(/^x-ratelimit-remaining:\s*(\d+)/im)?.[1] ?? reserve);
+    const reset = Number(headers.match(/^x-ratelimit-reset:\s*(\d+)/im)?.[1] ?? 0);
+    if (remaining < reserve) resumeAt = Math.max(resumeAt, reset * 1000 + 1000);
+    if (code === 0) return end < 0 ? "" : stdout.slice(end).replace(/^\r?\n\r?\n/, "");
+    // Retry server errors; a rate limit waits for its reset above, or a minute for secondary limits.
     const limited = /rate limit/i.test(stderr);
     if (attempt >= 5 || !(limited || /HTTP 5\d\d/.test(stderr)))
       throw new Error(`GitHub ${endpoint} failed (${code}): ${stderr.trim()}`);
-    let waitMs = 2 ** attempt * 1000;
-    if (limited) {
-      const core = JSON.parse((await gh(["api", "rate_limit", "--jq", ".resources.core"])).stdout || "{}");
-      // Secondary and search limits reset within a minute.
-      waitMs = core.remaining === 0 ? core.reset * 1000 - Date.now() + 1000 : 60_000;
-    }
-    await Bun.sleep(Math.max(waitMs, 1000));
+    if (limited) resumeAt = Math.max(resumeAt, Date.now() + 60_000);
+    await Bun.sleep(2 ** attempt * 1000);
   }
 };
 
@@ -63,11 +68,7 @@ const paginatedJobs = async (endpoint: string) => {
 export const collectCiFailures = async (repository: string, since: Date, until: Date, output: string) => {
   mkdirSync(output, { recursive: true });
   const runs: Array<WorkflowRun & { workflow: string }> = [];
-  // A push to main only refreshes the version PR; release validation runs on a schedule or by hand.
-  for (const [workflow, skippedEvent] of [
-    ["test-and-build.yml", ""],
-    ["release-packages.yml", "push"],
-  ] as const) {
+  for (const workflow of ["test-and-build.yml", "release-packages.yml"]) {
     // Listing without a search filter avoids the REST search result cap for large date ranges.
     for (let page = 1; ; page += 1) {
       const response = JSON.parse(
@@ -75,7 +76,7 @@ export const collectCiFailures = async (repository: string, since: Date, until: 
       ) as { workflow_runs: WorkflowRun[] };
       for (const run of response.workflow_runs) {
         const created = new Date(run.created_at);
-        if (created >= since && created <= until && run.event !== skippedEvent) runs.push({ ...run, workflow });
+        if (created >= since && created <= until) runs.push({ ...run, workflow });
       }
       const oldest = response.workflow_runs.at(-1);
       if (response.workflow_runs.length < 100 || (oldest && new Date(oldest.created_at) < since)) break;
@@ -122,7 +123,8 @@ export const collectCiFailures = async (repository: string, since: Date, until: 
     }),
   );
   const unique = deduplicateJobs(jobs);
-  const failures = unique.filter((job) => isFailedJob(job) && !isSummaryJob(job));
+  // PR failures are mostly the change under review, and their logs would exceed the request budget.
+  const failures = countedJobs(unique).filter((job) => isFailedJob(job) && job.event !== "pull_request");
   next = 0;
   await Promise.all(
     Array.from({ length: 4 }, async () => {

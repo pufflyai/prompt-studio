@@ -67,10 +67,18 @@ export const deduplicateJobs = (jobs: CiJob[]) => {
     });
 };
 
-// Gates fail whenever a job they aggregate fails; counting them would double every failure.
-const summaryJobs = new Set(["ci_passed", "validation_results", "version_pr", "nightly_prune", "desktop / targets"]);
-export const isSummaryJob = (job: CiJob) => summaryJobs.has(job.name);
 export const isFailedJob = (job: CiJob) => job.conclusion === "failure" || job.conclusion === "timed_out";
+
+const bookkeepingJobs = new Set(["version_pr", "nightly_prune", "desktop / targets"]);
+// Nested workflows prefix job names, e.g. "production / functional / validation_results".
+const gateJobs = new Set(["ci_passed", "production_ci_passed", "validation_results", "certify"]);
+const isGate = (job: CiJob) => gateJobs.has(job.name.split(" / ").at(-1)!);
+const attemptOf = (job: CiJob) => `${job.workflow}/${job.runId}/${job.attempt}`;
+// A gate fails whenever a job it checks fails, so it counts only when nothing else in its attempt failed.
+export const countedJobs = (jobs: CiJob[]) => {
+  const failedAttempts = new Set(jobs.filter((job) => isFailedJob(job) && !isGate(job)).map(attemptOf));
+  return jobs.filter((job) => !bookkeepingJobs.has(job.name) && !(isGate(job) && failedAttempts.has(attemptOf(job))));
+};
 export const passedOnRerun = (job: CiJob, jobs: CiJob[]) =>
   jobs.some(
     (candidate) =>
@@ -84,7 +92,7 @@ export const passedOnRerun = (job: CiJob, jobs: CiJob[]) =>
   );
 
 export const summarizeFailures = (input: CiJob[]) => {
-  const jobs = deduplicateJobs(input).filter((job) => !isSummaryJob(job));
+  const jobs = countedJobs(deduplicateJobs(input));
   return {
     failures: groupFailures(jobs, (job) =>
       job.failures?.length ? job.failures : job.failedSteps.map((step) => `step | ${job.name} | ${step}`),

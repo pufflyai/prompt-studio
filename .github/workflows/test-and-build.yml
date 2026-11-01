@@ -19,7 +19,7 @@ on:
           - merge_queue
           - pull_request
         default: production
-        description: Validation profile; pull_request runs the PR checks for the dispatched branch
+        description: Validation profile; pull_request runs the PR checks for the Version Packages branch only
       source_sha:
         type: string
         default: ""

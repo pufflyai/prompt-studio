@@ -126,6 +126,14 @@ export const resolveCiScope = (input: CiScopeInput) => {
 
 if (import.meta.main) {
   let profile = process.env.CI_PROFILE || undefined;
+  // A dispatch has no PR base, so scope compares the last commit only. That is the whole
+  // diff only for the version branch, which is one commit on top of main.
+  if (
+    process.env.GITHUB_EVENT_NAME === "workflow_dispatch" &&
+    profile === "pull_request" &&
+    process.env.GITHUB_REF !== "refs/heads/changeset-release/main"
+  )
+    throw new Error("The pull_request profile only runs for changeset-release/main.");
   if (!profile && process.env.GITHUB_REF?.startsWith("refs/heads/test/ci-reliability/")) {
     profile = "production";
     if (process.env.GITHUB_REF.startsWith("refs/heads/test/ci-reliability/merge/")) profile = "merge_queue";
