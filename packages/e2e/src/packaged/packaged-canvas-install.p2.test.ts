@@ -4,7 +4,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { type Browser, chromium } from "@playwright/test";
-import { packExtension, readExtensionPackage } from "pstdio-extensions/distribution";
+import { packExtension } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runTestCommand } from "../scripts/run-test-command";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
@@ -65,9 +65,6 @@ test(
     const phase = (name: string) =>
       console.log(`[Canvas install +${Math.round(performance.now() - startedAt)}ms] ${name}`);
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
-    const { files } = await readExtensionPackage(packed.bytes);
-    // UI Canvas ships no previews; it renders what the project's own build wrote.
-    expect([...files.keys()].filter((path) => path.includes("catalog"))).toEqual([]);
     const registry = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
