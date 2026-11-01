@@ -307,7 +307,7 @@ The database package is `packages/pstdio-db`. Generate Drizzle migrations from t
 bun run --cwd packages/pstdio-db db:generate
 ```
 
-Never edit generated SQL by hand. Keep one migration entry per PR. Verify migrations through isolated test/startup workflows. Do not connect directly to the local PGlite database or run Drizzle Studio against production state. Use public APIs for inspection. See [PGlite ownership and recovery](../../lessons-learned/0002-pglite-wal-corruption.md).
+Never edit generated SQL by hand. Keep one migration entry per PR. Verify migrations through isolated test/startup workflows. Do not connect directly to the local PGlite database or run Drizzle Studio against production state. Use public APIs for inspection. See [database ownership and clean shutdown](../../lessons-learned/0002-pglite-wal-corruption.md).
 
 ## Canvas
 

@@ -534,7 +534,7 @@ for (const session of sessions) {
 }
 ```
 
-`last_request_started` and `last_request_ended` describe the latest run only. `usage` sums the saved conversation's input, output, cache read and cache write tokens. It is null for sessions with no recorded usage, including old sessions until their next save. Show the number of sessions with unknown usage alongside any total. See [session token totals](../../adrs/0066-session-token-totals.md).
+`last_request_started` and `last_request_ended` describe the latest run only. `usage` sums the saved conversation's input, output, cache read and cache write tokens. It is null for sessions with no recorded usage, including old sessions until their next save. Show the number of sessions with unknown usage alongside any total. See [session token totals](../../adrs/0119-session-token-totals.md).
 
 Without a workspace filter, `workspace_id` is the earliest linked workspace, with link ID breaking timestamp ties. With a workspace filter it is the selected workspace. Multiple links do not duplicate session items.
 

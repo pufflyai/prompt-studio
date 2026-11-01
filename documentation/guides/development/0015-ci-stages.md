@@ -1,6 +1,6 @@
 # CI stages
 
-This guide explains how a change moves from a pull request to a stable release, and which tests run at each step. [ADR 0106](../../adrs/0106-prioritize-merge-checks-and-certify-release-candidates.md) records why CI is split this way.
+This guide explains how a change moves from a pull request to a stable release, and which tests run at each step. [ADR 0129](../../adrs/0129-prioritize-merge-checks-and-certify-release-candidates.md) records why CI is split this way.
 
 ```text
 pull request ──► merge queue ──► main ──► nightly (daily) ──► stable release (manual)
@@ -56,7 +56,7 @@ A local run only proves your own machine. It does not prove other platforms or s
 
 Prioritize distinct coverage first, then minimize repeated work on frequent runs. Parallel jobs contribute their dependency critical path, not the sum of every runner minute. Report total runner work separately to expose expensive duplication.
 
-Target times count real work: install, build, artifact transfer, tests, reports and cleanup. Time spent waiting in the queue or for a runner is reported separately. A target is never a reason to remove tests or to raise a time limit. See [CI timeouts and performance budgets](../../../AGENTS.md#ci-timeouts-and-performance-budgets).
+Target times count real work: install, build, artifact transfer, tests, reports and cleanup. Time spent waiting in the queue or for a runner is reported separately. A target is never a reason to remove tests or to raise a time limit. See [CI timeouts and performance budgets](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets).
 
 The timing report keeps initial scheduling delay, elapsed time after the first job starts, aggregate runner execution and per-job phases separate. Elapsed-after-start can still include later runner scheduling gaps; use the dependency path and phase timings when assessing the execution targets. Release duration includes certification and publication after the functional gate.
 
@@ -147,7 +147,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 
 A failed validation job does not unpublish the nightly. It makes the run red, `certify` reports the failed checks, and the Coverage workflow skips that nightly's measurement.
 
-P3 budgets describe the hosted CI runners, not a developer machine. Each was set from the slowest result of several runs on the hosted ubuntu-24.04 runner, plus about 20% (see [sidenav and subnav](../../references/performance/0004-sidenav-subnav.md) and [board cold open](../../references/performance/0002-planner-board-cold-open.md)). A fast laptop passes them easily, so a P3 failure on CI is the signal to act on. To change a budget, collect several CI runs of the same candidate first and get the exact value approved (see [AGENTS.md](../../../AGENTS.md#ci-timeouts-and-performance-budgets)).
+P3 budgets describe the hosted CI runners, not a developer machine. Each was set from the slowest result of several runs on the hosted ubuntu-24.04 runner, plus about 20% (see [sidenav and subnav](../../references/performance/0004-sidenav-subnav.md) and [board cold open](../../references/performance/0002-planner-board-cold-open.md)). A fast laptop passes them easily, so a P3 failure on CI is the signal to act on. To change a budget, collect several CI runs of the same candidate first and get the exact value approved (see [CI guidance](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets)).
 
 Fix nightly failures before you start a stable release. The stable release runs the same checks, so the same failure blocks it.
 

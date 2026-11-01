@@ -26,7 +26,7 @@ export const scrollAreaSlotRecipe = defineSlotRecipe({
       },
     },
     content: {
-      // Keep changing scrollbar geometry out of transcript styles. See ADR 0066.
+      // Keep changing scrollbar geometry out of transcript styles. See ADR 0120.
       "--thumb-width": "initial",
       "--thumb-height": "initial",
       "--corner-width": "initial",

@@ -13,7 +13,7 @@ A person opens a cloud project on a new device, chooses a new folder, and gets e
 included project-folder file that reached Cloud. Saved edits, new files and local Git data
 come back without a Git hosting service. No commit or push is required.
 
-This fits the [mission](../../../MISSION.md): storage, encryption and recovery belong
+This fits the [mission](../../guidance/0001-mission.md): storage, encryption and recovery belong
 in core because every tool needs them. The Cloud extension owns progress and recovery
 UI through public APIs. Extensions keep owning their records and declared files.
 

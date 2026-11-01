@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-25
 
-Status: Accepted as a temporary workaround for the failure policy in [ADR 0106](0106-prioritize-merge-checks-and-certify-release-candidates.md).
+Status: Accepted as a temporary workaround for the failure policy in [ADR 0129](0129-prioritize-merge-checks-and-certify-release-candidates.md).
 
 ## Intended behavior
 

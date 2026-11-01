@@ -95,7 +95,7 @@ The extension's normal `build` command discovers current examples and reuses com
 
 Run `bun run build -- --scope canvas --include-dependencies` before individual Canvas tests and after editing examples, components, or dependencies. Normal Nx test and type-check tasks build it first. Hashes are checked when a build runs; they do not watch files or rerender previews on their own. Freshness verification stays separate from generation.
 
-The whole catalog in `src/catalog/generated/` is build output and is never committed (AGENTS.md "Generated files"); the root `.gitignore` excludes it. Nx builds it before Canvas tests and type checks, and packaged Canvas archives include the built catalog. A Git install of a release tag has no catalog until Canvas builds previews itself (PS-987).
+The whole catalog in `src/catalog/generated/` is build output and is never committed under the [generated-file rules](../../documentation/guidance/0007-contributing.md#2-generated-files); the root `.gitignore` excludes it. Nx builds it before Canvas tests and type checks, and packaged Canvas archives include the built catalog. A Git install of a release tag has no catalog until Canvas builds previews itself (PS-987).
 
 `typecheck` checks the extension and examples across all owning workspaces. Published extension configurations exclude repository-only examples; the catalog checks them separately with the private authoring types.
 

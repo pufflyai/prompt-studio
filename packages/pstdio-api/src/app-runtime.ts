@@ -20,7 +20,7 @@ import { runStartupTasks } from "./startup";
 const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
 const FATAL_CLOSE_TIMEOUT_MS = 5_000;
 
-// Exiting while PGlite is open can corrupt its WAL (lessons 0002 and 0011), so a fatal exit waits
+// Exiting while PGlite is open can corrupt its WAL (lessons 0002 and 0014), so a fatal exit waits
 // for close. The deadline keeps a close that hangs from keeping a broken process alive.
 export const closeBeforeFatalExit = async (close: () => Promise<void>, timeoutMs = FATAL_CLOSE_TIMEOUT_MS) => {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -148,7 +148,7 @@ const createAppCloser = (input: {
         await input.terminalSupervisor.dispose();
         await harnessesStopped;
       } finally {
-        // A part that fails to stop must not leave PGlite open (lessons 0002 and 0011).
+        // A part that fails to stop must not leave PGlite open (lessons 0002 and 0014).
         try {
           await hooksStopped;
         } finally {

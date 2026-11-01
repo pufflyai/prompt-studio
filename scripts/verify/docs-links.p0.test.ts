@@ -53,6 +53,32 @@ test("a repository with working links passes", () => {
   expect(messages(createRepository(baseFiles()))).toEqual([]);
 });
 
+describe("ADR numbering", () => {
+  test("different decisions use unique numbers", () => {
+    const root = createRepository({
+      ...baseFiles(),
+      "documentation/adrs/0066-first.md": "# First decision\n",
+      "documentation/adrs/0067-next.md": "# Next decision\n",
+      "documentation/guides/0066-guide.md": "# Guide\n",
+    });
+
+    expect(messages(root)).toEqual([]);
+  });
+
+  test("reports decisions that share an ADR number", () => {
+    const root = createRepository({
+      ...baseFiles(),
+      "documentation/adrs/0066-first.md": "# First decision\n",
+      "documentation/adrs/0066-other.md": "# Other decision\n",
+      "documentation/adrs/0067-next.md": "# Next decision\n",
+    });
+
+    expect(messages(root)).toEqual([
+      'documentation/adrs/0066-other.md:1 reuses ADR number 0066 from "documentation/adrs/0066-first.md". Use a new number.',
+    ]);
+  });
+});
+
 describe("relative links", () => {
   test("report missing files and missing heading anchors", () => {
     const root = createRepository({

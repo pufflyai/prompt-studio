@@ -5,7 +5,7 @@ description: Write, illustrate, preview, and publish Prompt Studio blog posts, i
 
 # Write a blog post
 
-Blog posts live in `clients/landing-page/src/content/blog/`. Read the repository `MISSION.md` and the blog section of `documentation/guides/0001-documentation.md` first.
+Blog posts live in `clients/landing-page/src/content/blog/`. Read the repository `documentation/guidance/0001-mission.md` and the blog section of `documentation/guides/0001-documentation.md` first.
 
 ## Shape of a release post
 

@@ -6,7 +6,7 @@ import { readTicketTags } from "../../data/tag-operations";
 import { timelineTicketAttributes } from "../model/ticket-properties";
 import { readStoredPlan } from "./plan-store";
 
-// The hidden board exists only for saved-view fields. See ADR 0076.
+// The hidden board exists only for saved-view fields. See ADR 0125.
 export async function timelineViewSchema(ctx: Pick<ExtensionContextBase, "storage" | "files">) {
   await migratePlannerStorage(ctx);
   const [{ statuses }, { tags }, plan] = await Promise.all([

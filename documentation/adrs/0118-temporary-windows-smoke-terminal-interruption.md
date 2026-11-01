@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-31
 
+Status: Accepted.
+
 ## Intended behavior
 
 `pst extensions test` handles Ctrl+C through its existing abort controller, stops its browser and owned runtime, retains requested evidence, and exits with code 130. Normal process signals should provide this on every platform.
