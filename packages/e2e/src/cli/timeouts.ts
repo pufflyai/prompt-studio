@@ -1,6 +1,6 @@
-// Project/API-creating CLI flows install extensions (a cold `npm install` in CI), which can
-// legitimately run ~40s on a slow runner. The split e2e job has its own 15-minute budget, so
-// these per-test caps are generous enough to ride out a slow install instead of flaking.
-export const SETUP_TIMEOUT = 60_000;
-export const TEST_TIMEOUT = 60_000;
-export const FLOW_TIMEOUT = 60_000;
+// The slowest CI runs of the tests using these were 9 s (TEST), 4.3 s (SETUP) and 3.7 s (FLOW)
+// across four nightlies and five queue runs, with CI's warm install cache (PS-1005). 30 s lets a
+// hang fail near the tests' real duration. TEST_TIMEOUT also bounds the helpers' subprocesses.
+export const SETUP_TIMEOUT = 30_000;
+export const TEST_TIMEOUT = 30_000;
+export const FLOW_TIMEOUT = 30_000;

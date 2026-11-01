@@ -99,4 +99,4 @@ it("elects only one owner when processes race for a released lock", async () => 
     await Promise.all(children.map((child) => child.exited));
     fs.rmSync(root, { recursive: true, force: true });
   }
-}, 30_000);
+}, 15_000);
