@@ -196,7 +196,6 @@ const jsonFilesIn = async (dir: string): Promise<string[]> => {
 // Finished runs may still carry results from the platforms that passed.
 const cacheRunArtifacts = async (ctx: StoreContext, runId: string) => {
   const files = filesOf(ctx);
-  const commits = new Map<string, string>();
   const artifacts = (await listRunArtifacts(ctx, runId)).filter(
     (artifact) => RUN_ARTIFACT.test(artifact.name) && !artifact.expired,
   );
@@ -208,14 +207,28 @@ const cacheRunArtifacts = async (ctx: StoreContext, runId: string) => {
       for (const path of await jsonFilesIn(dir)) {
         const text = await readFile(path, "utf8");
         const result = parseResultFile(text);
-        if (result.commit.ref) commits.set(result.commit.ref, result.commit.sha);
         await files.writeText(`benchmarks/runs/${runId}/${artifact.name}-${result.commit.sha}.json`, text);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   }
-  return commits;
+};
+
+// The listing knows only refs, so each commit takes the SHA its cached results measured. A release run is titled
+// by its tag but measured one SHA, so a lone commit takes the lone SHA. SHAs are counted, not refs: one commit can
+// arrive under several refs, such as older Windows refs ending in a CR. Reading the cache also fills runs cached
+// before this rule.
+const fillCommits = async (ctx: StoreContext, run: RunRecord) => {
+  const files = filesOf(ctx);
+  const shas = new Map<string, string>();
+  for (const entry of await files.list(`benchmarks/runs/${run.id}/*.json`)) {
+    const { commit } = parseResultFile(await files.readText(entry.path));
+    shas.set(commit.ref?.trim() || commit.sha, commit.sha);
+  }
+  const distinct = [...new Set(shas.values())];
+  const only = run.commits.length === 1 && distinct.length === 1 ? distinct[0] : undefined;
+  run.commits = run.commits.map((commit) => ({ ...commit, sha: shas.get(commit.ref) ?? commit.sha ?? only }));
 };
 
 // The listing knows only refs; SHAs resolved at start or read from results stay.
@@ -232,18 +245,18 @@ export const mergeRun = (previous: RunRecord | undefined, run: WorkflowRun): Run
 const syncRun = async (ctx: StoreContext, run: RunRecord) => {
   // Open runs and newly finished ones read their jobs, so status details stay current.
   if (!(run.synced && run.complete)) Object.assign(run, await runProgress(ctx, run.id));
-  if ((run.synced && run.complete) || !finished(run.status)) return;
-  try {
-    const shas = await cacheRunArtifacts(ctx, run.id);
-    // A release run is titled by its tag but records the SHA it measured, so a lone commit takes the lone SHA.
-    const only = run.commits.length === 1 && shas.size === 1 ? [...shas.values()][0] : undefined;
-    run.commits = run.commits.map((commit) => ({ ...commit, sha: shas.get(commit.ref) ?? commit.sha ?? only }));
-    run.synced = true;
-    run.complete = true;
-    delete run.syncError;
-  } catch (error) {
-    run.syncError = `Results could not be downloaded: ${error instanceof Error ? error.message : String(error)}`;
+  if (!finished(run.status)) return;
+  if (!(run.synced && run.complete)) {
+    try {
+      await cacheRunArtifacts(ctx, run.id);
+      run.synced = true;
+      run.complete = true;
+      delete run.syncError;
+    } catch (error) {
+      run.syncError = `Results could not be downloaded: ${error instanceof Error ? error.message : String(error)}`;
+    }
   }
+  if (run.commits.some((commit) => !commit.sha)) await fillCommits(ctx, run);
 };
 
 // A run that cannot be read or downloaded keeps its error on its own row and retries on the next sync; only
