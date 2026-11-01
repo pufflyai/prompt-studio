@@ -232,7 +232,6 @@ access check must preserve that authority boundary. See the
   `package.json`.
 - Extensions consume host APIs only through `@pstdio/sdk` and `@pstdio/ui`. Additional workspace dependencies must be listed explicitly in the layer map.
 - The private `design-studies` workspace owns motion scenes, the shared kit in `design/motion/kit`, and shader renderers. Project-owned canvas files compile through `@pstdio/canvas`; UI Canvas supplies review controls and explicit version saves through the public extension API. The retired Lab extensions expose only read-only legacy preference exports. Production UI and host packages do not depend on the study renderers.
-  Its TypeScript paths resolve study imports through Motion Lab's installed dependencies, so type checking uses the same published UI as the preview.
 - Extensions pin `@pstdio/ui` to an exact published version. The pin does not have to match an unreleased workspace version; extension dependency updates ship after the public package release.
 - Extensions resolve `@pstdio/sdk` and `@pstdio/ui` from npm, including development dependencies. `bunfig.toml` disables automatic workspace links for plain version ranges; explicit `workspace:` links in core packages still work. `verify:boundaries` checks `bun.lock` for registry entries under every extension in `extensions/`, `.pstdio/extensions/`, and `infra/local/extensions/`. A matching local version must never hide an unreleased API.
 - `@pstdio/ui` may not import or declare router or React Query dependencies.
