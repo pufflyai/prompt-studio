@@ -42,7 +42,6 @@ test("PR selection resolves the public benchmark registry before dependency inst
         GITHUB_EVENT_PATH: event,
         GITHUB_OUTPUT: output,
         GITHUB_STEP_SUMMARY: "",
-        PULL_REQUEST_LABELS: "[]",
       },
       stdio: "pipe",
     });

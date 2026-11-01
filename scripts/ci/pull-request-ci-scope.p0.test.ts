@@ -165,3 +165,25 @@ test("P2 packaged CLI feature workflows run on one host per OS while P1 runs on 
   for (const host of ["cli-linux-x64", "cli-darwin-arm64", "cli-win-x64"]) expect(priorities[host]).toBe("P0,P1,P2");
   for (const host of ["cli-linux-arm64", "cli-darwin-x64", "cli-win-arm64"]) expect(priorities[host]).toBe("P0,P1");
 });
+
+test("a signed release candidate runs the packaged desktop suite once, in signed validation", () => {
+  const input = { ...scopeFixture(), event: "workflow_dispatch", profile: "production" };
+  const source = resolveCiScope(input);
+  expect(source.clientMatrix.every((row) => row.packaged)).toBe(true);
+  const signed = resolveCiScope({ ...input, signedCandidate: true });
+  expect(signed.clientMatrix.map((row) => row.target).sort()).toEqual([
+    "darwin-arm64",
+    "darwin-x64",
+    "linux-x64",
+    "win32-x64",
+  ]);
+  expect(signed.clientMatrix.every((row) => !row.packaged && row.shards === 1)).toBe(true);
+});
+
+test("production runs packaged CLI tests only in the toolchain job, which includes Linux x64", () => {
+  const input = { ...scopeFixture(), event: "workflow_dispatch", profile: "production" };
+  const production = resolveCiScope(input);
+  expect(production.packagedMatrix.some((row) => row.suite === "cli")).toBe(false);
+  expect(production.packagedMatrix.some((row) => row.suite === "browser")).toBe(true);
+  expect(production.toolchainMatrix.map((row) => row.platform_pkg)).toContain("cli-linux-x64");
+});
