@@ -2,6 +2,13 @@ import { expect, test } from "@playwright/test";
 
 // Critical: host parameters must retain local input, isolate siblings and control motion precisely.
 test("frame parameters and playback stay independent across themes and movement", async ({ page }) => {
+  await page.addInitScript(() =>
+    window.addEventListener("message", ({ source, data }) => {
+      if (data?.protocol !== "pstdio.canvas.preview" || data.type !== "loaded") return;
+      for (const frame of document.querySelectorAll("iframe"))
+        if (frame.contentWindow === source) frame.dataset.testNonce = data.nonce;
+    }),
+  );
   await page.goto("/?canvas=packages%2Fui%2Fsrc%2Ffoundations%2Fframe-parameters.canvas.tsx");
   const surface = (await (await page.locator("[data-verification-host]").elementHandle())!.contentFrame())!;
   const first = surface.locator('[data-canvas-item="First"]');
@@ -27,6 +34,17 @@ test("frame parameters and playback stay independent across themes and movement"
   await page.keyboard.press("Escape");
   await first.getByRole("button", { name: "Theme for" }).click();
   await surface.getByRole("menuitem", { name: "Prompt Dark", exact: true }).click();
+  await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
+  // Two ordinary host patches can arrive in one React batch while playback is active.
+  await first.locator("iframe").evaluate((frame) => {
+    for (const args of [{ amount: 7 }, { time: 1.5 }])
+      frame.contentWindow!.postMessage(
+        { protocol: "pstdio.canvas.preview", nonce: frame.dataset.testNonce, type: "args", args },
+        "*",
+      );
+  });
+  await expect(output).toContainText('"amount":7');
+  await expect(output).toContainText('"time":1.5');
   await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
   await first.getByRole("button", { name: "Midpoint", exact: true }).click();
   await expect(output).toContainText('"time":1');

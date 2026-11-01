@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { type CanvasFrame, type CanvasMeta, type CanvasPreview, CanvasThemeContext, composePreview } from "../compose";
 import { type ParameterValues, parameterValues } from "../parameters";
 import { createFrameAssetBridge } from "./assets";
-import { LiveFrame } from "./live-frame";
+import { type FrameArgsReady, LiveFrame } from "./live-frame";
 import { installFrameNavigation } from "./navigation";
 import { type FrameItem, type FrameMessage, type FrameRequest, type FrameTheme, frameProtocol } from "./protocol";
 
@@ -60,8 +60,12 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     }
   }
 
-  const Ready = (props: { loaded: LoadedFrame; minimumHeight: number; overrides: ParameterValues }) => {
-    const { loaded, minimumHeight, overrides } = props;
+  let applyArgs: Parameters<FrameArgsReady>[0];
+  const onArgsReady: FrameArgsReady = (update) => {
+    applyArgs = update;
+  };
+  const Ready = (props: { loaded: LoadedFrame; minimumHeight: number }) => {
+    const { loaded, minimumHeight } = props;
     useLayoutEffect(() => {
       let second = 0;
       // Offscreen iframe animation frames can be suspended; readiness must not wait for paint.
@@ -101,7 +105,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
           minHeight: minimumHeight ? `${minimumHeight}px` : undefined,
         }}
       >
-        <LiveFrame Frame={loaded.Component} args={loaded.args} overrides={overrides} />
+        <LiveFrame Frame={loaded.Component} args={loaded.args} onArgsReady={onArgsReady} />
       </div>
     );
   };
@@ -130,7 +134,6 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
   let theme: FrameTheme = { id: "light", mode: "light" };
   let item: FrameItem | undefined;
   let loaded: LoadedFrame | undefined;
-  let overrides: ParameterValues = {};
   let active = true;
   const render = () => {
     if (!active || !loaded || !item) return;
@@ -138,7 +141,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     reactRoot.render(
       <CanvasThemeContext.Provider value={theme}>
         <Boundary>
-          <Ready loaded={loaded} minimumHeight={minimumHeight} overrides={overrides} />
+          <Ready loaded={loaded} minimumHeight={minimumHeight} />
         </Boundary>
       </CanvasThemeContext.Provider>,
     );
@@ -159,8 +162,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
             }
           : {}),
       };
-      overrides = parameterValues(controls, {}, change) as ParameterValues;
-      render();
+      applyArgs?.(parameterValues(controls, {}, change));
     } catch (error) {
       send({ type: "error", message: String(error) });
     }
