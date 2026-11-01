@@ -2,7 +2,8 @@
 // percentile bootstrap intervals instead of means with normal-theory intervals.
 const RESAMPLES = 2000;
 
-export type Verdict = "improved" | "regressed" | "unchanged";
+// "inconclusive" means too few samples to tell a change from noise, so it is neither improved nor regressed.
+export type Verdict = "improved" | "regressed" | "unchanged" | "inconclusive";
 
 export const median = (values: number[]) => {
   const sorted = [...values].sort((a, b) => a - b);
@@ -43,7 +44,10 @@ const relativeChange = (base: number, head: number) => {
 };
 
 // Every tracked metric is better when lower: time, CPU share, and memory.
+// One value per side has no spread to resample, so it gets the difference without an interval or verdict.
 export const compareSamples = (base: number[], head: number[]) => {
+  const change = relativeChange(median(base), median(head));
+  if (base.length < 2 || head.length < 2) return { change, low: change, high: change, verdict: "inconclusive" as Verdict };
   const random = seeded(2);
   const changes = Array.from({ length: RESAMPLES }, () =>
     relativeChange(median(resample(base, random)), median(resample(head, random))),
@@ -52,5 +56,5 @@ export const compareSamples = (base: number[], head: number[]) => {
   let verdict: Verdict = "unchanged";
   if (high < 0) verdict = "improved";
   if (low > 0) verdict = "regressed";
-  return { change: relativeChange(median(base), median(head)), low, high, verdict };
+  return { change, low, high, verdict };
 };

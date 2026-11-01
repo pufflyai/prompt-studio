@@ -1,4 +1,5 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
+import { platformLabel, SUITES } from "./platforms";
 
 // Results and runs live on GitHub. The developer's own `gh` login reads and starts them.
 export const BENCHMARK_WORKFLOW = "benchmarks.yml";
@@ -15,10 +16,19 @@ export interface Release {
   assets: ReleaseAsset[];
 }
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+export const finished = (status: RunStatus) => status === "succeeded" || status === "failed" || status === "cancelled";
+
+export interface RunCommit {
+  ref: string;
+  // Known once results arrive, or when the ref is itself a SHA or was resolved when the run started.
+  sha?: string;
+}
 export interface WorkflowRun {
   id: string;
   title: string;
   status: RunStatus;
+  commits: RunCommit[];
+  platforms: string[];
   url: string;
   createdAt: string;
   updatedAt: string;
@@ -53,6 +63,20 @@ export const runStatus = (status: string, conclusion: string | null): RunStatus 
   if (conclusion === "success") return "succeeded";
   if (conclusion === "cancelled") return "cancelled";
   return "failed";
+};
+
+const SHA = /^[0-9a-f]{7,40}$/;
+
+// benchmarks.yml names each run "Benchmarks <commits or release tag> on <platforms>", so runs started
+// anywhere carry what they measure.
+export const parseRunTitle = (title: string) => {
+  const match = title.match(/^Benchmarks (.+) on (.+)$/);
+  if (!match) return { commits: [], platforms: [] };
+  const split = (list: string) => list.split(",").flatMap((entry) => (entry.trim() ? [entry.trim()] : []));
+  return {
+    commits: split(match[1]).map((ref): RunCommit => (SHA.test(ref) ? { ref, sha: ref } : { ref })),
+    platforms: split(match[2]),
+  };
 };
 
 interface ApiRelease {
@@ -100,6 +124,7 @@ export const listRuns = async (ctx: Context) => {
       id: String(run.databaseId),
       title: run.displayTitle,
       status: runStatus(run.status, run.conclusion),
+      ...parseRunTitle(run.displayTitle),
       url: run.url,
       createdAt: run.createdAt,
       updatedAt: run.updatedAt,
@@ -111,9 +136,13 @@ export interface StartRunInput {
   commits: string[];
   suites: string[];
   platforms: string[];
-  samples: number;
 }
+const runTitle = (input: StartRunInput) => `Benchmarks ${input.commits.join(",")} on ${input.platforms.join(",")}`;
+const DISPATCH_LOOKUPS = 5;
+
+// CI runs each benchmark once, so the workflow's samples input keeps its default of 1.
 export const startRun = async (ctx: Context, input: StartRunInput) => {
+  const dispatchedAt = Date.now();
   const output = await gh(ctx, [
     "workflow",
     "run",
@@ -124,10 +153,18 @@ export const startRun = async (ctx: Context, input: StartRunInput) => {
     `suites=${input.suites.join(",")}`,
     "-f",
     `platforms=${input.platforms.join(",")}`,
-    "-f",
-    `samples=${input.samples}`,
   ]);
-  return output.match(/actions\/runs\/(\d+)/)?.[1];
+  const printed = output.match(/actions\/runs\/(\d+)/)?.[1];
+  if (printed) return printed;
+  // Some gh versions print no run URL, so the run is found by its title among the newest runs.
+  for (let attempt = 0; attempt < DISPATCH_LOOKUPS; attempt++) {
+    const run = (await listRuns(ctx)).find(
+      (entry) => entry.title === runTitle(input) && Date.parse(entry.createdAt) >= dispatchedAt - 60_000,
+    );
+    if (run) return run.id;
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  return undefined;
 };
 
 export const cancelRun = (ctx: Context, runId: string) => gh(ctx, ["run", "cancel", runId]);
@@ -152,11 +189,32 @@ interface ApiRunView {
   conclusion: string | null;
   jobs: {
     name: string;
+    status: string;
     conclusion: string | null;
     steps: { name: string; status: string; conclusion: string | null }[];
   }[];
 }
-// Progress counts finished steps across every platform job, so it moves while samples run.
+const JOB_OUTCOMES: Record<string, string> = { success: "finished", failure: "failed", cancelled: "stopped" };
+
+// Benchmark jobs are named "<platform> · <suite>". The status tooltip names each suite's outcome, and the
+// platform too when the run covers several.
+export const jobsDetail = (jobs: ApiRunView["jobs"]) => {
+  const suites = jobs.flatMap((job) => {
+    const [platform, suite] = job.name.split(" · ");
+    return suite ? [{ platform, suite, job }] : [];
+  });
+  const several = new Set(suites.map((entry) => entry.platform)).size > 1;
+  return suites
+    .map(({ platform, suite, job }) => {
+      const label = SUITES.find((entry) => entry.id === suite)?.label ?? suite;
+      const name = several ? `${platformLabel(platform)} · ${label}` : label;
+      if (job.status !== "completed") return `${name} ${job.status === "in_progress" ? "running" : "queued"}`;
+      return `${name} ${JOB_OUTCOMES[job.conclusion ?? ""] ?? job.conclusion ?? "finished"}`;
+    })
+    .join("\n");
+};
+
+// Progress counts finished steps across every platform job, so it moves while benchmarks run.
 export const runProgress = async (ctx: Context, runId: string) => {
   const view = await ghJson<ApiRunView>(ctx, ["run", "view", runId, "--json", "status,conclusion,jobs"]);
   const steps = view.jobs.flatMap((job) => job.steps);
@@ -165,6 +223,7 @@ export const runProgress = async (ctx: Context, runId: string) => {
   return {
     status: runStatus(view.status, view.conclusion),
     progress: steps.length ? steps.filter((step) => step.status === "completed").length / steps.length : 0,
+    detail: jobsDetail(view.jobs),
     ...(failedJob ? { failure: `${failedJob.name}: ${failedStep?.name ?? "failed"}` } : {}),
   };
 };

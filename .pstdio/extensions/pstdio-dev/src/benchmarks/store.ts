@@ -7,10 +7,11 @@ import {
   cancelRun,
   downloadReleaseAsset,
   downloadRunArtifact,
+  finished,
   listReleases,
   listRunArtifacts,
   listRuns,
-  type RunStatus,
+  parseRunTitle,
   runProgress,
   type WorkflowRun,
 } from "./github";
@@ -20,11 +21,24 @@ export type StoreContext = Pick<ExtensionContextBase, "process" | "extensionFile
 
 export interface RunRecord extends WorkflowRun {
   progress?: number;
+  // The first failed job and step, and each suite's outcome, from the run's jobs.
   failure?: string;
+  detail?: string;
+  // Why the finished run's results could not be downloaded yet. The next sync retries.
+  syncError?: string;
   synced: boolean;
 }
 
+export interface ReleaseRecord {
+  version: string;
+  publishedAt: string;
+  // Platforms whose benchmark asset the release has.
+  platforms: string[];
+}
+
 const RUNS_FILE = "benchmarks/runs.json";
+const RELEASES_FILE = "benchmarks/releases.json";
+const SYNC_FILE = "benchmarks/sync.json";
 const RELEASE_ASSET = /^benchmarks-(.+)\.json$/;
 const RUN_ARTIFACT = /^benchmark-results-/;
 const STABLE_TAG = /^pstdio@(\d+\.\d+\.\d+)$/;
@@ -42,11 +56,28 @@ export const changed = (ctx: StoreContext, runId?: string) =>
 export const readRuns = async (ctx: Pick<ExtensionContextBase, "extensionFiles">) => {
   const files = filesOf(ctx);
   if (!(await files.exists(RUNS_FILE))) return [];
-  return JSON.parse(await files.readText(RUNS_FILE)) as RunRecord[];
+  // Runs cached before commits and platforms were recorded read them from their title.
+  return (JSON.parse(await files.readText(RUNS_FILE)) as RunRecord[]).map((run) => ({
+    ...parseRunTitle(run.title),
+    ...run,
+  }));
 };
 
 export const writeRuns = (ctx: Pick<ExtensionContextBase, "extensionFiles">, runs: RunRecord[]) =>
   filesOf(ctx).writeText(RUNS_FILE, `${JSON.stringify(runs, null, 2)}\n`);
+
+export const readReleases = async (ctx: Pick<ExtensionContextBase, "extensionFiles">) => {
+  const files = filesOf(ctx);
+  if (!(await files.exists(RELEASES_FILE))) return [];
+  return JSON.parse(await files.readText(RELEASES_FILE)) as ReleaseRecord[];
+};
+
+// The last sync that finished without errors, so pages can say how fresh cached results are.
+export const readSyncedAt = async (ctx: Pick<ExtensionContextBase, "extensionFiles">) => {
+  const files = filesOf(ctx);
+  if (!(await files.exists(SYNC_FILE))) return undefined;
+  return (JSON.parse(await files.readText(SYNC_FILE)) as { syncedAt: string }).syncedAt;
+};
 
 export interface CachedResult {
   source: { kind: "release"; version: string } | { kind: "run"; runId: string };
@@ -92,9 +123,15 @@ export const readResults = async (ctx: Pick<ExtensionContextBase, "extensionFile
 
 const syncReleases = async (ctx: StoreContext) => {
   const files = filesOf(ctx);
+  const records: ReleaseRecord[] = [];
   for (const release of await listReleases(ctx)) {
     const version = release.tag.match(STABLE_TAG)?.[1];
     if (!version) continue;
+    records.push({
+      version,
+      publishedAt: release.publishedAt,
+      platforms: release.assets.flatMap((asset) => asset.name.match(RELEASE_ASSET)?.[1] ?? []),
+    });
     for (const asset of release.assets) {
       const platform = asset.name.match(RELEASE_ASSET)?.[1];
       const path = `benchmarks/releases/${version}/${platform}.json`;
@@ -104,6 +141,7 @@ const syncReleases = async (ctx: StoreContext) => {
       await files.writeText(path, text);
     }
   }
+  await files.writeText(RELEASES_FILE, `${JSON.stringify(records, null, 2)}\n`);
 };
 
 const jsonFilesIn = async (dir: string): Promise<string[]> => {
@@ -121,6 +159,7 @@ const jsonFilesIn = async (dir: string): Promise<string[]> => {
 // Finished runs may still carry results from the platforms that passed.
 const cacheRunArtifacts = async (ctx: StoreContext, runId: string) => {
   const files = filesOf(ctx);
+  const commits = new Map<string, string>();
   const artifacts = (await listRunArtifacts(ctx, runId)).filter(
     (artifact) => RUN_ARTIFACT.test(artifact.name) && !artifact.expired,
   );
@@ -131,40 +170,51 @@ const cacheRunArtifacts = async (ctx: StoreContext, runId: string) => {
       for (const path of await jsonFilesIn(dir)) {
         const text = await readFile(path, "utf8");
         const result = parseResultFile(text);
+        if (result.commit.ref) commits.set(result.commit.ref, result.commit.sha);
         await files.writeText(`benchmarks/runs/${runId}/${artifact.name}-${result.commit.sha}.json`, text);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   }
+  return commits;
 };
 
-export const finished = (status: RunStatus) => status === "succeeded" || status === "failed" || status === "cancelled";
-
+// The listing knows only refs; SHAs resolved at start or read from results stay.
 export const mergeRun = (previous: RunRecord | undefined, run: WorkflowRun): RunRecord => ({
   ...previous,
   ...run,
+  commits: run.commits.map((commit) => ({
+    ...previous?.commits?.find((entry) => entry.ref === commit.ref),
+    ...commit,
+  })),
   synced: previous?.synced ?? false,
 });
 
-const syncRun = async (ctx: StoreContext, run: RunRecord, listed: boolean) => {
-  // GitHub lists only recent runs; an older run still open is asked for directly.
-  if (!listed && !finished(run.status)) Object.assign(run, await runProgress(ctx, run.id));
+const syncRun = async (ctx: StoreContext, run: RunRecord) => {
+  // Open runs and newly finished ones read their jobs, so status details stay current.
+  if (!run.synced) Object.assign(run, await runProgress(ctx, run.id));
   if (run.synced || !finished(run.status)) return;
-  await cacheRunArtifacts(ctx, run.id);
-  run.synced = true;
+  try {
+    const shas = await cacheRunArtifacts(ctx, run.id);
+    run.commits = run.commits.map((commit) => ({ ...commit, sha: shas.get(commit.ref) ?? commit.sha }));
+    run.synced = true;
+    delete run.syncError;
+  } catch (error) {
+    run.syncError = `Results could not be downloaded: ${error instanceof Error ? error.message : String(error)}`;
+    throw error;
+  }
 };
 
 export const syncRuns = async (ctx: StoreContext) => {
   const previous = new Map((await readRuns(ctx)).map((run) => [run.id, run]));
   const listed = await listRuns(ctx);
   for (const run of listed) previous.set(run.id, mergeRun(previous.get(run.id), run));
-  const listedIds = new Set(listed.map((run) => run.id));
   const runs = [...previous.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const failures: string[] = [];
   for (const run of runs) {
     // One run that cannot sync must not stop the others; it retries on the next sync.
-    await syncRun(ctx, run, listedIds.has(run.id)).catch((error: unknown) =>
+    await syncRun(ctx, run).catch((error: unknown) =>
       failures.push(`Run ${run.id}: ${error instanceof Error ? error.message : String(error)}`),
     );
   }
@@ -172,10 +222,18 @@ export const syncRuns = async (ctx: StoreContext) => {
   if (failures.length) throw new Error(failures.join("\n"));
 };
 
+// Releases and runs sync independently, so one failing does not hide the other's new results.
 export const syncAll = async (ctx: StoreContext) => {
-  await syncReleases(ctx);
-  await syncRuns(ctx);
+  const outcomes = await Promise.allSettled([syncReleases(ctx), syncRuns(ctx)]);
+  const failures = outcomes.flatMap((outcome) =>
+    outcome.status === "rejected"
+      ? [outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason)]
+      : [],
+  );
+  if (!failures.length)
+    await filesOf(ctx).writeText(SYNC_FILE, `${JSON.stringify({ syncedAt: new Date().toISOString() })}\n`);
   await changed(ctx);
+  if (failures.length) throw new Error(failures.join("\n"));
 };
 
 export const refreshRun = async (ctx: StoreContext, runId: string) => {
