@@ -21,6 +21,6 @@
 
 ## 4. Verification
 
-1. Performance tests run in nightly CI and stable-release validation. Existing benchmark budgets still apply; dedicated M5, average-memory, and aggregate-download checks are not implemented yet. Missing automated checks do not waive these targets.
+1. Performance tests run in nightly CI and stable-release validation. Backend nightly coverage uses Linux and Apple Silicon macOS; stable releases add Windows. Existing benchmark budgets still apply; dedicated M5, average-memory, and aggregate-download checks are not implemented yet. Missing automated checks do not waive these targets.
 2. Agents **SHOULD** run relevant local benchmarks for changes with significant performance impact. Ordinary changes can rely on nightly coverage.
 3. Use the [M5 and memory reference procedure](../guides/development/0016-writing-benchmarks.md#m5-and-average-memory-reference-procedure) for sampling, [writing benchmarks](../guides/development/0016-writing-benchmarks.md) for commands, and [CI stages](../guides/development/0015-ci-stages.md#nightly-full-validation) for the schedule.

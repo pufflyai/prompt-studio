@@ -4,7 +4,13 @@ import { changedFiles } from "./changed-files";
 import { affectedPackages } from "./ci-packages";
 import { createEditedTestMatrix } from "./edited-test-matrix";
 import { partitionPackageChecks } from "./package-check-matrix";
-import { productionDesktopCheckPlatforms, productionToolchainPlatforms } from "./production-platforms";
+import {
+  harnessCliLanes,
+  productionDesktopCheckPlatforms,
+  productionDesktopPlatforms,
+  productionToolchainPlatforms,
+  quarantineBunHosts,
+} from "./production-platforms";
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
 import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
 import { discoverTestFiles, priorityFromFile } from "./test-discovery";
@@ -14,12 +20,12 @@ import { readWorkspacePackages } from "./workspace-packages";
 
 interface CiScopeInput {
   event: string;
-  labels: string[];
   changedFiles: string[];
   packages: ReturnType<typeof readWorkspacePackages>;
   tests: string[];
   profile?: string;
   releaseChannel?: string;
+  signedCandidate?: boolean;
 }
 const documentation = (file: string) =>
   /\.(md|mdx|txt)$/.test(file) || file.startsWith("design/") || file === "LICENSE";
@@ -44,8 +50,12 @@ const prioritiesFor = (stage: ReturnType<typeof stageFor>): TestPriority[] => {
 const runsFileCheck = (stage: ReturnType<typeof stageFor>, touched: boolean) =>
   stage === "full" || (stage !== "main" && touched);
 
+// One Linux build per run feeds every host job that builds packages; each job still builds what it misses.
+const sharedBuildFilter = (owners: string[], publishedExtensions: boolean) =>
+  [...new Set([...owners, ...(publishedExtensions ? ["canvas"] : [])])].map((name) => `--scope ${name}`).join(" ");
+
 export const resolveCiScope = (input: CiScopeInput) => {
-  const { event, labels, changedFiles, packages, tests, profile, releaseChannel = "stable" } = input;
+  const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
   const production = profile === "production" || (event === "workflow_dispatch" && profile !== "merge_queue");
   const stage = stageFor(event, production, profile);
@@ -56,13 +66,20 @@ export const resolveCiScope = (input: CiScopeInput) => {
   if (stage === "main") affectedOwners = [];
   const publicApi = code.some((file) => /^packages\/(sdk|ui|pstdio-api-contracts)\//.test(file));
   const extensions = code.some((file) => file.startsWith("extensions/"));
+  const publishedExtensions = runsFileCheck(stage, shared || publicApi || extensions);
+  const sharedBuild = sharedBuildFilter(affectedOwners, publishedExtensions);
   const matrices = createTestMatrices(tests, packages, affectedOwners, prioritiesFor(stage));
   const componentMatrix = stage === "merge_queue" ? [] : matrices.componentMatrix;
   const browserSmoke = stage === "main" || stage === "merge_queue";
-  const clientMatrix = (production ? productionDesktopCheckPlatforms(releaseChannel) : []).map((row) => ({
+  let clientRows = production ? productionDesktopCheckPlatforms(releaseChannel) : [];
+  // Signed validation runs every packaged desktop case on the release files; here only source checks remain.
+  if (production && signedCandidate)
+    clientRows = productionDesktopPlatforms(releaseChannel).map((row) => ({ ...row, shard: 1, shards: 1 }));
+  const clientMatrix = clientRows.map((row) => ({
     ...row,
     os: row.platform === "linux" ? "ubuntu-latest" : row.os,
     tests: true,
+    packaged: !signedCandidate,
   }));
   return {
     stage,
@@ -80,10 +97,14 @@ export const resolveCiScope = (input: CiScopeInput) => {
         : [],
     ...matrices,
     appMatrix: production ? matrices.appMatrix : [],
-    packagedMatrix: production ? matrices.packagedMatrix : [],
+    // The toolchain job runs the packaged CLI suite on every host, including Linux x64.
+    packagedMatrix: production ? matrices.packagedMatrix.filter((row) => row.suite !== "cli") : [],
     componentMatrix,
     clientMatrix,
     toolchainMatrix: productionToolchainPlatforms(releaseChannel),
+    windows: production && productionDesktopPlatforms(releaseChannel).some((row) => row.platform === "win32"),
+    quarantineBunOs: production ? quarantineBunHosts(releaseChannel) : [],
+    harnessMatrix: production ? harnessCliLanes(releaseChannel) : [],
     componentChecks: componentMatrix.length > 0,
     databaseTests: matrices.databaseMatrix.length > 0,
     packageChecks: affectedOwners.length > 0,
@@ -95,10 +116,10 @@ export const resolveCiScope = (input: CiScopeInput) => {
       stage,
       changedFiles.some((file) => ["package.json", "bun.lock"].includes(basename(file))),
     ),
-    publishedExtensions: runsFileCheck(stage, shared || publicApi || extensions),
+    publishedExtensions,
+    sharedBuild,
     sdkApiReport: runsFileCheck(stage, shared || publicApi),
     browserSmoke,
-    deepDiagnostics: labels.includes("ci:full"),
   };
 };
 
@@ -110,7 +131,6 @@ if (import.meta.main) {
   }
   const scope = resolveCiScope({
     event: process.env.GITHUB_EVENT_NAME ?? "",
-    labels: JSON.parse(process.env.PULL_REQUEST_LABELS || "[]"),
     changedFiles: changedFiles(
       process.cwd(),
       // A PR checkout is the tested merge candidate. Event base metadata can lag
@@ -121,6 +141,7 @@ if (import.meta.main) {
     tests: discoverTestFiles(process.cwd()),
     profile,
     releaseChannel: process.env.RELEASE_CHANNEL || undefined,
+    signedCandidate: process.env.SIGNED_CANDIDATE === "true",
   });
   const outputs = Object.entries({
     ...scope,

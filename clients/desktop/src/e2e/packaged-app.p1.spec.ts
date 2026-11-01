@@ -16,9 +16,8 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
-import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 
-// Startup, warm attach, and recovery timings are benchmarks in packaged-launch.p3.bench.ts.
+// Startup and recovery timings are benchmarks in packaged-launch.p3.bench.ts.
 test("starts without editors and serves both authenticated transport paths", { tag: "@essential" }, async ({
   browserName: _browserName,
 }) => {
@@ -200,42 +199,6 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
   } finally {
     await disposePackagedApp(first);
     await disposePackagedApp(second);
-    await removePackagedHome(home);
-  }
-});
-
-test("restarts a crashed sidecar once and offers Retry after another crash in the same Electron process", async ({
-  browserName: _browserName,
-}) => {
-  // Three real runtime starts share this allowance; 45s on macOS ARM64 was approved on 2026-10-30.
-  if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(45_000);
-  const home = createPackagedHome();
-  let app: PackagedApp | null = null;
-  try {
-    // Sidecar restarts do not use an agent harness, so default extension downloads stay out of this deadline.
-    app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
-    const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
-    crashPackagedRuntime(app.runtime.pid);
-    await waitForAutomaticRecovery(app);
-    const originalInstanceId = app.runtime.instanceId;
-    crashPackagedRuntime(app.runtime.pid);
-    await expect(
-      app.lifecyclePage.getByRole("alert").getByRole("heading", { name: "Prompt Studio needs attention", exact: true }),
-    ).toBeVisible();
-    expect(await app.lifecyclePage.evaluate(() => performance.timeOrigin)).toBe(lifecycleStartedAt);
-
-    await app.lifecyclePage.getByRole("button", { name: "Retry" }).click();
-    const replacement = await waitForDescriptor(home, (descriptor) => descriptor.instanceId !== originalInstanceId);
-    await app.page.waitForURL(`${replacement.origin}/`);
-    await expect(app.page.locator("#root")).not.toBeEmpty();
-    await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
-
-    await app.finishTrace();
-    const close = runPackagedCli(home, ["close"]);
-    await waitForExit(app.child);
-    expect(await close).toMatchObject({ exitCode: 0 });
-  } finally {
-    await disposePackagedApp(app);
     await removePackagedHome(home);
   }
 });

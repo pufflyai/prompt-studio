@@ -30,7 +30,7 @@ const performanceChecks = (family: string) => {
       { id: "packaged-collections", command: ["bun", "run", "--cwd", "packages/e2e", "test:packaged:benchmark"] },
     ];
   if (family === "navigation")
-    return [{ id: "sidenav-subnav", command: ["bun", "run", "--cwd", "packages/e2e", "perf:subnav"] }];
+    return [{ id: "sidenav-subnav", command: ["bun", "scripts/ci/run-subnav-benchmarks.ts"] }];
   if (family === "planner")
     return [
       {

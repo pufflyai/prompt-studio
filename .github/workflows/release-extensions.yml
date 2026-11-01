@@ -25,7 +25,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - run: bun install --frozen-lockfile
       # Canvas ships a preview catalog built from this repo's UI; Git does not hold it.
       - name: Build the Canvas preview catalog

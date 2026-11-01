@@ -11,25 +11,24 @@ test("edited CLI shutdown checks install the browser engines they exercise", () 
   expect(rows[0]).toMatchObject({ runner: "cli", browser: true });
 });
 
-test("edited native desktop tests retain every stable desktop platform", () => {
+test("edited native desktop tests run on the nightly's desktop platforms", () => {
   const file = "clients/desktop/src/e2e/packaged-recovery.p2.spec.ts";
   const rows = createEditedTestMatrix([file], [{ name: "@pstdio/desktop", dir: "clients/desktop", dependencies: [] }]);
-  expect(rows.map((row) => row.platform).sort()).toEqual(["darwin", "darwin", "linux", "win32"]);
+  expect(rows.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual(["darwin-arm64", "linux-x64"]);
   expect(rows.every((row) => JSON.parse(row.files).includes(file))).toBe(true);
 });
 
 test("source and packaged desktop checks have distinct required result identities", () => {
   const files = ["clients/desktop/src/e2e/recovery.p1.spec.ts", "clients/desktop/src/e2e/packaged-recovery.p1.spec.ts"];
   const rows = createEditedTestMatrix(files, [{ name: "@pstdio/desktop", dir: "clients/desktop", dependencies: [] }]);
-  expect(rows).toHaveLength(8);
+  expect(rows).toHaveLength(4);
   expect(new Set(rows.map((row) => row.name)).size).toBe(rows.length);
 });
 
-test("edited packaged CLI tests retain all six native toolchains without duplicate shard rows", () => {
+test("edited packaged CLI P1 tests run on every nightly toolchain host without duplicate shard rows", () => {
   const file = "packages/e2e/src/packaged/install.p1.test.ts";
   const rows = createEditedTestMatrix([file], scopeFixture().packages);
-  expect(rows).toHaveLength(6);
-  expect(new Set(rows.map((row) => `${row.platform}-${row.arch}`)).size).toBe(6);
+  expect(rows.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual(["darwin-arm64", "linux-arm64", "linux-x64"]);
 });
 
 test("P0 unit tests already checked by PR CI are not executed twice", () => {
@@ -51,18 +50,12 @@ test("edited native benchmarks check platform-specific behavior before the PR ca
     ["clients/desktop/src/e2e/packaged-launch.p3.bench.ts"],
     scopeFixture().packages,
   );
-  expect(desktop.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual([
-    "darwin-arm64",
-    "darwin-x64",
-    "linux-x64",
-    "win32-x64",
-  ]);
-  expect(desktop.find((row) => row.platform === "win32")?.quarantine).toBe(true);
+  expect(desktop.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual(["darwin-arm64", "linux-x64"]);
   const backend = createEditedTestMatrix(
     ["packages/pstdio-api-runtime-host/src/harness-session-resources.p3.bench.ts"],
     scopeFixture().packages,
   );
-  expect(backend.map((row) => row.platform).sort()).toEqual(["darwin", "linux", "win32"]);
+  expect(backend.map((row) => row.platform).sort()).toEqual(["darwin", "linux"]);
 });
 
 test("the required PR gate cannot pass when an edited-test result is missing or fails", () => {
@@ -92,4 +85,12 @@ test("the required PR gate cannot pass when an edited-test result is missing or 
       true,
     ).outcome,
   ).toBe("failure");
+});
+
+test("edited packaged tests use the hosts their suites use in nightly", () => {
+  const packages = scopeFixture().packages;
+  const feature = createEditedTestMatrix(["packages/e2e/src/packaged/boards.p2.test.ts"], packages);
+  expect(feature.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual(["darwin-arm64", "linux-x64"]);
+  const browser = createEditedTestMatrix(["packages/e2e/src/packaged/editing.p2.spec.ts"], packages);
+  expect(browser.map((row) => `${row.platform}-${row.arch}`)).toEqual(["linux-x64"]);
 });

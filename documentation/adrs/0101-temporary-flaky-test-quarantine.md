@@ -35,5 +35,8 @@ Hosted cold-start variance and browser, filesystem, process, and shutdown failur
 - The 2026-11-01 certification added the exact Linux Side Panel close/reopen case under the same authorization: a 52 ms long task exceeded the unchanged 50 ms limit. It passed prior hosted qualification and failed an unchanged-main control. All seven workbench benchmarks retain their original order, samples, assertions, budgets, and allowances.
 - The same certification added Intel macOS automatic recovery after a sidecar crash: 586 ms exceeded its unchanged 500 ms budget after a prior native pass. Preserve its complete crash/recovery workload and ordered desktop evidence; other platforms remain blocking. The register owns both cases' owners and removal criteria.
 
+- The next 0.46 certification quarantined only navigation's `ticket/repeat structure` contract under the same authorization: one sample reached 376.5 ms against the unchanged 375 ms budget. Retain all 120 measurements, thirty per destination and visit, the fixed fixture, budgets, and raw errors. Require one fresh ordered execution and a separate quarantine report; missing or reordered measurements, browser errors, request failures, and every other navigation budget remain blocking. This performance debt remains unresolved.
+
 ## Removal
+
 For each case, reproduce and repair its cause, meet its existing registered removal criterion, and restore it to the stable lane. Do not delete a supported contract to clear quarantine. Delete the mechanism when the register is empty; remove obsolete reliability refs once their recorded qualification is no longer needed.

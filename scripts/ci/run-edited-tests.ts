@@ -103,6 +103,10 @@ if (row.suite) {
   const runner = quarantineRunnerForTest(row.runner);
   for (const [index, file] of files.entries()) {
     await Bun.write(selectionPath, JSON.stringify([file]));
+    const quarantinedHere = quarantineRegistry.some(
+      (entry) =>
+        entry.runner === runner && entry.file === file && matchesPlatform(entry, process.platform, process.arch),
+    );
     if (row.stable) {
       const code = await execute(
         [
@@ -112,6 +116,7 @@ if (row.suite) {
           "--files-from",
           selectionPath,
           "--prebuilt",
+          ...(quarantinedHere ? ["--allow-quarantine-only"] : []),
         ],
         env,
       );

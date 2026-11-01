@@ -1,6 +1,5 @@
 export const scopeFixture = () => ({
   event: "pull_request",
-  labels: [] as string[],
   changedFiles: ["packages/example/src/value.ts"],
   packages: [
     { name: "example", dir: "packages/example", dependencies: [] },
@@ -21,6 +20,7 @@ export const scopeFixture = () => ({
     "packages/e2e/src/ui/feature.p2.spec.ts",
     "packages/e2e/src/packaged/startup.p1.test.ts",
     "packages/e2e/src/packaged/feature.p2.test.ts",
+    "packages/e2e/src/packaged/editing.p2.spec.ts",
     "packages/canvas-tests/src/ui/ui/menu.p1.spec.ts",
     "packages/canvas-tests/src/ui/ui/menu-permutations.p2.spec.ts",
     "packages/canvas-tests/src/ui/pstdio-dashboard/navigation.p1.spec.ts",

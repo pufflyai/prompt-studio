@@ -16,15 +16,10 @@ test("Windows launch flakes execute once in quarantine and remain stable on othe
   const linux = playwrightQuarantineSelection(runner, directory, false, "linux", "x64");
   if (!("grepInvert" in stable && "grep" in quarantine && "grepInvert" in linux))
     throw new Error("Unexpected stable/quarantine selection");
-  for (const name of [
-    "warm attach restores the workbench within budget",
-    "cold start with an empty home shows the workbench within budget",
-  ]) {
-    const title = `packaged-launch.p3.bench.ts ${name}`;
-    expect(stable.grepInvert!.test(title)).toBe(true);
-    expect(quarantine.grep!.test(title)).toBe(true);
-    expect(linux.grepInvert.test(title)).toBe(false);
-  }
+  const title = "packaged-launch.p3.bench.ts cold start with an empty home shows the workbench within budget";
+  expect(stable.grepInvert!.test(title)).toBe(true);
+  expect(quarantine.grep!.test(title)).toBe(true);
+  expect(linux.grepInvert.test(title)).toBe(false);
   expect(quarantine.grep!.test("packaged-launch.p3.bench.ts sidecar crash shows recovery within budget")).toBe(false);
   expect(quarantine.repeatEach).toBe(1);
   expect(quarantine.retries).toBe(0);

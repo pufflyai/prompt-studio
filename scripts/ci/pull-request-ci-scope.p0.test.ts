@@ -76,24 +76,34 @@ test("the queue keeps source contracts and smoke while production retains comple
   expect(production.packagedMatrix.some((row) => row.priority === "P2")).toBe(true);
 });
 
-test("Intel Mac validation belongs to full releases while nightly keeps Windows diagnostics", () => {
+test("the nightly validates Linux and Apple Silicon while stable releases validate every published host", () => {
   const input = { ...scopeFixture(), event: "workflow_dispatch", profile: "production" };
   const queue = resolveCiScope({ ...input, profile: "merge_queue" });
   const nightly = resolveCiScope({ ...input, releaseChannel: "nightly" });
   const stable = resolveCiScope({ ...input, releaseChannel: "stable" });
   expect(queue.clientMatrix).toEqual([]);
-  expect(nightly.clientMatrix.map((row) => row.target)).toEqual(["linux-x64", "darwin-arm64", "win32-x64"]);
-  expect(stable.clientMatrix.map((row) => row.target)).toContain("darwin-x64");
-  expect(nightly.toolchainMatrix.map((row) => row.platform_pkg)).not.toContain("cli-darwin-x64");
-  expect(stable.toolchainMatrix.map((row) => row.platform_pkg)).toContain("cli-darwin-x64");
-  expect(JSON.stringify(plannedCiJobs(nightly))).not.toContain("cli-darwin-x64");
+  expect(nightly.clientMatrix.map((row) => row.target)).toEqual(["linux-x64", "darwin-arm64"]);
+  expect(stable.clientMatrix.map((row) => row.target)).toEqual(expect.arrayContaining(["darwin-x64", "win32-x64"]));
+  expect(nightly.toolchainMatrix.map((row) => row.platform_pkg)).toEqual([
+    "cli-linux-x64",
+    "cli-linux-arm64",
+    "cli-darwin-arm64",
+  ]);
+  expect(stable.toolchainMatrix.map((row) => row.platform_pkg)).toEqual(
+    expect.arrayContaining(["cli-darwin-x64", "cli-win-x64", "cli-win-arm64"]),
+  );
+  expect(nightly.quarantineBunOs).toEqual(["ubuntu-latest", "macos-15"]);
+  expect(stable.quarantineBunOs).toContain("windows-latest");
+  const nightlyJobs = JSON.stringify(plannedCiJobs(nightly));
+  for (const name of ["windows", "win32", "cli-win", "darwin-x64"]) expect(nightlyJobs).not.toContain(name);
+  expect(JSON.stringify(plannedCiJobs(stable))).toContain("windows_test_and_build");
+  expect(JSON.stringify(plannedCiJobs(stable))).toContain("harness-pi (latest, Windows)");
   expect(nightly.sourceCoverage).toBe(true);
   expect(plannedCiJobs(nightly).find((row) => row.id === "source_coverage")?.priority).toBe("P2");
   expect(queue.sourceCoverage).toBe(false);
   expect(stable.sourceCoverage).toBe(false);
   const artifacts = sourceCoverageArtifacts(nightly, 2);
-  expect(artifacts).toContain("windows_test_and_build-1-attempt-2");
-  expect(artifacts).not.toContain("windows_test_and_build-0-attempt-2");
+  expect(artifacts.some((name) => name.startsWith("windows"))).toBe(false);
   expect(artifacts.filter((name) => name.startsWith("database_tests-"))).toHaveLength(nightly.databaseMatrix.length);
   expect(sourceCoverageArtifacts(queue, 2)).toEqual([]);
 });
@@ -157,4 +167,49 @@ test("a queue entry runs dependency and public API checks only when its own diff
   expect(ui).toMatchObject({ license: true, publishedExtensions: true, sdkApiReport: true });
   const nightly = resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" });
   expect(nightly).toMatchObject({ license: true, publishedExtensions: true, sdkApiReport: true });
+});
+
+test("P2 packaged CLI feature workflows run on one host per OS while P1 runs on every toolchain host", () => {
+  const stable = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
+  const priorities = Object.fromEntries(stable.toolchainMatrix.map((row) => [row.platform_pkg, row.priorities]));
+  for (const host of ["cli-linux-x64", "cli-darwin-arm64", "cli-win-x64"]) expect(priorities[host]).toBe("P0,P1,P2");
+  for (const host of ["cli-linux-arm64", "cli-darwin-x64", "cli-win-arm64"]) expect(priorities[host]).toBe("P0,P1");
+});
+
+test("a signed release candidate runs the packaged desktop suite once, in signed validation", () => {
+  const input = { ...scopeFixture(), event: "workflow_dispatch", profile: "production" };
+  const source = resolveCiScope(input);
+  expect(source.clientMatrix.every((row) => row.packaged)).toBe(true);
+  const signed = resolveCiScope({ ...input, signedCandidate: true });
+  expect(signed.clientMatrix.map((row) => row.target).sort()).toEqual([
+    "darwin-arm64",
+    "darwin-x64",
+    "linux-x64",
+    "win32-x64",
+  ]);
+  expect(signed.clientMatrix.every((row) => !row.packaged && row.shards === 1)).toBe(true);
+});
+
+test("production runs packaged CLI tests only in the toolchain job, which includes Linux x64", () => {
+  const input = { ...scopeFixture(), event: "workflow_dispatch", profile: "production" };
+  const production = resolveCiScope(input);
+  expect(production.packagedMatrix.some((row) => row.suite === "cli")).toBe(false);
+  expect(production.packagedMatrix.some((row) => row.suite === "browser")).toBe(true);
+  expect(production.toolchainMatrix.map((row) => row.platform_pkg)).toContain("cli-linux-x64");
+});
+
+test("one shared build per run covers every package the Linux host jobs build", () => {
+  const input = scopeFixture();
+  const pr = resolveCiScope(input);
+  expect(pr.sharedBuild.split(" --scope ").length).toBeGreaterThan(0);
+  for (const owner of pr.affectedOwners) expect(pr.sharedBuild).toContain(`--scope ${owner}`);
+  const extensions = resolveCiScope({ ...input, changedFiles: ["packages/ui/src/index.ts"] });
+  expect(extensions.publishedExtensions).toBe(true);
+  expect(extensions.sharedBuild).toContain("--scope canvas");
+  expect(plannedCiJobs(pr).map((job) => job.id)).toContain("build_host");
+  const docs = resolveCiScope({ ...input, changedFiles: ["documentation/guide.md"] });
+  expect(docs.sharedBuild).toBe("");
+  expect(plannedCiJobs(docs).map((job) => job.id)).not.toContain("build_host");
+  const main = resolveCiScope({ ...input, event: "push" });
+  expect(main.sharedBuild).toBe("");
 });

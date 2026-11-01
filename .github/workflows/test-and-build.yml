@@ -5,7 +5,6 @@ on:
       - opened
       - synchronize
       - reopened
-      - labeled
   merge_group: null
   push:
     branches:
@@ -55,9 +54,16 @@ on:
         type: string
         default: stable
         description: Candidate release channel
+# A newer push to a PR, or a newer manual run for the same branch and source, replaces the older run.
+# ci:full diagnostics dispatch on the base branch with the PR's source_sha, so each PR keeps its own group.
+# Release Packages calls this workflow under its own name and keeps one group per commit.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: >-
+    ${{ github.workflow }}-${{ github.ref }}-${{
+    github.event_name == 'pull_request' && 'latest' ||
+    github.event_name == 'workflow_dispatch' && github.workflow == 'Test and Build' && format('dispatch-{0}', inputs.source_sha) ||
+    github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.workflow == 'Test and Build') }}
 env:
   NX_DAEMON: "false"
 jobs:
@@ -88,6 +94,10 @@ jobs:
       gate_plan: ${{ steps.scope.outputs.gatePlan }}
       client_matrix: ${{ steps.scope.outputs.clientMatrix }}
       toolchain_matrix: ${{ steps.scope.outputs.toolchainMatrix }}
+      windows: ${{ steps.scope.outputs.windows }}
+      quarantine_bun_os: ${{ steps.scope.outputs.quarantineBunOs }}
+      harness_matrix: ${{ steps.scope.outputs.harnessMatrix }}
+      shared_build: ${{ steps.scope.outputs.sharedBuild }}
       component_matrix: ${{ steps.scope.outputs.componentMatrix }}
       bun_contract_matrix: ${{ steps.scope.outputs.bunContractMatrix }}
       app_matrix: ${{ steps.scope.outputs.appMatrix }}
@@ -103,7 +113,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -111,14 +121,60 @@ jobs:
       - name: Choose the stage, jobs, and packages to test
         id: scope
         env:
-          PULL_REQUEST_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           GH_TOKEN: ${{ github.token }}
           CI_PROFILE: ${{ inputs.profile || '' }}
           RELEASE_CHANNEL: ${{ inputs.release_channel || 'stable' }}
+          SIGNED_CANDIDATE: ${{ inputs.artifact_run_id != '' }}
         run: bun scripts/ci/pull-request-ci-scope.ts
     env:
       CI_PRIORITY: P0
       GH_TOKEN: ${{ github.token }}
+  # One Linux build per run. Host jobs import its archives, so each package builds once.
+  # Build failures stay with the jobs that test those packages: they rebuild what is missing here.
+  build_host:
+    needs: scope
+    if: needs.scope.outputs.shared_build != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI_PRIORITY: P0
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Record the restored build archives
+        shell: bash
+        run: find .cache/ci-build -maxdepth 1 -name '*.tar.gz' -printf '%f\n' | sort > "$RUNNER_TEMP/restored-archives.txt"
+      - name: Build every package this run's host jobs build
+        continue-on-error: true
+        env:
+          SHARED_BUILD: ${{ needs.scope.outputs.shared_build }}
+        shell: bash
+        run: |
+          read -r -a filters <<< "$SHARED_BUILD"
+          bun run build -- "${filters[@]}" --include-dependencies --no-bail
+      - name: Keep only the archives this run built
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/shared-build"
+          find .cache/ci-build -maxdepth 1 -name '*.tar.gz' -printf '%f\n' | sort |
+            comm -13 "$RUNNER_TEMP/restored-archives.txt" - > "$RUNNER_TEMP/shared-build/archives.txt"
+          while read -r archive; do cp ".cache/ci-build/$archive" "$RUNNER_TEMP/shared-build/"; done < "$RUNNER_TEMP/shared-build/archives.txt"
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ci-build-shared-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/shared-build
+          compression-level: 0
+          if-no-files-found: error
   edited_tests:
     name: edited_tests (${{ matrix.name }})
     needs: scope
@@ -146,7 +202,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install native dependencies and restore host build cache
         uses: ./.github/actions/setup-ci-cache
         with:
@@ -194,7 +250,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - &a1
         uses: oven-sh/setup-bun@v2
         with:
@@ -240,8 +296,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
   package_checks:
     name: package_checks (${{ matrix.shard }})
-    needs: scope
-    if: needs.scope.outputs.package_checks == 'true'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.package_checks == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -256,13 +313,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       - name: Build the tested packages and their dependencies
         id: build_packages
         run: bun run build -- ${{ matrix.lernaFilter }} --include-dependencies --no-bail
@@ -297,8 +355,9 @@ jobs:
       CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
   integration_contracts:
     name: integration_contracts_${{ matrix.priority }} (${{ matrix.shard }})
-    needs: scope
-    if: needs.scope.outputs.integration_matrix != '[]'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.integration_matrix != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -316,11 +375,12 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       - name: Build selected contract owners
         env:
           LERNA_FILTER: ${{ matrix.lernaFilter }}
@@ -342,8 +402,9 @@ jobs:
         run: git diff --exit-code
   bun_contracts:
     name: bun_contracts_${{ matrix.priority }} (${{ matrix.shard }})
-    needs: scope
-    if: needs.scope.outputs.bun_contract_matrix != '[]'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.bun_contract_matrix != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -362,11 +423,12 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       - name: Build selected contract owners
         env:
           LERNA_FILTER: ${{ matrix.lernaFilter }}
@@ -389,8 +451,9 @@ jobs:
         run: git diff --exit-code
   database_tests:
     name: database_tests_${{ matrix.priority }} (${{ matrix.package }} ${{ matrix.shard }})
-    needs: scope
-    if: needs.scope.outputs.database_tests == 'true'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.database_tests == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -404,13 +467,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       - name: Build ${{ matrix.package }} and its dependencies
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
@@ -443,8 +507,9 @@ jobs:
       CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
       CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
   published_extensions:
-    needs: scope
-    if: needs.scope.outputs.published_extensions == 'true'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.published_extensions == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -456,13 +521,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       # Canvas is the only extension with build output: its preview catalog is built from
       # this repo's UI, so it must exist before the extension is copied out and checked.
       - name: Build the Canvas preview catalog
@@ -486,10 +552,11 @@ jobs:
     with:
       ref: ${{ inputs.source_sha || github.sha }}
       versions: '["minimum","latest"]'
+      harnesses: ${{ needs.scope.outputs.harness_matrix }}
   windows_test_and_build:
     name: windows_test_and_build (${{ matrix.check }})
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 25
     strategy:
@@ -518,7 +585,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
@@ -555,7 +622,7 @@ jobs:
   windows_database_tests:
     name: windows_database_tests (${{ matrix.package }} ${{ matrix.shard }})
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 25
     strategy:
@@ -594,7 +661,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
@@ -654,7 +721,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - uses: ./.github/actions/setup-ci-cache
@@ -696,7 +763,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - name: Install dependencies and restore build cache
@@ -780,7 +847,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - name: Install dependencies and restore build cache
@@ -840,7 +907,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - name: Install dependencies and restore build cache
@@ -891,7 +958,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - name: Install dependencies and restore build cache
@@ -964,10 +1031,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macos-15
+        os: ${{ fromJSON(needs.scope.outputs.quarantine_bun_os) }}
     env:
       E2E_TEST_LANE: quarantine
       CI_PRIORITY: P2
@@ -978,7 +1042,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: package.json
@@ -1015,7 +1079,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: package.json
@@ -1065,7 +1129,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - uses: ./.github/actions/setup-ci-cache
@@ -1164,7 +1228,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install native dependencies and restore host build cache
         id: install_native_dependencies
         uses: ./.github/actions/setup-ci-cache
@@ -1266,14 +1330,15 @@ jobs:
           CI_CHECK_COMMAND: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.config.ts
         shell: bash
       - name: Record complete packaged desktop inventory
-        if: matrix.tests && matrix.shards > 1 && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
+        if: matrix.packaged && matrix.shards > 1 && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         working-directory: clients/desktop
         run: |
           mkdir -p test-results
           bun run test:packaged -- --list --reporter=json > test-results/packaged-release-inventory.json
         shell: bash
+      # A signed release candidate runs these packaged cases in signed functional validation.
       - name: Smoke packaged desktop app
-        if: needs.scope.outputs.production == 'true' && matrix.tests && !cancelled() &&
+        if: needs.scope.outputs.production == 'true' && matrix.packaged && !cancelled() &&
           steps.desktop.outcome == 'success'
         env:
           DEBUG: pw:api,pw:browser
@@ -1283,7 +1348,7 @@ jobs:
           "$CI_CHECK_COMMAND"
         shell: bash
       - name: Run quarantined packaged desktop cases
-        if: needs.scope.outputs.production == 'true' && matrix.tests && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.packaged && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         continue-on-error: true
         env:
           CI_PRIORITY: P2
@@ -1291,7 +1356,7 @@ jobs:
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun ../../scripts/ci/run-quarantined-tests.ts packaged-desktop --scope @pstdio/desktop --prebuilt
       - name: Require first-attempt packaged desktop quarantine execution
-        if: needs.scope.outputs.production == 'true' && matrix.tests && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.packaged && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         env:
           CI_PRIORITY: P2
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
@@ -1359,7 +1424,7 @@ jobs:
       priority: P2
       gate_plan: ${{ needs.scope.outputs.gate_plan }}
   source_coverage:
-    needs: [scope, package_checks, bun_contracts, database_tests, windows_test_and_build, windows_database_tests]
+    needs: [scope, package_checks, bun_contracts, database_tests]
     if: >-
       !cancelled() && needs.scope.outputs.source_coverage == 'true' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
@@ -1448,7 +1513,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - *a1
       - uses: ./.github/actions/setup-ci-cache
       - name: Compare public APIs with last release
@@ -1473,6 +1538,7 @@ jobs:
     # GitHub owns waiting for runners; the result reader starts after execution finishes.
     needs:
       - scope
+      - build_host
       - edited_tests
       - static_checks
       - package_checks
@@ -1510,7 +1576,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - *a1
       - name: Require complete selected job results
         run: bun scripts/ci/monitor-ci-gates.ts
