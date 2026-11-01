@@ -128,3 +128,22 @@ test("an external cancellation keeps its signal reason and starts no files", asy
   expect(started).toBe(false);
   expect(results[0]).toMatchObject({ outcome: "cancelled", durationMs: null, cancellationReason: "signal:SIGTERM" });
 });
+
+test("a file that never finishes is stopped as stalled while the other files still run", async () => {
+  const reasons: unknown[] = [];
+  const results = await runApiTestFiles(
+    ["stuck", "quick"],
+    async (file, signal) => {
+      if (file === "quick") return 0;
+      await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+      reasons.push(signal.reason);
+      return 137;
+    },
+    { priority: "P2", stallMs: 20 },
+  );
+  expect(reasons).toEqual(["stalled"]);
+  expect(results.map((result) => [result.file, result.outcome, result.error])).toEqual([
+    ["stuck", "failure", "stalled for 0.02 s"],
+    ["quick", "success", undefined],
+  ]);
+});

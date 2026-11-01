@@ -3,6 +3,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { createApiTestPlan } from "./api-test-plan";
 import { runApiTestFiles } from "./api-test-scheduler";
+import { recordStalledProcesses, stopStalledProcesses } from "./api-test-stall";
 
 const packageRoot = resolve(import.meta.dirname, "../..");
 const root = resolve(packageRoot, "../..");
@@ -73,7 +74,12 @@ const runFile = async (file: string, signal: AbortSignal) => {
       },
     },
   );
-  const abort = () => child.kill();
+  const abort = () => {
+    if (signal.reason !== "stalled") return child.kill();
+    const report = resolve(directory, "files", String(index), "stall.txt");
+    console.error(`API test file stalled: ${file}. Process states: ${report}`);
+    stopStalledProcesses(recordStalledProcesses(child.pid, report));
+  };
   signal.addEventListener("abort", abort, { once: true });
   if (signal.aborted) abort();
   try {
@@ -87,7 +93,8 @@ try {
     resolve(directory, "selected.json"),
     `${JSON.stringify({ ...plan, priority, selectionReason: selected ? "explicit PR regression files" : "all API files" }, null, 2)}\n`,
   );
-  const results = await runApiTestFiles(plan.files, runFile, { priority, signal: controller.signal });
+  // API files finish in seconds; one that runs for 5 minutes is stalled (PS-1013, approved 2026-11-01).
+  const results = await runApiTestFiles(plan.files, runFile, { priority, signal: controller.signal, stallMs: 300_000 });
   const files = await Promise.all(
     results.map(async (result) => {
       const evidence = Bun.file(casesFor(result.file));
