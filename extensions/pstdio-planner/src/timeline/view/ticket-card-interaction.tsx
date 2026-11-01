@@ -1,9 +1,10 @@
 import { Icon, Text } from "@chakra-ui/react";
-import type { GuestHost } from "@pstdio/sdk/extensions";
+import type { GuestHost, WebviewResourceAction } from "@pstdio/sdk/extensions";
 import { getIconComponent, type ResourceContextAction } from "@pstdio/ui";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
 import { useEffect, useState } from "react";
 import type { TimelineTicketRow } from "../model/query-data";
+import { createTicketCardActions } from "./ticket-card-actions";
 import type { PlanClient } from "./use-plan";
 
 export interface TicketCardInteraction {
@@ -18,43 +19,35 @@ export function useTicketCardActions(
   interaction: TicketCardInteraction | undefined,
   row: TimelineTicketRow | undefined,
 ) {
-  const [actions, setActions] = useState<ResourceContextAction[]>([]);
+  const [actions, setActions] = useState<WebviewResourceAction[]>([]);
   const [error, setError] = useState<string>();
+  const [loader, setLoader] = useState<ReturnType<typeof createTicketCardActions>>();
   const host = interaction?.host;
   const resource = row?.resource;
   useEffect(() => {
-    let active = true;
-    if (!host || !resource) return;
-    const readActions = () =>
-      host
-        .call("resources.actions", { operation: "list", resource })
-        .then((actions) => {
-          if (!active) return;
-          setActions(
-            actions.map((action) => ({
-              ...action,
-              icon: action.icon ? <Icon as={getIconComponent(action.icon)} boxSize="4" /> : undefined,
-              onClick: async () => {
-                setError(undefined);
-                try {
-                  await host.call("resources.actions", { operation: "execute", resource, key: action.key });
-                } catch (reason) {
-                  setError(String(reason));
-                }
-              },
-            })),
-          );
-        })
-        .catch((reason) => {
-          if (active) setError(String(reason));
-        });
-    const stop = host.onEvent("resources.actions", () => void readActions());
-    void readActions();
-    return () => {
-      active = false;
-      stop();
-    };
-  }, [host, resource]);
+    if (!host) return;
+    const next = createTicketCardActions(host, {
+      onActions: setActions,
+      onError: (reason) => setError(String(reason)),
+    });
+    setLoader(next);
+    return () => next.dispose();
+  }, [host]);
+  const menuActions: ResourceContextAction[] =
+    host && resource
+      ? actions.map((action) => ({
+          ...action,
+          icon: action.icon ? <Icon as={getIconComponent(action.icon)} boxSize="4" /> : undefined,
+          onClick: async () => {
+            setError(undefined);
+            try {
+              await host.call("resources.actions", { operation: "execute", resource, key: action.key });
+            } catch (reason) {
+              setError(String(reason));
+            }
+          },
+        }))
+      : [];
   const onBadgeChange = async (attributeId: string, value: unknown) => {
     if (!interaction || !row) return;
     setError(undefined);
@@ -68,7 +61,11 @@ export function useTicketCardActions(
       setError(String(reason));
     }
   };
-  return { actions, onBadgeChange, error };
+  // Hover and focus come before a context menu opens, so its actions are ready by then.
+  const prepare = () => {
+    if (resource) loader?.prepare(resource);
+  };
+  return { actions: menuActions, prepare, onBadgeChange, error };
 }
 
 export function TicketCardError(props: { error?: string }) {
