@@ -84,7 +84,7 @@ test("separate wakes on one connection reuse the attempt signal", async () => {
     },
     websocket: {
       open(socket) {
-        socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
+        socket.send(JSON.stringify({ type: "ready", protocolVersion: 2 }));
       },
       message() {},
     },

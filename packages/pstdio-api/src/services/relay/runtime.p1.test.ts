@@ -48,3 +48,52 @@ test("committed writes in a synced project announce storage changes for that pro
     await app.close();
   }
 });
+
+test("an unsupported relay live version reaches the existing account error display as an update request", async () => {
+  const app = await createTestApp();
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (new URL(request.url).pathname === "/v1/environment-access")
+        return Response.json({ token: "access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 404 });
+    },
+    websocket: {
+      open(socket) {
+        socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
+      },
+      message() {},
+    },
+  });
+  const relay = await startRelayRuntime({ deps: app.deps });
+  try {
+    const project = await app.deps.projectService.create({ name: "Needs update" });
+    await relay.update([
+      {
+        accountId: "owner",
+        workbenchId: project.id,
+        environmentId: "device",
+        managerOrigin: server.url.origin,
+        relayOrigin: server.url.origin,
+        renewalGrant: "grant",
+      },
+    ]);
+    let error: unknown;
+    const end = Date.now() + 1000;
+    while (!error && Date.now() < end) {
+      error = await relay.status(project.id).then(
+        () => undefined,
+        (error) => error,
+      );
+      if (!error) await Bun.sleep(1);
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("Update Prompt Studio or the relay");
+  } finally {
+    await relay.close();
+    await server.stop(true);
+    await app.close();
+  }
+});

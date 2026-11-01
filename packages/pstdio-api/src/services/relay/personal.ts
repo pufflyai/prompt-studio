@@ -1,4 +1,5 @@
 import { hostname } from "node:os";
+import type { LiveConnection } from "pstdio-sync/relay";
 import {
   createDocumentRelay,
   createDocumentRelayConnection,
@@ -15,6 +16,7 @@ import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
 
 export const startRelayPersonalHistory = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
@@ -69,11 +71,12 @@ export const startRelayPersonalHistory = (input: {
     await capturePersonalHistory({ projectId: config.workbenchId, device, history, references, deps });
   };
   const connection = createDocumentRelayConnection({
+    live: input.live,
     origin: config.relayOrigin,
     projectId: config.workbenchId,
     signal,
     access: input.access,
-    synchronize: async (attemptSignal) => {
+    synchronize: async (attemptSignal, subscribe) => {
       const { personal, project } = await fetchSyncSpaces({
         ...config,
         credential: config.renewalGrant,
@@ -90,6 +93,7 @@ export const startRelayPersonalHistory = (input: {
           space: personal,
           relay: (documentId) =>
             createDocumentRelay({
+              subscribe,
               origin: config.relayOrigin,
               space: personal,
               documentId,
@@ -106,6 +110,7 @@ export const startRelayPersonalHistory = (input: {
           space: project,
           documentId,
           relay: createDocumentRelay({
+            subscribe,
             origin: config.relayOrigin,
             space: project,
             documentId,

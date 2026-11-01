@@ -1,4 +1,5 @@
 import { createReadBoundary } from "pstdio-extensions";
+import type { LiveConnection } from "pstdio-sync/relay";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { watchArtifactMount } from "../../features/extensions/artifact-mount-watch/mount-watcher";
 import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
@@ -10,6 +11,7 @@ import { createExtensionDocumentSync } from "./documents";
 import type { RelayWorkbench } from "./runtime";
 
 export const startRelayExtension = async (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   source: Awaited<ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>>[number];
   deps: ExtensionsRouteDeps;
@@ -76,13 +78,14 @@ export const startRelayExtension = async (input: {
         }),
       );
     connection = createDocumentRelayConnection({
+      live: input.live,
       origin: config.relayOrigin,
       projectId: config.workbenchId,
       signal,
       access,
-      synchronize: async (attemptSignal) => {
+      synchronize: async (attemptSignal, subscribe) => {
         await refreshFiles();
-        await documents.synchronize(attemptSignal);
+        await documents.synchronize(attemptSignal, subscribe);
         await refreshFiles();
       },
       onError: () =>

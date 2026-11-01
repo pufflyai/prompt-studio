@@ -1,3 +1,4 @@
+import type { SubscribeDocument } from "pstdio-sync/relay";
 import { createDocumentRelay, createDocumentSync, createRecordStreamSync, fetchSyncSpaces } from "pstdio-sync/relay";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
@@ -49,7 +50,7 @@ export const createExtensionDocumentSync = (input: {
         ...documentProgress(statuses, directory !== undefined),
       };
     },
-    async synchronize(signal: AbortSignal) {
+    async synchronize(signal: AbortSignal, subscribe?: SubscribeDocument) {
       directory = undefined;
       const { config, owner, deps } = input;
       const { project: space } = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal });
@@ -60,6 +61,7 @@ export const createExtensionDocumentSync = (input: {
       }
       const relay = (documentId: string) =>
         createDocumentRelay({
+          subscribe,
           origin: config.relayOrigin,
           space,
           documentId,
