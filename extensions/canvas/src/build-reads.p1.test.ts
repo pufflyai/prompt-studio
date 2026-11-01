@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { DEFAULT_OUT } from "@pstdio/canvas";
+import type { ArtifactMount } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "../extension";
 import { commands } from "./commands";
@@ -7,9 +8,20 @@ import { canvasResources } from "./resources";
 import { testManifest } from "./test-build";
 
 const foundations = "src/foundations.canvas.tsx";
-const context = (projectFiles: Record<string, unknown> | undefined) => {
+const context = (projectFiles: Partial<ArtifactMount> | undefined) => {
   const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
-  return Object.assign(ctx, { projectFiles });
+  const base = ctx.artifacts.mount("build");
+  return Object.assign(ctx, {
+    projectFiles,
+    artifacts: {
+      mount: () => ({
+        ...base,
+        exists: (path: string) => projectFiles?.exists?.(`${DEFAULT_OUT}/${path}`) ?? Promise.resolve(false),
+        readText: (path: string) =>
+          projectFiles?.readText?.(`${DEFAULT_OUT}/${path}`) ?? Promise.reject(new Error("No ready workspace")),
+      }),
+    },
+  });
 };
 
 test("a project without a readable folder shows an empty, explained state instead of failing", async () => {
@@ -47,12 +59,21 @@ const projectFolder = (manifests: ReturnType<typeof testManifest>[], modules: Re
   };
 };
 
-test("frames reuse the parsed build until it changes", async () => {
-  const folder = projectFolder([testManifest()], { "modules/runtime.txt": "runtime", "modules/foundations.txt": "f" });
+test("frames observe changed manifest contents even when filesystem timestamps match", async () => {
+  const before = testManifest();
+  before.frames.modules["foundations.js"]!.file = "modules/before.txt";
+  const folder = projectFolder([before, testManifest()], {
+    "modules/runtime.txt": "runtime",
+    "modules/before.txt": "before",
+    "modules/foundations.txt": "after",
+  });
   const ctx = context(folder.files);
-  for (let frame = 0; frame < 3; frame++)
-    await commands["preview.assets"].run(ctx, { source: foundations, cached: [] });
-  expect(folder.reads()).toBe(1);
+  expect((await commands["preview.assets"].run(ctx, { source: foundations, cached: [] })).files["foundations.js"]).toBe(
+    "before",
+  );
+  expect((await commands["preview.assets"].run(ctx, { source: foundations, cached: [] })).files["foundations.js"]).toBe(
+    "after",
+  );
 });
 
 test("a frame whose modules a new build replaced loads from the newest build", async () => {
@@ -64,4 +85,16 @@ test("a frame whose modules a new build replaced loads from the newest build", a
   });
   const assets = await commands["preview.assets"].run(context(folder.files), { source: foundations, cached: [] });
   expect(assets.files["foundations.js"]).toBe("new");
+});
+
+test.each([
+  "../../../../private.txt",
+  "..\\..\\..\\..\\private.txt",
+])("preview assets reject a manifest path that leaves the build folder: %s", async (path) => {
+  const manifest = testManifest();
+  manifest.frames.modules["foundations.js"]!.file = path;
+  const folder = projectFolder([manifest], { "modules/runtime.txt": "runtime", [path]: "private project data" });
+  await expect(
+    commands["preview.assets"].run(context(folder.files), { source: foundations, cached: [] }),
+  ).rejects.toThrow("Canvas build path escapes the build folder");
 });

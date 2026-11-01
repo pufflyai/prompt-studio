@@ -86,6 +86,32 @@ test("file mounts reject paths and symlinks outside their declared root", async 
   expect(await readFile(outside, "utf8")).toBe("private");
 });
 
+test("an unchanged point read does not scan an unrelated file, while its own boundary stays enforced", async () => {
+  const f = await fixture();
+  const mount = f.mount();
+  await mount.writeText("safe.md", "safe");
+  await mount.writeText("other.md", "other");
+  const outside = f.pathFor("outside/secret.md");
+  await mkdir(dirname(outside), { recursive: true });
+  await writeFile(outside, "private");
+  await rm(f.pathFor("documents/other.md"));
+  await symlink(outside, f.pathFor("documents/other.md"));
+  expect(await mount.readText("safe.md")).toBe("safe");
+  await expect(mount.readText("other.md")).rejects.toThrow("escapes");
+});
+
+test("point reads observe remote replacements and deletions without returning stale disk bytes", async () => {
+  const f = await fixture();
+  const mount = f.mount();
+  await mount.writeText("note.md", "before");
+  expect(await mount.readText("note.md")).toBe("before");
+  await f.replace("documents/note.md", "after");
+  expect(await mount.readText("note.md")).toBe("after");
+  await f.replace("documents/note.md", null);
+  await expect(mount.readText("note.md")).rejects.toThrow("not found");
+  expect(await mount.exists("note.md")).toBe(false);
+});
+
 test("file and directory replacements project deletions before incoming files", async () => {
   const f = await fixture();
   await f.mount().writeText("item", "old file");

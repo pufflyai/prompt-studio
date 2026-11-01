@@ -1,4 +1,4 @@
-import { type CanvasBuildManifest, DEFAULT_OUT, MANIFEST_FORMAT } from "@pstdio/canvas";
+import { type CanvasBuildManifest, MANIFEST_FORMAT } from "@pstdio/canvas";
 import {
   type ArtifactMount,
   artifactChanged,
@@ -18,23 +18,24 @@ export const buildMount = defineArtifactMount({
 export const buildChanged = artifactChanged(buildMount);
 
 export interface BuildFiles extends Pick<ArtifactMount, "exists" | "readText"> {
-  /** Identifies the current manifest, so an unchanged build is parsed once. */
-  stamp: () => Promise<string | undefined>;
+  projectId: string;
 }
 
-// Builds are local, regenerated output. Reads go to the project folder directly, because reads
-// through the mount copy every file into synced extension storage first.
-export const buildFiles = (ctx: Pick<ExtensionContextBase, "projectFiles" | "projectId">): BuildFiles | undefined => {
-  const files = ctx.projectFiles;
-  if (!files) return undefined;
-  const manifest = `${DEFAULT_OUT}/manifest.json`;
+const buildPath = (path: string) => {
+  if (path.split(/[/\\]/).includes("..")) throw new Error(`Canvas build path escapes the build folder: ${path}`);
+  return path;
+};
+
+// The declared mount protects both lexical paths and resolved symlink targets.
+export const buildFiles = (
+  ctx: Pick<ExtensionContextBase, "projectFiles" | "projectId" | "artifacts">,
+): BuildFiles | undefined => {
+  if (!ctx.projectFiles) return undefined;
+  const files = ctx.artifacts.mount("build");
   return {
-    exists: (path) => files.exists(`${DEFAULT_OUT}/${path}`),
-    readText: (path) => files.readText(`${DEFAULT_OUT}/${path}`),
-    stamp: async () => {
-      const [entry] = await files.list(manifest);
-      return entry?.updatedAt && `${ctx.projectId}\n${entry.updatedAt}\n${entry.size ?? ""}`;
-    },
+    projectId: ctx.projectId,
+    exists: (path) => files.exists(buildPath(path)),
+    readText: (path) => files.readText(buildPath(path)),
   };
 };
 
@@ -42,10 +43,11 @@ export const buildFiles = (ctx: Pick<ExtensionContextBase, "projectFiles" | "pro
 let parsed: { stamp: string; manifest: CanvasBuildManifest } | undefined;
 
 const readManifest = async (files: BuildFiles, fresh: boolean) => {
-  const stamp = await files.stamp();
-  if (!fresh && stamp && parsed?.stamp === stamp) return parsed.manifest;
-  const manifest = JSON.parse(await files.readText("manifest.json"));
-  if (stamp && manifest?.format === MANIFEST_FORMAT) parsed = { stamp, manifest };
+  const source = await files.readText("manifest.json");
+  const stamp = `${files.projectId}\n${new Bun.CryptoHasher("sha256").update(source).digest("hex")}`;
+  if (!fresh && parsed?.stamp === stamp) return parsed.manifest;
+  const manifest = JSON.parse(source);
+  if (manifest?.format === MANIFEST_FORMAT) parsed = { stamp, manifest };
   return manifest;
 };
 

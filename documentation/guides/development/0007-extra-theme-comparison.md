@@ -9,7 +9,7 @@ include contrast variants as well as normal light and dark variants.
 
 The comparison Canvas belongs to `extensions/pstdio-base-themes`. It renders Solarized Light, Solarized Dark, Dracula, and Monokai side by side using the shipped theme assets and the public UI components.
 
-Open Design System → Themes in Canvas, or search for the theme comparison. Use its predefined variants for surfaces, buttons, forms, navigation, feedback, overlays, and composed controls. Each frame also has an independent Theme menu.
+Open Design System → Themes in Canvas, or search for the theme comparison. Use its frames for surfaces, buttons, forms, navigation, feedback, overlays, and composed controls. Each frame also has an independent Theme menu.
 
 Each comparison column uses a separate document. Theme classes, color mode, CSS variables, focus, and portals stay local to that column. Menus, dialogs, drawers, popovers, and tooltips use the same theme as their trigger. On narrow screens, scroll horizontally to compare readable columns.
 

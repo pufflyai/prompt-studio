@@ -15,6 +15,16 @@ export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   await expect.poll(() => preview.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe(true);
   await preview.getByRole("button", { name: "Create folder", exact: true }).click();
   await expect(preview.getByRole("option", { name: "canvas-interactive" })).toBeVisible();
+  // Each export is its own frame, so the Empty frame never sees the Folders frame's draft.
+  const sibling = page.locator('[data-canvas-item="Empty"]');
+  await sibling.getByRole("button", { name: "Select Empty", exact: true }).click();
+  await expect(sibling.locator("iframe")).toHaveAttribute(
+    "data-frame-story",
+    "packages/ui/src/components/overlays/folder-picker-dialog.canvas.tsx#Empty",
+  );
+  await expect(sibling.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
+  await expect(sibling.frameLocator("iframe").getByRole("option", { name: "canvas-interactive" })).toHaveCount(0);
+  await item.getByRole("button", { name: "Select Folders", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const viewport = page.locator("[data-canvas-viewport]");
   await viewport.press("0");
@@ -66,15 +76,6 @@ export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   await expect(preview.getByRole("dialog")).toBeVisible();
   await expect(preview.getByRole("option", { name: "canvas-interactive" })).toHaveCount(0);
   await expect.poll(() => preview.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe(true);
-  // Each export is its own frame, so the Empty frame never sees the Folders frame's draft.
-  const sibling = page.locator('[data-canvas-item="Empty"]');
-  await sibling.getByRole("button", { name: "Select Empty", exact: true }).click();
-  await expect(sibling.locator("iframe")).toHaveAttribute(
-    "data-frame-story",
-    "packages/ui/src/components/overlays/folder-picker-dialog.canvas.tsx#Empty",
-  );
-  await expect(sibling.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
-  await expect(sibling.frameLocator("iframe").getByRole("option", { name: "canvas-interactive" })).toHaveCount(0);
   return {
     frames: await page.locator("[data-canvas-stage] > [data-canvas-item]").count(),
     folderCreated: true,

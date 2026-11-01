@@ -76,5 +76,5 @@ bun run --cwd packages/canvas-tests test
 
 - Treat each example as a reproducible test case for a real UI state.
 - Include states like default, loading, empty, error, long content, and disabled where relevant.
-- For non-visual behavior, add `play` interactions and assertions in the example.
+- Keep examples for exploration; put critical behavioral assertions in separate tests.
 - Keep examples deterministic: avoid real network calls.
