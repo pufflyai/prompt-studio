@@ -16,6 +16,15 @@ const result = (sha: string, suite = "storage"): BenchmarkResultFile => ({
   metrics: [{ suite, metric: `${suite}-metric`, label: suite, unit: "ms", values: [9, 8.8, 8.9] }],
 });
 
+// gh api --paginate --jq prints one JSON value per line; the mocks answer as GitHub would and apply the jq.
+const paged = (args: string[], value: unknown) => {
+  if (!args.includes("--paginate")) return value;
+  const list = Array.isArray(value) ? value : (value as { artifacts: unknown[] }).artifacts;
+  return list.map((entry) => JSON.stringify(entry)).join("\n");
+};
+const withoutPaging = (args: string[]) =>
+  args.filter((arg, index) => arg !== "--paginate" && arg !== "--jq" && args[index - 1] !== "--jq");
+
 // Run 8 is still running its runtime job; every other run has finished.
 const runView = (runId: string) => {
   const running = runId === "8";
@@ -40,60 +49,66 @@ const runView = (runId: string) => {
 };
 
 // gh is the boundary to GitHub, so the test answers its commands the way GitHub does.
+// Fixed GitHub answers, keyed by gh subcommand and path.
+const ANSWERS: Record<string, unknown> = {
+  "api repos/{owner}/{repo}/releases": [
+    {
+      tag_name: "pstdio@0.46.0",
+      published_at: "2026-10-22",
+      draft: false,
+      assets: [{ id: 1, name: "benchmarks-linux-x64.json" }],
+    },
+    {
+      tag_name: "pstdio@0.46.1-nightly.1",
+      published_at: "2026-10-23",
+      draft: false,
+      assets: [{ id: 2, name: "benchmarks-linux-x64.json" }],
+    },
+    {
+      tag_name: "pstdio@0.47.0",
+      published_at: null,
+      draft: true,
+      assets: [{ id: 3, name: "benchmarks-linux-x64.json" }],
+    },
+  ],
+  "api repos/{owner}/{repo}/releases/assets/1": result("release-sha"),
+  "api graphql": {
+    data: { repository: { refs: { nodes: [{ name: "pstdio@0.46.0", target: { oid: "release-sha" } }] } } },
+  },
+  "run list": [
+    {
+      databaseId: 7,
+      displayTitle: "Benchmarks a,b on linux-x64",
+      status: "completed",
+      conclusion: "success",
+      url: "https://github.com/runs/7",
+      createdAt: "2026-10-22T09:00:00Z",
+      updatedAt: "2026-10-22T10:00:00Z",
+    },
+    {
+      databaseId: 8,
+      displayTitle: "Benchmarks c on linux-x64,win32-x64",
+      status: "in_progress",
+      conclusion: null,
+      url: "https://github.com/runs/8",
+      createdAt: "2026-10-22T11:00:00Z",
+      updatedAt: "2026-10-22T11:05:00Z",
+    },
+  ],
+  "api repos/{owner}/{repo}/actions/runs/7/artifacts": {
+    artifacts: [
+      { id: 70, name: "benchmark-results-linux-x64-storage", expired: false },
+      { id: 71, name: "benchmark-results-linux-x64-runtime", expired: false },
+    ],
+  },
+};
+
 const github = () => {
   const calls: string[][] = [];
   const answer = async (args: string[]) => {
     const [command, path] = args;
-    if (command === "api" && path === "repos/{owner}/{repo}/releases?per_page=100")
-      return [
-        {
-          tag_name: "pstdio@0.46.0",
-          published_at: "2026-10-22",
-          draft: false,
-          assets: [{ id: 1, name: "benchmarks-linux-x64.json" }],
-        },
-        {
-          tag_name: "pstdio@0.46.1-nightly.1",
-          published_at: "2026-10-23",
-          draft: false,
-          assets: [{ id: 2, name: "benchmarks-linux-x64.json" }],
-        },
-        {
-          tag_name: "pstdio@0.47.0",
-          published_at: null,
-          draft: true,
-          assets: [{ id: 3, name: "benchmarks-linux-x64.json" }],
-        },
-      ];
-    if (command === "api" && path === "repos/{owner}/{repo}/releases/assets/1") return result("release-sha");
-    if (command === "run" && path === "list")
-      return [
-        {
-          databaseId: 7,
-          displayTitle: "Benchmarks a,b on linux-x64",
-          status: "completed",
-          conclusion: "success",
-          url: "https://github.com/runs/7",
-          createdAt: "2026-10-22T09:00:00Z",
-          updatedAt: "2026-10-22T10:00:00Z",
-        },
-        {
-          databaseId: 8,
-          displayTitle: "Benchmarks c on linux-x64,win32-x64",
-          status: "in_progress",
-          conclusion: null,
-          url: "https://github.com/runs/8",
-          createdAt: "2026-10-22T11:00:00Z",
-          updatedAt: "2026-10-22T11:05:00Z",
-        },
-      ];
-    if (command === "api" && path === "repos/{owner}/{repo}/actions/runs/7/artifacts")
-      return {
-        artifacts: [
-          { id: 70, name: "benchmark-results-linux-x64-storage", expired: false },
-          { id: 71, name: "benchmark-results-linux-x64-runtime", expired: false },
-        ],
-      };
+    const fixed = ANSWERS[`${command} ${path}`];
+    if (fixed !== undefined) return fixed;
     if (command === "run" && path === "view") return runView(args[2]);
     if (command === "run" && path === "download") {
       const dir = args[args.indexOf("--dir") + 1];
@@ -107,7 +122,7 @@ const github = () => {
   const run = async (input: { command: string[] }) => {
     const args = input.command.slice(1);
     calls.push(args);
-    const value = await answer(args);
+    const value = paged(args, await answer(withoutPaging(args).map((arg) => arg.replace("?per_page=100", ""))));
     return { exitCode: 0, stdout: typeof value === "string" ? value : JSON.stringify(value), stderr: "" };
   };
   return { calls, run };
@@ -158,7 +173,7 @@ describe("benchmark result cache", () => {
     });
     expect(done.commits).toEqual([{ ref: "a" }, { ref: "b" }]);
     expect(await readReleases(ctx)).toEqual([
-      { version: "0.46.0", publishedAt: "2026-10-22", platforms: ["linux-x64"] },
+      { version: "0.46.0", publishedAt: "2026-10-22", sha: "release-sha", platforms: ["linux-x64"] },
     ]);
     expect(await readSyncedAt(ctx)).toBeString();
   });
@@ -171,6 +186,31 @@ describe("benchmark result cache", () => {
     await syncAll(ctx);
     expect(downloads()).toBe(2);
     expect(gh.calls.filter((args) => args[1] === "repos/{owner}/{repo}/releases/assets/1")).toHaveLength(1);
+  });
+
+  test("a run synced before artifact lists were paged fetches only the artifacts it missed", async () => {
+    const { ctx, gh } = setup();
+    await writeRuns(ctx, [
+      {
+        id: "7",
+        title: "Benchmarks a,b on linux-x64",
+        status: "succeeded",
+        commits: [{ ref: "a" }, { ref: "b" }],
+        platforms: ["linux-x64"],
+        url: "https://github.com/runs/7",
+        createdAt: "2026-10-22T09:00:00Z",
+        updatedAt: "2026-10-22T10:00:00Z",
+        synced: true,
+      },
+    ]);
+    await ctx.extensionFiles?.writeText(
+      "benchmarks/runs/7/benchmark-results-linux-x64-storage-base.json",
+      JSON.stringify(result("base")),
+    );
+    await syncAll(ctx);
+    const downloads = gh.calls.filter((args) => args[0] === "run" && args[1] === "download");
+    expect(downloads.map((args) => args[args.indexOf("--name") + 1])).toEqual(["benchmark-results-linux-x64-runtime"]);
+    expect((await readRuns(ctx)).find((run) => run.id === "7")?.complete).toBe(true);
   });
 
   test("a run that cannot sync does not stop the others", async () => {

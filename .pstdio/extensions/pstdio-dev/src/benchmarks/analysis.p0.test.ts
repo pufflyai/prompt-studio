@@ -6,6 +6,7 @@ import {
   compareVersions,
   latestReleaseStatus,
   measuredCommits,
+  releaseResults,
 } from "./analysis";
 import type { BenchmarkResultFile } from "./result-file";
 import type { CachedResult, RunRecord } from "./store";
@@ -187,8 +188,8 @@ describe("run results and release status", () => {
   test("names a release's running and missing platforms, and nothing once all have results", () => {
     const platforms = ["linux-x64", "win32-x64", "darwin-arm64"];
     const releases = [
-      { version: "0.45.0", publishedAt: "2026-10-22", platforms: [] },
-      { version: "0.46.0", publishedAt: "2026-11-02", platforms: ["linux-x64"] },
+      { version: "0.45.0", publishedAt: "2026-10-22", sha: "sha-0.45.0", platforms: [] },
+      { version: "0.46.0", publishedAt: "2026-11-02", sha: "release", platforms: [] },
     ];
     const releaseRun: RunRecord = {
       id: "9",
@@ -201,13 +202,50 @@ describe("run results and release status", () => {
       updatedAt: "2026-11-02T10:00:00Z",
       synced: false,
     };
-    expect(latestReleaseStatus(releases, [releaseRun], platforms)).toEqual({
+    const history = releaseResults([run("8", "release", 5000)], releases);
+    expect(latestReleaseStatus(releases, [releaseRun], platforms, history)).toEqual({
       version: "0.46.0",
       finished: ["linux-x64"],
       running: ["win32-x64"],
       missing: ["darwin-arm64"],
+      failed: [],
     });
-    const complete = [{ version: "0.46.0", publishedAt: "2026-11-02", platforms }];
-    expect(latestReleaseStatus(complete, [], platforms)).toBeUndefined();
+    const everywhere = platforms.map((platform) => {
+      const result = run("8", "release", 5000);
+      result.file.platform = platform;
+      return result;
+    });
+    const history2 = releaseResults(everywhere, releases);
+    expect(latestReleaseStatus(releases, [], platforms, history2)).toBeUndefined();
+    // A finished release run names suites that failed; a later run that passed them clears them.
+    const failedRun: RunRecord = {
+      ...releaseRun,
+      id: "10",
+      status: "failed",
+      platforms: ["linux-x64", "win32-x64"],
+      detail: "Linux x64 · Storage finished\nWindows x64 · Chat rendering failed\nWindows x64 · Storage failed",
+    };
+    const retried: RunRecord = {
+      ...releaseRun,
+      id: "11",
+      status: "succeeded",
+      platforms: ["win32-x64"],
+      detail: "Storage finished",
+    };
+    expect(latestReleaseStatus(releases, [retried, failedRun], platforms, history2)?.failed).toEqual([
+      "Windows x64 · Chat rendering",
+    ]);
+  });
+
+  test("reads a release's history from any run of its commit, newest result per metric", () => {
+    const releases = [{ version: "0.46.0", publishedAt: "2026-11-01", sha: "release", platforms: [] }];
+    const older = run("100", "release", 5000);
+    const newer = run("200", "release", 4000);
+    newer.file.metrics.push({ suite: "desktop", metric: "warm", label: "Warm", unit: "ms", values: [] });
+    const [history] = releaseResults([older, newer, run("300", "other", 9000)], releases);
+    expect(history.source).toEqual({ kind: "release", version: "0.46.0" });
+    expect(history.file.metrics.map((metric) => [metric.label, metric.values[0]])).toEqual([["Cold start", 4000]]);
+    const [linux] = buildTrends([history], ["linux-x64"]).trends;
+    expect(linux.metrics[0].points[0]?.median).toBe(4000);
   });
 });

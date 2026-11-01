@@ -19,7 +19,7 @@ on:
         description: Executions per commit and suite. Must be 1; CI never repeats tests.
         default: "1"
       release_tag:
-        description: Release to attach the results to. The release workflow sets it after publishing.
+        description: Release these results belong to. The release workflow sets it after publishing; it only names the run.
         default: ""
 
 permissions:
@@ -145,7 +145,8 @@ jobs:
             git worktree add --detach "$dir" "$sha"
             (cd "$dir" && bun scripts/ci/install-native-dependencies.ts)
             args+=("--checkout" "$dir=$sha=$ref")
-          done < <(jq -r '.[] | [.sha, .ref] | @tsv' <<< "$CHECKOUTS")
+          # jq on Windows ends lines with CRLF, and read keeps the CR in the last field.
+          done < <(jq -r '.[] | [.sha, .ref] | @tsv' <<< "$CHECKOUTS" | tr -d '\r')
           bun packages/benchmarks/src/cli.ts run "${args[@]}" \
             --suites "$SUITE" --samples "$SAMPLES" \
             --cache "$temp/benchmark-cache" --out "$temp/benchmark-results"
@@ -178,32 +179,3 @@ jobs:
             ${{ runner.temp }}/checkouts/*/packages/e2e/test-results/workbench-benchmarks*.json
             ${{ runner.temp }}/checkouts/*/test-results/quarantine/workbench-benchmark
           if-no-files-found: error
-
-  # The release workflow starts this run after it publishes, so benchmarks never hold a release.
-  release_assets:
-    needs: benchmark
-    if: ${{ !cancelled() && inputs.release_tag != '' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-      TAG: ${{ inputs.release_tag }}
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: benchmark-results-*
-          path: benchmark-results
-      - name: Attach benchmark results to the release
-        run: |
-          set -euo pipefail
-          mkdir -p benchmark-assets
-          # Each suite ran as its own job, so the files of one platform merge into one asset.
-          for platform in $(jq -r .platform benchmark-results/*/*.json | sort -u); do
-            jq -s --arg platform "$platform" \
-              'map(select(.platform == $platform)) | .[0] + {suites: (map(.suites[]) | unique_by(.id)), metrics: map(.metrics[])}' \
-              benchmark-results/*/*.json > "benchmark-assets/benchmarks-$platform.json"
-          done
-          gh release upload "$TAG" benchmark-assets/* --clobber

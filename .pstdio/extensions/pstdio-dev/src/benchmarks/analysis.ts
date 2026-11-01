@@ -1,5 +1,5 @@
 import { finished } from "./github";
-import { runsOn, SUITES } from "./platforms";
+import { platformLabel, runsOn, SUITES } from "./platforms";
 import type { BenchmarkMetricResult, BenchmarkResultFile, BenchmarkUnit } from "./result-file";
 import { compareSamples, median, summarize } from "./stats";
 import type { CachedResult, ReleaseRecord, RunRecord } from "./store";
@@ -33,6 +33,8 @@ export interface CompareRow extends MetricKey {
 
 const keyOf = (metric: Pick<BenchmarkMetricResult, "suite" | "metric">) => `${metric.suite}/${metric.metric}`;
 
+const runIdOf = (result: CachedResult) => (result.source.kind === "run" ? result.source.runId : undefined);
+
 const versionParts = (version: string) => version.split(".").map(Number);
 export const compareVersions = (a: string, b: string) => {
   const [left, right] = [versionParts(a), versionParts(b)];
@@ -63,6 +65,38 @@ const collectKeys = (files: BenchmarkResultFile[]) => {
     for (const metric of file.metrics) keys.set(keyOf(metric), metricKey(file, metric));
   }
   return keys;
+};
+
+// A release's history is every result for its commit: its release run, or any later run of its tag. GitHub
+// releases are immutable once published, so results stay with the runs instead of the release. Each metric
+// comes from the newest result that measured it.
+export const releaseResults = (results: CachedResult[], releases: ReleaseRecord[]) => {
+  const versionOf = new Map(releases.flatMap((release) => (release.sha ? [[release.sha, release.version]] : [])));
+  const groups = new Map<string, { version: string; results: CachedResult[] }>();
+  for (const result of results) {
+    const version = result.source.kind === "release" ? result.source.version : versionOf.get(result.file.commit.sha);
+    if (!version) continue;
+    const key = `${version}|${result.file.platform}`;
+    const group = groups.get(key) ?? { version, results: [] };
+    group.results.push(result);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map(({ version, results: group }): CachedResult => {
+    const newestFirst = [...group].sort((a, b) => Number(runIdOf(b) ?? 0) - Number(runIdOf(a) ?? 0));
+    const files = newestFirst.map((result) => result.file);
+    const suites = files.flatMap((file) => file.suites);
+    const metrics = files.flatMap((file) => file.metrics.filter((metric) => metric.values.length));
+    return {
+      source: { kind: "release", version },
+      file: {
+        ...files[0],
+        suites: suites.filter((suite, index) => suites.findIndex((entry) => entry.id === suite.id) === index),
+        metrics: metrics.filter(
+          (metric, index) => metrics.findIndex((entry) => keyOf(entry) === keyOf(metric)) === index,
+        ),
+      },
+    };
+  });
 };
 
 export interface PlatformTrend {
@@ -105,8 +139,6 @@ export const buildTrends = (results: CachedResult[], platforms: string[]) => {
   });
   return { versions, trends };
 };
-
-const runIdOf = (result: CachedResult) => (result.source.kind === "run" ? result.source.runId : undefined);
 
 const valuesOf = (result: CachedResult | undefined, key: string) =>
   result?.file.metrics.find((metric) => keyOf(metric) === key)?.values;
@@ -197,6 +229,8 @@ export interface ReleaseStatus {
   finished: string[];
   running: string[];
   missing: string[];
+  // Suite jobs that failed in a finished run of the release, as "<platform> · <suite>".
+  failed: string[];
 }
 
 // The newest stable release, when some platforms have no results. Its release run is still going, failed,
@@ -205,16 +239,33 @@ export const latestReleaseStatus = (
   releases: ReleaseRecord[],
   runs: RunRecord[],
   platforms: string[],
+  history: CachedResult[],
 ): ReleaseStatus | undefined => {
   const [latest] = [...releases].sort((a, b) => compareVersions(b.version, a.version));
   if (!latest) return undefined;
-  const done = platforms.filter((platform) => latest.platforms.includes(platform));
-  if (done.length === platforms.length) return undefined;
+  const measured = history.filter(
+    (result) => result.source.kind === "release" && result.source.version === latest.version,
+  );
+  const done = platforms.filter((platform) => measured.some((result) => result.file.platform === platform));
+
   const tag = `pstdio@${latest.version}`;
-  const active = runs.filter((run) => !finished(run.status) && run.commits.some((commit) => commit.ref === tag));
+  const ofRelease = runs.filter((run) =>
+    run.commits.some((commit) => commit.ref === tag || (latest.sha && commit.sha === latest.sha)),
+  );
+  const active = ofRelease.filter((run) => !finished(run.status));
+  // A suite that failed in one run and passed in a later one has results, so only the newest outcome counts.
+  const outcomes = new Map<string, string>();
+  for (const run of ofRelease.filter((entry) => finished(entry.status)).reverse()) {
+    for (const line of run.detail?.split("\n") ?? []) {
+      const [, name, outcome] = line.match(/^(.*) (finished|failed|stopped|queued|running)$/) ?? [];
+      if (name) outcomes.set(run.platforms.length > 1 ? name : `${platformLabel(run.platforms[0])} · ${name}`, outcome);
+    }
+  }
+  const failed = [...outcomes].flatMap(([name, outcome]) => (outcome === "failed" ? [name] : []));
   const running = platforms.filter(
     (platform) => !done.includes(platform) && active.some((run) => run.platforms.includes(platform)),
   );
   const missing = platforms.filter((platform) => !done.includes(platform) && !running.includes(platform));
-  return { version: latest.version, finished: done, running, missing };
+  if (!running.length && !missing.length && !failed.length) return undefined;
+  return { version: latest.version, finished: done, running, missing, failed };
 };
