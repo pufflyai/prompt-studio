@@ -6,7 +6,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createResourcesApi } from "./resources";
 
-const phase = (name: string) => console.error(`[prefix diagnostic ${process.pid} ${Date.now()}] ${name}`);
+const phase = (name: string) => process.stderr.write(`[prefix diagnostic ${process.pid} ${Date.now()}] ${name}\n`);
 
 const createHarness = async () => {
   const root = mkdtempSync(join(tmpdir(), "resource-prefix-scenarios-"));
