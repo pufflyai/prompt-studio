@@ -103,7 +103,7 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/extension-browser-install.p2.test.ts",
+    "file": "packages/e2e/src/packaged/extension-browser-install.p1.test.ts",
     "name": "installs the smoke browser without external JavaScript runtimes",
     "platforms": ["win32"],
     "owner": "PS-907 / packaged browser installation",
@@ -116,7 +116,7 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/extension-browser-install.p2.test.ts",
+    "file": "packages/e2e/src/packaged/extension-browser-install.p1.test.ts",
     "name": "the installed Playwright cache runs a packaged extension page outside the checkout",
     "platforms": ["win32"],
     "owner": "PS-907 / packaged browser installation",
@@ -445,21 +445,6 @@
   {
     "runner": "packaged-desktop-benchmark",
     "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
-    "name": "warm attach restores the workbench within budget",
-    "platforms": ["win32"],
-    "arch": "x64",
-    "owner": "PS-907 / desktop performance",
-    "reason": "The original nightly and focused final-source run intermittently leave initial Sessions Main empty. Identical-source diagnosis passed; a separate baseline also exceeded the unchanged 3000 ms attach budget.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41025270739",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41026983012"
-    ],
-    "removeWhen": "Fix initial Sessions view mounting and warm attach timing, then verify the unchanged workload in the first Windows execution before restoring the stable gate."
-  },
-  {
-    "runner": "packaged-desktop-benchmark",
-    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
     "name": "cold start with an empty home shows the workbench within budget",
     "platforms": ["win32"],
     "arch": "x64",
@@ -612,20 +597,6 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41248380174/job/124676622471"
     ],
     "removeWhen": "Fix Intel sidecar-crash recovery latency and complete the full first-attempt native workload with automatic recovery UI below 500 ms, native measurements, and all recovery assertions intact."
-  },
-  {
-    "runner": "packaged-desktop-benchmark",
-    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
-    "name": "warm attach restores the workbench within budget",
-    "platforms": ["darwin"],
-    "arch": "x64",
-    "owner": "PS-932 / desktop performance",
-    "reason": "User-authorized release quarantine on 2026-10-31. Intel warm attach measured 4225 ms against the unchanged 3000 ms budget; subsequent setup evidence also exposed the theme-picker race, now fixed. Retain the complete saved workbench workload and native CPU/memory evidence.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41243502506/job/124662175838",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41245408313"
-    ],
-    "removeWhen": "Fix Intel warm-attach latency and complete the unchanged saved-project, Sessions, theme and Side Panel workload with native evidence below the 3000 ms launch budget in its first native execution."
   },
   {
     "runner": "packaged-desktop",

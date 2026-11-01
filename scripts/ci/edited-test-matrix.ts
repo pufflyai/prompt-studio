@@ -41,9 +41,9 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
     let platforms = [linux];
     if (group.runner === "desktop" || group.owner === "@pstdio/desktop")
       platforms = productionDesktopPlatforms("stable");
-    if (group.runner.startsWith("packaged-"))
+    if (group.runner === "packaged-cli")
       platforms = productionToolchainPlatforms("stable")
-        .filter((row) => row.shard === 1)
+        .filter((row) => row.shard === 1 && row.priorities.split(",").includes(group.priority))
         .map((row) => {
           const [, platform, arch] = row.platform_pkg.split("-");
           return { os: row.os, platform: platform === "win" ? "win32" : platform!, arch: arch! };

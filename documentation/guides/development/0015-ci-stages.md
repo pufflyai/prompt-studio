@@ -70,7 +70,7 @@ The timing report keeps initial scheduling delay, elapsed time after the first j
 - Added or edited P1, P2 and P3 tests run immediately in required `edited_tests` jobs, alongside the affected P0 checks. P0 tests already covered by the baseline do not run twice. Deleted tests are not executed; their removal still selects affected workspace checks.
 - Only test files the PR adds or edits run beyond P0. Helpers, fixtures, runners and test configuration select their workspace's P0 checks, not its P1–P3 tests. The queue runs selected P1 source contracts; complete P1–P3 coverage runs in nightly and stable validation.
 - Benchmarks and the service delivery smoke do not run on PRs. Edited benchmark files still run through `edited_tests`.
-- Edited tests use their registered runners and setup. Native desktop checks retain all four desktop platforms; packaged CLI and browser checks retain all six toolchain targets. An edited benchmark runs its complete registered suite once per applicable host, preserving its workload and cold-start order. Desktop benchmarks use all four desktop platforms; backend suites use Linux, Apple Silicon and Windows; browser and relay suites use Linux. Existing test limits and performance budgets apply.
+- Edited tests use their registered runners and setup. Edited tests run on the hosts their suite uses in nightly: native desktop checks on all four desktop platforms, packaged CLI P0–P1 on all six toolchain targets and P2 on Linux x64, Windows x64 and macOS arm64, and packaged browser checks on Linux. An edited benchmark runs its complete registered suite once per applicable host, preserving its workload and cold-start order. Desktop benchmarks use all four desktop platforms; backend suites use Linux, Apple Silicon and Windows; browser and relay suites use Linux. Existing test limits and performance budgets apply.
 - Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.
 - Complete P1/P2/P3 matrices run in nightly and stable validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
 - A new push cancels the PR's older run.
@@ -141,7 +141,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
   - P1 and P2 against the signed desktop apps
   - P3 performance measurements
   - container service checks
-  - the packaged CLI on the other five native hosts
+  - the packaged CLI on the other five native hosts: P1 everywhere; P2 feature workflows on Linux x64, Windows x64 and macOS arm64 only, because they test OS-independent behavior. Install, native process and asset checks are P1.
   - Windows source diagnostics
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
@@ -157,7 +157,7 @@ Start **Release Packages** manually with the `stable` channel.
 
 1. `plan` picks the version and places the release tag.
 2. The release files are built once: npm packages, containers, and signed desktop apps for Linux x64, macOS x64, macOS arm64 and Windows x64. The Windows installer also gets an update check.
-3. **Production validation** runs everything the nightly runs, against those exact files, on all six native CLI hosts.
+3. **Production validation** runs everything the nightly runs, against those exact files, on all six native CLI hosts (P2 feature workflows on three of them).
 4. `certify` writes a certificate. It ties the results to the source commit, version commit, toolchain, producing run and attempt, and the artifact IDs and digests.
 5. `publish` runs only if every job passed. It checks the certificate again before it downloads the files. Missing, expired, changed or partial results block publishing.
 

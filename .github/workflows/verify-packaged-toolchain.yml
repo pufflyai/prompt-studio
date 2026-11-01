@@ -90,6 +90,7 @@ jobs:
         id: toolchain
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
+          TEST_PRIORITIES: ${{ matrix.priorities }}
         # Git Bash pipelines give Windows children an inherited Ctrl+C-ignore attribute.
         # Use the native shell and direct arguments so real terminal interrupts reach the CLI.
         run: >-

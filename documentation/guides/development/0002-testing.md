@@ -169,7 +169,7 @@ bun run build -- --scope pstdio-dashboard --include-dependencies
 bun run --cwd scripts build:host
 export PLAYWRIGHT_BROWSERS_PATH="$(mktemp -d)" PSTDIO_HOME="$(mktemp -d)" E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
 dist/pstdio extensions install-browser
-cd packages/e2e && bun test src/packaged/packaged-serve-helpers.p2.test.ts src/packaged/extension-browser-install.p2.test.ts
+cd packages/e2e && bun test src/packaged/packaged-serve-helpers.p2.test.ts src/packaged/extension-browser-install.p1.test.ts
 ```
 
 Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the copy when another task may rebuild the binary at the same time.
@@ -261,14 +261,6 @@ bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.p2.spec.ts
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
 
-The Marketplace install/delete/disable/enable lifecycle is manual-only. Run it explicitly with:
-
-```bash
-E2E_MANUAL_MARKETPLACE_LIFECYCLE=1 bun run --cwd packages/e2e test:ui -- src/ui/marketplace-extension-lifecycle.p1.spec.ts --grep "deletes, installs, disables, and enables a Marketplace extension"
-```
-
-Normal UI runs skip that lifecycle check. The separate extension automation toggle test still runs automatically.
-
 App UI tests in `packages/e2e` never build or start Canvas. Component browser interactions live in the private `packages/canvas-tests` package, while story source stays beside its component. This suite starts only Canvas servers; it has no application API, database, or app web server.
 
 Run critical component contracts with `bun test:p1 --runner component`. The command builds the selected owners and serves their static Canvas previews. To run a single spec, build its owner with `bun run --cwd packages/pstdio-workbench build:preview-tests`, then use `CANVAS_TEST_PACKAGES=pstdio-workbench bun run --cwd packages/canvas-tests test:browser -- src/ui/pstdio-workbench/panel-tabs.p1.spec.ts`. Static output lives under each owner's `canvas-test-static` directory. Servers load a real story before tests begin, preserve story play completion waits, and keep the existing 60-second startup allowance. Reports and traces live under `packages/canvas-tests/playwright-report` and `packages/canvas-tests/test-results`.
@@ -279,7 +271,7 @@ Keep the existing job and test time limits. A timeout needs an investigation of 
 
 The Windows job tests native dependency installation, relative workspace links, scoped dependency watcher events, and concurrent attachment reads before building. After building the SDK dependencies, command discovery tests exercise real process launches with PATH overrides, PATHEXT order, PowerShell siblings, explicit wrapper paths, custom npm prefixes, spaces, Unicode, shell operators, conflicting installations, missing targets, and timeout cleanup. npm fixtures use the pinned `cmd-shim` generator and check both adjacent Node and PATH fallback. Argument round trips include literal percent signs, exclamation marks, and variable-like strings with values present in the child environment. Environment tests cover Windows case-insensitive names without passing host secrets to extensions. The same portable cases run on Linux.
 
-`harness-npm-detection.p2.test.ts` runs the compiled runtime with deterministic OpenCode, Codex, and Claude Code CLI fixtures. It checks detection, versions written to stderr or with terminal colors, a healthy harness alongside failed and hanging probes, project extension filtering, and OpenCode model discovery. It changes installations for the same project and checks discovery again after the availability cache expires. Model requests for all three harnesses must return empty lists when version probes hang, and their child processes must exit. The runtime parent stays alive, and repaired commands must recover detection and model listing in the same runtime after the existing cache expires. The version-probe deadline applies to model listing as well as availability checks. No provider accounts, API keys, or live agent services are required. Harness changes receive affected fast checks; the queue retains Linux/macOS integrity. Windows npm detection and the full native matrix run in production functional validation. Add `ci:full` to request separate full functional diagnostics for an internal PR. Keep these tests within the existing CI time limits.
+`harness-npm-detection.p1.test.ts` runs the compiled runtime with deterministic OpenCode, Codex, and Claude Code CLI fixtures. It checks detection, versions written to stderr or with terminal colors, a healthy harness alongside failed and hanging probes, project extension filtering, and OpenCode model discovery. It changes installations for the same project and checks discovery again after the availability cache expires. Model requests for all three harnesses must return empty lists when version probes hang, and their child processes must exit. The runtime parent stays alive, and repaired commands must recover detection and model listing in the same runtime after the existing cache expires. The version-probe deadline applies to model listing as well as availability checks. No provider accounts, API keys, or live agent services are required. Harness changes receive affected fast checks; the queue retains Linux/macOS integrity. Windows npm detection and the full native matrix run in production functional validation. Add `ci:full` to request separate full functional diagnostics for an internal PR. Keep these tests within the existing CI time limits.
 
 These tests simulate different inherited environments. Real Explorer/login PATH refresh, PowerShell aliases, WSL-only installations, and organization-managed execution policies still need targeted manual checks. Codex and Claude model/session protocols and OpenCode server startup use separate launch paths; this discovery suite does not establish their Windows compatibility. Those paths need dedicated protocol fixtures before changing their launch behavior.
 
@@ -344,22 +336,11 @@ On 2026-10-28 the user approved a 60-second Windows allowance for two packaged c
 
 Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) remain the advisory product targets. Regular performance coverage runs in nightly CI and stable-release validation.
 
-## Live provider tests
-
-These commands opt into real agent sessions:
-
-```bash
-E2E_AGENTS=claude-code bun run --cwd packages/e2e test:ui -- src/ui/session-follow-up-completion-claude.p2.spec.ts
-E2E_AGENTS=opencode bun run --cwd packages/e2e test:ui -- src/ui/session-follow-up-ordering-opencode.p2.spec.ts
-```
-
-They require the selected provider and its credentials. They are separate from ordinary fixture-based CI coverage.
-
 Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The Windows x64 Pi 0.73.1 cold detection/model case runs once in its version-specific quarantine before the blocking tool/session-resume case. Its report must prove exactly one first attempt; the 3000 ms probe remains unchanged.
 
 The final full battery additionally confirmed Intel macOS harness-submenu dismissal and compiled collection-view restart flakes. Both complete cases passed in the prior battery with unchanged sources. Their exact darwin-x64 cases join the existing native quarantine lanes; other platforms remain blocking and no deadline or assertion changes.
 
-Desktop benchmarks retain one complete ordered Playwright invocation: launch cases (including quarantined warm attach and cold start) precede renderer cases. The runner classifies the resulting first-attempt report: stable/setup failures block CI, quarantined failures remain visible in a separate mandatory report. Comparison artifacts retain all measurements and the quarantine evidence. No second invocation repeats or moves the cold scenario after renderer work.
+Desktop benchmarks retain one complete ordered Playwright invocation: launch cases (including the quarantined cold start) precede renderer cases. The runner classifies the resulting first-attempt report: stable/setup failures block CI, quarantined failures remain visible in a separate mandatory report. Comparison artifacts retain all measurements and the quarantine evidence. No second invocation repeats or moves the cold scenario after renderer work.
 
 ## Critical UI checks
 

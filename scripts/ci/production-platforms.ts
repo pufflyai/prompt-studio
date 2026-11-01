@@ -19,6 +19,10 @@ export const productionDesktopCheckPlatforms = (channel: string) =>
     return Array.from({ length: shards }, (_, index) => ({ ...row, shard: index + 1, shards }));
   });
 
+// P2 packaged CLI files test OS-independent feature workflows, so one host per OS runs them.
+// Install, native process and asset checks are P1 and run on every host.
+const featureHosts = new Set(["cli-linux-x64", "cli-darwin-arm64", "cli-win-x64"]);
+
 export const productionToolchainPlatforms = (channel: string) =>
   [
     { os: "ubuntu-24.04", platform_pkg: "cli-linux-x64" },
@@ -31,7 +35,8 @@ export const productionToolchainPlatforms = (channel: string) =>
     .filter((row) => channel !== "nightly" || row.platform_pkg !== "cli-darwin-x64")
     .flatMap((row) => {
       const shards = row.platform_pkg === "cli-win-arm64" || row.platform_pkg === "cli-darwin-x64" ? 2 : 1;
-      return Array.from({ length: shards }, (_, index) => ({ ...row, shard: index + 1, shards }));
+      const priorities = featureHosts.has(row.platform_pkg) ? "P0,P1,P2" : "P0,P1";
+      return Array.from({ length: shards }, (_, index) => ({ ...row, priorities, shard: index + 1, shards }));
     });
 
 if (import.meta.main)
