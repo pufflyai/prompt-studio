@@ -17,7 +17,7 @@ export const startByteCapture = () => {
     const result = Reflect.apply(original, this, args) as Buffer;
     const [value, encoding] = args;
     if (typeof value === "string" && encoding === "hex") {
-      const size = value.length / 2;
+      const size = result.length;
       calls++;
       bytes += size;
       if (size > 100_000) {

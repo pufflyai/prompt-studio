@@ -34,6 +34,23 @@ describe("backend byte captures", () => {
     }
   });
 
+  test("counts actual bytes when hex input is truncated", () => {
+    const finish = startByteCapture();
+    try {
+      Buffer.from("f", "hex");
+      Buffer.from("ffgg", "hex");
+      Buffer.from("f".repeat(200_001), "hex");
+      const result = finish();
+
+      expect(result.calls).toBe(3);
+      expect(result.bytes).toBe(100_001);
+      expect(result.large).toEqual([]);
+      expect(result.sizes).toEqual([]);
+    } finally {
+      finish();
+    }
+  });
+
   test("rejects an overlapping capture without interrupting its owner", () => {
     const original = Buffer.from;
     const finish = startByteCapture();

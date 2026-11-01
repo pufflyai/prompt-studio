@@ -295,7 +295,12 @@ const FinishBenchmarkFlow = () => {
             <Stack gap="md">
               <HStack justify="space-between" wrap="wrap" gap="sm">
                 <Text textStyle="heading/S">Run 1044 · {screen === "cancelled" ? "Cancelled" : "Finished"}</Text>
-                <Button size="sm" variant="primary" onClick={() => show("results")}>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={screen === "cancelled" && completedSuites.length === 0}
+                  onClick={() => show("results")}
+                >
                   View results
                 </Button>
               </HStack>

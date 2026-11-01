@@ -3,7 +3,7 @@
 ## 1. Git
 
 1. Name branches `<category>/<kebab-description>`, using `feature`, `bugfix`, `hotfix`, `test`, or `chore`. Example: `feature/add-new-event-button`.
-2. Use commit messages `<category>(<PS-XXX>): <statement>; <statement>`, with `feat`, `fix`, `refactor`, or `chore`. Each statement must finish “This commit will…”. Example: `fix(PS-42): add new button component; add new button to templates`.
+2. Use commit messages `<category>(<PS-XXX>): <statement>; <statement>`, with `feat`, `fix`, `refactor`, or `chore`. Write each statement as an imperative phrase that completes “This commit will …”; omit that prefix from the message. Example: `fix(PS-42): add new button component; add new button to templates`.
 3. Open PRs as drafts against `main` unless the user says otherwise.
 4. Use PR titles `<category>(<PS-XXX>): <statement>`, such as `fix(PS-42): add new button component`.
 5. Use the headings in the [PR template](../../.github/pull_request_template.md), in the same order. `gh pr create --body` replaces the template, so include the headings yourself.
