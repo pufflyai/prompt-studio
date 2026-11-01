@@ -32,5 +32,8 @@ Hosted cold-start variance and browser, filesystem, process, and shutdown failur
 - That approval explicitly permits quarantine of the Linux project-switch performance regression. Twenty switches reached 1,885–1,917 ms against the unchanged 1,850 ms budget; the budget remains unmet.
 - Workbench benchmarks classify the same first-attempt report as desktop. Keep the complete suite, samples, and assertions; require a separate quarantine report and reject setup, missing-case, skipped-case, and repeated-execution failures.
 
+- The 2026-11-01 certification added the exact Linux Side Panel close/reopen case under the same authorization: a 52 ms long task exceeded the unchanged 50 ms limit. It passed prior hosted qualification and failed an unchanged-main control. All seven workbench benchmarks retain their original order, samples, assertions, budgets, and allowances.
+- The same certification added Intel macOS automatic recovery after a sidecar crash: 586 ms exceeded its unchanged 500 ms budget after a prior native pass. Preserve its complete crash/recovery workload and ordered desktop evidence; other platforms remain blocking. The register owns both cases' owners and removal criteria.
+
 ## Removal
 For each case, reproduce and repair its cause, meet its existing registered removal criterion, and restore it to the stable lane. Do not delete a supported contract to clear quarantine. Delete the mechanism when the register is empty; remove obsolete reliability refs once their recorded qualification is no longer needed.

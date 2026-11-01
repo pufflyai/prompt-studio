@@ -87,7 +87,7 @@ The `main` ruleset controls the queue:
 | Merge method | squash, 1 to 5 entries at a time, after waiting up to 5 minutes for more entries |
 | Check timeout | 60 minutes |
 
-The queue runs all P0 checks, P1 API/database/Bun/service-integration contracts, and the existing real dashboard startup smoke on the merged commit. Complete browser, component, CLI and native desktop matrices run in nightly and stable validation. Added or edited tests still run immediately in required PR CI.
+The queue runs all P0 checks, P1 API/database/Bun/service-integration contracts, and the existing real dashboard startup smoke on the merged commit. Bun and service-integration contracts share two jobs each, because their setup outweighs their tests. The license, published-extension and public API checks depend only on the files they read, so a queue entry runs them only when its own changes touch those files, as on PRs. Each entry is diffed against the entry ahead of it, which already checked its own changes. Nightly and stable runs always include them. Complete browser, component, CLI and native desktop matrices run in nightly and stable validation. Added or edited tests still run immediately in required PR CI.
 
 This retains fast data-safety and integration coverage before merging while reducing repeated native and browser builds. Browser/native regressions outside the smoke check may first appear after merging. Stable publishing remains blocked until complete validation certifies the exact release candidate.
 
