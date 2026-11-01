@@ -1,4 +1,4 @@
-import { liveClientMessageSchema, liveProtocolVersion } from "pstdio-sync-contracts";
+import { type LiveClientMessage, liveClientMessageSchema, liveProtocolVersion } from "pstdio-sync-contracts";
 
 export interface PeerLiveData {
   discovery: Set<string | null>;
@@ -10,7 +10,7 @@ export const createPeerLive = () => {
   const sockets = new Set<Bun.ServerWebSocket<PeerLiveData>>();
   const topicMessage = (
     socket: Bun.ServerWebSocket<PeerLiveData>,
-    message: ReturnType<typeof liveClientMessageSchema.parse> & { topic: string },
+    message: Extract<LiveClientMessage, { topic: string }>,
   ) => {
     const key = topicKey(message.spaceOwner, message.topic);
     if (message.type === "subscribe") socket.subscribe(key);
