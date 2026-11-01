@@ -3,7 +3,7 @@ import { openCanvasPreview } from "../preview";
 
 // Critical: an inline notice must not block reading the surrounding document.
 test("scrolling over alerts continues through the article", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "ui-primitives-alertmessage--page-scrolling");
+  const preview = await openCanvasPreview(page, "packages/ui/src/components/primitives/alert.canvas.tsx#PageScrolling");
   const article = preview.getByRole("region", { name: "Article", exact: true });
   const notices = preview.locator(".chakra-alert__root");
   const short = notices.filter({ hasText: "Preview notice" });
