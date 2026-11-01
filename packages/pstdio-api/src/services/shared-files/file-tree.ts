@@ -1,14 +1,10 @@
 import { posix } from "node:path";
+import { type ArtifactFileNode, artifactFileNodeSchema } from "pstdio-api-contracts";
 import { normalizeMountRelativePath } from "pstdio-extensions";
-import { storageRecordId } from "pstdio-sync";
-import { z } from "zod";
+import { storageRecordId } from "pstdio-sync/records";
 
-const location = { path: z.string(), parent: z.string() };
-export const fileNode = z.discriminatedUnion("kind", [
-  z.strictObject({ ...location, kind: z.literal("file"), updatedAt: z.string() }),
-  z.strictObject({ ...location, kind: z.literal("directory"), id: z.string() }),
-]);
-export type FileNode = z.infer<typeof fileNode>;
+export const fileNode = artifactFileNodeSchema;
+export type FileNode = ArtifactFileNode;
 export const fileRecordId = (path: string) => storageRecordId(["artifact-file"], path);
 export const within = (path: string, prefix: string) => path === prefix || path.startsWith(`${prefix}/`);
 export const parentPath = (path: string) => posix.dirname(path);

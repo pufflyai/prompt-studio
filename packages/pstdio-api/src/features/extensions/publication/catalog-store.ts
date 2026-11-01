@@ -1,4 +1,4 @@
-import type { GroupCommit, LockedRecords } from "pstdio-sync";
+import type { GroupCommit, LockedRecords } from "pstdio-sync/records";
 import type { Asset, StorageRecord } from "pstdio-sync-contracts";
 import { type Publication, PublicationChangedError, packageMetadataSchema, selectionSchema } from "./types";
 

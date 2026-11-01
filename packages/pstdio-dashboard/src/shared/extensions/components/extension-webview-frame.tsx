@@ -3,6 +3,7 @@ import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { getThemePreferenceMode, useThemePreference, useToaster } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
 import { createExtensionWebviewHostCapabilities } from "@pstdio/workbench/extensions";
+import type { NativeDocumentTarget } from "pstdio-api-contracts";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
@@ -38,6 +39,7 @@ interface ExtensionWebviewFrameProps {
   projectId: string | undefined;
   resource?: ResourceRef;
   placement?: WorkbenchPanelInstance;
+  textTarget?: NativeDocumentTarget;
   terminal?: WorkbenchTerminalController;
   title?: string;
   webview?: WebviewDescriptor;
@@ -137,6 +139,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       webviewId,
       workbench: props.workbench,
       placement: props.placement,
+      textTarget: props.textTarget,
       ownedPreferences: createDashboardOwnedPreferences({ projectId, instanceId: extensionInstanceId, installName }),
     }),
   );

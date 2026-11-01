@@ -147,9 +147,10 @@
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts",
         // Extension manifests load this webview entry by packageAsset path.
-        "src/fixtures/editing-session/view.ts"
+        "src/fixtures/editing-session/view.ts",
+        "src/fixtures/public-text-editor/view.tsx"
       ],
-      "project": ["playwright*.config.ts", "src/**/*.ts"],
+      "project": ["playwright*.config.ts", "src/**/*.{ts,tsx}"],
       "ignore": ["playwright-report/**", "screenshots/**", "test-results/**"],
       // Extensions e2e installs at runtime by path, and the dashboard it builds and serves.
       // Declared so CI treats their changes as e2e changes.

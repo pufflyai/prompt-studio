@@ -1,5 +1,5 @@
 import type { LiveClientMessage, StateEnvelope, UpdateEnvelope } from "pstdio-sync-contracts";
-import { decodeBytes, encodeBytes } from "../encoding";
+import { decodeBytes, encodeBytes } from "../shared";
 import { open, seal } from "./sealing";
 import { createSyncId, type SyncSpace } from "./space";
 

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
-import { coreOwnerId, rememberResourceNumber, resourceNumbers, resourceNumbersDocumentId } from "pstdio-sync";
+import { coreOwnerId, rememberResourceNumber, resourceNumbers, resourceNumbersDocumentId } from "pstdio-sync/records";
 import { createDb } from "../db/connection.pglite";
 import {
   storage_current_records,

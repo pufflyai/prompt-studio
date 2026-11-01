@@ -1,0 +1,259 @@
+import { expect, test } from "bun:test";
+import { textEditingSessionFixture as fixture } from "./text-editing-session.test-fixture";
+
+test("close drains a second SDK edit queued behind a held durable acknowledgement", async () => {
+  const f = await fixture();
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  f.hold(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  f.session.transact((text) => text.insert(0, "first "));
+  await entered.promise;
+  f.session.transact((text) => text.insert(text.length, " second"));
+  const closing = f.session.close();
+  release.resolve();
+  await closing;
+  expect(f.document.getText("content").toString()).toBe("first source second");
+  expect(f.frames).toHaveLength(2);
+  f.document.destroy();
+});
+
+test("a tentative draft blocks close and its original authored delta survives peer edits", async () => {
+  const f = await fixture();
+  const draft = f.session.createDraft();
+  draft.text.insert(draft.text.length, " draft");
+  await expect(f.session.close()).rejects.toMatchObject({ code: "draft_active" });
+  f.session.transact((text) => text.insert(0, "peer "));
+  await f.session.flush();
+  await draft.commit();
+  await draft.commit();
+  expect(f.document.getText("content").toString()).toBe("peer source draft");
+  await f.session.close();
+  f.document.destroy();
+});
+
+test("flush waits for its captured authored prefix while a later edit remains unacknowledged", async () => {
+  const f = await fixture();
+  const firstEntered = Promise.withResolvers<void>();
+  const secondEntered = Promise.withResolvers<void>();
+  const firstRelease = Promise.withResolvers<void>();
+  const secondRelease = Promise.withResolvers<void>();
+  let calls = 0;
+  f.hold(async () => {
+    if (++calls === 1) {
+      firstEntered.resolve();
+      await firstRelease.promise;
+    } else {
+      secondEntered.resolve();
+      await secondRelease.promise;
+    }
+  });
+  f.session.transact((text) => text.insert(0, "first "));
+  let flushed = false;
+  const prefix = f.session.flush().then(() => {
+    flushed = true;
+  });
+  await firstEntered.promise;
+  f.session.transact((text) => text.insert(text.length, " later"));
+  firstRelease.resolve();
+  await secondEntered.promise;
+  await Promise.resolve();
+  try {
+    expect(flushed).toBe(true);
+    expect(f.session.getSnapshot().pending).toBe(true);
+  } finally {
+    secondRelease.resolve();
+    await prefix;
+    await f.session.close();
+    f.document.destroy();
+  }
+});
+
+test("lost durable acknowledgements retry the same member sequence and authored bytes", async () => {
+  const f = await fixture();
+  f.loseAck();
+  f.session.transact((text) => text.insert(0, "once "));
+  await expect(f.session.flush()).rejects.toThrow("Connection closed");
+  expect(f.session.getSnapshot().pending).toBe(true);
+  await f.session.retry();
+  expect(f.sequences).toEqual([1, 1]);
+  expect(f.frames[0]).toBe(f.frames[1]);
+  expect(f.document.getText("content").toString()).toBe("once source");
+  await f.session.close();
+  f.document.destroy();
+});
+
+test("read-only sessions reject direct binding transactions before changing their source text", async () => {
+  const f = await fixture(false);
+  const snapshot = f.session.getSnapshot();
+  expect(() => f.session.transact((text) => text.insert(0, "forbidden "))).toThrow();
+  expect(snapshot.text.toString()).toBe("source");
+  expect(f.frames).toHaveLength(0);
+  await f.session.close();
+  f.document.destroy();
+});
+
+test("a projection fence keeps its captured durable revision while a later edit awaits acknowledgement", async () => {
+  const f = await fixture();
+  const firstEntered = Promise.withResolvers<void>();
+  const secondEntered = Promise.withResolvers<void>();
+  const firstRelease = Promise.withResolvers<void>();
+  const secondRelease = Promise.withResolvers<void>();
+  let calls = 0;
+  f.hold(async () => {
+    if (++calls === 1) {
+      firstEntered.resolve();
+      await firstRelease.promise;
+    } else {
+      secondEntered.resolve();
+      await secondRelease.promise;
+    }
+  });
+  f.session.transact((text) => text.insert(0, "first "));
+  const projection = f.session.project();
+  await firstEntered.promise;
+  f.session.transact((text) => text.insert(text.length, " later"));
+  firstRelease.resolve();
+  await secondEntered.promise;
+  try {
+    await projection;
+    expect(f.projects).toEqual([2]);
+    expect(f.session.getSnapshot().pending).toBe(true);
+  } finally {
+    secondRelease.resolve();
+    await f.session.close();
+    f.document.destroy();
+  }
+});
+
+test("unsupported direct read-only mutations remain recoverable without poisoning Yjs transactions", async () => {
+  const f = await fixture(false);
+  const text = f.session.getSnapshot().text;
+  text.insert(0, "first ");
+  text.insert(0, "second ");
+  expect(text.toString()).toBe("second first source");
+  expect(f.session.getSnapshot().pending).toBe(true);
+  expect(f.session.getSnapshot().error?.code).toBe("source_read_only");
+  await expect(f.session.flush()).rejects.toMatchObject({ code: "source_read_only" });
+  expect(f.frames).toHaveLength(0);
+  f.document.destroy();
+});
+
+test("a frozen draft admits only its captured delta even if a retained Yjs copy is mutated again", async () => {
+  const f = await fixture();
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  f.hold(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  const draft = f.session.createDraft();
+  draft.text.insert(0, "frozen ");
+  const committing = draft.commit();
+  await entered.promise;
+  draft.text.insert(0, "ignored ");
+  draft.text.insert(0, "also ignored ");
+  release.resolve();
+  await committing;
+  await draft.commit();
+  expect(f.document.getText("content").toString()).toBe("frozen source");
+  await f.session.close();
+  f.document.destroy();
+});
+
+test("a retired frozen draft fails its flush fence and retains recovery until explicit cancellation", async () => {
+  const f = await fixture();
+  f.retireDraft();
+  const draft = f.session.createDraft();
+  draft.text.insert(0, "recover ");
+  await expect(draft.commit()).rejects.toMatchObject({ code: "source_retired" });
+  expect(f.session.getSnapshot().error?.code).toBe("source_retired");
+  await expect(f.session.flush()).rejects.toMatchObject({ code: "source_retired" });
+  expect(draft.text.toString()).toBe("recover source");
+  draft.cancel();
+  expect(f.session.getSnapshot().pending).toBe(false);
+  await f.session.close();
+  f.document.destroy();
+});
+
+test("a lost acknowledgement retries its admitted batch before requesting writable recovery history", async () => {
+  const f = await fixture();
+  f.loseAck();
+  f.session.transact((text) => text.insert(0, "saved "));
+  await expect(f.session.flush()).rejects.toThrow("Connection closed");
+  f.readonly();
+  await f.session.retry();
+  expect(f.sequences).toEqual([1, 1]);
+  expect(f.session.getSnapshot().pending).toBe(false);
+  expect(f.session.getSnapshot().editable).toBe(false);
+  await f.session.close();
+  f.document.destroy();
+});
+
+test("draft cancellation reports whether an editor can dismiss its tentative text", async () => {
+  const f = await fixture();
+  const tentative = f.session.createDraft();
+  tentative.text.insert(0, "discard ");
+  expect(tentative.cancel()).toBe(true);
+  const draft = f.session.createDraft();
+  draft.text.insert(0, "keep ");
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  f.hold(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  const committing = draft.commit();
+  await entered.promise;
+  try {
+    expect(draft.cancel()).toBe(false);
+    expect(draft.text.toString()).toBe("keep source");
+  } finally {
+    release.resolve();
+    await committing;
+    expect(draft.cancel()).toBe(false);
+    await f.session.close();
+    f.document.destroy();
+  }
+});
+
+test("close installs a newer canonical history before a finishing draft releases its visible preview", async () => {
+  const f = await fixture();
+  const draft = f.session.createDraft();
+  draft.text.insert(0, "IME ");
+  await f.replaceHistory("parent history");
+  f.emit({ type: "snapshot", version: 1, snapshot: await f.snapshot() });
+  await f.session.retry();
+  expect(f.session.getSnapshot().text.toString()).toBe("parent history");
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  f.hold(async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  const committing = draft.commit();
+  await entered.promise;
+  let visible: string | undefined;
+  f.session.beforeClose(async () => {
+    await draft.commit();
+    await f.session.retry();
+    visible = f.session.getSnapshot().text.toString();
+  });
+  const closing = f.session.close();
+  expect(f.session.getSnapshot().closing).toBe(true);
+  // The host's receipt now belongs to a third canonical history; the parent's second history cannot apply it.
+  await f.replaceHistory("canonical saved IME");
+  f.hold(undefined);
+  release.resolve();
+  try {
+    await committing;
+    await closing;
+    expect(visible).toBe("canonical saved IME");
+  } finally {
+    release.resolve();
+    await f.session.close();
+    f.document.destroy();
+  }
+});

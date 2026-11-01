@@ -1,11 +1,10 @@
+import { createMemoryDocumentStore, type DocumentStore } from "pstdio-sync";
 import {
   createDocumentStorage,
   createLegacyRecordStorage,
-  createMemoryDocumentStore,
-  type DocumentStore,
   scopeRecordStorage,
   snapshotDocumentRecords,
-} from "pstdio-sync";
+} from "pstdio-sync/records";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import type { createMemoryAssets } from "./memory-assets";
 

@@ -82,16 +82,16 @@ export const createFileProjectionIO = (input: {
     target: FileIdentity,
     asset: AssetReference | null | undefined,
     expected: FileIdentity,
+    content?: Blob,
   ) => {
     await input.beforeWrite?.();
-    const temporary = asset
-      ? await scratch.resolveForWrite(`.publishers/pstdio-shared-files/${crypto.randomUUID()}`)
-      : null;
+    const temporary =
+      asset || content ? await scratch.resolveForWrite(`.publishers/pstdio-shared-files/${crypto.randomUUID()}`) : null;
     try {
-      if (temporary && asset)
+      if (temporary && (asset || content))
         await Bun.write(
           temporary.operationPath,
-          new Response(await input.assets.read(input.owner, asset, input.signal)),
+          content ? new Response(content) : new Response(await input.assets.read(input.owner, asset!, input.signal)),
         );
       // A download must not overwrite an editor save made while the transfer was in flight.
       await input.beforeWrite?.();
@@ -103,5 +103,5 @@ export const createFileProjectionIO = (input: {
       if (temporary) await rm(temporary.operationPath, { force: true });
     }
   };
-  return { source, install };
+  return { source, install, projectionKey: (path: string) => JSON.stringify(["artifact-file", input.root, path]) };
 };

@@ -6,13 +6,14 @@ import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createPublicationStorageAccess } from "../../features/extensions/publication/storage-access";
 import { apiLogger } from "../../lib/logger";
 import { createSharedArtifactMount } from "../shared-files/artifact-mount";
+import type { RelayDeps } from "./deps";
 import { createExtensionDocumentSync } from "./documents";
 import type { RelayWorkbench } from "./runtime";
 
 export const startRelayExtension = async (input: {
   config: RelayWorkbench;
   source: Awaited<ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>>[number];
-  deps: ExtensionsRouteDeps;
+  deps: RelayDeps;
   signal: AbortSignal;
   statusChanged: () => void;
   contextKey: string;
@@ -25,7 +26,13 @@ export const startRelayExtension = async (input: {
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
   const access = () => createReadBoundary(signal)(input.access);
-  const documents = createExtensionDocumentSync({ config, owner, deps, access });
+  const documents = createExtensionDocumentSync({
+    config,
+    owner,
+    deps,
+    access,
+    discoveryNeeded: () => connection?.wake(),
+  });
   const snapshot = input.snapshot;
   const repoRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "read").catch(() => null);
   const mounts = repoRoot
@@ -54,6 +61,10 @@ export const startRelayExtension = async (input: {
         )
     : [];
   let connection: ReturnType<typeof createDocumentRelayConnection> | undefined;
+  const wakeDocument = (name: string) => {
+    if (!documents.hasDocument(name)) connection?.wake();
+    connection?.wakeDocument(name);
+  };
   const watches: ReturnType<typeof watchArtifactMount>[] = [];
   const refreshFiles = async () => {
     const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
@@ -80,7 +91,14 @@ export const startRelayExtension = async (input: {
       projectId: config.workbenchId,
       signal,
       access,
+      acceptsChange: documents.acceptsChange,
+      synchronizeChanged: documents.synchronizeChanged,
+      synchronizeDocument: documents.synchronizeDocument,
+      onReady: () => {
+        for (const name of deps.nativeDocuments.sources.current(owner)) wakeDocument(name);
+      },
       synchronize: async (attemptSignal) => {
+        await documents.prepare(attemptSignal);
         await refreshFiles();
         await documents.synchronize(attemptSignal);
         await refreshFiles();
@@ -97,6 +115,7 @@ export const startRelayExtension = async (input: {
       owner,
       contextKey: input.contextKey,
       wake: connection.wake,
+      wakeDocument,
       retry: connection.retry,
       done: connection.done.finally(documents.close),
       status: async () => ({ ...(await documents.status()), ...active.status() }),
@@ -108,7 +127,7 @@ export const startRelayExtension = async (input: {
   } catch (error) {
     for (const watch of watches) watch.close();
     controller.abort();
-    documents.close();
+    await documents.close();
     throw error;
   }
 };

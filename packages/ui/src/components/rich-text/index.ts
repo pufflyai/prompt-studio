@@ -1,8 +1,10 @@
-export type { CollaborativeMarkdownEditorProps } from "./collaborative-markdown-editor/collaborative-markdown-editor";
-export { CollaborativeMarkdownEditor } from "./collaborative-markdown-editor/collaborative-markdown-editor";
 export { LazyMarkdownEditor } from "./lazy-markdown-editor";
 export type { MarkdownEditorProps } from "./markdown-editor/markdown-editor";
 export { MarkdownEditor } from "./markdown-editor/markdown-editor";
+export type {
+  MarkdownCollaboration,
+  MarkdownDocumentSelection,
+} from "./markdown-editor/plugins/markdown-collaboration-plugin";
 export type {
   MarkdownSectionAnchor,
   MarkdownSectionNavigation,

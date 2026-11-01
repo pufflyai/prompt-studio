@@ -2,7 +2,7 @@ import { beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createDocumentStorage } from "pstdio-sync";
+import { createDocumentStorage } from "pstdio-sync/records";
 import { createResourceLinksApi } from "../../features/extensions/command-environment/resource-links";
 import { streamPersonalSession } from "../../features/sessions/endpoints/stream-personal-session";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";

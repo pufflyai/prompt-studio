@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest, CommandExecutionResult } from "@pstdio/sdk/api";
+import type { NativeDocumentsClient, TextEditingTransportClient } from "@pstdio/sdk/client";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type {
@@ -9,6 +10,8 @@ import type {
   ResourceRef,
   WorkbenchModuleContext,
 } from "../../core";
+import { createNativeDocumentSession } from "../../core/native-documents/native-document-session";
+import { createNativeTextPresentation } from "../bridge/native-text-presentation";
 import { unwrapCommandValue } from "../host/command-response";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import { executeWorkbenchExtensionCommandResponse } from "../host/workbench-extension-command";
@@ -20,6 +23,8 @@ export interface RegisterWorkbenchExtensionFileRenderersInput {
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
   workbench: WorkbenchModuleContext;
+  nativeDocuments?: NativeDocumentsClient;
+  textEditing?: TextEditingTransportClient;
 }
 
 const slotContext = (input: { projectId: string; rendererId: string; resource?: ResourceRef }) => ({
@@ -94,47 +99,71 @@ export const fileRendererRefreshEnvelopeFromCommand = (
     ...(revision ? { revision } : {}),
   };
 };
-const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInput, record: FileRendererRecord) =>
-  input.workbench.views.registerView({
-    id: record.id,
-    title: text(record.title, record.id),
-    icon: record.icon,
-    body: {
-      kind: "file",
-      resourceKind: record.resourceKind,
-      load: async (resource, signal, pageParams) => {
-        const result = await executeFileCommand(
-          input,
-          record.id,
-          record.loadHandlerId,
-          resource,
-          {},
-          { fileStorageVersions: {} },
-          signal,
-          pageParams,
-        );
-        return attachFileStorageVersions((unwrapCommandValue(result) ?? {}) as FileRendererContent, result);
+const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInput, record: FileRendererRecord) => {
+  const client = input.nativeDocuments;
+  return input.workbench.views.registerView(
+    {
+      id: record.id,
+      title: text(record.title, record.id),
+      icon: record.icon,
+      body: {
+        kind: "file",
+        resourceKind: record.resourceKind,
+        connectText: input.textEditing
+          ? (presentation, pageParams) =>
+              createNativeTextPresentation({
+                workbench: presentation.workbench,
+                placement: presentation.instance,
+                projectId: input.projectId,
+                textEditing: input.textEditing!,
+                textTarget: { fileRendererId: record.id, resource: presentation.instance.resource, pageParams },
+              })
+          : undefined,
+        connectDocument:
+          client && record.saveHandlerId
+            ? (resource, pageParams) =>
+                createNativeDocumentSession({
+                  client,
+                  projectId: input.projectId,
+                  target: { fileRendererId: record.id, resource, pageParams },
+                })
+            : undefined,
+        load: async (resource, signal, pageParams) => {
+          const result = await executeFileCommand(
+            input,
+            record.id,
+            record.loadHandlerId,
+            resource,
+            {},
+            { fileStorageVersions: {} },
+            signal,
+            pageParams,
+          );
+          return attachFileStorageVersions((unwrapCommandValue(result) ?? {}) as FileRendererContent, result);
+        },
+        save: record.saveHandlerId
+          ? async (resource, content, origin, loaded) => {
+              const result = await executeFileCommand(
+                input,
+                record.id,
+                record.saveHandlerId as string,
+                resource,
+                { content },
+                {
+                  fileStorageVersions: fileStorageVersions(loaded),
+                  ...(origin ? { fileRendererOrigin: origin } : {}),
+                  ...(resourceKey(resource) ? { fileRendererResourceKey: resourceKey(resource) } : {}),
+                },
+              );
+              const revision = revisionFromValue(unwrapCommandValue(result));
+              return attachFileStorageVersions(revision ? { revision } : {}, result);
+            }
+          : undefined,
       },
-      save: record.saveHandlerId
-        ? async (resource, content, origin, loaded) => {
-            const result = await executeFileCommand(
-              input,
-              record.id,
-              record.saveHandlerId as string,
-              resource,
-              { content },
-              {
-                fileStorageVersions: fileStorageVersions(loaded),
-                ...(origin ? { fileRendererOrigin: origin } : {}),
-                ...(resourceKey(resource) ? { fileRendererResourceKey: resourceKey(resource) } : {}),
-              },
-            );
-            const revision = revisionFromValue(unwrapCommandValue(result));
-            return attachFileStorageVersions(revision ? { revision } : {}, result);
-          }
-        : undefined,
     },
-  });
+    { source: "extension", ownerId: record.extensionId },
+  );
+};
 export const registerWorkbenchExtensionFileRenderers = (input: RegisterWorkbenchExtensionFileRenderersInput) => {
   const disposables: Disposable[] = [];
   for (const record of input.metadata.fileRenderers ?? []) {
