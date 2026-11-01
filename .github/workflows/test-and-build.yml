@@ -97,6 +97,7 @@ jobs:
       windows: ${{ steps.scope.outputs.windows }}
       quarantine_bun_os: ${{ steps.scope.outputs.quarantineBunOs }}
       harness_matrix: ${{ steps.scope.outputs.harnessMatrix }}
+      shared_build: ${{ steps.scope.outputs.sharedBuild }}
       component_matrix: ${{ steps.scope.outputs.componentMatrix }}
       bun_contract_matrix: ${{ steps.scope.outputs.bunContractMatrix }}
       app_matrix: ${{ steps.scope.outputs.appMatrix }}
@@ -128,6 +129,52 @@ jobs:
     env:
       CI_PRIORITY: P0
       GH_TOKEN: ${{ github.token }}
+  # One Linux build per run. Host jobs import its archives, so each package builds once.
+  # Build failures stay with the jobs that test those packages: they rebuild what is missing here.
+  build_host:
+    needs: scope
+    if: needs.scope.outputs.shared_build != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI_PRIORITY: P0
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Record the restored build archives
+        shell: bash
+        run: find .cache/ci-build -maxdepth 1 -name '*.tar.gz' -printf '%f\n' | sort > "$RUNNER_TEMP/restored-archives.txt"
+      - name: Build every package this run's host jobs build
+        continue-on-error: true
+        env:
+          SHARED_BUILD: ${{ needs.scope.outputs.shared_build }}
+        shell: bash
+        run: |
+          read -r -a filters <<< "$SHARED_BUILD"
+          bun run build -- "${filters[@]}" --include-dependencies --no-bail
+      - name: Keep only the archives this run built
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/shared-build"
+          find .cache/ci-build -maxdepth 1 -name '*.tar.gz' -printf '%f\n' | sort |
+            comm -13 "$RUNNER_TEMP/restored-archives.txt" - > "$RUNNER_TEMP/shared-build/archives.txt"
+          while read -r archive; do cp ".cache/ci-build/$archive" "$RUNNER_TEMP/shared-build/"; done < "$RUNNER_TEMP/shared-build/archives.txt"
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ci-build-shared-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/shared-build
+          compression-level: 0
+          if-no-files-found: error
   edited_tests:
     name: edited_tests (${{ matrix.name }})
     needs: scope
@@ -249,8 +296,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
   package_checks:
     name: package_checks (${{ matrix.shard }})
-    needs: scope
-    if: needs.scope.outputs.package_checks == 'true'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.package_checks == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -272,6 +320,7 @@ jobs:
           bun-version-file: package.json
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       - name: Build the tested packages and their dependencies
         id: build_packages
         run: bun run build -- ${{ matrix.lernaFilter }} --include-dependencies --no-bail
@@ -306,8 +355,9 @@ jobs:
       CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
   integration_contracts:
     name: integration_contracts_${{ matrix.priority }} (${{ matrix.shard }})
-    needs: scope
-    if: needs.scope.outputs.integration_matrix != '[]'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.integration_matrix != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -330,6 +380,7 @@ jobs:
         with:
           bun-version-file: package.json
       - uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       - name: Build selected contract owners
         env:
           LERNA_FILTER: ${{ matrix.lernaFilter }}
@@ -351,8 +402,9 @@ jobs:
         run: git diff --exit-code
   bun_contracts:
     name: bun_contracts_${{ matrix.priority }} (${{ matrix.shard }})
-    needs: scope
-    if: needs.scope.outputs.bun_contract_matrix != '[]'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.bun_contract_matrix != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -376,6 +428,7 @@ jobs:
         with:
           bun-version-file: package.json
       - uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       - name: Build selected contract owners
         env:
           LERNA_FILTER: ${{ matrix.lernaFilter }}
@@ -398,8 +451,9 @@ jobs:
         run: git diff --exit-code
   database_tests:
     name: database_tests_${{ matrix.priority }} (${{ matrix.package }} ${{ matrix.shard }})
-    needs: scope
-    if: needs.scope.outputs.database_tests == 'true'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.database_tests == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -420,6 +474,7 @@ jobs:
           bun-version-file: package.json
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       - name: Build ${{ matrix.package }} and its dependencies
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
@@ -452,8 +507,9 @@ jobs:
       CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
       CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
   published_extensions:
-    needs: scope
-    if: needs.scope.outputs.published_extensions == 'true'
+    needs: [scope, build_host]
+    # build_host only speeds builds up: this job still builds and reports if it failed.
+    if: ${{ !cancelled() && needs.scope.result == 'success' && needs.scope.outputs.published_extensions == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -472,6 +528,7 @@ jobs:
           bun-version-file: package.json
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/use-shared-build
       # Canvas is the only extension with build output: its preview catalog is built from
       # this repo's UI, so it must exist before the extension is copied out and checked.
       - name: Build the Canvas preview catalog
@@ -1481,6 +1538,7 @@ jobs:
     # GitHub owns waiting for runners; the result reader starts after execution finishes.
     needs:
       - scope
+      - build_host
       - edited_tests
       - static_checks
       - package_checks
