@@ -14,8 +14,7 @@
     "@pstdio/ui": "workspace:*",
     "lucide-react": "^0.556.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "zod": "^4.1.12"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

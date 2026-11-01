@@ -27,7 +27,7 @@ const StreamedReply = (props: SceneProps) => {
   });
 };
 
-export const ChatTurn = (props: SceneProps) => {
+const ChatTurn = (props: SceneProps) => {
   const { time, variant } = props;
   // Only the rise style moves messages; the others fade in place.
   const rise = variant.values.turn === "rise" ? 4 : 0;

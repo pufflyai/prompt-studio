@@ -36,7 +36,7 @@ const StreamingChunk = (props: SceneProps & { chunk: (typeof responseChunks)[num
   );
 };
 
-export const Streaming = (props: SceneProps) => {
+const Streaming = (props: SceneProps) => {
   const { time } = props;
   const y = track(time, [
     { at: 0, value: -480, duration: 0 },

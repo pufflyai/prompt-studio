@@ -12,7 +12,8 @@ import {
   track,
   WorkbenchFrame,
 } from "../../kit";
-export const Panels = (props: SceneProps) => {
+
+const Panels = (props: SceneProps) => {
   const { time } = props;
   const side = track(time, [
     { at: 1, value: 1, duration: duration(props, timings.panelOpen, true) },

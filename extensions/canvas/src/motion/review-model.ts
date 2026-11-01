@@ -21,8 +21,3 @@ export const defaultProps: StudyProps = {
   left: { preset: "instant", values: {} },
   right: { preset: "subtle", values: {} },
 };
-export interface SceneProps {
-  time: number;
-  variant: Variant;
-  reducedMotion: boolean;
-}

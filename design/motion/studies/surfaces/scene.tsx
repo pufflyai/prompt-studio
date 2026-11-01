@@ -4,7 +4,7 @@ import { Copy, FileText, MoreHorizontal, Pencil, Trash2, X } from "lucide-react"
 import type { SceneProps } from "../../kit";
 import { duration, FileRow, SceneWindow, timings, tooltipDelaySeconds, track } from "../../kit";
 
-export const Surfaces = (props: SceneProps) => {
+const Surfaces = (props: SceneProps) => {
   const { time, reducedMotion } = props;
   const menuStyles = useSlotRecipe({ key: "menu" })();
   const dialogStyles = useSlotRecipe({ key: "dialog" })();

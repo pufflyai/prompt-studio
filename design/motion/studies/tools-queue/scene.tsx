@@ -26,7 +26,7 @@ const QueueRow = (props: SceneProps & { start: number; end: number; text: string
     </Box>
   );
 };
-export const ToolsQueue = (props: SceneProps) => {
+const ToolsQueue = (props: SceneProps) => {
   const { time } = props;
   return (
     <SessionWindow>

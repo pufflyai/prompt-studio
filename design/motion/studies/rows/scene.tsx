@@ -13,7 +13,7 @@ import {
   WorkbenchFrame,
 } from "../../kit";
 
-export const Rows = (props: SceneProps) => {
+const Rows = (props: SceneProps) => {
   const { time } = props;
   const input = track(time, [
     { at: 1, value: 48, duration: duration(props, timings.rowSpace, true) },
