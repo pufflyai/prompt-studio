@@ -17,7 +17,7 @@ const InteractiveTrends = (props: InteractiveTrendsProps) => {
   const [showTable, setShowTable] = useState(props.showTable ?? false);
   const [platforms, setPlatforms] = useState(props.platforms ?? PLATFORMS.map((platform) => platform.id));
   return (
-    <Box h="100dvh">
+    <Box h="100dvh" w="full" minW="0" overflow="hidden">
       <TrendsView
         versions={props.versions}
         trends={props.trends}
