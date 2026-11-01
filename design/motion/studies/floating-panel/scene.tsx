@@ -13,7 +13,7 @@ const toggles = [
   { at: 7, open: false },
 ];
 
-export const FloatingPanel = (props: SceneProps) => {
+const FloatingPanel = (props: SceneProps) => {
   const { time, reducedMotion } = props;
   const panel = track(
     time,

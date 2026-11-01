@@ -5,7 +5,7 @@ test("frame parameters and playback stay independent across themes and movement"
   await page.addInitScript(() =>
     window.addEventListener("message", ({ source, data }) => {
       if (data?.protocol !== "pstdio.canvas.preview" || data.type !== "loaded") return;
-      for (const frame of document.querySelectorAll("iframe"))
+      for (const frame of window.document.querySelectorAll("iframe"))
         if (frame.contentWindow === source) frame.dataset.testNonce = data.nonce;
     }),
   );
@@ -37,9 +37,10 @@ test("frame parameters and playback stay independent across themes and movement"
   await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
   // Two ordinary host patches can arrive in one React batch while playback is active.
   await first.locator("iframe").evaluate((frame) => {
+    const target = frame as HTMLIFrameElement;
     for (const args of [{ amount: 7 }, { time: 1.5 }])
-      frame.contentWindow!.postMessage(
-        { protocol: "pstdio.canvas.preview", nonce: frame.dataset.testNonce, type: "args", args },
+      target.contentWindow!.postMessage(
+        { protocol: "pstdio.canvas.preview", nonce: target.dataset.testNonce, type: "args", args },
         "*",
       );
   });

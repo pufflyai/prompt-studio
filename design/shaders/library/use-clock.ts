@@ -1,5 +1,3 @@
-import { useSyncExternalStore } from "react";
-
 export type Clock = ReturnType<typeof createClock>;
 
 // Timers leave no frame callback pending between ticks, even on high-refresh displays.
@@ -77,6 +75,3 @@ export const createClock = (options: { external?: boolean } = {}) => {
     time,
   };
 };
-
-export const useClockSeconds = (clock: Clock) =>
-  useSyncExternalStore(clock.subscribeElapsed, () => Math.floor(clock.time()));

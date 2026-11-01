@@ -37,7 +37,7 @@ const StudyTab = (props: { name: string; width: number; selected: boolean }) => 
   );
 };
 
-export const Tabs = (props: SceneProps) => {
+const Tabs = (props: SceneProps) => {
   const { time } = props;
   const crowded = time >= 4;
   const width = track(time, [{ at: 4, value: 96, duration: duration(props, timings.tabClose, true) }], 160);

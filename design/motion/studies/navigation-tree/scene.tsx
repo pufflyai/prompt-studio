@@ -4,7 +4,7 @@ import { Files, Folder, MessageCircle, MoreHorizontal, MousePointer2, Search, Ti
 import type { SceneProps } from "../../kit";
 import { duration, PanelSurface, timings, track } from "../../kit";
 
-export const NavigationTree = (props: SceneProps) => {
+const NavigationTree = (props: SceneProps) => {
   const { time } = props;
   const expansion = track(time, [
     { at: 1, value: 1, duration: duration(props, timings.treeExpand, true) },
