@@ -2,7 +2,7 @@
   "name": "motion-lab",
   "version": "0.0.0",
   "displayName": "Motion Lab",
-  "description": "Review chat and workbench motion studies with Remotion.",
+  "description": "Legacy review data bridge for UI Canvas.",
   "publisher": "pstdio",
   "private": true,
   "type": "module",
@@ -18,16 +18,7 @@
     "typecheck": "bun check"
   },
   "dependencies": {
-    "@chakra-ui/react": "3.32.0",
-    "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
-    "@pstdio/ui": "0.35.0",
-    "@remotion/player": "4.0.529",
-    "lucide-react": "^0.556.0",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "remotion": "4.0.529",
-    "zod": "^4.1.12"
+    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

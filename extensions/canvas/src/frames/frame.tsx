@@ -6,13 +6,19 @@ import type { CanvasItem } from "../canvas-model";
 import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
 import { frameThemeOption, resolveFrameTheme } from "../frame-themes";
+import { ParameterMenu } from "../parameters/menu";
+import { readParameters, type Values } from "../parameters/model";
 import { frameDocument } from "./assets";
 import { FrameLoaderContext } from "./frame-loader";
 import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
 import { useFrameStartup } from "./use-frame-startup";
 
-const postFrame = (frame: HTMLIFrameElement | null, message: Omit<FrameRequest, "protocol">) =>
+type ParameterRequest = Omit<FrameRequest, "type" | "protocol"> & {
+  type: FrameRequest["type"] | "args";
+  args?: Values;
+};
+const postFrame = (frame: HTMLIFrameElement | null, message: ParameterRequest) =>
   frame?.contentWindow?.postMessage({ protocol: frameProtocol, ...message }, "*");
 const validFrameMessage = (event: MessageEvent<FrameMessage>, frame: HTMLIFrameElement | null) =>
   event.source === frame?.contentWindow && event.data?.protocol === frameProtocol;
@@ -35,6 +41,7 @@ export const FramePreview = (props: FramePreviewProps) => {
   const [bootstrap, setBootstrap] = useState<FrameBootstrap>();
   const [height, setHeight] = useState(item.height);
   const [information, setInformation] = useState<FrameMessage["information"]>();
+  const [parameters, setParameters] = useState<ReturnType<typeof readParameters>>();
   const [ready, setReady] = useState(false);
   const [imported, setImported] = useState(false);
   const [error, setError] = useState("");
@@ -130,6 +137,7 @@ export const FramePreview = (props: FramePreviewProps) => {
           });
           setReady(true);
           setInformation(message.information);
+          setParameters(readParameters(message.information));
           break;
         case "error":
           setError(message.message ?? "Preview failed");
@@ -160,6 +168,16 @@ export const FramePreview = (props: FramePreviewProps) => {
   if (error) phase = "error";
   return (
     <Box data-ui-canvas-frame data-frame-startup={phase}>
+      {parameters && (Object.keys(parameters.controls).length > 0 || parameters.motion) && (
+        <ParameterMenu
+          item={item}
+          parameters={parameters}
+          restoreTheme={(theme) => {
+            if (!runtime.get().themes[item.id]) runtime.setTheme(item.id, theme);
+          }}
+          onChange={(args) => postFrame(frame.current, { nonce: nonce.current, type: "args", args })}
+        />
+      )}
       {error && (
         <Text role="alert" data-ui-canvas-error>
           {error}
@@ -193,6 +211,7 @@ export const FramePreview = (props: FramePreviewProps) => {
           setReady(false);
           setImported(false);
           setInformation(undefined);
+          setParameters(undefined);
           setBootstrap(undefined);
           setTimings(undefined);
           setHeight(item.height);

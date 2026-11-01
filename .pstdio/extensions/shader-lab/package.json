@@ -2,7 +2,7 @@
   "name": "pstdio-shader-lab",
   "version": "0.0.0",
   "displayName": "Shader Lab",
-  "description": "Tune surface shaders that mark active work, with a live preview in both themes.",
+  "description": "Legacy review data bridge for UI Canvas.",
   "publisher": "pstdio",
   "private": true,
   "type": "module",
@@ -18,13 +18,7 @@
     "typecheck": "bun check"
   },
   "dependencies": {
-    "@chakra-ui/react": "3.32.0",
-    "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
-    "@pstdio/ui": "0.35.0",
-    "lucide-react": "^0.556.0",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
