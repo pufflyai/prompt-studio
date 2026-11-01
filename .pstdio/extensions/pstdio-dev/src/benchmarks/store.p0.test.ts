@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import type { BenchmarkResultFile } from "./result-file";
-import { readResults, readRuns, syncAll, writeRuns } from "./store";
+import { readReleases, readResults, readRuns, readSyncedAt, syncAll, writeRuns } from "./store";
 
 const result = (sha: string, suite = "storage"): BenchmarkResultFile => ({
   format: 1,
@@ -47,7 +47,7 @@ const github = () => {
       return [
         {
           databaseId: 7,
-          displayTitle: "Benchmarks a,b",
+          displayTitle: "Benchmarks a,b on linux-x64",
           status: "completed",
           conclusion: "success",
           url: "https://github.com/runs/7",
@@ -56,7 +56,7 @@ const github = () => {
         },
         {
           databaseId: 8,
-          displayTitle: "Benchmarks c",
+          displayTitle: "Benchmarks c on linux-x64,win32-x64",
           status: "in_progress",
           conclusion: null,
           url: "https://github.com/runs/8",
@@ -69,6 +69,25 @@ const github = () => {
         artifacts: [
           { id: 70, name: "benchmark-results-linux-x64-storage", expired: false },
           { id: 71, name: "benchmark-results-linux-x64-runtime", expired: false },
+        ],
+      };
+    if (command === "run" && path === "view")
+      return {
+        status: args[2] === "8" ? "in_progress" : "completed",
+        conclusion: args[2] === "8" ? null : "success",
+        jobs: [
+          {
+            name: "linux-x64 · storage",
+            status: "completed",
+            conclusion: "success",
+            steps: [{ name: "Run benchmarks", status: "completed", conclusion: "success" }],
+          },
+          {
+            name: "linux-x64 · runtime",
+            status: args[2] === "8" ? "in_progress" : "completed",
+            conclusion: args[2] === "8" ? null : "success",
+            steps: [{ name: "Run benchmarks", status: args[2] === "8" ? "in_progress" : "completed", conclusion: null }],
+          },
         ],
       };
     if (command === "run" && path === "download") {
@@ -123,6 +142,22 @@ describe("benchmark result cache", () => {
     ]);
   });
 
+  test("records what each run measures, its suites' outcomes, releases, and the sync time", async () => {
+    const { ctx } = setup();
+    await syncAll(ctx);
+    const [running, done] = await readRuns(ctx);
+    expect(running).toMatchObject({
+      commits: [{ ref: "c" }],
+      platforms: ["linux-x64", "win32-x64"],
+      detail: "Storage finished\nRuntime running",
+    });
+    expect(done.commits).toEqual([{ ref: "a" }, { ref: "b" }]);
+    expect(await readReleases(ctx)).toEqual([
+      { version: "0.46.0", publishedAt: "2026-10-22", platforms: ["linux-x64"] },
+    ]);
+    expect(await readSyncedAt(ctx)).toBeString();
+  });
+
   test("does not download cached results again", async () => {
     const { ctx, gh } = setup();
     await syncAll(ctx);
@@ -139,8 +174,10 @@ describe("benchmark result cache", () => {
     await writeRuns(ctx, [
       {
         id: "6",
-        title: "Benchmarks old",
+        title: "Benchmarks old on linux-x64",
         status: "succeeded",
+        commits: [{ ref: "old" }],
+        platforms: ["linux-x64"],
         url: "https://github.com/runs/6",
         createdAt: "2026-10-20T09:00:00Z",
         updatedAt: "2026-10-20T10:00:00Z",
@@ -148,7 +185,10 @@ describe("benchmark result cache", () => {
       },
     ]);
     await expect(syncAll(ctx)).rejects.toThrow("Run 6");
+    // A failed sync keeps the last successful sync time, which is none yet.
+    expect(await readSyncedAt(ctx)).toBeUndefined();
     const runs = await readRuns(ctx);
+    expect(runs.find((run) => run.id === "6")?.syncError).toStartWith("Results could not be downloaded");
     expect(runs.map((run) => [run.id, run.synced])).toEqual([
       ["8", false],
       ["7", true],

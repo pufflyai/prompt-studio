@@ -43,7 +43,7 @@ const FILTERS: { value: ResultFilter; label: string }[] = [
   { value: "unchanged", label: "No significant change" },
 ];
 
-const ORDER: Record<Verdict, number> = { regressed: 0, improved: 1, unchanged: 2 };
+const ORDER: Record<Verdict, number> = { regressed: 0, improved: 1, unchanged: 2, inconclusive: 3 };
 
 // Regressions first, then improvements, each by size, so the rows that need attention lead.
 export const sortRows = (rows: CompareRow[]) =>
