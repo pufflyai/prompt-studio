@@ -94,6 +94,9 @@ jobs:
       gate_plan: ${{ steps.scope.outputs.gatePlan }}
       client_matrix: ${{ steps.scope.outputs.clientMatrix }}
       toolchain_matrix: ${{ steps.scope.outputs.toolchainMatrix }}
+      windows: ${{ steps.scope.outputs.windows }}
+      quarantine_bun_os: ${{ steps.scope.outputs.quarantineBunOs }}
+      harness_matrix: ${{ steps.scope.outputs.harnessMatrix }}
       component_matrix: ${{ steps.scope.outputs.componentMatrix }}
       bun_contract_matrix: ${{ steps.scope.outputs.bunContractMatrix }}
       app_matrix: ${{ steps.scope.outputs.appMatrix }}
@@ -492,10 +495,11 @@ jobs:
     with:
       ref: ${{ inputs.source_sha || github.sha }}
       versions: '["minimum","latest"]'
+      harnesses: ${{ needs.scope.outputs.harness_matrix }}
   windows_test_and_build:
     name: windows_test_and_build (${{ matrix.check }})
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 25
     strategy:
@@ -561,7 +565,7 @@ jobs:
   windows_database_tests:
     name: windows_database_tests (${{ matrix.package }} ${{ matrix.shard }})
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 25
     strategy:
@@ -970,10 +974,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macos-15
+        os: ${{ fromJSON(needs.scope.outputs.quarantine_bun_os) }}
     env:
       E2E_TEST_LANE: quarantine
       CI_PRIORITY: P2
@@ -1366,7 +1367,7 @@ jobs:
       priority: P2
       gate_plan: ${{ needs.scope.outputs.gate_plan }}
   source_coverage:
-    needs: [scope, package_checks, bun_contracts, database_tests, windows_test_and_build, windows_database_tests]
+    needs: [scope, package_checks, bun_contracts, database_tests]
     if: >-
       !cancelled() && needs.scope.outputs.source_coverage == 'true' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')

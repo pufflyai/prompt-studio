@@ -76,24 +76,34 @@ test("the queue keeps source contracts and smoke while production retains comple
   expect(production.packagedMatrix.some((row) => row.priority === "P2")).toBe(true);
 });
 
-test("Intel Mac validation belongs to full releases while nightly keeps Windows diagnostics", () => {
+test("the nightly validates Linux and Apple Silicon while stable releases validate every published host", () => {
   const input = { ...scopeFixture(), event: "workflow_dispatch", profile: "production" };
   const queue = resolveCiScope({ ...input, profile: "merge_queue" });
   const nightly = resolveCiScope({ ...input, releaseChannel: "nightly" });
   const stable = resolveCiScope({ ...input, releaseChannel: "stable" });
   expect(queue.clientMatrix).toEqual([]);
-  expect(nightly.clientMatrix.map((row) => row.target)).toEqual(["linux-x64", "darwin-arm64", "win32-x64"]);
-  expect(stable.clientMatrix.map((row) => row.target)).toContain("darwin-x64");
-  expect(nightly.toolchainMatrix.map((row) => row.platform_pkg)).not.toContain("cli-darwin-x64");
-  expect(stable.toolchainMatrix.map((row) => row.platform_pkg)).toContain("cli-darwin-x64");
-  expect(JSON.stringify(plannedCiJobs(nightly))).not.toContain("cli-darwin-x64");
+  expect(nightly.clientMatrix.map((row) => row.target)).toEqual(["linux-x64", "darwin-arm64"]);
+  expect(stable.clientMatrix.map((row) => row.target)).toEqual(expect.arrayContaining(["darwin-x64", "win32-x64"]));
+  expect(nightly.toolchainMatrix.map((row) => row.platform_pkg)).toEqual([
+    "cli-linux-x64",
+    "cli-linux-arm64",
+    "cli-darwin-arm64",
+  ]);
+  expect(stable.toolchainMatrix.map((row) => row.platform_pkg)).toEqual(
+    expect.arrayContaining(["cli-darwin-x64", "cli-win-x64", "cli-win-arm64"]),
+  );
+  expect(nightly.quarantineBunOs).toEqual(["ubuntu-latest", "macos-15"]);
+  expect(stable.quarantineBunOs).toContain("windows-latest");
+  const nightlyJobs = JSON.stringify(plannedCiJobs(nightly));
+  for (const name of ["windows", "win32", "cli-win", "darwin-x64"]) expect(nightlyJobs).not.toContain(name);
+  expect(JSON.stringify(plannedCiJobs(stable))).toContain("windows_test_and_build");
+  expect(JSON.stringify(plannedCiJobs(stable))).toContain("harness-pi (latest, Windows)");
   expect(nightly.sourceCoverage).toBe(true);
   expect(plannedCiJobs(nightly).find((row) => row.id === "source_coverage")?.priority).toBe("P2");
   expect(queue.sourceCoverage).toBe(false);
   expect(stable.sourceCoverage).toBe(false);
   const artifacts = sourceCoverageArtifacts(nightly, 2);
-  expect(artifacts).toContain("windows_test_and_build-1-attempt-2");
-  expect(artifacts).not.toContain("windows_test_and_build-0-attempt-2");
+  expect(artifacts.some((name) => name.startsWith("windows"))).toBe(false);
   expect(artifacts.filter((name) => name.startsWith("database_tests-"))).toHaveLength(nightly.databaseMatrix.length);
   expect(sourceCoverageArtifacts(queue, 2)).toEqual([]);
 });

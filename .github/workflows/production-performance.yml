@@ -20,6 +20,10 @@ on:
       desktop_platforms:
         required: true
         type: string
+      workloads:
+        description: JSON family and runner rows for the release channel, from scripts/ci/production-platforms.ts
+        required: true
+        type: string
 permissions:
   contents: read
   actions: read
@@ -41,17 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { family: storage, os: ubuntu-24.04 }
-          - { family: storage, os: macos-15 }
-          - { family: storage, os: windows-2025 }
-          - { family: runtime, os: ubuntu-24.04 }
-          - { family: runtime, os: macos-15 }
-          - { family: runtime, os: windows-2025 }
-          - { family: browser, os: ubuntu-24.04 }
-          - { family: relay, os: ubuntu-24.04 }
-          - { family: navigation, os: ubuntu-24.04 }
-          - { family: planner, os: ubuntu-24.04 }
+        include: ${{ fromJSON(inputs.workloads) }}
     env:
       SOURCE_SHA: ${{ inputs.source_sha }}
       VERSION_SHA: ${{ inputs.ref }}

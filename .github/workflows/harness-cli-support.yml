@@ -13,6 +13,10 @@ on:
         description: JSON list of versions to install, from "minimum" and "latest"
         required: true
         type: string
+      harnesses:
+        description: JSON list of harness lanes for the release channel, from scripts/ci/production-platforms.ts
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -26,18 +30,7 @@ jobs:
       fail-fast: ${{ github.event_name == 'merge_group' }}
       matrix:
         version: ${{ fromJSON(inputs.versions) }}
-        harness:
-          - extension: harness-codex
-            package: "@openai/codex"
-          - extension: harness-claude-code
-            package: "@anthropic-ai/claude-code"
-          - extension: harness-open-code
-            package: opencode-ai
-          - extension: harness-pi
-            package: "@earendil-works/pi-coding-agent"
-          - extension: harness-pi
-            package: "@earendil-works/pi-coding-agent"
-            os: windows-latest
+        harness: ${{ fromJSON(inputs.harnesses) }}
     steps:
       - uses: actions/checkout@v5
         with:
