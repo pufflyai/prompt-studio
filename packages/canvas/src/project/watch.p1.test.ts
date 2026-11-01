@@ -1,12 +1,14 @@
 import { afterEach, expect, test } from "bun:test";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { readManifest, resolveOut } from "./build";
 import type { CanvasBuildManifest } from "./manifest";
 import { createTestProject, sampleProject, writeProjectFiles } from "./test-project";
 import { watchCanvases } from "./watch";
 
-const cleanups: (() => void)[] = [];
-afterEach(() => {
-  for (const cleanup of cleanups.splice(0)) cleanup();
+const cleanups: (() => void | Promise<void>)[] = [];
+afterEach(async () => {
+  for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
 const nextManifest = async (out: string, after?: string) => {
@@ -19,6 +21,31 @@ const nextManifest = async (out: string, after?: string) => {
 };
 const moduleOf = (manifest: CanvasBuildManifest, id: string) =>
   manifest.frames.modules[manifest.frames.sources[id]!.script]!.file;
+
+test("closing waits for an active scheduled build to finish before the project is removed", async () => {
+  const project = createTestProject(sampleProject);
+  const exitCodes: number[] = [];
+  const watcher = watchCanvases({ root: project.root, intervalMs: 10, onBuild: (code) => exitCodes.push(code) });
+  const out = resolveOut(project.root);
+  const enteredBuild = join(out, ".gitignore");
+  try {
+    await watcher.started;
+    // Hold the next real builder at its output lock until close terminates it.
+    rmSync(enteredBuild);
+    writeFileSync(join(out, "build.lock"), String(process.pid));
+    writeProjectFiles(project.root, {
+      "src/button.tsx": "export const Button = () => <button>Changed</button>;\n",
+    });
+    for (let attempt = 0; attempt < 200 && !existsSync(enteredBuild); attempt++) await Bun.sleep(10);
+    expect(existsSync(enteredBuild)).toBe(true);
+    await watcher.close();
+    expect(exitCodes).toHaveLength(2);
+    expect(exitCodes[1]).not.toBe(0);
+  } finally {
+    await watcher.close();
+    project.dispose();
+  }
+});
 
 test("rebuilds when a component changes, replacing only that canvas's module", async () => {
   const project = createTestProject(sampleProject);

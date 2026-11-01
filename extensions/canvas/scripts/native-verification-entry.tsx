@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import { type CanvasBuildManifest } from "@pstdio/canvas";
+import type { CanvasBuildManifest } from "@pstdio/canvas";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { Component, type ReactNode, useState } from "react";
 import { createRoot } from "react-dom/client";
