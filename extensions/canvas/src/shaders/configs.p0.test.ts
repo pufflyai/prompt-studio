@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { defaultValues, normalizeValues } from "./catalog";
+import { defaultValues, normalizeValues, type ShaderDefinition } from "./catalog";
 import {
   addShader,
   deleteConfig,
@@ -11,7 +11,38 @@ import {
 } from "./configs";
 
 // An in-memory project folder with the parts of the file API that versions use.
-const catalog = await Bun.file(new URL("../../../../design/shaders/catalog.json", import.meta.url)).json();
+const catalog: ShaderDefinition[] = [
+  {
+    id: "section-hatch",
+    title: "Hatch",
+    description: "Test surface",
+    groups: [
+      {
+        fields: [
+          { id: "spacing", min: 2, max: 32, step: 1, defaultValue: 8 },
+          { id: "angle", min: 0, max: 180, step: 1, defaultValue: 45 },
+          { id: "darkOpacity", min: 0, max: 1, step: 0.01, defaultValue: 0.2 },
+          { id: "noiseScale", min: 1, max: 512, step: 1, defaultValue: 200 },
+          { id: "lineWidth", min: 0.5, max: 3, step: 0.25, defaultValue: 1 },
+          { id: "lineDrift", min: 0, max: 30, step: 0.5, defaultValue: 3 },
+        ],
+      },
+    ],
+  },
+  {
+    id: "ruler-ticks",
+    title: "Ruler",
+    description: "Test ruler",
+    groups: [
+      {
+        fields: [
+          { id: "tickSpacing", min: 1, max: 20, step: 1, defaultValue: 4 },
+          { id: "majorEvery", min: 1, max: 10, step: 1, defaultValue: 5 },
+        ],
+      },
+    ],
+  },
+];
 const memoryFiles = () => {
   const files = new Map<string, string>([["design/shaders/catalog.json", JSON.stringify(catalog)]]);
   return {
@@ -29,7 +60,7 @@ const memoryFiles = () => {
   };
 };
 
-const hatch = catalog.find((shader: { id: string }) => shader.id === "section-hatch");
+const hatch = catalog.find((shader) => shader.id === "section-hatch")!;
 
 describe("shader values", () => {
   test("missing values use the shader's defaults and out-of-range values are clamped", () => {
@@ -95,10 +126,10 @@ describe("shader versions", () => {
 });
 
 test("shader values follow declared field steps while keeping fractional fields", () => {
-  const ruler = normalizeValues(
-    catalog.find((shader: { id: string }) => shader.id === "ruler-ticks"),
-    { tickSpacing: 4.5, majorEvery: 5.2 },
-  );
+  const ruler = normalizeValues(catalog.find((shader) => shader.id === "ruler-ticks")!, {
+    tickSpacing: 4.5,
+    majorEvery: 5.2,
+  });
   expect(ruler.tickSpacing).toBe(5);
   expect(ruler.majorEvery).toBe(5);
   const hatchValues = normalizeValues(hatch, { lineWidth: 1.25, lineDrift: 3.5 });
