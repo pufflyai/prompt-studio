@@ -1,23 +1,27 @@
-import { type ComponentType, useEffect, useState } from "react";
+import { type ComponentType, useLayoutEffect, useState } from "react";
 
 type Callback = (...values: any[]) => unknown;
+export type FrameArgsReady = (update: ((change: Record<string, unknown>) => void) | undefined) => void;
 
 interface LiveFrameProps {
   Frame: ComponentType<Record<string, unknown>>;
   args: Record<string, unknown>;
-  overrides?: Record<string, unknown>;
+  onArgsReady?: FrameArgsReady;
 }
 
 // Frames keep the state their controls change, using the common React prop conventions, so a
 // person can try an example without each canvas wiring its own state.
 export const LiveFrame = (props: LiveFrameProps) => {
-  const { Frame } = props;
+  const { Frame, onArgsReady } = props;
   const [args, setArgs] = useState(props.args);
   const [closed, setClosed] = useState(false);
-  useEffect(() => {
-    if (props.overrides && Object.keys(props.overrides).length)
-      setArgs((current) => ({ ...current, ...props.overrides }));
-  }, [props.overrides]);
+  useLayoutEffect(() => {
+    if (!onArgsReady) return;
+    // Host updates use the same functional queue as controls inside the frame. Two patches
+    // arriving before a React commit must both apply, without replaying older local values.
+    onArgsReady((change) => setArgs((current) => ({ ...current, ...change })));
+    return () => onArgsReady(undefined);
+  }, [onArgsReady]);
   const update = (change: Record<string, unknown>) => setArgs((current) => ({ ...current, ...change }));
   const callbacks: Record<string, Callback> = {};
   const chain = (name: string, apply: Callback) => {
