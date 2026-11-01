@@ -73,7 +73,7 @@ The timing report keeps initial scheduling delay, elapsed time after the first j
 - Edited tests use their registered runners and setup. Edited tests run on the hosts their suite uses in nightly: native desktop checks on all four desktop platforms, packaged CLI P0–P1 on all six toolchain targets and P2 on Linux x64, Windows x64 and macOS arm64, and packaged browser checks on Linux. An edited benchmark runs its complete registered suite once per applicable host, preserving its workload and cold-start order. Desktop benchmarks use all four desktop platforms; backend suites use Linux, Apple Silicon and Windows; browser and relay suites use Linux. Existing test limits and performance budgets apply.
 - Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.
 - Complete P1/P2/P3 matrices run in nightly and stable validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
-- A new push cancels the PR's older run.
+- A new push cancels the PR's older run. Adding or removing labels does not rerun CI; `ci:full` requests diagnostics through its own workflow.
 
 ## Merge queue
 
@@ -138,10 +138,10 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 - It builds and publishes the npm packages, containers, and signed desktop apps for Linux x64 and Apple Silicon. Nightly publishing does not wait for the deep validation.
 - **Production validation** runs on the same files:
   - P0, P1 and P2 on Linux, macOS and Windows, with up to twelve P2 app shards
-  - P1 and P2 against the signed desktop apps
+  - P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.
   - P3 performance measurements
   - container service checks
-  - the packaged CLI on the other five native hosts: P1 everywhere; P2 feature workflows on Linux x64, Windows x64 and macOS arm64 only, because they test OS-independent behavior. Install, native process and asset checks are P1.
+  - the packaged CLI on all six native hosts, in the toolchain job: P1 everywhere; P2 feature workflows on Linux x64, Windows x64 and macOS arm64 only, because they test OS-independent behavior. Install, native process and asset checks are P1.
   - Windows source diagnostics
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
@@ -171,7 +171,7 @@ If a stable release stops halfway, re-run the `publish` job. It skips the steps 
 ## Extra diagnostics
 
 - **`ci:full` label.** Runs production functional diagnostics for a same-repository PR through the trusted base workflow. Its `production_ci_passed` result does not replace `ci_passed`. A maintainer runs this for fork PRs.
-- **Manual Test and Build.** The `merge_queue` profile repeats the queue checks without a real queue. The `production` profile runs production functional checks from source. Neither publishes anything.
+- **Manual Test and Build.** The `merge_queue` profile repeats the queue checks without a real queue. The `production` profile runs production functional checks from source. Neither publishes anything. A newer manual run for the same branch and `source_sha` cancels the older one.
 - **Reliability branches.** Pushes to `test/ci-reliability/merge/**` run the queue checks. Other `test/ci-reliability/**` branches run production functional checks.
 
 None of these replace the real queue run or release certification.

@@ -5,7 +5,6 @@ on:
       - opened
       - synchronize
       - reopened
-      - labeled
   merge_group: null
   push:
     branches:
@@ -55,9 +54,16 @@ on:
         type: string
         default: stable
         description: Candidate release channel
+# A newer push to a PR, or a newer manual run for the same branch and source, replaces the older run.
+# ci:full diagnostics dispatch on the base branch with the PR's source_sha, so each PR keeps its own group.
+# Release Packages calls this workflow under its own name and keeps one group per commit.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: >-
+    ${{ github.workflow }}-${{ github.ref }}-${{
+    github.event_name == 'pull_request' && 'latest' ||
+    github.event_name == 'workflow_dispatch' && github.workflow == 'Test and Build' && format('dispatch-{0}', inputs.source_sha) ||
+    github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.workflow == 'Test and Build') }}
 env:
   NX_DAEMON: "false"
 jobs:
@@ -111,10 +117,10 @@ jobs:
       - name: Choose the stage, jobs, and packages to test
         id: scope
         env:
-          PULL_REQUEST_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           GH_TOKEN: ${{ github.token }}
           CI_PROFILE: ${{ inputs.profile || '' }}
           RELEASE_CHANNEL: ${{ inputs.release_channel || 'stable' }}
+          SIGNED_CANDIDATE: ${{ inputs.artifact_run_id != '' }}
         run: bun scripts/ci/pull-request-ci-scope.ts
     env:
       CI_PRIORITY: P0
@@ -1266,14 +1272,15 @@ jobs:
           CI_CHECK_COMMAND: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.config.ts
         shell: bash
       - name: Record complete packaged desktop inventory
-        if: matrix.tests && matrix.shards > 1 && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
+        if: matrix.packaged && matrix.shards > 1 && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         working-directory: clients/desktop
         run: |
           mkdir -p test-results
           bun run test:packaged -- --list --reporter=json > test-results/packaged-release-inventory.json
         shell: bash
+      # A signed release candidate runs these packaged cases in signed functional validation.
       - name: Smoke packaged desktop app
-        if: needs.scope.outputs.production == 'true' && matrix.tests && !cancelled() &&
+        if: needs.scope.outputs.production == 'true' && matrix.packaged && !cancelled() &&
           steps.desktop.outcome == 'success'
         env:
           DEBUG: pw:api,pw:browser
@@ -1283,7 +1290,7 @@ jobs:
           "$CI_CHECK_COMMAND"
         shell: bash
       - name: Run quarantined packaged desktop cases
-        if: needs.scope.outputs.production == 'true' && matrix.tests && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.packaged && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         continue-on-error: true
         env:
           CI_PRIORITY: P2
@@ -1291,7 +1298,7 @@ jobs:
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun ../../scripts/ci/run-quarantined-tests.ts packaged-desktop --scope @pstdio/desktop --prebuilt
       - name: Require first-attempt packaged desktop quarantine execution
-        if: needs.scope.outputs.production == 'true' && matrix.tests && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
+        if: needs.scope.outputs.production == 'true' && matrix.packaged && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         env:
           CI_PRIORITY: P2
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
