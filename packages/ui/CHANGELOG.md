@@ -1,5 +1,13 @@
 # @pstdio/ui
 
+## 0.47.0-nightly.20261101230131
+
+_2026-11-01_
+
+### Patch Changes
+
+- adfdf60: Allow page scrolling through inline alerts and at the end of long alert messages.
+
 ## 0.46.0
 
 _2026-10-31_

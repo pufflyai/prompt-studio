@@ -1,5 +1,14 @@
 # @pstdio/sdk
 
+## 0.47.0-nightly.20261101230131
+
+_2026-11-01_
+
+### Minor Changes
+
+- 9c44404: Expose accurate Cloud document progress and persistent sign-in recovery through the public SDK.
+- 826dc74: Announce account status changes, including sign-in recovery, through `accountEvents.changed`, and include session history in Cloud sync progress.
+
 ## 0.46.0
 
 _2026-10-31_

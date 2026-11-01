@@ -1,5 +1,13 @@
 # pstdio-planner
 
+## 0.46.1-nightly.20261101230131
+
+_2026-11-01_
+
+### Patch Changes
+
+- a24082b: Let ticket designs hand off through a proposal folder on the default branch as well as a pushed branch and commit.
+
 ## 0.46.0
 
 _2026-10-31_
