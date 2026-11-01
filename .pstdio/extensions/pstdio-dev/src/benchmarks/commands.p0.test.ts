@@ -21,7 +21,9 @@ const measured = (sha: string): BenchmarkResultFile => ({
 // gh api --paginate --jq prints one JSON value per line; the mocks answer as GitHub would and apply the jq.
 const paged = (args: string[], value: unknown) => {
   if (!args.includes("--paginate")) return value;
-  const list = Array.isArray(value) ? value : (value as { artifacts: unknown[] }).artifacts;
+  type Refs = { data?: { repository: { refs: { nodes: { name: string; target: { oid: string } }[] } } } };
+  const refs = (value as Refs).data?.repository.refs.nodes.map((node) => ({ name: node.name, sha: node.target.oid }));
+  const list = Array.isArray(value) ? value : (refs ?? (value as { artifacts: unknown[] }).artifacts);
   return list.map((entry) => JSON.stringify(entry)).join("\n");
 };
 const withoutPaging = (args: string[]) =>

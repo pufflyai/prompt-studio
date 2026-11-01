@@ -103,35 +103,36 @@ export const listReleases = async (ctx: Context) => {
     }));
 };
 
-interface ApiTagRefs {
-  data: {
-    repository: {
-      refs: { nodes: { name: string; target: { oid: string; target?: { oid: string } } }[] };
-    };
-  };
-}
-const TAG_QUERY = `query($owner: String!, $name: String!) {
+const TAG_QUERY = `query($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
-    refs(refPrefix: "refs/tags/", query: "pstdio@", first: 100, orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
+    refs(refPrefix: "refs/tags/", query: "pstdio@", first: 100, after: $endCursor) {
       nodes { name target { oid ... on Tag { target { oid } } } }
+      pageInfo { hasNextPage endCursor }
     }
   }
 }`;
 
 // GitHub's tags are what CI checks out. A local clone can hold a tag that was moved since it was fetched.
+// Nightly tags outnumber releases, so every page is read. Annotated tags peel to their commit.
 export const listTagCommits = async (ctx: Context) => {
-  const { data } = await ghJson<ApiTagRefs>(ctx, [
+  const output = await gh(ctx, [
     "api",
     "graphql",
+    "--paginate",
     "-F",
     "owner={owner}",
     "-F",
     "name={repo}",
     "-f",
     `query=${TAG_QUERY}`,
+    "--jq",
+    ".data.repository.refs.nodes[] | {name, sha: (.target.target.oid // .target.oid)}",
   ]);
-  // Annotated tags point at a tag object, so the commit it peels to wins.
-  return new Map(data.repository.refs.nodes.map((node) => [node.name, node.target.target?.oid ?? node.target.oid]));
+  const tags = output
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as { name: string; sha: string });
+  return new Map(tags.map((tag) => [tag.name, tag.sha]));
 };
 
 // The commit GitHub holds for a pushed branch, tag, or SHA: the one a run checks out.
