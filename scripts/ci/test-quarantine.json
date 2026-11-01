@@ -612,6 +612,20 @@
   {
     "runner": "packaged-desktop",
     "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "starts without editors and serves both authenticated transport paths",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-932 / Intel desktop lifecycle",
+    "reason": "Hosted Intel macOS sometimes exceeds the existing 60-second allowance while real default extensions install: identical test code passed in one PR run and timed out in the next, after three earlier Intel timeouts between 2026-10-26 and 2026-10-31. Retain the empty home, real default installs, transport/lifecycle assertions and cleanup.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41258618730/job/124707099160",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41259951818/job/124711025595"
+    ],
+    "removeWhen": "Fix cold default-extension installation on hosted Intel macOS and complete this entire lifecycle case in its first native execution within the unchanged 60000 ms allowance, without prewarming, fewer extensions or retries."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
     "name": "promotes ownership, detaches, and preserves data through a warm relaunch",
     "platforms": ["win32"],
     "arch": "x64",
