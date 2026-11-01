@@ -255,6 +255,36 @@ describe("benchmark result cache", () => {
     ]);
   });
 
+  test("a release run cached before SHAs were filled gets its SHA from the cache", async () => {
+    const { ctx, gh } = setup();
+    await writeRuns(ctx, [
+      {
+        id: "9",
+        title: "Benchmarks pstdio@0.46.0 on linux-x64",
+        status: "failed",
+        commits: [{ ref: "pstdio@0.46.0" }],
+        platforms: ["linux-x64"],
+        url: "https://github.com/runs/9",
+        createdAt: "2026-11-01T02:42:00Z",
+        updatedAt: "2026-11-01T03:42:00Z",
+        synced: true,
+        complete: true,
+      },
+    ]);
+    const cached = { ...result("tag-sha"), commit: { sha: "tag-sha", ref: "tag-sha" } };
+    await ctx.extensionFiles?.writeText(
+      "benchmarks/runs/9/benchmark-results-linux-x64-storage-tag-sha.json",
+      JSON.stringify(cached),
+    );
+    await syncAll(ctx);
+    expect((await readRuns(ctx)).find((run) => run.id === "9")?.commits).toEqual([
+      { ref: "pstdio@0.46.0", sha: "tag-sha" },
+    ]);
+    expect(gh.calls.some((args) => args.includes("repos/{owner}/{repo}/actions/runs/9/artifacts?per_page=100"))).toBe(
+      false,
+    );
+  });
+
   test("a run that cannot sync does not stop the others", async () => {
     const { ctx } = setup();
     // Run 6 has dropped out of GitHub's recent list and its artifacts can no longer be listed.
