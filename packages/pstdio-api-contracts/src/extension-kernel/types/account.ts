@@ -8,6 +8,7 @@ export type { ProjectSyncState, ProjectSyncStatus } from "../../project-sync";
  * This device's Cloud account, the account's devices, and each project's sync status.
  * Methods that take a project id use the current project when it is omitted.
  * Listen to `accountEvents.projectSyncChanged` for sync status changes.
+ * Listen to `accountEvents.changed` for account changes, including `signInRequired`.
  */
 export interface ExtensionAccountApi {
   status(): Promise<AccountStatus>;

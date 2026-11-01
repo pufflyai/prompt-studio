@@ -2,7 +2,7 @@ import { expect, spyOn, test } from "bun:test";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createExtensionDocumentSync } from "./documents";
 
-test("a new document saved offline invalidates exact progress without loading its directory", async () => {
+test("offline saves keep known pending counts and new documents invalidate discovery without loading it", async () => {
   const app = await createTestApp();
   // Empty wire-level documents need neither updates nor blobs to complete their first download.
   const peer = Bun.serve({
@@ -36,6 +36,16 @@ test("a new document saved offline invalidates exact progress without loading it
   try {
     await sync.synchronize(new AbortController().signal);
     expect(await sync.status()).toMatchObject({ pendingItems: 0, download: { completed: 2, total: 2 } });
+    const storage = await app.deps.extensionStorageService.open({ owner });
+    await storage.records.commit({
+      operationId: "offline-save",
+      edits: [{ recordId: "note", replace: "Saved offline" }],
+    });
+    listing.mockClear();
+    expect(await sync.status()).toMatchObject({ pending: true, pendingItems: 1, download: { total: 2 } });
+    await storage.setDataVersion("project", 1);
+    expect(await sync.status()).toMatchObject({ pendingItems: 2, download: { total: 2 } });
+    expect(listing).not.toHaveBeenCalled();
     await app.deps.extensionStorageService.documents
       .open(JSON.stringify(["text-file", "new.md"]))
       .transaction(owner, async ({ document }) => {

@@ -1,3 +1,4 @@
+import type { AccountStatus } from "../account";
 import type { ProjectSyncStatus } from "../project-sync";
 import { workbenchResourceKinds } from "./builtin-refs";
 import { eventRef } from "./refs";
@@ -100,6 +101,8 @@ export const projectEvents = {
 };
 
 export const accountEvents = {
+  /** This device's public account status changed, including sign-in recovery. */
+  changed: hostEventRef<AccountStatus>("account.changed"),
   /** The project's derived sync status changed. The host sends it only when the status differs. */
   projectSyncChanged: hostEventRef<ProjectSyncStatus & { projectId: string }>("account.project-sync.changed"),
 };
