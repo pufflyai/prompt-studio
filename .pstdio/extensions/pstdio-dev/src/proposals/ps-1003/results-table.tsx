@@ -141,8 +141,8 @@ const ChangeCell = (props: { row: CompareRow; baseChosen: boolean }) => {
   const once = isSingleSample(row);
   let value = "—";
   let color = "fg.muted";
-  let detail = "Missing on one commit";
-  if (!baseChosen) detail = "Choose a base to compare";
+  let detail = row.head ? "Not measured on base" : "Not measured on head";
+  if (!baseChosen) detail = "No base chosen";
   else if (row.change) {
     value = once
       ? formatPercent(row.change.change)

@@ -1,4 +1,4 @@
-import { Button, Stack, Text } from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 
 interface SyncFailedProps {
@@ -6,15 +6,14 @@ interface SyncFailedProps {
   onRetry: () => void;
 }
 
-// Cached results stay readable; the notice says how fresh they are and how to recover.
+// Cached results stay readable; the notice says how fresh they are. Recovery sits in the alert footer.
 export const SyncFailed = (props: SyncFailedProps) => (
-  <AlertMessage status="error" title="Results could not be synced">
-    <Stack gap="sm" align="flex-start">
-      <Text>GitHub could not be reached. Showing results last synced {props.lastSynced}.</Text>
-      <Button size="xs" variant="outline" onClick={props.onRetry}>
-        Retry sync
-      </Button>
-    </Stack>
+  <AlertMessage
+    status="error"
+    title="Results could not be synced"
+    endElement={<Button onClick={props.onRetry}>Retry sync</Button>}
+  >
+    GitHub could not be reached. Showing results last synced {props.lastSynced}.
   </AlertMessage>
 );
 

@@ -1,16 +1,17 @@
-import { Button, Flex, Grid, HStack, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, EmptyState, SimpleCard } from "@pstdio/ui";
+import { Button, Flex, Grid, HStack, Text } from "@chakra-ui/react";
+import { EmptyState, SimpleCard } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { CompareRow } from "../../benchmarks/analysis";
 import { platformLabel } from "../../benchmarks/platforms";
 import type { Verdict } from "../../benchmarks/stats";
-import { type CommitOptionView, CommitPicker } from "../../compare/commit-picker";
+import type { CommitOptionView } from "../../compare/commit-picker";
 import { BASE_COLOR, HEAD_COLOR } from "../../compare/results-table";
 import { SampleDetail } from "../../compare/sample-detail";
 import { metricId } from "../../trends/trend-summary";
 import { shortSha } from "../../webview/format";
 import { PageFrame } from "../../webview/page-frame";
 import { PlatformControl } from "../../webview/platform-control";
+import { CommitPicker } from "./commit-picker";
 import { isSingleSample, ResultsTable } from "./results-table";
 
 export type ResultFilter = "all" | Verdict;
@@ -28,39 +29,11 @@ export interface CompareViewProps {
   onPlatformChange: (platform: string) => void;
   onFilterChange: (filter: ResultFilter) => void;
   onSelect: (id: string) => void;
-  // The run each commit's results came from. Different runs mean different runners and times.
-  origin?: { base?: string; head?: string };
-  // Suites the run chose that have no measurements, such as suites stopped by a cancel.
-  missingSuites?: string[];
   // Shown above the results, such as a failed sync.
   notice?: ReactNode;
-  onRunBoth: () => void;
+  // Starts a run for the chosen commits that have no results yet. Measured commits are never run again.
+  onMeasure: (shas: string[]) => void;
 }
-
-const RunOrigin = (props: Pick<CompareViewProps, "origin" | "onRunBoth">) => {
-  const { origin } = props;
-  if (!origin?.head) return null;
-  if (!origin.base || origin.base === origin.head)
-    return (
-      <Text textStyle="label/S/regular" color="fg.muted">
-        From run {origin.head}
-        {origin.base ? " · both commits measured on the same runner" : ""}
-      </Text>
-    );
-  return (
-    <AlertMessage status="warning" title="Separate runs">
-      <Stack gap="sm" align="flex-start">
-        <Text>
-          Base comes from run {origin.base} and head from run {origin.head}. They ran on different runners at different
-          times, so part of the difference can come from the runners.
-        </Text>
-        <Button size="xs" variant="outline" onClick={props.onRunBoth}>
-          Measure both together
-        </Button>
-      </Stack>
-    </AlertMessage>
-  );
-};
 
 const FILTERS: { value: ResultFilter; label: string }[] = [
   { value: "all", label: "All metrics" },
@@ -77,16 +50,6 @@ export const sortRows = (rows: CompareRow[]) =>
     if (!a.change || !b.change) return Number(!a.change) - Number(!b.change);
     return ORDER[a.change.verdict] - ORDER[b.change.verdict] || Math.abs(b.change.change) - Math.abs(a.change.change);
   });
-
-const MissingSuites = (props: { suites?: string[] }) => {
-  if (!props.suites?.length) return null;
-  const names = props.suites.join(", ");
-  return (
-    <AlertMessage status="info" title={`${names} has no measurements`}>
-      The run stopped before {names} finished. Those metrics are left out, not shown as zero.
-    </AlertMessage>
-  );
-};
 
 // With one sample per commit there is no verdict to filter by, so the tiles summarize what was measured.
 const SingleSampleTiles = (props: { rows: CompareRow[]; compared?: number }) => {
@@ -149,16 +112,18 @@ export const CompareView = (props: CompareViewProps) => {
       {missing.length ? (
         <EmptyState
           title={`${missing.map((commit) => shortSha(commit?.sha ?? "")).join(" and ")} ${missing.length > 1 ? "have" : "has"} no results on ${platformLabel(platform)}`}
-          description="Measure both commits together on one runner. The comparison fills in when the run finishes."
+          description="Measure it once and the comparison fills in when the run finishes. Commits that already have results are not run again."
         >
-          <Button size="sm" variant="primary" onClick={props.onRunBoth}>
-            Run benchmarks for both commits
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => props.onMeasure(missing.map((commit) => commit?.sha ?? ""))}
+          >
+            Measure {missing.map((commit) => shortSha(commit?.sha ?? "")).join(" and ")}
           </Button>
         </EmptyState>
       ) : (
         <>
-          <RunOrigin origin={props.origin} onRunBoth={props.onRunBoth} />
-          <MissingSuites suites={props.missingSuites} />
           {single ? <SingleSampleTiles rows={rows} compared={base ? compared.length : undefined} /> : null}
           <Grid
             display={single ? "none" : undefined}

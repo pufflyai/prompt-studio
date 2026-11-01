@@ -1,9 +1,10 @@
-import { Button, Fieldset, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Fieldset, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { Checkbox, Chip, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { X } from "lucide-react";
-import { useState } from "react";
 import { JOB_LIMIT_MINUTES, PLATFORMS, platformLabel } from "../../benchmarks/platforms";
-import { SUITES, type SuiteOption } from "./fixtures";
+import { CopySha } from "./copy-sha";
+import { type RefOption, SUITES, type SuiteOption } from "./fixtures";
+import { RefInput } from "./ref-input";
 
 export interface RunRequest {
   commits: string[];
@@ -11,14 +12,10 @@ export interface RunRequest {
   platforms: string[];
 }
 
-interface QuickCommit {
-  label: string;
-  ref: string;
-}
-
 interface RunFormProps {
   value: RunRequest;
-  quick: QuickCommit[];
+  // Tags and known commits. Measured ones already have results and are not run again.
+  refs: RefOption[];
   pending: boolean;
   error?: string;
   onChange: (value: RunRequest) => void;
@@ -32,37 +29,38 @@ const toggle = (list: string[], item: string) =>
 const runsOn = (suite: SuiteOption, platform: string) => !suite.platforms || suite.platforms.includes(platform);
 const available = (suite: SuiteOption, platforms: string[]) => platforms.some((platform) => runsOn(suite, platform));
 
-// Suites run as parallel jobs, so the slowest chosen suite sets the length. Each commit builds once first.
+// Suites run as parallel jobs, so the slowest chosen suite sets the length. Each new commit builds once first.
 export const estimateMinutes = (request: RunRequest) => {
   const chosen = SUITES.filter((suite) => request.suites.includes(suite.id));
   const slowest = Math.max(0, ...chosen.map((suite) => suite.minutes));
   return request.commits.length * (10 + slowest);
 };
 
-const problemOf = (request: RunRequest) => {
-  if (!request.commits.length) return "Add at least one commit.";
+const problemOf = (request: RunRequest, reused: number) => {
+  if (!request.commits.length)
+    return reused ? "Every commit already has results. Compare them instead." : "Add at least one commit.";
   if (!request.suites.length) return "Pick at least one suite.";
   if (!request.platforms.length) return "Pick at least one platform.";
   return undefined;
 };
 
 export const RunForm = (props: RunFormProps) => {
-  const { value, quick, pending, error, onChange, onStart } = props;
-  const [draft, setDraft] = useState("");
+  const { value, refs, pending, error, onChange, onStart } = props;
+  const measured = (ref: string) => refs.some((option) => option.ref === ref && option.measured);
+  const fresh = value.commits.filter((ref) => !measured(ref));
+  const reused = value.commits.length - fresh.length;
   const chosen = SUITES.filter((suite) => value.suites.includes(suite.id) && available(suite, value.platforms));
-  const problem = problemOf({ ...value, suites: chosen.map((suite) => suite.id) });
-  const minutes = estimateMinutes(value);
-  const jobs = chosen.reduce(
-    (count, suite) => count + value.platforms.filter((platform) => runsOn(suite, platform)).length,
-    0,
-  );
+  const problem = problemOf({ ...value, commits: fresh, suites: chosen.map((suite) => suite.id) }, reused);
+  const minutes = estimateMinutes({ ...value, commits: fresh });
+  const jobs = fresh.length
+    ? chosen.reduce((count, suite) => count + value.platforms.filter((platform) => runsOn(suite, platform)).length, 0)
+    : 0;
   const skipped = chosen.flatMap((suite) => {
     const missing = value.platforms.filter((platform) => !runsOn(suite, platform));
     return missing.length ? [`${suite.label} skips ${missing.map(platformLabel).join(", ")}: ${suite.reason}`] : [];
   });
   const addCommit = (ref: string) => {
-    if (ref.trim()) onChange({ ...value, commits: [...value.commits, ref.trim()] });
-    setDraft("");
+    if (!value.commits.includes(ref)) onChange({ ...value, commits: [...value.commits, ref] });
   };
   return (
     <SimpleCard>
@@ -70,52 +68,30 @@ export const RunForm = (props: RunFormProps) => {
         <Text textStyle="heading/S">New run</Text>
         <Stack gap="xs">
           <Text textStyle="label/S/regular" color="fg.muted">
-            Commits, branches, or tags · the first one is the base
+            Commits, branches, or tags
           </Text>
-          {value.commits.map((ref, index) => (
-            <HStack key={`${ref}-${index}`} gap="sm" bg="bg.subtle" borderRadius="xs" px="sm" py="2xs">
-              <Text textStyle="mono/XS" flex="1" truncate>
-                {ref}
-              </Text>
-              <Text textStyle="label/XS" color="fg.muted">
-                {index ? "Head" : "Base"}
-              </Text>
-              <IconButton
-                size="xs"
-                variant="ghost"
-                aria-label={`Remove ${ref}`}
-                onClick={() => onChange({ ...value, commits: value.commits.filter((_, entry) => entry !== index) })}
-              >
-                <X />
-              </IconButton>
-            </HStack>
-          ))}
-          <HStack
-            as="form"
-            gap="xs"
-            onSubmit={(event) => {
-              event.preventDefault();
-              addCommit(draft);
-            }}
-          >
-            <Input
-              size="sm"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="main, pstdio@0.45.0, or a pushed SHA"
-              aria-label="Add a commit, branch, or tag"
-            />
-            <Button size="sm" variant="outline" type="submit">
-              Add
-            </Button>
-          </HStack>
-          <HStack gap="xs" wrap="wrap">
-            {quick.map((entry) => (
-              <Chip key={entry.label} as="button" cursor="pointer" onClick={() => addCommit(entry.ref)}>
-                + {entry.label}
-              </Chip>
-            ))}
-          </HStack>
+          {value.commits.map((ref) => {
+            const known = refs.find((option) => option.ref === ref);
+            return (
+              <HStack key={ref} gap="sm" bg="bg.subtle" borderRadius="xs" px="sm" py="2xs">
+                <Text textStyle="mono/XS" truncate>
+                  {ref}
+                </Text>
+                {known && known.sha !== ref ? <CopySha sha={known.sha} /> : null}
+                <Box flex="1" />
+                {measured(ref) ? <Chip>Measured</Chip> : null}
+                <IconButton
+                  size="xs"
+                  variant="ghost"
+                  aria-label={`Remove ${ref}`}
+                  onClick={() => onChange({ ...value, commits: value.commits.filter((entry) => entry !== ref) })}
+                >
+                  <X />
+                </IconButton>
+              </HStack>
+            );
+          })}
+          <RefInput options={refs} chosen={value.commits} onAdd={addCommit} />
         </Stack>
         <Fieldset.Root>
           <Fieldset.Legend textStyle="label/S/regular" color="fg.muted">
@@ -177,7 +153,10 @@ export const RunForm = (props: RunFormProps) => {
                 : `About ${minutes} min`}
             </Text>
             <Text textStyle="label/XS" color="fg.muted">
-              {jobs} parallel jobs · each benchmark runs once, with all commits on the same runner
+              {jobs} parallel jobs · each benchmark runs once
+              {reused
+                ? ` · ${reused} measured ${reused > 1 ? "commits reuse their" : "commit reuses its"} results`
+                : ""}
             </Text>
           </Stack>
           <Button size="sm" variant="primary" onClick={onStart} disabled={Boolean(problem)} loading={pending}>

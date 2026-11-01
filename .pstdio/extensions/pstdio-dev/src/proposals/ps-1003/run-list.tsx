@@ -1,6 +1,18 @@
-import { Box, Button, HStack, Progress, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, SimpleCard } from "@pstdio/ui";
+import { Box, HStack, IconButton, Progress, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, SimpleCard, Tooltip } from "@pstdio/ui";
+import {
+  CircleCheck,
+  CircleDashed,
+  CircleSlash,
+  CircleX,
+  Github,
+  LoaderCircle,
+  type LucideIcon,
+  Square,
+} from "lucide-react";
 import type { RunStatus } from "../../benchmarks/github";
+import { PLATFORMS, platformLabel } from "../../benchmarks/platforms";
+import { CopySha } from "./copy-sha";
 import type { ProposedRun } from "./fixtures";
 
 interface RunListProps {
@@ -8,91 +20,109 @@ interface RunListProps {
   cancelling?: string;
   onCancel: (runId: string) => void;
   onOpen: (url: string) => void;
-  onViewResults: (run: ProposedRun) => void;
 }
 
-const STATUS: Record<RunStatus, { label: string; color: string }> = {
-  queued: { label: "Queued", color: "fg.muted" },
-  running: { label: "Running", color: "fg.info" },
-  succeeded: { label: "Finished", color: "fg.success" },
-  failed: { label: "Failed", color: "fg.error" },
-  cancelled: { label: "Cancelled", color: "fg.muted" },
+const STATUS: Record<RunStatus, { label: string; color: string; icon: LucideIcon }> = {
+  queued: { label: "Queued", color: "fg.muted", icon: CircleDashed },
+  running: { label: "Running", color: "fg.info", icon: LoaderCircle },
+  succeeded: { label: "Finished", color: "fg.success", icon: CircleCheck },
+  failed: { label: "Failed", color: "fg.error", icon: CircleX },
+  cancelled: { label: "Cancelled", color: "fg.muted", icon: CircleSlash },
 };
 
 const when = (value: string) =>
   new Date(value).toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
+const platformsText = (platforms: string[]) =>
+  platforms.length === PLATFORMS.length ? "All platforms" : platforms.map(platformLabel).join(", ");
+
+// One line per run: status, commits, platforms, and time. Details live in the status tooltip and on GitHub.
 export const RunList = (props: RunListProps) => {
-  const { runs, cancelling, onCancel, onOpen, onViewResults } = props;
+  const { runs, cancelling, onCancel, onOpen } = props;
   if (!runs.length)
     return <EmptyState title="No benchmark runs yet" description="Start a run to measure commits on GitHub Actions." />;
   return (
     <SimpleCard>
       {runs.map((run, index) => {
         const status = STATUS[run.status];
+        const Icon = status.icon;
         const active = run.status === "queued" || run.status === "running";
+        const tooltip = [run.detail ?? status.label, run.failure].filter(Boolean).join("\n");
         return (
-          <HStack
+          <Stack
             key={run.id}
-            gap="lg"
+            gap="2xs"
             px="md"
-            py="sm"
-            wrap="wrap"
+            py="xs"
             borderTopWidth={index ? "1px" : "0"}
             borderColor="border.subtle"
           >
-            <HStack gap="xs" w="24" flexShrink={0} color={status.color} textStyle="label/S/medium">
-              <Box boxSize="2" borderRadius="full" bg="currentColor" />
-              <Text>{status.label}</Text>
-            </HStack>
-            <Stack gap="2xs" flex="1 1 18rem" minW="0">
-              <HStack gap="sm" align="baseline">
-                <Text textStyle="label/S/medium">Run {run.id}</Text>
-                <Text textStyle="label/S/regular" color="fg.muted" truncate>
-                  {run.title}
-                </Text>
-              </HStack>
-              <Text textStyle="label/XS" color="fg.muted">
-                {run.source}
-                {run.note ? ` · ${run.note}` : ""}
-              </Text>
-              {run.status === "running" ? (
-                <Progress.Root
-                  size="xs"
-                  value={Math.round((run.progress ?? 0) * 100)}
-                  maxW="sm"
-                  aria-label="Run progress"
+            <HStack gap="sm" minH="7">
+              <Tooltip content={tooltip} contentProps={{ whiteSpace: "pre-line" }}>
+                <Box
+                  as="span"
+                  tabIndex={0}
+                  color={status.color}
+                  flexShrink={0}
+                  display="inline-flex"
+                  aria-label={tooltip}
+                  animation={run.status === "running" ? "spin 1.2s linear infinite" : undefined}
                 >
-                  <Progress.Track>
-                    <Progress.Range />
-                  </Progress.Track>
-                </Progress.Root>
-              ) : null}
-              {run.failure ? (
-                <Text textStyle="mono/XS" color="fg.error">
-                  {run.failure}
-                </Text>
-              ) : null}
-            </Stack>
-            <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0}>
-              {when(run.createdAt)}
-            </Text>
-            <HStack gap="xs" flexShrink={0}>
-              {active ? (
-                <Button size="xs" variant="outline" loading={cancelling === run.id} onClick={() => onCancel(run.id)}>
-                  Cancel
-                </Button>
-              ) : null}
-              {!active && run.results !== "none" ? (
-                <Button size="xs" variant="outline" onClick={() => onViewResults(run)}>
-                  View results
-                </Button>
-              ) : null}
-              <Button size="xs" variant="ghost" onClick={() => onOpen(run.url)}>
-                Open on GitHub
-              </Button>
+                  <Icon size={16} />
+                </Box>
+              </Tooltip>
+              <HStack gap="xs" flex="1" minW="0" wrap="wrap">
+                {run.commits.map((commit) => (
+                  <HStack key={commit.sha} gap="0">
+                    <CopySha sha={commit.sha} />
+                    {commit.ref ? (
+                      <Text textStyle="label/S/regular" color="fg.muted">
+                        {commit.ref}
+                      </Text>
+                    ) : null}
+                  </HStack>
+                ))}
+              </HStack>
+              <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} hideBelow="sm">
+                {platformsText(run.platforms)}
+              </Text>
+              <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0} w="28" textAlign="end">
+                {when(run.createdAt)}
+              </Text>
+              <HStack gap="0" flexShrink={0} w="14" justify="flex-end">
+                {active ? (
+                  <Tooltip content="Cancel run">
+                    <IconButton
+                      size="xs"
+                      variant="ghost"
+                      aria-label={`Cancel run ${run.id}`}
+                      loading={cancelling === run.id}
+                      onClick={() => onCancel(run.id)}
+                    >
+                      <Square />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+                <Tooltip content="Open on GitHub">
+                  <IconButton
+                    size="xs"
+                    variant="ghost"
+                    aria-label={`Open run ${run.id} on GitHub`}
+                    onClick={() => onOpen(run.url)}
+                  >
+                    <Github />
+                  </IconButton>
+                </Tooltip>
+              </HStack>
             </HStack>
-          </HStack>
+            {run.status === "running" ? (
+              <Progress.Root size="xs" value={Math.round((run.progress ?? 0) * 100)} ps="7" aria-label="Run progress">
+                <Progress.Track>
+                  <Progress.Range />
+                </Progress.Track>
+              </Progress.Root>
+            ) : null}
+          </Stack>
         );
       })}
     </SimpleCard>
