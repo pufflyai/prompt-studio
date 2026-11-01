@@ -38,7 +38,8 @@ const projectFiles: Record<string, string> = {
   "package.json": `{ "name": "canvas-consumer", "private": true }\n`,
   "src/button.tsx": "export const Button = (props: { label: string }) => <button>{props.label}</button>;\n",
   "src/button.canvas.tsx": `import { Button } from "./button";
-export default { title: "Components/Button", component: Button };
+export default { title: "Components/Button", component: Button,
+  controls: { label: { type: "select", label: "Label", options: [{ value: "Save", label: "Save" }, { value: "Archive", label: "Archive" }] } } };
 export const Primary = { args: { label: "Save" } };
 `,
   ".canvas/preview.tsx": `export default {
@@ -183,6 +184,8 @@ test(
       await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
       expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
       phase("project preview ready");
+      const editor = viewer.getByRole("complementary", { name: "Frame editor" });
+      await editor.getByText("Select a frame", { exact: true }).waitFor();
       await viewer
         .getByRole("button", { name: /^Theme for / })
         .first()
@@ -193,6 +196,11 @@ test(
       const preview = (await element!.contentFrame())!;
       await preview.waitForSelector('[data-frame-theme="pstdio-dark"]');
       expect(await preview.getByRole("button", { name: "Save" }).count()).toBe(1);
+      // The packaged editor follows the selected frame and lazy-loads its actual parameter controls.
+      await editor.getByText("Primary", { exact: true }).waitFor();
+      await editor.getByRole("button", { name: "Save", exact: true }).click();
+      await viewer.getByRole("menuitemradio", { name: "Archive", exact: true }).click();
+      await preview.getByRole("button", { name: "Archive", exact: true }).waitFor();
     } finally {
       await browser?.close();
       if (child) await stopProcess(child);
