@@ -391,6 +391,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0063 — Temporary Claude literal slash input](../adrs/0063-temporary-claude-literal-slash-input.md)
 - [0064 — Codex App Server runtime](../adrs/0064-codex-app-server-runtime.md)
 - [0065 — Stream command results over the shared client stream](../adrs/0065-stream-command-results-over-the-shared-client-stream.md)
+- [0067 — Separate performance budgets from execution allowances](../adrs/0067-separate-performance-budgets-from-execution-allowances.md)
 - [0072 — Publish releases from one verified commit](../adrs/0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md)
 - [0077 — Extension-owned data migrations](../adrs/0077-extension-owned-data-migrations.md)
 - [0083 — Temporary runtime Planner write guards](../adrs/0083-temporary-runtime-planner-write-guards.md)

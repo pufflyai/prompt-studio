@@ -51,12 +51,22 @@ interface CommitProps {
   onHead: (value: string) => void;
 }
 
-const NewRunCard = ({ base, head, onBase, onHead, onStart }: CommitProps & { onStart: () => void }) => {
-  const [suites, setSuites] = useState(["Storage", "Runtime"]);
-  const [platforms, setPlatforms] = useState(["Linux x64"]);
+interface NewRunCardProps extends CommitProps {
+  suites: string[];
+  platforms: string[];
+  onSuites: (suites: string[]) => void;
+  onPlatforms: (platforms: string[]) => void;
+  onStart: () => void;
+}
+
+const runnableSuites = (suites: string[], platforms: string[]) =>
+  suites.filter((suite) => suite !== "Relay storage" || platforms.includes("Linux x64"));
+
+const NewRunCard = (props: NewRunCardProps) => {
+  const { base, head, onBase, onHead, onStart, suites, platforms, onSuites, onPlatforms } = props;
   // Relay needs Linux and Docker, so it can only be chosen with Linux x64 and skips every other platform.
   const relayAllowed = platforms.includes("Linux x64");
-  const chosen = suites.filter((suite) => suite !== "Relay storage" || relayAllowed);
+  const chosen = runnableSuites(suites, platforms);
   const relaySkips = chosen.includes("Relay storage") ? platforms.filter((platform) => platform !== "Linux x64") : [];
   const jobs = chosen.length * platforms.length - relaySkips.length;
   return (
@@ -86,7 +96,7 @@ const NewRunCard = ({ base, head, onBase, onHead, onStart }: CommitProps & { onS
                     key={suite}
                     disabled={disabled}
                     checked={!disabled && suites.includes(suite)}
-                    onCheckedChange={() => setSuites(toggle(suites, suite))}
+                    onCheckedChange={() => onSuites(toggle(suites, suite))}
                   >
                     {suite}
                     {disabled ? " · Needs Linux x64 and Docker" : ""}
@@ -104,7 +114,7 @@ const NewRunCard = ({ base, head, onBase, onHead, onStart }: CommitProps & { onS
                 <Checkbox
                   key={platform}
                   checked={platforms.includes(platform)}
-                  onCheckedChange={() => setPlatforms(toggle(platforms, platform))}
+                  onCheckedChange={() => onPlatforms(toggle(platforms, platform))}
                 >
                   {platform}
                 </Checkbox>
@@ -126,91 +136,96 @@ const NewRunCard = ({ base, head, onBase, onHead, onStart }: CommitProps & { onS
   );
 };
 
-const CompareCard = ({
-  screen,
-  base,
-  head,
-  onBase,
-  onHead,
-  onRun,
-}: CommitProps & { screen: string; onRun: () => void }) => (
-  <SimpleCard>
-    <SimpleCardBody>
-      <Stack gap="md">
-        <Text textStyle="heading/S">Compare commits · Linux x64</Text>
-        <HStack gap="md" wrap="wrap">
-          <Stack flex="1" gap="xs">
-            <Text textStyle="label/S/medium">Base</Text>
-            <Input
-              aria-label="Base commit"
-              placeholder="Choose a base commit"
-              value={screen === "single" ? "" : base}
-              onChange={(event) => onBase(event.target.value)}
-            />
-          </Stack>
-          <Stack flex="1" gap="xs">
-            <Text textStyle="label/S/medium">Head</Text>
-            <Input aria-label="Head commit" value={head} onChange={(event) => onHead(event.target.value)} />
-          </Stack>
-        </HStack>
-        {screen === "missing" ? (
-          <Stack gap="sm">
-            <Text textStyle="label/S/regular" color="fg.muted">
-              These commits have no results on Linux x64.
-            </Text>
-            <Button size="sm" variant="primary" onClick={onRun}>
-              Run benchmarks for both commits
-            </Button>
-          </Stack>
-        ) : (
-          <Stack gap="sm">
-            <Text textStyle="label/S/regular" color="fg.muted">
-              {screen === "separate" ? "Base from run 1031 · Head from run 1044" : "From run 1044"}
-            </Text>
-            {screen === "separate" ? (
-              <AlertMessage status="warning" title="Separate runs">
-                <Stack gap="sm">
-                  <Text>These commits were measured on different runners at different times.</Text>
-                  <Button size="sm" variant="outline" onClick={onRun}>
-                    Measure both together
-                  </Button>
-                </Stack>
-              </AlertMessage>
-            ) : null}
-            {MEASUREMENTS.map((metric) => (
-              <HStack key={metric.label} justify="space-between" wrap="wrap" gap="md">
-                <Text textStyle="label/S/regular">{metric.label}</Text>
-                <Text textStyle="mono/XS">
-                  {screen === "single"
-                    ? `${metric.head} · ${metric.budget}`
-                    : `${metric.base} → ${metric.head} · ${metric.change} · ${metric.budget}`}
-                </Text>
-              </HStack>
-            ))}
-            <Text textStyle="label/S/regular" color="fg.muted">
-              1 sample per metric. Not enough evidence for a confidence interval or an improved or regressed verdict.
-            </Text>
-            <Text textStyle="label/S/regular" color="fg.muted">
-              Runtime has no measurements in this run.
-            </Text>
-          </Stack>
-        )}
-      </Stack>
-    </SimpleCardBody>
-  </SimpleCard>
-);
+interface CompareCardProps extends CommitProps {
+  screen: string;
+  onRun: () => void;
+  platforms: string[];
+}
+
+const CompareCard = (props: CompareCardProps) => {
+  const { screen, base, head, onBase, onHead, onRun, platforms } = props;
+  return (
+    <SimpleCard>
+      <SimpleCardBody>
+        <Stack gap="md">
+          <Text textStyle="heading/S">Compare commits · {platforms.join(", ")}</Text>
+          <HStack gap="md" wrap="wrap">
+            <Stack flex="1" gap="xs">
+              <Text textStyle="label/S/medium">Base</Text>
+              <Input
+                aria-label="Base commit"
+                placeholder="Choose a base commit"
+                value={base}
+                onChange={(event) => onBase(event.target.value)}
+              />
+            </Stack>
+            <Stack flex="1" gap="xs">
+              <Text textStyle="label/S/medium">Head</Text>
+              <Input aria-label="Head commit" value={head} onChange={(event) => onHead(event.target.value)} />
+            </Stack>
+          </HStack>
+          {screen === "missing" ? (
+            <Stack gap="sm">
+              <Text textStyle="label/S/regular" color="fg.muted">
+                These commits have no results on {platforms.join(", ")}.
+              </Text>
+              <Button size="sm" variant="primary" onClick={onRun}>
+                Run benchmarks for both commits
+              </Button>
+            </Stack>
+          ) : (
+            <Stack gap="sm">
+              <Text textStyle="label/S/regular" color="fg.muted">
+                {screen === "separate" ? "Base from run 1031 · Head from run 1044" : "From run 1044"}
+              </Text>
+              {screen === "separate" ? (
+                <AlertMessage status="warning" title="Separate runs">
+                  <Stack gap="sm">
+                    <Text>These commits were measured on different runners at different times.</Text>
+                    <Button size="sm" variant="outline" onClick={onRun}>
+                      Measure both together
+                    </Button>
+                  </Stack>
+                </AlertMessage>
+              ) : null}
+              {MEASUREMENTS.map((metric) => (
+                <HStack key={metric.label} justify="space-between" wrap="wrap" gap="md">
+                  <Text textStyle="label/S/regular">{metric.label}</Text>
+                  <Text textStyle="mono/XS">
+                    {screen === "single"
+                      ? `${metric.head} · ${metric.budget}`
+                      : `${metric.base} → ${metric.head} · ${metric.change} · ${metric.budget}`}
+                  </Text>
+                </HStack>
+              ))}
+              <Text textStyle="label/S/regular" color="fg.muted">
+                1 sample per metric. Not enough evidence for a confidence interval or an improved or regressed verdict.
+              </Text>
+            </Stack>
+          )}
+        </Stack>
+      </SimpleCardBody>
+    </SimpleCard>
+  );
+};
 
 const FinishBenchmarkFlow = () => {
   const [screen, setScreen] = useState("new");
   const [base, setBase] = useState("main~1");
   const [head, setHead] = useState("main");
+  const [suites, setSuites] = useState(["Storage", "Runtime"]);
+  const [platforms, setPlatforms] = useState(["Linux x64"]);
   const [notice, setNotice] = useState("");
   const show = (next: string, message = "") => {
+    if (next === "single") setBase("");
     setScreen(next);
     setNotice(message);
   };
 
   const compare = screen === "results" || screen === "single" || screen === "separate" || screen === "missing";
+  const chosen = runnableSuites(suites, platforms);
+  const cancelledSuite = chosen.at(-1) ?? "Benchmark";
+  const completedSuites = chosen.slice(0, -1);
 
   return (
     <Stack gap="lg" p="lg">
@@ -232,7 +247,17 @@ const FinishBenchmarkFlow = () => {
         </AlertMessage>
       ) : null}
       {screen === "new" ? (
-        <NewRunCard base={base} head={head} onBase={setBase} onHead={setHead} onStart={() => show("running")} />
+        <NewRunCard
+          base={base}
+          head={head}
+          onBase={setBase}
+          onHead={setHead}
+          suites={suites}
+          platforms={platforms}
+          onSuites={setSuites}
+          onPlatforms={setPlatforms}
+          onStart={() => show("running")}
+        />
       ) : null}
       {screen === "running" ? (
         <SimpleCard>
@@ -240,14 +265,19 @@ const FinishBenchmarkFlow = () => {
             <Stack gap="md">
               <Text textStyle="heading/S">Run 1044 · Running</Text>
               <Text textStyle="mono/XS">
-                {base} → {head} · Linux x64 · Started here
+                {base} → {head} · {platforms.join(", ")} · Started here
               </Text>
-              <Text textStyle="label/S/regular">Storage finished · Runtime running · Elapsed 4 min</Text>
+              <Text textStyle="label/S/regular">
+                {chosen
+                  .map((suite, index) => `${suite} ${index < chosen.length - 1 ? "finished" : "running"}`)
+                  .join(" · ")}
+                {" · Elapsed 4 min"}
+              </Text>
               <HStack gap="sm">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => show("cancelled", "Run 1044 cancelled. Storage results are kept.")}
+                  onClick={() => show("cancelled", "Run 1044 cancelled. Completed results are kept.")}
                 >
                   Cancel run
                 </Button>
@@ -270,11 +300,13 @@ const FinishBenchmarkFlow = () => {
                 </Button>
               </HStack>
               <Text textStyle="mono/XS">
-                {base} → {head} · Linux x64 · Elapsed 6 min
+                {base} → {head} · {platforms.join(", ")} · Elapsed 6 min
               </Text>
+              <Text textStyle="label/S/regular">{chosen.join(" · ")}</Text>
               {screen === "cancelled" ? (
-                <AlertMessage status="warning" title="Runtime was cancelled">
-                  Storage finished before the cancel and has results. Runtime stopped mid-run and has no measurements.
+                <AlertMessage status="warning" title={`${cancelledSuite} was cancelled`}>
+                  {completedSuites.length ? `${completedSuites.join(", ")} finished and has results. ` : ""}
+                  {cancelledSuite} stopped mid-run and has no measurements.
                 </AlertMessage>
               ) : null}
             </Stack>
@@ -301,9 +333,13 @@ const FinishBenchmarkFlow = () => {
           screen={screen}
           base={base}
           head={head}
-          onBase={setBase}
+          onBase={(value) => {
+            setBase(value);
+            if (screen === "single" && value.trim()) setScreen("results");
+          }}
           onHead={setHead}
           onRun={() => show("new")}
+          platforms={platforms}
         />
       ) : null}
       {screen === "release" ? (

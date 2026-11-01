@@ -1,5 +1,7 @@
 import { Session } from "node:inspector";
+import { setTimeout as delay } from "node:timers/promises";
 import { defineCommand, defineExtension } from "@pstdio/sdk/extensions";
+import { captureBytes } from "./byte-capture";
 
 export default defineExtension({
   commands: [
@@ -8,37 +10,10 @@ export default defineExtension({
       title: "Trace large backend decodes",
       cli: true,
       async run(ctx) {
-        const original = Buffer.from;
-        let calls = 0;
-        let bytes = 0;
-        const large: { bytes: number; stack?: string; transcript: boolean }[] = [];
-        const sizes = new Map<number, { count: number; transcript: boolean }>();
-        Buffer.from = function (this: typeof Buffer, ...args: unknown[]) {
-          const result = Reflect.apply(original, this, args) as Buffer;
-          const [value, encoding] = args;
-          if (typeof value === "string" && encoding === "hex") {
-            const size = value.length / 2;
-            calls++;
-            bytes += size;
-            if (size > 100_000) {
-              const transcript = result.subarray(0, 256).includes(Buffer.from("content"));
-              const previous = sizes.get(size);
-              sizes.set(size, { count: (previous?.count ?? 0) + 1, transcript });
-              if (large.length < 25) large.push({ bytes: size, stack: new Error().stack, transcript });
-            }
-          }
-          return result;
-        } as typeof original;
-        try {
-          await Bun.sleep(10_000);
-          Buffer.from = original;
-          const result = { pid: process.pid, calls, bytes, large, sizes: [...sizes] };
-          if (!ctx.extensionFiles) throw new Error("Diagnostic files are unavailable");
-          await ctx.extensionFiles.writeText("backend-bytes.json", JSON.stringify(result));
-          return { pid: process.pid, calls, bytes, large: large.length };
-        } finally {
-          Buffer.from = original;
-        }
+        const result = await captureBytes(10_000, ctx.signal);
+        if (!ctx.extensionFiles) throw new Error("Diagnostic files are unavailable");
+        await ctx.extensionFiles.writeText("backend-bytes.json", JSON.stringify(result));
+        return { pid: result.pid, calls: result.calls, bytes: result.bytes, large: result.large.length };
       },
     }),
     defineCommand({
@@ -55,7 +30,7 @@ export default defineExtension({
         try {
           await post("Profiler.enable");
           await post("Profiler.startPreciseCoverage", { callCount: true, detailed: true });
-          await Bun.sleep(10_000);
+          await delay(10_000, undefined, { signal: ctx.signal });
           const result = await post("Profiler.takePreciseCoverage");
           await post("Profiler.stopPreciseCoverage");
           if (!ctx.extensionFiles) throw new Error("Diagnostic files are unavailable");
@@ -81,7 +56,7 @@ export default defineExtension({
         try {
           await post("Profiler.enable");
           await post("Profiler.start");
-          await Bun.sleep(15_000);
+          await delay(15_000, undefined, { signal: ctx.signal });
           const result = await post("Profiler.stop");
           if (!ctx.extensionFiles) throw new Error("Diagnostic files are unavailable");
           await ctx.extensionFiles.writeText("backend-profile.json", JSON.stringify(result));
