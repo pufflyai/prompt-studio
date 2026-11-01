@@ -429,6 +429,20 @@
     "removeWhen": "Identify and fix the cold Claude dependency install delay, then pass this complete case in ten independent Linux x64 runs within its existing 30000 ms allowance, without retries, prewarming or fewer extensions."
   },
   {
+    "runner": "workbench-benchmark",
+    "file": "packages/e2e/src/perf/side-panel.p3.bench.ts",
+    "name": "closes and reopens the live Side Panel within budget",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-932 / workbench performance",
+    "reason": "Under the user's remaining-release-failure quarantine authorization, stable certification recorded a 52 ms long task where this case requires no tasks above 50 ms. The same case passed the preceding hosted qualification and also failed the unchanged-main cloud control. Preserve every close/reopen sample, collapse transition, duration and geometry assertion; this remains performance debt.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41254526863/job/124697622966",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41248380174/job/124676622461"
+    ],
+    "removeWhen": "Fix the long task source and complete every declared close/reopen sample in one first-attempt hosted Linux x64 execution with no task above 50 ms and all collapse-transition, duration and geometry assertions intact."
+  },
+  {
     "runner": "packaged-desktop-benchmark",
     "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
     "name": "warm attach restores the workbench within budget",

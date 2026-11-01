@@ -258,6 +258,7 @@ try {
     ? await createInstalledProject(active.page, join(home, "Windows updated project"))
     : project;
   await openPackagedProject(active.page, updatedProject);
+  if (retirement) await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
   await expect(active.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
   assert.equal(readFileSync(join(projectPath, "persisted.txt"), "utf8"), "Signed Windows update preservation\n");
   assert((await run(updated.sidecar, ["projects", "list"])).includes(updatedProject.id));
