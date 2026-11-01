@@ -5,6 +5,9 @@ const runsAlone = (file: string) => /\.exclusive\.p[0-3]\.test\.ts$/.test(file);
 interface SchedulerOptions {
   priority?: string;
   signal?: AbortSignal;
+  // A file that blocks its process never reaches Bun's per-test timeout (PS-1013).
+  // After this long its signal aborts with "stalled", so the caller can record and stop it.
+  stallMs?: number;
 }
 interface FileResult {
   file: string;
@@ -30,8 +33,12 @@ export const runApiTestFiles = async (
     if (controller.signal.aborted) return;
     const result = results[files.indexOf(file)]!;
     const started = performance.now();
+    const fileController = new AbortController();
+    const stop = () => fileController.abort(controller.signal.reason);
+    controller.signal.addEventListener("abort", stop, { once: true });
+    const stall = options.stallMs ? setTimeout(() => fileController.abort("stalled"), options.stallMs) : undefined;
     try {
-      result.exitCode = await runFile(file, controller.signal);
+      result.exitCode = await runFile(file, fileController.signal);
       result.outcome = result.exitCode === 0 ? "success" : "failure";
       if (controller.signal.aborted) result.outcome = "cancelled";
     } catch (error) {
@@ -39,7 +46,14 @@ export const runApiTestFiles = async (
       result.error = String(error);
       console.error(`${file}: ${result.error}`);
     } finally {
+      clearTimeout(stall);
+      controller.signal.removeEventListener("abort", stop);
       result.durationMs = performance.now() - started;
+    }
+    if (fileController.signal.reason === "stalled" && !controller.signal.aborted && result.exitCode !== 0) {
+      result.outcome = "failure";
+      result.error = `stalled for ${options.stallMs! / 1000} s`;
+      console.error(`${file}: ${result.error}`);
     }
     if (result.outcome === "failure" && priority === "P1") controller.abort("p1-failure");
   };
