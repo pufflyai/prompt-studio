@@ -60,11 +60,10 @@ export const plannedCiJobs = (scope: Scope) => {
   if (scope.harnessCli)
     add(
       "harness_cli_support",
-      ["harness-codex", "harness-claude-code", "harness-open-code", "harness-pi"].flatMap((harness) =>
-        ["minimum", "latest"].flatMap((version) => [
-          `harness_cli_support / ${harness} (${version})`,
-          ...(harness === "harness-pi" ? [`harness_cli_support / ${harness} (${version}, Windows)`] : []),
-        ]),
+      scope.harnessMatrix.flatMap((lane) =>
+        ["minimum", "latest"].map(
+          (version) => `harness_cli_support / ${lane.extension} (${version}${"os" in lane ? ", Windows" : ""})`,
+        ),
       ),
       "P2",
     );
@@ -74,7 +73,7 @@ export const plannedCiJobs = (scope: Scope) => {
       ["pstdio/landing-page", "pstdio/api"].map((image) => `build_docker (${image})`),
       "P2",
     );
-  if (scope.production) {
+  if (scope.windows) {
     add(
       "windows_test_and_build",
       ["lint", "unit-1", "unit-2", "unit-3", "unit-4"].map((lane) => `windows_test_and_build (${lane})`),
@@ -93,9 +92,11 @@ export const plannedCiJobs = (scope: Scope) => {
       ),
       "P2",
     );
+  }
+  if (scope.production) {
     add(
       "quarantined_bun_tests",
-      ["ubuntu-latest", "windows-latest", "macos-15"].map((os) => `quarantined_bun_tests (${os})`),
+      scope.quarantineBunOs.map((os) => `quarantined_bun_tests (${os})`),
       "P2",
     );
     add("quarantined_browser_tests", ["quarantined_browser_tests"], "P2");

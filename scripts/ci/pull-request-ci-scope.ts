@@ -5,9 +5,11 @@ import { affectedPackages } from "./ci-packages";
 import { createEditedTestMatrix } from "./edited-test-matrix";
 import { partitionPackageChecks } from "./package-check-matrix";
 import {
+  harnessCliLanes,
   productionDesktopCheckPlatforms,
   productionDesktopPlatforms,
   productionToolchainPlatforms,
+  quarantineBunHosts,
 } from "./production-platforms";
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
 import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
@@ -94,6 +96,9 @@ export const resolveCiScope = (input: CiScopeInput) => {
     componentMatrix,
     clientMatrix,
     toolchainMatrix: productionToolchainPlatforms(releaseChannel),
+    windows: production && productionDesktopPlatforms(releaseChannel).some((row) => row.platform === "win32"),
+    quarantineBunOs: production ? quarantineBunHosts(releaseChannel) : [],
+    harnessMatrix: production ? harnessCliLanes(releaseChannel) : [],
     componentChecks: componentMatrix.length > 0,
     databaseTests: matrices.databaseMatrix.length > 0,
     packageChecks: affectedOwners.length > 0,
