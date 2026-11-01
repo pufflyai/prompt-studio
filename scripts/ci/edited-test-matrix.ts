@@ -37,16 +37,17 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
     group.files.push(file);
     groups.set(key, group);
   }
+  // PR checks guard the nightly, so edited tests run on the nightly's hosts.
   const rows = [...groups.values()].flatMap((group) => {
     let platforms = [linux];
     if (group.runner === "desktop" || group.owner === "@pstdio/desktop")
-      platforms = productionDesktopPlatforms("stable");
+      platforms = productionDesktopPlatforms("nightly");
     if (group.runner === "packaged-cli")
-      platforms = productionToolchainPlatforms("stable")
+      platforms = productionToolchainPlatforms("nightly")
         .filter((row) => row.shard === 1 && row.priorities.split(",").includes(group.priority))
         .map((row) => {
           const [, platform, arch] = row.platform_pkg.split("-");
-          return { os: row.os, platform: platform === "win" ? "win32" : platform!, arch: arch! };
+          return { os: row.os, platform: platform!, arch: arch! };
         });
     return platforms.flatMap((platform) => {
       const covered =
@@ -84,9 +85,7 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
   });
   for (const [id, files] of performance) {
     let platforms = [linux];
-    if (id === "desktop") platforms = productionDesktopPlatforms("stable");
-    if (["runtime", "storage"].includes(id))
-      platforms = productionDesktopPlatforms("stable").filter((row) => row.target !== "darwin-x64");
+    if (["desktop", "runtime", "storage"].includes(id)) platforms = productionDesktopPlatforms("nightly");
     for (const platform of platforms)
       rows.push({
         name: `${id} P3 ${platform.os}`,

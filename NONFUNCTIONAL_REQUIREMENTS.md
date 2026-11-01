@@ -21,7 +21,7 @@ Regular performance coverage runs in nightly CI: [Release Packages](.github/work
 The P3 suite covers:
 
 - Packaged desktop startup, recovery, and renderer work on the selected native desktop runners.
-- Backend workloads on Linux, macOS, and Windows.
+- Backend workloads on Linux and Apple Silicon macOS in the nightly; stable releases add Windows.
 - Browser, navigation, Planner, and relay workloads on Linux, selected by [the performance runner](scripts/ci/production-performance.ts).
 
 Results, raw measurements, and machine metadata are attached to the GitHub Actions run. Workload artifacts are named `production-performance-<family>-<os>-attempt-<attempt>`; desktop artifacts are named `production-desktop-performance-<target>-attempt-<attempt>`. Existing benchmarks retain their own CI budgets and workloads.

@@ -70,22 +70,17 @@ test("source-only nightly Windows diagnostics cannot certify signed stable Windo
   ).toContain("windows: a source diagnostic cannot certify a stable publication artifact");
 });
 
-test("full releases require Intel functional and performance proof while nightly retains Windows", () => {
+test("stable releases certify every published host while the nightly certifies Linux and Apple Silicon", () => {
   const stable = requiredProductionChecks("stable");
   const nightly = requiredProductionChecks("nightly");
-  expect(stable).toContain("signed-functional-darwin-x64");
-  expect(stable).toContain("performance-desktop-darwin-x64");
-  expect(nightly).not.toContain("signed-functional-darwin-x64");
-  expect(nightly).not.toContain("performance-desktop-darwin-x64");
-  expect(nightly).toContain("signed-functional-win32-x64");
-  expect(nightly).toContain("performance-desktop-win32-x64");
-});
-
-test("certification requires storage and runtime measurements on Linux, macOS and Windows", () => {
-  for (const channel of ["stable", "nightly"]) {
-    const required = requiredProductionChecks(channel);
-    for (const suite of ["storage", "runtime"])
-      for (const os of ["ubuntu-24.04", "macos-15", "windows-2025"])
-        expect(required).toContain(`performance-${suite}-${os}`);
+  for (const target of ["darwin-x64", "win32-x64"]) {
+    expect(stable).toContain(`signed-functional-${target}`);
+    expect(stable).toContain(`performance-desktop-${target}`);
   }
+  for (const suite of ["storage", "runtime"])
+    for (const os of ["ubuntu-24.04", "macos-15", "windows-2025"])
+      expect(stable).toContain(`performance-${suite}-${os}`);
+  expect(nightly.filter((check) => /win32|windows|darwin-x64/.test(check))).toEqual([]);
+  expect(nightly).toContain("performance-storage-macos-15");
+  expect(nightly).toContain("signed-functional-darwin-arm64");
 });
