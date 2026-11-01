@@ -1,4 +1,5 @@
 import { finished } from "./github";
+import { runsOn, SUITES } from "./platforms";
 import type { BenchmarkMetricResult, BenchmarkResultFile, BenchmarkUnit } from "./result-file";
 import { compareSamples, median, summarize } from "./stats";
 import type { CachedResult, ReleaseRecord, RunRecord } from "./store";
@@ -107,30 +108,37 @@ export const buildTrends = (results: CachedResult[], platforms: string[]) => {
 
 const runIdOf = (result: CachedResult) => (result.source.kind === "run" ? result.source.runId : undefined);
 
-// A run that measured both commits side by side is the fairest comparison, so it wins over the
-// newest separate measurements of each commit.
-const pickFiles = (results: CachedResult[], base: string, head: string) => {
-  const newestFirst = [...results].sort((a, b) => Number(runIdOf(b) ?? 0) - Number(runIdOf(a) ?? 0));
-  const baseRuns = new Set(newestFirst.filter((result) => result.file.commit.sha === base).map(runIdOf));
-  const shared = newestFirst.find(
-    (result) => result.file.commit.sha === head && runIdOf(result) && baseRuns.has(runIdOf(result)),
-  );
-  const fileFor = (sha: string) =>
-    newestFirst.find((result) => result.file.commit.sha === sha && (!shared || runIdOf(result) === runIdOf(shared)))
-      ?.file;
-  return { base: fileFor(base), head: fileFor(head) };
-};
+const valuesOf = (result: CachedResult | undefined, key: string) =>
+  result?.file.metrics.find((metric) => keyOf(metric) === key)?.values;
 
+// Each metric comes from the newest result that measured it, so a newer run of a few suites does not hide
+// older results of the others. A run that measured the metric on both commits wins, being the fairest pair.
 export const buildComparison = (results: CachedResult[], base: string, head: string, platform: string) => {
-  const files = pickFiles(
-    results.filter((result) => result.file.platform === platform),
-    base,
-    head,
-  );
-  const present = [files.base, files.head].filter((file): file is BenchmarkResultFile => Boolean(file));
+  const newestFirst = results
+    .filter((result) => result.file.platform === platform)
+    .sort((a, b) => Number(runIdOf(b) ?? 0) - Number(runIdOf(a) ?? 0));
+  const baseResults = newestFirst.filter((result) => result.file.commit.sha === base);
+  const headResults = newestFirst.filter((result) => result.file.commit.sha === head);
+  const present = [...baseResults, ...headResults].map((result) => result.file);
   const rows = [...collectKeys(present)].map(([key, info]): CompareRow => {
-    const baseValues = files.base?.metrics.find((metric) => keyOf(metric) === key)?.values;
-    const headValues = files.head?.metrics.find((metric) => keyOf(metric) === key)?.values;
+    const pairedHead = headResults.find(
+      (result) =>
+        runIdOf(result) &&
+        valuesOf(result, key)?.length &&
+        baseResults.some((entry) => runIdOf(entry) === runIdOf(result) && valuesOf(entry, key)?.length),
+    );
+    const pick = (side: CachedResult[]) =>
+      pairedHead
+        ? valuesOf(
+            side.find((result) => runIdOf(result) === runIdOf(pairedHead)),
+            key,
+          )
+        : valuesOf(
+            side.find((result) => valuesOf(result, key)?.length),
+            key,
+          );
+    const baseValues = pick(baseResults);
+    const headValues = pick(headResults);
     return {
       ...info,
       base: baseValues?.length ? { ...summarize(baseValues), values: baseValues } : null,
@@ -138,11 +146,11 @@ export const buildComparison = (results: CachedResult[], base: string, head: str
       change: baseValues?.length && headValues?.length ? compareSamples(baseValues, headValues) : null,
     };
   });
-  return { hasBase: Boolean(files.base), hasHead: Boolean(files.head), rows };
+  return { hasBase: baseResults.length > 0, hasHead: headResults.length > 0, rows };
 };
 
-// Commits with results on every given platform. With suites, each platform must have measured all of them,
-// so a run can skip the commit and reuse its results.
+// Commits with results on every given platform. With suites, each platform must have measured every suite that
+// runs there, so a run can skip the commit and reuse its results.
 export const measuredCommits = (results: CachedResult[], platforms: string[], suites: string[] = []) => {
   const measured = new Map<string, Set<string>>();
   for (const result of results) {
@@ -156,7 +164,8 @@ export const measuredCommits = (results: CachedResult[], platforms: string[], su
     [...shas].filter((sha) =>
       platforms.every((platform) => {
         const seen = measured.get(`${sha}|${platform}`);
-        return seen && suites.every((suite) => seen.has(suite));
+        const expected = SUITES.filter((suite) => suites.includes(suite.id) && runsOn(suite, platform));
+        return seen && expected.every((suite) => seen.has(suite.id));
       }),
     ),
   );

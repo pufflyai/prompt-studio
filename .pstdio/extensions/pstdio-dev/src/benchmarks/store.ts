@@ -26,6 +26,8 @@ export interface RunRecord extends WorkflowRun {
   detail?: string;
   // Why the finished run's results could not be downloaded yet. The next sync retries.
   syncError?: string;
+  // The automation following the run, so a run gets one follower at a time.
+  followId?: string;
   synced: boolean;
 }
 
@@ -65,6 +67,33 @@ export const readRuns = async (ctx: Pick<ExtensionContextBase, "extensionFiles">
 
 export const writeRuns = (ctx: Pick<ExtensionContextBase, "extensionFiles">, runs: RunRecord[]) =>
   filesOf(ctx).writeText(RUNS_FILE, `${JSON.stringify(runs, null, 2)}\n`);
+
+export type RunPatch = Partial<RunRecord> & Pick<RunRecord, "id">;
+let runsWrite: Promise<unknown> = Promise.resolve();
+
+// Pages, follows, schedules and starts update runs at the same time. Each write merges into the latest file in
+// turn, so a slow sync cannot drop a run another writer added or a SHA it resolved.
+export const patchRuns = (ctx: Pick<ExtensionContextBase, "extensionFiles">, patches: RunPatch[]) => {
+  const write = runsWrite.then(async () => {
+    const runs = new Map((await readRuns(ctx)).map((run) => [run.id, run]));
+    for (const patch of patches) {
+      const existing = runs.get(patch.id);
+      if (!existing && !patch.title) continue;
+      const merged = { ...existing, ...patch } as RunRecord;
+      merged.commits = (merged.commits ?? []).map((commit) => ({
+        ...commit,
+        sha: commit.sha ?? existing?.commits.find((entry) => entry.ref === commit.ref)?.sha,
+      }));
+      runs.set(patch.id, merged);
+    }
+    await writeRuns(
+      ctx,
+      [...runs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    );
+  });
+  runsWrite = write.catch(() => undefined);
+  return write;
+};
 
 export const readReleases = async (ctx: Pick<ExtensionContextBase, "extensionFiles">) => {
   const files = filesOf(ctx);
@@ -197,29 +226,29 @@ const syncRun = async (ctx: StoreContext, run: RunRecord) => {
   if (run.synced || !finished(run.status)) return;
   try {
     const shas = await cacheRunArtifacts(ctx, run.id);
-    run.commits = run.commits.map((commit) => ({ ...commit, sha: shas.get(commit.ref) ?? commit.sha }));
+    // A release run is titled by its tag but records the SHA it measured, so a lone commit takes the lone SHA.
+    const only = run.commits.length === 1 && shas.size === 1 ? [...shas.values()][0] : undefined;
+    run.commits = run.commits.map((commit) => ({ ...commit, sha: shas.get(commit.ref) ?? commit.sha ?? only }));
     run.synced = true;
     delete run.syncError;
   } catch (error) {
     run.syncError = `Results could not be downloaded: ${error instanceof Error ? error.message : String(error)}`;
-    throw error;
   }
 };
 
+// A run that cannot be read or downloaded keeps its error on its own row and retries on the next sync; only
+// failing to reach GitHub at all fails the sync.
 export const syncRuns = async (ctx: StoreContext) => {
   const previous = new Map((await readRuns(ctx)).map((run) => [run.id, run]));
   const listed = await listRuns(ctx);
   for (const run of listed) previous.set(run.id, mergeRun(previous.get(run.id), run));
-  const runs = [...previous.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const failures: string[] = [];
+  const runs = [...previous.values()];
   for (const run of runs) {
-    // One run that cannot sync must not stop the others; it retries on the next sync.
-    await syncRun(ctx, run).catch((error: unknown) =>
-      failures.push(`Run ${run.id}: ${error instanceof Error ? error.message : String(error)}`),
-    );
+    await syncRun(ctx, run).catch((error: unknown) => {
+      run.syncError = `Run status could not be read: ${error instanceof Error ? error.message : String(error)}`;
+    });
   }
-  await writeRuns(ctx, runs);
-  if (failures.length) throw new Error(failures.join("\n"));
+  await patchRuns(ctx, runs);
 };
 
 // Releases and runs sync independently, so one failing does not hide the other's new results.
@@ -238,10 +267,7 @@ export const syncAll = async (ctx: StoreContext) => {
 
 export const refreshRun = async (ctx: StoreContext, runId: string) => {
   const progress = await runProgress(ctx, runId);
-  const runs = await readRuns(ctx);
-  const run = runs.find((entry) => entry.id === runId);
-  if (run) Object.assign(run, progress);
-  await writeRuns(ctx, runs);
+  await patchRuns(ctx, [{ id: runId, ...progress }]);
   await changed(ctx, runId);
   return progress.status;
 };

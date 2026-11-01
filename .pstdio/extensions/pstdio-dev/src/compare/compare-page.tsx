@@ -1,7 +1,7 @@
 import { useCommandQuery } from "@pstdio/sdk/extensions/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DEFAULT_PLATFORM } from "../benchmarks/platforms";
 import { useBenchmarks, useBenchmarksRefresh } from "../webview/client";
 import { SyncFailed } from "../webview/result-notices";
@@ -33,6 +33,10 @@ export const ComparePage = () => {
   });
   const runs = useCommandQuery({ queryKey: ["runs"], command: () => client.commands["benchmarks.runs"]() });
   const fallback = defaultPair(commits.data ?? []);
+  // The first default pair is kept, so new results arriving later do not swap the commits on screen.
+  useEffect(() => {
+    if (!chosen.head && fallback.head) setChosen({ base: fallback.base ?? null, head: fallback.head });
+  }, [chosen.head, fallback.base, fallback.head]);
   const base = chosen.base === null ? undefined : (chosen.base ?? fallback.base);
   const head = chosen.head ?? fallback.head;
   const comparison = useCommandQuery({

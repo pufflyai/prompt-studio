@@ -5,6 +5,8 @@ import { finished, startRun } from "./github";
 import { DEFAULT_PLATFORM, DEFAULT_SUITES, PLATFORMS, runsOn, SUITES } from "./platforms";
 import {
   changed,
+  patchRuns,
+  type RunRecord,
   readReleases,
   readResults,
   readRuns,
@@ -13,11 +15,12 @@ import {
   stopRun,
   syncAll,
   syncRuns,
-  writeRuns,
 } from "./store";
 
 const FOLLOW_INTERVAL_MS = 30_000;
-const ALL_PLATFORMS = PLATFORMS.map((platform) => platform.id);
+// GitHub can fail a status read now and then; a follower gives up only after this many failures in a row.
+const FOLLOW_ATTEMPTS = 5;
+const ALL_PLATFORMS: string[] = PLATFORMS.map((platform) => platform.id);
 
 // Keeps a dispatched run's progress current and caches its results the moment it finishes.
 const followRunCommand = defineCommand({
@@ -26,7 +29,19 @@ const followRunCommand = defineCommand({
   automation: true,
   params: { runId: params.text({ required: true }) },
   async run(ctx, { runId }) {
-    while (!finished(await refreshRun(ctx, runId))) {
+    let failures = 0;
+    for (;;) {
+      const status = await refreshRun(ctx, runId).then(
+        (value) => {
+          failures = 0;
+          return value;
+        },
+        (error: unknown) => {
+          if (++failures >= FOLLOW_ATTEMPTS) throw error;
+          return undefined;
+        },
+      );
+      if (status && finished(status)) break;
       await new Promise((resolve) => setTimeout(resolve, FOLLOW_INTERVAL_MS));
     }
     await syncRuns(ctx);
@@ -35,20 +50,38 @@ const followRunCommand = defineCommand({
   },
 });
 
-// The run id is the idempotency key, so each run is followed once however often it is seen.
-const follow = (ctx: Pick<ExtensionContextBase, "automation">, runId: string) =>
-  ctx.automation.enqueue({ command: followRunCommand.ref, input: { params: { runId } }, key: runId });
+type FollowContext = Pick<ExtensionContextBase, "automation" | "extensionFiles">;
+let following: Promise<unknown> = Promise.resolve();
+
+// One follower per run at a time. A follower that ended, by a restart or repeated GitHub errors, is replaced
+// the next time the run is seen. Follows run in turn, so pages syncing together do not start two.
+const follow = (ctx: FollowContext, run: RunRecord) => {
+  const next = following.then(async () => {
+    const current = run.followId ? await ctx.automation.get(run.followId) : undefined;
+    if (current && (current.status === "queued" || current.status === "running")) return;
+    const automation = await ctx.automation.enqueue({
+      command: followRunCommand.ref,
+      input: { params: { runId: run.id } },
+      key: `${run.id}:${Date.now()}`,
+    });
+    await patchRuns(ctx, [{ id: run.id, followId: automation.id }]);
+  });
+  following = next.catch(() => undefined);
+  return next;
+};
 
 const syncCommand = defineCommand({
   id: "benchmarks.sync",
   title: "Sync benchmark results",
   cli: true,
   async run(ctx) {
-    await syncAll(ctx);
-    // Runs started by a teammate, an agent, a release, or on GitHub keep updating too.
-    const runs = await readRuns(ctx);
-    for (const run of runs.filter((entry) => !finished(entry.status))) await follow(ctx, run.id);
-    return { runs: runs.length, syncedAt: await readSyncedAt(ctx) };
+    try {
+      await syncAll(ctx);
+    } finally {
+      // Runs started by a teammate, an agent, a release, or on GitHub keep updating, even when a sync fails.
+      for (const run of (await readRuns(ctx)).filter((entry) => !finished(entry.status))) await follow(ctx, run);
+    }
+    return { runs: (await readRuns(ctx)).length, syncedAt: await readSyncedAt(ctx) };
   },
 });
 
@@ -142,6 +175,8 @@ const startRunCommand = defineCommand({
   },
   async run(ctx, input) {
     const platforms = input.platforms?.length ? input.platforms : [DEFAULT_PLATFORM];
+    const strange = platforms.filter((platform) => !ALL_PLATFORMS.includes(platform));
+    if (strange.length) throw new Error(`Unknown platforms: ${strange.join(", ")}. Use ${ALL_PLATFORMS.join(", ")}.`);
     const requested = input.suites?.length ? input.suites : DEFAULT_SUITES;
     const unknown = requested.filter((id) => !SUITES.some((suite) => suite.id === id));
     if (unknown.length) throw new Error(`Unknown suites: ${unknown.join(", ")}.`);
@@ -161,24 +196,22 @@ const startRunCommand = defineCommand({
     const commits = await Promise.all(input.commits.map(async (ref) => ({ ref, sha: await resolveRef(ctx, ref) })));
     const reused = commits.filter((commit) => commit.sha && measured.has(commit.sha));
     const fresh = commits.filter((commit) => !reused.includes(commit));
-    if (!fresh.length) return { runId: undefined, reused, skipped };
+    // dispatched tells "nothing to run" apart from a run whose id GitHub has not shown yet.
+    if (!fresh.length) return { dispatched: false, runId: undefined, reused, skipped };
     const runId = await startRun(ctx, { commits: fresh.map((commit) => commit.ref), suites, platforms });
     await syncRuns(ctx);
-    if (runId) {
+    const run = (await readRuns(ctx)).find((entry) => entry.id === runId);
+    if (run) {
       // The listing knows only refs, so the SHAs resolved here identify the commits until results arrive.
-      const runs = await readRuns(ctx);
-      const run = runs.find((entry) => entry.id === runId);
-      if (run) {
-        run.commits = run.commits.map((commit) => ({
-          ...commit,
-          sha: commit.sha ?? fresh.find((entry) => entry.ref === commit.ref)?.sha,
-        }));
-        await writeRuns(ctx, runs);
-      }
-      await follow(ctx, runId);
+      const commits = run.commits.map((commit) => ({
+        ...commit,
+        sha: commit.sha ?? fresh.find((entry) => entry.ref === commit.ref)?.sha,
+      }));
+      await patchRuns(ctx, [{ id: run.id, commits }]);
+      await follow(ctx, run);
     }
     await changed(ctx, runId);
-    return { runId, reused, skipped };
+    return { dispatched: true, runId, reused, skipped };
   },
 });
 

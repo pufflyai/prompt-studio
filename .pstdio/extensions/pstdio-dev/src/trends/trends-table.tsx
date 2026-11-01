@@ -58,7 +58,7 @@ export const TrendsTable = (props: TrendsTableProps) => {
                         <Stack gap="0" align="flex-end">
                           <Text textStyle="label/S/regular">{formatValue(point.median, metric.unit)}</Text>
                           <Text textStyle="label/XS" color="fg.muted">
-                            {formatRange(point.low, point.high, metric.unit)}
+                            {point.samples > 1 ? formatRange(point.low, point.high, metric.unit) : "1 sample"}
                           </Text>
                         </Stack>
                       ) : (

@@ -107,8 +107,9 @@ const Bars = (props: { row: CompareRow }) => {
 const ChangePlot = (props: { row: CompareRow; scale: number }) => {
   const { row, scale } = props;
   const at = (share: number) => `${50 + Math.max(-50, Math.min(50, (share / scale) * 50))}%`;
-  const single = isSingleSample(row);
-  const color = row.change && !single ? verdictColor[row.change.verdict] : "fg.muted";
+  // With one sample on either side the change has no interval, so only its dot shows.
+  const single = !row.change || row.change.verdict === "inconclusive";
+  const color = row.change ? verdictColor[row.change.verdict] : "fg.muted";
   return (
     <Box position="relative" h="6" aria-hidden="true">
       <Box position="absolute" insetY="0" left="50%" borderStartWidth="1px" borderColor="border" />
@@ -140,7 +141,7 @@ const ChangePlot = (props: { row: CompareRow; scale: number }) => {
 
 const ChangeCell = (props: { row: CompareRow; baseChosen: boolean }) => {
   const { row, baseChosen } = props;
-  const once = isSingleSample(row);
+  const once = row.change?.verdict === "inconclusive";
   let value = "—";
   let color = "fg.muted";
   let detail = row.head ? "Not measured on base" : "Not measured on head";
@@ -150,7 +151,9 @@ const ChangeCell = (props: { row: CompareRow; baseChosen: boolean }) => {
       ? formatPercent(row.change.change)
       : `${verdictArrow[row.change.verdict]} ${formatPercent(row.change.change)}`;
     color = once ? "fg" : verdictColor[row.change.verdict];
-    detail = once ? "1 sample each · no interval" : formatChangeRange(row.change);
+    detail = once
+      ? `${isSingleSample(row) ? "1 sample each" : "1 sample on one side"} · too little evidence`
+      : formatChangeRange(row.change);
   }
   if (overBudget(row)) detail = `Over the ${formatValue(row.budget ?? 0, row.unit)} budget`;
   return (

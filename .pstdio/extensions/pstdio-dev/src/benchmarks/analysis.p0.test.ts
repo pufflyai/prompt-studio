@@ -130,6 +130,20 @@ describe("comparing commits", () => {
     expect(comparison.rows[0].change).toMatchObject({ change: expect.closeTo(0.1, 5), verdict: "inconclusive" });
   });
 
+  test("a newer run of other suites does not hide a commit's older results", () => {
+    const relayOnly = run("200", "head", 5000);
+    relayOnly.file.suites = [{ id: "relay", label: "Relay storage", source: "services/relay" }];
+    relayOnly.file.metrics = [{ suite: "relay", metric: "stored", label: "Stored", unit: "ms", values: [3] }];
+    const comparison = buildComparison(
+      [run("100", "base", 5000), run("100", "head", 6000), relayOnly],
+      "base",
+      "head",
+      "linux-x64",
+    );
+    expect(comparison.rows.find((row) => row.label === "Cold start")?.head?.median).toBe(6000);
+    expect(comparison.rows.find((row) => row.label === "Stored")?.head?.median).toBe(3);
+  });
+
   test("reads the head's own results when no base is chosen", () => {
     const comparison = buildComparison([run("100", "head", 5000)], "", "head", "linux-x64");
     expect(comparison).toMatchObject({ hasBase: false, hasHead: true });
@@ -146,6 +160,16 @@ describe("measured commits", () => {
     expect(measuredCommits(results, ["linux-x64", "win32-x64"])).toEqual(new Set(["both"]));
     expect(measuredCommits(results, ["linux-x64"], ["desktop"])).toEqual(new Set(["both", "linux-only"]));
     expect(measuredCommits(results, ["linux-x64"], ["desktop", "storage"])).toEqual(new Set());
+  });
+
+  test("does not require a suite on platforms it cannot run on", () => {
+    const linux = run("100", "sha", 5000);
+    linux.file.suites.push({ id: "relay", label: "Relay storage", source: "services/relay" });
+    const windows = run("101", "sha", 9000);
+    windows.file.platform = "win32-x64";
+    expect(measuredCommits([linux, windows], ["linux-x64", "win32-x64"], ["desktop", "relay"])).toEqual(
+      new Set(["sha"]),
+    );
   });
 });
 

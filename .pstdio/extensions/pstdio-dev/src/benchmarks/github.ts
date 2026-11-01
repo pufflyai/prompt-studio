@@ -142,6 +142,8 @@ const DISPATCH_LOOKUPS = 5;
 
 // CI runs each benchmark once, so the workflow's samples input keeps its default of 1.
 export const startRun = async (ctx: Context, input: StartRunInput) => {
+  // Runs that existed before this dispatch, so an identical run started by someone else is not taken for it.
+  const earlier = new Set((await listRuns(ctx)).map((run) => run.id));
   const dispatchedAt = Date.now();
   const output = await gh(ctx, [
     "workflow",
@@ -159,7 +161,10 @@ export const startRun = async (ctx: Context, input: StartRunInput) => {
   // Some gh versions print no run URL, so the run is found by its title among the newest runs.
   for (let attempt = 0; attempt < DISPATCH_LOOKUPS; attempt++) {
     const run = (await listRuns(ctx)).find(
-      (entry) => entry.title === runTitle(input) && Date.parse(entry.createdAt) >= dispatchedAt - 60_000,
+      (entry) =>
+        !earlier.has(entry.id) &&
+        entry.title === runTitle(input) &&
+        Date.parse(entry.createdAt) >= dispatchedAt - 60_000,
     );
     if (run) return run.id;
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -224,6 +229,7 @@ export const runProgress = async (ctx: Context, runId: string) => {
     status: runStatus(view.status, view.conclusion),
     progress: steps.length ? steps.filter((step) => step.status === "completed").length / steps.length : 0,
     detail: jobsDetail(view.jobs),
-    ...(failedJob ? { failure: `${failedJob.name}: ${failedStep?.name ?? "failed"}` } : {}),
+    // Undefined clears an earlier failure once a re-run passes.
+    failure: failedJob ? `${failedJob.name}: ${failedStep?.name ?? "failed"}` : undefined,
   };
 };

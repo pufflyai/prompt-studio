@@ -189,9 +189,9 @@ describe("benchmark result cache", () => {
         synced: false,
       },
     ]);
-    await expect(syncAll(ctx)).rejects.toThrow("Run 6");
-    // A failed sync keeps the last successful sync time, which is none yet.
-    expect(await readSyncedAt(ctx)).toBeUndefined();
+    // The run keeps its error on its own row; the sync still succeeds for everything else.
+    await syncAll(ctx);
+    expect(await readSyncedAt(ctx)).toBeString();
     const runs = await readRuns(ctx);
     expect(runs.find((run) => run.id === "6")?.syncError).toStartWith("Results could not be downloaded");
     expect(runs.map((run) => [run.id, run.synced])).toEqual([

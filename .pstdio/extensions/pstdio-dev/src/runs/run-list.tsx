@@ -33,6 +33,11 @@ const STATUS: Record<RunStatus, { label: string; color: string; icon: LucideIcon
 const when = (value: string) =>
   new Date(value).toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
+const elapsed = (since: string) => {
+  const minutes = Math.max(0, Math.round((Date.now() - Date.parse(since)) / 60_000));
+  return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
+};
+
 const platformsText = (platforms: string[]) =>
   platforms.length === PLATFORMS.length ? "All platforms" : platforms.map(platformLabel).join(", ");
 
@@ -47,7 +52,14 @@ export const RunList = (props: RunListProps) => {
         const status = STATUS[run.status];
         const Icon = status.icon;
         const active = run.status === "queued" || run.status === "running";
-        const tooltip = [status.label, run.detail, run.failure, run.syncError].filter(Boolean).join("\n");
+        const tooltip = [
+          active ? `${status.label} for ${elapsed(run.createdAt)}` : status.label,
+          run.detail,
+          run.failure,
+          run.syncError,
+        ]
+          .filter(Boolean)
+          .join("\n");
         return (
           <Stack
             key={run.id}

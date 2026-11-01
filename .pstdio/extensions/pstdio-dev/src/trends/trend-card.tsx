@@ -10,15 +10,20 @@ interface TrendCardProps {
   versions: string[];
 }
 
+// One sample has no spread, so it shows no interval and its change no range.
+const changeText = (point: FocusedPoint, series: PlatformSeries) => {
+  if (!point.change) return "first result";
+  const text = verdictText(point.change, series.metric.unit);
+  return point.change.verdict === "inconclusive" ? text : `${text} (${formatChangeRange(point.change)})`;
+};
+
 const pointDetail = (point: FocusedPoint, series: PlatformSeries) =>
   [
     point.version,
     platformLabel(point.platform),
     `median ${formatValue(point.median, series.metric.unit)}`,
-    `95% CI ${formatRange(point.low, point.high, series.metric.unit)}`,
-    point.change
-      ? `${verdictText(point.change, series.metric.unit)} (${formatChangeRange(point.change)})`
-      : "first result",
+    point.samples > 1 ? `95% CI ${formatRange(point.low, point.high, series.metric.unit)}` : "1 sample",
+    changeText(point, series),
   ].join(" · ");
 
 // One time series per benchmark: a median line per platform, and the budget when it has one.
