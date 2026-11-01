@@ -25,8 +25,7 @@ export const RunsPage = () => {
   // Measured means results for every chosen suite on every chosen platform, so the list follows the form.
   const commits = useCommandQuery({
     queryKey: ["commits", request.platforms, request.suites],
-    command: () =>
-      client.commands["benchmarks.commits"]({ platforms: request.platforms, suites: request.suites }),
+    command: () => client.commands["benchmarks.commits"]({ platforms: request.platforms, suites: request.suites }),
   });
   const start = useMutation({
     mutationFn: (effective: RunRequest) => client.commands["benchmarks.start-run"](effective),

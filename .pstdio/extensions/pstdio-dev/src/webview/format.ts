@@ -30,13 +30,23 @@ export const formatChangeRange = (change: Change) => `${formatPercent(change.low
 // Memory is not faster or slower, so its verdicts name the direction instead.
 const verdictWords: Record<"time" | "memory", Record<Verdict, string>> = {
   time: { improved: "faster", regressed: "slower", unchanged: "no change", inconclusive: "too little evidence" },
-  memory: { improved: "less memory", regressed: "more memory", unchanged: "no change", inconclusive: "too little evidence" },
+  memory: {
+    improved: "less memory",
+    regressed: "more memory",
+    unchanged: "no change",
+    inconclusive: "too little evidence",
+  },
 };
 
 export const verdictWord = (verdict: Verdict, unit: BenchmarkUnit) =>
   verdictWords[unit === "bytes" ? "memory" : "time"][verdict];
 
-export const verdictArrow: Record<Verdict, string> = { improved: "↓", regressed: "↑", unchanged: "≈", inconclusive: "" };
+export const verdictArrow: Record<Verdict, string> = {
+  improved: "↓",
+  regressed: "↑",
+  unchanged: "≈",
+  inconclusive: "",
+};
 
 // Status colors carry an arrow and a word, never color alone.
 export const verdictPalette: Record<Verdict, string> = {

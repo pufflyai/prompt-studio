@@ -2,7 +2,7 @@ import { Flex, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { DEFAULT_PLATFORM } from "../benchmarks/platforms";
-import { storyRefs, storyRuns } from "../webview/story-fixtures";
+import { storyRefs, storyRuns } from "../webview/story-runs";
 import { RunForm, type RunRequest } from "./run-form";
 import { RunList } from "./run-list";
 

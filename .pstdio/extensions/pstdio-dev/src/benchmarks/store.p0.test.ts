@@ -16,6 +16,29 @@ const result = (sha: string, suite = "storage"): BenchmarkResultFile => ({
   metrics: [{ suite, metric: `${suite}-metric`, label: suite, unit: "ms", values: [9, 8.8, 8.9] }],
 });
 
+// Run 8 is still running its runtime job; every other run has finished.
+const runView = (runId: string) => {
+  const running = runId === "8";
+  return {
+    status: running ? "in_progress" : "completed",
+    conclusion: running ? null : "success",
+    jobs: [
+      {
+        name: "linux-x64 · storage",
+        status: "completed",
+        conclusion: "success",
+        steps: [{ name: "Run benchmarks", status: "completed", conclusion: "success" }],
+      },
+      {
+        name: "linux-x64 · runtime",
+        status: running ? "in_progress" : "completed",
+        conclusion: running ? null : "success",
+        steps: [{ name: "Run benchmarks", status: running ? "in_progress" : "completed", conclusion: null }],
+      },
+    ],
+  };
+};
+
 // gh is the boundary to GitHub, so the test answers its commands the way GitHub does.
 const github = () => {
   const calls: string[][] = [];
@@ -71,25 +94,7 @@ const github = () => {
           { id: 71, name: "benchmark-results-linux-x64-runtime", expired: false },
         ],
       };
-    if (command === "run" && path === "view")
-      return {
-        status: args[2] === "8" ? "in_progress" : "completed",
-        conclusion: args[2] === "8" ? null : "success",
-        jobs: [
-          {
-            name: "linux-x64 · storage",
-            status: "completed",
-            conclusion: "success",
-            steps: [{ name: "Run benchmarks", status: "completed", conclusion: "success" }],
-          },
-          {
-            name: "linux-x64 · runtime",
-            status: args[2] === "8" ? "in_progress" : "completed",
-            conclusion: args[2] === "8" ? null : "success",
-            steps: [{ name: "Run benchmarks", status: args[2] === "8" ? "in_progress" : "completed", conclusion: null }],
-          },
-        ],
-      };
+    if (command === "run" && path === "view") return runView(args[2]);
     if (command === "run" && path === "download") {
       const dir = args[args.indexOf("--dir") + 1];
       const suite = args[args.indexOf("--name") + 1].split("-").at(-1);

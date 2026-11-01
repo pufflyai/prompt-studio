@@ -3,13 +3,8 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import type { CompareRow } from "../benchmarks/analysis";
 import { SyncFailed } from "../webview/result-notices";
-import {
-  storyCommits,
-  storyComparison,
-  storyHeadOnly,
-  storyOnceComparison,
-  storyPartialComparison,
-} from "../webview/story-fixtures";
+import { storyCommits, storyComparison } from "../webview/story-fixtures";
+import { storyHeadOnly, storyOnceComparison, storyPartialComparison } from "../webview/story-runs";
 import { CompareView, type ResultFilter } from "./compare-view";
 
 interface InteractiveCompareProps {

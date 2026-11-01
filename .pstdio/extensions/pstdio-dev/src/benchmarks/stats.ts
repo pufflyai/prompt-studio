@@ -47,7 +47,8 @@ const relativeChange = (base: number, head: number) => {
 // One value per side has no spread to resample, so it gets the difference without an interval or verdict.
 export const compareSamples = (base: number[], head: number[]) => {
   const change = relativeChange(median(base), median(head));
-  if (base.length < 2 || head.length < 2) return { change, low: change, high: change, verdict: "inconclusive" as Verdict };
+  if (base.length < 2 || head.length < 2)
+    return { change, low: change, high: change, verdict: "inconclusive" as Verdict };
   const random = seeded(2);
   const changes = Array.from({ length: RESAMPLES }, () =>
     relativeChange(median(resample(base, random)), median(resample(head, random))),

@@ -3,7 +3,7 @@ import { Checkbox, Chip, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { X } from "lucide-react";
 import { JOB_LIMIT_MINUTES, PLATFORMS, platformLabel, runsOn, SUITES, type SuiteOption } from "../benchmarks/platforms";
 import { CopySha } from "../webview/copy-sha";
-import { type RefOption, RefInput } from "./ref-input";
+import { RefInput, type RefOption } from "./ref-input";
 
 export interface RunRequest {
   commits: string[];
@@ -165,7 +165,13 @@ export const RunForm = (props: RunFormProps) => {
                 : ""}
             </Text>
           </Stack>
-          <Button size="sm" variant="primary" onClick={() => onStart({ ...value, commits: fresh, suites: chosen.map((suite) => suite.id) })} disabled={Boolean(problem)} loading={pending}>
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => onStart({ ...value, commits: fresh, suites: chosen.map((suite) => suite.id) })}
+            disabled={Boolean(problem)}
+            loading={pending}
+          >
             Start run
           </Button>
         </HStack>
