@@ -15,7 +15,7 @@ export interface ShaderConfig {
 type ConfigFiles = Pick<ArtifactMount, "exists" | "readText" | "writeText" | "list" | "delete">;
 
 const configPath = (shader: string, id: string) => {
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) throw new Error("Invalid shader version ID");
+  if (!/^[a-z0-9-]+$/.test(id)) throw new Error("Invalid shader version ID");
   return `${shadersRoot}/${shader}/${id}.json`;
 };
 
@@ -40,7 +40,7 @@ export const readConfig = async (files: ConfigFiles, shader: ShaderDefinition, i
 export const listConfigs = async (files: ConfigFiles, shader: ShaderDefinition) => {
   const ids = (await files.list(`${shadersRoot}/${shader.id}/*.json`))
     .map(({ path }) => path.slice(`${shadersRoot}/${shader.id}/`.length, -".json".length))
-    .filter((id) => /^[a-z0-9][a-z0-9-]*$/.test(id));
+    .filter((id) => /^[a-z0-9-]+$/.test(id));
   const configs = await Promise.all(ids.map((id) => readConfig(files, shader, id)));
   return configs.sort((a, b) => Number(b.id === "default") - Number(a.id === "default") || a.id.localeCompare(b.id));
 };

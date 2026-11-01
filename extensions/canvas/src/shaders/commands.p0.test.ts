@@ -3,7 +3,7 @@ import { parameterCommands } from "../parameters/commands";
 import { testContext, testManifest } from "../test-build";
 import { shaderCommands } from "./commands";
 
-test("shader comparison commands and the frame menu share one selected version", async () => {
+test.each(["soft", "-draft"])("shader comparison and frame menu share selected version %s", async (alternate) => {
   const manifest = testManifest();
   const canvas = "design/shaders/section-hatch/shader.canvas.tsx";
   manifest.canvases[0].id = canvas;
@@ -26,20 +26,20 @@ test("shader comparison commands and the frame menu share one selected version",
   const target = { canvas, frame: "Compare" };
   for (const [file, spacing] of [
     ["default", 8],
-    ["soft", 12],
+    [alternate, 12],
   ] as const)
     await ctx.projectFiles!.writeText(
       `design/shaders/section-hatch/${file}.json`,
       JSON.stringify({ name: file, values: { spacing } }),
     );
-  await parameterCommands["parameters.select"].run(ctx, { ...target, file: "soft.json" });
-  expect(await shaderCommands["compare.read"].run(ctx, { shader: "section-hatch" })).toEqual({ version: "soft" });
+  await parameterCommands["parameters.select"].run(ctx, { ...target, file: `${alternate}.json` });
+  expect(await shaderCommands["compare.read"].run(ctx, { shader: "section-hatch" })).toEqual({ version: alternate });
   await shaderCommands["compare.update"].run(ctx, { shader: "section-hatch", version: "default" });
   expect((await parameterCommands["parameters.versions"].run(ctx, target)).file).toBe("default.json");
   await shaderCommands["compare.update"].run(ctx, { shader: "section-hatch" });
   expect(await shaderCommands["compare.read"].run(ctx, { shader: "section-hatch" })).toEqual({ version: null });
-  await parameterCommands["parameters.select"].run(ctx, { ...target, file: "soft.json" });
-  await shaderCommands["version.delete"].run(ctx, { shader: "section-hatch", version: "soft" });
+  await parameterCommands["parameters.select"].run(ctx, { ...target, file: `${alternate}.json` });
+  await shaderCommands["version.delete"].run(ctx, { shader: "section-hatch", version: alternate });
   expect(await shaderCommands["compare.read"].run(ctx, { shader: "section-hatch" })).toEqual({ version: null });
   expect((await parameterCommands["parameters.versions"].run(ctx, target)).file).toBe("default.json");
 });
