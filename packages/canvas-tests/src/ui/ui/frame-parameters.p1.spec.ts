@@ -18,6 +18,8 @@ test("frame parameters and playback stay independent across themes and movement"
   await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(2);
   const menu = surface.getByRole("complementary", { name: "Frame editor" });
   await expect(menu.getByText("Select a frame", { exact: true })).toBeVisible();
+  // Fit both comparison frames beside the editor before interacting with them.
+  await surface.locator("[data-canvas-viewport]").press("f");
   await first.locator("[data-canvas-select]").click();
   await document.getByRole("textbox", { name: "Frame draft" }).fill("Keep this input");
   const dialog = surface.getByRole("complementary", { name: "Frame editor" });
@@ -60,6 +62,7 @@ test("frame parameters and playback stay independent across themes and movement"
   await dialog.getByRole("button", { name: "Midpoint", exact: true }).click();
   await expect(output).toContainText('"time":1');
   await second.locator("[data-canvas-select]").click();
+  await expect(dialog.getByText("Second", { exact: true })).toBeVisible();
   await expect(dialog.locator("[data-frame-playback]:visible")).toContainText("0.00 / 2.00");
   await first.locator("[data-canvas-select]").click();
   await expect(dialog.locator("[data-frame-playback]:visible")).toContainText("1.00 / 2.00");
