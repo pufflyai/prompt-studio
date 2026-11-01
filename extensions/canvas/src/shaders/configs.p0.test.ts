@@ -157,3 +157,12 @@ test("adding an existing shader and unsafe version IDs never replace design data
   await expect(deleteConfig(mount, hatch, "../../outside")).rejects.toThrow();
   expect((await readConfig(mount, hatch, "default")).values.spacing).toBe(12);
 });
+
+test("unsupported version filenames do not break the shader list or version edits", async () => {
+  const { files, mount } = memoryFiles();
+  await addShader(mount, hatch);
+  files.set("design/shaders/section-hatch/-draft.json", "{}");
+  expect((await listShaders(mount)).map((shader) => shader.id)).toEqual(["section-hatch"]);
+  await duplicateConfig(mount, hatch, "default", "Alternative");
+  expect((await listConfigs(mount, hatch)).map((version) => version.id)).toEqual(["default", "alternative"]);
+});

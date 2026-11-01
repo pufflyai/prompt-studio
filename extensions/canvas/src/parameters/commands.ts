@@ -176,9 +176,12 @@ const remove = defineCommand({
     await source.read(file);
     await source.files.delete(source.path(file));
     await ctx.storage.collection("parameter-version-names").delete(source.path(file));
-    await ctx.storage.collection<string>("parameter-versions").put(selectionKey(input), source.file);
+    const selection = ctx.storage.collection<string>("parameter-versions");
+    const selected = await selection.get(selectionKey(input));
+    const next = selected === file ? source.file : (selected ?? source.file);
+    if (selected === file) await selection.put(selectionKey(input), next);
     await ctx.events.emit(parametersChanged, {});
-    return { file: source.file };
+    return { file: next };
   },
 });
 export const parameterCommands = {

@@ -1,6 +1,5 @@
-import { Field, Flex, Input, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Field, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
-import { ScrollArea } from "@pstdio/ui";
 import { type Param, ParamEditor } from "@pstdio/ui/param-editor";
 import { useContext, useEffect, useRef, useState } from "react";
 import type { CanvasItem } from "../canvas-model";
@@ -13,7 +12,8 @@ import type { FrameParameters, Values } from "./model";
 import { Playback } from "./playback";
 import { editableValues, useMotionReview } from "./review";
 
-interface ParameterMenuProps {
+interface ParameterEditorProps {
+  active: boolean;
   item: CanvasItem;
   parameters: FrameParameters;
   onChange: (values: Values) => void;
@@ -55,7 +55,7 @@ const savedVersions = async (host: Parameters<typeof createWebviewClient>[0], it
   const compared = await client.commands["compare.read"]({ shader });
   return { ...result, file: compared.version ? `${compared.version}.json` : result.file };
 };
-export const ParameterMenu = (props: ParameterMenuProps) => {
+export const ParameterEditor = (props: ParameterEditorProps) => {
   const { item, parameters, onChange } = props;
   const host = useContext(FrameHostContext);
   const [values, setValues] = useState(parameters.values);
@@ -196,112 +196,90 @@ export const ParameterMenu = (props: ParameterMenuProps) => {
       setSaving(false);
     }
   };
+  // Keep values and clocks alive, but dispose inactive controls and their portaled menus.
   return (
-    <>
-      <Popover.Root positioning={{ placement: "bottom-end" }}>
-        <Popover.Trigger asChild>
-          <Button size="xs" variant="outline">
-            Parameters
+    <Stack gap="md" p="sm">
+      {props.active && (
+        <Stack gap="md">
+          {!!versions.length && (
+            <ParamEditor
+              params={[
+                {
+                  id: "version",
+                  name: "Version",
+                  type: "selection",
+                  defaultValue: file ?? "",
+                  options: versions.map((version) => ({ id: version.file, name: version.name })),
+                  disabled: saving,
+                },
+              ]}
+              onChange={(_id, value) => {
+                const version = versions.find((entry) => entry.file === value);
+                if (version) choose(version);
+              }}
+            />
+          )}
+          <ParamEditor
+            params={controlParams(parameters, values)}
+            defaultValues={values}
+            onChange={(id, value) => {
+              if (["string", "number", "boolean"].includes(typeof value)) change({ [id]: value as Values[string] });
+            }}
+          />
+          <Button
+            variant="ghost"
+            disabled={saving}
+            onClick={() => {
+              edits.current += 1;
+              const reset = Object.fromEntries(Object.keys(parameters.controls).map((key) => [key, defaults[key]]));
+              setValues((current) => ({ ...current, ...reset }));
+              onChange(reset);
+            }}
+          >
+            Reset parameters
           </Button>
-        </Popover.Trigger>
-        <Portal>
-          <Popover.Positioner>
-            <Popover.Content>
-              <Popover.Header>
-                <Popover.Title>Parameters</Popover.Title>
-              </Popover.Header>
-              <Popover.Body>
-                <ScrollArea maxH="96">
-                  <Stack gap="md">
-                    {!!versions.length && (
-                      <ParamEditor
-                        params={[
-                          {
-                            id: "version",
-                            name: "Version",
-                            type: "selection",
-                            defaultValue: file ?? "",
-                            options: versions.map((version) => ({ id: version.file, name: version.name })),
-                            disabled: saving,
-                          },
-                        ]}
-                        onChange={(_id, value) => {
-                          const version = versions.find((entry) => entry.file === value);
-                          if (version) choose(version);
-                        }}
-                      />
-                    )}
-                    <ParamEditor
-                      params={controlParams(parameters, values)}
-                      defaultValues={values}
-                      onChange={(id, value) => {
-                        if (["string", "number", "boolean"].includes(typeof value))
-                          change({ [id]: value as Values[string] });
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      disabled={saving}
-                      onClick={() => {
-                        edits.current += 1;
-                        const reset = Object.fromEntries(
-                          Object.keys(parameters.controls).map((key) => [key, defaults[key]]),
-                        );
-                        setValues((current) => ({ ...current, ...reset }));
-                        onChange(reset);
-                      }}
-                    >
-                      Reset parameters
-                    </Button>
-                    {item.preview.save && (
-                      <>
-                        <Field.Root>
-                          <Field.Label>Version name</Field.Label>
-                          <Input size="sm" value={name} onChange={(event) => setName(event.target.value)} />
-                        </Field.Root>
-                        <Flex gap="sm">
-                          <Button
-                            variant="primary"
-                            loading={saving}
-                            disabled={!host || !dirty || saving}
-                            onClick={() => void save(false)}
-                          >
-                            Save
-                          </Button>
-                          <Button disabled={!host || !name.trim() || saving} onClick={() => void save(true)}>
-                            Save as new version
-                          </Button>
-                        </Flex>
-                        <Flex gap="sm">
-                          <Button disabled={!host || !name.trim() || saving} onClick={() => void manage(false)}>
-                            Rename version
-                          </Button>
-                          <Button
-                            disabled={!host || file === item.preview.save.file || saving}
-                            onClick={() => void manage(true)}
-                          >
-                            Delete version
-                          </Button>
-                        </Flex>
-                      </>
-                    )}
-                    <Text role="status" textStyle="paragraph/S/regular" color="fg.muted">
-                      {dirty ? "Temporary changes" : "Saved values"}
-                    </Text>
-                    {error && (
-                      <Text role="alert" color="fg.error">
-                        {error}
-                      </Text>
-                    )}
-                  </Stack>
-                </ScrollArea>
-              </Popover.Body>
-            </Popover.Content>
-          </Popover.Positioner>
-        </Portal>
-      </Popover.Root>
+          {item.preview.save && (
+            <>
+              <Field.Root>
+                <Field.Label>Version name</Field.Label>
+                <Input size="sm" value={name} onChange={(event) => setName(event.target.value)} />
+              </Field.Root>
+              <Flex gap="sm" wrap="wrap">
+                <Button
+                  variant="primary"
+                  loading={saving}
+                  disabled={!host || !dirty || saving}
+                  onClick={() => void save(false)}
+                >
+                  Save
+                </Button>
+                <Button disabled={!host || !name.trim() || saving} onClick={() => void save(true)}>
+                  Save as new version
+                </Button>
+              </Flex>
+              <Flex gap="sm" wrap="wrap">
+                <Button disabled={!host || !name.trim() || saving} onClick={() => void manage(false)}>
+                  Rename version
+                </Button>
+                <Button disabled={!host || file === item.preview.save.file || saving} onClick={() => void manage(true)}>
+                  Delete version
+                </Button>
+              </Flex>
+            </>
+          )}
+          <Text role="status" textStyle="paragraph/S/regular" color="fg.muted">
+            {dirty ? "Temporary changes" : "Saved values"}
+          </Text>
+          {error && (
+            <Text role="alert" color="fg.error">
+              {error}
+            </Text>
+          )}
+        </Stack>
+      )}
       {parameters.motion && (
         <Playback
+          active={props.active}
           motion={parameters.motion}
           restored={playback}
           onInteraction={() => {
@@ -310,6 +288,6 @@ export const ParameterMenu = (props: ParameterMenuProps) => {
           onChange={onChange}
         />
       )}
-    </>
+    </Stack>
   );
 };

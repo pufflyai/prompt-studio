@@ -74,6 +74,7 @@ const remove = defineCommand({
     const id = studyId.parse(input.study);
     await projectFiles(ctx).delete(`${studiesPath}/${id}`);
     await ctx.storage.collection("reviews").delete(id);
+    await ctx.storage.collection<boolean>("legacy-imports").put(`motion:${id}`, true);
     await ctx.resources.removed({ type: canvasResource.id, id: `${studiesPath}/${id}/study.canvas.tsx` });
     await ctx.events.emit(studiesChanged, { studies: [id] });
     return { id };

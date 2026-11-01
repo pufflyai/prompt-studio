@@ -46,7 +46,7 @@ export const Small = { name: "Small size", args: { children: "Save", size: "sm" 
 
 ## Parameters, playback, and saved versions
 
-Declare `controls` on a frame or default export: `number` with min/max/step, `boolean`, or `select` with value/label options. Args supply initial values. Parameters updates only that frame and keeps React state. Reset restores the selected version. Temporary experiments do not edit source.
+Declare `controls` on a frame or default export: `number` with min/max/step, `boolean`, or `select` with value/label options. Args supply initial values. Select a frame to show its parameters, versions, and playback in the Frame editor menu on the right. With no selection the menu asks for a frame. Switching selection retains each frame’s temporary values and playback state. Parameters update only that frame and keep React state. Reset restores the selected version. Temporary experiments do not edit source.
 
 Declare `motion: { duration, fps?, markers? }` to drive a `time` arg in seconds from independent play/pause, scrub, speed, and loop-range controls. Derive animation from time so scrubbing works.
 
