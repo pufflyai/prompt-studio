@@ -79,6 +79,7 @@ export const CompareView = (props: CompareViewProps) => {
   const { commits, base, head, platform, rows, filter, selected } = props;
   const find = (sha?: string) => commits.find((commit) => commit.sha === sha);
   const missing = [find(base), find(head)].filter((commit) => commit && !commit.measured);
+  const waiting = missing.length > 0 && missing.every((commit) => commit && props.measuring.includes(commit.sha));
   const compared = rows.filter((row) => row.change);
   const single = rows.length > 0 && rows.every(isSingleSample);
   const visible = sortRows(rows).filter((row) => single || filter === "all" || row.change?.verdict === filter);
@@ -114,11 +115,17 @@ export const CompareView = (props: CompareViewProps) => {
       {missing.length ? (
         <EmptyState
           title={`${missing.map((commit) => shortSha(commit?.sha ?? "")).join(" and ")} ${missing.length > 1 ? "have" : "has"} no results on ${platformLabel(platform)}`}
-          description="Measure it once and the comparison fills in when the run finishes. Commits that already have results are not run again."
+          description={
+            waiting
+              ? "A run is measuring it now. The comparison fills in when the run finishes."
+              : "Measure it once and the comparison fills in when the run finishes. Commits that already have results are not run again."
+          }
         >
           <Button
             size="sm"
             variant="primary"
+            loading={waiting}
+            loadingText="Measuring"
             onClick={() => props.onMeasure(missing.map((commit) => commit?.sha ?? ""))}
           >
             Measure {missing.map((commit) => shortSha(commit?.sha ?? "")).join(" and ")}

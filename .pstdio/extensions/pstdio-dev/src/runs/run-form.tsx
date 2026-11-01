@@ -18,7 +18,8 @@ interface RunFormProps {
   pending: boolean;
   error?: string;
   onChange: (value: RunRequest) => void;
-  onStart: () => void;
+  // Receives only what CI will run: new commits and the suites the chosen platforms support.
+  onStart: (request: RunRequest) => void;
 }
 
 const toggle = (list: string[], item: string) =>
@@ -44,7 +45,10 @@ const problemOf = (request: RunRequest, reused: number) => {
 
 export const RunForm = (props: RunFormProps) => {
   const { value, refs, pending, error, onChange, onStart } = props;
-  const measured = (ref: string) => refs.some((option) => option.ref === ref && option.measured);
+  // A typed SHA matches its commit by prefix, so a pushed commit is recognized however it was entered.
+  const find = (ref: string) =>
+    refs.find((option) => option.ref === ref || (ref.length >= 7 && option.sha.startsWith(ref)));
+  const measured = (ref: string) => Boolean(find(ref)?.measured);
   const fresh = value.commits.filter((ref) => !measured(ref));
   const reused = value.commits.length - fresh.length;
   const chosen = SUITES.filter((suite) => value.suites.includes(suite.id) && available(suite, value.platforms));
@@ -69,7 +73,7 @@ export const RunForm = (props: RunFormProps) => {
             Commits, branches, or tags
           </Text>
           {value.commits.map((ref) => {
-            const known = refs.find((option) => option.ref === ref);
+            const known = find(ref);
             return (
               <HStack key={ref} gap="sm" bg="bg.subtle" borderRadius="xs" px="sm" py="2xs">
                 <Text textStyle="mono/XS" truncate>
@@ -89,7 +93,11 @@ export const RunForm = (props: RunFormProps) => {
               </HStack>
             );
           })}
-          <RefInput options={refs} chosen={value.commits} onAdd={addCommit} />
+          <RefInput
+            options={refs.filter((option) => option.ref === "main" || option.ref.startsWith("pstdio@"))}
+            chosen={value.commits}
+            onAdd={addCommit}
+          />
         </Stack>
         <Fieldset.Root>
           <Fieldset.Legend textStyle="label/S/regular" color="fg.muted">
@@ -157,7 +165,7 @@ export const RunForm = (props: RunFormProps) => {
                 : ""}
             </Text>
           </Stack>
-          <Button size="sm" variant="primary" onClick={onStart} disabled={Boolean(problem)} loading={pending}>
+          <Button size="sm" variant="primary" onClick={() => onStart({ ...value, commits: fresh, suites: chosen.map((suite) => suite.id) })} disabled={Boolean(problem)} loading={pending}>
             Start run
           </Button>
         </HStack>

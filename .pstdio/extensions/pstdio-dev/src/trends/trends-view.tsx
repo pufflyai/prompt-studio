@@ -63,6 +63,7 @@ export const TrendsView = (props: TrendsViewProps) => {
   if (!versions.length)
     return (
       <PageFrame toolbar={toolbar}>
+        {props.notice}
         <EmptyState
           title="No release results yet"
           description="Releases attach their benchmark results when they publish. Results appear here after the first release that records them."
