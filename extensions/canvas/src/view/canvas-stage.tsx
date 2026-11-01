@@ -18,6 +18,9 @@ export const CanvasStage = (props: StageProps) => {
   const stage = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const container = shell.current!;
+    // The camera owns navigation; native focus and scrollIntoView must not move its viewport.
+    const overflow = container.style.overflow;
+    container.style.overflow = "clip";
     runtime.mount(container, stage.current!);
     let active = true;
     let measureFrame = 0;
@@ -39,6 +42,7 @@ export const CanvasStage = (props: StageProps) => {
       observer.disconnect();
       document.fonts.removeEventListener("loadingdone", measure);
       cancelAnimationFrame(measureFrame);
+      container.style.overflow = overflow;
       runtime.dispose();
     };
   }, [runtime]);
