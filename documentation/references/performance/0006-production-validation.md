@@ -16,7 +16,8 @@ P3 runs the maintained acceptance workloads on exact candidate inputs. Manual an
 Run an enabled family manually after restoring the candidate archive and installing its declared browser/native dependencies:
 
 ```sh
-bun scripts/ci/production-performance.ts backend
+bun scripts/ci/production-performance.ts storage
+bun scripts/ci/production-performance.ts runtime
 bun scripts/ci/production-performance.ts browser
 bun scripts/ci/production-performance.ts navigation
 bun scripts/ci/production-performance.ts planner

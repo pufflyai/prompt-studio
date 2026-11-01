@@ -94,6 +94,8 @@ export const fg = {
 
   button: {
     primary: {
+      hover: { value: "{colors.fg.button.primary.default}" },
+      pressed: { value: "{colors.fg.button.primary.default}" },
       default: {
         value: {
           _light: "{colors.blacks.800}",
@@ -107,6 +109,9 @@ export const fg = {
   },
 
   "menu-item": {
+    hover: { value: "{colors.fg.menu-item.default}" },
+    focus: { value: "{colors.fg.menu-item.default}" },
+    selected: { value: "{colors.fg.menu-item.default}" },
     default: {
       value: "{colors.fg}",
     },
@@ -248,6 +253,9 @@ export const orange = {
 };
 
 export const text = {
+  selection: {
+    value: { _light: "{colors.fg}", _dark: "{colors.fg.inverted}" },
+  },
   selectable: {
     primary: {
       value: {

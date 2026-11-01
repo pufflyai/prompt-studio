@@ -15,6 +15,7 @@ import {
   type CreateWorkbenchStoragePersistenceInput,
   readJson,
   resolveStorage,
+  workbenchHostStorageKey,
   workbenchStoragePersistenceKey,
 } from "./local-storage-persistence-helpers";
 
@@ -110,6 +111,7 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
     },
   };
   const layoutPersistence = createLocalStorageLayoutPersistence({
+    scope: input.scope,
     debounceMs: input.debounceMs,
     eventTarget: input.eventTarget,
     namespace: input.namespace,
@@ -127,13 +129,14 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
     flush: layoutPersistence.flush,
     dispose: layoutPersistence.dispose,
   };
-  const statusBarKey = workbenchStoragePersistenceKey(input.namespace, "status-bar", undefined);
+  const statusBarKey = workbenchHostStorageKey(input.namespace, "status-bar", input.scope);
   const statusBarPersistence: WorkbenchStatusBarPersistenceAdapter = {
     getOrder: () => readJson<string[]>(storage, statusBarKey),
     setOrder: (ids) => storage.setItem(statusBarKey, JSON.stringify(ids)),
   };
 
   return {
+    storageScope: input.scope,
     preferencePersistence,
     snapshotPersistence,
     statusBarPersistence,

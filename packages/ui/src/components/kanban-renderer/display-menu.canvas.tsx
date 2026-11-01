@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { DisplayMenu } from "./display-menu";
 import { buildDisplayPropertyOptions, buildGroupingOptions } from "./kanban-renderer-helpers";
@@ -36,7 +36,7 @@ const meta: CanvasMeta = {
   title: "Patterns/Kanban Renderer/Display Menu",
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const Wrapper = (props: { initialSettings?: KanbanRendererSettings } = {}) => {
   const [settings, setSettings] = useState<KanbanRendererSettings>(
     props.initialSettings ?? DEFAULT_KANBAN_RENDERER_SETTINGS,

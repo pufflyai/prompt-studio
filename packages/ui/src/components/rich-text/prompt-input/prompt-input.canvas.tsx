@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
 import { PromptEditor, type PromptEditorProps } from "./prompt-input";
 import { generateEditorStateFromString } from "./utils";
@@ -7,7 +7,6 @@ import { generateEditorStateFromString } from "./utils";
 const meta: CanvasMeta<typeof PromptEditor> = {
   title: "Patterns/Editors/Prompt Editor",
   component: PromptEditor,
-  parameters: { layout: "padded" },
   args: {
     defaultState: JSON.stringify(generateEditorStateFromString()),
     commands: [
@@ -17,7 +16,7 @@ const meta: CanvasMeta<typeof PromptEditor> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof PromptEditor>;
+type Story = CanvasFrame<typeof PromptEditor>;
 export const Basic: Story = {
   id: "patterns-editors-prompt-editor--basic",
 };

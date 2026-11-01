@@ -1,5 +1,5 @@
 import { Box, Button, HStack, IconButton, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
@@ -79,13 +79,9 @@ const overflowingFollowUpMessages: SessionMessage[] = [
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel",
   component: ChatPanel,
-  parameters: {
-    layout: "padded",
-    actions: { argTypesRegex: "^on[A-Z].*" },
-  },
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 type ChatPanelProps = ComponentProps<typeof ChatPanel>;
 const panelContainerStyles = {
   w: "960px",
@@ -575,12 +571,10 @@ export const PromptHistory: Story = {
 };
 export const PromptHistoryFull: Story = {
   id: "patterns-chat-chat-panel--prompt-history-full",
-  tags: ["!manifest"],
   render: () => <PromptHistoryPanel prompts={Array.from({ length: 12 }, (_, i) => `Prompt ${i + 1}`)} />,
 };
 export const PromptHistoryMultiline: Story = {
   id: "patterns-chat-chat-panel--prompt-history-multiline",
-  tags: ["!manifest"],
   render: () => <PromptHistoryPanel prompts={["Earlier prompt", "First line\nSecond line"]} />,
 };
 export const PromptHistoryReset: Story = {

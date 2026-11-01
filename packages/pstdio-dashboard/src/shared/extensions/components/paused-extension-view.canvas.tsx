@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { PausedExtensionView } from "./paused-extension-view";
 
 const meta = {
@@ -8,7 +8,7 @@ const meta = {
   args: { installedExtensionId: "shader", name: "Shader Lab" },
 } satisfies CanvasMeta<typeof PausedExtensionView>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 // A view in a panel gets the full empty state.
 export const Panel: Story = {
   id: "extensions-paused-extension-view--panel",

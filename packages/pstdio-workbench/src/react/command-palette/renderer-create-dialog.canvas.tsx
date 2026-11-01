@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -55,10 +55,10 @@ void workbench.keyboard.press("C").then(() => workbench.keyboard.press("T"));
 const meta = {
   title: "pstdio-workbench/Reference/Command creation",
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const SharedCreationForm: Story = {
   id: "pstdio-workbench-reference-command-creation--shared-creation-form",
   args: { workbench },

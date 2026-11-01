@@ -1,5 +1,5 @@
 import { Box, Button, Dialog, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Cpu, TerminalIcon } from "lucide-react";
 import { useState } from "react";
 import { WorkspaceAgentMenu, type WorkspacePanelMenuOption } from "./workspace-agent-menu";
@@ -7,7 +7,6 @@ import { WorkspaceAgentMenu, type WorkspacePanelMenuOption } from "./workspace-a
 const meta: CanvasMeta<typeof WorkspaceAgentMenu> = {
   title: "Shared/WorkspaceAgentMenu",
   component: WorkspaceAgentMenu,
-  parameters: { layout: "padded" },
   decorators: [
     (Story) => (
       <Box maxWidth="400px">
@@ -17,7 +16,7 @@ const meta: CanvasMeta<typeof WorkspaceAgentMenu> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof WorkspaceAgentMenu>;
+type Story = CanvasFrame<typeof WorkspaceAgentMenu>;
 const agentOptions = [
   { label: "Claude Code", value: "claude-code", icon: TerminalIcon },
   { label: "OpenCode", value: "opencode", icon: TerminalIcon },
@@ -237,8 +236,7 @@ export const NoHarnessAvailable: Story = {
 };
 export const CommandDialogPlacement: Story = {
   id: "shared-workspaceagentmenu--command-dialog-placement",
-  tags: ["!manifest"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("claude-code");
     const [selectedModel, setSelectedModel] = useState("claude-sonnet-4");

@@ -1,5 +1,5 @@
 import { Button, HStack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import { startChatMountMetric } from "../performance/chat-mount-metrics";
 import {
@@ -24,20 +24,12 @@ import type { SessionMessage } from "./message-types";
 const meta: CanvasMeta<typeof ChatPanel> = {
   title: "Patterns/Chat/Chat Panel Performance",
   component: ChatPanel,
-  parameters: {
-    layout: "fullscreen",
-    controls: { disable: true },
-    docs: {
-      description: {
-        component:
-          "Performance benchmarks for ChatPanel mount, streaming, and session switching. Excluded from agent manifests.",
-      },
-    },
-  },
-  tags: ["!manifest"],
+  description:
+    "Performance benchmarks for ChatPanel mount, streaming, and session switching. Excluded from agent manifests.",
+  fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof ChatPanel>;
+type Story = CanvasFrame<typeof ChatPanel>;
 const largeConversation = buildLargeChatConversation({
   sessionId: "perf-large",
   turns: CHAT_PERFORMANCE_STRESS_TURNS,

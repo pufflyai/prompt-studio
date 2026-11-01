@@ -1,5 +1,5 @@
 import { Button, HStack, Kbd } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Tooltip } from "../primitives/tooltip";
 import { PaletteShortcut } from "./palette-shortcut";
 
@@ -9,7 +9,7 @@ const meta = {
   args: { binding: "Alt+Shift+N" },
 } satisfies CanvasMeta<typeof PaletteShortcut>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Inline: Story = {
   id: "components-paletteshortcut--inline",
 };

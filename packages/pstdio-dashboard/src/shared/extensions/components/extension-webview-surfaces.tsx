@@ -1,5 +1,6 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
+import { useUiScope } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { useWebviewKeyboardShortcuts } from "@pstdio/workbench/react";
 import {
@@ -88,6 +89,7 @@ export const BridgedWebviewSurface = (props: {
   view: ExtensionFrameProps["view"];
 }) => {
   const { capabilities, extensionProps, hostEvents, theme, view } = props;
+  const surface = useUiScope();
   const keyboard = useWebviewKeyboardShortcuts(props.workbench);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -111,6 +113,11 @@ export const BridgedWebviewSurface = (props: {
       ) : null}
       <ExtensionFrame
         {...keyboard}
+        themeRoot={() => surface?.root.current ?? null}
+        onKeyboardEvent={(event) => {
+          if (props.workbench && !props.workbench.activation.isActive()) return;
+          document.dispatchEvent(new KeyboardEvent("keydown", { ...event, bubbles: true, cancelable: true }));
+        }}
         sizing={props.sizing}
         view={view}
         props={extensionProps}

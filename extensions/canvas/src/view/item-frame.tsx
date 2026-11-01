@@ -81,7 +81,7 @@ export const ItemFrame = (props: ItemProps) => {
             {item.name}
           </Button>
         </Tooltip>
-        <FrameThemePicker id={item.id} name={item.name} runtime={runtime} />
+        <FrameThemePicker item={selectedItem} runtime={runtime} />
         {variant && <FrameVariantPicker item={item} selected={variant} onSelect={setVariantId} />}
         <Text role="status" aria-live="polite" textStyle="label/XS" color="fg.muted">
           {feedback}

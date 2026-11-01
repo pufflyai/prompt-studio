@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -11,36 +11,36 @@ const SettingsOverlayStory = () => {
   useEffect(() => {
     const settings = workbench.registerModule(createWorkbenchSettingsModule());
     const general = workbench.registerModule({
-      id: "storybook.settings.general",
+      id: "preview.settings.general",
       activate(ctx) {
         ctx.views.registerView({
-          id: "storybook.settings.general.view",
+          id: "preview.settings.general.view",
           title: "General",
           body: { kind: "react", render: () => <Text p="md">General settings</Text> },
         });
         ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
         ctx.settings.registerPanel({
-          id: "storybook.general",
+          id: "preview.general",
           title: "General",
           kind: "view",
           order: 10,
           section: "workbench",
           scope: "global",
-          viewId: "storybook.settings.general.view",
+          viewId: "preview.settings.general.view",
         });
         ctx.views.registerView({
-          id: "storybook.settings.appearance.view",
+          id: "preview.settings.appearance.view",
           title: "Appearance",
           body: { kind: "react", render: () => <Text p="md">Appearance settings</Text> },
         });
         ctx.settings.registerPanel({
-          id: "storybook.appearance",
+          id: "preview.appearance",
           title: "Appearance",
           kind: "view",
           order: 20,
           section: "workbench",
           scope: "global",
-          viewId: "storybook.settings.appearance.view",
+          viewId: "preview.settings.appearance.view",
         });
       },
     });
@@ -64,15 +64,11 @@ const meta = {
       </WorkbenchThemeProvider>
     ),
   ],
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: { component: "The settings dialog uses the shared dialog close position beside its title." },
-    },
-  },
+  description: "The settings dialog uses the shared dialog close position beside its title.",
+  fullscreen: true,
 } satisfies CanvasMeta<typeof SettingsOverlayStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const CenteredClose: Story = {
   id: "pstdio-workbench-reference-core-api-settings-overlay--centered-close",
 };

@@ -15,6 +15,16 @@ export const quarantineRegistry = JSON.parse(
   readFileSync(new URL("./test-quarantine.json", import.meta.url), "utf8"),
 ) as QuarantinedTest[];
 
+export const quarantineRunnerForTest = (runner: string) => {
+  const runners: Record<string, string> = {
+    app: "playwright-ui",
+    "packaged-cli": "packaged-bun",
+    "packaged-browser": "playwright",
+    desktop: "packaged-desktop",
+  };
+  return runners[runner] ?? "bun";
+};
+
 const escapeRegex = (name: string) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const matchesPlatform = (entry: QuarantinedTest, platform: string, arch: string) =>
@@ -69,6 +79,7 @@ const browserReports: Record<string, string> = {
   "playwright-ui": "packages/e2e/test-results/ui-quarantine/results.json",
   "packaged-desktop": "clients/desktop/test-results/packaged-quarantine-readiness.json",
   "packaged-desktop-benchmark": "clients/desktop/test-results/packaged-benchmarks-quarantine.json",
+  "workbench-benchmark": "packages/e2e/test-results/workbench-benchmarks-quarantine.json",
 };
 export const browserQuarantineReportPath = (runner: string) => {
   const path = browserReports[runner];

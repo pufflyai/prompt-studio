@@ -41,6 +41,7 @@ define their exact types.
 | `storage.positions.between(before?, after?)` | A unique position strictly between the supplied neighbours. Omit either end, or both for a first position. |
 | `storage.migrate(version, run)` | Runs `run(previousVersion, migration)` once for a scope version. Existing one-argument callbacks remain supported. |
 | `migration.id(key, prefix?)` | A UUIDv8 derived from the extension, workbench, scope, target migration version and stable source key. The optional prefix selects the same compact format. |
+| `migration.position(rank, key)` | A deterministic initial position for a zero-based nonnegative safe integer rank and stable unique item key. The key separates equal ranks from different offline source lists. Sort source items by stable data before assigning ranks. Use `storage.positions.between` for later insertions and moves. |
 
 `storage.ids.create("tk")` returns `tk_` followed by 22 Base62 characters, retaining
 all 128 UUID bits. Prefixes match `[a-z][a-z0-9]{0,15}`; an empty string is invalid.
@@ -57,7 +58,7 @@ resource ownership. Numbered resources use the same generator through
 `resources.allocate({ kind, idPrefix? })`; see [Resource identities](0002-resources.md#resource-identities).
 
 Compare positions with ordinary string comparison (`<`, `>`, or default string
-`sort()`), never `localeCompare`. The complete string includes device identity
+`sort()`), never `localeCompare`. Positions from `between` include device identity
 and a random suffix. Concurrent positions remain distinct and divisible without
 rebalancing. Store one position per stable item record so concurrent moves merge
 to one item. See [Create records and arrange items](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).

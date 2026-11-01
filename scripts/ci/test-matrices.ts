@@ -6,6 +6,10 @@ import type { readWorkspacePackages } from "./workspace-packages";
 
 type WorkspacePackage = ReturnType<typeof readWorkspacePackages>[number];
 
+// Each contract job spends most of a minute on setup before short tests. Two shards keep the
+// queue's job count low while the longest shard stays within its critical path.
+const contractJobs = 2;
+
 const partition = (files: string[], maximum: number, target: number) => {
   const count = Math.min(maximum, Math.ceil(files.length / target));
   const rows: string[][] = Array.from({ length: count }, () => []);
@@ -99,7 +103,7 @@ export const createTestMatrices = (
           ),
       )
       .map((pkg) => pkg.name);
-    return partitionPackageChecks(names).map((row) => ({ ...row, priority }));
+    return partitionPackageChecks(names, contractJobs).map((row) => ({ ...row, priority }));
   });
   const app = selected.filter((file) => testRunner(file) === "app");
   const appMatrix = functional.flatMap((priority) =>
@@ -121,16 +125,19 @@ export const createTestMatrices = (
   );
   return {
     integrationMatrix: priorities.flatMap((priority) =>
-      packages
-        .filter((pkg) =>
-          selected.some(
-            (file) =>
-              file.startsWith(`${pkg.dir}/`) &&
-              testRunner(file) === "integration" &&
-              priorityFromFile(file) === priority,
-          ),
-        )
-        .map((pkg) => ({ package: pkg.name, priority })),
+      partitionPackageChecks(
+        packages
+          .filter((pkg) =>
+            selected.some(
+              (file) =>
+                file.startsWith(`${pkg.dir}/`) &&
+                testRunner(file) === "integration" &&
+                priorityFromFile(file) === priority,
+            ),
+          )
+          .map((pkg) => pkg.name),
+        contractJobs,
+      ).map((row) => ({ ...row, priority })),
     ),
     databaseMatrix,
     bunContractMatrix,

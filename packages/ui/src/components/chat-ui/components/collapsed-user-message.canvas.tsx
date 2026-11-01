@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
@@ -34,11 +34,9 @@ function Preview(props: PreviewProps) {
 }
 const meta: CanvasMeta = {
   title: "Patterns/Chat/Collapsed User Message",
-  parameters: { layout: "padded" },
-  tags: ["!manifest"],
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 export const WrappedPrompt: Story = {
   id: "patterns-chat-collapsed-user-message--wrapped-prompt",
   render: () => <Preview text={wrappedPrompt} narrow />,

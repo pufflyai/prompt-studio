@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { AvailableExtensionDetail } from "./available-extension-detail";
 
 const noop = () => undefined;
@@ -67,7 +67,7 @@ const metadata = {
 const meta: CanvasMeta<typeof AvailableExtensionDetail> = {
   title: "ProjectSettings/AvailableExtensionDetail",
   component: AvailableExtensionDetail,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: {
     extension: {
       installName: "pstdio-reports",
@@ -91,7 +91,7 @@ const meta: CanvasMeta<typeof AvailableExtensionDetail> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof AvailableExtensionDetail>;
+type Story = CanvasFrame<typeof AvailableExtensionDetail>;
 export const Contributions: Story = {
   id: "projectsettings-availableextensiondetail--contributions",
 };

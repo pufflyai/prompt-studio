@@ -1,5 +1,10 @@
-import { type CanvasMeta, type CanvasProject, type CanvasVariant, composePreview } from "@pstdio/canvas";
-import type { ComponentType } from "react";
+import {
+  type CanvasFrame,
+  type CanvasMeta,
+  type CanvasPreview,
+  CanvasThemeContext,
+  composePreview,
+} from "@pstdio/canvas";
 
 interface PreviewInput {
   kind: string;
@@ -17,22 +22,20 @@ export const createPreviewLoader =
     const started = performance.now();
     const module = await modules[input.source]?.();
     if (!module) throw new Error(`Missing preview source: ${input.source}`);
-    if (input.kind === "document") {
-      imported();
-      return {
-        Component: module.default as ComponentType,
-        timings: { importMs: performance.now() - started, setupMs: 0 },
-      };
-    }
     const project = (await projects[input.suite]()).default;
     const exportName = input.exportName!;
     if (!module[exportName]) throw new Error(`Missing preview: ${input.source}#${exportName}`);
     const importedAt = performance.now();
     imported();
-    const preview = await composePreview(
-      module[exportName] as CanvasVariant,
+    const preview = composePreview(
+      module[exportName] as CanvasFrame,
       module.default as CanvasMeta,
-      project as CanvasProject,
+      project as CanvasPreview,
     );
-    return { ...preview, timings: { importMs: importedAt - started, setupMs: performance.now() - importedAt } };
+    // A preview with decorators themes its frames from this context; the runtime themes the others.
+    return {
+      ...preview,
+      ThemeProvider: (project as CanvasPreview).decorators?.length ? CanvasThemeContext.Provider : undefined,
+      timings: { importMs: importedAt - started, setupMs: performance.now() - importedAt },
+    };
   };

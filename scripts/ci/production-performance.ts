@@ -1,34 +1,31 @@
 import { mkdirSync } from "node:fs";
 import { cpus, platform, release, totalmem } from "node:os";
 import { runCiChecks } from "./run-ci-checks";
-import { discoverTestFiles } from "./test-discovery";
 
 const performanceChecks = (family: string) => {
-  if (family === "backend")
-    return discoverTestFiles(process.cwd())
-      .filter(
-        (path) =>
-          path.startsWith("packages/") &&
-          !path.startsWith("packages/e2e/") &&
-          !path.startsWith("packages/canvas-tests/") &&
-          path.endsWith(".p3.bench.ts"),
-      )
-      .map((path) => ({ id: path, command: ["bun", path] }));
+  // Backend suites run as separate jobs: together they exceed the release's critical path on Windows.
+  if (family === "storage" || family === "runtime")
+    return [
+      {
+        id: family,
+        command: [
+          "bun",
+          "packages/benchmarks/src/cli.ts",
+          "sample",
+          "--suite",
+          family,
+          "--out",
+          `test-results/production-performance/${family}/${family}.jsonl`,
+        ],
+      },
+    ];
   if (family === "browser")
     return [
       { id: "chat-rendering", command: ["bun", "run", "--cwd", "packages/ui", "perf:chat"] },
       { id: "canvas-startup", command: ["bun", "run", "--cwd", "packages/canvas-tests", "perf:startup"] },
       {
         id: "frontend",
-        command: [
-          "bun",
-          "run",
-          "--cwd",
-          "packages/e2e",
-          "src/scripts/run-playwright.ts",
-          "-c",
-          "playwright.perf.config.ts",
-        ],
+        command: ["bun", "scripts/ci/run-workbench-benchmarks.ts"],
       },
       { id: "packaged-collections", command: ["bun", "run", "--cwd", "packages/e2e", "test:packaged:benchmark"] },
     ];
@@ -52,6 +49,8 @@ if (import.meta.main) {
   const checks = performanceChecks(family);
   const directory = `test-results/production-performance/${family}`;
   mkdirSync(directory, { recursive: true });
+  if (family === "storage" || family === "runtime")
+    for (const check of checks) await Bun.write(`${directory}/${check.id}.jsonl`, "");
   const metadata = {
     sourceSha: process.env.SOURCE_SHA,
     versionSha: process.env.VERSION_SHA,
@@ -68,7 +67,7 @@ if (import.meta.main) {
     trace: "off",
     checks,
     // Sampling, cold/warm boundaries and budgets belong to each maintained benchmark.
-    measurementPolicy: "Use each benchmark's fixed default workload and existing operation budgets unchanged",
+    measurementPolicy: "Use registered benchmark workloads and existing operation budgets unchanged",
   };
   await Bun.write(`${directory}/metadata.json`, JSON.stringify(metadata, null, 2));
   const report = await runCiChecks(checks, { priority: "P3", concurrency: 1 });

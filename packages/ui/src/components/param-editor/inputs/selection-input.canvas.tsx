@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { SelectionInput } from "./selection-input";
 
 const main = { id: "main", name: "main", icon: "git-commit-horizontal" };
@@ -16,10 +16,9 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof SelectionInput>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const BranchChoices: Story = {
   id: "patterns-param-editor-selection--branch-choices",
-  tags: ["menu-selection"],
 };
 export const StatusChoices: Story = {
   id: "patterns-param-editor-selection--status-choices",
@@ -68,7 +67,6 @@ export const OptionalSelection: Story = {
 };
 export const MultiSelection: Story = {
   id: "patterns-param-editor-selection--multi-selection",
-  tags: ["menu-selection"],
   args: { options: [main], defaultValue: ["main"], multiSelect: true },
 };
 export const UnavailableAlternatives: Story = {

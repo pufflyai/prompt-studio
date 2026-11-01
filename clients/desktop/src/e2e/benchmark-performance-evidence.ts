@@ -15,20 +15,22 @@ export const enableBenchmarkMonitoring = (home: string) => {
 
 export const attachBenchmarkPerformance = async (app: PackagedApp, name: string, endedAt: number) => {
   let settlingError: unknown;
+  let snapshot: PerformanceSnapshot | null = null;
   // Read settling evidence after the operation clock stops. This never changes its budget or workload.
   await expect
     .poll(
       async () => {
-        const snapshot = await readSnapshot(app.page);
-        if (snapshot?.version !== 2) return false;
+        const current = await readSnapshot(app.page);
+        snapshot = current;
+        if (current?.version !== 2) return false;
         return ["backend", "workbench"].every(
           (role) =>
-            snapshot.capture.samples.filter((sample) =>
+            current.capture.samples.filter((sample) =>
               sample.processes.some((process) => process.role === role && process.cpuTimeMs !== null),
             ).length >= 2 &&
-            snapshot.capture.samples.some(
+            current.capture.samples.some(
               (sample) =>
-                Date.parse(sample.capturedAt) >= endedAt + snapshot.capture.sampleIntervalMs &&
+                Date.parse(sample.capturedAt) >= endedAt + current.capture.sampleIntervalMs &&
                 sample.processes.some((process) => process.role === role),
             ),
         );
@@ -44,7 +46,6 @@ export const attachBenchmarkPerformance = async (app: PackagedApp, name: string,
     .catch((error: unknown) => {
       settlingError = error;
     });
-  let snapshot: PerformanceSnapshot | null = null;
   let saved: PerformanceRecordingExport | null = null;
   let summary: ReturnType<typeof summarizePerformanceEvidence>;
   const operation = { startedAt: app.startedAt, endedAt };

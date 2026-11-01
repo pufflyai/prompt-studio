@@ -1,5 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import {
   KanbanSquare,
   MessageCircle,
@@ -184,12 +184,10 @@ const PaletteStory = (props: PaletteStoryProps) => {
 const meta: CanvasMeta<typeof PaletteStory> = {
   title: "Components/Overlays/Palette",
   component: PaletteStory,
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof PaletteStory>;
+type Story = CanvasFrame<typeof PaletteStory>;
 export const Default: Story = {
   id: "components-overlays-palette--default",
   render: () => <PaletteStory />,
@@ -205,13 +203,7 @@ export const ThemeMenu: Story = {
 export const FullScreenNavigation: Story = {
   id: "components-overlays-palette--full-screen-navigation",
   render: () => <PaletteStory fullScreen searchAutoFocus={false} entries={largeEntries} />,
-  parameters: {
-    docs: {
-      description: {
-        story: "Fill the viewport and focus the dialog on open. Search receives focus only when selected.",
-      },
-    },
-  },
+  description: "Fill the viewport and focus the dialog on open. Search receives focus only when selected.",
 };
 export const Modes: Story = {
   id: "components-overlays-palette--modes",

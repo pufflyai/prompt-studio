@@ -1,16 +1,15 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Canvas } from "./canvas";
 import { FreeformCanvasExample } from "./canvas.examples";
 
 const meta: CanvasMeta<typeof Canvas> = {
   title: "Components/Layout/Canvas Gestures",
   component: Canvas,
-  tags: ["!manifest"],
   args: { zoom: 1, onPan: () => {}, onZoom: () => {}, onFit: () => {} },
 };
 export default meta;
-type Story = CanvasVariant<typeof Canvas>;
+type Story = CanvasFrame<typeof Canvas>;
 const innerPan = () => {};
 const innerZoom = () => {};
 export const NestedCanvases: Story = {

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Profiler, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   formatPerformanceMs,
@@ -184,9 +184,7 @@ const DiffViewerStressStory = () => {
 const meta: CanvasMeta<typeof DiffViewer> = {
   title: "Patterns/Diff/Diff Viewer",
   component: DiffViewer,
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
   decorators: [
     (Story: StoryFn) => (
       <Box height="100vh" width="100vw" border="1px solid" borderColor="border.subtle" overflow="hidden">
@@ -199,7 +197,7 @@ const meta: CanvasMeta<typeof DiffViewer> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof DiffViewer>;
+type Story = CanvasFrame<typeof DiffViewer>;
 export const Default: Story = {
   id: "patterns-diff-diff-viewer--default",
 };

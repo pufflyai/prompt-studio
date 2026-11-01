@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
@@ -11,7 +11,7 @@ const StartPageLayout = () => {
     const next = createWorkbench();
     next.modes.registerMode({ id: "project", activate() {} });
     next.registerModule(createStartModule());
-    next.pageLocations.setProject("storybook-start-page");
+    next.pageLocations.setProject("preview-start-page");
     next.pageLocations.navigate({ kind: "page", page: workbenchPages.start });
     return next;
   });
@@ -24,10 +24,10 @@ const StartPageLayout = () => {
 const meta = {
   title: "Start/Page layout",
   component: StartPageLayout,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof StartPageLayout>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Default: Story = {
   id: "start-page-layout--default",
 };

@@ -1,6 +1,6 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
-import { CoreComponents, type Section } from "./core-components.canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { CoreComponents, type Section } from "./core-components";
 
 function Compare(props: { section: Section }) {
   const { section } = props;
@@ -16,11 +16,12 @@ function Compare(props: { section: Section }) {
 }
 const meta = {
   title: "Themes/Compare",
+  fullscreen: true,
   component: Compare,
   args: { section: "all" },
 } satisfies CanvasMeta<typeof Compare>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const AllCoreComponents: Story = {
   id: "themes-compare--all-core-components",
 };

@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { TreeList } from "./tree-list";
 
@@ -36,9 +36,8 @@ const NavigableBranch = () => {
 const meta = {
   title: "Components/Data Display/Tree List/Branch navigation",
   component: NavigableBranch,
-  tags: ["tree-branch-navigation"],
 } satisfies CanvasMeta<typeof NavigableBranch>;
 export default meta;
-export const PageAndChildren: CanvasVariant<typeof meta> = {
+export const PageAndChildren: CanvasFrame<typeof meta> = {
   id: "components-data-display-tree-list-branch-navigation--page-and-children",
 };

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import type { Diff } from "./diff-drawer";
 import { DiffDrawer } from "./lazy-diff";
@@ -18,9 +18,7 @@ const loadingDiffs: Diff[] = [
 const meta: CanvasMeta<typeof DiffDrawer> = {
   title: "Patterns/Diff/Diff Panel/Loading",
   component: DiffDrawer,
-  parameters: {
-    layout: "fullscreen",
-  },
+  fullscreen: true,
   decorators: [
     (Story: StoryFn) => (
       <Box height="100vh" width="100vw" border="1px solid" borderColor="border.subtle" overflow="hidden">
@@ -30,7 +28,7 @@ const meta: CanvasMeta<typeof DiffDrawer> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof DiffDrawer>;
+type Story = CanvasFrame<typeof DiffDrawer>;
 export const DeferredContent: Story = {
   id: "patterns-diff-diff-panel-loading--deferred-content",
   render: (args) => <DiffDrawer {...args} />,

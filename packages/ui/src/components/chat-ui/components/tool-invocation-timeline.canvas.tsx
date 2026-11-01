@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import type { SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline } from "./tool-invocation-timeline";
@@ -67,7 +67,7 @@ const claudeToolInvocations: ToolPart[] = [
             priority: "high",
           },
           {
-            content: "Validate Storybook output",
+            content: "Validate Canvas output",
             status: "in_progress",
             priority: "medium",
           },
@@ -88,22 +88,12 @@ const claudeToolInvocations: ToolPart[] = [
 const meta: CanvasMeta<typeof ToolInvocationTimeline> = {
   title: "Patterns/Chat/Tool Invocation Timeline",
   component: ToolInvocationTimeline,
-  parameters: {
-    layout: "padded",
-  },
 };
 export default meta;
-type Story = CanvasVariant<typeof ToolInvocationTimeline>;
+type Story = CanvasFrame<typeof ToolInvocationTimeline>;
 export const LongTitles: Story = {
   id: "patterns-chat-tool-invocation-timeline--long-titles",
-  tags: ["!manifest"],
-  parameters: {
-    docs: {
-      description: {
-        story: "Long tool titles stay on one line in narrow chat panels. Expand a row to read its output.",
-      },
-    },
-  },
+  description: "Long tool titles stay on one line in narrow chat panels. Expand a row to read its output.",
   render: () => (
     <Box width="full" maxW="sm">
       <ToolInvocationTimeline
@@ -173,7 +163,6 @@ export const CodexShell: Story = {
 };
 export const CommandWithoutOutput: Story = {
   id: "patterns-chat-tool-invocation-timeline--command-without-output",
-  tags: ["command-disclosure"],
   args: {
     invocations: [
       {

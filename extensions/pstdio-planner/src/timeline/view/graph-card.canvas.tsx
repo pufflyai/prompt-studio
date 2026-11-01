@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
@@ -50,7 +50,7 @@ const meta: CanvasMeta<typeof GraphCard> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof GraphCard>;
+type Story = CanvasFrame<typeof GraphCard>;
 export const Available: Story = {
   id: "extensions-planner-timeline-card--available",
 };

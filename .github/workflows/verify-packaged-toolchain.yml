@@ -80,6 +80,9 @@ jobs:
         run: |
           bun scripts/ci/production-payload.ts check
           tar -xzf release-build.tar.gz
+      - name: Build source fixtures for packaged runtime tests
+        if: inputs.profile == 'full' && inputs.artifact_run_id == ''
+        run: bun run build -- --scope e2e --include-dependencies
       - name: Install Chromium for packaged extension smoke tests
         if: inputs.profile == 'full' && runner.os != 'Windows'
         run: bunx playwright@1.60.0 install chromium --with-deps

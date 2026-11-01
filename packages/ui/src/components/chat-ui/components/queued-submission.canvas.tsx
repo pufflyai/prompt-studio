@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 
 const meta = {
@@ -30,7 +30,17 @@ const meta = {
   },
 } satisfies CanvasMeta<typeof ChatPanel>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Sending: Story = {
   id: "patterns-chat-queued-submission--sending",
+};
+export const LiveInput: Story = {
+  id: "patterns-chat-queued-submission--live-input",
+  args: {
+    messages: [
+      { id: "working", role: "assistant", parts: [{ type: "text", text: "Reviewing the changes." }] },
+      { id: "delivery", role: "user", parts: [{ type: "text", text: "Check the keyboard interaction too." }] },
+    ],
+    queuedFollowUps: [{ id: "saved", position: 1, revision: "saved", prompt: "Write the release notes" }],
+  },
 };

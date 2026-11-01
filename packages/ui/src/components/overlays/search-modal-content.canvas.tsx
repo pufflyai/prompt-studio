@@ -1,7 +1,8 @@
-import { Button, Dialog, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import { Button, Stack } from "@chakra-ui/react";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ListRow } from "@/components/list-row/list-row";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { SearchModalContent } from "./search-modal-content";
 
 const ProjectListDialog = (props: { showSearch: boolean }) => {
@@ -43,11 +44,11 @@ const ProjectListDialog = (props: { showSearch: boolean }) => {
 const meta = {
   title: "Overlays/Search modal content",
   component: ProjectListDialog,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   args: { showSearch: true },
 } satisfies CanvasMeta<typeof ProjectListDialog>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Searchable: Story = {
   id: "overlays-search-modal-content--searchable",
 };

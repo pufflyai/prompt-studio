@@ -16,6 +16,12 @@ export const plannedCiJobs = (scope: Scope) => {
     jobs.push({ id, priority, count: names.length, names });
   add("scope");
   add("static_checks");
+  if (scope.editedMatrix.length)
+    add(
+      "edited_tests",
+      scope.editedMatrix.map((row) => `edited_tests (${row.name})`),
+      "P0",
+    );
   if (scope.packageChecks)
     add(
       "package_checks",
@@ -31,9 +37,9 @@ export const plannedCiJobs = (scope: Scope) => {
     if (selected) add(id);
   jobs.push(...matrixPlan("database_tests", scope.databaseMatrix, (row) => `${row.package} ${row.shard}`));
   jobs.push(...matrixPlan("bun_contracts", scope.bunContractMatrix, (row) => row.shard));
-  jobs.push(...matrixPlan("integration_contracts", scope.integrationMatrix, (row) => row.package));
+  jobs.push(...matrixPlan("integration_contracts", scope.integrationMatrix, (row) => row.shard));
   jobs.push(...matrixPlan("components", scope.componentMatrix, (row) => row.package));
-  if (["merge_queue", "full"].includes(scope.stage)) {
+  if (scope.stage === "full") {
     jobs.push(...matrixPlan("e2e", scope.appMatrix, (row) => `${row.shard}/${row.total}`));
     jobs.push(...matrixPlan("packaged_and_vite_e2e", scope.packagedMatrix, (row) => `${row.suite} ${row.shard}`));
     add("e2e_cli", ["e2e_cli"], scope.production ? "P2" : "P1");

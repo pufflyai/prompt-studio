@@ -117,7 +117,6 @@ const DesktopTitleBarExample = () => {
 };
 export const WithDesktopTitleBar = {
   id: "components-feedback-toaster--with-desktop-title-bar",
-  tags: ["!manifest"],
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
   render: () => <DesktopTitleBarExample />,
 };

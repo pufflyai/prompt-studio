@@ -16,7 +16,7 @@ test("native previews match the component sources, fixtures, and generated files
 });
 
 test("every catalog source has a complete packaged dependency graph", () => {
-  const sources = [...new Set([...catalog.stories, ...catalog.documents].map((entry) => entry.source))];
+  const sources = [...new Set(catalog.stories.map((entry) => entry.source))];
   const native = Object.keys(previews).map((name) => `$native:${name}`);
   expect(Object.keys(frames.sources).sort()).toEqual([...sources, ...native].sort());
   const assets = new Set(frames.styles);

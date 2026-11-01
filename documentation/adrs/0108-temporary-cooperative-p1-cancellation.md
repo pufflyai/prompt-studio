@@ -6,7 +6,7 @@ Status: Accepted as a temporary workaround for the failure policy in [ADR 0106](
 
 ## Intended behavior
 
-The first P1 failure should stop queued and active P1 work promptly across jobs, while P0, P2, and P3 keep collecting their diagnostics. Required failure reporting must not wait for those unrelated diagnostics. Successful validation still requires every selected result.
+The first P1 failure should stop queued and active P1 work promptly across jobs, while P0, P2, and P3 keep collecting their diagnostics. Individual P1 failures remain visible immediately. The aggregate required result waits for all execution jobs; see the runner-capacity qualification below. Successful validation still requires every selected result.
 
 ## External limitation
 
@@ -24,7 +24,13 @@ Each observer retains its own HTTP ETags and uses authenticated conditional read
 
 The implementation is isolated in `scripts/ci/p1-fail-fast.ts` and `scripts/ci/run-ci-checks.ts`. It uses Actions read permission. It never calls workflow cancel or force-cancel. Bootstrap steps that install Bun run before the Bun supervisor can operate.
 
-A separate read-only `validation_results` monitor reports the early blocking P1 result. P0/P2/P3 collection and final production certification remain separate from peer stopping.
+A separate read-only `validation_results` job requires complete selected results after execution jobs finish. P0/P2/P3 collection and final production certification remain separate from peer stopping.
+
+### Runner-capacity qualification
+
+On 2026-10-31, merge-queue run 41198313164 exhausted the existing 40-minute result-reader allowance while execution jobs still waited for hosted runners. No selected test had failed. Starting a polling result reader alongside execution both consumed scarce runner capacity and charged runner queue time to a job execution allowance.
+
+GitHub job dependencies now hold the result reader until execution finishes, without occupying a runner. This restores the distinction between queue waiting and execution. The aggregate required failure can arrive later than an individual P1 failure because P0/P2/P3 diagnostics still finish. P1 supervisors retain early cooperative stopping. No workload or time limit changes.
 
 ## Limitations
 

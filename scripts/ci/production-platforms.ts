@@ -30,7 +30,7 @@ export const productionToolchainPlatforms = (channel: string) =>
   ]
     .filter((row) => channel !== "nightly" || row.platform_pkg !== "cli-darwin-x64")
     .flatMap((row) => {
-      const shards = row.platform_pkg === "cli-win-arm64" ? 2 : 1;
+      const shards = row.platform_pkg === "cli-win-arm64" || row.platform_pkg === "cli-darwin-x64" ? 2 : 1;
       return Array.from({ length: shards }, (_, index) => ({ ...row, shard: index + 1, shards }));
     });
 

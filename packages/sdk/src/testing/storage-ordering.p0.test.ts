@@ -2,6 +2,59 @@ import { expect, test } from "bun:test";
 import { createDocumentStorage, memoryDocumentState } from "pstdio-sync";
 import * as Y from "yjs";
 import { createMemoryStorage } from "./memory-storage";
+import { createMemoryStorageDevices } from "./memory-storage-devices";
+
+test("offline migrations with different source lists leave every neighbour movable", async () => {
+  const pair = await createMemoryStorageDevices();
+  const put = async (device: (typeof pair.devices)[number], recordId: string, value: Record<string, number | string>) =>
+    device.records.commit({ operationId: device.ids.create(), edits: [{ recordId, replace: value }] });
+  await put(pair.devices[0], "a", { oldOrder: 0 });
+  await put(pair.devices[0], "c", { oldOrder: 2 });
+  await pair.merge();
+  await put(pair.devices[0], "b", { oldOrder: 1 });
+  await put(pair.devices[1], "d", { oldOrder: 1 });
+
+  for (const device of pair.devices) {
+    await device.migrate(1, async (_, migration) => {
+      const rows = (await device.records.list())
+        .map((row) => ({
+          ...row,
+          value: row.value as Record<string, number | string>,
+        }))
+        .sort((left, right) => {
+          const difference = Number(left.value.oldOrder) - Number(right.value.oldOrder);
+          if (difference) return difference;
+          return left.recordId < right.recordId ? -1 : 1;
+        });
+      for (const [rank, row] of rows.entries()) {
+        await device.records.commit({
+          operationId: migration.id(`position:${row.recordId}`),
+          edits: [
+            { recordId: row.recordId, replace: { ...row.value!, position: migration.position(rank, row.recordId) } },
+          ],
+        });
+      }
+    });
+  }
+  await pair.merge();
+  const ordered = async (device: (typeof pair.devices)[number]) =>
+    (await device.records.list())
+      .map(({ recordId, value }) => ({ recordId, position: String((value as Record<string, string>).position) }))
+      .sort((left, right) => (left.position < right.position ? -1 : 1));
+  const migrated = await ordered(pair.devices[0]);
+  expect(await ordered(pair.devices[1])).toEqual(migrated);
+  expect(new Set(migrated.map(({ position }) => position)).size).toBe(4);
+  const neighbours = migrated.filter(({ recordId }) => recordId === "b" || recordId === "d");
+  for (const device of pair.devices) {
+    const position = device.positions.between(neighbours[0]!.position, neighbours[1]!.position);
+    await put(device, "a", { oldOrder: 0, position });
+  }
+  await pair.merge();
+  const moved = await ordered(pair.devices[0]);
+  expect(await ordered(pair.devices[1])).toEqual(moved);
+  expect(moved.map(({ recordId }) => recordId).sort()).toEqual(["a", "b", "c", "d"]);
+  expect(new Set(moved.map(({ position }) => position)).size).toBe(4);
+});
 
 test("concurrent moves converge to the same order with each stable item once", async () => {
   const device = (id: string) => {

@@ -1,6 +1,6 @@
-import { Button, Dialog, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { type ResourceAnchorPage, type ResourceRef, type ResourceRole, resourceKey } from "@pstdio/sdk/extensions";
-import { AlertMessage, ListRow, ScrollArea } from "@pstdio/ui";
+import { AlertMessage, ScopedDialog as Dialog, ListRow, ScrollArea } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { WorkbenchIcon } from "../shared/icon";
 import { ResourceLinkPicker } from "./resource-link-picker";

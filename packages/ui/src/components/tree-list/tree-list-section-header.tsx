@@ -1,6 +1,7 @@
-import { Box, HStack, IconButton, Text, useRecipe } from "@chakra-ui/react";
+import { Box, HStack, Text, useRecipe } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
 import type { FocusEventHandler, MouseEvent as ReactMouseEvent } from "react";
+import { ActionIconButton } from "../list-row/action-icon-button";
 import { createResourceContextActions } from "../list-row/list-row-chrome";
 import { SearchableActionMenu } from "../list-row/searchable-action-menu";
 import { ResourceActionMenu, ResourceContextMenu } from "../overlays/resource-context-menu";
@@ -26,15 +27,21 @@ const TreeListSectionActions = (props: TreeListSectionActionsProps) => {
         if (action.menuItems && action.menuItems.length > 0) {
           return (
             <ResourceActionMenu key={action.id} actions={createResourceContextActions(action.menuItems)}>
-              <IconButton variant="ghost" size="2xs" aria-label={action.label}>
+              <ActionIconButton
+                tooltip={action.tooltip ?? action.label}
+                variant="ghost"
+                size="2xs"
+                aria-label={action.label}
+              >
                 {action.icon}
-              </IconButton>
+              </ActionIconButton>
             </ResourceActionMenu>
           );
         }
         return (
-          <IconButton
+          <ActionIconButton
             key={action.id}
+            tooltip={action.tooltip ?? action.label}
             variant="ghost"
             size="2xs"
             aria-label={action.label}
@@ -44,7 +51,7 @@ const TreeListSectionActions = (props: TreeListSectionActionsProps) => {
             }}
           >
             {action.icon}
-          </IconButton>
+          </ActionIconButton>
         );
       })}
     </HStack>

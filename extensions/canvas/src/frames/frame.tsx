@@ -5,7 +5,7 @@ import type { CanvasItem } from "../canvases/definitions";
 import { PreviewSource } from "../catalog/source-information";
 import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
-import { frameThemePreferences } from "../frame-themes";
+import { frameThemePreferences, resolveFrameTheme } from "../frame-themes";
 import { type FrameBootstrap, frameBootstrap, frameDocument } from "./assets";
 import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
@@ -38,7 +38,12 @@ export const FramePreview = (props: FramePreviewProps) => {
   const [ready, setReady] = useState(false);
   const [imported, setImported] = useState(false);
   const [error, setError] = useState("");
-  const selected = useSyncExternalStore(runtime.subscribe, () => runtime.get().themes[item.id] ?? "app");
+  const selected = useSyncExternalStore(runtime.subscribe, () =>
+    resolveFrameTheme(
+      runtime.get().themes[item.id],
+      item.preview?.kind === "story" ? item.preview.defaultTheme : undefined,
+    ),
+  );
   const app = useThemePreference();
   const appTheme = app.themePreferences.find((theme) => theme.id === app.themePreference);
   const theme = selected === "app" ? appTheme : frameThemePreferences.find((theme) => theme.id === selected);
@@ -78,8 +83,6 @@ export const FramePreview = (props: FramePreviewProps) => {
           postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", bootstrap });
           return;
         case "boot":
-          // Release before fixture setup, which can await nested previews.
-          job.current?.finish();
           sentTheme.current = theme;
           postFrame(frame.current, {
             nonce: nonce.current,
@@ -92,7 +95,7 @@ export const FramePreview = (props: FramePreviewProps) => {
       if (message.nonce !== nonce.current) return;
       switch (message.type) {
         case "imports-ready":
-          // Let the next imports start without waiting for a React commit.
+          // Bound module imports, then release before setup can await nested previews.
           job.current?.finish();
           setImported(true);
           break;
@@ -199,11 +202,6 @@ export const FramePreview = (props: FramePreviewProps) => {
           {information?.args && (
             <Box as="pre" whiteSpace="pre-wrap" overflowWrap="anywhere">
               {information.args}
-            </Box>
-          )}
-          {information?.argTypes && (
-            <Box as="pre" whiteSpace="pre-wrap" overflowWrap="anywhere">
-              {information.argTypes}
             </Box>
           )}
           {expanded && <PreviewSource source={item.preview.source} />}

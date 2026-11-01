@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { defaultThemePreferences, ThemePreferenceProvider } from "@pstdio/ui";
 import { createWorkbench } from "@pstdio/workbench";
 import { openRelatedResourcesPreference } from "@pstdio/workbench/react";
@@ -28,7 +28,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof AppearanceExample>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Default: Story = {
   id: "settings-appearance--default",
 };

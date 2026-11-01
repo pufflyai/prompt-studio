@@ -1,4 +1,4 @@
-import { useMenu } from "@chakra-ui/react";
+import { useScopedMenu as useMenu } from "@pstdio/ui";
 import { type MouseEvent, useRef } from "react";
 
 export const useTabContextMenu = (triggerId: string, disabled = false) => {

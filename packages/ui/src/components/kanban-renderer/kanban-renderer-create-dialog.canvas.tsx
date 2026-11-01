@@ -1,5 +1,5 @@
 import { Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { HostStorageProvider } from "../../utils/host-storage";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
@@ -66,10 +66,10 @@ const config: KanbanRendererCreateRowConfig = {
 const meta = {
   title: "Patterns/Kanban Renderer/Create Dialog",
   component: KanbanRendererCreateDialog,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof KanbanRendererCreateDialog>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const Harness = (props: {
   config: KanbanRendererCreateRowConfig;
   onSubmit?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;

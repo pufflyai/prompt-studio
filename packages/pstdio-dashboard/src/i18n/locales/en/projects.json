@@ -1,5 +1,15 @@
 {
   "title": "Projects",
+  "opening": {
+    "title": "Opening {{name}}",
+    "preparing": "Preparing project files…",
+    "downloading": "Waiting for project content…",
+    "failed": "Could not open this project",
+    "retry": "Retry",
+    "back": "Projects",
+    "downloadFailed": "Some project content could not be downloaded. Retry to continue.",
+    "offline": "Connect to download this project for the first time."
+  },
   "loading": "Loading projects...",
   "chatInput": {
     "agent": {

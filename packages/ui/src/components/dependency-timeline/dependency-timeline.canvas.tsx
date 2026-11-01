@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DependencyTimeline } from "./dependency-timeline";
 import { DependencyTimelineExample } from "./dependency-timeline.examples";
 
@@ -14,18 +14,12 @@ const meta: CanvasMeta<typeof DependencyTimeline> = {
     />
   ),
   args: { onContext: () => {}, onCreateSection: () => {} },
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "A dependency timeline with milestone sections and collapsible tracks, built on Canvas. Supply item content and section headers; the component owns layout, measured card heights, dependency edges, windowing, and navigation. Callers own data, saved presentation, and actions. Use the exported DependencyTimeline component and TimelineItem/TimelineSection/TimelineTrack types.",
-      },
-    },
-  },
+  description:
+    "A dependency timeline with milestone sections and collapsible tracks, built on Canvas. Supply item content and section headers; the component owns layout, measured card heights, dependency edges, windowing, and navigation. Callers own data, saved presentation, and actions. Use the exported DependencyTimeline component and TimelineItem/TimelineSection/TimelineTrack types.",
+  fullscreen: true,
 };
 export default meta;
-type Story = CanvasVariant<typeof DependencyTimeline>;
+type Story = CanvasFrame<typeof DependencyTimeline>;
 export const ReleasePlan: Story = {
   id: "components-layout-dependency-timeline--release-plan",
 };
@@ -60,7 +54,6 @@ export const SelectedDependencies: Story = {
 };
 export const LargePlan: Story = {
   id: "components-layout-dependency-timeline--large-plan",
-  tags: ["!manifest"],
   render: () => <DependencyTimelineExample large />,
 };
 // Keep the public component visible in generated API documentation.

@@ -132,6 +132,19 @@
       "extensionId": "pstdio.pstdio-skills"
     },
     {
+      "installName": "pstdio-performance",
+      "extensionId": "pstdio.pstdio-performance",
+      "displayName": "Prompt Studio Performance Monitoring",
+      "description": "Frame rate, backend response time, CPU and memory in the status bar while monitoring is on.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-performance",
+        "ref": "{hostRelease}"
+      },
+      "default": true
+    },
+    {
       "installName": "extension-lab",
       "extensionId": "pstdio.extension-lab",
       "displayName": "Extension Lab",

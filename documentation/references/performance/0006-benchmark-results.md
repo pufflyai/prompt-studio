@@ -55,7 +55,7 @@ The runner also works locally, for checking a suite change. Its numbers are not 
 bun run --cwd packages/benchmarks bench run --checkout ../..=$(git rev-parse HEAD) --suites storage --samples 2 --out /tmp/benchmark-results
 ```
 
-A pull request that changes `packages/benchmarks` or the workflow measures its own head with the `storage` and `runtime` suites, to prove the runner still works.
+Pull requests do not run this workflow. A PR that edits a benchmark file runs that benchmark's suite in its `edited_tests` check; runner changes are covered by their P0 tests and the nightly.
 
 ## Result file
 

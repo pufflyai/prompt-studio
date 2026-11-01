@@ -1,136 +1,18 @@
-import { Box, Button, Input, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
-import { Activity, type ReactNode, useState } from "react";
-import { createWorkbench, type WorkbenchPanelRegion } from "../../core";
+import { Box, Button, Text } from "@chakra-ui/react";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { Activity, useState } from "react";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createWorkbenchTerminalModule } from "../terminal/terminal-module";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
-export const createArrangementWorkbench = (
-  crowded = false,
-  pageContent: ReactNode = <Text p="md">Page without a header</Text>,
-  mainAcceptsTabs = true,
-  bottomInitiallyOpen = true,
-  sourceRegion: WorkbenchPanelRegion = "side",
-) => {
-  const page = { kind: "page", extensionId: "storybook", id: "arrangement" } as const;
-  const w = createWorkbench({
-    startPage: page,
-    initialSidePanelMode: sourceRegion === "side" ? "attached" : "closed",
-    defaultPanelOpenByRegionId: { secondary: bottomInitiallyOpen },
-  });
-  w.modes.registerMode({
-    id: "arrangement",
-    label: "Arrange tabs",
-    regionSettings: { main: { showHeader: false, acceptsTabs: mainAcceptsTabs } },
-    activate() {},
-  });
-  w.views.registerView({
-    id: "page",
-    title: "Page",
-    body: { kind: "react", render: () => pageContent },
-  });
-  w.views.registerView({
-    id: "editor",
-    title: "Session",
-    icon: "MessageCircle",
-    body: {
-      kind: "react",
-      render: (input) => (
-        <Box p="md">
-          <Text>{input.instance.resource?.label}</Text>
-          <Input aria-label="Retained draft" placeholder="Type here, then move this tab" />
-        </Box>
-      ),
-    },
-  });
-  w.views.registerView({
-    id: "menu",
-    title: "Tools",
-    body: { kind: "react", render: () => <Text p="md">Panel menu</Text> },
-  });
-  w.viewMenus.registerViewMenu({ id: "tools", ownerViewId: "editor", viewId: "menu", side: "right" });
-  w.pages.registerPage({
-    id: page.id,
-    ref: page,
-    path: "arrangement",
-    modeId: "arrangement",
-    main: { kind: "view", view: { kind: "view", id: "page" }, cardinality: "one" },
-    slots: [],
-  });
-  w.commands.registerCommand(
-    { id: "add-session", label: "New session" },
-    {
-      execute: (_args, context) =>
-        w.navigation.openTarget({
-          kind: "panel",
-          panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
-          resource: { type: "session", id: crypto.randomUUID(), label: "New session" },
-          open: "pin",
-          region: context?.region,
-        }),
-    },
-  );
-  w.modePlacements.registerPlacement({
-    id: "sessions",
-    ref: { kind: "placement", extensionId: "storybook", id: "sessions" },
-    modeId: "arrangement",
-    region: "side",
-    item: {
-      kind: "binding",
-      binding: {
-        kinds: [{ kind: "resource-kind", id: "session" }],
-        view: { kind: "view", id: "editor" },
-        cardinality: "many",
-        add: { kind: "command", target: { command: { kind: "command", extensionId: "storybook", id: "add-session" } } },
-      },
-    },
-    tab: {
-      getSnapshot: (instance) => ({
-        label: instance.resource?.label,
-        menu: [
-          {
-            id: "session-actions",
-            rows: [
-              {
-                id: "new",
-                label: "New session",
-                icon: "MessageSquarePlus",
-                action: { kind: "command", commandId: "add-session" },
-              },
-            ],
-          },
-        ],
-      }),
-    },
-  });
-  // Command references use the declared owner; this alias keeps the example's action identical to an extension action.
-  w.commands.registerCommand(
-    { id: "storybook.command.add-session", label: "Create session" },
-    { execute: (args, context) => w.commands.executeCommand("add-session", args, context) },
-  );
-  w.pageLocations.switchProject("arrangement");
-  for (let i = 0; i < (crowded ? 8 : 2); i++)
-    void w.navigation.openTarget({
-      kind: "panel",
-      panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
-      resource: {
-        type: "session",
-        id: String(i),
-        label: i === 0 ? "Review session" : `Session with a longer name ${i}`,
-      },
-      region: sourceRegion,
-      open: i === (crowded ? 7 : 1) ? "preview" : "pin",
-    });
-  return w;
-};
+import { createArrangementWorkbench } from "./panel-arrangement-workbench";
+
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Panel arrangement",
-  excludeStories: ["createArrangementWorkbench"],
   component: WorkbenchStory,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const HeaderlessMain: Story = {
   id: "pstdio-workbench-reference-core-api-panel-arrangement--headerless-main",
   args: { workbench: createArrangementWorkbench() },
@@ -218,7 +100,7 @@ const draggedPreview = previewInsertionWorkbench.layout
 previewInsertionWorkbench.movePanel(draggedPreview.widgetId, "secondary");
 void previewInsertionWorkbench.navigation.openTarget({
   kind: "panel",
-  panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
+  panel: { kind: "placement", extensionId: "preview", id: "sessions" },
   resource: { type: "session", id: "kept-preview", label: "Unpinned session to keep" },
   open: "preview",
 });

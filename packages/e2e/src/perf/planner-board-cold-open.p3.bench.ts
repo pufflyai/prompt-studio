@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { chromium } from "@playwright/test";
 import { benchmarkSampleCount, findBudgetFailures, plannerBudget } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
@@ -217,8 +217,10 @@ Reports every sample against the ${targetMs} ms target. Seeding takes several mi
   // The seed script reads the count from the environment it inherits.
   if (process.argv.includes("--tickets")) process.env.PSTDIO_PLANNER_STRESS_TICKETS = option("--tickets", 1000);
   buildBinary();
-  const kept = process.argv.includes("--home") ? option("--home", 0) : undefined;
+  // The runtime resolves its home from its own working directory; the descriptor wait uses ours.
+  const kept = process.argv.includes("--home") ? resolve(option("--home", 0)) : undefined;
   const home = kept ?? mkdtempSync(join(tmpdir(), "pstdio-planner-cold-open-"));
+  mkdirSync(home, { recursive: true });
   try {
     const fixturePath = join(home, "fixture.json");
     const seeded = existsSync(fixturePath);

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { DEFAULT_STATUSES, DEFAULT_TAGS } from "../../data/seed";
 import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
@@ -100,7 +100,7 @@ const meta: CanvasMeta<typeof MilestoneHeaderStory> = {
   args: { state: "forecast" },
 };
 export default meta;
-type Story = CanvasVariant<typeof MilestoneHeaderStory>;
+type Story = CanvasFrame<typeof MilestoneHeaderStory>;
 export const Forecast: Story = {
   id: "extensions-planner-milestone-header--forecast",
 };

@@ -1,5 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
@@ -58,7 +58,7 @@ const createNotesWorkbench = () => {
       },
     ],
   });
-  workbench.pageLocations.setProject("storybook-notes");
+  workbench.pageLocations.setProject("preview-notes");
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
 };
@@ -69,11 +69,10 @@ const NotesCards = () => {
 const meta = {
   title: "pstdio-workbench/Reference/Core API/New resource cards",
   component: NotesCards,
-  parameters: { layout: "fullscreen" },
-  tags: ["new-resource-cards"],
+  fullscreen: true,
 } satisfies CanvasMeta<typeof NotesCards>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const CreateFromCardAndMenu: Story = {
   id: "pstdio-workbench-reference-core-api-new-resource-cards--create-from-card-and-menu",
   render: () => <NotesCards />,

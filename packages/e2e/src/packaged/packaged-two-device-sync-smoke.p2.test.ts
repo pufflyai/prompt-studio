@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
@@ -7,6 +7,8 @@ import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { coreOwnerId, createSyncSpace, projectInfoDocumentId } from "pstdio-sync";
 import { folderProjectInput } from "../helpers/folder-project";
+import { logTestPhase } from "../scripts/log-test-phase";
+import { openCloudProjectInPicker, reopenPreparedProjectOffline } from "./packaged-cloud-project-picker";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { createPackagedSyncPeer, packagedProjectKey } from "./packaged-sync-relay.fixture";
@@ -49,7 +51,7 @@ const writeExtension = async (root: string) => {
 };
 
 const startDevice = async (root: string, env: Record<string, string>) => {
-  await mkdir(root);
+  await mkdir(root, { recursive: true });
   const host = await startPackagedServe(root, env);
   const client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
   const command = async <T>(projectId: string, id: string, params: unknown = {}) => {
@@ -102,8 +104,10 @@ const write = (device: Awaited<ReturnType<typeof startDevice>>, projectId: strin
 
 setupPackagedSmokeTests();
 test(
-  "a new device gets the cloud project and its records after login, reports an interrupted download honestly, and clones its folder later",
+  "a new device opens its cloud project from the picker, prepares its folder, and restores shared files",
   async () => {
+    const startedAt = Date.now();
+    const phase = (name: string) => logTestPhase(`Cloud project opening: ${name} (+${Date.now() - startedAt}ms)`);
     const root = await mkdtemp(join(tmpdir(), "packaged-two-device-sync-"));
     const tls = writeCertificate(root);
     const peer = createPackagedSyncPeer({ key: Bun.file(tls.key), cert: Bun.file(tls.cert) });
@@ -113,7 +117,9 @@ test(
       NODE_EXTRA_CA_CERTS: tls.cert,
     };
     const first = await startDevice(join(root, "first"), env);
-    const second = await startDevice(join(root, "second"), env);
+    let second = await startDevice(join(root, "second"), env);
+    phase("devices ready");
+    let picker: Awaited<ReturnType<typeof openCloudProjectInPicker>> | undefined;
     try {
       const remote = join(root, "origin");
       await writeRepository(remote);
@@ -121,9 +127,13 @@ test(
       git(root, "clone", "-q", remote, checkout);
       const project = await first.client.projects.create(folderProjectInput({ name: "Shared notes" }, checkout));
       await write(first, project.id, "note", "written on the first device");
+      await first.command(project.id, "write-file", { path: "note.md", content: "# Shared note" });
+      await first.command(project.id, "write-file", { path: "artifact.html", content: "<h1>Shared artifact</h1>" });
+      phase("source files saved");
       await signIn(first, peer.origin);
       await first.client.account.syncProject(project.id);
       await first.reach(project.id, "synced");
+      phase("source project synced");
 
       // A new device reads the project's info before anything else. Let it read that one document and none
       // of the project's data yet. The first device may still be reading, so name the document by its relay ID,
@@ -138,6 +148,25 @@ test(
       expect((await second.client.projects.folder(project.id)).path).toBeNull();
       await waitFor(() => peer.failedReads() > 0);
       await second.reach(project.id, "first-download-incomplete");
+      phase("new device waiting for download");
+      const prematureOpen = await fetch(`${second.host.baseUrl}/v1/projects/${project.id}/open`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${second.host.descriptor.token}` },
+      });
+      expect(prematureOpen.status).toBe(400);
+      expect((await second.client.projects.folder(project.id)).path).toBeNull();
+      // Keep two choices in the picker so opening the cloud project is an explicit user action.
+      const local = join(root, "second-local");
+      await mkdir(local);
+      await second.client.projects.create(folderProjectInput({ name: "Local scratchpad" }, local));
+      phase("local picker choice created");
+      picker = await openCloudProjectInPicker({
+        baseUrl: second.host.baseUrl,
+        token: second.host.descriptor.token,
+        projectId: project.id,
+        name: project.name,
+      });
+      phase("project selected in browser");
 
       // Losing the connection never turns an incomplete download into a ready one.
       await peer.stop();
@@ -153,17 +182,33 @@ test(
 
       peer.failReads(false);
       peer.restart();
+      await picker.retry();
+      phase("retry requested");
       await first.reach(project.id, "synced");
       await second.reach(project.id, "synced");
+      await picker.ready();
+      phase("project folder prepared");
       expect((await second.command<Record<string, StorageRecord>>(project.id, "read")).note?.value).toBe(
         "written on the first device",
       );
 
-      // The first work on files asks for a folder. Cloning the recorded remote gives the device the same files.
-      const clone = join(root, "second-checkout");
-      await second.client.projects.chooseFolder(project.id, { path: clone, clone: true });
-      expect(await Bun.file(join(clone, "README.md")).text()).toBe("Shared notes");
-      expect((await second.client.projects.folder(project.id)).path).toBe(await realpath(clone));
+      const folderAfterSelection = await second.client.projects.folder(project.id);
+      expect(folderAfterSelection.path).toBeTruthy();
+      const files = join(folderAfterSelection.path!, ".pstdio/extension-storage/example.shared-notes/documents");
+      expect(await Bun.file(join(files, "note.md")).text()).toBe("# Shared note");
+      expect(await Bun.file(join(files, "artifact.html")).text()).toBe("<h1>Shared artifact</h1>");
+      await second.command(project.id, "write-file", { path: "new-note.md", content: "Written on the new machine" });
+      await waitFor(async () => {
+        try {
+          return (
+            (await first.command<string>(project.id, "read-file", { path: "new-note.md" })) ===
+            "Written on the new machine"
+          );
+        } catch {
+          return false;
+        }
+      });
+      expect((await second.client.projects.open(project.id)).root_path).toBe(folderAfterSelection.path);
       await second.reach(project.id, "synced");
 
       // Making the project local is account-wide. The second device learns it on its next account refresh,
@@ -195,7 +240,24 @@ test(
       const madeLocal = history.events.indexOf("local", firstSynced);
       expect(history.events.slice(firstSynced, madeLocal)).toContain("offline");
       expect(history.events.slice(firstSynced, madeLocal)).not.toContain("first-download-incomplete");
+      await picker.close();
+      picker = undefined;
+      await peer.stop();
+      await stopProcess(second.host.child);
+      second = await startDevice(join(root, "second"), env);
+      expect((await second.client.account.projectSyncStatus(project.id)).offlineReady).toBe(false);
+      await reopenPreparedProjectOffline({
+        baseUrl: second.host.baseUrl,
+        token: second.host.descriptor.token,
+        projectId: project.id,
+      });
+      expect((await second.client.projects.folder(project.id)).path).toBe(folderAfterSelection.path);
+      expect(await second.command<string>(project.id, "read-file", { path: "new-note.md" })).toBe(
+        "Written on the new machine",
+      );
+      phase("prepared project reopened offline after restart");
     } finally {
+      await picker?.close();
       await stopProcess(first.host.child);
       await stopProcess(second.host.child);
       await peer.stop();

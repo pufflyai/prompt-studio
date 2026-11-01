@@ -66,6 +66,18 @@ const createAccountWatch = () => {
   };
 };
 
+const retryProjectSync = async (
+  projectId: string,
+  projects: Pick<RouteDeps["projectService"], "get">,
+  refresh: () => Promise<void>,
+  retry: (projectId: string) => Promise<void>,
+) => {
+  if (!(await projects.get(projectId))) throw new AccountRequestError("Unknown project");
+  await refresh();
+  await retry(projectId);
+  return { ok: true };
+};
+
 export const createNativeAccount = (input: {
   file: string;
   environment: RouteDeps["environmentService"];
@@ -84,6 +96,7 @@ export const createNativeAccount = (input: {
   const projectsFor = (login: DeviceLogin | null) =>
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
+  let retryProject: (projectId: string) => Promise<void> = async () => {};
   const missing = createMissingProjectRecovery({
     exists: async (id) => Boolean(await input.projects.get(id)),
     recovered: () => void refresh(),
@@ -214,8 +227,10 @@ export const createNativeAccount = (input: {
       relay: (connections: RelayWorkbench[]) => Promise<void>,
       status: typeof projectStatus,
       recoverProject: Parameters<typeof missing.start>[0],
+      retrySync: typeof retryProject = async () => {},
     ) {
       update = relay;
+      retryProject = retrySync;
       projectStatus = status;
       missing.start(recoverProject);
       void refresh();
@@ -261,15 +276,13 @@ export const createNativeAccount = (input: {
       if (!projects?.includes(projectId)) return { state: "local" as const, offlineReady: false };
       return projectStatus(projectId);
     },
+    retryProjectSync: (projectId: string) => retryProjectSync(projectId, input.projects, refresh, retryProject),
     logout,
     async devices() {
       const listed = devicesSchema.parse(await call("/v1/devices"));
       return listed.devices.map((device) => ({ ...device, current: device.id === listed.deviceId }));
     },
-    async renameDevice(id: string, name: string) {
-      await call(`${devicePath(id)}/rename`, { name });
-      return { ok: true };
-    },
+    renameDevice: (id: string, name: string) => call(`${devicePath(id)}/rename`, { name }).then(() => ({ ok: true })),
     async removeDevice(id: string) {
       const login = await current();
       if (id === login.deviceId) return logout();

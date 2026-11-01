@@ -22,6 +22,7 @@ import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runti
 test("starts without editors and serves both authenticated transport paths", { tag: "@essential" }, async ({
   browserName: _browserName,
 }) => {
+  // Windows retains its 60-second limit and runs this cold-install case in registered quarantine.
   // Cold SDK installation exceeded 25s on hosted macOS ARM64; the 45s allowance is user-approved.
   if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(45_000);
   const home = createPackagedHome();
@@ -77,6 +78,7 @@ test("starts without editors and serves both authenticated transport paths", { t
 test("promotes ownership, detaches, and preserves data through a warm relaunch", async ({
   browserName: _browserName,
 }) => {
+  // Windows keeps the full lifecycle workload in quarantine at the existing 60-second limit.
   // Initial setup, trace capture and relaunch share this user-approved execution allowance.
   if (
     (process.platform === "darwin" && process.arch === "arm64") ||
@@ -114,7 +116,9 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const chosenTheme = await test.step("Choose the theme opposite to the one shown", async () => {
       const page = first!.page;
       const theme =
-        (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark" ? "pstdio-light" : "pstdio-dark";
+        (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark"
+          ? { id: "pstdio-light", title: "Prompt Light" }
+          : { id: "pstdio-dark", title: "Prompt Dark" };
       await page.evaluate(() =>
         (
           window as unknown as {
@@ -122,12 +126,12 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
           }
         ).__pstdioDashboardWorkbench.commands.executeCommand("workbench.action.changeTheme"),
       );
-      await page.getByRole("option", { name: theme }).click();
-      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await page.getByRole("option", { name: theme.title, exact: true }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme.id);
       await expect
         .poll(() => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
-        .toMatchObject({ values: { "theme-preference": theme } });
-      return theme;
+        .toMatchObject({ values: { "theme-preference": theme.id } });
+      return theme.id;
     });
 
     const originalPid = first.runtime.pid;
@@ -203,10 +207,13 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
 test("restarts a crashed sidecar once and offers Retry after another crash in the same Electron process", async ({
   browserName: _browserName,
 }) => {
+  // Three real runtime starts share this allowance; 45s on macOS ARM64 was approved on 2026-10-30.
+  if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(45_000);
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
-    app = await launchPackagedApp(home);
+    // Sidecar restarts do not use an agent harness, so default extension downloads stay out of this deadline.
+    app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
     const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
     crashPackagedRuntime(app.runtime.pid);
     await waitForAutomaticRecovery(app);

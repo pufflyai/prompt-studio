@@ -1,5 +1,5 @@
 import { Button, Input, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { BubbleButton } from "./bubble-button";
@@ -22,13 +22,12 @@ const FloatingPanel = () => {
   );
 };
 const meta = {
-  tags: ["motion", "launcher-visibility"],
   title: "Components/Overlays/Bubble/Motion",
   component: FloatingPanel,
-  parameters: { layout: "fullscreen" },
+  fullscreen: true,
 } satisfies CanvasMeta<typeof FloatingPanel>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const LauncherAndPanel: Story = {
   id: "components-overlays-bubble-motion--launcher-and-panel",
 };

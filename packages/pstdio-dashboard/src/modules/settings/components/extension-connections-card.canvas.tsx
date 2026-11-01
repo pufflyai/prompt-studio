@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
@@ -31,7 +31,6 @@ const definitions: NonNullable<WorkbenchExtensionMetadata["connections"]> = [
 const meta: CanvasMeta<typeof ExtensionConnectionsCard> = {
   title: "ProjectSettings/ExtensionConnectionsCard",
   component: ExtensionConnectionsCard,
-  parameters: { layout: "padded" },
   decorators: [
     (Story) => (
       <QueryClientProvider client={queryClient}>
@@ -41,7 +40,7 @@ const meta: CanvasMeta<typeof ExtensionConnectionsCard> = {
   ],
 };
 export default meta;
-type Story = CanvasVariant<typeof ExtensionConnectionsCard>;
+type Story = CanvasFrame<typeof ExtensionConnectionsCard>;
 export const Connected: Story = {
   id: "projectsettings-extensionconnectionscard--connected",
   args: { projectId: "project-1", definitions },

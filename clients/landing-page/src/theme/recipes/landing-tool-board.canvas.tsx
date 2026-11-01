@@ -1,11 +1,10 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ToolBoard } from "../../components/shapes/tool-board";
 import { BOARD_PREVIEW_HEIGHT, BOARD_WIDTH, SLOT_TRAY_HEIGHT } from "../../services/shapes/assembly-layout";
 
 const meta = {
   title: "Theme/Progressive Tool Board",
   component: ToolBoard,
-  parameters: { layout: "centered" },
   args: { x: 0, y: 0, scale: 1, unitScale: 1, view: { example: "icons", parts: [] } },
   decorators: [
     (Story, { args }) => (
@@ -21,7 +20,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof ToolBoard>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Empty: Story = {
   id: "theme-progressive-tool-board--empty",
 };
@@ -32,9 +31,7 @@ export const PageAdded: Story = {
 export const InspectorAdded: Story = {
   id: "theme-progressive-tool-board--inspector-added",
   args: { view: { example: "icons", parts: ["page", "editor"] } },
-  parameters: {
-    docs: { description: { story: "The inspector centers its glyph in a taller preview, including compact boards." } },
-  },
+  description: "The inspector centers its glyph in a taller preview, including compact boards.",
 };
 export const IconsComplete: Story = {
   id: "theme-progressive-tool-board--icons-complete",

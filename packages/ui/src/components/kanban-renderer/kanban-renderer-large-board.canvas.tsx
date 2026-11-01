@@ -1,8 +1,8 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
-const meta: CanvasMeta = { title: "Patterns/Kanban Renderer/Large Board", tags: ["!manifest"] };
+const meta: CanvasMeta = { title: "Patterns/Kanban Renderer/Large Board" };
 export default meta;
 const items = Array.from({ length: 1000 }, (_, index) => ({
   id: `row-${index}`,
@@ -16,7 +16,7 @@ const column: KanbanRendererBoardColumn = {
   actions: [],
   canCreate: false,
 };
-export const VariableHeightCards: CanvasVariant = {
+export const VariableHeightCards: CanvasFrame = {
   id: "patterns-kanban-renderer-large-board--variable-height-cards",
   render: () => (
     <Box height="600px">
@@ -24,7 +24,7 @@ export const VariableHeightCards: CanvasVariant = {
     </Box>
   ),
 };
-export const GroupedCards: CanvasVariant = {
+export const GroupedCards: CanvasFrame = {
   id: "patterns-kanban-renderer-large-board--grouped-cards",
   render: () => (
     <Box height="600px">

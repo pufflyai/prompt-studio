@@ -44,6 +44,10 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
     async (c) => c.json(await service.projectSyncStatus(c.req.valid("param").id), 200),
   );
   routes.openapi(
+    createRoute({ method: "post", path: "/account/projects/{id}/retry", tags, request: { params }, responses }),
+    async (c) => c.json(await service.retryProjectSync(c.req.valid("param").id), 200),
+  );
+  routes.openapi(
     createRoute({
       method: "get",
       path: "/account",

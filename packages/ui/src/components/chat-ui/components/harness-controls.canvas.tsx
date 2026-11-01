@@ -1,5 +1,5 @@
 import { Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { createSerializedPromptState } from "../utils/editor-state";
@@ -15,7 +15,7 @@ const meta: CanvasMeta<typeof HarnessControls> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof HarnessControls>;
+type Story = CanvasFrame<typeof HarnessControls>;
 const NewConversationComposer = (props: HarnessControlsProps) => {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(false);
