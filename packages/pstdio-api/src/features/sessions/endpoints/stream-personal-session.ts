@@ -22,26 +22,37 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
   try {
     let messages = (await deps.personalHistoryService.messages(id, projectId)) ?? [];
     await sink.write("patch", { op: "replace", path: "/messages", value: messages });
+    let pendingLive: (typeof arrived)[number] | undefined;
+    const apply = async ({ index, message, live }: (typeof arrived)[number]) => {
+      if (sink.aborted || !(await deps.personalHistoryService.getSession(id))) return;
+      // A streaming preview can be ahead of the last saved message; the saved messages arrive in order.
+      if (live && index > messages.length) {
+        pendingLive = { index, message, live };
+        return;
+      }
+      if (!live && pendingLive?.index === index) pendingLive = undefined;
+      if (index > messages.length) {
+        // A message arrived before an earlier one this reader has; show the saved conversation again.
+        messages = (await deps.personalHistoryService.messages(id, projectId)) ?? [];
+        await sink.write("patch", { op: "replace", path: "/messages", value: messages });
+        return;
+      }
+      const op = index < messages.length ? "replace" : "add";
+      messages[index] = message;
+      await sink.write("patch", { op, path: `/messages/${index}`, value: message });
+    };
     const flush = async () => {
-      for (const { index, message, live } of arrived.splice(0)) {
-        if (!(await deps.personalHistoryService.getSession(id))) return;
-        // A streaming preview can be ahead of the last saved message; the saved messages arrive in order.
-        if (live && index > messages.length) continue;
-        if (index > messages.length) {
-          // A message arrived before an earlier one this reader has; show the saved conversation again.
-          messages = (await deps.personalHistoryService.messages(id, projectId)) ?? [];
-          await sink.write("patch", { op: "replace", path: "/messages", value: messages });
-          continue;
-        }
-        const op = index < messages.length ? "replace" : "add";
-        messages[index] = message;
-        await sink.write("patch", { op, path: `/messages/${index}`, value: message });
+      for (const update of arrived.splice(0)) await apply(update);
+      if (pendingLive?.index === messages.length) {
+        arrived.unshift(pendingLive);
+        pendingLive = undefined;
+        await flush();
       }
     };
     while (!sink.aborted) {
       if (!(await deps.personalHistoryService.getSession(id))) break;
       await flush();
-      if (finished.includes(session?.status ?? "")) break;
+      if (sink.aborted || finished.includes(session?.status ?? "")) break;
       await Promise.race([sink.sleep(2000), new Promise<void>((resolve) => (wake = resolve))]);
       wake = undefined;
       session = await deps.personalHistoryService.getSession(id);
