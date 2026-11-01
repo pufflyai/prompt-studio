@@ -206,6 +206,7 @@ Quarantine is manual, never automatic. Entries live in `scripts/ci/test-quaranti
 - Build inputs include production source and dependencies, the lockfile, build helpers, toolchain, OS, CPU and relevant environment. Changing only tests does not rebuild production code.
 - Only `main` publishes the shared certified Linux host and browser build cache, and only after it matches the queue run. Each job's archives are downloaded into their own folder, then imported one at a time: the same Nx hash can have different tar details on different runners, and parallel extraction can corrupt a file.
 - A missing cache entry runs the build. A failed build skips the tests that need it.
+- Every workflow pins one exact Node version. Main compares the queue run's Node version with its own, and runner images cache different patch releases, so a loose version can make main red without any code change.
 - If a corrupt archive was published, delete those exact cache entries before you test the fix. Keep the failing logs and note which run produced the archive. A cache problem never justifies changing a test or its priority.
 
 Package-check jobs use shallow checkouts because they read the current source tree; scope/static jobs keep the history required for comparisons and provenance.
