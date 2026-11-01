@@ -1,6 +1,6 @@
 # UI Canvas
 
-Browse a project's own components and design pages inside Prompt Studio. The project writes small `*.canvas.tsx` files next to its components, and the [`@pstdio/canvas`](../../packages/canvas/README.md) package builds them. UI Canvas shows what that package built. Its extension backend never builds anything or runs project code. Canvas code runs only inside each frame, a sandboxed iframe with no access to Prompt Studio. The workbench saves each canvas's camera, frame positions and frame themes.
+Browse a project's own components and design pages inside Prompt Studio. The project writes small `*.canvas.tsx` files next to its components, and the [`@pstdio/canvas`](https://www.npmjs.com/package/@pstdio/canvas) package builds them. UI Canvas shows what that package built. Its extension backend never builds anything or runs project code. Canvas code runs only inside each frame, a sandboxed iframe with no access to Prompt Studio. The workbench saves each canvas's camera, frame positions and frame themes.
 
 UI Canvas is an optional extension. Install it from the extension catalog:
 
@@ -36,7 +36,7 @@ export const Primary = { args: { children: "Save" } };
 export const Loading = () => <Button loading>Save</Button>;
 ```
 
-The title's part before the last `/` is the navigation group. A `.canvas/preview.tsx` file supplies CSS and decorators for the canvas files below it. See the [`@pstdio/canvas` README](../../packages/canvas/README.md) for the full format.
+The title's part before the last `/` is the navigation group. A `.canvas/preview.tsx` file supplies CSS and decorators for the canvas files below it. See the [`@pstdio/canvas` README](https://www.npmjs.com/package/@pstdio/canvas#readme) for the full format.
 
 ## Work with a design
 

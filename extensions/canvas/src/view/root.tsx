@@ -38,7 +38,9 @@ const ConnectedCanvas = (props: ConnectedCanvasProps) => {
   const [error, setError] = useState("");
   const connection = useRef<ReturnType<typeof createLayoutSession> | undefined>(undefined);
   const latest = useRef(canvas);
-  latest.current = canvas;
+  useEffect(() => {
+    latest.current = canvas;
+  });
   useEffect(() => {
     const current = latest.current;
     const client = createWebviewClient<typeof commands>(host);

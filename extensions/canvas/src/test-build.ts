@@ -1,5 +1,5 @@
-import { type CanvasBuildManifest, DEFAULT_OUT } from "@pstdio/canvas";
-import { createMemoryRepoFiles, createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import type { CanvasBuildManifest } from "@pstdio/canvas";
+import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import type { CanvasItem } from "./canvas-model";
 
 // A build as `pstdio-canvas` writes it: three frames in one canvas, one in another, and one
@@ -53,11 +53,9 @@ export const testManifest = (): CanvasBuildManifest => ({
 });
 
 export const testContext = async (manifest: CanvasBuildManifest | null = testManifest()) => {
-  const project = createMemoryRepoFiles();
-  // The build as `pstdio-canvas` writes it into the project folder.
-  const files = { writeText: (path: string, value: string) => project.writeText(`${DEFAULT_OUT}/${path}`, value) };
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
+  const files = ctx.artifacts.mount("build");
   if (manifest) await files.writeText("manifest.json", JSON.stringify(manifest));
-  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {}, overrides: { projectFiles: project } });
   return { ctx, files };
 };
 

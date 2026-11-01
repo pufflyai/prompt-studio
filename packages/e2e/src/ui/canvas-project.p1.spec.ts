@@ -80,7 +80,7 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
     await expect(button).toHaveCSS("color", "rgb(0, 128, 0)");
 
     // Bun keeps a chunk's name when only its stylesheet changes; the frame must still reload.
-    writeProject(root, "Version 2", "rgb(255, 0, 0)");
+    writeFileSync(join(root, "src/button.css"), ".button { color: rgb(255, 0, 0); }\n");
     await expect(frame.getByRole("button", { name: "Version 2: Save" })).toHaveCSS("color", "rgb(255, 0, 0)", {
       timeout: 30_000,
     });

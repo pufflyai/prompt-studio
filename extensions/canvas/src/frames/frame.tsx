@@ -43,8 +43,8 @@ export const FramePreview = (props: FramePreviewProps) => {
   );
   const app = useThemePreference();
   const appTheme = app.themePreferences.find((theme) => theme.id === app.themePreference);
-  const themeId = selected === "app" ? appTheme?.id : selected;
   const theme = frameThemeOption(selected, appTheme);
+  const themeKey = JSON.stringify(theme);
   const sentTheme = useRef<string | undefined>(undefined);
   const { source, exportName, viewportHeight, revision: build } = item.preview;
   useEffect(() => {
@@ -68,10 +68,10 @@ export const FramePreview = (props: FramePreviewProps) => {
     if (ready || error) job.current?.finish();
   }, [ready, error, job]);
   useEffect(() => {
-    if (!ready || sentTheme.current === themeId) return;
-    sentTheme.current = themeId;
+    if (!ready || sentTheme.current === themeKey) return;
+    sentTheme.current = themeKey;
     postFrame(frame.current, { nonce: nonce.current, type: "theme", theme });
-  }, [theme, themeId, ready]);
+  }, [theme, themeKey, ready]);
   useEffect(() => {
     const receive = (event: MessageEvent<FrameMessage>) => {
       const message = event.data;
@@ -81,7 +81,7 @@ export const FramePreview = (props: FramePreviewProps) => {
           postFrame(frame.current, { nonce: nonce.current, type: "bootstrap", bootstrap });
           return;
         case "boot":
-          sentTheme.current = themeId;
+          sentTheme.current = themeKey;
           postFrame(frame.current, {
             nonce: nonce.current,
             type: "render",
@@ -143,7 +143,7 @@ export const FramePreview = (props: FramePreviewProps) => {
     bootstrap,
     frameBootstrap,
     theme,
-    themeId,
+    themeKey,
     source,
     exportName,
     viewportHeight,
