@@ -429,6 +429,17 @@
     "removeWhen": "Identify and fix the cold Claude dependency install delay, then pass this complete case in ten independent Linux x64 runs within its existing 30000 ms allowance, without retries, prewarming or fewer extensions."
   },
   {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "ticket/repeat structure",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-932 / workbench navigation performance",
+    "reason": "User-authorized remaining-release-failure quarantine. Stable 0.46 certification completed all 120 samples and recorded one repeated-ticket structure measurement at 376.5 ms against its unchanged 375 ms budget. The other structure, data and editor contracts passed. Preserve all thirty samples per destination and visit, the full fixed fixture, trusted clicks and original ordering; this remains performance debt.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/41258726585/job/124711510001"],
+    "removeWhen": "Fix repeated-ticket structure latency and complete the entire 120-sample hosted Linux x64 workload in one first attempt with all thirty repeated-ticket structure samples below 375 ms and every original data, editor, request and reachability assertion intact."
+  },
+  {
     "runner": "workbench-benchmark",
     "file": "packages/e2e/src/perf/side-panel.p3.bench.ts",
     "name": "closes and reopens the live Side Panel within budget",
