@@ -21,7 +21,6 @@ export interface CiJob {
   runner?: string | null;
   labels?: string[];
   steps?: CiStepTiming[];
-  fullOverride?: boolean;
   cause?: CiFailureCause;
 }
 
@@ -68,12 +67,32 @@ export const deduplicateJobs = (jobs: CiJob[]) => {
     });
 };
 
-const summaryJobs = new Set(["ci_passed", "version_pr", "nightly_prune", "desktop / targets"]);
-export const isSummaryJob = (job: CiJob) => summaryJobs.has(job.name);
 export const isFailedJob = (job: CiJob) => job.conclusion === "failure" || job.conclusion === "timed_out";
 
+const bookkeepingJobs = new Set(["version_pr", "nightly_prune", "desktop / targets"]);
+// Nested workflows prefix job names, e.g. "production / functional / validation_results".
+const gateJobs = new Set(["ci_passed", "production_ci_passed", "validation_results", "certify"]);
+const isGate = (job: CiJob) => gateJobs.has(job.name.split(" / ").at(-1)!);
+const attemptOf = (job: CiJob) => `${job.workflow}/${job.runId}/${job.attempt}`;
+// A gate fails whenever a job it checks fails, so it counts only when nothing else in its attempt failed.
+export const countedJobs = (jobs: CiJob[]) => {
+  const failedAttempts = new Set(jobs.filter((job) => isFailedJob(job) && !isGate(job)).map(attemptOf));
+  return jobs.filter((job) => !bookkeepingJobs.has(job.name) && !(isGate(job) && failedAttempts.has(attemptOf(job))));
+};
+export const passedOnRerun = (job: CiJob, jobs: CiJob[]) =>
+  jobs.some(
+    (candidate) =>
+      candidate.workflow === job.workflow &&
+      candidate.sha === job.sha &&
+      candidate.name === job.name &&
+      candidate.conclusion === "success" &&
+      candidate.started !== null &&
+      job.completed !== null &&
+      candidate.started > job.completed,
+  );
+
 export const summarizeFailures = (input: CiJob[]) => {
-  const jobs = deduplicateJobs(input).filter((job) => !isSummaryJob(job));
+  const jobs = countedJobs(deduplicateJobs(input));
   return {
     failures: groupFailures(jobs, (job) =>
       job.failures?.length ? job.failures : job.failedSteps.map((step) => `step | ${job.name} | ${step}`),
@@ -98,16 +117,7 @@ const groupFailures = (jobs: CiJob[], signaturesFor: (job: CiJob) => string[]) =
   for (const job of jobs.filter(isFailedJob)) {
     const signatures = signaturesFor(job);
     if (!signatures.length) signatures.push(`job | ${job.name} | ${job.conclusion}`);
-    const passedOnRerun = jobs.some(
-      (candidate) =>
-        candidate.workflow === job.workflow &&
-        candidate.sha === job.sha &&
-        candidate.name === job.name &&
-        candidate.conclusion === "success" &&
-        candidate.started !== null &&
-        job.completed !== null &&
-        candidate.started > job.completed,
-    );
+    const rerunPassed = passedOnRerun(job, jobs);
     for (const signature of signatures) {
       const group = groups.get(signature) ?? {
         signature,
@@ -121,7 +131,7 @@ const groupFailures = (jobs: CiJob[], signaturesFor: (job: CiJob) => string[]) =
       group.branches.add(job.branch);
       if (job.workflow === "test-and-build.yml" && job.branch === "main") group.main += 1;
       if (job.workflow === "release-packages.yml") group.release += 1;
-      if (passedOnRerun) group.passedOnRerun += 1;
+      if (rerunPassed) group.passedOnRerun += 1;
       groups.set(signature, group);
     }
   }

@@ -50,8 +50,8 @@ A local run only proves your own machine. It does not prove other platforms or s
 | --- | --- | --- | --- | --- | --- |
 | Pull request | Push to a PR branch | Test and Build (`pull_request`) | Affected P0, lint, types and public contracts, plus added or edited tests at every priority | The baseline and edited tests passed for this PR | under 3 min for the baseline; edited tests add their normal setup and execution |
 | Merge queue | Add to queue | Test and Build (`merge_group`) | All P0, P1 source contracts and real dashboard startup smoke | The exact merged commit passed safety contracts and starts | under 8 min |
-| Main | Queue merges a commit | Test and Build (`push`) | Checks that main matches the tested queue commit, publishes the build cache, runs a startup smoke test | Main is the commit the queue tested, and it still starts | a few min |
-| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on Linux and Apple Silicon, P3 performance, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | 40–50 min of execution |
+| Main | Queue merges a commit | Test and Build (`push`) | Checks that main matches the tested queue commit, publishes the build cache, runs a startup smoke test | Main is the commit the queue tested, and it still starts | under 8 min |
+| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on Linux, with native desktop and packaged CLI checks also on Apple Silicon; P3 performance, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | 40–50 min of execution |
 | Stable release | Manual `stable` | Release Packages → Production validation | Everything nightly runs, plus Windows and Intel macOS: signed desktop apps, packaged CLI hosts, Windows unit and database checks, backend benchmarks on Windows, and the Windows update check | A complete certificate for the exact release files allows publishing | 40–50 min of execution |
 
 Prioritize distinct coverage first, then minimize repeated work on frequent runs. Parallel jobs contribute their dependency critical path, not the sum of every runner minute. Report total runner work separately to expose expensive duplication.
@@ -74,6 +74,7 @@ The timing report keeps initial scheduling delay, elapsed time after the first j
 - Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.
 - Complete P1/P2/P3 matrices run in nightly and stable validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
 - A new push cancels the PR's older run. Adding or removing labels does not rerun CI; `ci:full` requests diagnostics through its own workflow.
+- The Version Packages PR gets its checks from Release Packages. Its pushes use the workflow token, so GitHub holds their `pull_request` runs for a maintainer's approval. After updating the PR, Release Packages dispatches Test and Build with `profile=pull_request`, which runs the same PR checks on the branch. The PR changes every package, so each update runs P0 for all of them; a newer update cancels the older run. The profile refuses other branches, because a dispatch compares only the last commit.
 
 ## Merge queue
 
@@ -143,6 +144,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
   - container service checks
   - the packaged CLI in the toolchain job on Linux x64, Linux arm64 and Apple Silicon: P1 everywhere; P2 feature workflows on Linux x64 and Apple Silicon only, because they test OS-independent behavior. Install, native process and asset checks are P1.
 - The nightly does not run Windows or Intel macOS. Stable releases validate them, so a Windows-only regression first shows up when a release is cut.
+- The shared Bun unit, API and database suites run on Linux. Apple Silicon runs the desktop app's own Bun tests, the native desktop and packaged CLI checks, and the Bun quarantine lane.
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
 A failed validation job does not unpublish the nightly. It makes the run red, `certify` reports the failed checks, and the Coverage workflow skips that nightly's measurement.
@@ -213,6 +215,18 @@ Quarantine is manual, never automatic. Entries live in `scripts/ci/test-quaranti
 Package-check jobs use shallow checkouts because they read the current source tree; scope/static jobs keep the history required for comparisons and provenance.
 
 P0 package rows build their packages and dependencies once, then run lint and unit checks side by side. These checks call package scripts directly so Nx cannot rebuild a dependency while tests read it. API and database tests have a separate row for each priority. API test files keep a fresh process each, with at most two at once. A file that needs the whole process pool uses `.exclusive.p1.test.ts` and runs alone ([ADR 0018](../../adrs/0018-temporary-api-test-process-isolation.md)).
+
+## CI health report
+
+The **Weekly CI failure report** runs every Sunday at 21:17 UTC and covers the previous seven days. Besides failing tests and steps, it reports:
+
+- p50 and p90 time per stage against the 3, 8, 8 and 40 minute targets for PRs, the queue, main and release validation. Only first attempts whose required gate passed or failed count; superseded, approval-pending and gate-less runs are left out.
+- runner minutes per stage, including reruns
+- queue runs per merged PR
+- the share of failed jobs that passed when rerun on the same commit. A gate job counts only when nothing else in its attempt failed.
+- the quarantine size, and the entries added more than 30 days ago. Entries are not removed automatically.
+
+Every workflow shares the token's 1,000 API requests per hour, and a busy week needs about 2,700. The collector keeps 300 requests in reserve for other workflows and waits for each reset, so the job can take over four hours. It reads failure logs only for queue, main, release and diagnostic runs. The data is uploaded as the `ci-failure-report-attempt-<attempt>` artifact; `health.json` holds the health figures. To report another window, run `bun scripts/ci/report-ci-failures.ts --since <date> --until <date>`.
 
 ## Changing the CI setup
 

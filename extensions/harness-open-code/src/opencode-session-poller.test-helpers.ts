@@ -60,5 +60,3 @@ export const createMessageTimeline = () => {
   };
   return { loader, set };
 };
-
-export const tick = () => new Promise((resolve) => setTimeout(resolve, 1_100));

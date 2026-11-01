@@ -10,12 +10,11 @@ The `PR area labels` workflow marks changes that need focused review. Labels des
 | `extension-runtime` | Extension installation, lifecycle, bridges, and processes |
 | `security` | Runtime authentication, secrets, webview access, and desktop isolation |
 | `sync` | Event delivery, ordering, reconnects, and consistency |
-| `release` | CI permissions, packaging, publishing, and label policy |
+| `release` | Packaging, publishing, and the release and production validation workflows |
+| `ci` | CI workflows and permissions, test selection, and label policy |
 | `dashboard-ui` | Core UI and dashboard chrome: compare with the live Canvas design and [design rules](../../guidance/0002-design.md) |
 
 `.github/labeler.yml` is the executable mapping source. Whole-package rules include tests and documentation. `dashboard-ui` is the exception: it covers the sources of the dashboard, the workbench and `@pstdio/ui`, the dashboard's `index.html` and `public/` assets, the icon font and the design system file, but not test files or test fixtures, support, utilities and helpers. Stories, story fixtures and locale strings count. Extension views are not core UI: the `extensions` label tracks them. Several labels can match one file. The security paths identify known boundaries and do not detect every security change.
-
-Reviewers own two separate labels: `breaking-change` for incompatible behavior or contracts, and `needs-migration` for required data transitions. Explain the affected consumers or migration in the PR description. These labels are never managed by the workflow.
 
 The PR author owns `waiting-for-release`. Add it to an extension PR that uses SDK or UI changes that are merged but not yet published to npm. Name the SDK or UI PR it waits for in the description. The `published_extensions` CI job fails on such a PR until the next release, so do not merge it. After the release, raise the extension's `@pstdio/sdk` or `@pstdio/ui` range to the published version, rerun CI, and remove the label once `published_extensions` passes. The workflow never manages this label.
 
@@ -31,7 +30,7 @@ For open PRs, the workflow publishes pending before classification, then success
 
 Runs that find the PR closed before classification do not change labels or publish commit statuses. A status belongs to a commit SHA and may also gate an open PR. Reopening a PR starts fresh classification. A run that starts while open and observes closure during classification still reports a changed-snapshot error on its captured head.
 
-The pinned labeler has GitHub API limits: the files endpoint returns at most 3,000 files and a PR holds at most 100 labels. The policy reports an error for a diff over 3,000 files, fewer than eight free label slots before classification, or a full label list afterward. It never treats a partial classification as success. Remove unnecessary labels or split the diff, then rerun.
+The pinned labeler has GitHub API limits: the files endpoint returns at most 3,000 files and a PR holds at most 100 labels. The policy reports an error for a diff over 3,000 files, fewer than nine free label slots before classification, or a full label list afterward. It never treats a partial classification as success. Remove unnecessary labels or split the diff, then rerun.
 
 ## Trusted execution
 
