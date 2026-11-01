@@ -21,7 +21,6 @@ export interface CiJob {
   runner?: string | null;
   labels?: string[];
   steps?: CiStepTiming[];
-  fullOverride?: boolean;
   cause?: CiFailureCause;
 }
 
@@ -68,9 +67,21 @@ export const deduplicateJobs = (jobs: CiJob[]) => {
     });
 };
 
-const summaryJobs = new Set(["ci_passed", "version_pr", "nightly_prune", "desktop / targets"]);
+// Gates fail whenever a job they aggregate fails; counting them would double every failure.
+const summaryJobs = new Set(["ci_passed", "validation_results", "version_pr", "nightly_prune", "desktop / targets"]);
 export const isSummaryJob = (job: CiJob) => summaryJobs.has(job.name);
 export const isFailedJob = (job: CiJob) => job.conclusion === "failure" || job.conclusion === "timed_out";
+export const passedOnRerun = (job: CiJob, jobs: CiJob[]) =>
+  jobs.some(
+    (candidate) =>
+      candidate.workflow === job.workflow &&
+      candidate.sha === job.sha &&
+      candidate.name === job.name &&
+      candidate.conclusion === "success" &&
+      candidate.started !== null &&
+      job.completed !== null &&
+      candidate.started > job.completed,
+  );
 
 export const summarizeFailures = (input: CiJob[]) => {
   const jobs = deduplicateJobs(input).filter((job) => !isSummaryJob(job));
@@ -98,16 +109,7 @@ const groupFailures = (jobs: CiJob[], signaturesFor: (job: CiJob) => string[]) =
   for (const job of jobs.filter(isFailedJob)) {
     const signatures = signaturesFor(job);
     if (!signatures.length) signatures.push(`job | ${job.name} | ${job.conclusion}`);
-    const passedOnRerun = jobs.some(
-      (candidate) =>
-        candidate.workflow === job.workflow &&
-        candidate.sha === job.sha &&
-        candidate.name === job.name &&
-        candidate.conclusion === "success" &&
-        candidate.started !== null &&
-        job.completed !== null &&
-        candidate.started > job.completed,
-    );
+    const rerunPassed = passedOnRerun(job, jobs);
     for (const signature of signatures) {
       const group = groups.get(signature) ?? {
         signature,
@@ -121,7 +123,7 @@ const groupFailures = (jobs: CiJob[], signaturesFor: (job: CiJob) => string[]) =
       group.branches.add(job.branch);
       if (job.workflow === "test-and-build.yml" && job.branch === "main") group.main += 1;
       if (job.workflow === "release-packages.yml") group.release += 1;
-      if (passedOnRerun) group.passedOnRerun += 1;
+      if (rerunPassed) group.passedOnRerun += 1;
       groups.set(signature, group);
     }
   }

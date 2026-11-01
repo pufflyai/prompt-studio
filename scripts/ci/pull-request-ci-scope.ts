@@ -35,7 +35,9 @@ const sharedBuildInput = (file: string) =>
 
 const stageFor = (event: string, production: boolean, profile?: string) => {
   if (production) return "full";
-  if (event === "pull_request") return "pull_request";
+  // The release workflow dispatches PR checks for the Version Packages PR: its
+  // token's pushes need a maintainer's approval before pull_request runs start.
+  if (event === "pull_request" || profile === "pull_request") return "pull_request";
   if (event === "push" && profile !== "merge_queue") return "main";
   return "merge_queue";
 };
@@ -53,7 +55,9 @@ const runsFileCheck = (stage: ReturnType<typeof stageFor>, touched: boolean) =>
 export const resolveCiScope = (input: CiScopeInput) => {
   const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
-  const production = profile === "production" || (event === "workflow_dispatch" && profile !== "merge_queue");
+  const production =
+    profile === "production" ||
+    (event === "workflow_dispatch" && profile !== "merge_queue" && profile !== "pull_request");
   const stage = stageFor(event, production, profile);
   const code = changedFiles.filter((file) => !documentation(file));
   const shared = code.some((file) => sharedBuildInput(file) || !packages.some((pkg) => file.startsWith(`${pkg.dir}/`)));

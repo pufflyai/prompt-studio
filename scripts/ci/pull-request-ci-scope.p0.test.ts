@@ -76,6 +76,14 @@ test("the queue keeps source contracts and smoke while production retains comple
   expect(production.packagedMatrix.some((row) => row.priority === "P2")).toBe(true);
 });
 
+test("a dispatched pull_request profile runs the same checks as the PR itself", () => {
+  const input = { ...scopeFixture(), changedFiles: ["packages/sdk/package.json"] };
+  const pull = resolveCiScope({ ...input, event: "pull_request" });
+  const dispatched = resolveCiScope({ ...input, event: "workflow_dispatch", profile: "pull_request" });
+  expect(dispatched).toEqual(pull);
+  expect(dispatched).toMatchObject({ stage: "pull_request", production: false });
+});
+
 test("the nightly validates Linux and Apple Silicon while stable releases validate every published host", () => {
   const input = { ...scopeFixture(), event: "workflow_dispatch", profile: "production" };
   const queue = resolveCiScope({ ...input, profile: "merge_queue" });

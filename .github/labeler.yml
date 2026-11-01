@@ -35,16 +35,25 @@ sync:
           - packages/pstdio-api/src/features/sync/**
           - packages/pstdio-api/src/services/sync-service.ts
           - packages/sdk/src/client/sync.ts
+# Packaging, publishing and release validation. CI-only changes get `ci` instead.
 release:
   - changed-files:
       - any-glob-to-any-file:
-          - .github/workflows/**
-          - .github/labeler.yml
-          - scripts/ci/**
+          - .github/workflows/release-*.yml
+          - .github/workflows/publish-*.yml
+          - .github/workflows/production-*.yml
+          - .github/workflows/verify-*.yml
           - scripts/build/**
           - scripts/release/**
           - scripts/embed.json
           - .changeset/config.json
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/workflows/**
+          - .github/actions/**
+          - .github/labeler.yml
+          - scripts/ci/**
 # Core UI only: the dashboard chrome, the workbench, shared components and theme, and the design system.
 # Extension views are tracked by the `extensions` label. Test-only files do not count.
 dashboard-ui:

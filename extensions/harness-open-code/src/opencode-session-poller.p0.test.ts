@@ -9,9 +9,11 @@ import {
   lastStatusPatch,
   questionAssistant,
   recordingSink,
-  tick,
   userMessage,
 } from "./opencode-session-poller.test-helpers";
+
+const pollIntervalMs = 10;
+const tick = () => Bun.sleep(20);
 
 const errorInfo = {
   name: "service_unavailable_error",
@@ -71,6 +73,7 @@ describe("pollOpencodeMessages", () => {
       events: sink,
       baselineCount: 1,
       messageComplete,
+      pollIntervalMs,
     });
 
     await tick();
@@ -101,6 +104,7 @@ describe("pollOpencodeMessages", () => {
       events: sink,
       baselineCount: 1,
       messageComplete,
+      pollIntervalMs,
     });
 
     await tick();
@@ -130,6 +134,7 @@ describe("pollOpencodeMessages", () => {
       events: sink,
       baselineCount: 2,
       messageComplete,
+      pollIntervalMs,
     });
 
     await tick();
@@ -167,6 +172,7 @@ describe("pollOpencodeMessages", () => {
       events: sink,
       baselineCount: 1,
       messageComplete,
+      pollIntervalMs,
     });
 
     await tick();
@@ -187,6 +193,7 @@ describe("pollOpencodeMessages", () => {
       events: sink,
       baselineCount: 1,
       messageComplete: Promise.resolve(),
+      pollIntervalMs,
     });
 
     await tick();

@@ -12,9 +12,13 @@ permissions:
 jobs:
   report:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # A week of runs needs about 2,500 API requests; the workflow token allows 1,000 per hour.
+    timeout-minutes: 180
     steps:
+      # Full history dates each quarantine entry.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json

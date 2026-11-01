@@ -109,8 +109,8 @@ export async function prepare(api: PolicyApi) {
   try {
     // GitHub's files API stops at 3,000. A partial diff cannot prove separation.
     if (pull.changed_files > 3000) throw new Error("The PR exceeds GitHub's 3,000-file classification limit");
-    // Leave room for all eight managed labels without the labeler's truncation.
-    if (pull.labels.length > 92) throw new Error("Remove labels to leave room for the eight area labels");
+    // Leave room for all nine managed labels without the labeler's truncation.
+    if (pull.labels.length > 91) throw new Error("Remove labels to leave room for the nine area labels");
     return snapshot;
   } catch (error) {
     await api.publish(snapshot.head, { state: "error", description: String(error).slice(0, 140) });

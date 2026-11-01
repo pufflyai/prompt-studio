@@ -1,4 +1,4 @@
-import type { CiJob } from "./ci-failures";
+import { type CiJob, isFailedJob, isSummaryJob, passedOnRerun } from "./ci-failures";
 
 export interface CiStepTiming {
   name: string;
@@ -46,14 +46,12 @@ const phaseForStep = (name: string) => {
   return "unclassified";
 };
 
-const stageForRun = (job: Pick<CiJob, "workflow" | "event" | "branch" | "fullOverride">) => {
+const stageForRun = (job: Pick<CiJob, "workflow" | "event" | "branch">) => {
   if (job.workflow.startsWith("release-")) return "release";
   if (job.event === "merge_group") return "merge_queue";
   if (job.event === "push" && job.branch === "main") return "main";
-  if (job.event === "pull_request") {
-    if (job.fullOverride === undefined) return "pull_request-unclassified";
-    return job.fullOverride ? "pull_request-full" : "pull_request";
-  }
+  // PR runs no longer change scope by label; full diagnostics are manual dispatches.
+  if (job.event === "pull_request") return "pull_request";
   return job.event;
 };
 
@@ -146,6 +144,58 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
   return {
     runs,
     limits:
-      "Aggregate runner time sums parallel work; elapsed after start excludes initial scheduling but can include later scheduling gaps. A dependency critical path needs the workflow graph. Runner wait needs a job creation timestamp. PR scope and failure causes stay unclassified without evidence. Merge-candidate creation wait is outside run wall time.",
+      "Aggregate runner time sums parallel work; elapsed after start excludes initial scheduling but can include later scheduling gaps. A dependency critical path needs the workflow graph. Runner wait needs a job creation timestamp. Failure causes stay unclassified without evidence. Merge-candidate creation wait is outside run wall time.",
+  };
+};
+
+// The stage time targets from the CI stages guide.
+const stageTargetsMs = {
+  pull_request: 3 * 60_000,
+  merge_queue: 8 * 60_000,
+  main: 8 * 60_000,
+  release: 40 * 60_000,
+};
+
+const percentile = (values: number[], share: number) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted.length ? sorted[Math.ceil(share * sorted.length) - 1]! : null;
+};
+
+export const summarizeCiHealth = (
+  timing: ReturnType<typeof summarizeCiTiming>,
+  jobs: CiJob[],
+  observedRuns: CiRunTiming[],
+  mergedPulls: number,
+) => {
+  const stages = Object.entries(stageTargetsMs).map(([stage, targetMs]) => {
+    const runs = timing.runs.filter((run) => run.stage === stage);
+    const walls = runs.map((run) => run.wallMs).filter((wall): wall is number => wall !== null);
+    const runnerMs = runs.reduce((sum, run) => sum + (run.totalRunnerMs ?? 0), 0);
+    return {
+      stage,
+      targetMs,
+      runs: runs.length,
+      measured: walls.length,
+      p50Ms: percentile(walls, 0.5),
+      p90Ms: percentile(walls, 0.9),
+      withinTarget: walls.filter((wall) => wall <= targetMs).length,
+      firstAttemptFailures: runs.filter((run) => !run.firstAttemptSucceeded).length,
+      runnerMinutes: Math.round(runnerMs / 60_000),
+    };
+  });
+  // Every attempt counts: a rerun builds the queue entry again.
+  const queueRuns = observedRuns
+    .filter((run) => run.event === "merge_group")
+    .reduce((sum, run) => sum + (run.run_attempt ?? 1), 0);
+  const failed = jobs.filter((job) => isFailedJob(job) && !isSummaryJob(job));
+  return {
+    stages,
+    queueRuns,
+    mergedPulls,
+    queueRunsPerMerge: mergedPulls ? queueRuns / mergedPulls : null,
+    failedJobs: failed.length,
+    // A queue entry that fails is removed and gets a new commit when added again, so
+    // same-commit reruns undercount flakes there.
+    passedOnRerun: failed.filter((job) => passedOnRerun(job, jobs)).length,
   };
 };
