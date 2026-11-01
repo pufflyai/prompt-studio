@@ -1,5 +1,14 @@
 # pstdio-planner
 
+## 0.46.1
+
+_2026-11-01_
+
+### Patch Changes
+
+- a24082b: Let ticket designs hand off through a proposal folder on the default branch as well as a pushed branch and commit.
+- 2d0cff8: Keep the project timeline from pinning the CPU: each ticket card loads its context-menu actions once and reloads them only when you use the card after a change, instead of every card reloading them after every workbench change.
+
 ## 0.46.0
 
 _2026-10-31_

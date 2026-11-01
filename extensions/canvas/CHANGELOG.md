@@ -1,5 +1,17 @@
 # canvas
 
+## 0.1.0
+
+_2026-11-01_
+
+### Minor Changes
+
+- 3d76d3a: UI Canvas shows the project's own canvases from the build that `pstdio-canvas watch` writes, reloads only the frames whose code changed, and no longer ships a prebuilt catalog; canvas code always imports the `@pstdio/canvas` that runs the build; `@pstdio/canvas` no longer exports `./indexer`.
+
+### Patch Changes
+
+- a24082b: Describe how to propose a ticket's design in a `proposals/` folder built from copies of the real components.
+
 ## 0.0.1
 
 _2026-10-31_

@@ -1,5 +1,19 @@
 # pstdio
 
+## 0.47.0
+
+_2026-11-01_
+
+### Minor Changes
+
+- 9c44404: Expose accurate Cloud document progress and persistent sign-in recovery through the public SDK.
+- 826dc74: Announce account status changes, including sign-in recovery, through `accountEvents.changed`, and include session history in Cloud sync progress.
+
+### Patch Changes
+
+- 3d76d3a: Read unchanged artifact files without reconciling unrelated files while preserving mount boundaries and remote updates; wait for Canvas watcher shutdown before releasing project files.
+- adfdf60: Allow page scrolling through inline alerts and at the end of long alert messages.
+
 ## 0.46.0
 
 _2026-10-31_

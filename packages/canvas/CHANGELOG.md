@@ -1,5 +1,13 @@
 # @pstdio/canvas
 
+## 0.47.0
+
+_2026-11-01_
+
+### Minor Changes
+
+- 3d76d3a: UI Canvas shows the project's own canvases from the build that `pstdio-canvas watch` writes, reloads only the frames whose code changed, and no longer ships a prebuilt catalog; canvas code always imports the `@pstdio/canvas` that runs the build; `@pstdio/canvas` no longer exports `./indexer`.
+
 ## 0.46.0
 
 _2026-10-31_
