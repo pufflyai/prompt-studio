@@ -259,7 +259,8 @@ try {
     : project;
   await openPackagedProject(active.page, updatedProject);
   if (retirement) await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
-  await expect(active.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+  // Installed harnesses can replace the empty-state title with account setup.
+  await expect(active.page.getByLabel("Main").getByRole("log")).toBeVisible();
   assert.equal(readFileSync(join(projectPath, "persisted.txt"), "utf8"), "Signed Windows update preservation\n");
   assert((await run(updated.sidecar, ["projects", "list"])).includes(updatedProject.id));
   await active.page.screenshot({ path: join(evidence, "updated-workbench.png") });
@@ -307,6 +308,14 @@ try {
   );
 } catch (error) {
   writeFileSync(join(evidence, "failure.txt"), error instanceof Error ? (error.stack ?? error.message) : String(error));
+  if (active) {
+    await active.page.screenshot({ path: join(evidence, "failure.png"), timeout: 5_000 }).catch(() => {});
+    const snapshot = await active.page
+      .locator("body")
+      .ariaSnapshot({ timeout: 5_000 })
+      .catch(() => "Page unavailable");
+    writeFileSync(join(evidence, "failure-aria.yml"), snapshot);
+  }
   throw error;
 } finally {
   if (active) await closeInstalled(active).catch(() => {});
