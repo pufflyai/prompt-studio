@@ -109,7 +109,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -152,7 +152,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install native dependencies and restore host build cache
         uses: ./.github/actions/setup-ci-cache
         with:
@@ -200,7 +200,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - &a1
         uses: oven-sh/setup-bun@v2
         with:
@@ -262,7 +262,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -322,7 +322,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -368,7 +368,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -410,7 +410,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -462,7 +462,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -524,7 +524,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
@@ -600,7 +600,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
@@ -660,7 +660,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - uses: ./.github/actions/setup-ci-cache
@@ -702,7 +702,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - name: Install dependencies and restore build cache
@@ -786,7 +786,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - name: Install dependencies and restore build cache
@@ -846,7 +846,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - name: Install dependencies and restore build cache
@@ -897,7 +897,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - name: Install dependencies and restore build cache
@@ -984,7 +984,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: package.json
@@ -1021,7 +1021,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: package.json
@@ -1071,7 +1071,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Setup Bun
         run: node scripts/ci/setup-container-bun.ts
       - uses: ./.github/actions/setup-ci-cache
@@ -1170,7 +1170,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install native dependencies and restore host build cache
         id: install_native_dependencies
         uses: ./.github/actions/setup-ci-cache
@@ -1455,7 +1455,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - *a1
       - uses: ./.github/actions/setup-ci-cache
       - name: Compare public APIs with last release
@@ -1517,7 +1517,7 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - *a1
       - name: Require complete selected job results
         run: bun scripts/ci/monitor-ci-gates.ts

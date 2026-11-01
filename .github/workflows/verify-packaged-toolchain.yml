@@ -61,7 +61,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install native dependencies and restore host build cache
         uses: ./.github/actions/setup-ci-cache
         with:
