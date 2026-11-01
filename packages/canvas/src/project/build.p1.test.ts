@@ -86,3 +86,19 @@ test("a canvas with a broken import fails alone", async () => {
   expect(fixed.built).toBe(true);
   expect(fixed.manifest.canvases.find((canvas) => canvas.id === "src/gauge.canvas.tsx")?.error).toBeUndefined();
 });
+
+test("canvas code imports the same @pstdio/canvas as the frame runtime", async () => {
+  // A project's own copy would give nested frames a loader the runtime never installs.
+  const root = project({
+    ...sampleProject,
+    "node_modules/@pstdio/canvas/package.json": `{ "name": "@pstdio/canvas", "main": "index.ts" }\n`,
+    "node_modules/@pstdio/canvas/index.ts": `export const projectCopy = "project copy";\n`,
+    "src/nested.canvas.tsx": `import { frameBootstrap } from "@pstdio/canvas";\nexport const Default = () => <button onClick={() => void frameBootstrap("x")}>Load</button>;\n`,
+  });
+  const { manifest } = await buildCanvases({ root });
+  const out = resolveOut(root);
+
+  expect(manifest.canvases.find((canvas) => canvas.id === "src/nested.canvas.tsx")?.error).toBeUndefined();
+  const code = Object.values(manifest.frames.modules).map((module) => moduleCode(out, module.file));
+  expect(code.some((text) => text.includes("project copy"))).toBe(false);
+});

@@ -1,5 +1,5 @@
 import type { ExtensionStorageApi, SharedStorageEdit } from "@pstdio/sdk/extensions";
-import type { CanvasDefinition } from "./canvases/definitions";
+import type { CanvasDefinition } from "./canvas-model";
 import { object, readLayout, updateLayout } from "./layout";
 
 const recordId = (storage: ExtensionStorageApi, canvas: CanvasDefinition) => storage.records.id(`layout:${canvas.id}`);

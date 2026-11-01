@@ -1,26 +1,26 @@
+import type { CanvasEntry } from "@pstdio/canvas";
 import type { TreeNode } from "@pstdio/sdk/extensions";
-import { canvases } from "./canvases/definitions";
-import { canvasGroups } from "./catalog/navigation-groups";
 import { canvasResource, canvasTarget } from "./navigation";
 
-export const canvasTree = (projectId: string) => {
-  const roots: TreeNode[] = canvasGroups.map((group) => ({
-    id: `group-${group}`,
-    label: group,
-    collapsible: true,
-    children: [],
-  }));
-  for (const canvas of canvases) {
-    let parent = roots.find((node) => node.label === canvas.group)!;
-    for (const label of canvas.path ?? []) {
-      let child = parent.children!.find((node) => node.label === label && node.children);
-      if (!child) {
-        child = { id: `${parent.id}/${label}`, label, collapsible: true, children: [] };
-        parent.children!.push(child);
-      }
-      parent = child;
+// Titles such as "Design System/Components/Button" become nested folders, sorted by title.
+export const canvasTree = (projectId: string, canvases: readonly CanvasEntry[]) => {
+  const roots: TreeNode[] = [];
+  const folder = (siblings: TreeNode[], id: string, label: string) => {
+    let node = siblings.find((entry) => entry.children && entry.label === label);
+    if (!node) {
+      node = { id, label, collapsible: true, children: [] };
+      siblings.push(node);
     }
-    parent.children!.push({
+    return node.children!;
+  };
+  for (const canvas of [...canvases].sort((a, b) => a.title.localeCompare(b.title))) {
+    let siblings = roots;
+    let path = "group";
+    for (const label of canvas.group.split("/").filter(Boolean)) {
+      path = `${path}/${label}`;
+      siblings = folder(siblings, path, label);
+    }
+    siblings.push({
       id: canvas.id,
       label: canvas.name,
       icon: canvasResource.icon,

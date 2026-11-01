@@ -8,13 +8,14 @@ Shared React UI package for Prompt Studio apps. This package owns:
 
 ## Work with the live catalog
 
-Browse Design System in the Canvas extension. Open a component canvas and use Variant, Theme, and Props and source to inspect its states and public API.
+Browse Design System in the Canvas extension. Open a component canvas and use Theme and Props and source to inspect its states and public API.
 
 ```sh
 bun run --cwd packages/ui build
-bun run --cwd scripts canvas:build
 bun run --cwd extensions/canvas test
 ```
+
+Keep `bun run canvas` running in its own terminal while you work; UI Canvas shows what it builds.
 
 See [Canvas coverage](../../documentation/guides/development/0003-canvas-coverage.md) for authoring and isolated browser checks.
 
@@ -68,12 +69,12 @@ bun run test
 UI-specific check:
 
 ```bash
-bun run --cwd scripts canvas:verify
+bun run --cwd packages/canvas-tests test
 ```
 
 ## Example guidelines
 
 - Treat each example as a reproducible test case for a real UI state.
 - Include states like default, loading, empty, error, long content, and disabled where relevant.
-- For non-visual behavior, add `play` interactions and assertions in the example.
+- Keep examples for exploration; put critical behavioral assertions in separate tests.
 - Keep examples deterministic: avoid real network calls.

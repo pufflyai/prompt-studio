@@ -142,9 +142,10 @@ layer-map change.
    fixture databases and transport measurements. It never opens the user's database.
 
    The private `canvas-tests` package owns component browser interactions and
-   their Canvas servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
-   `pstdio-dashboard` as development dependencies because it loads their stories.
-   Story sources stay with those owners. It does not depend on the API, database,
+   their Canvas servers. It builds this repository's canvases with `pstdio-canvas build`
+   and type-checks every canvas file with its owner's settings. It declares `@pstdio/ui`,
+   `@pstdio/workbench`, and `pstdio-dashboard` as development dependencies.
+   Canvas sources stay with those owners. It does not depend on the API, database,
    CLI, or `e2e`. It uses `pstdio-benchmarks` for startup measurements and sample counts.
    App E2E never starts or builds Canvas.
 
@@ -242,4 +243,4 @@ The database uses the contract-layer `ResourceRef` type for persisted resource v
 
 ## Canvas authoring tooling
 
-The published `@pstdio/canvas` package owns the canvas file format, preview composition, source indexing, and the `pstdio-canvas` command that builds and watches a project's canvases. It has no application-layer dependencies; React is a peer dependency. Projects, UI packages and repository preview builds use it as development tooling. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; the repository Canvas type-check command checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.
+The published `@pstdio/canvas` package owns the canvas file format, preview composition, source indexing, and the `pstdio-canvas` command that builds and watches a project's canvases. It has no application-layer dependencies; React is a peer dependency. Projects, UI packages and repository preview builds use it as development tooling. The UI Canvas extension depends on its released version for the build manifest, frame messages and the nested-frame loader; it never runs the build itself. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; `bun run --cwd packages/canvas-tests typecheck` checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.

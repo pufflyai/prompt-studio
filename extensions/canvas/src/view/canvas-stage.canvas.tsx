@@ -1,12 +1,17 @@
 import { Box } from "@chakra-ui/react";
 import { useState } from "react";
-import { type CanvasDefinition, canvases } from "../canvases/definitions";
-import { documentationFixture, interactionFixture } from "../canvases/verification-fixtures";
+import type { CanvasDefinition } from "../canvas-model";
 import { createCanvasRuntime } from "../controller/runtime";
 import { readLayout } from "../layout";
+import { documentationFixture, interactionFixture, populatedFixture } from "./canvas-fixtures";
 import { CanvasStage } from "./canvas-stage";
 
-const Example = (props: { canvas: CanvasDefinition; zoom?: number; selected?: string }) => {
+interface ExampleProps {
+  canvas: CanvasDefinition;
+  zoom?: number;
+  selected?: string;
+}
+const Example = (props: ExampleProps) => {
   const { canvas, zoom = 1, selected } = props;
   const [runtime] = useState(() => {
     const runtime = createCanvasRuntime(
@@ -24,49 +29,8 @@ const Example = (props: { canvas: CanvasDefinition; zoom?: number; selected?: st
   );
 };
 export default { title: "Canvas/Workspace", fullscreen: true };
-export const Interactive = {
-  id: "canvas-workspace--interactive",
-  render: () => <Example canvas={interactionFixture} />,
-};
-export const ZoomedOut = {
-  id: "canvas-workspace--zoomed-out",
-  render: () => <Example canvas={interactionFixture} zoom={0.5} />,
-};
-export const SelectedFrame = {
-  id: "canvas-workspace--selected-frame",
-  render: () => <Example canvas={interactionFixture} selected="project-form" />,
-};
-const populated: CanvasDefinition = {
-  id: "populated-story",
-  name: "Populated canvas",
-  items: Array.from({ length: 24 }, (_, index) => ({
-    ...interactionFixture.items[index % 2],
-    id: `preview-${index}`,
-    name: `Interactive preview ${index + 1}`,
-    position: { x: (index % 6) * 440, y: Math.floor(index / 6) * 500 },
-  })),
-};
-export const Populated = {
-  id: "canvas-workspace--populated",
-  render: () => <Example canvas={populated} zoom={0.3} />,
-};
-export const Foundations = {
-  id: "canvas-workspace--foundations",
-  render: () => <Example canvas={canvases.find((canvas) => canvas.id === "foundations")!} zoom={0.4} />,
-};
-export const SharedComponents = {
-  id: "canvas-workspace--shared-components",
-  render: () => <Example canvas={canvases.find((canvas) => canvas.id === "shared-components")!} zoom={0.4} />,
-};
-export const IntrinsicDocumentation = {
-  id: "canvas-workspace--intrinsic-documentation",
-  render: () => <Example canvas={documentationFixture} zoom={0.2} />,
-};
-export const GroupedFolderExamples = {
-  id: "canvas-workspace--grouped-folder-examples",
-  render: () => <Example canvas={canvases.find((canvas) => canvas.name === "Create folder")!} zoom={0.2} />,
-};
-export const GroupedAutoBuild = {
-  id: "canvas-workspace--grouped-auto-build",
-  render: () => <Example canvas={canvases.find((canvas) => canvas.name === "Auto Build")!} zoom={0.2} />,
-};
+export const Interactive = () => <Example canvas={interactionFixture} />;
+export const ZoomedOut = () => <Example canvas={interactionFixture} zoom={0.5} />;
+export const SelectedFrame = () => <Example canvas={interactionFixture} selected="project-form" />;
+export const Populated = () => <Example canvas={populatedFixture} zoom={0.3} />;
+export const IntrinsicDocumentation = () => <Example canvas={documentationFixture} zoom={0.2} />;

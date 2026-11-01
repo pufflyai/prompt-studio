@@ -203,9 +203,6 @@ test("one shared build per run covers every package the Linux host jobs build", 
   const pr = resolveCiScope(input);
   expect(pr.sharedBuild.split(" --scope ").length).toBeGreaterThan(0);
   for (const owner of pr.affectedOwners) expect(pr.sharedBuild).toContain(`--scope ${owner}`);
-  const extensions = resolveCiScope({ ...input, changedFiles: ["packages/ui/src/index.ts"] });
-  expect(extensions.publishedExtensions).toBe(true);
-  expect(extensions.sharedBuild).toContain("--scope canvas");
   expect(plannedCiJobs(pr).map((job) => job.id)).toContain("build_host");
   const docs = resolveCiScope({ ...input, changedFiles: ["documentation/guide.md"] });
   expect(docs.sharedBuild).toBe("");

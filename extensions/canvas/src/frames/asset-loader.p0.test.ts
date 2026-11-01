@@ -39,3 +39,30 @@ test("a failed asset load can be retried instead of poisoning the viewer cache",
   await expect(load("button")).rejects.toThrow("Interrupted download");
   expect(await (await load("button")).scripts["runtime.js"].text()).toBe("runtime");
 });
+
+test("new builds release obsolete cached module bytes and preview revisions", async () => {
+  const requests: FrameAssetRequest[] = [];
+  let revision = 1;
+  const load = createFrameAssetLoader(async (request) => {
+    requests.push(request);
+    const modules = request.source === "$runtime" ? ["runtime.js"] : ["runtime.js", `example-${revision}.js`];
+    return {
+      entry: "runtime.js",
+      modules,
+      styles: [],
+      files: Object.fromEntries(
+        modules.filter((name) => !request.cached.includes(name)).map((name) => [name, encoded(name)]),
+      ),
+    };
+  });
+  const first = await load("button", "1");
+  revision = 2;
+  await load("button", "2");
+  await load("other", "2");
+  expect(requests.at(-1)!.cached).not.toContain("example-1.js");
+  // A mounted old frame still owns its bytes even though the loader released them.
+  expect(await first.scripts["example-1.js"].text()).toBe("example-1.js");
+  const count = requests.length;
+  await load("button", "1");
+  expect(requests.length).toBeGreaterThan(count);
+});

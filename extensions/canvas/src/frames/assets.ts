@@ -1,18 +1,4 @@
-import type { FrameBootstrap } from "./asset-loader";
-
-export type { FrameBootstrap } from "./asset-loader";
-
-let load: ((source: string) => Promise<FrameBootstrap>) | undefined;
-export const installFrameAssetLoader = (loader: (source: string) => Promise<FrameBootstrap>) => {
-  load = loader;
-  return () => {
-    if (load === loader) load = undefined;
-  };
-};
-export const frameBootstrap = (source: string) => {
-  if (!load) return Promise.reject(new Error("Preview asset loader is unavailable"));
-  return load(source);
-};
+import type { FrameBootstrap } from "@pstdio/canvas";
 
 // Each sandbox has an opaque origin. Transfer immutable blobs and create URLs in
 // their consuming document; ancestor blob URLs cannot cross this boundary.

@@ -1,5 +1,5 @@
+import type { FrameMessage } from "@pstdio/canvas";
 import type { CanvasRuntime } from "../controller/runtime";
-import type { FrameMessage } from "./protocol";
 
 export const navigateFrame = (message: FrameMessage, id: string, runtime: CanvasRuntime) => {
   if (runtime.selection.get() !== id) return;

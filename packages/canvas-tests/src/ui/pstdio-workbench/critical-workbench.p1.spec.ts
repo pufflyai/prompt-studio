@@ -5,7 +5,7 @@ import { openCanvasPreview } from "../preview";
 test("switching projects starts project views fresh", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
-    "workbench-pstdio-workbench-guides-project-switch--keeps-shell-mounted",
+    "packages/pstdio-workbench/src/react/workbench/project-switch.canvas.tsx#KeepsShellMounted",
   );
   await expect(preview.getByText("Project A content", { exact: true })).toBeVisible();
   await preview.getByRole("button", { name: "Notes edited 0 times" }).click();
@@ -18,7 +18,10 @@ test("switching projects starts project views fresh", async ({ page }) => {
 
 // Critical: replacing an unpinned preview must preserve pinned resource tabs and their drafts.
 test("resource previews share a tray and retain pinned tabs", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "workbench-pstdio-workbench-guides-panels-and-pages--resource-tabs");
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/examples/api/api.canvas.tsx#ResourceTabs",
+  );
   const header = preview.locator('[data-workbench-panel-header="secondary"]');
   await preview.getByRole("button", { name: "Preview Alpha" }).click();
   await expect(header.getByRole("tab", { name: "Alpha.md" })).toBeVisible();
@@ -39,7 +42,7 @@ test("resource previews share a tray and retain pinned tabs", async ({ page }) =
 test("moving a panel preserves its draft", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
-    "workbench-pstdio-workbench-reference-core-api-panel-arrangement--closed-bottom",
+    "packages/pstdio-workbench/src/react/region/panel-arrangement.canvas.tsx#ClosedBottom",
   );
   const source = preview.locator('[data-workbench-panel="side"]:visible');
   const tab = source.getByRole("tab", { selected: true });
@@ -57,7 +60,10 @@ test("moving a panel preserves its draft", async ({ page }) => {
 
 // Critical: tab navigation must restore keyboard focus without losing the preceding draft.
 test("keyboard tab navigation restores focus and draft state", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "workbench-pstdio-workbench-reference-keyboard--visible-panels");
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/keybindings/keyboard.canvas.tsx#VisiblePanels",
+  );
   await preview.getByRole("tab", { name: "PS-1", exact: true }).click();
   await preview.getByRole("textbox", { name: "Draft 1", exact: true }).fill("Retained keyboard draft");
   await page.keyboard.press("Control+Tab");
