@@ -29,6 +29,31 @@ export interface CanvasDefinition {
 // This registry owns membership, names and dimensions. Saved layouts only own positions.
 export const nativeCanvases: readonly CanvasDefinition[] = [
   {
+    id: "canvas-lab-merger",
+    name: "Lab merger · proposal",
+    group: "Extensions",
+    path: ["UI Canvas", "Proposals"],
+    keywords: "PS-1006 motion shader parameters playback save versions",
+    items: [
+      {
+        id: "shader-parameters",
+        name: "Shader · frame parameters and save",
+        component: "proposal-shader-parameters",
+        position: { x: 0, y: 0 },
+        width: 640,
+        height: 600,
+      },
+      {
+        id: "motion-parameters",
+        name: "Motion · frame parameters and playback",
+        component: "proposal-motion-parameters",
+        position: { x: 720, y: 0 },
+        width: 640,
+        height: 600,
+      },
+    ],
+  },
+  {
     id: "foundations",
     name: "Foundations",
     group: "Design System",

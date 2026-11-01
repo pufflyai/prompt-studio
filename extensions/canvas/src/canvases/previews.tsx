@@ -1,4 +1,12 @@
 export const previews = {
+  "proposal-shader-parameters": {
+    source: "packages/ui/src/foundations/canvas-lab-merger.canvas.tsx",
+    exportName: "ShaderParameters",
+  },
+  "proposal-motion-parameters": {
+    source: "packages/ui/src/foundations/canvas-lab-merger.canvas.tsx",
+    exportName: "MotionParameters",
+  },
   "long-documentation": {
     source: "packages/ui/src/foundations/documentation.canvas.tsx",
     exportName: "LongDocumentation",
