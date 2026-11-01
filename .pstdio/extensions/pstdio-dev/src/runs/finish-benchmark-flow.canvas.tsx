@@ -1,29 +1,217 @@
-import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Button, Fieldset, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { AlertMessage, SegmentedControl, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { AlertMessage, Checkbox, SegmentedControl, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useState } from "react";
 
 const STATES = [
   { value: "new", label: "New run" },
   { value: "running", label: "Running" },
-  { value: "results", label: "Results" },
-  { value: "partial", label: "Partial results" },
+  { value: "finished", label: "Finished" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "results", label: "View results" },
+  { value: "single", label: "One commit" },
+  { value: "separate", label: "Separate runs" },
+  { value: "missing", label: "Missing comparison" },
   { value: "sync", label: "Sync failed" },
-  { value: "compare", label: "Missing comparison" },
   { value: "release", label: "Release pending" },
 ];
 
-const MEASUREMENTS = [
-  { label: "Session badge query", value: "9.1 ms", budget: "100 ms", outcome: "Below budget" },
-  { label: "Record save", value: "1.2 ms", budget: "No budget", outcome: "Measured" },
+const SUITES = [
+  "Desktop app",
+  "Workbench interactions",
+  "Canvas cold startup",
+  "Chat rendering",
+  "Side navigation",
+  "Planner board",
+  "Storage",
+  "Runtime",
+  "Relay storage",
 ];
+
+const PLATFORMS = ["Linux x64", "macOS arm64", "macOS x64", "Windows x64"];
+
+const OTHER_RUNS = [
+  { id: "1043", source: "Release 0.46.0", status: "Running" },
+  { id: "1040", source: "Started by an agent", status: "Finished" },
+  { id: "1031", source: "Started on GitHub", status: "Finished" },
+];
+
+const MEASUREMENTS = [
+  { label: "Session badge query", base: "9.4 ms", head: "9.1 ms", change: "−3%", budget: "Below 100 ms" },
+  { label: "Record save", base: "1.1 ms", head: "1.2 ms", change: "+9%", budget: "No budget" },
+];
+
+const toggle = (list: string[], item: string) =>
+  list.includes(item) ? list.filter((entry) => entry !== item) : [...list, item];
+
+interface CommitProps {
+  base: string;
+  head: string;
+  onBase: (value: string) => void;
+  onHead: (value: string) => void;
+}
+
+const NewRunCard = ({ base, head, onBase, onHead, onStart }: CommitProps & { onStart: () => void }) => {
+  const [suites, setSuites] = useState(["Storage", "Runtime"]);
+  const [platforms, setPlatforms] = useState(["Linux x64"]);
+  // Relay needs Linux and Docker, so it can only be chosen with Linux x64 and skips every other platform.
+  const relayAllowed = platforms.includes("Linux x64");
+  const chosen = suites.filter((suite) => suite !== "Relay storage" || relayAllowed);
+  const relaySkips = chosen.includes("Relay storage") ? platforms.filter((platform) => platform !== "Linux x64") : [];
+  const jobs = chosen.length * platforms.length - relaySkips.length;
+  return (
+    <SimpleCard>
+      <SimpleCardBody>
+        <Stack gap="md">
+          <Text textStyle="heading/S">New benchmark run</Text>
+          <HStack gap="md" wrap="wrap">
+            <Stack flex="1" gap="xs">
+              <Text textStyle="label/S/medium">Base</Text>
+              <Input aria-label="Base commit" value={base} onChange={(event) => onBase(event.target.value)} />
+            </Stack>
+            <Stack flex="1" gap="xs">
+              <Text textStyle="label/S/medium">Head</Text>
+              <Input aria-label="Head commit" value={head} onChange={(event) => onHead(event.target.value)} />
+            </Stack>
+          </HStack>
+          <Fieldset.Root>
+            <Fieldset.Legend textStyle="label/S/regular" color="fg.muted">
+              Suites
+            </Fieldset.Legend>
+            <Stack gap="xs" pt="xs">
+              {SUITES.map((suite) => {
+                const disabled = suite === "Relay storage" && !relayAllowed;
+                return (
+                  <Checkbox
+                    key={suite}
+                    disabled={disabled}
+                    checked={!disabled && suites.includes(suite)}
+                    onCheckedChange={() => setSuites(toggle(suites, suite))}
+                  >
+                    {suite}
+                    {disabled ? " · Needs Linux x64 and Docker" : ""}
+                  </Checkbox>
+                );
+              })}
+            </Stack>
+          </Fieldset.Root>
+          <Fieldset.Root>
+            <Fieldset.Legend textStyle="label/S/regular" color="fg.muted">
+              Platforms
+            </Fieldset.Legend>
+            <HStack gap="md" wrap="wrap" pt="xs">
+              {PLATFORMS.map((platform) => (
+                <Checkbox
+                  key={platform}
+                  checked={platforms.includes(platform)}
+                  onCheckedChange={() => setPlatforms(toggle(platforms, platform))}
+                >
+                  {platform}
+                </Checkbox>
+              ))}
+            </HStack>
+          </Fieldset.Root>
+          {relaySkips.length ? (
+            <Text textStyle="label/S/regular" color="fg.muted">
+              Relay storage runs on Linux x64 only. It skips {relaySkips.join(", ")}.
+            </Text>
+          ) : null}
+          <Text textStyle="label/S/regular">{jobs} jobs · Each benchmark runs once</Text>
+          <Button size="sm" variant="primary" disabled={!jobs} onClick={onStart}>
+            Start run
+          </Button>
+        </Stack>
+      </SimpleCardBody>
+    </SimpleCard>
+  );
+};
+
+const CompareCard = ({
+  screen,
+  base,
+  head,
+  onBase,
+  onHead,
+  onRun,
+}: CommitProps & { screen: string; onRun: () => void }) => (
+  <SimpleCard>
+    <SimpleCardBody>
+      <Stack gap="md">
+        <Text textStyle="heading/S">Compare commits · Linux x64</Text>
+        <HStack gap="md" wrap="wrap">
+          <Stack flex="1" gap="xs">
+            <Text textStyle="label/S/medium">Base</Text>
+            <Input
+              aria-label="Base commit"
+              placeholder="Choose a base commit"
+              value={screen === "single" ? "" : base}
+              onChange={(event) => onBase(event.target.value)}
+            />
+          </Stack>
+          <Stack flex="1" gap="xs">
+            <Text textStyle="label/S/medium">Head</Text>
+            <Input aria-label="Head commit" value={head} onChange={(event) => onHead(event.target.value)} />
+          </Stack>
+        </HStack>
+        {screen === "missing" ? (
+          <Stack gap="sm">
+            <Text textStyle="label/S/regular" color="fg.muted">
+              These commits have no results on Linux x64.
+            </Text>
+            <Button size="sm" variant="primary" onClick={onRun}>
+              Run benchmarks for both commits
+            </Button>
+          </Stack>
+        ) : (
+          <Stack gap="sm">
+            <Text textStyle="label/S/regular" color="fg.muted">
+              {screen === "separate" ? "Base from run 1031 · Head from run 1044" : "From run 1044"}
+            </Text>
+            {screen === "separate" ? (
+              <AlertMessage status="warning" title="Separate runs">
+                <Stack gap="sm">
+                  <Text>These commits were measured on different runners at different times.</Text>
+                  <Button size="sm" variant="outline" onClick={onRun}>
+                    Measure both together
+                  </Button>
+                </Stack>
+              </AlertMessage>
+            ) : null}
+            {MEASUREMENTS.map((metric) => (
+              <HStack key={metric.label} justify="space-between" wrap="wrap" gap="md">
+                <Text textStyle="label/S/regular">{metric.label}</Text>
+                <Text textStyle="mono/XS">
+                  {screen === "single"
+                    ? `${metric.head} · ${metric.budget}`
+                    : `${metric.base} → ${metric.head} · ${metric.change} · ${metric.budget}`}
+                </Text>
+              </HStack>
+            ))}
+            <Text textStyle="label/S/regular" color="fg.muted">
+              1 sample per metric. Not enough evidence for a confidence interval or an improved or regressed verdict.
+            </Text>
+            <Text textStyle="label/S/regular" color="fg.muted">
+              Runtime has no measurements in this run.
+            </Text>
+          </Stack>
+        )}
+      </Stack>
+    </SimpleCardBody>
+  </SimpleCard>
+);
 
 const FinishBenchmarkFlow = () => {
   const [screen, setScreen] = useState("new");
   const [base, setBase] = useState("main~1");
   const [head, setHead] = useState("main");
   const [notice, setNotice] = useState("");
-  const results = screen === "results" || screen === "partial";
+  const show = (next: string, message = "") => {
+    setScreen(next);
+    setNotice(message);
+  };
+
+  const compare = screen === "results" || screen === "single" || screen === "separate" || screen === "missing";
+
   return (
     <Stack gap="lg" p="lg">
       <Text textStyle="heading/M">Performance</Text>
@@ -31,48 +219,20 @@ const FinishBenchmarkFlow = () => {
         aria-label="Proposed benchmark flow state"
         value={screen}
         options={STATES}
-        onValueChange={(value) => {
-          setScreen(value);
-          setNotice("");
-        }}
+        onValueChange={(value) => show(value)}
       />
       {screen === "sync" ? (
         <AlertMessage status="error" title="Results could not be synced">
           <Stack gap="sm">
             <Text>GitHub is unavailable. Showing results last synced on 1 November at 09:42.</Text>
-            <Button size="sm" variant="outline" onClick={() => setScreen("results")}>
+            <Button size="sm" variant="outline" onClick={() => show("finished", "Synced. Run 1044 is up to date.")}>
               Retry sync
             </Button>
           </Stack>
         </AlertMessage>
       ) : null}
-      {screen === "new" || screen === "compare" ? (
-        <SimpleCard>
-          <SimpleCardBody>
-            <Stack gap="md">
-              <Text textStyle="heading/S">{screen === "compare" ? "Compare commits" : "New benchmark run"}</Text>
-              <HStack gap="md" wrap="wrap">
-                <Stack flex="1" gap="xs">
-                  <Text textStyle="label/S/medium">Base</Text>
-                  <Input aria-label="Base commit" value={base} onChange={(event) => setBase(event.target.value)} />
-                </Stack>
-                <Stack flex="1" gap="xs">
-                  <Text textStyle="label/S/medium">Head</Text>
-                  <Input aria-label="Head commit" value={head} onChange={(event) => setHead(event.target.value)} />
-                </Stack>
-              </HStack>
-              <Text textStyle="label/S/regular">Storage and runtime · Linux x64 · One measurement per benchmark</Text>
-              {screen === "compare" ? (
-                <Text textStyle="label/S/regular" color="fg.muted">
-                  These commits have no results on Linux x64.
-                </Text>
-              ) : null}
-              <Button size="sm" variant="primary" onClick={() => setScreen("running")}>
-                {screen === "compare" ? "Run benchmarks for both commits" : "Start run"}
-              </Button>
-            </Stack>
-          </SimpleCardBody>
-        </SimpleCard>
+      {screen === "new" ? (
+        <NewRunCard base={base} head={head} onBase={setBase} onHead={setHead} onStart={() => show("running")} />
       ) : null}
       {screen === "running" ? (
         <SimpleCard>
@@ -80,21 +240,18 @@ const FinishBenchmarkFlow = () => {
             <Stack gap="md">
               <Text textStyle="heading/S">Run 1044 · Running</Text>
               <Text textStyle="mono/XS">
-                {base} → {head} · Linux x64
+                {base} → {head} · Linux x64 · Started here
               </Text>
               <Text textStyle="label/S/regular">Storage finished · Runtime running · Elapsed 4 min</Text>
               <HStack gap="sm">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => {
-                    setScreen("partial");
-                    setNotice("Run cancelled. The completed storage measurements remain available.");
-                  }}
+                  onClick={() => show("cancelled", "Run 1044 cancelled. Storage results are kept.")}
                 >
                   Cancel run
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setScreen("results")}>
+                <Button size="sm" variant="ghost" onClick={() => show("finished")}>
                   Preview completion
                 </Button>
               </HStack>
@@ -102,53 +259,52 @@ const FinishBenchmarkFlow = () => {
           </SimpleCardBody>
         </SimpleCard>
       ) : null}
-      {results || screen === "sync" ? (
+      {screen === "finished" || screen === "cancelled" || screen === "sync" ? (
         <SimpleCard>
           <SimpleCardBody>
             <Stack gap="md">
               <HStack justify="space-between" wrap="wrap" gap="sm">
-                <Text textStyle="heading/S">Run 1044 · {screen === "partial" ? "Partial results" : "Finished"}</Text>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => setNotice("Showing the cached results for run 1044.")}
-                >
+                <Text textStyle="heading/S">Run 1044 · {screen === "cancelled" ? "Cancelled" : "Finished"}</Text>
+                <Button size="sm" variant="primary" onClick={() => show("results")}>
                   View results
                 </Button>
               </HStack>
-              <Text textStyle="mono/XS">{head} · Linux x64 · Elapsed 6 min</Text>
-              {screen === "partial" ? (
-                <AlertMessage status="warning" title="Runtime did not finish">
-                  Storage measurements are available. Runtime measurements are missing.
+              <Text textStyle="mono/XS">
+                {base} → {head} · Linux x64 · Elapsed 6 min
+              </Text>
+              {screen === "cancelled" ? (
+                <AlertMessage status="warning" title="Runtime was cancelled">
+                  Storage finished before the cancel and has results. Runtime stopped mid-run and has no measurements.
                 </AlertMessage>
               ) : null}
-              <Text textStyle="label/S/medium">Storage results</Text>
-              {MEASUREMENTS.map((metric) => (
-                <HStack key={metric.label} justify="space-between" wrap="wrap" gap="md">
-                  <Text textStyle="label/S/regular">{metric.label}</Text>
-                  <Text textStyle="mono/XS">
-                    {metric.value} · {metric.budget} · {metric.outcome}
-                  </Text>
-                </HStack>
-              ))}
-              <Text textStyle="label/S/regular" color="fg.muted">
-                1 sample per metric. Insufficient evidence for a confidence interval or a significant change.
-              </Text>
-              <HStack gap="sm" wrap="wrap">
-                <Button size="sm" variant="outline" onClick={() => setScreen("compare")}>
-                  Compare commits
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setNotice("Raw sample: session badge query = 9.1 ms.")}
-                >
-                  Show measurements
-                </Button>
-              </HStack>
             </Stack>
           </SimpleCardBody>
         </SimpleCard>
+      ) : null}
+      {screen === "running" || screen === "finished" ? (
+        <Stack gap="xs">
+          <Text textStyle="label/S/medium">Other runs in this repository</Text>
+          {OTHER_RUNS.map((run) => (
+            <HStack key={run.id} justify="space-between" wrap="wrap" gap="md">
+              <Text textStyle="label/S/regular">
+                Run {run.id} · {run.source}
+              </Text>
+              <Text textStyle="label/S/regular" color="fg.muted">
+                {run.status}
+              </Text>
+            </HStack>
+          ))}
+        </Stack>
+      ) : null}
+      {compare ? (
+        <CompareCard
+          screen={screen}
+          base={base}
+          head={head}
+          onBase={setBase}
+          onHead={setHead}
+          onRun={() => show("new")}
+        />
       ) : null}
       {screen === "release" ? (
         <SimpleCard>
