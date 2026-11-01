@@ -41,7 +41,6 @@ const openLabMode = async (page: import("@playwright/test").Page) => {
 };
 
 test("the Lab mode preserves its live webview when leaving and returning", async ({ page, request }) => {
-  test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -87,7 +86,6 @@ test("the Lab mode preserves its live webview when leaving and returning", async
 });
 
 test("the Cameras tree menu drives the cams player", async ({ page, request }) => {
-  test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -113,7 +111,6 @@ test("the Cameras tree menu drives the cams player", async ({ page, request }) =
 });
 
 test("artifacts are created from the panel menu and inspected in the Side Panel", async ({ page, request }) => {
-  test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });

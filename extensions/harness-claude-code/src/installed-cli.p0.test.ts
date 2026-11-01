@@ -135,5 +135,5 @@ describe.if(enabled)("installed Claude Code CLI", () => {
     });
     expect(session.agentSessionId).toMatch(/\S/);
     await session.done;
-  }, 120_000);
+  }, 5_000);
 });

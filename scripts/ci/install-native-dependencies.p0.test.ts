@@ -91,4 +91,4 @@ try {
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
-}, 30_000);
+}, 15_000);
