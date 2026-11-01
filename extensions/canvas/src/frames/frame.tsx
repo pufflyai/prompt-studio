@@ -1,18 +1,21 @@
 import { Box, Text } from "@chakra-ui/react";
 import { type FrameBootstrap, type FrameMessage, type FrameRequest, frameProtocol } from "@pstdio/canvas";
 import { useThemePreference } from "@pstdio/ui";
-import { type RefObject, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, type RefObject, Suspense, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CanvasItem } from "../canvas-model";
 import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
 import { frameThemeOption, resolveFrameTheme } from "../frame-themes";
-import { ParameterMenu } from "../parameters/menu";
 import { readParameters, type Values } from "../parameters/model";
 import { frameDocument } from "./assets";
 import { FrameLoaderContext } from "./frame-loader";
 import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
 import { useFrameStartup } from "./use-frame-startup";
+
+const ParameterMenu = lazy(() =>
+  import("../parameters/menu").then(({ ParameterMenu }) => ({ default: ParameterMenu })),
+);
 
 type ParameterRequest = Omit<FrameRequest, "type" | "protocol"> & {
   type: FrameRequest["type"] | "args";
@@ -169,14 +172,16 @@ export const FramePreview = (props: FramePreviewProps) => {
   return (
     <Box data-ui-canvas-frame data-frame-startup={phase}>
       {parameters && (Object.keys(parameters.controls).length > 0 || parameters.motion) && (
-        <ParameterMenu
-          item={item}
-          parameters={parameters}
-          restoreTheme={(theme) => {
-            if (!runtime.get().themes[item.id]) runtime.setTheme(item.id, theme);
-          }}
-          onChange={(args) => postFrame(frame.current, { nonce: nonce.current, type: "args", args })}
-        />
+        <Suspense fallback={null}>
+          <ParameterMenu
+            item={item}
+            parameters={parameters}
+            restoreTheme={(theme) => {
+              if (!runtime.get().themes[item.id]) runtime.setTheme(item.id, theme);
+            }}
+            onChange={(args) => postFrame(frame.current, { nonce: nonce.current, type: "args", args })}
+          />
+        </Suspense>
       )}
       {error && (
         <Text role="alert" data-ui-canvas-error>
