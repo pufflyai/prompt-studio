@@ -602,6 +602,20 @@
   {
     "runner": "packaged-desktop-benchmark",
     "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
+    "name": "sidecar crash shows recovery within budget",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-932 / desktop performance",
+    "reason": "Under the user's remaining-release-failure quarantine authorization, stable certification measured automatic-recovery UI at 586 ms against its unchanged 500 ms budget. The preceding native qualification passed this case. Preserve the sidecar crash, recovery UI, complete metrics and all assertions; cold startup and renderer checks remain blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41254526863/job/124697623012",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41248380174/job/124676622471"
+    ],
+    "removeWhen": "Fix Intel sidecar-crash recovery latency and complete the full first-attempt native workload with automatic recovery UI below 500 ms, native measurements, and all recovery assertions intact."
+  },
+  {
+    "runner": "packaged-desktop-benchmark",
+    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
     "name": "warm attach restores the workbench within budget",
     "platforms": ["darwin"],
     "arch": "x64",
