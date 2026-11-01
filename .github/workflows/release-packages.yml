@@ -497,7 +497,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      actions: write
       contents: write
       pull-requests: write
     steps:
@@ -525,18 +524,9 @@ jobs:
         run: echo "tag=$(gh release view --json tagName --jq .tagName)" >> "$GITHUB_OUTPUT"
 
       - name: Create or update the version PR
-        id: changesets
         uses: changesets/action@v1
         with:
           version: bun run --cwd scripts release:version
         env:
           PSTDIO_STABLE_TAG: ${{ steps.baseline.outputs.tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Pushes made with this job's token start pull_request runs only after a maintainer approves them.
-      # A dispatch is allowed to start a run, so the version PR gets its required checks right away.
-      - name: Run PR checks on the version PR
-        if: steps.changesets.outputs.pullRequestNumber != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run test-and-build.yml --ref changeset-release/main -f profile=pull_request
