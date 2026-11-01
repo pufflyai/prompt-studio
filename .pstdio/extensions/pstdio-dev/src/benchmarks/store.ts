@@ -11,6 +11,7 @@ import {
   listReleases,
   listRunArtifacts,
   listRuns,
+  listTagCommits,
   parseRunTitle,
   runProgress,
   type WorkflowRun,
@@ -29,12 +30,17 @@ export interface RunRecord extends WorkflowRun {
   // The automation following the run, so a run gets one follower at a time.
   followId?: string;
   synced: boolean;
+  // Every result artifact is cached. Runs synced before artifact lists were paged lack it and fetch the rest.
+  complete?: boolean;
 }
 
 export interface ReleaseRecord {
   version: string;
   publishedAt: string;
-  // Platforms whose benchmark asset the release has.
+  // The release's commit on GitHub. Results for it, from any run, are the release's history.
+  sha?: string;
+  // Platforms with a benchmark asset. Releases are immutable once published, so only releases from before
+  // that setting can have them.
   platforms: string[];
 }
 
@@ -153,12 +159,14 @@ export const readResults = async (ctx: Pick<ExtensionContextBase, "extensionFile
 const syncReleases = async (ctx: StoreContext) => {
   const files = filesOf(ctx);
   const records: ReleaseRecord[] = [];
+  const tags = await listTagCommits(ctx);
   for (const release of await listReleases(ctx)) {
     const version = release.tag.match(STABLE_TAG)?.[1];
     if (!version) continue;
     records.push({
       version,
       publishedAt: release.publishedAt,
+      sha: tags.get(release.tag),
       platforms: release.assets.flatMap((asset) => asset.name.match(RELEASE_ASSET)?.[1] ?? []),
     });
     for (const asset of release.assets) {
@@ -193,6 +201,7 @@ const cacheRunArtifacts = async (ctx: StoreContext, runId: string) => {
     (artifact) => RUN_ARTIFACT.test(artifact.name) && !artifact.expired,
   );
   for (const artifact of artifacts) {
+    if ((await files.list(`benchmarks/runs/${runId}/${artifact.name}-*.json`)).length) continue;
     const dir = await mkdtemp(join(tmpdir(), "pstdio-benchmarks-"));
     try {
       await downloadRunArtifact(ctx, runId, artifact.name, dir);
@@ -222,14 +231,15 @@ export const mergeRun = (previous: RunRecord | undefined, run: WorkflowRun): Run
 
 const syncRun = async (ctx: StoreContext, run: RunRecord) => {
   // Open runs and newly finished ones read their jobs, so status details stay current.
-  if (!run.synced) Object.assign(run, await runProgress(ctx, run.id));
-  if (run.synced || !finished(run.status)) return;
+  if (!(run.synced && run.complete)) Object.assign(run, await runProgress(ctx, run.id));
+  if ((run.synced && run.complete) || !finished(run.status)) return;
   try {
     const shas = await cacheRunArtifacts(ctx, run.id);
     // A release run is titled by its tag but records the SHA it measured, so a lone commit takes the lone SHA.
     const only = run.commits.length === 1 && shas.size === 1 ? [...shas.values()][0] : undefined;
     run.commits = run.commits.map((commit) => ({ ...commit, sha: shas.get(commit.ref) ?? commit.sha ?? only }));
     run.synced = true;
+    run.complete = true;
     delete run.syncError;
   } catch (error) {
     run.syncError = `Results could not be downloaded: ${error instanceof Error ? error.message : String(error)}`;

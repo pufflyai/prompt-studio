@@ -1,7 +1,14 @@
 import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
-import { buildComparison, buildRunResults, buildTrends, latestReleaseStatus, measuredCommits } from "./analysis";
+import {
+  buildComparison,
+  buildRunResults,
+  buildTrends,
+  latestReleaseStatus,
+  measuredCommits,
+  releaseResults,
+} from "./analysis";
 import { listCommits } from "./commits";
-import { finished, startRun } from "./github";
+import { finished, resolveCommit, startRun } from "./github";
 import { DEFAULT_PLATFORM, DEFAULT_SUITES, PLATFORMS, runsOn, SUITES } from "./platforms";
 import {
   changed,
@@ -99,10 +106,12 @@ const trendsCommand = defineCommand({
   params: { platforms: params.list({ label: "Platforms" }) },
   async run(ctx, input) {
     const platforms = input.platforms?.length ? input.platforms : ALL_PLATFORMS;
+    const releases = await readReleases(ctx);
+    const history = releaseResults(await readResults(ctx), releases);
     return {
-      ...buildTrends(await readResults(ctx), platforms),
+      ...buildTrends(history, platforms),
       // Names the newest release while some of its platforms have no results, so it never reads as zero.
-      pendingRelease: latestReleaseStatus(await readReleases(ctx), await readRuns(ctx), ALL_PLATFORMS),
+      pendingRelease: latestReleaseStatus(releases, await readRuns(ctx), ALL_PLATFORMS, history),
     };
   },
 });
@@ -118,7 +127,10 @@ const commitsCommand = defineCommand({
     const results = await readResults(ctx);
     const platforms = input.platforms?.length ? input.platforms : [DEFAULT_PLATFORM];
     const measured = measuredCommits(results, platforms, input.suites);
-    return (await listCommits(ctx, results)).map((commit) => ({ ...commit, measured: measured.has(commit.sha) }));
+    return (await listCommits(ctx, results, await readReleases(ctx))).map((commit) => ({
+      ...commit,
+      measured: measured.has(commit.sha),
+    }));
   },
 });
 
@@ -152,17 +164,6 @@ const runResultsCommand = defineCommand({
   },
 });
 
-// Resolves through origin first, like the commit list, so a stale local branch is not mistaken for measured.
-const resolveRef = async (ctx: Pick<ExtensionContextBase, "process">, ref: string) => {
-  for (const candidate of [`origin/${ref}`, ref]) {
-    const result = await ctx.process.run({
-      command: ["git", "rev-parse", "--verify", "--quiet", `${candidate}^{commit}`],
-    });
-    if (result.exitCode === 0 && result.stdout.trim()) return result.stdout.trim();
-  }
-  return undefined;
-};
-
 const startRunCommand = defineCommand({
   id: "benchmarks.start-run",
   title: "Run benchmarks on GitHub Actions",
@@ -193,7 +194,7 @@ const startRunCommand = defineCommand({
     if (!suites.length) throw new Error("None of the chosen suites runs on the chosen platforms.");
     // Commits that already have results for these suites and platforms are not measured again.
     const measured = measuredCommits(await readResults(ctx), platforms, suites);
-    const commits = await Promise.all(input.commits.map(async (ref) => ({ ref, sha: await resolveRef(ctx, ref) })));
+    const commits = await Promise.all(input.commits.map(async (ref) => ({ ref, sha: await resolveCommit(ctx, ref) })));
     const reused = commits.filter((commit) => commit.sha && measured.has(commit.sha));
     const fresh = commits.filter((commit) => !reused.includes(commit));
     // dispatched tells "nothing to run" apart from a run whose id GitHub has not shown yet.

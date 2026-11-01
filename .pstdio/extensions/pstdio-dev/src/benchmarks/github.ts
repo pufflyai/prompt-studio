@@ -57,6 +57,13 @@ const gh = async (ctx: Context, args: string[]) => {
 
 const ghJson = async <T>(ctx: Context, args: string[]) => JSON.parse(await gh(ctx, args)) as T;
 
+// GitHub pages lists at 30 by default; every page is read, one JSON value per line.
+const ghPages = async <T>(ctx: Context, path: string, jq: string) =>
+  (await gh(ctx, ["api", "--paginate", path, "--jq", jq]))
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as T);
+
 export const runStatus = (status: string, conclusion: string | null): RunStatus => {
   if (status === "queued" || status === "waiting" || status === "pending" || status === "requested") return "queued";
   if (status !== "completed") return "running";
@@ -86,7 +93,7 @@ interface ApiRelease {
   assets: { id: number; name: string }[];
 }
 export const listReleases = async (ctx: Context) => {
-  const releases = await ghJson<ApiRelease[]>(ctx, ["api", "repos/{owner}/{repo}/releases?per_page=100"]);
+  const releases = await ghPages<ApiRelease>(ctx, "repos/{owner}/{repo}/releases?per_page=100", ".[]");
   return releases
     .filter((release) => !release.draft && release.published_at)
     .map((release) => ({
@@ -95,6 +102,42 @@ export const listReleases = async (ctx: Context) => {
       assets: release.assets.map((asset) => ({ id: asset.id, name: asset.name })),
     }));
 };
+
+const TAG_QUERY = `query($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    refs(refPrefix: "refs/tags/", query: "pstdio@", first: 100, after: $endCursor) {
+      nodes { name target { oid ... on Tag { target { oid } } } }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}`;
+
+// GitHub's tags are what CI checks out. A local clone can hold a tag that was moved since it was fetched.
+// Nightly tags outnumber releases, so every page is read. Annotated tags peel to their commit.
+export const listTagCommits = async (ctx: Context) => {
+  const output = await gh(ctx, [
+    "api",
+    "graphql",
+    "--paginate",
+    "-F",
+    "owner={owner}",
+    "-F",
+    "name={repo}",
+    "-f",
+    `query=${TAG_QUERY}`,
+    "--jq",
+    ".data.repository.refs.nodes[] | {name, sha: (.target.target.oid // .target.oid)}",
+  ]);
+  const tags = output
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as { name: string; sha: string });
+  return new Map(tags.map((tag) => [tag.name, tag.sha]));
+};
+
+// The commit GitHub holds for a pushed branch, tag, or SHA: the one a run checks out.
+export const resolveCommit = async (ctx: Context, ref: string) =>
+  (await gh(ctx, ["api", `repos/{owner}/{repo}/commits/${ref}`, "--jq", ".sha"]).catch(() => "")).trim() || undefined;
 
 export const downloadReleaseAsset = (ctx: Context, assetId: number) =>
   gh(ctx, ["api", `repos/{owner}/{repo}/releases/assets/${assetId}`, "-H", "Accept: application/octet-stream"]);
@@ -174,16 +217,13 @@ export const startRun = async (ctx: Context, input: StartRunInput) => {
 
 export const cancelRun = (ctx: Context, runId: string) => gh(ctx, ["run", "cancel", runId]);
 
-interface ApiArtifacts {
-  artifacts: { id: number; name: string; expired: boolean }[];
-}
-export const listRunArtifacts = async (ctx: Context, runId: string) => {
-  const { artifacts } = await ghJson<ApiArtifacts>(ctx, [
-    "api",
-    `repos/{owner}/{repo}/actions/runs/${runId}/artifacts`,
-  ]);
-  return artifacts.map((artifact): RunArtifact => ({ ...artifact }));
-};
+// A release run uploads one artifact per platform and suite, more than one page holds.
+export const listRunArtifacts = (ctx: Context, runId: string) =>
+  ghPages<RunArtifact>(
+    ctx,
+    `repos/{owner}/{repo}/actions/runs/${runId}/artifacts?per_page=100`,
+    ".artifacts[] | {id, name, expired}",
+  );
 
 // Artifacts download as zip archives, so gh unpacks them into a folder the caller reads.
 export const downloadRunArtifact = (ctx: Context, runId: string, name: string, dir: string) =>

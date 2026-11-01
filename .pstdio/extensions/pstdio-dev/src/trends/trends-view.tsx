@@ -66,7 +66,7 @@ export const TrendsView = (props: TrendsViewProps) => {
         {props.notice}
         <EmptyState
           title="No release results yet"
-          description="Releases attach their benchmark results when they publish. Results appear here after the first release that records them."
+          description="Each stable release runs its benchmarks after it publishes. Results appear here when the first release run finishes."
         />
       </PageFrame>
     );

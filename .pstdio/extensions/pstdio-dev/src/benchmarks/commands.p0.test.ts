@@ -18,6 +18,17 @@ const measured = (sha: string): BenchmarkResultFile => ({
   metrics: [{ suite: "storage", metric: "badge-query", label: "Badges", unit: "ms", values: [9] }],
 });
 
+// gh api --paginate --jq prints one JSON value per line; the mocks answer as GitHub would and apply the jq.
+const paged = (args: string[], value: unknown) => {
+  if (!args.includes("--paginate")) return value;
+  type Refs = { data?: { repository: { refs: { nodes: { name: string; target: { oid: string } }[] } } } };
+  const refs = (value as Refs).data?.repository.refs.nodes.map((node) => ({ name: node.name, sha: node.target.oid }));
+  const list = Array.isArray(value) ? value : (refs ?? (value as { artifacts: unknown[] }).artifacts);
+  return list.map((entry) => JSON.stringify(entry)).join("\n");
+};
+const withoutPaging = (args: string[]) =>
+  args.filter((arg, index) => arg !== "--paginate" && arg !== "--jq" && args[index - 1] !== "--jq");
+
 const listedRun = (id: number, title: string, status: string) => ({
   databaseId: id,
   displayTitle: title,
@@ -33,9 +44,14 @@ const listedRun = (id: number, title: string, status: string) => ({
 const setup = (options: { releasesFail?: boolean } = {}) => {
   const calls: string[][] = [];
   const listed = [listedRun(5, "Benchmarks pstdio@0.45.0 on linux-x64", "completed")];
-  const shas: Record<string, string> = { "origin/main": "main-sha", "pstdio@0.45.0": "tag-sha" };
+  const shas: Record<string, string> = { main: "main-sha", "pstdio@0.45.0": "tag-sha" };
   const answers: Record<string, (args: string[]) => unknown> = {
-    "rev-parse --verify": (args) => shas[args[3].replace("^{commit}", "")],
+    "api commits": (args) => {
+      const sha = shas[args[1].split("/commits/")[1]];
+      if (!sha) throw new Error("No commit found");
+      return sha;
+    },
+    "api graphql": () => ({ data: { repository: { refs: { nodes: [] } } } }),
     "workflow run": (args) => {
       listed.unshift(listedRun(9, `Benchmarks ${args[4].slice(8)} on ${args[8].slice(10)}`, "queued"));
       return "";
@@ -53,7 +69,8 @@ const setup = (options: { releasesFail?: boolean } = {}) => {
   };
   const answer = (args: string[]) => {
     const [command, second] = args;
-    const path = command === "api" ? (second.split("?")[0].split("/").at(-1) ?? "") : second;
+    let path = command === "api" ? (second.split("?")[0].split("/").at(-1) ?? "") : second;
+    if (second.includes("/commits/")) path = "commits";
     const handler = answers[`${command} ${path}`];
     if (!handler) throw new Error(`Unexpected ${args.join(" ")}`);
     return handler(args);
@@ -62,7 +79,7 @@ const setup = (options: { releasesFail?: boolean } = {}) => {
     const args = input.command.slice(1);
     calls.push(input.command);
     try {
-      const value = answer(args);
+      const value = paged(args, answer(withoutPaging(args)));
       if (value === undefined) return { exitCode: 1, stdout: "", stderr: "" };
       return { exitCode: 0, stdout: typeof value === "string" ? value : JSON.stringify(value), stderr: "" };
     } catch (error) {

@@ -24,7 +24,7 @@ const InteractiveCompare = (props: InteractiveCompareProps) => {
   const measured = storyCommits.filter((commit) => commit.measured).map((commit) => commit.sha);
   const ready = measured.includes(head) && (!base || measured.includes(base));
   return (
-    <Box h="100dvh">
+    <Box h="100dvh" w="full" minW="0" overflow="hidden">
       <CompareView
         commits={storyCommits}
         base={base}

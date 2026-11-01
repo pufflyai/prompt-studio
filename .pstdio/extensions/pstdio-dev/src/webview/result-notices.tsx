@@ -33,23 +33,25 @@ export const SyncFailed = (props: SyncFailedProps) => (
 
 const list = (platforms: string[]) => platforms.map(platformLabel).join(", ");
 
-// A published release without results yet is named here instead of appearing as zero in the charts.
+// A published release without results yet is named here instead of appearing as zero in the charts, and failed
+// suites are named instead of leaving silent gaps.
 export const ReleasePending = (props: { status: ReleaseStatus }) => {
-  const { version, finished, running, missing } = props.status;
+  const { version, finished, running, missing, failed } = props.status;
   const sentences = [
-    finished.length ? `${list(finished)} finished.` : "",
+    finished.length ? `${list(finished)} ${finished.length > 1 ? "have" : "has"} results.` : "",
     running.length ? `${list(running)} still running.` : "",
     missing.length ? `${list(missing)} ${missing.length > 1 ? "have" : "has"} no results.` : "",
+    failed.length ? `Failed: ${failed.join(", ")}; their charts have no point for this release.` : "",
   ];
+  let title = `${version} · some benchmarks failed`;
+  if (missing.length) title = `${version} · benchmark results incomplete`;
+  if (running.length) title = `${version} · benchmark results pending`;
   return (
-    <AlertMessage
-      status={running.length ? "info" : "warning"}
-      title={`${version} · benchmark results ${running.length ? "pending" : "incomplete"}`}
-    >
+    <AlertMessage status={running.length ? "info" : "warning"} title={title}>
       {sentences.filter(Boolean).join(" ")}{" "}
       {running.length
         ? "The release is published either way; its results appear in the charts when its benchmarks finish."
-        : "Its benchmark run failed or never started, so those platforms have no point for this release."}
+        : "Measure the release's tag from Runs to fill the gaps."}
     </AlertMessage>
   );
 };

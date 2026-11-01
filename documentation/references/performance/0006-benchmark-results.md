@@ -1,6 +1,6 @@
 # Benchmark results
 
-Every benchmark in the repository reports its measurements in one result format. GitHub Actions runs them, release runs attach their results to the GitHub release, and the **Performance** pages in the repository's `pstdio-dev` extension read them. Tickets: PS-920 and PS-924. See [Write a benchmark](../../guides/development/0016-writing-benchmarks.md) for naming, coverage, sampling, budgets and shared helpers.
+Every benchmark in the repository reports its measurements in one result format. GitHub Actions runs them and keeps their results as run artifacts, and the **Performance** pages in the repository's `pstdio-dev` extension read them. Tickets: PS-920 and PS-924. See [Write a benchmark](../../guides/development/0016-writing-benchmarks.md) for naming, coverage, sampling, budgets and shared helpers.
 
 Benchmarks run only on GitHub Actions. A developer machine has other work running, so its numbers vary too much to compare commits.
 
@@ -78,13 +78,15 @@ Each job uploads `<sha>-<platform>.json` files as the `benchmark-results-<platfo
 
 `values` holds one value per sample, in run order. CI results have one value per metric; older or local results can have several. A benchmark that measures something several times in one sample contributes that sample's median, because samples, not single measurements, are the independent units. Readers compute their own statistics from these values. A failed sample keeps the measurements it recorded; the job still fails so the run shows it. A measurement that is not a finite number is left out.
 
-After a stable or patch release publishes, the release workflow starts a separate Benchmarks run with `release_tag` set. It runs every suite on every release platform, merges each platform's suite files, and attaches them to the release as `benchmarks-<platform>.json`. Benchmarks never hold or fail a release.
+After a stable or patch release publishes, the release workflow starts a separate Benchmarks run with `release_tag` set. It runs every suite on every release platform. Benchmarks never hold or fail a release.
+
+Releases are immutable once published, so results cannot be attached to them. A release's history is every result for its commit instead: its release run's artifacts, and any later run of its tag, such as one started from the Runs page to fill a failed platform. GitHub keeps artifacts for 90 days, and the Performance pages cache them on their daily sync. Releases published before this change, which carry `benchmarks-<platform>.json` assets, still read from those.
 
 ## Performance pages
 
 The pages read only from `.pstdio/extension-storage/pstdio.pstdio-dev/benchmarks/`. Opening a page, the daily schedule, and a followed run download new release assets and finished run artifacts there with the developer's `gh` login. Cached results outlive GitHub's artifact retention. Extension storage is not tracked by Git, so each developer keeps their own cache. When a sync fails, the pages keep showing cached results with the time of the last successful sync and a **Retry sync** action.
 
-- **Trends** shows one chart per benchmark across releases, with one line per chosen platform. With one platform it also shows the 95% interval band. **Show table** lists every release and platform as a row and every benchmark as a column. When the newest release lacks results on some platforms, a notice names which finished, which are still running, and which have none. A release a platform did not measure is a gap, never a zero.
+- **Trends** shows one chart per benchmark across releases, with one line per chosen platform. With one platform it also shows the 95% interval band. **Show table** lists every release and platform as a row and every benchmark as a column. When the newest release lacks results on some platforms or some of its suites failed, a notice names which platforms have results, which are still running, which have none, and which suites failed. Measuring the release's tag from Runs fills the gaps. A release a platform did not measure is a gap, never a zero.
 - **Compare** shows the base and head values and their difference. Any two commits compare, whichever runs measured them; a metric one commit lacks shows as not measured. With no base, the head's own measurements and budget outcomes show. When a chosen commit has no results, **Measure** starts a run for only that commit on the chosen platform.
 - **Runs** starts and cancels workflow runs. The commit input lists every release tag; commits that already have results for the chosen suites and platforms are tagged Measured and are not run again. Suites a chosen platform cannot run are disabled with the reason. Each run shows its status, commits, platforms and start time, with each suite's outcome in the status tooltip. Runs started anywhere, including by releases and on GitHub, keep updating while they run.
 
