@@ -64,7 +64,7 @@ pst canvas layout read --canvas src/button.canvas.tsx
 
 ## Parameters, motion, and shader versions
 
-Project frames can advertise number, toggle, and choice controls. Select a frame and open **Parameters**. Edits stay local across themes, moves, and camera gestures. Reset parameters restores its saved values. A `motion` declaration adds Play/Pause, Restart, precise time, speed, markers, and a loop range. Each frame starts paused and owns its clock.
+Project frames can advertise number, toggle, and choice controls. Select a frame to see its parameters, saved versions, and playback in the **Frame editor** menu on the right. Clearing selection empties the menu; selecting another frame preserves each frame’s temporary edits and playback state. Edits stay local across themes, moves, and camera gestures. Reset parameters restores its saved values. A `motion` declaration adds Play/Pause, Restart, precise time, speed, markers, and a loop range. Each frame starts paused and owns its clock.
 
 A literal `save: { file: "default.json", key: "values" }` declaration enables selection, explicit saving, and named JSON versions beside the canvas. The menu can rename or delete versions, while protecting the source's imported version. Errors preserve edits for retry. Agents use `pst canvas parameters <action> --help` for the same actions.
 

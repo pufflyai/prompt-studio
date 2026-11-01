@@ -93,8 +93,7 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
 
     // Critical: saving is explicit, durable, and failures retain the frame's edits for retry.
     await viewer.locator("[data-canvas-select]").click();
-    await viewer.getByRole("button", { name: "Parameters", exact: true }).click();
-    const parameters = viewer.getByRole("dialog", { name: "Parameters" });
+    const parameters = viewer.getByRole("complementary", { name: "Frame editor" });
     await parameters.getByRole("button", { name: "Save", exact: true }).first().click();
     await viewer.getByRole("menuitemradio", { name: "Archive", exact: true }).click();
     await expect(frame.getByRole("button", { name: "Version 2: Archive" })).toBeVisible();
@@ -121,7 +120,6 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
     await page.reload();
     await expect(frame.getByRole("button", { name: "Version 2: Archive" })).toBeVisible();
     await viewer.locator("[data-canvas-select]").click();
-    await viewer.getByRole("button", { name: "Parameters", exact: true }).click();
     await parameters.getByRole("button", { name: "Archive", exact: true }).click();
     await viewer.getByRole("menuitemradio", { name: "Save", exact: true }).click();
     writeFileSync(join(root, "src/alternate.json"), "{}");

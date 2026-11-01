@@ -7,6 +7,7 @@ import { type FrameParameters, nextPlaybackTime, type Values } from "./model";
 import type { PlaybackSettings } from "./review";
 
 interface PlaybackProps {
+  active: boolean;
   motion: NonNullable<FrameParameters["motion"]>;
   onChange: (values: Values) => void;
   restored?: PlaybackSettings;
@@ -67,9 +68,10 @@ export const Playback = (props: PlaybackProps) => {
     setTime(value);
     onChange({ time: value });
   };
+  if (!props.active) return null;
   return (
     <Stack gap="sm" p="sm" data-frame-playback>
-      <Flex align="center" gap="sm">
+      <Flex align="center" gap="sm" wrap="wrap">
         <Button
           size="xs"
           onClick={() => {

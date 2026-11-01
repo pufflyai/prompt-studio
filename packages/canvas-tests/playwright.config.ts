@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const previewUrl = `http://127.0.0.1:${process.env.CANVAS_PREVIEW_PORT ?? 43187}`;
+
 export default defineConfig({
   testDir: "./src/ui",
   testMatch:
@@ -13,12 +15,12 @@ export default defineConfig({
   outputDir: "test-results",
   webServer: {
     command: "bun ../../extensions/canvas/scripts/serve-verification.ts",
-    url: "http://127.0.0.1:43187",
+    url: previewUrl,
     timeout: 60_000,
   },
   reporter: [["html", { open: "never", outputFolder: "playwright-report" }], ["list"]],
   use: {
-    baseURL: "http://127.0.0.1:43187",
+    baseURL: previewUrl,
     navigationTimeout: 60_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",

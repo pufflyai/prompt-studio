@@ -15,7 +15,7 @@ import type { StudyMetadata } from "./study-schema";
 const read = async (ctx: CommandContext, study: StudyMetadata) => {
   const storage = ctx.storage;
   let stored = await storage.collection<ReviewState>("reviews").get(study.id);
-  if (!stored) {
+  if (!stored && !(await storage.collection("legacy-imports").get(`motion:${study.id}`))) {
     const previous = await readLegacyMotion(ctx, study.id);
     if (previous?.settings) {
       stored = previous;

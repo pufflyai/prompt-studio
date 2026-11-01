@@ -16,13 +16,23 @@ test("frame parameters and playback stay independent across themes and movement"
   const document = first.frameLocator("iframe");
   const output = document.locator("[data-parameters-preview]");
   await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(2);
+  const menu = surface.getByRole("complementary", { name: "Frame editor" });
+  await expect(menu.getByText("Select a frame", { exact: true })).toBeVisible();
   await first.locator("[data-canvas-select]").click();
   await document.getByRole("textbox", { name: "Frame draft" }).fill("Keep this input");
-  await first.getByRole("button", { name: "Parameters", exact: true }).click();
-  const dialog = surface.getByRole("dialog");
-  await dialog.getByRole("spinbutton").fill("7");
-  await dialog.getByRole("spinbutton").press("Tab");
+  const dialog = surface.getByRole("complementary", { name: "Frame editor" });
+  await expect(dialog.getByText("First", { exact: true })).toBeVisible();
+  await dialog.getByRole("spinbutton").first().fill("7");
+  await dialog.getByRole("spinbutton").first().press("Tab");
   await expect(output).toContainText('"amount":7');
+  await dialog.getByRole("button", { name: "Calm", exact: true }).click();
+  await second.locator("[data-canvas-select]").click();
+  await expect(dialog.getByText("Second", { exact: true })).toBeVisible();
+  await expect(surface.getByRole("menuitemradio", { name: "Bright", exact: true })).not.toBeVisible();
+  await expect(dialog.getByRole("spinbutton").first()).toHaveValue("2");
+  await first.locator("[data-canvas-select]").click();
+  await expect(dialog.getByRole("spinbutton").first()).toHaveValue("7");
+  await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
   await dialog.getByRole("checkbox", { name: "Enabled" }).press("Space");
   await dialog.getByRole("button", { name: "Calm", exact: true }).click();
   await surface.getByRole("menuitemradio", { name: "Bright", exact: true }).click();
@@ -47,15 +57,23 @@ test("frame parameters and playback stay independent across themes and movement"
   await expect(output).toContainText('"amount":7');
   await expect(output).toContainText('"time":1.5');
   await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
-  await first.getByRole("button", { name: "Midpoint", exact: true }).click();
+  await dialog.getByRole("button", { name: "Midpoint", exact: true }).click();
   await expect(output).toContainText('"time":1');
-  await first.getByRole("button", { name: "Play", exact: true }).click();
+  await second.locator("[data-canvas-select]").click();
+  await expect(dialog.locator("[data-frame-playback]:visible")).toContainText("0.00 / 2.00");
+  await first.locator("[data-canvas-select]").click();
+  await expect(dialog.locator("[data-frame-playback]:visible")).toContainText("1.00 / 2.00");
+  await dialog.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(async () => JSON.parse((await output.textContent())!).time).toBeGreaterThan(1);
-  await first.getByRole("button", { name: "Pause", exact: true }).click();
-  await first.getByRole("button", { name: "Restart", exact: true }).click();
+  await dialog.getByRole("button", { name: "Pause", exact: true }).click();
+  await dialog.getByRole("button", { name: "Restart", exact: true }).click();
   await expect(output).toContainText('"time":0');
   await first.getByRole("button", { name: "Move First", exact: true }).press("ArrowRight");
   await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
+  await surface.locator("[data-canvas-viewport]").focus();
+  await page.keyboard.press("Escape");
+  await expect(menu.getByText("Select a frame", { exact: true })).toBeVisible();
+  await expect(menu.getByRole("spinbutton")).toHaveCount(0);
   await expect(surface.locator("[data-ui-canvas-error]")).toHaveCount(0);
 });
 
@@ -67,9 +85,9 @@ test("zero-speed shader layers stay stationary while the frame seeks", async ({ 
   const frame = panel.frameLocator("iframe");
   await expect(panel.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
   await panel.locator("[data-canvas-select]").click();
-  await panel.getByRole("button", { name: "Parameters", exact: true }).click();
+  const editor = shell.getByRole("complementary", { name: "Frame editor" });
   const drift = shell
-    .getByRole("dialog")
+    .getByRole("complementary", { name: "Frame editor" })
     .getByText("Pattern: Drift", { exact: true })
     .locator("../..")
     .getByRole("spinbutton");
@@ -91,7 +109,16 @@ test("zero-speed shader layers stay stationary while the frame seeks", async ({ 
     .toBe(true);
   await page.keyboard.press("Escape");
   const initial = await hatch.evaluate((element) => getComputedStyle(element).transform);
-  await panel.getByRole("slider", { name: "Time", exact: true }).press("PageUp");
-  await expect(panel.locator("[data-frame-playback]")).not.toContainText("0.00 / 30.00");
+  await editor.getByRole("slider", { name: "Time", exact: true }).press("PageUp");
+  await expect(editor.locator("[data-frame-playback]")).not.toContainText("0.00 / 30.00");
   await expect(hatch).toHaveCSS("transform", initial);
+  // Critical: essential save/version actions remain reachable in a narrow Canvas view.
+  await page.setViewportSize({ width: 400, height: 900 });
+  for (const name of ["Save as new version", "Delete version"]) {
+    const action = editor.getByRole("button", { name, exact: true });
+    await action.scrollIntoViewIfNeeded();
+    const bounds = (await editor.boundingBox())!;
+    const button = (await action.boundingBox())!;
+    expect(button.x + button.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+  }
 });

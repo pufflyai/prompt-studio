@@ -72,3 +72,15 @@ test("root-value versions can be named and renamed without turning their labels 
   await parameterCommands["parameters.delete"].run(ctx, { ...target, file: "night.json" });
   expect(await ctx.projectFiles!.exists("src/night.json")).toBe(false);
 });
+
+test("deleting an unused version keeps the selected version and its values", async () => {
+  const ctx = await fixture();
+  const target = { canvas, frame: "Colors" };
+  await parameterCommands["parameters.save"].run(ctx, { ...target, values: { opacity: 0.7 }, name: "Selected" });
+  await parameterCommands["parameters.save"].run(ctx, { ...target, values: { opacity: 0.9 }, name: "Unused" });
+  await parameterCommands["parameters.select"].run(ctx, { ...target, file: "selected.json" });
+  await parameterCommands["parameters.delete"].run(ctx, { ...target, file: "unused.json" });
+  const result = await parameterCommands["parameters.versions"].run(ctx, target);
+  expect(result.file).toBe("selected.json");
+  expect(result.versions.find((version) => version.file === result.file)?.values).toEqual({ opacity: 0.7 });
+});
