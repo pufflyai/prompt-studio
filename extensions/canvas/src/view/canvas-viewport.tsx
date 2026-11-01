@@ -30,6 +30,12 @@ export const CanvasViewport = (props: {
         const unit = [1, 16, event.currentTarget.clientHeight][event.deltaMode] ?? 1;
         wheel.current = event.ctrlKey || event.metaKey ? Math.exp((-event.deltaY * unit) / 1000) : undefined;
       }}
+      onScroll={(event) => {
+        if (event.target !== event.currentTarget) return;
+        // Native focus scrolling must not add a second offset to the camera transform.
+        event.currentTarget.scrollLeft = 0;
+        event.currentTarget.scrollTop = 0;
+      }}
       onFit={runtime.fit}
       onReset={runtime.reset}
       onNavigationEnd={runtime.flush}
