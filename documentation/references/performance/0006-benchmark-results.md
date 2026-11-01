@@ -12,6 +12,7 @@ Benchmarks run only on GitHub Actions. A developer machine has other work runnin
 | --- | --- | --- |
 | `desktop` | `clients/desktop/src/e2e/packaged-*.bench.ts` | Launch, recovery, renderer CPU share, renderer heap, and app memory |
 | `workbench` | `packages/e2e/src/perf/*.p3.bench.ts` and the packaged collection benchmark | Workbench interaction times and page heap |
+| `canvas` | `packages/canvas-tests/src/performance/frame-startup.p3.bench.ts` | Canvas frame cold startup |
 | `chat` | `packages/ui/src/components/chat-ui/performance/*.p3.bench.ts` | Chat loading, switching, streaming, rendering, and page heap |
 | `subnav` | `packages/e2e/src/perf/subnav.p3.bench.ts` | Side navigation sections, data, and editor times |
 | `planner` | `packages/e2e/src/perf/planner-board-cold-open.p3.bench.ts` | Tickets cold open with 1,000 tickets |
@@ -37,16 +38,16 @@ recordPeakMemory("cold-start-memory", "Cold start peak memory");
 - `budget` is optional. It repeats the benchmark's existing budget; the writer never adds a new one.
 - The writer does nothing unless the runner sets `BENCHMARK_RESULTS`, so benchmarks still run on their own.
 
-A new suite needs an entry in `suites.ts` and in `SUITES` in `.pstdio/extensions/pstdio-dev/src/benchmarks/platforms.ts`, which the Runs page offers.
+A new suite needs an entry in `suites.ts` and in `SUITES` in `.pstdio/extensions/pstdio-dev/src/benchmarks/platforms.ts`, which the Runs page offers. A P0 test in `suites.p0.test.ts` fails when the two lists differ in suites, labels or platform limits.
 
 ## Run benchmarks
 
-The [Benchmarks workflow](../../../.github/workflows/benchmarks.yml) takes commits, suites, platforms, and samples per commit. It runs one job per platform and suite. Each job checks out every commit into its own folder, installs and prepares each one, then runs the commits in turn for each sample: A then B, then B then A. Runner drift therefore affects every commit equally. Each commit runs its own copy of the runner and benchmarks, so a commit from before this format cannot be measured.
+The [Benchmarks workflow](../../../.github/workflows/benchmarks.yml) takes commits, suites and platforms. CI runs each benchmark once (rule `005.3.5`), so its `samples` input must stay 1. It runs one job per platform and suite the suite supports; a chosen suite that cannot run on a platform, such as `relay` off Linux, starts no job and the run shows a warning. Each job checks out every commit into its own folder, installs and prepares each one, then runs the commits in turn. Each commit runs its own copy of the runner and benchmarks, so a commit from before this format cannot be measured.
 
 Start a run from the Runs page, or with GitHub CLI:
 
 ```sh
-gh workflow run benchmarks.yml -f commits=pstdio@0.45.0,main -f suites=storage,runtime -f platforms=linux-x64 -f samples=10
+gh workflow run benchmarks.yml -f commits=pstdio@0.45.0,main -f suites=storage,runtime -f platforms=linux-x64
 ```
 
 The runner also works locally, for checking a suite change. Its numbers are not comparable with CI results:
@@ -75,16 +76,24 @@ Each job uploads `<sha>-<platform>.json` files as the `benchmark-results-<platfo
 }
 ```
 
-`values` holds one value per sample, in run order. A benchmark that measures something several times in one sample contributes that sample's median, because samples, not single measurements, are the independent units. Readers compute their own statistics from these values. A failed sample keeps the measurements it recorded; the job still fails so the run shows it. A measurement that is not a finite number is left out.
+`values` holds one value per sample, in run order. CI results have one value per metric; older or local results can have several. A benchmark that measures something several times in one sample contributes that sample's median, because samples, not single measurements, are the independent units. Readers compute their own statistics from these values. A failed sample keeps the measurements it recorded; the job still fails so the run shows it. A measurement that is not a finite number is left out.
 
 After a stable or patch release publishes, the release workflow starts a separate Benchmarks run with `release_tag` set. It runs every suite on every release platform, merges each platform's suite files, and attaches them to the release as `benchmarks-<platform>.json`. Benchmarks never hold or fail a release.
 
 ## Performance pages
 
-The pages read only from `.pstdio/extension-storage/pstdio.pstdio-dev/benchmarks/`. Opening a page, the daily schedule, and a followed run download new release assets and finished run artifacts there with the developer's `gh` login. Cached results outlive GitHub's artifact retention. Extension storage is not tracked by Git, so each developer keeps their own cache.
+The pages read only from `.pstdio/extension-storage/pstdio.pstdio-dev/benchmarks/`. Opening a page, the daily schedule, and a followed run download new release assets and finished run artifacts there with the developer's `gh` login. Cached results outlive GitHub's artifact retention. Extension storage is not tracked by Git, so each developer keeps their own cache. When a sync fails, the pages keep showing cached results with the time of the last successful sync and a **Retry sync** action.
 
-- **Trends** shows one chart per benchmark across the chosen releases: the median, its 95% confidence interval, and the budget. **Show table** lists every benchmark as a column and every release as a row. **One version** lists every benchmark for one release with its change against the previous release.
-- **Compare** shows base and head medians with intervals, and the change with its interval. When a run measured both commits, its results win over separate runs.
-- **Runs** starts and cancels workflow runs and shows their progress.
+- **Trends** shows one chart per benchmark across releases, with one line per chosen platform. With one platform it also shows the 95% interval band. **Show table** lists every release and platform as a row and every benchmark as a column. When the newest release lacks results on some platforms, a notice names which finished, which are still running, and which have none. A release a platform did not measure is a gap, never a zero.
+- **Compare** shows the base and head values and their difference. Any two commits compare, whichever runs measured them; a metric one commit lacks shows as not measured. With no base, the head's own measurements and budget outcomes show. When a chosen commit has no results, **Measure** starts a run for only that commit on the chosen platform.
+- **Runs** starts and cancels workflow runs. The commit input lists every release tag; commits that already have results for the chosen suites and platforms are tagged Measured and are not run again. Suites a chosen platform cannot run are disabled with the reason. Each run shows its status, commits, platforms and start time, with each suite's outcome in the status tooltip. Runs started anywhere, including by releases and on GitHub, keep updating while they run.
 
-Medians use percentile bootstrap intervals with 2,000 resamples. A change counts as an improvement or a regression only when the 95% interval of the change in medians excludes zero. A metric whose base median is zero, such as idle CPU, reads as "up from 0" when it rises.
+## What results can show
+
+A median with several samples uses a percentile bootstrap interval with 2,000 resamples. A change counts as an improvement or a regression only when the 95% interval of the change in medians excludes zero. A metric whose base median is zero, such as idle CPU, reads as "up from 0" when it rises.
+
+One sample per commit, which every CI result has, has no spread. Its difference and budget outcome are real measurements, but there is too little evidence to call it improved or regressed, so it gets no interval and the verdict `inconclusive`. A suite stopped by a cancel saves no measurements; suites that finished before it keep theirs.
+
+## Agent commands
+
+Agents use the same commands as the pages: `pst pstdio-dev benchmarks sync` and `start-run` from the CLI, and `benchmarks.runs`, `benchmarks.run-results`, `benchmarks.commits`, `benchmarks.compare`, `benchmarks.trends`, `benchmarks.cancel-run` and `benchmarks.sync-status` through the extension command surface. `start-run` returns the commits it reused and any skipped suite and platform pairs; `run-results` returns one run's measurements and the platforms that have none.
