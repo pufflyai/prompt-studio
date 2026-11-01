@@ -1,6 +1,7 @@
 import { createDocumentRelay, createDocumentSync, createRecordStreamSync, fetchSyncSpaces } from "pstdio-sync/relay";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { documentProgress } from "./document-progress";
 import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
 
@@ -9,6 +10,7 @@ export const createExtensionDocumentSync = (input: {
   owner: { workbenchId: string; extensionId: string };
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
+  statusChanged?: () => void;
 }) => {
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
@@ -16,31 +18,43 @@ export const createExtensionDocumentSync = (input: {
   let firstDownloaded = false;
   const documents = new Map<string, ReturnType<typeof createDocumentSync>>();
   let records: ReturnType<typeof createRecordStreamSync> | undefined;
-  const close = () => {
+  // This directory drives the active download loop; it is unknown before owner metadata arrives.
+  let directory: string[] | undefined;
+  const reset = () => {
     for (const document of documents.values()) document.close();
     documents.clear();
     records = undefined;
+    directory = undefined;
   };
+  const stop = input.deps.extensionStorageService.watch((owner) => {
+    if (owner.workbenchId === input.owner.workbenchId && owner.extensionId === input.owner.extensionId) {
+      directory = undefined;
+      input.statusChanged?.();
+    }
+  });
   return {
-    close,
+    close() {
+      stop();
+      reset();
+    },
     async status() {
-      const names = await input.deps.extensionStorageService.documents.list(input.owner);
       const statuses = await Promise.all([
-        ...[...new Set(["records", ...names])].map((name) => documents.get(name)?.status()),
+        ...[...new Set(["records", ...documents.keys(), ...(directory ?? [])])].map((name) =>
+          documents.get(name)?.status(),
+        ),
         records?.status(),
       ]);
       return {
         firstDownloaded,
-        downloaded: statuses.every((status) => status?.downloaded),
-        pending: statuses.some((status) => status?.pending),
-        needsAttention: statuses.some((status) => status?.needsAttention),
+        ...documentProgress(statuses, directory !== undefined),
       };
     },
     async synchronize(signal: AbortSignal) {
+      directory = undefined;
       const { config, owner, deps } = input;
       const { project: space } = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal });
       if (attempt !== signal || generation !== space.generation) {
-        close();
+        reset();
         attempt = signal;
         generation = space.generation;
       }
@@ -73,6 +87,7 @@ export const createExtensionDocumentSync = (input: {
           documents.set(name, sync);
         }
         await sync.synchronize();
+        input.statusChanged?.();
       };
       // Publish local text document names, then discover names downloaded with the records document.
       await deps.extensionStorageService.documents.list(owner);
@@ -89,8 +104,9 @@ export const createExtensionDocumentSync = (input: {
         });
       }
       await records.synchronize();
-      for (const name of await deps.extensionStorageService.documents.list(owner))
-        if (name !== "records") await synchronize(name);
+      directory = await deps.extensionStorageService.documents.list(owner);
+      input.statusChanged?.();
+      for (const name of directory) if (name !== "records") await synchronize(name);
       const statuses = await Promise.all([...documents.values(), records].map((sync) => sync.status()));
       if (statuses.every((status) => status.downloaded)) firstDownloaded = true;
     },
