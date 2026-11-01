@@ -37,6 +37,7 @@ export const plannedCiJobs = (scope: Scope) => {
     if (selected) add(id);
   jobs.push(...matrixPlan("database_tests", scope.databaseMatrix, (row) => `${row.package} ${row.shard}`));
   jobs.push(...matrixPlan("bun_contracts", scope.bunContractMatrix, (row) => row.shard));
+  if (scope.sharedBuild) add("build_host", ["build_host"], "P0");
   jobs.push(...matrixPlan("integration_contracts", scope.integrationMatrix, (row) => row.shard));
   jobs.push(...matrixPlan("components", scope.componentMatrix, (row) => row.package));
   if (scope.stage === "full") {

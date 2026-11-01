@@ -197,3 +197,19 @@ test("production runs packaged CLI tests only in the toolchain job, which includ
   expect(production.packagedMatrix.some((row) => row.suite === "browser")).toBe(true);
   expect(production.toolchainMatrix.map((row) => row.platform_pkg)).toContain("cli-linux-x64");
 });
+
+test("one shared build per run covers every package the Linux host jobs build", () => {
+  const input = scopeFixture();
+  const pr = resolveCiScope(input);
+  expect(pr.sharedBuild.split(" --scope ").length).toBeGreaterThan(0);
+  for (const owner of pr.affectedOwners) expect(pr.sharedBuild).toContain(`--scope ${owner}`);
+  const extensions = resolveCiScope({ ...input, changedFiles: ["packages/ui/src/index.ts"] });
+  expect(extensions.publishedExtensions).toBe(true);
+  expect(extensions.sharedBuild).toContain("--scope canvas");
+  expect(plannedCiJobs(pr).map((job) => job.id)).toContain("build_host");
+  const docs = resolveCiScope({ ...input, changedFiles: ["documentation/guide.md"] });
+  expect(docs.sharedBuild).toBe("");
+  expect(plannedCiJobs(docs).map((job) => job.id)).not.toContain("build_host");
+  const main = resolveCiScope({ ...input, event: "push" });
+  expect(main.sharedBuild).toBe("");
+});

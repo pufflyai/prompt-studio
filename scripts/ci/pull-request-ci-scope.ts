@@ -50,6 +50,10 @@ const prioritiesFor = (stage: ReturnType<typeof stageFor>): TestPriority[] => {
 const runsFileCheck = (stage: ReturnType<typeof stageFor>, touched: boolean) =>
   stage === "full" || (stage !== "main" && touched);
 
+// One Linux build per run feeds every host job that builds packages; each job still builds what it misses.
+const sharedBuildFilter = (owners: string[], publishedExtensions: boolean) =>
+  [...new Set([...owners, ...(publishedExtensions ? ["canvas"] : [])])].map((name) => `--scope ${name}`).join(" ");
+
 export const resolveCiScope = (input: CiScopeInput) => {
   const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
@@ -62,6 +66,8 @@ export const resolveCiScope = (input: CiScopeInput) => {
   if (stage === "main") affectedOwners = [];
   const publicApi = code.some((file) => /^packages\/(sdk|ui|pstdio-api-contracts)\//.test(file));
   const extensions = code.some((file) => file.startsWith("extensions/"));
+  const publishedExtensions = runsFileCheck(stage, shared || publicApi || extensions);
+  const sharedBuild = sharedBuildFilter(affectedOwners, publishedExtensions);
   const matrices = createTestMatrices(tests, packages, affectedOwners, prioritiesFor(stage));
   const componentMatrix = stage === "merge_queue" ? [] : matrices.componentMatrix;
   const browserSmoke = stage === "main" || stage === "merge_queue";
@@ -110,7 +116,8 @@ export const resolveCiScope = (input: CiScopeInput) => {
       stage,
       changedFiles.some((file) => ["package.json", "bun.lock"].includes(basename(file))),
     ),
-    publishedExtensions: runsFileCheck(stage, shared || publicApi || extensions),
+    publishedExtensions,
+    sharedBuild,
     sdkApiReport: runsFileCheck(stage, shared || publicApi),
     browserSmoke,
   };
