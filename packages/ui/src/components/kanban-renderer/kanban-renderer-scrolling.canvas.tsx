@@ -1,5 +1,5 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
@@ -41,15 +41,15 @@ const ColumnExample = (props: { count: number; grouped?: boolean }) => {
     </Stack>
   );
 };
-export const FittingCards: CanvasVariant = {
+export const FittingCards: CanvasFrame = {
   id: "patterns-kanban-renderer-column-scrolling--fitting-cards",
   render: () => <ColumnExample count={5} />,
 };
-export const OverflowingCards: CanvasVariant = {
+export const OverflowingCards: CanvasFrame = {
   id: "patterns-kanban-renderer-column-scrolling--overflowing-cards",
   render: () => <ColumnExample count={40} />,
 };
-export const GroupedCards: CanvasVariant = {
+export const GroupedCards: CanvasFrame = {
   id: "patterns-kanban-renderer-column-scrolling--grouped-cards",
   render: () => <ColumnExample count={40} grouped />,
 };

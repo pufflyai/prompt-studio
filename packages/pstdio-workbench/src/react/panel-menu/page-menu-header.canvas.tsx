@@ -1,5 +1,5 @@
 import { Box, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { Workbench, WorkbenchThemeProvider } from "../index";
@@ -61,7 +61,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof PageMenuHeaderStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 /** A tabless page keeps a minimal header that holds only the openers of its closed view menus. */
 export const WithClosedViewMenu: Story = {
   id: "pstdio-workbench-reference-core-api-page-menu-header--with-closed-view-menu",

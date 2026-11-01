@@ -1,5 +1,5 @@
-import { Dialog } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { ScopedDialog as Dialog } from "@pstdio/ui";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createKeyboardWorkbench } from "./keyboard.fixture";
 import { WorkbenchKeyboardShortcutsPanel } from "./keyboard-shortcuts-panel";
@@ -10,7 +10,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const VisiblePanels: Story = {
   id: "pstdio-workbench-reference-keyboard--visible-panels",
   args: { workbench: createKeyboardWorkbench() },

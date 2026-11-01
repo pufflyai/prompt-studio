@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-06
 
+Status: Accepted.
+
 ## Context
 
 Artifact mounts are the files an extension keeps under `.pstdio/extension-storage/<name>/`. Agents and people edit those files directly, with their own file tools or editors. Before PS-534, open views did not refresh after such an edit, because only command code emitted refresh events.

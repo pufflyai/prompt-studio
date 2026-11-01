@@ -91,7 +91,8 @@ test("a rejected install leaves no installed source or project instance behind",
     const project = await harness.app.deps.projectService.create({ name: "Prompt Studio" });
     await harness.install(project.id, "reports", "RP");
 
-    await expect(harness.install(project.id, "conflict", "RP")).rejects.toThrow("example.reports");
+    const error = await harness.install(project.id, "conflict", "RP").catch((error: unknown) => error);
+    expect(error).toMatchObject({ message: expect.stringContaining("example.reports") });
 
     expect(await harness.app.deps.extensionService.getInstalledSource("conflict")).toBeFalsy();
     const instances = await harness.app.deps.extensionService.listProjectExtensionInstances(project.id);

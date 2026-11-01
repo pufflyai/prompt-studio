@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-26
 
+Status: Accepted.
+
 This is a temporary workaround, not the intended design.
 
 ## Ideal behavior

@@ -9,6 +9,11 @@ const userMessage = (id: string, text: string): SessionMessage => ({
 });
 
 describe("splitQueuedFollowUps", () => {
+  test("preserves the submitted text when a saved request becomes a live message", () => {
+    const text = "\nCorrection\n";
+    const queued = userMessage("queued-prompt-session-1-2", text);
+    expect(splitQueuedFollowUps([queued], "session-1").queuedFollowUps[0].prompt).toBe(text);
+  });
   test("splits queued prompt messages from transcript messages", () => {
     const queued = userMessage("queued-prompt-session-1-2", "Run the follow-up");
     const transcript = userMessage("message-1", "Start work");
@@ -56,13 +61,63 @@ test("a delayed queue snapshot cannot restore a correlated delivered message bes
     messages: [delivered],
     queuedFollowUps: [],
   });
-  expect(
-    splitQueuedFollowUps([userMessage("other", "repeat"), queued], "session-1", queue).queuedFollowUps,
-  ).toHaveLength(1);
+  expect(splitQueuedFollowUps([userMessage("other", "repeat"), queued], "session-1", queue)).toEqual({
+    messages: [userMessage("other", "repeat"), userMessage("delivery", "repeat")],
+    queuedFollowUps: [],
+  });
   expect(
     splitQueuedFollowUps([delivered, queued], "session-1", {
       ...queue,
       requests: [{ ...request, attachments: [{ file_id: "missing" }] }],
     }).queuedFollowUps,
-  ).toHaveLength(1);
+  ).toHaveLength(0);
+});
+
+test("live handoffs appear as sent messages and return to the queue after rejection", () => {
+  const initial = userMessage("initial", "Start work");
+  const queued = {
+    ...userMessage("queued-prompt-session-1-2", "Use the attached notes"),
+    parts: [
+      { type: "text" as const, text: "Use the attached notes" },
+      { type: "file" as const, fileId: "notes", filename: "notes.txt", url: "/notes" },
+    ],
+  };
+  const request = {
+    queuePosition: 2,
+    revision: "saved",
+    prompt: "Use the attached notes",
+    model: "one",
+    params: {},
+    attachments: [{ file_id: "notes", name: "notes.txt", url: "/notes", mime_type: "text/plain", size_bytes: 4 }],
+    steeringDelivery: { id: "delivery", runStartedAt: "run" },
+  };
+  const queue = {
+    requests: [request],
+    activeRunStartedAt: "run",
+    steeringAvailable: true,
+    steeringUnavailableReason: null,
+  };
+  const optimistic = { ...queued, id: "delivery" };
+  expect(splitQueuedFollowUps([initial, queued], "session-1", queue)).toEqual({
+    messages: [initial, optimistic],
+    queuedFollowUps: [],
+  });
+  expect(splitQueuedFollowUps([initial, optimistic, queued], "session-1", queue)).toEqual({
+    messages: [initial, optimistic],
+    queuedFollowUps: [],
+  });
+  const rejected = splitQueuedFollowUps([initial, queued], "session-1", {
+    ...queue,
+    requests: [{ ...request, steeringDelivery: null }],
+  });
+  expect(rejected.messages).toEqual([initial]);
+  expect(rejected.queuedFollowUps.map((item) => ({ id: item.id, attachments: item.attachments }))).toEqual([
+    {
+      id: queued.id,
+      attachments: [{ id: "notes", name: "notes.txt", url: "/notes", mediaType: undefined, size: undefined }],
+    },
+  ]);
+  const partial = splitQueuedFollowUps([initial, userMessage("delivery", request.prompt), queued], "session-1", queue);
+  expect(partial.messages).toEqual([initial, optimistic]);
+  expect(partial.queuedFollowUps).toEqual([]);
 });

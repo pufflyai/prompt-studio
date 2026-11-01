@@ -1,7 +1,8 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { AlertMessage } from "./alert";
+import { ScrollArea } from "./scroll-area";
 
 const meta = {
   title: "Primitives/AlertMessage",
@@ -10,7 +11,7 @@ const meta = {
     "Titles and descriptions wrap and scroll within the alert. Alerts use at most half the viewport, capped at 24rem, and shrink inside constrained flex layouts. Error alerts include Copy error message, which copies the complete title and message. Extension webviews need clipboard.write. Place recovery controls in endElement for a wrapping bottom-right footer outside the scrolling content. Dismiss buttons stay at the top right, aligned with the icon and the first title line. Both use compact ghost buttons with hover, focus, and pressed backgrounds tinted by the alert's semantic color.",
 } satisfies CanvasMeta<typeof AlertMessage>;
 export default meta;
-type Story = CanvasVariant<typeof AlertMessage>;
+type Story = CanvasFrame<typeof AlertMessage>;
 const examples = [
   {
     status: "info",
@@ -218,4 +219,25 @@ export const ConstrainedContent: Story = {
 export const CopyMessage: Story = {
   id: "primitives-alertmessage--copy-message",
   render: () => <VariableContentPreview />,
+};
+
+export const PageScrolling: Story = {
+  id: "primitives-alertmessage--page-scrolling",
+  render: () => (
+    <Box height="96" width="lg" maxW="full">
+      <ScrollArea viewportProps={{ "aria-label": "Article", role: "region" }}>
+        <Stack gap="md" p="sm">
+          <AlertMessage status="info" title="Preview notice">
+            Keep reading by scrolling over this notice.
+          </AlertMessage>
+          <AlertMessage status="info" title="Import details" maxH="40">
+            {Array.from({ length: 30 }, (_, index) => `Imported document ${index + 1}.`).join("\n")}
+          </AlertMessage>
+          <Box minH="96">
+            <Text>Continue reading the article.</Text>
+          </Box>
+        </Stack>
+      </ScrollArea>
+    </Box>
+  ),
 };

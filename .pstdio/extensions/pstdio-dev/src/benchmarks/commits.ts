@@ -40,10 +40,9 @@ export const listCommits = async (ctx: GitContext, results: CachedResult[]) => {
       "for-each-ref",
       "refs/tags/pstdio@*",
       "--sort=-creatordate",
-      "--count=60",
       `--format=%(refname:short)${FIELD}%(*objectname)${FIELD}%(objectname)${FIELD}%(contents:subject)`,
     ]),
-  ).slice(0, 15);
+  );
   const known = new Set([...main, ...releases].map((commit) => commit.sha));
   // Runs started from elsewhere can measure branches; keep them pickable once their results exist.
   // Newest first, like the main log, so Compare defaults to the newest commit as head.

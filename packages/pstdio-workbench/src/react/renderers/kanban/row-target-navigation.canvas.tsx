@@ -1,5 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
 import { createWorkbench } from "../../../core";
@@ -129,10 +129,10 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof RowTargetNavigation>;
 export default meta;
-export const ImmediatePage: CanvasVariant<typeof meta> = {
+export const ImmediatePage: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-row-target-navigation--immediate-page",
 };
-export const BadgeOpensSidePanel: CanvasVariant<typeof meta> = {
+export const BadgeOpensSidePanel: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-row-target-navigation--badge-opens-side-panel",
   args: { panel: true },
 };

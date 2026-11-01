@@ -2,13 +2,11 @@
 
 Proposed: 2026-10-06
 
-## Status
-
-Proposed. Not implemented. PS-525 builds it. Until then, an installed extension has the access of the user's account.
+Status: Proposed. Not implemented. PS-525 builds it. Until then, an installed extension has the access of the user's account.
 
 ## Context
 
-MISSION.md lists "keeping secrets away from tools and limiting what a tool may touch" as core work, and expects people to install tools that others built.
+[The mission](../guidance/0001-mission.md) lists "keeping secrets away from tools and limiting what a tool may touch" as core work, and expects people to install tools that others built.
 
 Today the host `import()`s every enabled extension entry into the API process (`packages/pstdio-extensions/src/runtime/loader.ts`, called from `packages/pstdio-api/src/features/extensions/extension-runtime.ts` and `project-extension-runtime-sources.ts`). Extension code shares the process with the host, so it can:
 

@@ -5,6 +5,7 @@ import { freshInstallArgs } from "./fresh-install";
 import { verifyMonacoPackageAssets } from "./monaco-package-assets";
 import { verifyProviderPackageConsumer } from "./provider-package-consumer";
 import { writeStoragePackageConsumer } from "./storage-package-consumer";
+import { writeWorkbenchPackageConsumer } from "./workbench-package-consumer";
 
 const run = (cwd: string, args: string[]) => {
   const result = Bun.spawnSync(["bun", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
@@ -136,7 +137,32 @@ headerWorkbench.dispose();
       (react && imports.includes("@pstdio/ui")
         ? `
 import { createElement } from "react";
-import { BubblePanel, ListRow, TreeList } from "@pstdio/ui";
+import { BubblePanel, ListRow, TreeList, defaultThemePreferences, createThemePreferenceFromVsCodeTheme } from "@pstdio/ui";
+const imported = createThemePreferenceFromVsCodeTheme({
+  id: "packed", mode: "dark", theme: { colors: { "editor.background": "#222222" }, pstdio: { colors: { "border.accent": "#ABCDEF" } } },
+});
+if (!imported.tokens?.["colors.bg.subtle"] || imported.tokens["colors.bg.subtle"] === imported.tokens["colors.bg"])
+  throw new Error("Packed UI lost imported theme surface fallbacks");
+if (imported.tokens["colors.border.accent"] !== "#ABCDEF") throw new Error("Packed UI lost application overrides");
+const luminance = (hex: string) => {
+  const channels = [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16) / 255)
+    .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+};
+const contrast = (first: string, second: string) => {
+  const values = [luminance(first), luminance(second)];
+  return (Math.max(...values) + 0.05) / (Math.min(...values) + 0.05);
+};
+const contrastThemes = defaultThemePreferences.filter((theme) => theme.id.startsWith("prompt-contrast-"));
+if (contrastThemes.length !== 2) throw new Error("Packed UI lost its contrast themes");
+for (const theme of contrastThemes) {
+  const colors = "tokens" in theme ? theme.tokens : undefined;
+  if (!colors) throw new Error("Packed contrast theme has no colors");
+  for (const role of ["colors.fg", "colors.fg.muted", "colors.fg.subtle"]) {
+    if (contrast(colors[role], colors["colors.bg"]) < 4.5) throw new Error("Packed contrast theme has unreadable text");
+  }
+  if (contrast(colors["colors.border"], colors["colors.bg"]) < 3) throw new Error("Packed contrast theme lost control boundaries");
+}
 import { Canvas, zoomCanvas, type CanvasCamera } from "@pstdio/ui/canvas";
 import { DependencyTimeline } from "@pstdio/ui/dependency-timeline";
 let camera: CanvasCamera = { x: 0, y: 0, zoom: 1 };
@@ -188,6 +214,7 @@ void [invalidAttribute, invalidColumn];
         : ""),
   );
   writeStoragePackageConsumer(directory);
+  writeWorkbenchPackageConsumer(directory, react);
   if (react && dependencies["@pstdio/ui"]) {
     cpSync(join(directory, "node_modules/@pstdio/ui/examples/performance"), join(directory, "performance-example"), {
       recursive: true,
@@ -207,11 +234,18 @@ void [invalidAttribute, invalidColumn];
         jsx: "react-jsx",
         types: react ? ["node", "vite/client"] : [],
       },
-      include: ["consumer.ts", "storage-consumer.ts", "performance-example/*.ts", "performance-example/*.tsx"],
+      include: [
+        "consumer.ts",
+        "storage-consumer.ts",
+        "workbench-consumer.ts",
+        "performance-example/*.ts",
+        "performance-example/*.tsx",
+      ],
     }),
   );
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
   run(directory, ["check", "-p", "tsconfig.json"]);
+  run(directory, ["workbench-consumer.ts"]);
   if (react) {
     writeFileSync(
       join(directory, "vite.config.ts"),

@@ -2,9 +2,7 @@
 
 Proposed: 2026-08-27
 
-## Status
-
-The release deferral has been lifted in repository configuration. The active [desktop matrix](../../.github/workflows/release-desktop.yml) and [artifact target set](../../clients/desktop/src/release/release-artifacts.ts) include Windows x64. The historical decision below explains why it was excluded earlier.
+Status: Removed. The release deferral has been lifted in repository configuration. The active [desktop matrix](../../.github/workflows/release-desktop.yml) and [artifact target set](../../clients/desktop/src/release/release-artifacts.ts) include Windows x64. The historical decision below explains why it was excluded earlier.
 
 The prior signing and installed-update verification is recorded in PS-3/PS-219/PS-220. Enabling the lane does not by itself prove publication or a successful check of the public update feed; retain those release acceptance checks.
 

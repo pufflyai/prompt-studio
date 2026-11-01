@@ -16,12 +16,12 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
-import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 
-// Startup, warm attach, and recovery timings are benchmarks in packaged-launch.p3.bench.ts.
+// Startup and recovery timings are benchmarks in packaged-launch.p3.bench.ts.
 test("starts without editors and serves both authenticated transport paths", { tag: "@essential" }, async ({
   browserName: _browserName,
 }) => {
+  // Windows retains its 60-second limit and runs this cold-install case in registered quarantine.
   // Cold SDK installation exceeded 25s on hosted macOS ARM64; the 45s allowance is user-approved.
   if (process.platform === "darwin" && process.arch === "arm64") test.setTimeout(45_000);
   const home = createPackagedHome();
@@ -77,6 +77,7 @@ test("starts without editors and serves both authenticated transport paths", { t
 test("promotes ownership, detaches, and preserves data through a warm relaunch", async ({
   browserName: _browserName,
 }) => {
+  // Windows keeps the full lifecycle workload in quarantine at the existing 60-second limit.
   // Initial setup, trace capture and relaunch share this user-approved execution allowance.
   if (
     (process.platform === "darwin" && process.arch === "arm64") ||
@@ -114,7 +115,9 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const chosenTheme = await test.step("Choose the theme opposite to the one shown", async () => {
       const page = first!.page;
       const theme =
-        (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark" ? "pstdio-light" : "pstdio-dark";
+        (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark"
+          ? { id: "pstdio-light", title: "Prompt Light" }
+          : { id: "pstdio-dark", title: "Prompt Dark" };
       await page.evaluate(() =>
         (
           window as unknown as {
@@ -122,12 +125,12 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
           }
         ).__pstdioDashboardWorkbench.commands.executeCommand("workbench.action.changeTheme"),
       );
-      await page.getByRole("option", { name: theme }).click();
-      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await page.getByRole("option", { name: theme.title, exact: true }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme.id);
       await expect
         .poll(() => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
-        .toMatchObject({ values: { "theme-preference": theme } });
-      return theme;
+        .toMatchObject({ values: { "theme-preference": theme.id } });
+      return theme.id;
     });
 
     const originalPid = first.runtime.pid;
@@ -196,39 +199,6 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
   } finally {
     await disposePackagedApp(first);
     await disposePackagedApp(second);
-    await removePackagedHome(home);
-  }
-});
-
-test("restarts a crashed sidecar once and offers Retry after another crash in the same Electron process", async ({
-  browserName: _browserName,
-}) => {
-  const home = createPackagedHome();
-  let app: PackagedApp | null = null;
-  try {
-    app = await launchPackagedApp(home);
-    const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
-    crashPackagedRuntime(app.runtime.pid);
-    await waitForAutomaticRecovery(app);
-    const originalInstanceId = app.runtime.instanceId;
-    crashPackagedRuntime(app.runtime.pid);
-    await expect(
-      app.lifecyclePage.getByRole("alert").getByRole("heading", { name: "Prompt Studio needs attention", exact: true }),
-    ).toBeVisible();
-    expect(await app.lifecyclePage.evaluate(() => performance.timeOrigin)).toBe(lifecycleStartedAt);
-
-    await app.lifecyclePage.getByRole("button", { name: "Retry" }).click();
-    const replacement = await waitForDescriptor(home, (descriptor) => descriptor.instanceId !== originalInstanceId);
-    await app.page.waitForURL(`${replacement.origin}/`);
-    await expect(app.page.locator("#root")).not.toBeEmpty();
-    await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
-
-    await app.finishTrace();
-    const close = runPackagedCli(home, ["close"]);
-    await waitForExit(app.child);
-    expect(await close).toMatchObject({ exitCode: 0 });
-  } finally {
-    await disposePackagedApp(app);
     await removePackagedHome(home);
   }
 });

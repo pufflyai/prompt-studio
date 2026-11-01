@@ -23,7 +23,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(picker.getByText("No projects yet", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Enter Main fullscreen", exact: true })).toBeHidden();
     await expect(page.locator('[data-workbench-region="status"]')).toBeHidden();
-    for (const button of await page.locator("#root button").all()) {
+    for (const button of await page.locator('#root button:not([role="dialog"] button)').all()) {
       await expect(button).toBeHidden();
     }
     await picker.getByRole("button", { name: "Settings", exact: true }).click();

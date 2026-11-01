@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { AdvancedFilterMenu } from "./advanced-filter-menu";
@@ -10,7 +10,7 @@ const meta: CanvasMeta<typeof AdvancedFilterMenu> = {
   component: AdvancedFilterMenu,
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const Menu = (props: { filter: ViewFilterGroup }) => {
   const [filter, setFilter] = useState(props.filter);
   return (

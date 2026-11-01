@@ -1,8 +1,8 @@
 import { Flex, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
-import { DEFAULT_PLATFORM, DEFAULT_SUITES } from "../benchmarks/platforms";
-import { storyRuns } from "../webview/story-fixtures";
+import { DEFAULT_PLATFORM } from "../benchmarks/platforms";
+import { storyRefs, storyRuns } from "../webview/story-runs";
 import { RunForm, type RunRequest } from "./run-form";
 import { RunList } from "./run-list";
 
@@ -11,21 +11,16 @@ interface RunsStoryProps {
 }
 const RunsStory = (props: RunsStoryProps) => {
   const [request, setRequest] = useState<RunRequest>({
-    commits: ["pstdio@0.45.0", "main"],
-    suites: DEFAULT_SUITES,
+    commits: ["pstdio@0.45.0", "pstdio@0.43.0"],
+    suites: ["storage", "runtime"],
     platforms: [DEFAULT_PLATFORM],
-    samples: 10,
   });
   return (
     <Flex gap="lg" wrap="wrap" align="flex-start" p="lg">
       <Stack flex="1 1 24rem" maxW="lg">
         <RunForm
           value={request}
-          quick={[
-            { label: "Latest release", ref: "pstdio@0.45.0" },
-            { label: "Previous release", ref: "pstdio@0.44.0" },
-            { label: "main", ref: "main" },
-          ]}
+          refs={storyRefs}
           pending={false}
           error={props.error}
           onChange={setRequest}
@@ -42,9 +37,11 @@ const meta: CanvasMeta<typeof RunsStory> = {
   title: "Extensions/Prompt Studio Dev/Benchmark runs",
   component: RunsStory,
   fullscreen: true,
+  description:
+    "Open the commit input to see every tag; pstdio@0.45.0 is Measured and not run again. Pick a platform other than Linux x64 to see Relay storage disabled.",
 };
 export default meta;
-type Story = CanvasVariant<typeof RunsStory>;
+type Story = CanvasFrame<typeof RunsStory>;
 export const Runs: Story = {
   id: "extensions-prompt-studio-dev-benchmark-runs--runs",
 };

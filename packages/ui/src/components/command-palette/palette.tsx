@@ -1,4 +1,4 @@
-import { Dialog, useSlotRecipe } from "@chakra-ui/react";
+import { useSlotRecipe } from "@chakra-ui/react";
 import type { KeyboardEvent, ReactNode, SetStateAction } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/command-palette/palette-filter";
 import { PaletteList } from "@/components/command-palette/palette-list";
 import { SearchModalContent } from "@/components/overlays/search-modal-content";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 
 export type { FilterPaletteEntriesOptions, PaletteMode, PaletteSearchEntry };
 export { DEFAULT_PALETTE_ASSET_LIMIT, filterPaletteEntries };

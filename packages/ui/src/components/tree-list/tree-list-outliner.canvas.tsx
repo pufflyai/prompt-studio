@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Eye, EyeOff, FileImage, Folder, Lock, LockOpen } from "lucide-react";
 import { useRef, useState } from "react";
 import { ScrollArea } from "../primitives/scroll-area";
@@ -18,7 +18,7 @@ const meta: CanvasMeta<typeof TreeList> = {
     "Drop near a group edge for before/after, or in its center for inside. Native HTML drag moves and sortable customization remain separate APIs.",
 };
 export default meta;
-type Story = CanvasVariant<typeof TreeList>;
+type Story = CanvasFrame<typeof TreeList>;
 const Outliner = (props: { narrow?: boolean }) => {
   const { narrow } = props;
   const [selected, setSelected] = useState(["artwork"]);

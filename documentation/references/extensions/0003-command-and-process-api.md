@@ -340,7 +340,7 @@ Stopping and restarting sync are account-wide. Stopping keeps the project keys, 
 
 `pendingItems` counts distinct sync documents with unacknowledged local changes. Each owner metadata document, text document, and record stream is one item. This includes core project info and resource numbers, extension publications, automations, enabled extensions, and personal history with its shared references and transcripts. Several record edits in one stream count as one item, not one item per record. A retry does not add another item. The count is absent while an owner or its directory is not known, including personal changes awaiting capture by the sync worker. It can be zero while the transport finishes a sync pass.
 
-`download` reports `{ completed, total }` in the same document units. A document counts as completed only after its required files are verified too. `total` is `null` while any owner directory is unknown. Once known, `Math.floor(100 * completed / total)` gives the percentage for a nonzero total. Newly discovered documents can increase the total, and reconnects can restart verification. This is verified-document progress, not bytes transferred. The fields are optional additions to API 0.3.0; older hosts omit them. Status reads use document revision metadata and indexed outbox presence, without loading owner or record content or listing every record.
+`download` reports `{ completed, total }` in the same document units. A document counts as completed only after its required files are verified too. `total` is `null` while any owner directory is unknown. Once known, `Math.floor(100 * completed / total)` gives the percentage for a nonzero total. Newly discovered documents can increase the total, and reconnects can restart verification. This is verified-document progress, not bytes transferred. The fields are optional additions to API 0.3.1; older hosts omit them. Status reads use document revision metadata and indexed outbox presence, without loading owner or record content or listing every record.
 
 Listen to `accountEvents.projectSyncChanged` from `@pstdio/sdk/extensions` for changes. The host sends it for one project only when any derived status field changes, including progress while the state stays the same. Read the status once when the extension starts; the first value is not announced. The payload contains `projectId` and the status fields. Webviews receive only the event ID, so read the status again.
 
@@ -540,7 +540,7 @@ for (const session of sessions) {
 }
 ```
 
-`last_request_started` and `last_request_ended` describe the latest run only. `usage` sums the saved conversation's input, output, cache read and cache write tokens. It is null for sessions with no recorded usage, including old sessions until their next save. Show the number of sessions with unknown usage alongside any total. See [session token totals](../../adrs/0066-session-token-totals.md).
+`last_request_started` and `last_request_ended` describe the latest run only. `usage` sums the saved conversation's input, output, cache read and cache write tokens. It is null for sessions with no recorded usage, including old sessions until their next save. Show the number of sessions with unknown usage alongside any total. See [session token totals](../../adrs/0119-session-token-totals.md).
 
 Without a workspace filter, `workspace_id` is the earliest linked workspace, with link ID breaking timestamp ties. With a workspace filter it is the selected workspace. Multiple links do not duplicate session items.
 

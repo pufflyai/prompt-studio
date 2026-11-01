@@ -19,6 +19,7 @@ describe("resolveDefaultExtensionsConfig", () => {
       "harness-open-code",
       "pstdio-base-themes",
       "pstdio-skills",
+      "pstdio-performance",
     ]);
   });
 
@@ -280,6 +281,7 @@ describe("installDefaultExtensions sources", () => {
       "harness-open-code",
       "pstdio-base-themes",
       "pstdio-skills",
+      "pstdio-performance",
     ]);
     expect(
       calls.every(

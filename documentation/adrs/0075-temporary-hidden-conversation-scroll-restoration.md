@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-14
 
+Status: Accepted.
+
 ## Intended behavior
 
 A retained chat panel preserves its scroll position while hidden. Showing it again keeps the same response visible. A panel following the tail continues to follow it, including messages received while hidden.

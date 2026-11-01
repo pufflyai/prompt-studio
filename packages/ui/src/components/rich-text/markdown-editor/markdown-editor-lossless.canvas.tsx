@@ -1,5 +1,5 @@
 import { Box, SimpleGrid, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { MarkdownEditor } from "./markdown-editor";
 
@@ -52,7 +52,7 @@ const meta: CanvasMeta<typeof MarkdownEditor> = {
   component: MarkdownEditor,
 };
 export default meta;
-type Story = CanvasVariant<typeof MarkdownEditor>;
+type Story = CanvasFrame<typeof MarkdownEditor>;
 export const LosslessEditing: Story = {
   id: "patterns-editors-markdown-editor-source-preservation--lossless-editing",
   render: () => <LosslessSourceStory />,

@@ -46,6 +46,16 @@ describe("benchmark statistics", () => {
     expect(fromZero.change).toBe(Number.POSITIVE_INFINITY);
   });
 
+  test("one sample per side has a difference but no interval or verdict", () => {
+    expect(compareSamples([100], [110])).toEqual({
+      change: expect.closeTo(0.1, 5),
+      low: expect.closeTo(0.1, 5),
+      high: expect.closeTo(0.1, 5),
+      verdict: "inconclusive",
+    });
+    expect(compareSamples(base, [110]).verdict).toBe("inconclusive");
+  });
+
   test("a change inside the noise is unchanged", () => {
     const result = compareSamples(base, [101, 99, 100, 102, 98, 100, 103, 97, 100, 101]);
     expect(result.verdict).toBe("unchanged");

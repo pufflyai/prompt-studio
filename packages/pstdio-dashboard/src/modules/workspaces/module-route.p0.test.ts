@@ -1,12 +1,27 @@
 import { expect, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { createWorkbench } from "@pstdio/workbench";
+import { createWorkbench, type NavigationTarget } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "./module";
+import { workspaceNavigationNode } from "./workspace-navigation";
+
+test("Workspaces navigation identifies the page opened by its command", async () => {
+  const workbench = createWorkbench();
+  workbench.registerModule(createWorkspacesModule());
+  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+  const node = workspaceNavigationNode([]);
+  await workbench.commands.executeCommand(node.commandId);
+  const location = workbench.pages.store.getState().location;
+  expect(location).toBeDefined();
+  expect<NavigationTarget>(node.target).toEqual({
+    kind: "page",
+    page: location!.page,
+  });
+});
 
 test("opens the Workspaces view and workspace resources with stable identities", async () => {
   const workbench = createWorkbench();

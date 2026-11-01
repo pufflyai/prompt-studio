@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Ellipsis, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { TreeList } from "./tree-list";
@@ -54,7 +54,7 @@ const meta = {
     "Named sections support inline renaming and shared context actions. Hosts own group persistence and membership.",
 } satisfies CanvasMeta<typeof EditableGroup>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Default: Story = {
   id: "components-tree-list-groups--default",
 };

@@ -97,7 +97,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
     await expect(iframe).toHaveAttribute("data-pointer-events", "pointerdown,click");
   } finally {
     await probe.close();
-    // Restore Chromium's active compositor after closing the probe (ADR 0084).
+    // Restore Chromium's active compositor after closing the probe (ADR 0128).
     await page.bringToFront();
     await page.setViewportSize({ ...viewport, height: viewport.height + 1 });
     await page.setViewportSize(viewport);

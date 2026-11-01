@@ -1,5 +1,5 @@
 import { appendFileSync, readFileSync } from "node:fs";
-import { productionDesktopPlatforms } from "./production-platforms";
+import { productionDesktopPlatforms, productionPerformanceWorkloads } from "./production-platforms";
 
 export interface ProductionCandidate {
   sourceSha: string;
@@ -78,13 +78,7 @@ export const requiredProductionChecks = (channel: string) => {
     "functional",
     "services",
     ...targets.flatMap((target) => [`signed-functional-${target}`, `performance-desktop-${target}`]),
-    "performance-backend-ubuntu-24.04",
-    "performance-backend-macos-15",
-    "performance-backend-windows-2025",
-    "performance-browser-ubuntu-24.04",
-    "performance-relay-ubuntu-24.04",
-    "performance-navigation-ubuntu-24.04",
-    "performance-planner-ubuntu-24.04",
+    ...productionPerformanceWorkloads(channel).map((row) => `performance-${row.family}-${row.os}`),
   ];
 };
 

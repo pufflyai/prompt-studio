@@ -1,5 +1,5 @@
 import { Box, Flex } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { mediaRules } from "../sites";
 import { RadarStory, storyIdeas, storyPost, storyThread } from "../webview/story-fixtures";
 import { Conversation } from "./conversation";
@@ -19,7 +19,7 @@ const meta: CanvasMeta = {
   ],
 };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 export const ThreadMockup: Story = {
   id: "extensions-social-radar-thread--thread-mockup",
   render: () => (

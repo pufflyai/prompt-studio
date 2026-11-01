@@ -1,3 +1,5 @@
+import type { SessionMessage } from "@pstdio/sdk/extensions";
+
 export type ClaudeCodeToolUseBlock = { type: "tool_use"; id: string; name: string; input: unknown };
 
 export type ClaudeCodeToolResultBlock = {
@@ -39,6 +41,7 @@ export type ClaudeCodeTranscriptEntry = {
 };
 
 export type RawLogEvent =
+  | { type: "user_message"; message: SessionMessage }
   | { type: "stdout"; data: string }
   | { type: "stderr"; data: string }
   | { type: "session_id"; sessionId: string }

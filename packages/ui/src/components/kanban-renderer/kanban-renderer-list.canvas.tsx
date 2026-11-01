@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleX, Play, Signal } from "lucide-react";
 import { useState } from "react";
 import { KanbanRendererList, type KanbanRendererListItem } from "./kanban-renderer-list";
@@ -9,7 +9,7 @@ const meta: CanvasMeta<typeof KanbanRendererList> = {
   component: KanbanRendererList,
 };
 export default meta;
-type Story = CanvasVariant<typeof KanbanRendererList>;
+type Story = CanvasFrame<typeof KanbanRendererList>;
 const mockItems: KanbanRendererListItem[] = [
   {
     id: "1",

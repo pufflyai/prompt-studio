@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { TokenEditorOverlay, TokenPreviewScope } from "@/components/internal/style-guide";
 import { useTokenEditorValues } from "@/components/internal/token-editor-state";
@@ -14,15 +14,13 @@ import { NavigationIdentitySection } from "./gallery/sections/navigation-identit
 import { OverlaysSection } from "./gallery/sections/overlays-section";
 import { PanelsSection } from "./gallery/sections/panels-section";
 
-// One canvas that renders every light component family together. Switch the
-// frame theme (pstdio-light / pstdio-dark) to see the impact of a
-// token or recipe change across the whole system at once.
+// Compare component families with each frame's theme or predefined variants.
 const meta = {
   title: "Foundations/Component Gallery",
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const TokenizedGallery = (props: { children: ReactNode }) => {
   const { children } = props;
   const { themePreference, themePreferences } = useThemePreference();
@@ -77,6 +75,34 @@ export const Foundations: Story = {
   id: "foundations-component-gallery--foundations",
   render: () => <FoundationsGallery />,
 };
+
+export const PromptLight: Story = {
+  id: "foundations-component-gallery--prompt-light",
+  render: () => <FoundationsGallery />,
+  defaultTheme: "pstdio-light",
+};
+export const PromptDark: Story = {
+  id: "foundations-component-gallery--prompt-dark",
+  render: () => <FoundationsGallery />,
+  defaultTheme: "pstdio-dark",
+};
+export const PromptContrastLight: Story = {
+  id: "foundations-component-gallery--prompt-contrast-light",
+  render: () => <FoundationsGallery />,
+  defaultTheme: "prompt-contrast-light",
+};
+export const PromptContrastDark: Story = {
+  id: "foundations-component-gallery--prompt-contrast-dark",
+  render: () => <FoundationsGallery />,
+  defaultTheme: "prompt-contrast-dark",
+};
+
+export const FlatImportedPalette: Story = {
+  id: "foundations-component-gallery--flat-imported-palette",
+  render: () => <FoundationsGallery />,
+  defaultTheme: "vscode-flat-dark",
+};
+
 export const Composites: Story = {
   id: "foundations-component-gallery--composites",
   render: () => <CompositesGallery />,

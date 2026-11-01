@@ -243,8 +243,6 @@ Run the end-to-end spec for the behavior you changed:
 bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
 ```
 
-Agent-specific end-to-end behavior, including `E2E_AGENTS` and when real Claude or OpenCode sessions start, is documented in [Tests](0002-testing.md).
-
 ## Run isolated trials
 
 A trial is one validation run, for example a fresh-agent walkthrough or a reproduction. Give every trial its own name and keep everything it creates under that name, so trials cannot share state and cleanup removes only their own resources.
@@ -307,19 +305,26 @@ The database package is `packages/pstdio-db`. Generate Drizzle migrations from t
 bun run --cwd packages/pstdio-db db:generate
 ```
 
-Never edit generated SQL by hand. Keep one migration entry per PR. Verify migrations through isolated test/startup workflows. Do not connect directly to the local PGlite database or run Drizzle Studio against production state. Use public APIs for inspection. See [PGlite ownership and recovery](../../lessons-learned/0002-pglite-wal-corruption.md).
+Never edit generated SQL by hand. Keep one migration entry per PR. Verify migrations through isolated test/startup workflows. Do not connect directly to the local PGlite database or run Drizzle Studio against production state. Use public APIs for inspection. See [database ownership and clean shutdown](../../lessons-learned/0002-pglite-wal-corruption.md).
 
 ## Canvas
 
 Use the live Canvas extension for designs and component examples. See the [authoring and coverage guide](0003-canvas-coverage.md).
 
+Start the watcher in its own terminal. It keeps running until you stop it, and UI Canvas shows what it builds:
+
 ```sh
-bun run --cwd scripts canvas:build
-pst canvas list
-pst canvas open --canvas foundations
+bun run canvas
 ```
 
-Run `canvas:verify` in the isolated Docker tools container for browser validation.
+In another terminal:
+
+```sh
+pst canvas list
+pst canvas open --canvas packages/ui/src/foundations/foundations.canvas.tsx
+```
+
+Run the critical Canvas browser checks with `bun run --cwd packages/canvas-tests test` in the isolated Docker tools container.
 
 ## Project Validation
 

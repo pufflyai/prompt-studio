@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DesktopLifecycleView } from "./desktop-lifecycle-app";
 
 const actions = {
@@ -23,7 +23,7 @@ const meta = {
   args: { actions },
 } satisfies CanvasMeta<typeof DesktopLifecycleView>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const StartingDiscovery: Story = {
   id: "patterns-desktop-lifecycle--starting-discovery",
   args: { state: { kind: "starting", phase: "discovery" } },

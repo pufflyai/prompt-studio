@@ -3,7 +3,7 @@
 // intentional architecture changes — update the docs when this map changes.
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "@pstdio/canvas": [],
-  canvas: ["@pstdio/sdk", "@pstdio/ui"],
+  canvas: ["@pstdio/sdk", "@pstdio/ui", "@pstdio/canvas"],
   "social-radar": ["@pstdio/sdk", "@pstdio/ui", "@pstdio/canvas"],
   "pstdio-service-telemetry": [],
   // The benchmark result writer is a dependency-free leaf. Packages declare it only as a development
@@ -24,6 +24,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "storage-scale-fixture": [],
   "pstdio-sync": ["pstdio-sync-contracts", "storage-scale-fixture"],
   "pstdio-file-types": [],
+  "pstdio-theme": [],
   "pstdio-paths": [],
   "pstdio-logging": ["pstdio-paths"],
   "pstdio-db": [
@@ -41,7 +42,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "@pstdio/sdk": ["pstdio-api-contracts", "pstdio-sync", "pstdio-sync-contracts"],
   // pstdio-extensions also declares extension-lab, whose documented examples its tests load,
   // so changing an example marks pstdio-extensions as affected.
-  "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths", "extension-lab"],
+  "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths", "pstdio-theme", "extension-lab"],
   "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions", "pstdio-benchmarks"],
   // pstdio-api also declares the extensions and fixtures its tests install from source,
   // so changing one marks pstdio-api as affected.
@@ -75,7 +76,14 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "pstdio-wt",
   ],
-  "@pstdio/ui": ["@pstdio/canvas", "@pstdio/sdk", "pstdio-api-contracts", "pstdio-file-types", "pstdio-benchmarks"],
+  "@pstdio/ui": [
+    "@pstdio/canvas",
+    "@pstdio/sdk",
+    "pstdio-api-contracts",
+    "pstdio-file-types",
+    "pstdio-theme",
+    "pstdio-benchmarks",
+  ],
   "@pstdio/workbench": [
     "@pstdio/canvas",
     "@pstdio/sdk",
@@ -127,6 +135,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-base-themes",
     "pstdio-dashboard",
     "pstdio-notes",
+    "pstdio-performance",
     "pstdio-planner",
     "pstdio-reports",
     "pstdio-skills",
@@ -147,6 +156,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-logging",
     "pstdio-paths",
     "workbench-fixture",
+    "pstdio-performance",
     "pstdio-benchmarks",
     "pstdio-scripts",
   ],

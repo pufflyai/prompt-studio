@@ -35,11 +35,26 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   await page.reload();
   await expect(group).toBeVisible();
   await expect(source).toBeVisible();
-  // Visibility alone does not ensure a stable, unobstructed pointer target after reload.
+  // A raw bounding box can point outside the clipped tree after it scrolls. Use the
+  // locator's hit-tested hover and the actual pointer-down, not later layout geometry.
+  const pointerDown = await group.evaluateHandle((element) => ({
+    event: new Promise<{ x: number; y: number; onGroup: boolean }>((resolve) => {
+      document.addEventListener(
+        "pointerdown",
+        (event) => {
+          const header = (event.target as Element).closest("[data-tree-list-focus-id]");
+          resolve({ x: event.clientX, y: event.clientY, onGroup: header?.contains(element) ?? false });
+        },
+        { once: true, capture: true },
+      );
+    }),
+  }));
   await group.hover();
-  const header = (await group.boundingBox())!;
   await page.mouse.down();
-  await page.mouse.move(header.x + header.width / 2, header.y + header.height / 2 - 35, { steps: 8 });
+  const start = await pointerDown.evaluate(({ event }) => event);
+  await pointerDown.dispose();
+  expect(start.onGroup, "the gesture starts on the group header").toBe(true);
+  await page.mouse.move(start.x, start.y - 35, { steps: 8 });
   await expect(page.locator("[data-panel-dragging]")).toHaveCount(0);
   await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
   await page.mouse.up();

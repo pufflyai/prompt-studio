@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { BlogIndexView } from "../../components/blog/blog-index-view";
 import { PostView } from "../../components/blog/post-view";
@@ -33,7 +33,7 @@ const meta = {
   ],
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const TabBar = (props: { selected: SiteSection }) => (
   <ProjectTabsBar
     windowed={false}

@@ -21,6 +21,8 @@ permissions:
 
 jobs:
   psx_delivery:
+    # PR CI runs P0 only. Releases call this delivery smoke with their version.
+    if: github.event_name != 'pull_request' || inputs.version != ''
     # Temporary: Playwright's Chromium does not install on Ubuntu 26.04 yet (ADR 0105).
     runs-on: ubuntu-24.04
     steps:
@@ -33,7 +35,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - run: bun install --frozen-lockfile
       - run: bun run --cwd services/psx test:integration
       - run: docker build -f infra/psx/Dockerfile -t pstdio-psx-smoke .
@@ -96,7 +98,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Check the built image and pinned Bun runtime
         env:
           SERVICE: ${{ matrix.service }}

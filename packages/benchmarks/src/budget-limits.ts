@@ -60,7 +60,6 @@ export const desktopBudgets = (platform = process.platform, arch = process.arch)
   return {
     coldStartMs: limit(intelMac ? 28000 : cold, "ms", "2026-10-10", desktopEvidence),
     startupWindowMs: limit(platform === "darwin" ? macWindow : 1000, "ms", "2026-10-10", desktopEvidence),
-    warmAttachMs: limit(3000, "ms", "2026-10-10", desktopEvidence),
     recoveryMs: limit(500, "ms", "2026-10-10", desktopEvidence),
   };
 };

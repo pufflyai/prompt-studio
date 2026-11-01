@@ -5,11 +5,9 @@ for (const [platform, separator] of [
   ["POSIX", "/"],
   ["Windows", "\\"],
 ]) {
-  test(`runs process discovery alone after shared workers finish with ${platform} paths`, async () => {
-    const processDiscovery = ["src", "features", "extensions", "process-discovery.exclusive.p1.test.ts"].join(
-      separator,
-    );
-    const files = ["first.test.ts", processDiscovery, "last.test.ts"];
+  test(`runs an exclusive file alone after shared workers finish with ${platform} paths`, async () => {
+    const exclusive = ["src", "features", "startup.exclusive.p1.test.ts"].join(separator);
+    const files = ["first.test.ts", exclusive, "last.test.ts"];
     const active = new Set<string>();
     const completed: string[] = [];
     const started: Array<{ file: string; active: string[]; completed: string[] }> = [];
@@ -24,8 +22,8 @@ for (const [platform, separator] of [
     });
 
     expect([...completed].sort()).toEqual([...files].sort());
-    expect(started.find(({ file }) => file === processDiscovery)).toEqual({
-      file: processDiscovery,
+    expect(started.find(({ file }) => file === exclusive)).toEqual({
+      file: exclusive,
       active: [],
       completed: ["first.test.ts", "last.test.ts"],
     });
@@ -56,7 +54,7 @@ test("P1 cancels active files and never starts remaining or isolated files", asy
     releaseStarted = resolve;
   });
   const results = await runApiTestFiles(
-    ["active", "failure", "pending", "src/features/extensions/process-discovery.exclusive.p1.test.ts"],
+    ["active", "failure", "pending", "src/features/startup.exclusive.p1.test.ts"],
     async (file, signal) => {
       started.push(file);
       if (file === "active") {

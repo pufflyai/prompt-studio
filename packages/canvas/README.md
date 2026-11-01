@@ -74,7 +74,7 @@ import { ThemeProvider } from "../src/theme";
 export default {
   decorators: [
     (Frame, { theme }) => (
-      <ThemeProvider mode={theme}>
+      <ThemeProvider mode={theme.mode}>
         <Frame />
       </ThemeProvider>
     ),
@@ -82,7 +82,7 @@ export default {
 };
 ```
 
-A decorator is `(Frame, context) => element`, where `context` is `{ theme, args }` and `theme` is `"light"` or `"dark"` from the frame's theme switch. Decorators run from the outside in: `.canvas/preview.tsx`, then the file's default export, then the frame.
+A decorator is `(Frame, context) => element`, where `context` is `{ theme, args }`. `theme` is the theme the host chose for the frame: `{ id, mode, tokens? }`, where `mode` is `"light"` or `"dark"` and `tokens` carries a theme's own values, such as a VS Code theme's. Canvas passes it through unchanged; apply it with your project's theme provider. Decorators run from the outside in: `.canvas/preview.tsx`, then the file's default export, then the frame.
 
 ## Types
 

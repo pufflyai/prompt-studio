@@ -1,12 +1,11 @@
 import { Box, Flex, Icon, Text } from "@chakra-ui/react";
 import { resolveIconComponent, Tooltip } from "@pstdio/ui";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { CanvasItem } from "../canvases/definitions";
+import type { CanvasItem } from "../canvas-model";
 import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
 import { FramePreview } from "../frames/frame";
 import { FrameThemePicker } from "./frame-theme-picker";
-import { FrameVariantPicker } from "./frame-variant-picker";
 
 const Grip = resolveIconComponent("grip-vertical")!;
 
@@ -17,9 +16,6 @@ interface ItemProps {
 export const ItemFrame = (props: ItemProps) => {
   const { item, runtime } = props;
   const selected = useSyncExternalStore(runtime.selection.subscribe, () => runtime.selection.get() === item.id);
-  const [variantId, setVariantId] = useState(item.variants?.[0]?.id);
-  const variant = item.variants?.find((entry) => entry.id === variantId);
-  const selectedItem = variant ? { ...item, preview: variant.preview } : item;
   const [feedback, setFeedback] = useState<"" | "Copied" | "Select and copy the name">("");
   const wrapper = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -81,8 +77,7 @@ export const ItemFrame = (props: ItemProps) => {
             {item.name}
           </Button>
         </Tooltip>
-        <FrameThemePicker id={item.id} name={item.name} runtime={runtime} />
-        {variant && <FrameVariantPicker item={item} selected={variant} onSelect={setVariantId} />}
+        <FrameThemePicker item={item} runtime={runtime} />
         <Text role="status" aria-live="polite" textStyle="label/XS" color="fg.muted">
           {feedback}
         </Text>
@@ -103,7 +98,14 @@ export const ItemFrame = (props: ItemProps) => {
         data-canvas-preview={item.id}
       >
         <Box inert={!selected} pointerEvents={selected ? "auto" : "none"}>
-          <FramePreview key={variantId} item={selectedItem} runtime={runtime} container={wrapper} selected={selected} />
+          {/* A new build of this canvas restarts only its own frames. */}
+          <FramePreview
+            key={item.preview.revision}
+            item={item}
+            runtime={runtime}
+            container={wrapper}
+            selected={selected}
+          />
         </Box>
         {!selected && (
           <Button

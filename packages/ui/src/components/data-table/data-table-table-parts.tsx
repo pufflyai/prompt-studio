@@ -1,4 +1,4 @@
-import { Icon as ChakraIcon, Flex, IconButton, Menu, Portal, Table, Text } from "@chakra-ui/react";
+import { Icon as ChakraIcon, Flex, IconButton, Table, Text } from "@chakra-ui/react";
 import type { ViewSortDirection } from "@pstdio/sdk/extensions";
 import {
   type Cell,
@@ -11,6 +11,8 @@ import {
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronsUpDown, EyeOff, ListFilter } from "lucide-react";
 import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { ListRow } from "../list-row/list-row";
 import type { DataTableColumnMeta } from "./data-table-column-meta";
 import type { DataTableCellContext, DataTableProps, RowData } from "./types";

@@ -11,7 +11,7 @@ const trackWrites = (target: NodeJS.WriteStream) =>
   });
 
 /**
- * Temporary workaround, see ADR 0081: Bun's global console drops output that does
+ * Temporary workaround, see ADR 0127: Bun's global console drops output that does
  * not fit into a full pipe. This console writes through the stream API, which waits
  * for the reader, and `exit` waits until that output is delivered.
  */

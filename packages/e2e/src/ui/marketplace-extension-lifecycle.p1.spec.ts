@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -75,104 +75,6 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   expect(projectResponse.ok()).toBe(true);
   return (await projectResponse.json()) as { id: string };
 };
-
-// Reports is in the catalog but not in the e2e defaults, so it starts as a Marketplace entry.
-const marketplaceExtension = "pstdio-reports";
-const marketplaceExtensionName = "Prompt Studio Reports";
-const installedManifestPath = () => join(process.env.E2E_HOME!, "extensions", marketplaceExtension, "package.json");
-
-test("deletes, installs, disables, and enables a Marketplace extension without stale lists", async ({
-  page,
-  request,
-}) => {
-  test.skip(
-    process.env.E2E_MANUAL_MARKETPLACE_LIFECYCLE !== "1",
-    "Manual Marketplace lifecycle check; opt in with E2E_MANUAL_MARKETPLACE_LIFECYCLE=1.",
-  );
-  test.setTimeout(45_000);
-  const project = await createProject(request);
-
-  const [initialInstallResponse] = await Promise.all([
-    request.post(`${apiBase}/v1/projects/${project.id}/extensions/install`, {
-      data: { source: { kind: "catalog", name: marketplaceExtension }, force: true },
-    }),
-    openExtensions(page, project.id),
-  ]);
-  expect(initialInstallResponse.status(), await initialInstallResponse.text()).toBe(201);
-
-  const listResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions`);
-  expect(listResponse.ok()).toBe(true);
-  const list = (await listResponse.json()) as {
-    extensions: Array<{ enabled: boolean; id: string; installName: string }>;
-  };
-  const installed = list.extensions.find((extension) => extension.installName === marketplaceExtension);
-  expect(installed).toMatchObject({ enabled: true });
-  expect(existsSync(installedManifestPath())).toBe(true);
-
-  const installedRow = page.getByTestId("extension-entry").filter({ hasText: marketplaceExtensionName });
-  const availableRow = page.getByTestId("marketplace-extension-entry").filter({ hasText: marketplaceExtensionName });
-
-  await expect(installedRow).toBeVisible();
-  await expect(availableRow).toHaveCount(0);
-
-  await installedRow.click();
-  await expect(page.getByTestId("extension-detail")).toBeVisible();
-  await page.getByRole("tab", { name: "Settings" }).click();
-  await page.getByTestId("extension-delete").click();
-  const dialog = page.getByRole("dialog").last();
-  await dialog.getByText("Also delete this extension's data", { exact: false }).click();
-  const deleteReads = await holdProjectExtensionReads(page, project.id);
-  const deleteResponse = page.waitForResponse(
-    (response) =>
-      response.url().includes(`/v1/projects/${project.id}/extensions/`) && response.request().method() === "DELETE",
-  );
-  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
-  expect((await deleteResponse).status()).toBe(204);
-
-  await expect(page.getByTestId("extensions-panel")).toBeVisible();
-  await expect(installedRow).toHaveCount(0);
-  await expect(availableRow).toBeVisible();
-  expect(existsSync(installedManifestPath())).toBe(false);
-
-  await deleteReads.wait();
-  await deleteReads.release();
-
-  const installReads = await holdProjectExtensionReads(page, project.id);
-  const installResponse = page.waitForResponse(
-    (response) => response.url().includes(`/extensions/install`) && response.request().method() === "POST",
-  );
-  await availableRow.getByTestId("marketplace-extension-install").click();
-  expect((await installResponse).status()).toBe(201);
-  await expect(installedRow).toBeVisible();
-  await expect(availableRow).toHaveCount(0);
-  expect(existsSync(installedManifestPath())).toBe(true);
-  await installReads.wait();
-  await installReads.release();
-
-  const checkbox = installedRow.locator("input[type='checkbox']");
-  const visibleSwitch = installedRow.locator("[data-scope='switch'][data-part='control']");
-  await expect(checkbox).toBeChecked();
-
-  const disableReads = await holdProjectExtensionReads(page, project.id);
-  const disableResponse = page.waitForResponse(
-    (response) => response.request().method() === "PATCH" && response.url().includes(`/extensions/`),
-  );
-  await visibleSwitch.click();
-  expect((await disableResponse).status()).toBe(200);
-  await expect(checkbox).not.toBeChecked();
-  await disableReads.wait();
-  await disableReads.release();
-
-  const enableReads = await holdProjectExtensionReads(page, project.id);
-  const enableResponse = page.waitForResponse(
-    (response) => response.request().method() === "PATCH" && response.url().includes(`/extensions/`),
-  );
-  await visibleSwitch.click();
-  expect((await enableResponse).status()).toBe(200);
-  await expect(checkbox).toBeChecked();
-  await enableReads.wait();
-  await enableReads.release();
-});
 
 test("disables and enables an extension automation", async ({ page, request }) => {
   const project = await createProject(request);

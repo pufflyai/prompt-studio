@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench } from "@pstdio/workbench";
 import { useState } from "react";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -20,7 +20,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof ProjectTabsStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const OpenProjectHover: Story = {
   id: "dashboard-project-tabs--open-project-hover",
 };

@@ -1,6 +1,6 @@
 {
   "name": "canvas",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "displayName": "UI Canvas",
   "description": "Designs, component states, and interactive examples in one UI workspace.",
   "publisher": "pstdio",
@@ -11,17 +11,15 @@
     "pstdio": "^0.3.0"
   },
   "scripts": {
-    "test": "bun test ./src ./scripts",
-    "typecheck": "bun check && bun scripts/typecheck-examples.ts",
-    "catalog:build": "bun scripts/build-native-previews.ts",
-    "catalog:verify": "bun scripts/verify-native-previews.ts",
-    "build": "bun scripts/build-catalog.ts"
+    "test": "bun test ./src",
+    "typecheck": "bun check"
   },
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.46.0-nightly.20261026030503",
-    "@pstdio/ui": "0.46.0-nightly.20261026030503",
+    "@pstdio/canvas": "0.46.0-nightly.20261031030226",
+    "@pstdio/sdk": "0.46.0-nightly.20261031030226",
+    "@pstdio/ui": "0.46.0-nightly.20261031030226",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
@@ -30,49 +28,6 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "6.0.2"
-  },
-  "nx": {
-    "implicitDependencies": [
-      "@pstdio/ui",
-      "@pstdio/workbench"
-    ],
-    "targets": {
-      "build": {
-        "inputs": [
-          "production",
-          "^production",
-          "{workspaceRoot}/packages/**/*",
-          "{workspaceRoot}/clients/**/*",
-          "{workspaceRoot}/extensions/**/*",
-          "{workspaceRoot}/.pstdio/extensions/**/*",
-          "!{projectRoot}/src/catalog/generated/**/*",
-          {
-            "env": "NODE_ENV"
-          },
-          {
-            "env": "PSTDIO_API_URL"
-          },
-          {
-            "env": "PSTDIO_TERMINAL_WEBSOCKET_URL"
-          }
-        ],
-        "outputs": [
-          "{projectRoot}/src/catalog/generated"
-        ]
-      },
-      "test": {
-        "dependsOn": [
-          "build",
-          "^build"
-        ]
-      },
-      "typecheck": {
-        "dependsOn": [
-          "build",
-          "^build"
-        ]
-      }
-    }
   },
   "files": [
     "extension.ts",

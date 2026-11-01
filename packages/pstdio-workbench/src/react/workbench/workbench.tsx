@@ -1,5 +1,12 @@
 import { Flex } from "@chakra-ui/react";
-import { ResizableSplitLayout, type ThemePreferenceStorage, Toaster } from "@pstdio/ui";
+import {
+  HostStorageScope,
+  ResizableSplitLayout,
+  type ThemePreferenceStorage,
+  Toaster,
+  UiScopeProvider,
+  UiScopeRoot,
+} from "@pstdio/ui";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
@@ -244,6 +251,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 };
 
 export const Workbench = (props: WorkbenchProps) => {
+  const active = useWorkbenchStore(props.workbench.activation.store, (state) => state.active);
   const themePreferences = useWorkbenchThemePreferences(props.workbench);
   const mode = useWorkbenchStore(props.workbench.modes.store, (state) =>
     state.activeModeId ? state.modes[state.activeModeId] : undefined,
@@ -251,19 +259,25 @@ export const Workbench = (props: WorkbenchProps) => {
   const fileIconThemePreferences = useWorkbenchFileIconThemePreferences(props.workbench);
 
   return (
-    <WorkbenchThemeProvider
-      themePreferences={themePreferences}
-      fileIconThemePreferences={fileIconThemePreferences}
-      defaultThemePreference={mode?.defaultTheme}
-      preferenceScope={mode?.defaultTheme ? mode.id : undefined}
-      themeStorage={props.themeStorage}
-    >
-      <WorkbenchTabDragProvider workbench={props.workbench}>
-        <WorkbenchPanelViewHosts workbench={props.workbench}>
-          <WorkbenchContent {...props} />
-        </WorkbenchPanelViewHosts>
-      </WorkbenchTabDragProvider>
-      <Toaster />
-    </WorkbenchThemeProvider>
+    <UiScopeProvider active={active}>
+      <HostStorageScope scope={props.workbench.host.storageScope}>
+        <WorkbenchThemeProvider
+          themePreferences={themePreferences}
+          fileIconThemePreferences={fileIconThemePreferences}
+          defaultThemePreference={mode?.defaultTheme}
+          preferenceScope={mode?.defaultTheme ? mode.id : undefined}
+          themeStorage={props.themeStorage}
+        >
+          <UiScopeRoot>
+            <WorkbenchTabDragProvider workbench={props.workbench}>
+              <WorkbenchPanelViewHosts workbench={props.workbench}>
+                <WorkbenchContent {...props} />
+              </WorkbenchPanelViewHosts>
+            </WorkbenchTabDragProvider>
+            <Toaster />
+          </UiScopeRoot>
+        </WorkbenchThemeProvider>
+      </HostStorageScope>
+    </UiScopeProvider>
   );
 };

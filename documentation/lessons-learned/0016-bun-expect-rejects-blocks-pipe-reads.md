@@ -1,43 +1,31 @@
-# Bun promise assertions can deadlock Windows pipe reads
+# Await I/O before using Bun promise assertions
 
-Await child-process results before asserting on them. Bun's `expect(promise).rejects` can run a nested event loop before returning, which can prevent Windows from delivering the output that settles the promise.
+## 1. When to use
 
-## What failed
+- Testing promises that compile extension sources, read child-process output or socket input, or need another I/O callback.
 
-The Codex harness tests sometimes stopped at the 15-second Windows test limit while checking rejected question replies. The async steering rejection and cleared native request cases needed another message from their child process. The resulting connection-closed error came from cleanup after the timeout.
+## 2. Failure
 
-## Cause
+- Bun promise assertions synchronously drove a nested event loop inside a Windows pipe-read callback. The callback could not return to deliver the output needed to settle the assertion.
+- Awaiting `expect(promise).rejects` did not help: the assertion ran before the await.
 
-In Bun 1.4.2, `expect(promise).rejects` drives the event loop synchronously before returning. An `await` before the assertion does not change this: JavaScript must first evaluate the assertion.
+## 3. Prevention
 
-On Windows, Bun can invoke JavaScript inside a libuv pipe-read callback. When a test resumes inside that callback and synchronously waits for more pipe output, the outer callback cannot return and let the pipe read continue. A question delivered in the same read as the turn acknowledgement can expose this ordering.
-
-[Bun PR #40023](https://github.com/oven-sh/bun/pull/40023) describes this class of nested event-loop failures, including child-process pipes and sockets. Promise assertions such as `.resolves` can also enter a nested loop.
-
-## Fix
-
-Let a normal `await` settle the operation, then assert on the captured error:
+- Await the operation normally, then assert on its result or captured error.
+- Attach rejection handlers immediately when starting work before another await.
+- Extension installation can compile source before rejecting a conflicting contribution. Await the installation normally before checking its error and retained state.
 
 ```ts
-const error = await session
-  .replyQuestion!({ callId: "async-1", answers: [] })
-  .catch((error: unknown) => error);
-expect(error).toMatchObject({ message: expect.stringContaining("Steer rejected") });
+const error = await operation().catch((error: unknown) => error);
+expect(error).toMatchObject({ message: "Steer rejected" });
 ```
 
-The assertion still fails if the operation succeeds or rejects with the wrong error. For operations started before another await, attach the catch handler immediately to avoid an unhandled rejection.
+- Keep real transport coverage and existing time limits. Immediate validation rejections do not have this I/O dependency.
+- Follow the testing policy; do not add retries or repeated reliability runs to obtain a pass.
 
-Apply this rule when a promise needs process output, socket input, or another I/O callback. Immediate validation rejections and in-memory peers do not have this pipe-read dependency. Review `.rejects` and `.resolves` whenever adding real-process tests.
+## 4. Evidence
 
-Production already uses asynchronous waits. Fix the test at its assertion boundary; keep the real transport and its timeout coverage.
-
-## Validation
-
-The existing tests cover rejected steering, unconfirmed native replies, RPC EOF while its peer stays alive, and plan-approval rejections. Run the harness suite on Windows with the existing 15-second limit:
-
-```bash
-cd extensions/harness-codex
-bun test --timeout 15000 --rerun-each=50
-```
-
-The repetitions expose scheduling differences; every repetition must pass. They are a one-time validation for PS-595, not retries that turn a failed run green. See the [testing guide](../guides/development/0002-testing.md).
+- [Testing isolation guidance](../guides/development/0002-testing.md#isolation)
+- [Question rejection tests](../../extensions/harness-codex/src/async-question-session.p0.test.ts)
+- [RPC EOF regression](../../extensions/harness-codex/src/app-server-rpc.p0.test.ts)
+- [Resource-prefix rejection and cleanup](../../packages/pstdio-api/src/features/extensions/command-environment/resource-prefix-scenarios.p1.test.ts)

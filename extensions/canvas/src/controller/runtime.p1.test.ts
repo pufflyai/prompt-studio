@@ -2,13 +2,22 @@ import { expect, test } from "bun:test";
 import { readLayout } from "../layout";
 import { createCanvasRuntime } from "./runtime";
 
+const preview = { source: "src/test.canvas.tsx", exportName: "Default", viewportHeight: 960, revision: "1" };
+
 test("fit and explicit reveal include updated tall panel and title bounds", () => {
   const original = globalThis.requestAnimationFrame;
   globalThis.requestAnimationFrame = () => 1;
   try {
-    const item = { id: "documentation", name: "Documentation", width: 640, height: 240, position: { x: 0, y: 0 } };
+    const item = {
+      id: "documentation",
+      name: "Documentation",
+      width: 640,
+      height: 240,
+      position: { x: 0, y: 0 },
+      preview,
+    };
     const runtime = createCanvasRuntime(
-      { id: "docs", name: "Docs", items: [item] },
+      { id: "docs", name: "Docs", group: "", items: [item] },
       readLayout(null, [item]),
       () => {},
     );
@@ -39,9 +48,9 @@ test("fit ignores a loading placeholder and follows the completed content", () =
   const original = globalThis.requestAnimationFrame;
   globalThis.requestAnimationFrame = () => 1;
   try {
-    const item = { id: "async-doc", name: "Async doc", width: 640, height: 240, position: { x: 0, y: 0 } };
+    const item = { id: "async-doc", name: "Async doc", width: 640, height: 240, position: { x: 0, y: 0 }, preview };
     const runtime = createCanvasRuntime(
-      { id: "async", name: "Async", items: [item] },
+      { id: "async", name: "Async", group: "", items: [item] },
       readLayout(null, [item]),
       () => {},
     );
@@ -67,9 +76,9 @@ test("zoom keeps the same point in a frame under the pointer including its heade
   const original = globalThis.requestAnimationFrame;
   globalThis.requestAnimationFrame = () => 1;
   try {
-    const item = { id: "frame", name: "Frame", position: { x: 1280, y: 100 }, width: 1200, height: 960 };
+    const item = { id: "frame", name: "Frame", position: { x: 1280, y: 100 }, width: 1200, height: 960, preview };
     const runtime = createCanvasRuntime(
-      { id: "group", name: "Group", items: [item] },
+      { id: "group", name: "Group", group: "", items: [item] },
       readLayout({ version: 1, camera: { x: 20, y: 30, zoom: 0.4 } }, [item]),
       () => {},
     );
@@ -104,8 +113,9 @@ test("group rows follow measured height while saved manual positions and themes 
       width: 1200,
       height: 240,
       position: { x: (index % 4) * 1280, y: Math.floor(index / 4) * 1100 },
+      preview,
     }));
-    const canvas = { id: "group", name: "Group", items, layout: "grid" as const };
+    const canvas = { id: "group", name: "Group", group: "", items, layout: "grid" as const };
     const initial = readLayout(null, items);
     const runtime = createCanvasRuntime(canvas, initial, () => {});
     const tall = { offsetWidth: 1200, offsetHeight: 4000, style: {}, querySelector: () => null };

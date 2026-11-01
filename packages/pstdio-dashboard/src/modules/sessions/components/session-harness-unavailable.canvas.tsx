@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import { SessionHarnessUnavailable } from "./session-harness-unavailable";
 
@@ -32,7 +32,7 @@ const meta = {
   ),
 } satisfies CanvasMeta<typeof SessionHarnessUnavailable>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const NoHarnessAvailable: Story = {
   id: "modules-sessions-harness-unavailable--no-harness-available",
 };

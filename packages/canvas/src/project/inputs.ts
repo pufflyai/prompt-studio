@@ -21,24 +21,35 @@ const packageFolder = (file: string) => {
   return parts.slice(0, index + (parts[index + 1]?.startsWith("@") ? 3 : 2)).join("/");
 };
 
-// Installing a package adds an entry to a `node_modules` folder the project's files resolve from.
-const nodeModulesFolders = (root: string, sources: string[]) => {
-  const folders = new Set<string>();
+// Installing a package adds an entry to a `node_modules` folder the project's files resolve from,
+// and a `tsconfig.json` between a source and the root can change how its imports resolve.
+const resolutionFiles = (root: string, sources: string[]) => {
+  const files = new Set<string>();
   const visited = new Set<string>();
   for (const source of sources) {
     for (let folder = dirname(source); !visited.has(folder); folder = dirname(folder)) {
       visited.add(folder);
-      if (existsSync(join(folder, "node_modules"))) folders.add(join(folder, "node_modules"));
+      if (existsSync(join(folder, "node_modules"))) files.add(join(folder, "node_modules"));
+      // Tracked even when absent: creating one changes how imports resolve.
+      files.add(join(folder, "tsconfig.json"));
       if (folder === root || dirname(folder) === folder) break;
     }
   }
-  return folders;
+  return files;
 };
+
+// A new version of this builder can build the same sources differently.
+const BUILDER_ROOT = resolve(import.meta.dir, "..");
+const builderFiles = () =>
+  [...new Bun.Glob("**/*.{ts,tsx}").scanSync(BUILDER_ROOT)]
+    .filter((file) => !/\.(test|spec)\.tsx?$/.test(file))
+    .map((file) => join(BUILDER_ROOT, file));
 
 /**
  * Every file whose change can change the build: the sources it read, wherever they live, files that
  * broke it, the project's package manifests and lockfiles, the manifests of the packages it
- * resolved, and the `node_modules` folders new packages are installed into.
+ * resolved, the `node_modules` folders new packages are installed into, the `tsconfig.json` files
+ * that resolve its imports, and the builder's own source.
  */
 export const collectInputs = (root: string, read: string[], canvases: CanvasEntry[], failedFiles: Set<string>) => {
   const sources = [
@@ -49,19 +60,23 @@ export const collectInputs = (root: string, read: string[], canvases: CanvasEntr
   const packages = read.filter(inNodeModules).map((file) => join(packageFolder(file), "package.json"));
   const projectFiles = PROJECT_FILES.map((name) => join(root, name)).filter((file) => existsSync(file));
   return new Set(
-    [...sources, ...projectFiles, ...packages, ...nodeModulesFolders(root, sources)].map((file) => resolve(file)),
+    [...sources, ...projectFiles, ...packages, ...resolutionFiles(root, sources), ...builderFiles()].map((file) =>
+      resolve(file),
+    ),
   );
 };
 
 /**
- * Modification times keyed by `inputKey`. A file changed at or after `startedAt` may have been read
- * before or after the change, so it is recorded as unknown and the next check rebuilds.
+ * Modification times keyed by `inputKey`; 0 marks a file that does not exist. A file changed at or
+ * after `startedAt` may have been read before or after the change, so it is recorded as unknown and
+ * the next check rebuilds.
  */
 export const readInputs = async (root: string, files: Set<string>, startedAt: number) => {
   const inputs: Record<string, number> = {};
   for (const file of [...files].sort()) {
     const info = await stat(file).catch(() => undefined);
-    if (info) inputs[inputKey(root, file)] = info.mtimeMs >= startedAt ? -1 : info.mtimeMs;
+    if (!info) inputs[inputKey(root, file)] = 0;
+    else inputs[inputKey(root, file)] = info.mtimeMs >= startedAt ? -1 : info.mtimeMs;
   }
   return inputs;
 };
@@ -70,7 +85,7 @@ export const readInputs = async (root: string, files: Set<string>, startedAt: nu
 export const inputsUnchanged = async (root: string, inputs: Record<string, number>) => {
   for (const [key, modified] of Object.entries(inputs)) {
     const info = await stat(inputPath(root, key)).catch(() => undefined);
-    if (info?.mtimeMs !== modified) return false;
+    if ((info?.mtimeMs ?? 0) !== modified) return false;
   }
   return true;
 };

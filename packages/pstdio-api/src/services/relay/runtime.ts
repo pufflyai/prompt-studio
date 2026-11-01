@@ -146,6 +146,14 @@ export const startRelayRuntime = async (input: {
   });
   await refresh();
   return {
+    async retry(workbenchId: string) {
+      await refresh();
+      publications.get(workbenchId)?.retry();
+      automations.get(workbenchId)?.retry();
+      coreDocuments.get(workbenchId)?.retry();
+      for (const connection of connections.values())
+        if (connection.owner.workbenchId === workbenchId) connection.retry();
+    },
     // Every owner of project data reports: core resource numbers and each enabled extension.
     // An owner that has not started yet counts as not downloaded.
     async status(workbenchId: string) {

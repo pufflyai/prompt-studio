@@ -1,5 +1,5 @@
 import { Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWorkbench, resourceContextMenuPath, workbenchBreadcrumbLocationMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -98,7 +98,7 @@ const meta = {
   ),
 } satisfies CanvasMeta<typeof WorkbenchStory>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const ResourcePage: Story = {
   id: "pstdio-workbench-reference-core-api-breadcrumb-actions--resource-page",
   args: { workbench: createBreadcrumbWorkbench({ page: ticketPage, resource: ticket }) },

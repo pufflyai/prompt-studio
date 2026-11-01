@@ -2,7 +2,7 @@ import { chakra } from "@chakra-ui/react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { HighlightedText } from "../collection-view/highlighted-text";
 
-// Long paths keep their start and final characters, so the folder name stays readable (design/DESIGN.md).
+// Long paths keep their start and final characters, so the folder name stays readable (documentation/guidance/0002-design.md).
 const visibleEndLength = 5;
 
 export const DataTablePathCell = (props: { value: string; search?: string }) => {

@@ -1,5 +1,5 @@
 import { Box, Button, HStack, IconButton, Stack, Tag, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ListRow, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 
@@ -68,10 +68,11 @@ function SolarizedChat(props: SolarizedChatProps) {
 }
 const meta = {
   title: "Themes/Solarized chat",
+  fullscreen: true,
   component: SolarizedChat,
 } satisfies CanvasMeta<typeof SolarizedChat>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Dark: Story = {
   id: "themes-solarized-chat--dark",
 };

@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { StartHarnessStatus } from "./start-harness-status";
 
@@ -31,7 +31,7 @@ const meta: CanvasMeta<typeof StartHarnessStatus> = {
   },
 };
 export default meta;
-type Story = CanvasVariant<typeof StartHarnessStatus>;
+type Story = CanvasFrame<typeof StartHarnessStatus>;
 export const NoHarnesses: Story = {
   id: "start-harnessstatus--no-harnesses",
 };

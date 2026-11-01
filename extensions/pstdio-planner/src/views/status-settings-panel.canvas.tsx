@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { GuestHost } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -37,7 +37,7 @@ const meta: CanvasMeta<typeof StatusSettingsStory> = {
   component: StatusSettingsStory,
 };
 export default meta;
-type Story = CanvasVariant<typeof StatusSettingsStory>;
+type Story = CanvasFrame<typeof StatusSettingsStory>;
 export const Default: Story = {
   id: "extensions-planner-status-settings--default",
 };

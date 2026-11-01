@@ -1,5 +1,5 @@
 import { Box, Stack, Text, Wrap } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { CollectionBadge } from "./collection-badge";
 import { renderBadgeListDisplay } from "./kanban-renderer-helpers";
@@ -42,7 +42,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const LinkedResources: Story = {
   id: "patterns-kanban-renderer-collection-badge-list--linked-resources",
   render: () => <LinkedBadgeList />,

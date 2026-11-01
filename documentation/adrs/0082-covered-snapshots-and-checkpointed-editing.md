@@ -14,7 +14,7 @@ there is no historical migration or mixed-protocol adapter.
 
 The platform owns these rules. Only it can coordinate enrolled environments,
 publication, recovery, immutable assets, and independently verified backups. This
-fits [the mission](../../MISSION.md): extensions keep their normal file and storage
+fits [the mission](../guidance/0001-mission.md): extensions keep their normal file and storage
 interfaces, and people and agents use the same authorized operations.
 
 ## Ownership

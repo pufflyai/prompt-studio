@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { MarkdownEditor } from "../../markdown-editor/markdown-editor";
 import { RichMessage } from "../../rich-message/rich-message";
 
@@ -9,7 +9,7 @@ const meta: CanvasMeta<typeof RichMessage> = {
     "Chat tables wrap cells and hide row numbers by default. Display settings can change wrapping for each table independently.",
 };
 export default meta;
-type Story = CanvasVariant<typeof RichMessage>;
+type Story = CanvasFrame<typeof RichMessage>;
 const tableMarkdown = `# DataTableNode Demo
 
 This demonstrates how markdown tables are rendered using the new DataTableNode instead of editable table nodes.

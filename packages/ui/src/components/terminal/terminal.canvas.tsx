@@ -1,5 +1,5 @@
 import { Button, Input, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useRef, useState } from "react";
 import { createScriptedTerminalBridge, type ScriptedTerminalStep } from "./scripted-bridge";
 import { Terminal } from "./terminal";
@@ -10,7 +10,7 @@ const meta: CanvasMeta<typeof Terminal> = {
   component: Terminal,
 };
 export default meta;
-type Story = CanvasVariant<typeof Terminal>;
+type Story = CanvasFrame<typeof Terminal>;
 const TerminalFrame = ({ children }: { children: React.ReactNode }) => (
   <div style={{ width: "min(720px, 90vw)", height: "320px" }}>{children}</div>
 );

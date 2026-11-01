@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, setSystemTime, test } from "bun:test";
 import type { HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { recordingSink } from "./opencode-session-poller.test-helpers";
@@ -35,6 +35,7 @@ const serviceOverrides = () => ({
 const harnessDefaults = () => ({
   detect: async () => ({ available: true }),
   getModelsOutput: async () => "",
+  pollIntervalMs: 1,
 });
 
 const createRunningQuestionMessage = (): OpencodeSessionMessage => ({
@@ -146,6 +147,8 @@ const createQuestionReplyFetcher = (handlers: QuestionReplyFetcherInput) => {
 
     const sessionId = getSessionMessageId(request);
     if (request.method === "GET" && sessionId) {
+      // Each poll stands for one production poll interval, so idle grace periods still span the same number of polls.
+      if (advanceClock) setSystemTime(Date.now() + 1_000);
       return new Response(JSON.stringify(handlers.getSessionMessages(sessionId)));
     }
 
@@ -158,7 +161,19 @@ const createQuestionReplyFetcher = (handlers: QuestionReplyFetcherInput) => {
   };
 };
 
+// A poller that outlives a failed test must not freeze the clock for later files in this process.
+let advanceClock = false;
+
 describe("OpenCode question replies", () => {
+  beforeEach(() => {
+    advanceClock = true;
+  });
+
+  afterEach(() => {
+    advanceClock = false;
+    setSystemTime();
+  });
+
   test("answers the pending question request instead of sending a follow-up message", async () => {
     const questionMessage = createRunningQuestionMessage();
     const sessionMessages: Record<string, OpencodeSessionMessage[]> = {
@@ -246,7 +261,7 @@ describe("OpenCode question replies", () => {
       tool: "question",
       state: { metadata: { answers: [["Nice"]] } },
     });
-  }, 15_000);
+  });
 
   test("waits for a delayed assistant continuation after answering a question", async () => {
     const questionMessage = createRunningQuestionMessage();
@@ -294,5 +309,5 @@ describe("OpenCode question replies", () => {
 
     expect(exit).toEqual({ status: "completed" });
     expect(lastMessages.at(-1)?.parts[0]).toEqual({ type: "text", text: "Thanks, TypeScript works." });
-  }, 15_000);
+  });
 });

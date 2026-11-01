@@ -101,8 +101,6 @@
         "bin/pstdio-canvas.ts",
         "scripts/prune-tests.ts",
         "src/index.ts",
-        "src/indexer.ts",
-        "src/native-preview-runtime.tsx",
         // Generated build entries import the frame runtime by file path.
         "src/runtime/frame-runtime.tsx",
         "src/**/*.test.ts",
@@ -165,6 +163,7 @@
         "pstdio-base-themes",
         "pstdio-dashboard",
         "pstdio-notes",
+        "pstdio-performance",
         "pstdio-planner",
         "pstdio-reports",
         "pstdio-skills",
@@ -303,6 +302,8 @@
         // Keep in sync with build-entries.ts and vite.monaco.config.ts.
         "src/index.ts",
         "src/theme/index.ts",
+        // The Canvas build loads these themes by absolute path.
+        "src/theme/custom/vscode-theme.canvas-fixture.ts",
         "src/components/{canvas,dependency-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.canvas.tsx",
@@ -322,8 +323,6 @@
       "entry": [
         "extension.ts",
         "src/view/main.tsx",
-        // Native preview modules are lazy entries named by the data-only registry.
-        "src/canvases/{component-controls,component-surfaces,documentation,foundations,interactive-previews}.tsx",
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "scripts/**/*.{ts,tsx}"
@@ -362,6 +361,16 @@
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "src/{view,open-artifact}.tsx"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-performance": {
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/{meter,details}-view.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },

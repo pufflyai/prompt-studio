@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-25
 
+Status: Accepted.
+
 ## Intended design
 
 The portable DigitalOcean module creates a normal PostgreSQL login for each

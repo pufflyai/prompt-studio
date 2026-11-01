@@ -1,8 +1,10 @@
-import { Box, Button, HStack, IconButton, Popover, Portal, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import { Box, Button, HStack, IconButton, Stack } from "@chakra-ui/react";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Folder, ListTree, PanelBottom, PanelRight, Plus } from "lucide-react";
 import { useState } from "react";
 import { ResourceActionMenu, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { WindowTabs } from "./window-tabs";
 import { WindowTitleBar } from "./window-title-bar";
 
@@ -100,7 +102,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta<typeof WindowTitleBar>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const MacOS: Story = {
   id: "components-navigation-window-title-bar--mac-os",
   render: () => <Example />,

@@ -1,5 +1,5 @@
 import { Box, Button, IconButton, Stack, Tabs } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ArrowUpRight, GitBranch } from "lucide-react";
 import { ChatPanel } from "./chat-panel";
 import { ChatWorkspaceHub } from "./workspace-hub";
@@ -52,7 +52,7 @@ const meta: CanvasMeta<typeof ChatPanel> = {
   ),
 };
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Light: Story = {
   id: "patterns-chat-composer-surfaces--light",
 };

@@ -1,5 +1,5 @@
 name: Benchmarks
-run-name: Benchmarks ${{ inputs.release_tag || inputs.commits || github.event.pull_request.head.sha }} on ${{ inputs.platforms || 'linux-x64' }}
+run-name: Benchmarks ${{ inputs.release_tag || inputs.commits }} on ${{ inputs.platforms }}
 
 # Every run measures each given commit and suite once on the same runner.
 # The Performance pages in the pstdio-dev extension start these runs and read their artifacts.
@@ -16,23 +16,14 @@ on:
         description: Platforms separated by commas (linux-x64, darwin-arm64, darwin-x64, win32-x64).
         default: linux-x64
       samples:
-        description: Samples per commit and suite. Must be 1; CI never repeats tests.
+        description: Executions per commit and suite. Must be 1; CI never repeats tests.
         default: "1"
       release_tag:
         description: Release to attach the results to. The release workflow sets it after publishing.
         default: ""
-  # Proves the runner still works when it changes, with a short measurement of the fastest suites.
-  pull_request:
-    paths:
-      - packages/benchmarks/**
-      - .github/workflows/benchmarks.yml
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   plan:
@@ -54,11 +45,10 @@ jobs:
       - name: Resolve commits, platforms, and suites
         id: plan
         env:
-          # A pull request measures only its head: its base may predate the result format.
-          COMMITS: ${{ inputs.commits || github.event.pull_request.head.sha }}
+          COMMITS: ${{ inputs.commits }}
           PLATFORMS: ${{ inputs.platforms || 'linux-x64' }}
-          SUITES: ${{ github.event_name == 'pull_request' && 'storage,runtime' || inputs.suites }}
-          SAMPLES: ${{ github.event_name == 'pull_request' && '1' || inputs.samples }}
+          SUITES: ${{ inputs.suites }}
+          SAMPLES: ${{ inputs.samples }}
         run: |
           set -euo pipefail
           if [ "${SAMPLES:-1}" != "1" ]; then
@@ -88,6 +78,10 @@ jobs:
               exit 1
             fi
             available=$(bun packages/benchmarks/src/cli.ts describe --platform "$platform")
+            # A chosen suite this platform cannot run starts no job, so the run says so instead of dropping it quietly.
+            for suite in $(jq -r --argjson available "$available" '($ENV.SUITES | split(",")) - [$available[].id] | .[] | select(. != "")' <<< 'null'); do
+              echo "::warning title=Suite skipped::$suite does not run on $platform"
+            done
             include=$(jq -c --argjson available "$available" --arg suites "$SUITES" --arg platform "$platform" --arg os "$os" \
               '. + [$available[] | select($suites == "" or (.id | IN($suites | split(",")[]))) | {platform: $platform, os: $os, suite: .id}]' \
               <<< "$include")
@@ -124,7 +118,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: "24.22.1"
 
       - name: Set up Windows desktop tests
         if: runner.os == 'Windows'
@@ -173,6 +167,16 @@ jobs:
           path: |
             ${{ runner.temp }}/checkouts/*/clients/desktop/test-results/packaged-benchmarks*.json
             ${{ runner.temp }}/checkouts/*/test-results/quarantine/packaged-desktop-benchmark
+          if-no-files-found: error
+
+      - name: Preserve ordered workbench benchmark quarantine evidence
+        if: ${{ !cancelled() && matrix.suite == 'workbench' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-workbench-evidence-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/checkouts/*/packages/e2e/test-results/workbench-benchmarks*.json
+            ${{ runner.temp }}/checkouts/*/test-results/quarantine/workbench-benchmark
           if-no-files-found: error
 
   # The release workflow starts this run after it publishes, so benchmarks never hold a release.

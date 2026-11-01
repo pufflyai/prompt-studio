@@ -20,13 +20,16 @@ layer-map change.
    consumes its identity and exact-target schemas for local environment bindings;
    it adds no host or provider dependency to the synchronization package.
 
-   `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
+   `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-theme`, `pstdio-paths`,
    `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, `pstdio-db`, and
    `pstdio-storage` define stable contracts, file-type metadata, paths, logging,
    scheduling, git, persistence, and filesystem storage primitives.
    `pstdio-storage` reuses asset reference types from `pstdio-sync-contracts`
    and does not depend on `pstdio-db`. They do not
    depend on SDK, UI, workbench, dashboard, or API host packages.
+   `pstdio-theme` owns browser-free palette conversion for the extension runtime
+   and UI importer. UI bundles its implementation and public types; it is not
+   a published SDK contract.
    `pstdio-db` also consumes synchronization contracts for the durable extension
    journal and accepted state. It does not import the test-only conformance entry.
    The private `pstdio-sync` package owns the production, runtime-neutral record
@@ -139,9 +142,10 @@ layer-map change.
    fixture databases and transport measurements. It never opens the user's database.
 
    The private `canvas-tests` package owns component browser interactions and
-   their Canvas servers. It declares `@pstdio/ui`, `@pstdio/workbench`, and
-   `pstdio-dashboard` as development dependencies because it loads their stories.
-   Story sources stay with those owners. It does not depend on the API, database,
+   their Canvas servers. It builds this repository's canvases with `pstdio-canvas build`
+   and type-checks every canvas file with its owner's settings. It declares `@pstdio/ui`,
+   `@pstdio/workbench`, and `pstdio-dashboard` as development dependencies.
+   Canvas sources stay with those owners. It does not depend on the API, database,
    CLI, or `e2e`. It uses `pstdio-benchmarks` for startup measurements and sample counts.
    App E2E never starts or builds Canvas.
 
@@ -205,7 +209,7 @@ relay content implementation, local API host, SDK, UI, client or extension code.
 It is not part of the CLI bundle. Its authenticated HTTP service and the relay's
 access check must preserve that authority boundary. See the
 [account authority guide](../../guides/development/0007-account-manager.md) and
-[ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+[ADR 0124](../../adrs/0124-separate-account-authority-from-content.md).
 
 ## Rules
 
@@ -239,4 +243,4 @@ The database uses the contract-layer `ResourceRef` type for persisted resource v
 
 ## Canvas authoring tooling
 
-The published `@pstdio/canvas` package owns the canvas file format, preview composition, source indexing, and the `pstdio-canvas` command that builds and watches a project's canvases. It has no application-layer dependencies; React is a peer dependency. Projects, UI packages and repository preview builds use it as development tooling. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; the repository Canvas type-check command checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.
+The published `@pstdio/canvas` package owns the canvas file format, preview composition, source indexing, and the `pstdio-canvas` command that builds and watches a project's canvases. It has no application-layer dependencies; React is a peer dependency. Projects, UI packages and repository preview builds use it as development tooling. The UI Canvas extension depends on its released version for the build manifest, frame messages and the nested-frame loader; it never runs the build itself. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; `bun run --cwd packages/canvas-tests typecheck` checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.

@@ -1,8 +1,9 @@
 name: Weekly CI failure report
 
 on:
+  # Sunday night stays clear of the 03:00 nightly, which shares the token's request budget.
   schedule:
-    - cron: "17 3 * * 1"
+    - cron: "17 21 * * 0"
   workflow_dispatch:
 
 permissions:
@@ -12,9 +13,14 @@ permissions:
 jobs:
   report:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The week to 2026-11-01 needed about 2,700 API requests. The token's 1,000 per hour are
+    # shared with every workflow, so the collector keeps 300 in reserve and waits for each reset.
+    timeout-minutes: 330
     steps:
+      # Full history dates each quarantine entry.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json

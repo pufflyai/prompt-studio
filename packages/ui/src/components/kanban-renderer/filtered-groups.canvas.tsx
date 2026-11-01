@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, initialRows } from "./kanban-renderer-story-fixtures";
@@ -8,7 +8,7 @@ import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
 const meta: CanvasMeta = { title: "Patterns/Kanban Renderer/Filtered Groups", fullscreen: true };
 export default meta;
-type Story = CanvasVariant;
+type Story = CanvasFrame;
 const FilteredGroups = (props: { mode: ViewMode; empty?: boolean; grouped?: boolean }) => {
   const key = `preview-empty-filter-groups-${props.mode}-${props.empty ?? false}-${props.grouped ?? true}`;
   const initial = {

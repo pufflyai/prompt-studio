@@ -101,7 +101,8 @@ test("enabled extensions allocate declared prefixes and reject conflicting insta
     expect(await resources.findByShorthand({ kind: "planner", shorthand: first.shorthand })).toHaveLength(2);
     expect(extensionResourceRefSchema.parse({ type: "item", ...first }).shorthand).toBe(first.shorthand);
     expect((await api("example.reports").allocate({ kind: "item" })).shorthand).toBe("RP-1");
-    await expect(install("conflict", "RP")).rejects.toThrow("example.reports");
+    const conflict = await install("conflict", "RP").catch((error: unknown) => error);
+    expect(conflict).toMatchObject({ message: expect.stringContaining("example.reports") });
     expect((await api("example.reports").allocate({ kind: "item" })).shorthand).toBe("RP-2");
     await install("derived-conflict", project.shorthand);
     await expect(api("example.derived-conflict").allocate({ kind: "item" })).rejects.toThrow("example.planner");

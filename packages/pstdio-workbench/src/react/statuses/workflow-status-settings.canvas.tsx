@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { useEffect, useState } from "react";
 import { createWorkbench, type WorkflowStatus } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkflowStatusSettings } from "./workflow-status-settings";
@@ -78,7 +79,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 const StatusesFrame = (props: { workbench: ReturnType<typeof createWorkbench> }) => {
   const { workbench } = props;
   return (
@@ -97,13 +98,17 @@ export const Loading: Story = {
   id: "pstdio-workbench-reference-core-api-workflow-status-editor--loading",
   render: () => <StatusesFrame workbench={loadingWorkbench} />,
 };
+// Loads the cached statuses before the editor mounts, so the editor starts with loaded data.
+const AlreadyLoadedFrame = () => {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    void cachedWorkbench.statuses.load("cached").then(() => setLoaded(true));
+  }, []);
+  return loaded ? <StatusesFrame workbench={cachedWorkbench} /> : null;
+};
 export const AlreadyLoaded: Story = {
   id: "pstdio-workbench-reference-core-api-workflow-status-editor--already-loaded",
-  setup: async () => {
-    await cachedWorkbench.statuses.load("cached");
-    return {};
-  },
-  render: () => <StatusesFrame workbench={cachedWorkbench} />,
+  render: () => <AlreadyLoadedFrame />,
 };
 export const SaveFailure: Story = {
   id: "pstdio-workbench-reference-core-api-workflow-status-editor--save-failure",

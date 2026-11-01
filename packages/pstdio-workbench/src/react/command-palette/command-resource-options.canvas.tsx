@@ -1,5 +1,5 @@
 import { Button, Stack } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandParamsDialog } from "./command-params-dialog";
@@ -57,6 +57,6 @@ const meta = {
   component: ResourceOptionsExample,
 } satisfies CanvasMeta<typeof ResourceOptionsExample>;
 export default meta;
-export const HiddenResourceDependency: CanvasVariant<typeof meta> = {
+export const HiddenResourceDependency: CanvasFrame<typeof meta> = {
   id: "pstdio-workbench-guides-command-resource-options--hidden-resource-dependency",
 };

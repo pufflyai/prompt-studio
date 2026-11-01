@@ -16,6 +16,12 @@ export const plannedCiJobs = (scope: Scope) => {
     jobs.push({ id, priority, count: names.length, names });
   add("scope");
   add("static_checks");
+  if (scope.editedMatrix.length)
+    add(
+      "edited_tests",
+      scope.editedMatrix.map((row) => `edited_tests (${row.name})`),
+      "P0",
+    );
   if (scope.packageChecks)
     add(
       "package_checks",
@@ -31,9 +37,10 @@ export const plannedCiJobs = (scope: Scope) => {
     if (selected) add(id);
   jobs.push(...matrixPlan("database_tests", scope.databaseMatrix, (row) => `${row.package} ${row.shard}`));
   jobs.push(...matrixPlan("bun_contracts", scope.bunContractMatrix, (row) => row.shard));
-  jobs.push(...matrixPlan("integration_contracts", scope.integrationMatrix, (row) => row.package));
+  if (scope.sharedBuild) add("build_host", ["build_host"], "P0");
+  jobs.push(...matrixPlan("integration_contracts", scope.integrationMatrix, (row) => row.shard));
   jobs.push(...matrixPlan("components", scope.componentMatrix, (row) => row.package));
-  if (["merge_queue", "full"].includes(scope.stage)) {
+  if (scope.stage === "full") {
     jobs.push(...matrixPlan("e2e", scope.appMatrix, (row) => `${row.shard}/${row.total}`));
     jobs.push(...matrixPlan("packaged_and_vite_e2e", scope.packagedMatrix, (row) => `${row.suite} ${row.shard}`));
     add("e2e_cli", ["e2e_cli"], scope.production ? "P2" : "P1");
@@ -54,11 +61,10 @@ export const plannedCiJobs = (scope: Scope) => {
   if (scope.harnessCli)
     add(
       "harness_cli_support",
-      ["harness-codex", "harness-claude-code", "harness-open-code", "harness-pi"].flatMap((harness) =>
-        ["minimum", "latest"].flatMap((version) => [
-          `harness_cli_support / ${harness} (${version})`,
-          ...(harness === "harness-pi" ? [`harness_cli_support / ${harness} (${version}, Windows)`] : []),
-        ]),
+      scope.harnessMatrix.flatMap((lane) =>
+        ["minimum", "latest"].map(
+          (version) => `harness_cli_support / ${lane.extension} (${version}${"os" in lane ? ", Windows" : ""})`,
+        ),
       ),
       "P2",
     );
@@ -68,7 +74,7 @@ export const plannedCiJobs = (scope: Scope) => {
       ["pstdio/landing-page", "pstdio/api"].map((image) => `build_docker (${image})`),
       "P2",
     );
-  if (scope.production) {
+  if (scope.windows) {
     add(
       "windows_test_and_build",
       ["lint", "unit-1", "unit-2", "unit-3", "unit-4"].map((lane) => `windows_test_and_build (${lane})`),
@@ -87,9 +93,11 @@ export const plannedCiJobs = (scope: Scope) => {
       ),
       "P2",
     );
+  }
+  if (scope.production) {
     add(
       "quarantined_bun_tests",
-      ["ubuntu-latest", "windows-latest", "macos-15"].map((os) => `quarantined_bun_tests (${os})`),
+      scope.quarantineBunOs.map((os) => `quarantined_bun_tests (${os})`),
       "P2",
     );
     add("quarantined_browser_tests", ["quarantined_browser_tests"], "P2");

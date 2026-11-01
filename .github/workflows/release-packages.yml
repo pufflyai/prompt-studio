@@ -59,7 +59,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install dependencies
         run: bun scripts/ci/install-native-dependencies.ts
       - name: Give SDK/UI previews a source-based version
@@ -104,7 +104,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install dependencies
         run: bun scripts/ci/install-native-dependencies.ts
       - name: Prepare the patch candidate
@@ -165,7 +165,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
 
       - name: Plan the stable release
         id: stable
@@ -252,7 +252,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Build and verify immutable publication artifacts
         uses: ./.github/actions/build-release
       - name: Record source and build identity
@@ -497,6 +497,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
+      actions: write
       contents: write
       pull-requests: write
     steps:
@@ -512,7 +513,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
 
       - name: Install dependencies
         run: bun scripts/ci/install-native-dependencies.ts
@@ -524,9 +525,18 @@ jobs:
         run: echo "tag=$(gh release view --json tagName --jq .tagName)" >> "$GITHUB_OUTPUT"
 
       - name: Create or update the version PR
+        id: changesets
         uses: changesets/action@v1
         with:
           version: bun run --cwd scripts release:version
         env:
           PSTDIO_STABLE_TAG: ${{ steps.baseline.outputs.tag }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pushes made with this job's token start pull_request runs only after a maintainer approves them.
+      # A dispatch is allowed to start a run, so the version PR gets its required checks right away.
+      - name: Run PR checks on the version PR
+        if: steps.changesets.outputs.pullRequestNumber != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run test-and-build.yml --ref changeset-release/main -f profile=pull_request

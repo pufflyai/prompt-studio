@@ -1,6 +1,6 @@
 {
   "name": "@pstdio/ui",
-  "version": "0.45.0",
+  "version": "0.46.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"
@@ -100,7 +100,7 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@chakra-ui/react": "^3.0.0",
+    "@chakra-ui/react": "^3.21.0",
     "@emotion/react": "^11.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -174,6 +174,7 @@
     "rolldown-plugin-dts": "^0.28.6",
     "typescript": "6.0.2",
     "vite": "^8.3.1",
-    "@pstdio/canvas": "workspace:*"
+    "@pstdio/canvas": "workspace:*",
+    "pstdio-theme": "workspace:*"
   }
 }

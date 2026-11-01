@@ -2,7 +2,8 @@ import { beforeAll, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, join } from "node:path";
+import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -34,14 +35,7 @@ test("the packaged Codex harness preserves protocol loss and independent provide
       PATH: `${bin}${delimiter}${process.env.PATH ?? ""}`,
       CODEX_TRANSPORT_PID: pidPath,
       CODEX_TRANSPORT_RELEASE: releasePath,
-      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-        defaultExtensions: [
-          {
-            installName: "harness-codex",
-            source: resolve(import.meta.dirname, "../../../../extensions/harness-codex"),
-          },
-        ],
-      }),
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("harness-codex"),
     });
     child = started.child;
     const request = async (path: string, method = "GET", body?: unknown) => {

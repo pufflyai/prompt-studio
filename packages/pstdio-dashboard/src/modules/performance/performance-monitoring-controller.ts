@@ -5,16 +5,14 @@ import type { PerformanceHost } from "./performance-host";
 import { observeSlowFrames } from "./slow-frame-observer";
 
 // Owns this renderer's slow-frame observer and frame counter. Both run exactly
-// while monitoring is on, so reopening the popover never starts a second one.
+// while monitoring is on, so a second reader never starts a second one.
 export const createPerformanceMonitoringController = (host: PerformanceHost) => {
   const frameRate = createFrameRateCounter();
   let enabled: boolean | undefined;
-  let popoverOpen = false;
   let stopObserver: (() => void) | undefined;
   let stopStateReports: (() => void) | undefined;
   let disposed = false;
   let releaseCapture: (() => Promise<void>) | undefined;
-  const listeners = new Set<() => void>();
   const snapshotListeners = new Set<(snapshot: PerformanceSnapshot | null) => void>();
   let stopSnapshots: (() => void) | undefined;
   const startSnapshots = () => {
@@ -70,41 +68,52 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       stopSnapshots?.();
       stopSnapshots = undefined;
       for (const listener of snapshotListeners) listener(null);
-      popoverOpen = false;
     }
-    for (const listener of listeners) listener();
   };
+
+  const setEnabled = async (next: boolean) => {
+    // Stop observing before the host stops collecting, and start after it starts.
+    if (!next) apply(false);
+    try {
+      await host.setEnabled(next);
+    } catch (error) {
+      // The host kept collecting, so this window keeps measuring too.
+      if (!next) apply(true);
+      throw error;
+    }
+    if (next) apply(true);
+  };
+  let leases = 0;
 
   return {
     host,
-    frameRate,
-    getPopoverOpen: () => popoverOpen,
-    setPopoverOpen: (open: boolean) => {
-      popoverOpen = open && enabled === true;
-      for (const listener of listeners) listener();
+    // A loaded monitoring extension is the person's choice to measure, so monitoring runs exactly
+    // while one holds a capture, and stops when the last one is disabled or unloaded.
+    retainCapture: async () => {
+      const release = (await host.retainCapture?.()) ?? (async () => {});
+      leases += 1;
+      if (leases === 1) await setEnabled(true);
+      let released = false;
+      return async () => {
+        if (released) return;
+        released = true;
+        leases -= 1;
+        await release();
+        if (leases === 0 && !disposed) await setEnabled(false);
+      };
     },
-    retainCapture: async () => host.retainCapture?.() ?? (async () => {}),
     load: async () => {
       releaseCapture ??= await host.retainCapture?.();
       if (disposed) {
         await releaseCapture?.();
         return;
       }
-      apply(await host.isEnabled());
+      const saved = await host.isEnabled();
+      // A monitoring extension may have switched it on while the saved switch was still loading.
+      apply(leases > 0 || saved);
     },
     getEnabled: () => enabled,
-    setEnabled: async (next: boolean) => {
-      // Stop observing before the host stops collecting, and start after it starts.
-      if (!next) apply(false);
-      try {
-        await host.setEnabled(next);
-      } catch (error) {
-        // The host kept collecting, so this window keeps measuring too.
-        if (!next) apply(true);
-        throw error;
-      }
-      if (next) apply(true);
-    },
+    setEnabled,
     subscribeSnapshots: (listener: (snapshot: PerformanceSnapshot | null) => void) => {
       snapshotListeners.add(listener);
       if (enabled && !disposed) stopSnapshots ??= startSnapshots();
@@ -114,12 +123,6 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
           stopSnapshots?.();
           stopSnapshots = undefined;
         }
-      };
-    },
-    subscribe: (listener: () => void) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
       };
     },
     dispose: () => {
@@ -132,7 +135,6 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       stopObserver = undefined;
       stopSnapshots?.();
       snapshotListeners.clear();
-      listeners.clear();
     },
   };
 };

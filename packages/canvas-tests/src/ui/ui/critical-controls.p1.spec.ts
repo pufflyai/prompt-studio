@@ -1,9 +1,33 @@
 import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
+// Critical: highlighted menu labels and checkmarks must stay readable during keyboard selection.
+test("imported menu highlights keep their matching text and indicator colors", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/overlays/menu-selection.canvas.tsx#PaleSelection",
+  );
+  await preview.getByRole("button", { name: "Layout options", exact: true }).click();
+  const menu = preview.getByRole("menu").first();
+  const pinned = preview.getByRole("menuitemcheckbox", { name: "Pinned", exact: true });
+  await expect(menu).toHaveCSS("background-color", "rgb(36, 36, 36)");
+  await pinned.hover();
+  await expect(pinned).toHaveCSS("background-color", "rgb(238, 238, 238)");
+  await expect(pinned).toHaveCSS("color", "rgb(17, 17, 17)");
+  await expect(pinned.locator("[data-part=item-indicator]")).toHaveCSS("color", "rgb(17, 17, 17)");
+  await menu.press("End");
+  await menu.press("Home");
+  await expect(pinned).toHaveAttribute("data-highlighted", "");
+  await expect(pinned).toHaveCSS("background-color", "rgb(238, 238, 238)");
+  await expect(pinned).toHaveCSS("color", "rgb(17, 17, 17)");
+});
+
 // Critical: a portalled menu must accept input without dismissing its owning dialog.
 test("menu selection and keyboard dismissal keep its dialog usable", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "ui-components-navigation-searchable-menu--portalled-inside-dialog");
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/overlays/searchable-menu.canvas.tsx#PortalledInsideDialog",
+  );
   await preview.getByRole("button", { name: "Select workspace", exact: true }).click();
   const search = preview.getByRole("textbox", { name: "Search workspaces..." });
   await search.fill("origin/main");
@@ -22,7 +46,7 @@ test("menu selection and keyboard dismissal keep its dialog usable", async ({ pa
 
 // Critical: saving an edited value must update the visible table.
 test("a table cell edit can be saved", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "ui-components-data-display-data-table--edit-mode");
+  const preview = await openCanvasPreview(page, "packages/ui/src/components/data-table/data-table.canvas.tsx#EditMode");
   const cell = preview.locator("tbody tr[data-document-row]").first().locator("td[data-column-id='name']");
   await cell.click();
   await preview.getByRole("textbox", { name: "Edit cell", exact: true }).fill("Updated name");
@@ -32,7 +56,10 @@ test("a table cell edit can be saved", async ({ page }) => {
 
 // Critical: menu focus restoration must not steal terminal keyboard input.
 test("opening a terminal transfers keyboard focus", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "ui-components-terminal--deferred-focus-ignores-popup-restore");
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/terminal/terminal.canvas.tsx#DeferredFocusIgnoresPopupRestore",
+  );
   await preview.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   await expect(preview.getByRole("textbox", { name: "Terminal input", exact: true })).toBeFocused();
 });
@@ -46,6 +73,6 @@ test("preview setup failures are visible", async ({ page }) => {
 
 // Critical: extension examples must load the catalog's fallback provider rather than a missing module.
 test("extension examples load their fallback suite provider", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "dashboard-motion-lab-study-status--deleted");
+  const preview = await openCanvasPreview(page, ".pstdio/extensions/motion-lab/src/study-status.canvas.tsx#Deleted");
   await expect(preview.getByText("This study was deleted or does not exist.", { exact: true })).toBeVisible();
 });

@@ -2,9 +2,7 @@
 
 Proposed: 2026-03-07
 
-## Status
-
-Accepted.
+Status: Accepted.
 
 ## Decision
 

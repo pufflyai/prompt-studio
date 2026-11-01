@@ -2,9 +2,7 @@
 
 Proposed: 2026-09-28
 
-## Status
-
-Accepted for PS-415.
+Status: Accepted for PS-415.
 
 ## Context
 

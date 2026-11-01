@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-26
 
+Status: Accepted.
+
 ## Intended design
 
 Hosted Windows jobs should put temporary runtime homes, databases and installation caches in a temporary directory that the job owns, on storage that suits many small files. The runner owns its lifetime. Applications and local tests should keep using the operating system's normal temp API.
@@ -25,7 +27,9 @@ Inside the packaged core cases, the Planner's dependency install took 79.7–91.
 
 ## Temporary workaround
 
-Only the packaged-toolchain workflow opts into the shared setup action’s `windows-dev-drive` input. Other Windows jobs keep `TEMP` and `TMP` on `RUNNER_TEMP`. In that opted-in job, the action creates a dynamic 50 GB ReFS Dev Drive file in `RUNNER_TEMP`, mounts it, and writes `TEMP` and `TMP` to a folder on it for later steps. The job owns the drive; the hosted runner discards it with the job. Both Windows architectures use the same rule. Later build and test processes reach it through the existing temp API. No application path, dependency layout or cache policy changes. Every cold fixture still allocates its own home and cache; no fixture is prewarmed or reused. No timeout, budget or workload changes.
+The packaged-toolchain workflow and edited-test rows registered with the `packaged-cli` or `packaged-browser` runner opt into the shared setup action’s `windows-dev-drive` input. Other Windows jobs keep `TEMP` and `TMP` on `RUNNER_TEMP`. In an opted-in job, the action creates a dynamic 50 GB ReFS Dev Drive file in `RUNNER_TEMP`, mounts it, and writes `TEMP` and `TMP` to a folder on it for later steps. The job owns the drive; the hosted runner discards it with the job. Both Windows architectures use the same rule. Later build and test processes reach it through the existing temp API. No application path, dependency layout or cache policy changes. Every cold fixture still allocates its own home and cache; no fixture is prewarmed or reused. No timeout, budget or workload changes.
+
+Edited packaged rows must use the same storage setup as their registered release runner. [Run 41215765835](https://github.com/pufflyai/prompt-studio/actions/runs/41215765835/job/124587671341) exposed the missing opt-in: the ARM64 core-default case spent 76.9 seconds in Planner dependency installation and exhausted its unchanged 120-second allowance. The Canvas case also exhausted its 30-second allowance during installation. Desktop, API, database and ordinary package rows retain their previous storage.
 
 This is a temporary override of the provider's storage. Keeping it in CI setup avoids Windows-only storage rules in the application or test fixtures.
 

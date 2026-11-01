@@ -20,6 +20,10 @@ on:
       desktop_platforms:
         required: true
         type: string
+      workloads:
+        description: JSON family and runner rows for the release channel, from scripts/ci/production-platforms.ts
+        required: true
+        type: string
 permissions:
   contents: read
   actions: read
@@ -41,14 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { family: backend, os: ubuntu-24.04 }
-          - { family: backend, os: macos-15 }
-          - { family: backend, os: windows-2025 }
-          - { family: browser, os: ubuntu-24.04 }
-          - { family: relay, os: ubuntu-24.04 }
-          - { family: navigation, os: ubuntu-24.04 }
-          - { family: planner, os: ubuntu-24.04 }
+        include: ${{ fromJSON(inputs.workloads) }}
     env:
       SOURCE_SHA: ${{ inputs.source_sha }}
       VERSION_SHA: ${{ inputs.ref }}
@@ -78,7 +75,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install native dependencies
         run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts
       - name: Download the immutable compiled candidate
@@ -118,6 +115,8 @@ jobs:
           name: production-performance-${{ matrix.family }}-${{ matrix.os }}-attempt-${{ github.run_attempt }}
           path: |
             test-results/production-performance
+            test-results/quarantine/workbench-benchmark
+            test-results/quarantine/subnav-benchmark
             packages/e2e/test-results
             packages/e2e/playwright-report
             packages/ui/test-results

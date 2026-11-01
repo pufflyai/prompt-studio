@@ -80,6 +80,7 @@ export const createAppAccount = (
             },
             relay.status,
             (connection, signal) => recoverCloudProject(app.deps, connection, signal),
+            relay.retry,
           );
         },
       },

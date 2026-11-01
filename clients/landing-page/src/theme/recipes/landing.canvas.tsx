@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkbenchLanding } from "../../components/workbench/workbench-landing";
 import { LANDING_PAGES } from "../../content/landing-pages";
 
@@ -10,7 +10,7 @@ const meta = {
   args: { initialPath: "/", pages: LANDING_PAGES, initialDocument: undefined },
 } satisfies CanvasMeta<typeof WorkbenchLanding>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Desktop: Story = {
   id: "theme-landing-pages--desktop",
   description: "The download copy and editor stay vertically centered in the main area on wide desktops.",

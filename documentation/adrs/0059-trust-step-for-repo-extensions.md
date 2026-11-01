@@ -2,9 +2,7 @@
 
 Proposed: 2026-10-06
 
-## Status
-
-Proposed. Not implemented. PS-526 builds it.
+Status: Proposed. Not implemented. PS-526 builds it.
 
 ## Context
 

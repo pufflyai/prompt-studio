@@ -1,5 +1,5 @@
 import { Box, Grid, Text, Textarea } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { MarkdownEditor } from "./markdown-editor";
 import {
@@ -48,7 +48,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof MarkdownEditor>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const EditableLargeTable: Story = {
   id: "patterns-editors-markdown-editor-tables--editable-large-table",
   render: () => <EditableTableDemo initialValue={largeMarkdownTableFixture} />,

@@ -2,9 +2,7 @@
 
 Proposed: 2026-09-13
 
-## Status
-
-Accepted temporary workaround.
+Status: Accepted temporary workaround.
 
 ## Intended design
 

@@ -1,5 +1,5 @@
 import { Input, Stack, Text } from "@chakra-ui/react";
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { SlidersHorizontal } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { createWorkbench } from "../../core";
@@ -70,7 +70,7 @@ const meta = {
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const AttachedOnly: Story = {
   id: "pstdio-workbench-reference-core-api-side-panel--attached-only",
   description: "An attached-only panel opens from the navigation bar and has no bubble.",

@@ -2,9 +2,9 @@ import { expect, test } from "@playwright/test";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 
 for (const [workload, query, count] of [
-  ["button", "preview=ui-components-inputs-button--variants", 1],
+  ["button", "frame=packages/ui/src/components/primitives/button.canvas.tsx%23Variants", 1],
   ["documentation", "canvas=documentation-contract", 1],
-  ["populated", "canvas=verification-populated", 24],
+  ["populated", "canvas=populated", 24],
 ] as const) {
   // Critical: cold startup must reach usable previews without changing the fixed 24-frame workload.
   test(`cold frame startup: ${workload}`, async ({ page }, info) => {

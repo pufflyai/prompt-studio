@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TreeList } from "@pstdio/ui";
 import { useState } from "react";
 import type { TreeViewSection } from "../../../core";
@@ -61,7 +61,7 @@ const meta = {
   ],
 } satisfies CanvasMeta<typeof WorkspaceSelection>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const TicketContext: Story = {
   id: "pstdio-workbench-guides-workspace-selection--ticket-context",
 };

@@ -103,7 +103,22 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/extension-browser-install.p2.test.ts",
+    "file": "packages/e2e/src/packaged/packaged-canvas-install.p2.test.ts",
+    "name": "installs Canvas from the catalog with working commands and its authoring skill",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-932 / Canvas catalog installation",
+    "reason": "The catalog install intermittently stalls after the runtime is ready (86 assertions passed, then no output until the 30-second allowance). Identical test code passed on macOS arm64 in two earlier PR runs. The same stall was seen on Windows before its 60-second allowance. Preserve the cold install, commands, skill, preview and theme checks.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41262148435/job/124717471356",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41259951818/job/124711025694",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41258618730/job/124707099106"
+    ],
+    "removeWhen": "Find and fix the catalog install stall, then pass this complete case in ten independent macOS arm64 runs within the existing 30-second allowance, without retries."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/extension-browser-install.p1.test.ts",
     "name": "installs the smoke browser without external JavaScript runtimes",
     "platforms": ["win32"],
     "owner": "PS-907 / packaged browser installation",
@@ -116,7 +131,7 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/extension-browser-install.p2.test.ts",
+    "file": "packages/e2e/src/packaged/extension-browser-install.p1.test.ts",
     "name": "the installed Playwright cache runs a packaged extension page outside the checkout",
     "platforms": ["win32"],
     "owner": "PS-907 / packaged browser installation",
@@ -269,6 +284,48 @@
     "removeWhen": "Find why the packaged runtime ignores or stalls on SIGTERM after auto-build dispatch and fix it, then pass ten independent Linux runs within the existing 30 second allowance."
   },
   {
+    "runner": "bun",
+    "file": "extensions/harness-claude-code/src/managed-cli.p0.test.ts",
+    "name": "detects the installed private CLI without PATH tools",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-999 / Claude Code cold native startup",
+    "reason": "The asynchronous native version probe returned unavailable after 3009.40 ms in the post-merge remaining-package run at 6a4ca2007, against its existing 3000 ms process limit. The identical asynchronous fixture passed in its focused execution (381.24 ms) and complete harness suite before that run. The variable native startup phase is unconfirmed; preserve the real CLI, fresh home, empty PATH, assertions and limits in the separate evidence lane.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/pull/1624",
+      "https://github.com/pufflyai/prompt-studio/pull/1628"
+    ],
+    "removeWhen": "Identify and fix the variable native startup phase, then verify fresh-home, empty-PATH macOS ARM64 probes in representative first-attempt local and CI executions within the unchanged 3000 ms process and 5000 ms test limits, without retries or prewarming."
+  },
+  {
+    "runner": "bun",
+    "file": "extensions/harness-codex/src/managed-cli.p0.test.ts",
+    "name": "detects the installed private CLI without PATH tools",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-999 / Codex cold native startup",
+    "reason": "The asynchronous native version probe returned unavailable after 3013.68 ms in the post-merge remaining-package run at 6a4ca2007, against its existing 3000 ms process limit. The identical asynchronous fixture passed in its focused execution (37.89 ms) and complete harness suite before that run. The variable native startup phase is unconfirmed; preserve the real CLI, fresh home, empty PATH, assertions and limits in the separate evidence lane.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/pull/1624",
+      "https://github.com/pufflyai/prompt-studio/pull/1628"
+    ],
+    "removeWhen": "Identify and fix the variable native startup phase, then verify fresh-home, empty-PATH macOS ARM64 probes in representative first-attempt local and CI executions within the unchanged 3000 ms process and 5000 ms test limits, without retries or prewarming."
+  },
+  {
+    "runner": "bun",
+    "file": "extensions/harness-open-code/src/managed-cli.p0.test.ts",
+    "name": "detects the installed private CLI without PATH tools",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-999 / OpenCode cold native startup",
+    "reason": "The asynchronous native version probe returned unavailable after 3008.26 ms in the post-merge full local suite at 6a4ca2007, against its existing 3000 ms process limit. The identical asynchronous fixture passed in its focused execution (2930.91 ms) and complete harness suite before that run. This case is already quarantined on Linux. The native startup phase causing the remaining variation is unconfirmed; preserve the real CLI, fresh home, empty PATH, assertions and limits in the separate evidence lane.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/pull/1624",
+      "https://github.com/pufflyai/prompt-studio/pull/1628"
+    ],
+    "removeWhen": "Identify and fix the variable native startup phase, then verify fresh-home, empty-PATH macOS ARM64 probes in representative first-attempt local and CI executions within the unchanged 3000 ms process and 5000 ms test limits, without retries or prewarming."
+  },
+  {
     "runner": "packaged-desktop",
     "file": "clients/desktop/src/e2e/packaged-attached-recovery.p1.spec.ts",
     "name": "automatically recovers a CLI-started backend and restores the open project",
@@ -387,19 +444,29 @@
     "removeWhen": "Identify and fix the cold Claude dependency install delay, then pass this complete case in ten independent Linux x64 runs within its existing 30000 ms allowance, without retries, prewarming or fewer extensions."
   },
   {
-    "runner": "packaged-desktop-benchmark",
-    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
-    "name": "warm attach restores the workbench within budget",
-    "platforms": ["win32"],
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "ticket/repeat structure",
+    "platforms": ["linux"],
     "arch": "x64",
-    "owner": "PS-907 / desktop performance",
-    "reason": "The original nightly and focused final-source run intermittently leave initial Sessions Main empty. Identical-source diagnosis passed; a separate baseline also exceeded the unchanged 3000 ms attach budget.",
+    "owner": "PS-932 / workbench navigation performance",
+    "reason": "User-authorized remaining-release-failure quarantine. Stable 0.46 certification completed all 120 samples and recorded one repeated-ticket structure measurement at 376.5 ms against its unchanged 375 ms budget. The other structure, data and editor contracts passed. Preserve all thirty samples per destination and visit, the full fixed fixture, trusted clicks and original ordering; this remains performance debt.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/41258726585/job/124711510001"],
+    "removeWhen": "Fix repeated-ticket structure latency and complete the entire 120-sample hosted Linux x64 workload in one first attempt with all thirty repeated-ticket structure samples below 375 ms and every original data, editor, request and reachability assertion intact."
+  },
+  {
+    "runner": "workbench-benchmark",
+    "file": "packages/e2e/src/perf/side-panel.p3.bench.ts",
+    "name": "closes and reopens the live Side Panel within budget",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-932 / workbench performance",
+    "reason": "Under the user's remaining-release-failure quarantine authorization, stable certification recorded a 52 ms long task where this case requires no tasks above 50 ms. The same case passed the preceding hosted qualification and also failed the unchanged-main cloud control. Preserve every close/reopen sample, collapse transition, duration and geometry assertion; this remains performance debt.",
     "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41025270739",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41026983012"
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41254526863/job/124697622966",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41248380174/job/124676622461"
     ],
-    "removeWhen": "Fix initial Sessions view mounting and warm attach timing, then verify the unchanged workload in the first Windows execution before restoring the stable gate."
+    "removeWhen": "Fix the long task source and complete every declared close/reopen sample in one first-attempt hosted Linux x64 execution with no task above 50 ms and all collapse-transition, duration and geometry assertions intact."
   },
   {
     "runner": "packaged-desktop-benchmark",
@@ -503,20 +570,6 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-api/src/features/extensions/extension-detached-process.p1.test.ts",
-    "name": "a detached extension command outlives its host after 1500ms startup",
-    "platforms": ["win32"],
-    "arch": "x64",
-    "owner": "PS-907 / detached extension process lifetime",
-    "reason": "The unchanged delayed-start Windows case passed in both prior complete batteries (1966 ms in the revised run), then exhausted its existing 30000 ms allowance after the host-exit assertions in the final battery. The immediate-start variant passed and remains blocking. Preserve child lifetime and post-exit heartbeat assertions.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41041647151/job/124015754479",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41052259182/job/124051161177"
-    ],
-    "removeWhen": "Fix the delayed child post-host-exit progress or observation race, then verify this complete Windows x64 workload in a first attempt within its existing 30000 ms allowance."
-  },
-  {
-    "runner": "bun",
     "file": "extensions/harness-pi/src/authentication.p0.test.ts",
     "name": "native Pi browser completion wins over a pending manual-code prompt",
     "platforms": ["win32"],
@@ -542,5 +595,98 @@
       "https://github.com/pufflyai/prompt-studio/pull/1571"
     ],
     "removeWhen": "Identify and fix the delayed fixture phase on Apple Silicon, then use independent normal CI observations within the existing 5000 ms limit to restore the stable gate. Preserve every environment and argument assertion; do not retry or run reliability loops."
+  },
+  {
+    "runner": "workbench-benchmark",
+    "file": "packages/e2e/src/perf/project-switch.p3.bench.ts",
+    "name": "switches projects once and within budget",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-932 / workbench performance",
+    "reason": "User-authorized release quarantine on 2026-10-31. The complete twenty-switch workload still reaches 1885–1917 ms against its unchanged 1850 ms budget after the label/layout optimizations. Preserve every sample, request-count and stable-instance assertion; this remains product performance debt.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41234623888",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41245408313/job/124667798482"
+    ],
+    "removeWhen": "Optimize project switching and pass the complete twenty-switch workload in its first hosted Linux x64 execution below 1850 ms per switch and 525 ms per long task, with all correctness assertions intact."
+  },
+  {
+    "runner": "packaged-desktop-benchmark",
+    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
+    "name": "sidecar crash shows recovery within budget",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-932 / desktop performance",
+    "reason": "Under the user's remaining-release-failure quarantine authorization, stable certification measured automatic-recovery UI at 586 ms against its unchanged 500 ms budget. The preceding native qualification passed this case. Preserve the sidecar crash, recovery UI, complete metrics and all assertions; cold startup and renderer checks remain blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41254526863/job/124697623012",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41248380174/job/124676622471"
+    ],
+    "removeWhen": "Fix Intel sidecar-crash recovery latency and complete the full first-attempt native workload with automatic recovery UI below 500 ms, native measurements, and all recovery assertions intact."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "starts without editors and serves both authenticated transport paths",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-932 / Windows desktop lifecycle",
+    "reason": "User-authorized release quarantine on 2026-10-31 with no execution allowance above 60 seconds. The signed Windows release candidate waits for cold Performance extension dependencies past the existing 60-second deadline. Retain the empty home, real default installs, transport/lifecycle assertions and cleanup.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/41234623888"],
+    "removeWhen": "Fix cold Windows default-extension installation and complete this entire lifecycle case in its first native execution within the unchanged 60000 ms allowance, without prewarming, fewer extensions or retries."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "starts without editors and serves both authenticated transport paths",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-932 / Intel desktop lifecycle",
+    "reason": "Hosted Intel macOS sometimes exceeds the existing 60-second allowance while real default extensions install: identical test code passed in one PR run and timed out in the next, after three earlier Intel timeouts between 2026-10-26 and 2026-10-31. Retain the empty home, real default installs, transport/lifecycle assertions and cleanup.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41258618730/job/124707099160",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41259951818/job/124711025595"
+    ],
+    "removeWhen": "Fix cold default-extension installation on hosted Intel macOS and complete this entire lifecycle case in its first native execution within the unchanged 60000 ms allowance, without prewarming, fewer extensions or retries."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "promotes ownership, detaches, and preserves data through a warm relaunch",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-932 / Windows desktop lifecycle",
+    "reason": "User-authorized release quarantine on 2026-10-31 with no execution allowance above 60 seconds. The signed Windows release candidate waits for cold Performance extension dependencies past the existing 60-second deadline. Retain the empty home, real default installs, transport/lifecycle assertions and cleanup.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/41234623888"],
+    "removeWhen": "Fix cold Windows default-extension installation and complete this entire lifecycle case in its first native execution within the unchanged 60000 ms allowance, without prewarming, fewer extensions or retries."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "promotes ownership, detaches, and preserves data through a warm relaunch",
+    "platforms": ["darwin"],
+    "owner": "PS-932 / macOS desktop lifecycle",
+    "reason": "Times out intermittently on both hosted macOS architectures (Intel 4 and Apple Silicon 3 failures from 2026-10-28 to 2026-11-01, with 30, 45 and 60 second allowances). Identical test code passed on both architectures in earlier runs of the same PR. Preserve ownership promotion, detach, data preservation and relaunch assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41263904557/job/124722745543",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41227243185/job/124614013916",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41200165464/job/124538114747"
+    ],
+    "removeWhen": "Find the slow relaunch phase on macOS, fix it, then pass this complete case in ten independent runs on each macOS architecture within its existing allowance, without retries."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-canvas-install.p2.test.ts",
+    "name": "installs Canvas from the catalog with working commands and its authoring skill",
+    "platforms": ["win32"],
+    "arch": "arm64",
+    "owner": "PS-1002 / extension dependency install size",
+    "reason": "A cold catalog install of UI Canvas downloads about 485 MB of npm packages, mostly @pstdio/ui's mermaid, monaco-editor and lucide-react. On Windows ARM the dependency install alone exceeds the 30 second allowance; the same test fails there on main. Preserve the cold install, the real extension commands and the browser frame check.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41163609063",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41199524648/job/124533078659",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41199524648/job/124533078715"
+    ],
+    "removeWhen": "PS-1002 makes a cold UI Canvas install finish well inside 30 seconds on Windows ARM; then pass ten independent Windows ARM runs within the existing 30 second allowance, without retries."
   }
 ]

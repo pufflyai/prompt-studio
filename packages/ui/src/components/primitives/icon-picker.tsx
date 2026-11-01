@@ -1,5 +1,7 @@
-import { Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Icon, IconButton, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { resolveIconComponent } from "../../utils/resolve-icon-component";
 import { getIconComponent, type IconColorPickerIconOption, optionIcons } from "./icon-options";
 import { IconPickerGrid } from "./icon-picker-grid";

@@ -1,4 +1,4 @@
-import type { CanvasMeta, CanvasVariant } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
 
@@ -15,7 +15,7 @@ const meta = {
   args: { fileName: "notes.ts", filePath: "src/notes.ts" },
 } satisfies CanvasMeta<typeof FileRendererPathHeader>;
 export default meta;
-type Story = CanvasVariant<typeof meta>;
+type Story = CanvasFrame<typeof meta>;
 export const Saved: Story = {
   id: "pstdio-workbench-file-editor-save-status--saved",
 };
