@@ -12,7 +12,11 @@ interface TestPackage {
 interface Selection {
   scope?: string;
   runner?: string;
+  // Every case may be quarantined on this platform; the quarantine lane must still execute them.
+  allowQuarantineOnly?: boolean;
 }
+
+const playwrightRunners = new Set(["app", "desktop", "packaged-browser"]);
 interface TestGroup {
   owner: TestPackage;
   runner: string;
@@ -167,5 +171,12 @@ export const createPriorityPlan = (
     group.files.push(file);
     groups.set(id, group);
   }
-  return [...groups].sort(([a], [b]) => a.localeCompare(b)).flatMap(([id, group]) => groupRuns(id, group, priority));
+  return [...groups]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .flatMap(([id, group]) => groupRuns(id, group, priority))
+    .map((run) =>
+      options.allowQuarantineOnly && playwrightRunners.has(run.runner)
+        ? { ...run, command: [...run.command, "--pass-with-no-tests"] }
+        : run,
+    );
 };
