@@ -1,16 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import type { GuestHost } from "@pstdio/sdk/extensions";
+import type { GuestHost, WebviewResourceAction } from "@pstdio/sdk/extensions";
 import { createTicketCardActions } from "./ticket-card-actions";
 
+interface PendingList {
+  params: { resource: { id: string } };
+  resolve: (actions: WebviewResourceAction[]) => void;
+  reject: (reason: unknown) => void;
+}
+
+// Each list stays pending until the test answers it, so tests control arrival order.
 const createHost = () => {
   const listeners = new Set<(payload: unknown) => void>();
-  const lists: unknown[] = [];
+  const lists: PendingList[] = [];
   const host = {
     extensionId: "pstdio.pstdio-planner",
-    call: (async (method: string, params: unknown) => {
+    call: ((method: string, params: PendingList["params"]) => {
       if (method !== "resources.actions") throw new Error(`Unexpected ${method}`);
-      lists.push(params);
-      return [{ key: "run", label: "Run attempt" }];
+      return new Promise<WebviewResourceAction[]>((resolve, reject) => lists.push({ params, resolve, reject }));
     }) as GuestHost["call"],
     onEvent: (scope: string, listener: (payload: unknown) => void) => {
       if (scope !== "resources.actions") throw new Error(`Unexpected ${scope}`);
@@ -25,61 +31,114 @@ const createHost = () => {
 };
 
 const ticket = (id: string) => ({ type: "ticket", id, extensionId: "pstdio.pstdio-planner" });
+const actions = (label: string) => [{ key: label, label }];
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+const createCard = (host: ReturnType<typeof createHost>["host"]) => {
+  const shown: string[] = [];
+  const errors: string[] = [];
+  const card = createTicketCardActions(host, {
+    onActions: (listed) => shown.push(listed.map(({ label }) => label).join()),
+    onError: (reason) => errors.push(String(reason)),
+  });
+  return { card, shown, errors };
+};
+
 describe("timeline ticket card actions", () => {
-  test("cards nobody touches never list their actions, however often the host reports changes", async () => {
+  test("host changes never make drawn cards list again until someone uses one", async () => {
     const { host, lists, emitChanged } = createHost();
-    const cards = Array.from({ length: 40 }, () => createTicketCardActions(host, { onActions: () => {} }));
+    const cards = Array.from({ length: 40 }, (_, index) => {
+      const { card } = createCard(host);
+      card.load(ticket(`t${index}`));
+      card.load(ticket(`t${index}`));
+      return card;
+    });
+    expect(lists).toHaveLength(40);
+    for (const list of lists) list.resolve(actions("run"));
 
     for (let change = 0; change < 25; change++) emitChanged();
     await settle();
 
-    expect(lists).toHaveLength(0);
+    expect(lists).toHaveLength(40);
+    cards[0]!.refresh(ticket("t0"));
+    expect(lists).toHaveLength(41);
     for (const card of cards) card.dispose();
   });
 
-  test("a card lists its actions once when it is about to be used, and again only after a change", async () => {
+  test("using a card lists again only after a change", async () => {
     const { host, lists, emitChanged } = createHost();
-    const loaded: unknown[] = [];
-    const card = createTicketCardActions(host, { onActions: (actions) => loaded.push(actions) });
+    const { card, shown } = createCard(host);
 
-    card.prepare(ticket("t1"));
-    card.prepare(ticket("t1"));
+    card.load(ticket("t1"));
+    lists[0]!.resolve(actions("run"));
     await settle();
-    expect(lists).toEqual([{ operation: "list", resource: ticket("t1") }]);
-    expect(loaded).toEqual([[{ key: "run", label: "Run attempt" }]]);
-
-    emitChanged();
-    emitChanged();
-    await settle();
+    card.refresh(ticket("t1"));
     expect(lists).toHaveLength(1);
 
-    card.prepare(ticket("t1"));
+    emitChanged();
+    card.refresh(ticket("t1"));
+    card.refresh(ticket("t1"));
+    lists[1]!.resolve(actions("run,review"));
     await settle();
+
+    expect(lists).toHaveLength(2);
+    expect(shown).toEqual(["run", "run,review"]);
+    card.dispose();
+  });
+
+  test("a list that was in flight during a change still shows, and the next use lists again", async () => {
+    const { host, lists, emitChanged } = createHost();
+    const { card, shown } = createCard(host);
+
+    card.refresh(ticket("t1"));
+    emitChanged();
+    lists[0]!.resolve(actions("run"));
+    await settle();
+    expect(shown).toEqual(["run"]);
+
+    card.refresh(ticket("t1"));
     expect(lists).toHaveLength(2);
     card.dispose();
   });
 
-  test("a card shows the actions of the ticket it currently draws", async () => {
+  test("only the newest list reaches the card, whatever order the answers arrive in", async () => {
+    const { host, lists, emitChanged } = createHost();
+    const { card, shown, errors } = createCard(host);
+
+    card.refresh(ticket("t1"));
+    emitChanged();
+    card.refresh(ticket("t1"));
+    card.refresh(ticket("t2"));
+    lists[2]!.resolve(actions("t2"));
+    lists[0]!.reject(new Error("old failure"));
+    lists[1]!.resolve(actions("t1"));
+    await settle();
+
+    expect(lists.map(({ params }) => params.resource.id)).toEqual(["t1", "t1", "t2"]);
+    expect(shown).toEqual(["t2"]);
+    expect(errors).toEqual([]);
+    card.dispose();
+  });
+
+  test("a failed list is reported and the next use tries again", async () => {
     const { host, lists } = createHost();
-    const card = createTicketCardActions(host, { onActions: () => {} });
+    const { card, shown, errors } = createCard(host);
 
-    card.prepare(ticket("t1"));
+    card.load(ticket("t1"));
+    lists[0]!.reject(new Error("host unavailable"));
     await settle();
-    card.prepare(ticket("t2"));
-    await settle();
+    expect(errors).toEqual(["Error: host unavailable"]);
 
-    expect(lists).toEqual([
-      { operation: "list", resource: ticket("t1") },
-      { operation: "list", resource: ticket("t2") },
-    ]);
+    card.refresh(ticket("t1"));
+    lists[1]!.resolve(actions("run"));
+    await settle();
+    expect(shown).toEqual(["run"]);
     card.dispose();
   });
 
   test("a removed card stops listening for changes", () => {
     const { host, listeners } = createHost();
-    const card = createTicketCardActions(host, { onActions: () => {} });
+    const { card } = createCard(host);
 
     card.dispose();
 

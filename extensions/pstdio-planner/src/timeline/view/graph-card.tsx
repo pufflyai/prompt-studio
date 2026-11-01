@@ -78,8 +78,11 @@ export function GraphCard(props: GraphCardProps) {
         role="button"
         tabIndex={0}
         aria-label={`${row.shorthand} ${row.title}`}
-        onPointerEnter={menu.prepare}
-        onFocus={menu.prepare}
+        onPointerEnter={menu.refresh}
+        onPointerMove={menu.refresh}
+        onPointerDown={menu.refresh}
+        onFocus={menu.refresh}
+        onContextMenu={menu.refresh}
         onKeyDown={(event) => {
           if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
             event.preventDefault();

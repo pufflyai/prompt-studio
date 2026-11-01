@@ -27,12 +27,18 @@ export function useTicketCardActions(
   useEffect(() => {
     if (!host) return;
     const next = createTicketCardActions(host, {
-      onActions: setActions,
+      onActions: (listed) => {
+        setActions(listed);
+        setError(undefined);
+      },
       onError: (reason) => setError(String(reason)),
     });
     setLoader(next);
     return () => next.dispose();
   }, [host]);
+  useEffect(() => {
+    if (resource) loader?.load(resource);
+  }, [loader, resource]);
   const menuActions: ResourceContextAction[] =
     host && resource
       ? actions.map((action) => ({
@@ -61,11 +67,11 @@ export function useTicketCardActions(
       setError(String(reason));
     }
   };
-  // Hover and focus come before a context menu opens, so its actions are ready by then.
-  const prepare = () => {
-    if (resource) loader?.prepare(resource);
+  // Any use of the card replaces a list that a change has made stale; an open menu updates in place.
+  const refresh = () => {
+    if (resource) loader?.refresh(resource);
   };
-  return { actions: menuActions, prepare, onBadgeChange, error };
+  return { actions: menuActions, refresh, onBadgeChange, error };
 }
 
 export function TicketCardError(props: { error?: string }) {
