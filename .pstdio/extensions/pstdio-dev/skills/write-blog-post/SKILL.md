@@ -77,6 +77,10 @@ For SDK, extension API, and CLI changes, show what the change lets people build.
 - Run every example against the real SDK or CLI before publishing, and type-check TypeScript examples. Use the SDK's test helpers, such as `@pstdio/sdk/testing`, as a stand-in for `ctx`.
 - Follow the examples with short bullets for smaller API additions.
 
+## Copyable prompts
+
+Write prompts for readers in fenced `markdown` code blocks, not blockquotes. Introduce each prompt with a short sentence. Check the rendered block has a visible, keyboard-accessible copy icon and that it copies the complete prompt without the fence markers. Keep prompt text readable on mobile without horizontal scrolling.
+
 ## GIFs and screenshots
 
 Record real UI interactions with Playwright against an isolated stack. Use a disposable project with sample content.
