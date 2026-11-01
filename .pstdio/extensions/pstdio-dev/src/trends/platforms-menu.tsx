@@ -1,6 +1,6 @@
 import { Button, Menu, Portal } from "@chakra-ui/react";
 import { ChevronDown, Monitor } from "lucide-react";
-import { PLATFORMS, platformLabel } from "../../benchmarks/platforms";
+import { PLATFORMS, platformLabel } from "../benchmarks/platforms";
 
 interface PlatformsMenuProps {
   chosen: string[];

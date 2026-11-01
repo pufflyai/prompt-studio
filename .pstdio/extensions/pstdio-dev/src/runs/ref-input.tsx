@@ -1,8 +1,14 @@
 import { HStack, Input, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import { Chip, ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
-import { shortSha } from "../../webview/format";
-import type { RefOption } from "./fixtures";
+import { shortSha } from "../webview/format";
+
+export interface RefOption {
+  ref: string;
+  sha: string;
+  // Has results for the chosen suites and platforms, so a new run reuses them instead of measuring again.
+  measured: boolean;
+}
 
 interface RefInputProps {
   options: RefOption[];

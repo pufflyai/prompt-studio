@@ -1,7 +1,7 @@
 import { Button } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
 import { useEffect, useRef, useState } from "react";
-import { shortSha } from "../../webview/format";
+import { shortSha } from "./format";
 
 interface CopyShaProps {
   sha: string;

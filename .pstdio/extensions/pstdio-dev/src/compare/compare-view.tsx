@@ -1,5 +1,6 @@
-import { Flex, Grid, HStack, Text } from "@chakra-ui/react";
+import { Button, Flex, Grid, HStack, Text } from "@chakra-ui/react";
 import { EmptyState, SimpleCard } from "@pstdio/ui";
+import type { ReactNode } from "react";
 import type { CompareRow } from "../benchmarks/analysis";
 import { platformLabel } from "../benchmarks/platforms";
 import type { Verdict } from "../benchmarks/stats";
@@ -8,7 +9,7 @@ import { shortSha } from "../webview/format";
 import { PageFrame } from "../webview/page-frame";
 import { PlatformControl } from "../webview/platform-control";
 import { type CommitOptionView, CommitPicker } from "./commit-picker";
-import { BASE_COLOR, HEAD_COLOR, ResultsTable } from "./results-table";
+import { BASE_COLOR, HEAD_COLOR, isSingleSample, ResultsTable } from "./results-table";
 import { SampleDetail } from "./sample-detail";
 
 export type ResultFilter = "all" | Verdict;
@@ -22,10 +23,17 @@ export interface CompareViewProps {
   filter: ResultFilter;
   selected?: string;
   onBaseChange: (sha: string) => void;
+  onBaseClear: () => void;
   onHeadChange: (sha: string) => void;
   onPlatformChange: (platform: string) => void;
   onFilterChange: (filter: ResultFilter) => void;
   onSelect: (id: string) => void;
+  // Shown above the results, such as a failed sync.
+  notice?: ReactNode;
+  // Starts a run for the chosen commits that have no results yet. Measured commits are never run again.
+  onMeasure: (shas: string[]) => void;
+  // Commits an open run is already measuring.
+  measuring: string[];
 }
 
 const FILTERS: { value: ResultFilter; label: string }[] = [
@@ -44,12 +52,36 @@ export const sortRows = (rows: CompareRow[]) =>
     return ORDER[a.change.verdict] - ORDER[b.change.verdict] || Math.abs(b.change.change) - Math.abs(a.change.change);
   });
 
+// With one sample per commit there is no verdict to filter by, so the tiles summarize what was measured.
+const SingleSampleTiles = (props: { rows: CompareRow[]; compared?: number }) => {
+  const { rows, compared } = props;
+  const overBudget = rows.filter((row) => row.budget !== undefined && row.head && row.head.median > row.budget);
+  const tiles = [
+    { label: compared === undefined ? "Metrics measured" : "Metrics compared", value: compared ?? rows.length },
+    { label: "Over budget", value: overBudget.length },
+    { label: "Samples per commit", value: 1 },
+  ];
+  return (
+    <Grid templateColumns="repeat(auto-fit, minmax(12rem, 1fr))" gap="md">
+      {tiles.map((tile) => (
+        <SimpleCard key={tile.label} p="md" display="flex" flexDirection="column" gap="2xs">
+          <Text textStyle="label/S/regular" color="fg.muted">
+            {tile.label}
+          </Text>
+          <Text textStyle="heading/XL">{tile.value}</Text>
+        </SimpleCard>
+      ))}
+    </Grid>
+  );
+};
+
 export const CompareView = (props: CompareViewProps) => {
   const { commits, base, head, platform, rows, filter, selected } = props;
   const find = (sha?: string) => commits.find((commit) => commit.sha === sha);
   const missing = [find(base), find(head)].filter((commit) => commit && !commit.measured);
   const compared = rows.filter((row) => row.change);
-  const visible = sortRows(rows).filter((row) => filter === "all" || row.change?.verdict === filter);
+  const single = rows.length > 0 && rows.every(isSingleSample);
+  const visible = sortRows(rows).filter((row) => single || filter === "all" || row.change?.verdict === filter);
   const detail = rows.find((row) => metricId(row) === selected) ?? visible[0];
   const count = (value: ResultFilter) =>
     value === "all" ? compared.length : compared.filter((row) => row.change?.verdict === value).length;
@@ -68,6 +100,7 @@ export const CompareView = (props: CompareViewProps) => {
           value={find(base)}
           options={commits}
           onChange={props.onBaseChange}
+          onClear={props.onBaseClear}
         />
         <CommitPicker
           label="Head"
@@ -77,14 +110,25 @@ export const CompareView = (props: CompareViewProps) => {
           onChange={props.onHeadChange}
         />
       </Flex>
+      {props.notice}
       {missing.length ? (
         <EmptyState
           title={`${missing.map((commit) => shortSha(commit?.sha ?? "")).join(" and ")} ${missing.length > 1 ? "have" : "has"} no results on ${platformLabel(platform)}`}
-          description="Start a run for both commits from Performance › Runs. Results appear here when the run finishes."
-        />
+          description="Measure it once and the comparison fills in when the run finishes. Commits that already have results are not run again."
+        >
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => props.onMeasure(missing.map((commit) => commit?.sha ?? ""))}
+          >
+            Measure {missing.map((commit) => shortSha(commit?.sha ?? "")).join(" and ")}
+          </Button>
+        </EmptyState>
       ) : (
         <>
+          {single ? <SingleSampleTiles rows={rows} compared={base ? compared.length : undefined} /> : null}
           <Grid
+            display={single ? "none" : undefined}
             templateColumns="repeat(auto-fit, minmax(12rem, 1fr))"
             gap="md"
             role="group"
@@ -112,7 +156,12 @@ export const CompareView = (props: CompareViewProps) => {
               </SimpleCard>
             ))}
           </Grid>
-          <ResultsTable rows={visible} selected={detail ? metricId(detail) : undefined} onSelect={props.onSelect} />
+          <ResultsTable
+            rows={visible}
+            baseChosen={Boolean(base)}
+            selected={detail ? metricId(detail) : undefined}
+            onSelect={props.onSelect}
+          />
           {detail && base && head ? <SampleDetail row={detail} base={base} head={head} /> : null}
         </>
       )}

@@ -13,10 +13,16 @@ import {
 
 export const BASE_COLOR = "vis.categorical.1";
 export const HEAD_COLOR = "vis.categorical.2";
+
+// One value per commit has no spread, so it gets neither an interval nor an improved or regressed verdict.
+export const isSingleSample = (row: CompareRow) => (row.base?.samples ?? 1) <= 1 && (row.head?.samples ?? 1) <= 1;
+const overBudget = (row: CompareRow) => row.budget !== undefined && row.head !== null && row.head.median > row.budget;
+
 const COLUMNS = "minmax(11rem, 13rem) 9rem 9rem 7rem minmax(12rem, 1fr) 9rem";
 
 interface ResultsTableProps {
   rows: CompareRow[];
+  baseChosen: boolean;
   selected?: string;
   onSelect: (id: string) => void;
 }
@@ -47,7 +53,7 @@ const SummaryCell = (props: SummaryCellProps) => {
     <Stack gap="0" align="flex-end">
       <Text textStyle="label/S/regular">{formatValue(summary.median, row.unit)}</Text>
       <Text textStyle="label/XS" color="fg.muted">
-        {formatRange(summary.low, summary.high, row.unit)}
+        {summary.samples > 1 ? formatRange(summary.low, summary.high, row.unit) : "1 sample"}
       </Text>
     </Stack>
   );
@@ -101,13 +107,15 @@ const Bars = (props: { row: CompareRow }) => {
 const ChangePlot = (props: { row: CompareRow; scale: number }) => {
   const { row, scale } = props;
   const at = (share: number) => `${50 + Math.max(-50, Math.min(50, (share / scale) * 50))}%`;
-  const color = row.change ? verdictColor[row.change.verdict] : "fg.muted";
+  const single = isSingleSample(row);
+  const color = row.change && !single ? verdictColor[row.change.verdict] : "fg.muted";
   return (
     <Box position="relative" h="6" aria-hidden="true">
       <Box position="absolute" insetY="0" left="50%" borderStartWidth="1px" borderColor="border" />
       {row.change ? (
         <>
           <Box
+            display={single ? "none" : undefined}
             position="absolute"
             top="calc(50% - 1px)"
             h="0.5"
@@ -130,16 +138,44 @@ const ChangePlot = (props: { row: CompareRow; scale: number }) => {
   );
 };
 
+const ChangeCell = (props: { row: CompareRow; baseChosen: boolean }) => {
+  const { row, baseChosen } = props;
+  const once = isSingleSample(row);
+  let value = "—";
+  let color = "fg.muted";
+  let detail = row.head ? "Not measured on base" : "Not measured on head";
+  if (!baseChosen) detail = "No base chosen";
+  else if (row.change) {
+    value = once
+      ? formatPercent(row.change.change)
+      : `${verdictArrow[row.change.verdict]} ${formatPercent(row.change.change)}`;
+    color = once ? "fg" : verdictColor[row.change.verdict];
+    detail = once ? "1 sample each · no interval" : formatChangeRange(row.change);
+  }
+  if (overBudget(row)) detail = `Over the ${formatValue(row.budget ?? 0, row.unit)} budget`;
+  return (
+    <Stack gap="0" align="flex-end">
+      <Text textStyle="label/S/medium" color={color}>
+        {value}
+      </Text>
+      <Text textStyle="label/XS" color={overBudget(row) ? "fg.error" : "fg.muted"}>
+        {detail}
+      </Text>
+    </Stack>
+  );
+};
+
 export const ResultsTable = (props: ResultsTableProps) => {
-  const { rows, selected, onSelect } = props;
+  const { rows, baseChosen, selected, onSelect } = props;
   const scale = changeScale(rows);
+  const single = rows.every(isSingleSample);
   return (
     <SimpleCard overflowX="auto">
       <Box minW="5xl">
         <Grid templateColumns={COLUMNS} gap="md" px="md" py="sm" textStyle="label/XS" color="fg.muted" alignItems="end">
           <Text>Metric</Text>
-          <Text textAlign="end">Base median · 95% CI</Text>
-          <Text textAlign="end">Head median · 95% CI</Text>
+          <Text textAlign="end">{single ? "Base" : "Base median · 95% CI"}</Text>
+          <Text textAlign="end">{single ? "Head" : "Head median · 95% CI"}</Text>
           <Text>Base and head</Text>
           <Box position="relative" h="4">
             {[-scale, 0, scale].map((tick) => (
@@ -154,7 +190,7 @@ export const ResultsTable = (props: ResultsTableProps) => {
               </Text>
             ))}
           </Box>
-          <Text textAlign="end">Change · 95% CI</Text>
+          <Text textAlign="end">{single ? "Difference" : "Change · 95% CI"}</Text>
         </Grid>
         {rows.map((row) => {
           const id = metricId(row);
@@ -188,22 +224,15 @@ export const ResultsTable = (props: ResultsTableProps) => {
               <SummaryCell row={row} side="head" />
               <Bars row={row} />
               <ChangePlot row={row} scale={scale} />
-              <Stack gap="0" align="flex-end">
-                <Text textStyle="label/S/medium" color={row.change ? verdictColor[row.change.verdict] : "fg.muted"}>
-                  {row.change ? `${verdictArrow[row.change.verdict]} ${formatPercent(row.change.change)}` : "—"}
-                </Text>
-                <Text textStyle="label/XS" color="fg.muted">
-                  {row.change ? formatChangeRange(row.change) : "Missing on one commit"}
-                </Text>
-              </Stack>
+              <ChangeCell row={row} baseChosen={baseChosen} />
             </Grid>
           );
         })}
       </Box>
       <Text textStyle="label/XS" color="fg.muted" px="md" py="sm" borderTopWidth="1px" borderColor="border.subtle">
-        Bars show each commit's median with its 95% confidence interval; a dashed line marks the budget. The dot is the
-        change in median; its line is the 95% bootstrap interval. Left of zero is faster or smaller. A change counts
-        only when its interval excludes zero.
+        {single
+          ? "Each commit was measured once. Bars show each value; a dashed line marks the budget. The dot is the difference between the two values. One sample is not enough evidence for a confidence interval or an improved or regressed verdict."
+          : "Bars show each commit's median with its 95% confidence interval; a dashed line marks the budget. The dot is the change in median; its line is the 95% bootstrap interval. Left of zero is faster or smaller. A change counts only when its interval excludes zero."}
       </Text>
     </SimpleCard>
   );

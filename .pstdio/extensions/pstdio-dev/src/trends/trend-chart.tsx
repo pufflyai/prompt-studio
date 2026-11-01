@@ -5,56 +5,74 @@ import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { scalePoint } from "@tanstack/charts/scales/point";
 import type { TrendMetric, TrendPoint } from "../benchmarks/analysis";
+import { PLATFORMS } from "../benchmarks/platforms";
 import { formatValue } from "../webview/format";
 
 // Charts paint with theme tokens, so they follow the light and dark themes.
 const token = (name: string) => psTheme.token.var(`colors.${name}`);
-const seriesColor = token("vis.categorical.1");
 
-interface TrendChartProps {
+// Each platform keeps one color on every chart, so the shared legend reads for all of them.
+export const platformColor = (platform: string) =>
+  token(`vis.categorical.${PLATFORMS.findIndex((entry) => entry.id === platform) + 1}`);
+
+export interface PlatformSeries {
+  platform: string;
   metric: TrendMetric;
-  versions: string[];
-  height: number;
-  compact?: boolean;
-  onFocusPoint?: (point: TrendPoint | null) => void;
 }
 
+export interface FocusedPoint extends TrendPoint {
+  platform: string;
+}
+
+interface TrendChartProps {
+  series: PlatformSeries[];
+  versions: string[];
+  height: number;
+  onFocusPoint?: (point: FocusedPoint | null) => void;
+}
+
+const pointsOf = (entry: PlatformSeries) =>
+  entry.metric.points.flatMap((point) => (point ? [{ ...point, platform: entry.platform }] : []));
+
 export const TrendChart = (props: TrendChartProps) => {
-  const { metric, versions, height, compact = false, onFocusPoint } = props;
-  const points = metric.points.filter((point): point is TrendPoint => point !== null);
-  if (!points.length)
+  const { series, versions, height, onFocusPoint } = props;
+  const measured = series
+    .map((entry) => ({ ...entry, points: pointsOf(entry) }))
+    .filter((entry) => entry.points.length);
+  const [first] = series;
+  if (!first || !measured.length)
     return (
       <Flex h={`${height}px`} align="center" justify="center">
         <Text textStyle="label/S/regular" color="fg.muted">
-          Not measured on this platform
+          Not measured on these platforms
         </Text>
       </Flex>
     );
+  const { metric } = first;
   const budget = metric.budget === undefined ? [] : [metric.budget];
+  // One platform keeps its 95% interval band; several platforms show lines only, so they stay readable.
+  const band = measured.length === 1;
   const definition = defineChart({
     marks: [
-      areaY(points, { x: "version", y1: "low", y2: "high", fill: seriesColor, fillOpacity: 0.18 }),
-      lineY(points, { x: "version", y: "median", stroke: seriesColor, strokeWidth: 2 }),
-      dot(points, {
-        x: "version",
-        y: "median",
-        fill: seriesColor,
-        r: compact ? 2 : 4,
-        stroke: token("bg"),
-        strokeWidth: 2,
+      ...measured.flatMap((entry) => {
+        const color = platformColor(entry.platform);
+        return [
+          ...(band
+            ? [areaY(entry.points, { x: "version", y1: "low", y2: "high", fill: color, fillOpacity: 0.18 })]
+            : []),
+          lineY(entry.points, { x: "version", y: "median", stroke: color, strokeWidth: 2 }),
+          dot(entry.points, { x: "version", y: "median", fill: color, r: 4, stroke: token("bg"), strokeWidth: 2 }),
+        ];
       }),
       ruleY(budget, { y: (value) => value, stroke: token("fg.muted"), strokeDasharray: "4 4", strokeWidth: 1 }),
     ],
     scales: {
-      x: {
-        scale: () => scalePoint<string>().domain(versions).padding(0.5),
-        axis: compact ? false : undefined,
-      },
+      x: { scale: () => scalePoint<string>().domain(versions).padding(0.5) },
       y: {
         scale: scaleLinear,
         nice: true,
-        grid: !compact,
-        axis: compact ? false : { ticks: { format: (value: number) => formatValue(value, metric.unit) } },
+        grid: true,
+        axis: { ticks: { format: (value: number) => formatValue(value, metric.unit) } },
       },
     },
   });
@@ -63,8 +81,8 @@ export const TrendChart = (props: TrendChartProps) => {
       <Chart
         definition={definition}
         height={height}
-        ariaLabel={`${metric.label} across releases, median with 95% confidence interval`}
-        onFocusChange={(focused) => onFocusPoint?.((focused?.datum as TrendPoint | undefined) ?? null)}
+        ariaLabel={`${metric.label} across releases, median per platform`}
+        onFocusChange={(focused) => onFocusPoint?.((focused?.datum as FocusedPoint | undefined) ?? null)}
       />
     </Box>
   );
