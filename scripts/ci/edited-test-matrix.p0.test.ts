@@ -93,3 +93,15 @@ test("the required PR gate cannot pass when an edited-test result is missing or 
     ).outcome,
   ).toBe("failure");
 });
+
+test("edited packaged tests use the hosts their suites use in nightly", () => {
+  const packages = scopeFixture().packages;
+  const feature = createEditedTestMatrix(["packages/e2e/src/packaged/boards.p2.test.ts"], packages);
+  expect(feature.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual([
+    "darwin-arm64",
+    "linux-x64",
+    "win32-x64",
+  ]);
+  const browser = createEditedTestMatrix(["packages/e2e/src/packaged/editing.p2.spec.ts"], packages);
+  expect(browser.map((row) => `${row.platform}-${row.arch}`)).toEqual(["linux-x64"]);
+});

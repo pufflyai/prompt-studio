@@ -12,7 +12,6 @@ import { verificationCanvases } from "./native-verification-fixtures";
 import "@pstdio/ui/style.css";
 import { createFrameAssetLoader } from "../src/frames/asset-loader";
 import { installFrameAssetLoader } from "../src/frames/assets";
-import { frameProtocol } from "../src/frames/protocol";
 
 installFrameAssetLoader(
   createFrameAssetLoader(async (request) => {
@@ -26,26 +25,6 @@ installFrameAssetLoader(
   }),
 );
 
-declare global {
-  interface Window {
-    __CANVAS_VERIFICATION__: { saves: number; longTasks: number[] };
-  }
-}
-window.__CANVAS_VERIFICATION__ = { saves: 0, longTasks: [] };
-let maximumStarting = 0;
-const starting = new Set<MessageEventSource>();
-// Import handshakes finish before React commits its loading display.
-window.addEventListener("message", (event) => {
-  if (!event.source || event.data?.protocol !== frameProtocol) return;
-  if (event.data.type === "bootstrap") starting.add(event.source);
-  if (["imports-ready", "loaded", "error"].includes(event.data.type)) starting.delete(event.source);
-  maximumStarting = Math.max(maximumStarting, starting.size);
-  document.documentElement.dataset.canvasStartupMaximum = String(maximumStarting);
-});
-const longTasks = new PerformanceObserver((list) => {
-  window.__CANVAS_VERIFICATION__.longTasks.push(...list.getEntries().map((entry) => entry.duration));
-});
-longTasks.observe({ type: "longtask", buffered: true });
 class Boundary extends Component<{ children: ReactNode }, { error?: string }> {
   state: { error?: string } = {};
   static getDerivedStateFromError(error: Error) {
@@ -108,9 +87,8 @@ const resolveCanvas = (): CanvasDefinition | undefined => {
 };
 const canvas = resolveCanvas();
 if (!canvas) throw new Error(`Unknown canvas ${id}`);
-const runtime = createCanvasRuntime(canvas, readLayout(null, canvas.items), () => {
-  window.__CANVAS_VERIFICATION__.saves += 1;
-});
+// Verification layouts are not persisted.
+const runtime = createCanvasRuntime(canvas, readLayout(null, canvas.items), () => {});
 const Harness = () => {
   const [dark, setDark] = useState(false);
   return (

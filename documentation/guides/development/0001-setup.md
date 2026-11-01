@@ -243,8 +243,6 @@ Run the end-to-end spec for the behavior you changed:
 bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
 ```
 
-Agent-specific end-to-end behavior, including `E2E_AGENTS` and when real Claude or OpenCode sessions start, is documented in [Tests](0002-testing.md).
-
 ## Run isolated trials
 
 A trial is one validation run, for example a fresh-agent walkthrough or a reproduction. Give every trial its own name and keep everything it creates under that name, so trials cannot share state and cleanup removes only their own resources.

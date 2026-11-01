@@ -158,3 +158,10 @@ test("a queue entry runs dependency and public API checks only when its own diff
   const nightly = resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" });
   expect(nightly).toMatchObject({ license: true, publishedExtensions: true, sdkApiReport: true });
 });
+
+test("P2 packaged CLI feature workflows run on one host per OS while P1 runs on every toolchain host", () => {
+  const stable = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
+  const priorities = Object.fromEntries(stable.toolchainMatrix.map((row) => [row.platform_pkg, row.priorities]));
+  for (const host of ["cli-linux-x64", "cli-darwin-arm64", "cli-win-x64"]) expect(priorities[host]).toBe("P0,P1,P2");
+  for (const host of ["cli-linux-arm64", "cli-darwin-x64", "cli-win-arm64"]) expect(priorities[host]).toBe("P0,P1");
+});

@@ -16,11 +16,11 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.
 // Packaged harnesses expose scoped account state and a private interactive account channel.
-// harness-npm-detection.p2.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
+// harness-npm-detection.p1.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
-// packaged-canvas-install.p1.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
+// packaged-canvas-install.p2.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/workbench-package-consumer.ts checks packaged activation, scoped status persistence and overlay exports.
@@ -54,7 +54,7 @@ beforeAll(() => {
   }
 }, BUILD_TIMEOUT);
 
-// extension-browser-install.p2.test.ts installs the cached Playwright package and visits a smoke page.
+// extension-browser-install.p1.test.ts installs the cached Playwright package and visits a smoke page.
 
 test(
   "exports saved performance recordings with monitoring stopped",

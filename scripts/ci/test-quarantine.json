@@ -103,7 +103,22 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/extension-browser-install.p2.test.ts",
+    "file": "packages/e2e/src/packaged/packaged-canvas-install.p2.test.ts",
+    "name": "installs Canvas from the catalog with working commands and its authoring skill",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-932 / Canvas catalog installation",
+    "reason": "The catalog install intermittently stalls after the runtime is ready (86 assertions passed, then no output until the 30-second allowance). Identical test code passed on macOS arm64 in two earlier PR runs. The same stall was seen on Windows before its 60-second allowance. Preserve the cold install, commands, skill, preview and theme checks.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41262148435/job/124717471356",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41259951818/job/124711025694",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41258618730/job/124707099106"
+    ],
+    "removeWhen": "Find and fix the catalog install stall, then pass this complete case in ten independent macOS arm64 runs within the existing 30-second allowance, without retries."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/extension-browser-install.p1.test.ts",
     "name": "installs the smoke browser without external JavaScript runtimes",
     "platforms": ["win32"],
     "owner": "PS-907 / packaged browser installation",
@@ -116,7 +131,7 @@
   },
   {
     "runner": "packaged-bun",
-    "file": "packages/e2e/src/packaged/extension-browser-install.p2.test.ts",
+    "file": "packages/e2e/src/packaged/extension-browser-install.p1.test.ts",
     "name": "the installed Playwright cache runs a packaged extension page outside the checkout",
     "platforms": ["win32"],
     "owner": "PS-907 / packaged browser installation",
@@ -456,21 +471,6 @@
   {
     "runner": "packaged-desktop-benchmark",
     "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
-    "name": "warm attach restores the workbench within budget",
-    "platforms": ["win32"],
-    "arch": "x64",
-    "owner": "PS-907 / desktop performance",
-    "reason": "The original nightly and focused final-source run intermittently leave initial Sessions Main empty. Identical-source diagnosis passed; a separate baseline also exceeded the unchanged 3000 ms attach budget.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/40995061329",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41025270739",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41026983012"
-    ],
-    "removeWhen": "Fix initial Sessions view mounting and warm attach timing, then verify the unchanged workload in the first Windows execution before restoring the stable gate."
-  },
-  {
-    "runner": "packaged-desktop-benchmark",
-    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
     "name": "cold start with an empty home shows the workbench within budget",
     "platforms": ["win32"],
     "arch": "x64",
@@ -625,20 +625,6 @@
     "removeWhen": "Fix Intel sidecar-crash recovery latency and complete the full first-attempt native workload with automatic recovery UI below 500 ms, native measurements, and all recovery assertions intact."
   },
   {
-    "runner": "packaged-desktop-benchmark",
-    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
-    "name": "warm attach restores the workbench within budget",
-    "platforms": ["darwin"],
-    "arch": "x64",
-    "owner": "PS-932 / desktop performance",
-    "reason": "User-authorized release quarantine on 2026-10-31. Intel warm attach measured 4225 ms against the unchanged 3000 ms budget; subsequent setup evidence also exposed the theme-picker race, now fixed. Retain the complete saved workbench workload and native CPU/memory evidence.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41243502506/job/124662175838",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/41245408313"
-    ],
-    "removeWhen": "Fix Intel warm-attach latency and complete the unchanged saved-project, Sessions, theme and Side Panel workload with native evidence below the 3000 ms launch budget in its first native execution."
-  },
-  {
     "runner": "packaged-desktop",
     "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
     "name": "starts without editors and serves both authenticated transport paths",
@@ -652,6 +638,20 @@
   {
     "runner": "packaged-desktop",
     "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "starts without editors and serves both authenticated transport paths",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-932 / Intel desktop lifecycle",
+    "reason": "Hosted Intel macOS sometimes exceeds the existing 60-second allowance while real default extensions install: identical test code passed in one PR run and timed out in the next, after three earlier Intel timeouts between 2026-10-26 and 2026-10-31. Retain the empty home, real default installs, transport/lifecycle assertions and cleanup.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41258618730/job/124707099160",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41259951818/job/124711025595"
+    ],
+    "removeWhen": "Fix cold default-extension installation on hosted Intel macOS and complete this entire lifecycle case in its first native execution within the unchanged 60000 ms allowance, without prewarming, fewer extensions or retries."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
     "name": "promotes ownership, detaches, and preserves data through a warm relaunch",
     "platforms": ["win32"],
     "arch": "x64",
@@ -659,5 +659,19 @@
     "reason": "User-authorized release quarantine on 2026-10-31 with no execution allowance above 60 seconds. The signed Windows release candidate waits for cold Performance extension dependencies past the existing 60-second deadline. Retain the empty home, real default installs, transport/lifecycle assertions and cleanup.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/41234623888"],
     "removeWhen": "Fix cold Windows default-extension installation and complete this entire lifecycle case in its first native execution within the unchanged 60000 ms allowance, without prewarming, fewer extensions or retries."
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "promotes ownership, detaches, and preserves data through a warm relaunch",
+    "platforms": ["darwin"],
+    "owner": "PS-932 / macOS desktop lifecycle",
+    "reason": "Times out intermittently on both hosted macOS architectures (Intel 4 and Apple Silicon 3 failures from 2026-10-28 to 2026-11-01, with 30, 45 and 60 second allowances). Identical test code passed on both architectures in earlier runs of the same PR. Preserve ownership promotion, detach, data preservation and relaunch assertions.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41263904557/job/124722745543",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41227243185/job/124614013916",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41200165464/job/124538114747"
+    ],
+    "removeWhen": "Find the slow relaunch phase on macOS, fix it, then pass this complete case in ten independent runs on each macOS architecture within its existing allowance, without retries."
   }
 ]

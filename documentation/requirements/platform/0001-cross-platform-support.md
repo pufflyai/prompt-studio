@@ -76,7 +76,7 @@ Git Bash dependency is needed.
 
 The packaged desktop test `clients/desktop/src/e2e/packaged-harness-detection.p2.spec.ts`
 checks discovery from a directory containing spaces. It uses native executables on
-Windows and login-shell setup on POSIX. `packages/e2e/src/packaged/harness-npm-detection.p2.test.ts`
+Windows and login-shell setup on POSIX. `packages/e2e/src/packaged/harness-npm-detection.p1.test.ts`
 checks npm command shims on `PATH`.
 
 ### 4. Path Separator Handling
