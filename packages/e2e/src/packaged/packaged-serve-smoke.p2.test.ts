@@ -33,7 +33,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-planner-timeline-smoke.ts checks side-panel attention actions without leaving the board or timeline.
 // packaged-lab-selection.p2.spec.ts checks tabless selection, retained frames, shared edits and saved transforms.
 // packaged-scribble-pages.p2.spec.ts checks native Scribble pages, drafts, favorites and group operations.
-// performance-observer.p2.test.ts checks native CPU units and memory in the compiled observer.
+// performance-observer.p2.test.ts checks native CPU units and memory through the compiled observer's direct startup path.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
 // packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.

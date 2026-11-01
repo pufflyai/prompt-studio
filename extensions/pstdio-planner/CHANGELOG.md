@@ -1,5 +1,44 @@
 # pstdio-planner
 
+## 0.46.0
+
+_2026-10-31_
+
+### Minor Changes
+
+- 4eeef83: Declare and verify supported extension API baselines for independently published core extensions.
+- 9057d87: Offer reusable browser panel views while keeping Tickets and Timeline pages tabless.
+- 2ff78f4: Add shared keyboard actions and contextual targets across core extensions and repository tools, with G R for Scribble navigation.
+- 389553b: Remember Timeline milestone visibility and collapsed tracks and milestones per project.
+- 2ff78f4: Add one default shortcut per resource creation and navigation action through existing UI flows.
+- 4eeef83: Keep extension files in the full-ID `.pstdio/extension-storage/pstdio.<name>/` folder; earlier name-only folders are not read.
+- 1051151: Stop a paused Auto Build run and cancel all linked sessions and queued follow-ups.
+- 53a2847: Pause and resume the same Auto Build run and keep review requests and activity controls accessible in a scrolling popover.
+- d2d73b8: Let agents maintain Planner progress and configure Auto Build with explicit statuses, safe revisions, and execution recovery.
+- 9931aa2: Store ticket file bodies as ticket-scoped blobs instead of inside the ticket record, so large files no longer slow down or bloat ticket storage.
+- fa849fd: Keep both tag changes when two devices edit the same ticket, with one value for each single-select tag.
+
+### Patch Changes
+
+- 3d7f576: Save Auto Build settings and supervisor resets atomically with published storage APIs.
+- cc847d7: Open Needs attention beside Tickets and Timeline while preserving display choices.
+- b5d3e2c: Require canvas design updates before tickets add or change UI.
+- b5d3e2c: Replace Storybook preview tooling with native Canvas composition and critical Playwright checks; limit visual verification guidance to critical risks; distribute UI Canvas as an optional extension with a working-with-Canvas skill and dependency-scoped frame startup.
+- 2b48d68: Resolve attempt bases without rebuilding workspace creation options.
+- 9894f51: Resolve ticket links with summary-only ancestor state and one read per ancestor.
+- d54da21: Keep the ticket page's tabbed Main so its Properties menu shows again; only the Tickets list is tabless.
+- 8e004ed: Let the Auto Build canvas example keep its own pause, resume and stop state, and theme Planner canvases from their own preview.
+- f874480: Hide command-controlled harness fields in run options and explain when to explore another implementation variant.
+- 4bd155d: Refresh open ticket views after saving local ticket edits.
+- 06a74ed: Keep ticket saves fast in large projects by no longer reading every ticket after each change.
+- 5e25e20: Accept extension API 0.3, which refuses storage records over 256 KiB and commits over 4 MiB.
+- d2d73b8: Configure Auto Build with ticket filters, show colored status indicators and completion, use native workflow settings, and reuse owned workspaces for corrections.
+- d2d73b8: Configure Auto Build in one modal, show activity and waiting reasons in a popover, and share editable ticket cards with saved Timeline display options, and use request bubbles instead of a duplicate attention flag.
+- 13f7b30: Read ticket numbers from core and keep old number aliases working.
+- b86f345: Declare ticket navigation structure and board page targets before content requests, and scope ticket history reads to related sessions.
+- 4cc9445: Remove obsolete board drag settings from Planner and Extension Lab.
+- 16d0979: Use core record IDs in Planner, Reports, Notes and Artifacts and preserve stable migration imports.
+
 ## 0.45.0
 
 _2026-10-22_

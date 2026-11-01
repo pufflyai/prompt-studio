@@ -10,9 +10,9 @@ This guide prepares deployment. It does not authorize cloud resources or spendin
 ## Release images
 
 [Service containers](../../../.github/workflows/service-containers.yml) builds both
-images on relevant pull requests. The release pipeline builds the exact release
-commit, keeps the verified images as artifacts, and publishes them before completing
-the GitHub release:
+images in the release pipeline. It builds the exact release commit, keeps the verified
+images as artifacts, and publishes them before completing the GitHub release. Pull
+requests run only its fast contract and Terraform checks:
 
 - `ghcr.io/pufflyai/prompt-studio/relay`
 - `ghcr.io/pufflyai/prompt-studio/account-manager`

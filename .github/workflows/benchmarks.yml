@@ -1,5 +1,5 @@
 name: Benchmarks
-run-name: Benchmarks ${{ inputs.release_tag || inputs.commits || github.event.pull_request.head.sha }} on ${{ inputs.platforms || 'linux-x64' }}
+run-name: Benchmarks ${{ inputs.release_tag || inputs.commits }} on ${{ inputs.platforms }}
 
 # Every run measures each given commit and suite once on the same runner.
 # The Performance pages in the pstdio-dev extension start these runs and read their artifacts.
@@ -21,18 +21,9 @@ on:
       release_tag:
         description: Release to attach the results to. The release workflow sets it after publishing.
         default: ""
-  # Proves the runner still works when it changes, with a short measurement of the fastest suites.
-  pull_request:
-    paths:
-      - packages/benchmarks/**
-      - .github/workflows/benchmarks.yml
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   plan:
@@ -54,11 +45,10 @@ jobs:
       - name: Resolve commits, platforms, and suites
         id: plan
         env:
-          # A pull request measures only its head: its base may predate the result format.
-          COMMITS: ${{ inputs.commits || github.event.pull_request.head.sha }}
+          COMMITS: ${{ inputs.commits }}
           PLATFORMS: ${{ inputs.platforms || 'linux-x64' }}
-          SUITES: ${{ github.event_name == 'pull_request' && 'storage,runtime' || inputs.suites }}
-          SAMPLES: ${{ github.event_name == 'pull_request' && '1' || inputs.samples }}
+          SUITES: ${{ inputs.suites }}
+          SAMPLES: ${{ inputs.samples }}
         run: |
           set -euo pipefail
           if [ "${SAMPLES:-1}" != "1" ]; then
@@ -173,6 +163,16 @@ jobs:
           path: |
             ${{ runner.temp }}/checkouts/*/clients/desktop/test-results/packaged-benchmarks*.json
             ${{ runner.temp }}/checkouts/*/test-results/quarantine/packaged-desktop-benchmark
+          if-no-files-found: error
+
+      - name: Preserve ordered workbench benchmark quarantine evidence
+        if: ${{ !cancelled() && matrix.suite == 'workbench' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-workbench-evidence-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/checkouts/*/packages/e2e/test-results/workbench-benchmarks*.json
+            ${{ runner.temp }}/checkouts/*/test-results/quarantine/workbench-benchmark
           if-no-files-found: error
 
   # The release workflow starts this run after it publishes, so benchmarks never hold a release.

@@ -154,7 +154,8 @@ test("reports a failed tab write and recovers when the next tab change can be sa
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
-    app = await launchPackagedApp(home);
+    // Tab persistence uses no agent harness; default extension installs would only delay project creation.
+    app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
     const first = await createPackagedProject(app, "First project");
     const second = await createPackagedProject(app, "Second project");
     const blockedWrite = join(home, "electron-user-data", "project-tabs.json.tmp");

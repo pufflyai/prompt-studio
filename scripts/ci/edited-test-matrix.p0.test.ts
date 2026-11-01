@@ -1,9 +1,15 @@
 import { expect, test } from "bun:test";
 import { scopeFixture } from "./ci-scope.test-fixture";
-import { createEditedTestMatrix, editedTestFiles } from "./edited-test-matrix";
+import { createEditedTestMatrix } from "./edited-test-matrix";
 import { resolveCiScope } from "./pull-request-ci-scope";
 import { plannedCiJobs } from "./required-ci-jobs";
 import { evaluateCiGate } from "./test-policy";
+
+test("edited CLI shutdown checks install the browser engines they exercise", () => {
+  const rows = createEditedTestMatrix(["packages/e2e/src/cli/close.p1.test.ts"], scopeFixture().packages);
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ runner: "cli", browser: true });
+});
 
 test("edited native desktop tests retain every stable desktop platform", () => {
   const file = "clients/desktop/src/e2e/packaged-recovery.p2.spec.ts";
@@ -57,16 +63,6 @@ test("edited native benchmarks check platform-specific behavior before the PR ca
     scopeFixture().packages,
   );
   expect(backend.map((row) => row.platform).sort()).toEqual(["darwin", "linux", "win32"]);
-});
-
-test("test fixture edits select their owner tests and deleted tests are not scheduled", () => {
-  const input = scopeFixture();
-  const selected = editedTestFiles(
-    input.tests,
-    ["packages/e2e/src/ui/helpers/camera.ts", "removed.p2.spec.ts"],
-    input.packages,
-  );
-  expect(selected).toEqual(input.tests.filter((file) => file.startsWith("packages/e2e/")).sort());
 });
 
 test("the required PR gate cannot pass when an edited-test result is missing or fails", () => {

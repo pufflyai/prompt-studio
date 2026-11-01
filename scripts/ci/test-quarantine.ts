@@ -79,6 +79,7 @@ const browserReports: Record<string, string> = {
   "playwright-ui": "packages/e2e/test-results/ui-quarantine/results.json",
   "packaged-desktop": "clients/desktop/test-results/packaged-quarantine-readiness.json",
   "packaged-desktop-benchmark": "clients/desktop/test-results/packaged-benchmarks-quarantine.json",
+  "workbench-benchmark": "packages/e2e/test-results/workbench-benchmarks-quarantine.json",
 };
 export const browserQuarantineReportPath = (runner: string) => {
   const path = browserReports[runner];

@@ -1,6 +1,6 @@
 {
   "name": "@pstdio/canvas",
-  "version": "0.45.0",
+  "version": "0.46.0",
   "description": "Build and watch a project's .canvas.tsx files for UI Canvas.",
   "repository": {
     "type": "git",

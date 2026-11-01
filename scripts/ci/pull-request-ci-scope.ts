@@ -1,8 +1,8 @@
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import { basename } from "node:path";
 import { changedFiles } from "./changed-files";
 import { affectedPackages } from "./ci-packages";
-import { createEditedTestMatrix, editedTestFiles } from "./edited-test-matrix";
+import { createEditedTestMatrix } from "./edited-test-matrix";
 import { partitionPackageChecks } from "./package-check-matrix";
 import { productionDesktopCheckPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
@@ -24,6 +24,9 @@ interface CiScopeInput {
 const documentation = (file: string) =>
   /\.(md|mdx|txt)$/.test(file) || file.startsWith("design/") || file === "LICENSE";
 
+const sharedBuildInput = (file: string) =>
+  file.startsWith("scripts/build/") || ["scripts/release/stage-package.ts", "scripts/test-setup.ts"].includes(file);
+
 const stageFor = (event: string, production: boolean, profile?: string) => {
   if (production) return "full";
   if (event === "pull_request") return "pull_request";
@@ -31,58 +34,69 @@ const stageFor = (event: string, production: boolean, profile?: string) => {
   return "merge_queue";
 };
 
+const prioritiesFor = (stage: ReturnType<typeof stageFor>): TestPriority[] => {
+  if (stage === "full") return ["P0", "P1", "P2"];
+  return stage === "merge_queue" ? ["P0", "P1"] : ["P0"];
+};
+
+// These checks depend only on the files they read. A queue entry diffs against the entry ahead
+// of it, which already checked its own changes, so PRs and the queue check only their own diff.
+const runsFileCheck = (stage: ReturnType<typeof stageFor>, touched: boolean) =>
+  stage === "full" || (stage !== "main" && touched);
+
 export const resolveCiScope = (input: CiScopeInput) => {
   const { event, labels, changedFiles, packages, tests, profile, releaseChannel = "stable" } = input;
   for (const file of tests) priorityFromFile(file);
   const production = profile === "production" || (event === "workflow_dispatch" && profile !== "merge_queue");
   const stage = stageFor(event, production, profile);
   const code = changedFiles.filter((file) => !documentation(file));
-  const shared = code.some(
-    (file) => file.startsWith("scripts/") || !packages.some((pkg) => file.startsWith(`${pkg.dir}/`)),
-  );
+  const shared = code.some((file) => sharedBuildInput(file) || !packages.some((pkg) => file.startsWith(`${pkg.dir}/`)));
   let affectedOwners = affectedPackages(packages, code);
   if (shared || stage !== "pull_request") affectedOwners = packages.map((pkg) => pkg.name).sort();
   if (stage === "main") affectedOwners = [];
-  let priorities: TestPriority[] = ["P0", "P1"];
-  if (stage === "pull_request") priorities = ["P0"];
-  if (production) priorities = ["P0", "P1", "P2"];
-  const matrices = createTestMatrices(tests, packages, affectedOwners, priorities);
-  const browserSmoke = stage === "main";
-  const clientMatrix = productionDesktopCheckPlatforms(production ? releaseChannel : "nightly")
-    .filter((row) => production || row.platform !== "win32")
-    .map((row) => ({ ...row, os: row.platform === "linux" ? "ubuntu-latest" : row.os, tests: true }));
+  const publicApi = code.some((file) => /^packages\/(sdk|ui|pstdio-api-contracts)\//.test(file));
+  const extensions = code.some((file) => file.startsWith("extensions/"));
+  const matrices = createTestMatrices(tests, packages, affectedOwners, prioritiesFor(stage));
+  const componentMatrix = stage === "merge_queue" ? [] : matrices.componentMatrix;
+  const browserSmoke = stage === "main" || stage === "merge_queue";
+  const clientMatrix = (production ? productionDesktopCheckPlatforms(releaseChannel) : []).map((row) => ({
+    ...row,
+    os: row.platform === "linux" ? "ubuntu-latest" : row.os,
+    tests: true,
+  }));
   return {
     stage,
     production,
     sourceCoverage: production && releaseChannel === "nightly",
     affectedOwners,
+    // Only tests edited by the PR run beyond P0. Support files, fixtures and runners rely on
+    // the affected P0 checks here and on the complete suites in nightly and stable validation.
     editedMatrix:
-      stage === "pull_request" ? createEditedTestMatrix(editedTestFiles(tests, code, packages), packages) : [],
+      stage === "pull_request"
+        ? createEditedTestMatrix(
+            tests.filter((file) => code.includes(file)),
+            packages,
+          )
+        : [],
     ...matrices,
-    appMatrix: stage === "pull_request" ? [] : matrices.appMatrix,
-    packagedMatrix: stage === "pull_request" ? [] : matrices.packagedMatrix,
+    appMatrix: production ? matrices.appMatrix : [],
+    packagedMatrix: production ? matrices.packagedMatrix : [],
+    componentMatrix,
     clientMatrix,
     toolchainMatrix: productionToolchainPlatforms(releaseChannel),
-    componentChecks: matrices.componentMatrix.length > 0,
+    componentChecks: componentMatrix.length > 0,
     databaseTests: matrices.databaseMatrix.length > 0,
     packageChecks: affectedOwners.length > 0,
     packageMatrix: partitionPackageChecks(affectedOwners),
     lernaFilter: affectedOwners.map((name) => `--scope ${name}`).join(" "),
     dockerBuild: production,
     harnessCli: production,
-    license:
-      stage !== "main" &&
-      (stage !== "pull_request" || changedFiles.some((file) => ["package.json", "bun.lock"].includes(basename(file)))),
-    publishedExtensions:
-      stage !== "main" &&
-      (shared ||
-        stage !== "pull_request" ||
-        code.some((file) => /^(extensions|packages\/(sdk|ui|pstdio-api-contracts))\//.test(file))),
-    sdkApiReport:
-      stage !== "main" &&
-      (shared ||
-        stage !== "pull_request" ||
-        code.some((file) => /^packages\/(sdk|ui|pstdio-api-contracts)\//.test(file))),
+    license: runsFileCheck(
+      stage,
+      changedFiles.some((file) => ["package.json", "bun.lock"].includes(basename(file))),
+    ),
+    publishedExtensions: runsFileCheck(stage, shared || publicApi || extensions),
+    sdkApiReport: runsFileCheck(stage, shared || publicApi),
     browserSmoke,
     deepDiagnostics: labels.includes("ci:full"),
   };
@@ -99,9 +113,9 @@ if (import.meta.main) {
     labels: JSON.parse(process.env.PULL_REQUEST_LABELS || "[]"),
     changedFiles: changedFiles(
       process.cwd(),
-      process.env.GITHUB_EVENT_NAME === "pull_request"
-        ? JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH!, "utf8")).pull_request.base.sha
-        : undefined,
+      // A PR checkout is the tested merge candidate. Event base metadata can lag
+      // main; its first parent is the actual base and excludes upstream-only edits.
+      process.env.GITHUB_EVENT_NAME === "pull_request" ? "HEAD^1" : undefined,
     ),
     packages: readWorkspacePackages(process.cwd()),
     tests: discoverTestFiles(process.cwd()),

@@ -13,7 +13,10 @@ test("refuses a second packaged runtime on an occupied loopback port", async () 
   const ownerHome = createPackagedHome();
   const contenderHome = createPackagedHome();
   try {
-    expect(await runPackagedCli(ownerHome, ["serve"])).toMatchObject({ exitCode: 0 });
+    // Port ownership does not use an agent harness, so default extension downloads stay out of this test.
+    expect(await runPackagedCli(ownerHome, ["serve"], { PSTDIO_DEFAULT_EXTENSIONS: "[]" })).toMatchObject({
+      exitCode: 0,
+    });
     const owner = await waitForDescriptor(ownerHome);
     const contender = await runPackagedCli(contenderHome, [
       "serve",

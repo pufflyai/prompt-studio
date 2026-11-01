@@ -78,9 +78,9 @@ export const requiredProductionChecks = (channel: string) => {
     "functional",
     "services",
     ...targets.flatMap((target) => [`signed-functional-${target}`, `performance-desktop-${target}`]),
-    "performance-backend-ubuntu-24.04",
-    "performance-backend-macos-15",
-    "performance-backend-windows-2025",
+    ...["storage", "runtime"].flatMap((suite) =>
+      ["ubuntu-24.04", "macos-15", "windows-2025"].map((os) => `performance-${suite}-${os}`),
+    ),
     "performance-browser-ubuntu-24.04",
     "performance-relay-ubuntu-24.04",
     "performance-navigation-ubuntu-24.04",
