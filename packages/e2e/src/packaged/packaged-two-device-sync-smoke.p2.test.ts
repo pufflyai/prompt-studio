@@ -192,12 +192,15 @@ test(
         "written on the first device",
       );
 
+      phase("downloaded records read");
       const folderAfterSelection = await second.client.projects.folder(project.id);
       expect(folderAfterSelection.path).toBeTruthy();
       const files = join(folderAfterSelection.path!, ".pstdio/extension-storage/example.shared-notes/documents");
       expect(await Bun.file(join(files, "note.md")).text()).toBe("# Shared note");
       expect(await Bun.file(join(files, "artifact.html")).text()).toBe("<h1>Shared artifact</h1>");
+      phase("downloaded files read");
       await second.command(project.id, "write-file", { path: "new-note.md", content: "Written on the new machine" });
+      phase("new file written on second");
       await waitFor(async () => {
         try {
           return (
@@ -208,6 +211,7 @@ test(
           return false;
         }
       });
+      phase("new file reached first");
       expect((await second.client.projects.open(project.id)).root_path).toBe(folderAfterSelection.path);
       await second.reach(project.id, "synced");
 
@@ -217,13 +221,17 @@ test(
       await second.client.projects.update(project.id, { name: "Shared notes (local)" });
       await first.reach(project.id, "local");
       await second.reach(project.id, "local");
+      phase("both devices local");
       await write(first, project.id, "note", "edited on the first device while local");
       await write(second, project.id, "caption", "edited on the second device while local");
 
       await first.client.account.syncProject(project.id);
+      phase("first syncProject returned");
       await second.client.projects.update(project.id, { name: "Shared notes" });
+      phase("second project refreshed");
       await first.reach(project.id, "synced");
       await second.reach(project.id, "synced");
+      phase("both devices resynced");
       const merged = async (device: typeof first) => {
         const records = await device.command<Record<string, StorageRecord>>(project.id, "read");
         return [records.note?.value, records.caption?.value];

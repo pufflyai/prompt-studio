@@ -74,6 +74,7 @@ export const startRelayRuntime = async (input: {
   };
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+    if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     for (const owners of coreOwners) owners.ensure(config);
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
@@ -202,12 +203,15 @@ export const startRelayRuntime = async (input: {
           .filter(([id, current]) => canonicalJson(desired.get(id) ?? null) !== canonicalJson(current))
           .map(([id]) => id),
       );
+      // Events emitted while owners drain must not recreate them on the old shared connection.
+      for (const id of changed) {
+        workbenches.delete(id);
+        access.delete(id);
+      }
       for (const id of changed) {
         for (const owners of coreOwners) await owners.remove(id);
         // Closing the project's connection also ends its extension owners' runs before they stop below.
         await projects.remove(id);
-        workbenches.delete(id);
-        access.delete(id);
       }
       // Publish new owners before awaiting shutdown so an older in-flight start cannot take ownership.
       for (const [id, connection] of desired)
