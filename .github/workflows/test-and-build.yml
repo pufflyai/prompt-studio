@@ -1453,6 +1453,10 @@ jobs:
       - validation_results
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      statuses: write
     steps:
       - uses: actions/checkout@v5
         with:
@@ -1485,6 +1489,14 @@ jobs:
           name: production-evidence-functional-attempt-${{ github.run_attempt }}
           path: production-evidence/functional.json
           if-no-files-found: error
+      # A PR's check list leaves out runs started by workflow_dispatch, so the version PR's
+      # dispatched checks also report this result as the required ci_passed commit status.
+      - name: Report the result on the version PR
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && needs.scope.outputs.stage == 'pull_request' }}
+        env:
+          STATE: ${{ needs.validation_results.result == 'success' && 'success' || 'failure' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f state="$STATE" -f context=ci_passed -f target_url="$RUN_URL"
     env:
       CI_PRIORITY: P1
       GH_TOKEN: ${{ github.token }}
