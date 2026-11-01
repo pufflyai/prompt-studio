@@ -16,9 +16,9 @@ test("frame parameters and playback stay independent across themes and movement"
   await dialog.getByRole("spinbutton").fill("7");
   await dialog.getByRole("spinbutton").press("Tab");
   await expect(output).toContainText('"amount":7');
-  await dialog.getByRole("switch").click();
-  await dialog.getByRole("combobox").click();
-  await surface.getByRole("option", { name: "Bright", exact: true }).click();
+  await dialog.getByRole("checkbox", { name: "Enabled" }).press("Space");
+  await dialog.getByRole("button", { name: "Calm", exact: true }).click();
+  await surface.getByRole("menuitemradio", { name: "Bright", exact: true }).click();
   await expect(output).toContainText('"enabled":false');
   await expect(output).toContainText('"treatment":"bright"');
   await expect(second.frameLocator("iframe").locator("[data-parameters-preview]")).toContainText('"amount":2');
@@ -38,4 +38,41 @@ test("frame parameters and playback stay independent across themes and movement"
   await first.getByRole("button", { name: "Move First", exact: true }).press("ArrowRight");
   await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
   await expect(surface.locator("[data-ui-canvas-error]")).toHaveCount(0);
+});
+
+// Critical: scrubbing must not animate a shader layer whose speed is zero.
+test("zero-speed shader layers stay stationary while the frame seeks", async ({ page }) => {
+  await page.goto("/?frame=design%2Fshaders%2Fsection-hatch%2Fshader.canvas.tsx%23Preview");
+  const shell = page.frameLocator("[data-verification-host]");
+  const panel = shell.locator("[data-canvas-item]");
+  const frame = panel.frameLocator("iframe");
+  await expect(panel.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
+  await panel.locator("[data-canvas-select]").click();
+  await panel.getByRole("button", { name: "Parameters", exact: true }).click();
+  const drift = shell
+    .getByRole("dialog")
+    .getByText("Pattern: Drift", { exact: true })
+    .locator("../..")
+    .getByRole("spinbutton");
+  await drift.fill("0");
+  await drift.press("Tab");
+  const hatch = frame.locator('[data-motion="noise-counter hatch"]').first();
+  await expect
+    .poll(() =>
+      hatch.evaluate((element) =>
+        element
+          .getAnimations()
+          .some(
+            (animation) =>
+              (animation as CSSAnimation).animationName.includes("hatch-") &&
+              (animation as CSSAnimation).animationName.endsWith("-stationary"),
+          ),
+      ),
+    )
+    .toBe(true);
+  await page.keyboard.press("Escape");
+  const initial = await hatch.evaluate((element) => getComputedStyle(element).transform);
+  await panel.getByRole("slider", { name: "Time", exact: true }).press("PageUp");
+  await expect(panel.locator("[data-frame-playback]")).not.toContainText("0.00 / 30.00");
+  await expect(hatch).toHaveCSS("transform", initial);
 });

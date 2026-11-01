@@ -1,6 +1,6 @@
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
-import type { SceneProps } from "motion-lab/kit";
-import { Activity, Composer, Message, reveal, SessionWindow, ToolTimeline, timings } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { Activity, Composer, Message, reveal, SessionWindow, ToolTimeline, timings } from "../../kit";
 
 export const ChatTurn = (props: SceneProps) => {
   const { time } = props;

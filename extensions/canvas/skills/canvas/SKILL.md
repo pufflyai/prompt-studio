@@ -44,6 +44,16 @@ export const Small = { name: "Small size", args: { children: "Save", size: "sm" 
 - **Theme** changes one frame's theme and keeps its input. **Reset frame** starts it fresh.
 - When a file changes, the watcher rebuilds and UI Canvas reloads only that canvas's frames.
 
+## Parameters, playback, and saved versions
+
+Declare `controls` on a frame or default export: `number` with min/max/step, `boolean`, or `select` with value/label options. Args supply initial values. Parameters updates only that frame and keeps React state. Reset restores the selected version. Temporary experiments do not edit source.
+
+Declare `motion: { duration, fps?, markers? }` to drive a `time` arg in seconds from independent play/pause, scrub, speed, and loop-range controls. Derive animation from time so scrubbing works.
+
+Declare a literal `save: { file: "default.json", key: "values" }` for explicit saving and named JSON versions beside the canvas. Keep primitive keys/types consistent across versions. Select, save, save as new, rename, or delete versions not imported by the source. Errors preserve edits. Agents use `pst canvas parameters <action> --help` for the same operations.
+
+For this repository's motion authoring, read `design/motion/README.md` and use `pst canvas study`. For shaders, read `design/shaders/README.md` and use `pst canvas shaders` and `pst canvas version`. Keep legacy Lab data bridges installed while importing old review choices; they no longer provide pages or compilers.
+
 ## Arrange and navigate
 
 Drag a frame's grip, or focus it and use arrow keys; Shift moves farther. Drag empty space, hold Space while dragging, or middle-drag to pan. Use Ctrl/Meta + wheel or pinch to zoom around the pointer. With canvas focus, use arrow keys to pan, `+`/`-` to zoom, `F` to fit, and `0` to reset.

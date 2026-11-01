@@ -62,6 +62,14 @@ pst canvas open --canvas src/button.canvas.tsx
 pst canvas layout read --canvas src/button.canvas.tsx
 ```
 
+## Parameters, motion, and shader versions
+
+Project frames can advertise number, toggle, and choice controls. Select a frame and open **Parameters**. Edits stay local across themes, moves, and camera gestures. Reset parameters restores its saved values. A `motion` declaration adds Play/Pause, Restart, precise time, speed, markers, and a loop range. Each frame starts paused and owns its clock.
+
+A literal `save: { file: "default.json", key: "values" }` declaration enables selection, explicit saving, and named JSON versions beside the canvas. The menu can rename or delete versions, while protecting the source's imported version. Errors preserve edits for retry. Agents use `pst canvas parameters <action> --help` for the same actions.
+
+This repository's motion and shader studies now use this workflow. Their source paths remain stable. The former Lab extensions retain read-only commands to import saved review and comparison choices; Canvas owns current commands and storage. The project builder owns compilation. Ordinary projects need neither legacy bridge installed.
+
 ## How frames load
 
 The `preview.assets` command reads the modules a frame needs from the build folder, using the module graph in the build's `manifest.json`. The view decodes shared modules once and reuses them across frames. Each frame is an opaque sandbox with its own React, providers, theme and state. A frame that shows UI Canvas itself asks its own host for code through the `@pstdio/canvas` frame bridge.

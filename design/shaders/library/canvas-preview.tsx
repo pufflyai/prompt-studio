@@ -14,7 +14,11 @@ const ShaderCanvas = (props: { shader: string; values: ShaderValues; time: numbe
     const update = () => {
       for (const animation of root.current?.getAnimations({ subtree: true }) ?? []) {
         animation.pause();
-        animation.currentTime = clock.time() * 1000;
+        // A zero-speed layer retains its initial phase even while other layers seek.
+        animation.currentTime =
+          animation instanceof CSSAnimation && animation.animationName.endsWith("-stationary")
+            ? 0
+            : clock.time() * 1000;
       }
     };
     update();
@@ -41,7 +45,7 @@ export const shaderCanvas = (id: string, config: { name: string; values: ShaderV
         field.id,
         {
           type: "number",
-          label: field.name,
+          label: `${group.title}: ${field.name}`,
           description: field.description,
           min: field.min,
           max: field.max,

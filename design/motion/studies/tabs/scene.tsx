@@ -1,7 +1,7 @@
 import { Box, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import { FileText, MousePointer2, X } from "lucide-react";
-import type { SceneProps } from "motion-lab/kit";
-import { duration, PanelSurface, progress, timings, track, WorkbenchFrame } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { duration, PanelSurface, progress, timings, track, WorkbenchFrame } from "../../kit";
 
 const names = ["README.md", "motion.ts", "chat.tsx", "panels.tsx", "notes.md"];
 const closeTimes = [Infinity, 1, 1.5, 2, Infinity];

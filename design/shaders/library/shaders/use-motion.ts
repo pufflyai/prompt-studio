@@ -24,14 +24,16 @@ export const useMotion = (
     });
     previous.current = next;
     revision.current += 1;
+    const motionName = (item: Motion) =>
+      `${id}-${item.name}-${revision.current}${item.durationSeconds ? "" : "-stationary"}`;
     // New animation names restart the CSS timelines at their preserved negative delays.
     const animation = (item: Motion) => {
-      const name = `${id}-${item.name}-${revision.current}`;
+      const name = motionName(item);
       return `${name} ${item.durationSeconds || 1}s ${item.timing} ${item.delaySeconds}s infinite ${item.direction} both`;
     };
     const keyframes = next
       .map((item) => {
-        const name = `${id}-${item.name}-${revision.current}`;
+        const name = motionName(item);
         const { x, y } = item.distance;
         // Independent properties let inverse mask motion share a content layer with pattern motion.
         if (item.name.endsWith("-counter"))

@@ -1,6 +1,6 @@
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 import { MousePointer2 } from "lucide-react";
-import type { SceneProps } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
 import {
   Composer,
   duration,
@@ -11,7 +11,7 @@ import {
   timings,
   track,
   WorkbenchFrame,
-} from "motion-lab/kit";
+} from "../../kit";
 export const Panels = (props: SceneProps) => {
   const { time } = props;
   const side = track(time, [

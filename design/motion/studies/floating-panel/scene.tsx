@@ -1,8 +1,8 @@
 import { Box, Flex, HStack, IconButton, Spacer, Stack, Text } from "@chakra-ui/react";
 import { BubbleButton, Header, PANEL_HEADER_CONTROL_SIZE } from "@pstdio/ui";
 import { MessageCircle, Minus, SquareArrowOutUpRight } from "lucide-react";
-import type { SceneProps } from "motion-lab/kit";
-import { Composer, duration, Message, PanelSurface, PanelTab, timings, track, WorkbenchFrame } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { Composer, duration, Message, PanelSurface, PanelTab, timings, track, WorkbenchFrame } from "../../kit";
 
 const toggles = [
   { at: 1, open: true },
