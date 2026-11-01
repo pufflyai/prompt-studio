@@ -180,15 +180,19 @@ test.skipIf(process.platform !== "win32")("runs a standalone PowerShell script",
 test("stops a timed-out wrapper and the child it started", async () => {
   const { command, prefix, script } = fixture("npm", "hanging-cli");
   const pidFile = join(prefix, "child.pid");
+  // Write the PID under a temporary name, then rename it: the deadline can stop the child after
+  // writeFileSync creates the file and before it writes, leaving an empty file.
   writeFileSync(
     script,
-    `require('node:fs').writeFileSync(${JSON.stringify(pidFile)}, String(process.pid)); setInterval(() => {}, 1000);`,
+    `const fs = require('node:fs'); fs.writeFileSync(${JSON.stringify(`${pidFile}.tmp`)}, String(process.pid)); fs.renameSync(${JSON.stringify(`${pidFile}.tmp`)}, ${JSON.stringify(pidFile)}); setInterval(() => {}, 1000);`,
   );
   // Reading the PID file below proves the wrapper started its child before the
   // deadline, so slow startup cannot make this test pass without testing cleanup.
   const running = createProcessApi().run({ command: [command], timeoutMs: 1500 });
   await expect(running).rejects.toThrow("timed out");
   const pid = Number(await Bun.file(pidFile).text());
+  // Signal 0 and SIGKILL to PID 0 would target this test's own process group.
+  expect(pid).toBeGreaterThan(0);
   let alive = true;
   for (let attempt = 0; attempt < 30; attempt++) {
     try {

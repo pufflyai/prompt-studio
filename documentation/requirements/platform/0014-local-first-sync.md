@@ -17,7 +17,7 @@ data lives on the clients. The relay is a small service that moves encrypted dat
 between clients and keeps an encrypted copy of the latest state. It cannot read
 project content.
 
-This fits the [mission](../../../MISSION.md): extensions own their data and edits, and
+This fits the [mission](../../guidance/0001-mission.md): extensions own their data and edits, and
 the platform owns storage, sync and recovery. Extensions use the normal storage, file
 and editor APIs. They never handle encryption, merging or relay traffic, and they never
 write merge rules: data merges by its shape, and core provides record IDs, resource

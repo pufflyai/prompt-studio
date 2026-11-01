@@ -84,6 +84,40 @@ const device = (relay: ReturnType<typeof relayFixture>["relay"], limits?: { byte
   };
 };
 
+test("sync status counts a changed document without opening its content, including delete-only edits", async () => {
+  const relay = relayFixture();
+  const store = createMemoryDocumentStore();
+  let contentReads = 0;
+  const sync = createDocumentSync({
+    owner,
+    space,
+    documentId,
+    relay: relay.relay,
+    store: {
+      ...store,
+      transaction: async (owner, action) => {
+        contentReads++;
+        return store.transaction(owner, action);
+      },
+    },
+    quarantine: async () => {},
+  });
+  try {
+    await store.transaction(owner, async ({ document }) => document.getMap("values").set("title", "Saved"));
+    await sync.synchronize();
+    await store.transaction(owner, async ({ document }) => document.getMap("values").delete("title"));
+    contentReads = 0;
+    expect(await sync.status()).toMatchObject({ pending: true });
+    expect(contentReads).toBe(0);
+    await sync.synchronize();
+    contentReads = 0;
+    expect(await sync.status()).toMatchObject({ pending: false });
+    expect(contentReads).toBe(0);
+  } finally {
+    sync.close();
+  }
+});
+
 test("a one-time document download reads encrypted latest state and updates without publishing local edits", async () => {
   const f = relayFixture();
   const online = device(f.relay, { bytes: 1_048_576, updates: 1 });

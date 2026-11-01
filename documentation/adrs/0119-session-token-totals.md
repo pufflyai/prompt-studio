@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-06
 
+Status: Accepted.
+
 ## Context
 
 Extensions need token totals to build session dashboards. Usage parts live in conversation files. Reading and parsing one file per session on every refresh makes the work grow with both session count and conversation size.

@@ -25,7 +25,7 @@ export const startRelayExtension = async (input: {
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
   const access = () => createReadBoundary(signal)(input.access);
-  const documents = createExtensionDocumentSync({ config, owner, deps, access });
+  const documents = createExtensionDocumentSync({ config, owner, deps, access, statusChanged: input.statusChanged });
   const snapshot = input.snapshot;
   const repoRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "read").catch(() => null);
   const mounts = repoRoot

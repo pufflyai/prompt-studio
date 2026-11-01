@@ -28,4 +28,4 @@ pst pstdio-shader-lab version rename --shader section-hatch --version larger-pat
 pst pstdio-shader-lab version delete --shader section-hatch --version larger-patches
 ```
 
-Keep lines neutral and faint. Do not add colored glows or animated text; see `design/DESIGN.md`.
+Keep lines neutral and faint. Do not add colored glows or animated text; see `documentation/guidance/0002-design.md`.

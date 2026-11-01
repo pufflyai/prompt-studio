@@ -311,7 +311,7 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 
 | Method | What it does |
 | --- | --- |
-| `ctx.account.status()` | Returns `{ login, cloudProjects, cloudProjectsLoaded }`. `login` is `null` when this device is signed out; otherwise it has the account and device IDs, the service addresses, and the signed-in `email`. `cloudProjectsLoaded` stays `false` until the account service answered for this login. |
+| `ctx.account.status()` | Returns `{ login, cloudProjects, cloudProjectsLoaded, features, signInRequired? }`. `login` is `null` when this device is signed out; otherwise it has the account and device IDs, the service addresses, and the signed-in `email`. `cloudProjectsLoaded` stays `false` until the account service answered for this login. `signInRequired` is true after this device credential was rejected. |
 | `ctx.account.login(managerOrigin)` | Starts a native browser sign-in with the given account service and returns `{ id, url }`. Open `url` in a browser on the computer that runs Prompt Studio. |
 | `ctx.account.loginStatus(id)` | Returns `pending`, `complete`, or `failed`. |
 | `ctx.account.cancelLogin(id)` | Cancels a pending sign-in and returns `failed`. A sign-in that already finished returns `complete`. |
@@ -319,7 +319,7 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | `ctx.account.devices()` | Lists the account's devices with `name`, `platform`, `lastSeenAt`, `online`, and `current` for this device. |
 | `ctx.account.renameDevice(id, name)` | Renames a device. |
 | `ctx.account.removeDevice(id)` | Stops a device from renewing Cloud access. Removing the current device signs it out. |
-| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady }` for a project. |
+| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady, pendingItems?, download? }` for a project. |
 | `ctx.account.syncProject(projectId?)` | Syncs the project on every device of the account that has it. |
 | `ctx.account.stopProjectSync(projectId?)` | Makes the project local on every device. |
 
@@ -338,7 +338,13 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 
 Stopping and restarting sync are account-wide. Stopping keeps the project keys, the encrypted Cloud data, and each device's local copy. Edits made on several devices while the project is local merge when it syncs again.
 
-Listen to `accountEvents.projectSyncChanged` from `@pstdio/sdk/extensions` for changes. The host sends it for one project only when that project's `state` or `offlineReady` changes. Read the status once when the extension starts; the first value is not announced. The payload is `{ projectId, state, offlineReady }`. Webviews receive only the event ID, so read the status again.
+`pendingItems` counts distinct sync documents with unacknowledged local changes. Each owner metadata document, text document, and record stream is one item. Several record edits in one stream count as one item, not one item per record. A retry does not add another item. The count is absent while an owner or its directory is not known. It can be zero while the transport finishes a sync pass.
+
+`download` reports `{ completed, total }` in the same document units. A document counts as completed only after its required files are verified too. `total` is `null` while any owner directory is unknown. Once known, `Math.floor(100 * completed / total)` gives the percentage for a nonzero total. Newly discovered documents can increase the total, and reconnects can restart verification. This is verified-document progress, not bytes transferred. The fields are optional additions to API 0.3.1; older hosts omit them. Status reads use document revision metadata and indexed outbox presence, without loading owner or record content or listing every record.
+
+Listen to `accountEvents.projectSyncChanged` from `@pstdio/sdk/extensions` for changes. The host sends it for one project only when any derived status field changes, including progress while the state stays the same. Read the status once when the extension starts; the first value is not announced. The payload contains `projectId` and the status fields. Webviews receive only the event ID, so read the status again.
+
+`signInRequired` distinguishes a rejected device credential from an ordinary sign-out. It survives a host restart and clears after successful sign-in or explicit sign-out. Network loss, scheduled relay-token renewal, a removed project, and lack of early access do not set it. Local project data stays on this device.
 
 Account service failures reach the extension as a generic message, so private service details stay in the host. Device presence comes from the account service: a signed-in runtime sends a heartbeat every 15 seconds, and `online` means the service heard from the device within the last 45 seconds.
 
@@ -534,7 +540,7 @@ for (const session of sessions) {
 }
 ```
 
-`last_request_started` and `last_request_ended` describe the latest run only. `usage` sums the saved conversation's input, output, cache read and cache write tokens. It is null for sessions with no recorded usage, including old sessions until their next save. Show the number of sessions with unknown usage alongside any total. See [session token totals](../../adrs/0066-session-token-totals.md).
+`last_request_started` and `last_request_ended` describe the latest run only. `usage` sums the saved conversation's input, output, cache read and cache write tokens. It is null for sessions with no recorded usage, including old sessions until their next save. Show the number of sessions with unknown usage alongside any total. See [session token totals](../../adrs/0119-session-token-totals.md).
 
 Without a workspace filter, `workspace_id` is the earliest linked workspace, with link ID breaking timestamp ties. With a workspace filter it is the selected workspace. Multiple links do not duplicate session items.
 

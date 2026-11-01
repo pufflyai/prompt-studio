@@ -40,6 +40,6 @@ bun run --cwd packages/canvas-tests test:browser -- src/ui/pstdio-workbench/crit
 
 Rendering alone does not prove editing, validation, persistence, accessibility, or visual fidelity. Report unavailable physical-device checks separately.
 
-See [design rules](../../../design/DESIGN.md), [UI guidance](../../../packages/ui/README.md), and [testing](0002-testing.md).
+See [design rules](../../guidance/0002-design.md), [UI guidance](../../../packages/ui/README.md), and [testing](0002-testing.md).
 
 Screenshot comparisons are reserved for critical appearance contracts that behavioral assertions cannot establish. Keep the visual catalog without a test per example. Preserve explicit user-requested visual checks.

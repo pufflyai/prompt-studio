@@ -42,7 +42,7 @@ Use source-load counts, snapshot identities, generations, and diagnostic outcome
 
 Cover concurrent reads, source replacement, settings/enablement changes, webview rebuilds, project-workspace changes, stale in-flight loads, broken packages, retry after failure, and shutdown cleanup. Metadata and command execution must identify the same adopted source.
 
-A passing cache test does not prove the installed user flow. Check install, use, update, disable/remove, restart, and recovery with the [manual walkthrough](../../lessons-learned/0013-manually-check-installed-user-flows.md).
+A passing cache test does not prove the installed user flow. Check the affected install, use, update, disable/remove, restart, and recovery flows with the [installed-product checks](../../guides/development/0002-testing.md#installed-product-checks).
 
 ## Delivery record
 

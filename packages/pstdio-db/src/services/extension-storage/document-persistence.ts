@@ -137,6 +137,7 @@ export const runDocumentTransaction = async <T>(
   try {
     const value = await action({
       document,
+      revision: row.revision,
       migrationSeed: migration?.key,
       migrationHistory: migration?.histories.get(key),
       operation: operations.operation,

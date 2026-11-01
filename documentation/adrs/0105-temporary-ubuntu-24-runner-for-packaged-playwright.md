@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-24
 
+Status: Accepted.
+
 ## Decision
 
 This is a temporary workaround, not the intended design. The Linux job of `verify-packaged-toolchain.yml`, the `psx_delivery` job of `service-containers.yml` and the `publish` job of `release-packages.yml` run on `ubuntu-24.04` instead of `ubuntu-latest`. All three install Playwright's Chromium. All other jobs keep `ubuntu-latest`.

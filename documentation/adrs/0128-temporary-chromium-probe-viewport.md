@@ -2,9 +2,7 @@
 
 Proposed: 2026-10-20
 
-## Status
-
-Accepted during PS-800 package validation.
+Status: Accepted during PS-800 package validation.
 
 ## Intended design
 

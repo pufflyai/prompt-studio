@@ -2,9 +2,7 @@
 
 Proposed: 2026-10-06
 
-## Status
-
-Accepted temporary workaround for PS-524.
+Status: Accepted temporary workaround for PS-524.
 
 ## Intended design
 

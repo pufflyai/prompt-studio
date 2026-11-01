@@ -57,9 +57,9 @@ bun run --cwd packages/pstdio-dashboard test -- src/workbench.p0.test.ts
 
 The script runs `bun test --conditions production --tsconfig-override tsconfig.app.json`. `--tsconfig-override tsconfig.app.json` loads the `@/*` path alias; a plain `bun test <file>` in the dashboard fails with `Cannot find module '@/...'`. `--conditions production` makes dependencies resolve their `production` export condition, as the built dashboard does. `test:coverage` uses the same flags. The dashboard imports `@pstdio/ui` and `@pstdio/workbench` from their `dist` folders, so build them first after changing them.
 
-Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks described in `AGENTS.md`. Documentation-reference-only edits do not.
+Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks in the [testing guidance](../../guidance/0005-testing.md#5-packaged-files). Documentation-reference-only edits do not.
 
-During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../../AGENTS.md#finishing-a-pull-request), including the full test run after integrating main for behavioral features and meaningful regressions. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
+During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../guidance/0004-ci.md#1-finishing-a-pull-request), including the full test run after integrating main for behavioral features and meaningful regressions. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
 
 The complete local test run schedules one workspace suite at a time. Suites such as the API already own worker pools; running several suites together multiplies those pools and can starve native CLI fixtures. Priority and CI commands retain their own scheduling. The complete local run may take longer because workspace suites do not overlap.
 
@@ -141,6 +141,15 @@ The Merge queue removals workflow retains first-failure links and the `removed-f
 Signed macOS builds submit the app with native `notarytool` from Forge's `postPackage` hook. Submission and ticket retrieval are separate operations. After Apple accepts the upload, `stapler staple` gets up to three attempts for Apple network failures: exit code 68 with `NSURLErrorDomain` in the output. The pauses are one and two seconds. Release verification uses the same rule for `stapler validate`.
 
 Every attempt logs its status and output. Other errors fail at once. This retries an external service call; test retries remain disabled. Validate a change to this path with a full stable release candidate that builds, notarizes, staples, and verifies both macOS targets. Nightly runs cover Apple Silicon only.
+
+## Installed-product checks
+
+- Check the installed behavior affected by the change. A source workspace can supply unpublished SDK APIs, dependencies, or files that the installed product lacks.
+- Use the packaged app when packaging or file inclusion changes. Install extensions outside the monorepo against their declared published dependencies; see [published extension dependencies](#published-extension-dependencies).
+- Use disposable projects and isolated runtime data. Choose a representative affected flow: create a project, install and use a tool, update it, or remove it. Check reopen and restart when persistence or cleanup changes.
+- Compare cold and warm setup when installation or startup performance changes. Record whether the home and download cache were fresh or reused.
+- Require a manual browser or native-app walkthrough only for the critical risks in the [testing guidance](../../guidance/0005-testing.md#4-prove-it-works). Keep relevant automated packaged checks; a successful API response alone does not prove that the primary task works.
+- Record the build, platform, dependency versions, actions, expected and observed results, and useful logs. Include timings for performance changes and state what remains unchecked.
 
 ## Published extension dependencies
 
@@ -324,7 +333,7 @@ To review a timeout:
 3. Collect timings from representative local runs with the same workload and build mode as CI. Include cold setup when the test needs it.
 4. Inspect several runs on each applicable CI platform, including slow successes and failures. Keep local and CI timings separate; do not average different environments. Record the revision, command, OS and architecture, runner, and cold or warm state.
 5. Propose an exact value that covers the slowest legitimate phase with stated headroom. Use platform-specific values only when the evidence shows different work. When relevant local or CI evidence is missing, say so and collect it first.
-6. Get approval for that exact value (see AGENTS.md), then verify it locally and in the affected CI jobs. Check that a never-ready case still fails and cleanup still completes.
+6. Get approval for that exact value (see [timeout approval](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets)), then verify it locally and in the affected CI jobs. Check that a never-ready case still fails and cleanup still completes.
 
 When tests are added, review the job allowance or sharding. Do not lengthen the per-test limit because a suite has more tests.
 
@@ -334,7 +343,7 @@ On 2026-10-28 the user approved a 60-second Windows allowance for two packaged c
 
 ## Desktop benchmarks
 
-Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) remain the advisory product targets. Regular performance coverage runs in nightly CI and stable-release validation.
+Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../guidance/0003-nonfunctional-requirements.md) set mandatory product targets. Regular performance coverage runs in nightly CI and stable-release validation.
 
 Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The Windows x64 Pi 0.73.1 cold detection/model case runs once in its version-specific quarantine before the blocking tool/session-resume case. Its report must prove exactly one first attempt; the 3000 ms probe remains unchanged.
 

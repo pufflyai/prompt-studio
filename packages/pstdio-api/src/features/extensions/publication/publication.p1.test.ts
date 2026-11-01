@@ -332,7 +332,8 @@ test("retry keeps project files unavailable until the published extension activa
           ?.status()
           .then((status) => {
             if (status.needsAttention) failed.resolve();
-            else if (status.downloaded) activated.resolve();
+            // Document progress is announced before the published set finishes activating.
+            else if (projectSyncStatus([status]).state === "synced") activated.resolve();
             if (status.needsAttention && status.downloaded) downloaded.resolve();
           })
           .catch(failed.reject);

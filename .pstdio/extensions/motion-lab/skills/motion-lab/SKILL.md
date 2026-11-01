@@ -5,7 +5,7 @@ description: Create, edit, review, and delete live Motion Lab animation studies.
 
 # Motion Lab studies
 
-Read `design/motion/README.md` and `design/DESIGN.md` before authoring a study.
+Read `design/motion/README.md` and `documentation/guidance/0002-design.md` before authoring a study.
 
 1. Work in the default project folder. Worktree studies appear after merge.
 2. Run `pst motion-lab study create --id <kebab-id> --title <title> --group <group> --duration <seconds>`.

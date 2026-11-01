@@ -209,7 +209,7 @@ relay content implementation, local API host, SDK, UI, client or extension code.
 It is not part of the CLI bundle. Its authenticated HTTP service and the relay's
 access check must preserve that authority boundary. See the
 [account authority guide](../../guides/development/0007-account-manager.md) and
-[ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+[ADR 0124](../../adrs/0124-separate-account-authority-from-content.md).
 
 ## Rules
 

@@ -9,6 +9,8 @@ interface OwnerSyncStatus {
   needsAttention: boolean;
   connected: boolean;
   busy: boolean;
+  pendingItems?: number;
+  download?: { completed: number; total: number | null };
 }
 
 export const projectSyncStatus = (owners: OwnerSyncStatus[]) => {
@@ -18,5 +20,17 @@ export const projectSyncStatus = (owners: OwnerSyncStatus[]) => {
   else if (owners.some((owner) => !owner.firstDownloaded)) state = "first-download-incomplete";
   else if (owners.some((owner) => !owner.connected)) state = "offline";
   else if (owners.some((owner) => owner.pending || owner.busy || !owner.downloaded)) state = "waiting-to-sync";
-  return { state, offlineReady };
+  return {
+    state,
+    offlineReady,
+    pendingItems: owners.every((owner) => owner.pendingItems !== undefined)
+      ? owners.reduce((sum, owner) => sum + (owner.pendingItems ?? 0), 0)
+      : undefined,
+    download: {
+      completed: owners.reduce((sum, owner) => sum + (owner.download?.completed ?? 0), 0),
+      total: owners.every((owner) => owner.download?.total != null)
+        ? owners.reduce((sum, owner) => sum + (owner.download?.total ?? 0), 0)
+        : null,
+    },
+  };
 };

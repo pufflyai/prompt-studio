@@ -35,8 +35,28 @@ test("forgetting an older credential keeps a newer login", async () => {
     const newer = { ...login, token: "newer-device-credential" };
     await Promise.all([store.save(newer), store.forget(login.token)]);
     expect(await store.read()).toEqual(newer);
+    await store.reject(login.token);
+    expect(await store.read()).toEqual(newer);
+    expect(await store.signInRequired(login.deviceId)).toBe(false);
     await store.forget(newer.token);
     expect(await store.read()).toBeNull();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a rejected login belongs to its device and an older logout cannot clear a newer rejection", async () => {
+  const root = await mkdtemp(join(tmpdir(), "native-rejected-login-"));
+  const store = createNativeStore(join(root, "native-account.json"));
+  try {
+    await store.save({ ...login, token: "new-credential" });
+    await store.reject("new-credential");
+    expect(await store.signInRequired(login.deviceId)).toBe(true);
+    expect(await store.signInRequired("another-device")).toBe(false);
+    await store.forget(login.token);
+    expect(await store.signInRequired(login.deviceId)).toBe(true);
+    await store.forget("new-credential");
+    expect(await store.signInRequired(login.deviceId)).toBe(false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -7,6 +7,7 @@ import {
 } from "pstdio-sync/relay";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
+import { documentProgress } from "./document-progress";
 import { reconcileProjectInfo } from "./project-info-owner";
 import { createSyncQuarantine } from "./quarantine";
 import { createResourceNumberSync } from "./resource-number-sync";
@@ -88,7 +89,10 @@ export const startCoreDocumentSync = (input: {
         attempt = attemptSignal;
         generation = space.generation;
       }
-      for (const sync of syncs) await sync.synchronize();
+      for (const sync of syncs) {
+        await sync.synchronize();
+        input.statusChanged?.();
+      }
       numbers ??= await createResourceNumberSync({
         owner,
         space,
@@ -126,12 +130,10 @@ export const startCoreDocumentSync = (input: {
       close();
     }),
     status: async () => {
-      const statuses = await Promise.all([...syncs, ...(numbers ? [numbers] : [])].map((sync) => sync.status()));
+      const statuses = await Promise.all([syncs[0]?.status(), numbers?.status()]);
       return {
         firstDownloaded,
-        downloaded: !!numbers && statuses.length > 0 && statuses.every((status) => status.downloaded),
-        pending: statuses.some((status) => status.pending),
-        needsAttention: statuses.some((status) => status.needsAttention),
+        ...documentProgress(statuses, true),
         ...connection.status(),
       };
     },

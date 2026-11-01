@@ -1,0 +1,18 @@
+{
+  "name": "runtime-diagnostic",
+  "publisher": "local",
+  "version": "0.0.1",
+  "description": "Temporary CPU capture for the current investigation.",
+  "main": "./extension.ts",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "pstdio": "^0.3.0"
+  },
+  "pstdio": {
+    "scope": "repo"
+  },
+  "dependencies": {
+    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4"
+  }
+}
