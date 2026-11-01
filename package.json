@@ -74,7 +74,8 @@
     ".pstdio/extensions/shader-lab",
     ".pstdio/extensions/shape-art",
     "services/telemetry",
-    "services/psx"
+    "services/psx",
+    "design"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.4.10",

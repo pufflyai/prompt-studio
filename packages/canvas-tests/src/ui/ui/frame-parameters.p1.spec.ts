@@ -1,0 +1,41 @@
+import { expect, test } from "@playwright/test";
+
+// Critical: host parameters must retain local input, isolate siblings and control motion precisely.
+test("frame parameters and playback stay independent across themes and movement", async ({ page }) => {
+  await page.goto("/?canvas=packages%2Fui%2Fsrc%2Ffoundations%2Fframe-parameters.canvas.tsx");
+  const surface = (await (await page.locator("[data-verification-host]").elementHandle())!.contentFrame())!;
+  const first = surface.locator('[data-canvas-item="First"]');
+  const second = surface.locator('[data-canvas-item="Second"]');
+  const document = first.frameLocator("iframe");
+  const output = document.locator("[data-parameters-preview]");
+  await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(2);
+  await first.locator("[data-canvas-select]").click();
+  await document.getByRole("textbox", { name: "Frame draft" }).fill("Keep this input");
+  await first.getByRole("button", { name: "Parameters", exact: true }).click();
+  const dialog = surface.getByRole("dialog");
+  await dialog.getByRole("spinbutton").fill("7");
+  await dialog.getByRole("spinbutton").press("Tab");
+  await expect(output).toContainText('"amount":7');
+  await dialog.getByRole("switch").click();
+  await dialog.getByRole("combobox").click();
+  await surface.getByRole("option", { name: "Bright", exact: true }).click();
+  await expect(output).toContainText('"enabled":false');
+  await expect(output).toContainText('"treatment":"bright"');
+  await expect(second.frameLocator("iframe").locator("[data-parameters-preview]")).toContainText('"amount":2');
+  await dialog.getByRole("button", { name: "Reset parameters" }).click();
+  await expect(output).toContainText('"amount":2');
+  await page.keyboard.press("Escape");
+  await first.getByRole("button", { name: "Theme for" }).click();
+  await surface.getByRole("menuitem", { name: "Prompt Dark", exact: true }).click();
+  await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
+  await first.getByRole("button", { name: "Midpoint", exact: true }).click();
+  await expect(output).toContainText('"time":1');
+  await first.getByRole("button", { name: "Play", exact: true }).click();
+  await expect.poll(async () => JSON.parse((await output.textContent())!).time).toBeGreaterThan(1);
+  await first.getByRole("button", { name: "Pause", exact: true }).click();
+  await first.getByRole("button", { name: "Restart", exact: true }).click();
+  await expect(output).toContainText('"time":0');
+  await first.getByRole("button", { name: "Move First", exact: true }).press("ArrowRight");
+  await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
+  await expect(surface.locator("[data-ui-canvas-error]")).toHaveCount(0);
+});

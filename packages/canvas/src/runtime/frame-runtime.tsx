@@ -1,6 +1,7 @@
 import { Component, type ReactNode, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { type CanvasFrame, type CanvasMeta, type CanvasPreview, CanvasThemeContext, composePreview } from "../compose";
+import { type ParameterValues, parameterValues } from "../parameters";
 import { createFrameAssetBridge } from "./assets";
 import { LiveFrame } from "./live-frame";
 import { installFrameNavigation } from "./navigation";
@@ -59,8 +60,8 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     }
   }
 
-  const Ready = (props: { loaded: LoadedFrame; minimumHeight: number }) => {
-    const { loaded, minimumHeight } = props;
+  const Ready = (props: { loaded: LoadedFrame; minimumHeight: number; overrides: ParameterValues }) => {
+    const { loaded, minimumHeight, overrides } = props;
     useLayoutEffect(() => {
       let second = 0;
       // Offscreen iframe animation frames can be suspended; readiness must not wait for paint.
@@ -71,7 +72,15 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
           bootstrapMs: booted - (performance.getEntriesByName("canvas:bootstrap-received")[0]?.startTime ?? 0),
           committedMs: performance.now(),
         },
-        information: { args: inspect(loaded.args), description: loaded.description },
+        information: {
+          args: inspect(loaded.args),
+          description: loaded.description,
+          controls: loaded.controls,
+          motion: loaded.motion,
+          values: Object.fromEntries(
+            Object.entries(loaded.args).filter(([, value]) => ["string", "number", "boolean"].includes(typeof value)),
+          ),
+        },
       });
       const first = requestAnimationFrame(() => {
         second = requestAnimationFrame(() => send({ type: "painted", timings: { firstPaintMs: performance.now() } }));
@@ -92,7 +101,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
           minHeight: minimumHeight ? `${minimumHeight}px` : undefined,
         }}
       >
-        <LiveFrame Frame={loaded.Component} args={loaded.args} />
+        <LiveFrame Frame={loaded.Component} args={loaded.args} overrides={overrides} />
       </div>
     );
   };
@@ -121,6 +130,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
   let theme: FrameTheme = { id: "light", mode: "light" };
   let item: FrameItem | undefined;
   let loaded: LoadedFrame | undefined;
+  let overrides: ParameterValues = {};
   let active = true;
   const render = () => {
     if (!active || !loaded || !item) return;
@@ -128,10 +138,32 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     reactRoot.render(
       <CanvasThemeContext.Provider value={theme}>
         <Boundary>
-          <Ready loaded={loaded} minimumHeight={minimumHeight} />
+          <Ready loaded={loaded} minimumHeight={minimumHeight} overrides={overrides} />
         </Boundary>
       </CanvasThemeContext.Provider>,
     );
+  };
+  const updateArgs = (change: ParameterValues) => {
+    if (!loaded) return;
+    try {
+      const controls = {
+        ...loaded.controls,
+        ...(loaded.motion
+          ? {
+              time: {
+                type: "number" as const,
+                min: 0,
+                max: loaded.motion.duration,
+                step: 1 / (loaded.motion.fps ?? 60),
+              },
+            }
+          : {}),
+      };
+      overrides = parameterValues(controls, {}, change) as ParameterValues;
+      render();
+    } catch (error) {
+      send({ type: "error", message: String(error) });
+    }
   };
   const receive = (event: MessageEvent<FrameRequest>) => {
     const message = event.data;
@@ -141,6 +173,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     if (message.theme) theme = message.theme;
     if (message.type === "assets") assets.receive(message);
     if (message.type === "theme") render();
+    if (message.type === "args" && message.args) updateArgs(message.args);
     if (message.type !== "render" || !message.item || item) return;
     item = message.item;
     void load(message.item)

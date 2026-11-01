@@ -1,4 +1,5 @@
 export * from "./compose";
+export * from "./parameters";
 export {
   type CanvasBuildManifest,
   type CanvasEntry,

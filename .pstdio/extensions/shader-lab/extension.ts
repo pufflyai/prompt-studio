@@ -1,106 +1,13 @@
-import {
-  defineExtension,
-  defineKeybinding,
-  defineNavigationItem,
-  definePage,
-  defineSkill,
-  defineView,
-  defineViewMenu,
-  l10n,
-  packageAsset,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
-import { commands } from "./src/commands";
-import { controls } from "./src/controls";
-import { shaderVersion } from "./src/navigation";
-import { versionsTree } from "./src/tree";
+import { defineCommand, defineExtension, params } from "@pstdio/sdk/extensions";
 
-const preview = defineView({
-  id: "preview",
-  title: l10n("preview.title", "Preview"),
-  icon: "blend",
-  body: {
-    kind: "webview",
-    entry: packageAsset("./src/preview-entry.tsx", import.meta.url),
-    capabilities: ["commands.execute"],
-  },
-});
-
-const home = definePage({
-  id: "shader-lab",
-  title: l10n("shaderLab.title", "Shader Lab"),
-  path: "shader-lab",
-  mode: workbenchModes.project,
-  main: { kind: "view", view: preview.ref, cardinality: "one" },
-  slots: [],
-});
-
-const version = definePage({
-  id: "version",
-  title: l10n("shaderLab.title", "Shader Lab"),
-  path: "shader-lab/version",
-  mode: workbenchModes.project,
-  parent: home.ref,
-  resource: { kinds: [shaderVersion.ref] },
-  main: { kind: "view", view: preview.ref, cardinality: "one" },
-  slots: [],
-});
-
+// Keep access to existing comparison choices while Canvas adopts the same project files.
 export default defineExtension({
-  commands: Object.values(commands),
-  keybindings: [
-    defineKeybinding({
-      id: "keyboard-open",
-      layer: "go",
-      key: "S",
-      sticky: true,
-      action: { kind: "page", page: home.ref },
-    }),
-    defineKeybinding({
-      id: "create-shader",
-      layer: "create",
-      key: shaderVersion.ref.id[0]!.toUpperCase(),
-      action: { kind: "command", target: { command: commands["shaders.add"].ref } },
-    }),
-    ...(
-      [
-        ["current.rename", "R"],
-        ["current.duplicate", "D"],
-        ["current.compare", "C"],
-      ] as const
-    ).map(([id, key]) =>
-      defineKeybinding({
-        id: `current-${id}`,
-        layer: "current",
-        key,
-        targetScope: "resource",
-        when: { resourceType: [shaderVersion.ref] },
-        action: { kind: "command", target: { command: commands[id].ref } },
-      }),
-    ),
-  ],
-  resourceKinds: [shaderVersion],
-  views: [preview, versionsTree, controls],
-  pages: [home, version],
-  viewMenus: [
-    defineViewMenu({ id: "versions", owner: preview.ref, view: versionsTree.ref, side: "left" }),
-    defineViewMenu({ id: "controls", owner: preview.ref, view: controls.ref, side: "right" }),
-  ],
-  skills: [
-    defineSkill({
-      id: "shader-lab",
-      title: l10n("shaderLab.title", "Shader Lab"),
-      source: packageAsset("./skills/shader-lab", import.meta.url),
-    }),
-  ],
-  navigationItems: [
-    defineNavigationItem({
-      id: "shader-lab",
-      owner: workbenchModes.project,
-      slot: "content",
-      label: l10n("shaderLab.title", "Shader Lab"),
-      icon: "blend",
-      action: { kind: "page", page: home.ref },
+  commands: [
+    defineCommand({
+      id: "compare.export",
+      title: "Read legacy shader comparison",
+      params: { shader: params.text({ required: true }) },
+      run: (ctx, input) => ctx.storage.collection("compare").get(input.shader),
     }),
   ],
 });

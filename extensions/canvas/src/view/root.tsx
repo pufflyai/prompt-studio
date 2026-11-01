@@ -13,6 +13,7 @@ import type { commands } from "../commands";
 import { Button } from "../components/themed-primitives";
 import { type CanvasRuntime, createCanvasRuntime } from "../controller/runtime";
 import { layoutChanged } from "../events";
+import { FrameHostContext } from "../frames/frame-loader";
 import { readLayout } from "../layout";
 import { createLayoutSession } from "../layout-session";
 import { BuildNotice, type BuildStatus } from "./build-notice";
@@ -78,7 +79,9 @@ const ConnectedCanvas = (props: ConnectedCanvasProps) => {
       )}
       <Box flex="1" minH="0" minW="0">
         {runtime ? (
-          <CanvasStage canvas={canvas} runtime={runtime} />
+          <FrameHostContext.Provider value={host}>
+            <CanvasStage canvas={canvas} runtime={runtime} />
+          </FrameHostContext.Provider>
         ) : (
           <Text p="sm" textStyle="paragraph/S/regular">
             Loading canvas…

@@ -1,0 +1,4 @@
+{
+  "extends": "./motion/tsconfig.json",
+  "include": ["motion", "shaders"]
+}
