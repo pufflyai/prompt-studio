@@ -74,7 +74,7 @@ The timing report keeps initial scheduling delay, elapsed time after the first j
 - Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.
 - Complete P1/P2/P3 matrices run in nightly and stable validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
 - A new push cancels the PR's older run. Adding or removing labels does not rerun CI; `ci:full` requests diagnostics through its own workflow.
-- The Version Packages PR gets its checks from Release Packages. Its pushes use the workflow token, so GitHub holds their `pull_request` runs for a maintainer's approval. After updating the PR, Release Packages dispatches Test and Build with `profile=pull_request`, which runs the same PR checks on the branch. The PR changes every package, so each update runs P0 for all of them; a newer update cancels the older run. The profile refuses other branches, because a dispatch compares only the last commit.
+- The Version Packages PR is pushed with the workflow token, so GitHub holds its `pull_request` runs until a maintainer approves them. Approve the latest run before queueing the PR. A dispatched run does not help: a PR's check list leaves out `workflow_dispatch` runs, so their `ci_passed` does not satisfy the required check.
 
 ## Merge queue
 

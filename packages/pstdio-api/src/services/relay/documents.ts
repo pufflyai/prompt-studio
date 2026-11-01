@@ -30,7 +30,9 @@ export const createExtensionDocumentSync = (input: {
   };
   const stop = input.deps.extensionStorageService.watch((owner) => {
     if (owner.workbenchId === input.owner.workbenchId && owner.extensionId === input.owner.extensionId) {
-      directory = undefined;
+      // Record outbox writes and edits to known documents do not change the directory.
+      // New remote names arrive during synchronize(), which already resets discovery.
+      if (owner.documentId && !directory?.includes(owner.documentId)) directory = undefined;
       input.statusChanged?.();
     }
   });

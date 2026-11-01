@@ -163,6 +163,7 @@ export const startRelayRuntime = async (input: {
   return {
     async retry(workbenchId: string) {
       await refresh();
+      personal.get(workbenchId)?.retry();
       publications.get(workbenchId)?.retry();
       automations.get(workbenchId)?.retry();
       coreDocuments.get(workbenchId)?.retry();
@@ -177,6 +178,7 @@ export const startRelayRuntime = async (input: {
         coreDocuments.get(workbenchId),
         publications.get(workbenchId),
         automations.get(workbenchId),
+        personal.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),

@@ -17,9 +17,8 @@ on:
         options:
           - production
           - merge_queue
-          - pull_request
         default: production
-        description: Validation profile; pull_request runs the PR checks for the Version Packages branch only
+        description: Validation profile
       source_sha:
         type: string
         default: ""
