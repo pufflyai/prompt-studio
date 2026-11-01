@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createProjectRelayConnection } from "pstdio-sync/relay";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { startPublishedExtensions } from "./publications";
 
@@ -8,6 +9,10 @@ test("extension set discovery closes while access renewal is pending", async () 
   const entered = Promise.withResolvers<void>();
   const pending = Promise.withResolvers<{ token: string; expiresAt: string }>();
   const controller = new AbortController();
+  const access = () => {
+    entered.resolve();
+    return pending.promise;
+  };
   const connection = startPublishedExtensions({
     deps: app.deps,
     signal: controller.signal,
@@ -19,10 +24,13 @@ test("extension set discovery closes while access renewal is pending", async () 
       managerOrigin: "http://127.0.0.1:9",
       renewalGrant: "grant",
     },
-    access: () => {
-      entered.resolve();
-      return pending.promise;
-    },
+    access,
+    relay: createProjectRelayConnection({
+      origin: "http://127.0.0.1:9",
+      projectId: "project",
+      access,
+      signal: controller.signal,
+    }),
   });
   try {
     await entered.promise;

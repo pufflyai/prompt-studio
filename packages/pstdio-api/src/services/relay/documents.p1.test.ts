@@ -21,6 +21,7 @@ test("a new document saved offline invalidates exact progress without loading it
   const owner = { workbenchId: project.id, extensionId: "example.notes" };
   const sync = createExtensionDocumentSync({
     owner,
+    claim() {},
     deps: app.deps,
     config: {
       accountId: "owner",

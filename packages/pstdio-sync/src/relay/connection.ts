@@ -1,12 +1,4 @@
-import {
-  liveServerMessageSchema,
-  relayEventSchema,
-  relayPath,
-  type Scope,
-  syncPath,
-  syncProtocolHeader,
-  syncProtocolVersion,
-} from "pstdio-sync-contracts";
+import { relayEventSchema, relayPath, type Scope } from "pstdio-sync-contracts";
 import { serviceAddress, serviceUrl } from "./http";
 
 const NativeWebSocket = globalThis.WebSocket as { new (url: string | URL, options?: Bun.WebSocketOptions): WebSocket };
@@ -166,22 +158,5 @@ export const createRelayConnection = (
     message: (body) => {
       const event = relayEventSchema.parse(body);
       return event.type === "ready" ? "ready" : "changed";
-    },
-  });
-
-export const createDocumentRelayConnection = (
-  input: Omit<RelaySocketInput, "path" | "message" | "headers"> & { projectId: string },
-) =>
-  createRelaySocket({
-    ...input,
-    path: syncPath({ kind: "live", projectId: input.projectId }),
-    headers: { [syncProtocolHeader]: String(syncProtocolVersion) },
-    message: (body) => {
-      const event = liveServerMessageSchema.parse(body);
-      if (event.type === "ready") {
-        if (event.protocolVersion !== syncProtocolVersion) throw new Error("Unsupported sync protocol");
-        return "ready";
-      }
-      return event.type === "changed" ? "changed" : null;
     },
   });

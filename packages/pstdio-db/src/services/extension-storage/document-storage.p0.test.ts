@@ -18,6 +18,29 @@ const fixture = async () => {
   return { ...f, owner, service, storage };
 };
 
+test("obsolete document journals can be discarded without loading their content or another owner's data", async () => {
+  const f = await fixture();
+  const name = JSON.stringify(["transcript", "session"]);
+  for (const owner of [f.owner, { ...f.owner, extensionId: "another-account" }])
+    await f.service.documents.open(name).transaction(owner, async ({ document }) => {
+      document.getText("content").insert(0, "obsolete".repeat(100_000));
+    });
+  let loaded = 0;
+  const cold = createDocumentStorageDBService(f.db, undefined, (event) => {
+    if (event.phase === "document-loaded") loaded++;
+  });
+  await cold.documents.discard(f.owner, name);
+  expect(loaded).toBe(0);
+  expect(await f.service.documents.open(name).revision(f.owner)).toBe(0);
+  expect(await f.service.documents.open(name).revision({ ...f.owner, extensionId: "another-account" })).toBe(1);
+  expect(
+    await f.db
+      .select()
+      .from(storage_document_updates)
+      .where(eq(storage_document_updates.extension_id, f.owner.extensionId)),
+  ).toHaveLength(0);
+});
+
 test("document revisions can be read cold without opening owner or record content", async () => {
   const f = await fixture();
   const document = f.service.documents.open("notes.md");

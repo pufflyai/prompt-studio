@@ -1,4 +1,4 @@
-import { createDocumentRelayConnection } from "pstdio-sync/relay";
+import type { ProjectRelayConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { activatePublishedSet } from "../../features/extensions/publication/activate";
@@ -16,6 +16,7 @@ export const startPublishedExtensions = (input: {
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
   access: () => Promise<{ token: string; expiresAt: string }>;
+  relay: ProjectRelayConnection;
   statusChanged?: () => void;
 }) => {
   const { config, deps } = input;
@@ -33,15 +34,19 @@ export const startPublishedExtensions = (input: {
       signal.removeEventListener("abort", abort);
     }
   };
-  const documents = createExtensionDocumentSync({ config, owner, deps, access, statusChanged: input.statusChanged });
+  const documents = createExtensionDocumentSync({
+    config,
+    owner,
+    deps,
+    access,
+    statusChanged: input.statusChanged,
+    claim: (id) => connection.claim(id),
+  });
   // A set that failed to activate is tried again after a growing delay, or at once when it changes.
   // Retrying on every reconnect would repeat package checks, installs and webview builds each time.
   let failed: { key: string; delay: number; waiting: boolean } | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
-  const connection = createDocumentRelayConnection({
-    origin: config.relayOrigin,
-    projectId: config.workbenchId,
-    access,
+  const connection = input.relay.attach({
     signal,
     synchronize: async (attemptSignal) => {
       await documents.synchronize(attemptSignal);

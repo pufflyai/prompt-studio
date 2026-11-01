@@ -11,6 +11,8 @@ export const createExtensionDocumentSync = (input: {
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
   statusChanged?: () => void;
+  /** Routes the relay's change notices for a document to this owner. */
+  claim: (documentId: string) => void;
 }) => {
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
@@ -58,14 +60,16 @@ export const createExtensionDocumentSync = (input: {
         attempt = signal;
         generation = space.generation;
       }
-      const relay = (documentId: string) =>
-        createDocumentRelay({
+      const relay = (documentId: string) => {
+        input.claim(documentId);
+        return createDocumentRelay({
           origin: config.relayOrigin,
           space,
           documentId,
           signal,
           token: async () => (await input.access()).token,
         });
+      };
       const quarantine = (documentId: string) =>
         createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
       const synchronize = async (name: string) => {

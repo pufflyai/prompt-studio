@@ -79,6 +79,19 @@ export const createDocumentStorageDBService = (
       };
     },
     documents: {
+      async discard(owner: StorageOwner, documentId: string) {
+        const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: documentId };
+        await db
+          .delete(storage_documents)
+          .where(
+            and(
+              eq(storage_documents.workbench_id, owner.workbenchId),
+              eq(storage_documents.extension_id, owner.extensionId),
+              eq(storage_documents.document_id, documentId),
+            ),
+          );
+        cache.discard(JSON.stringify(address));
+      },
       open: (documentId: string) => ({ transaction: transactionFor(documentId), revision: revisionFor(documentId) }),
       recordStream: (owner: StorageOwner) =>
         createRecordStreamStore(db, owner, {

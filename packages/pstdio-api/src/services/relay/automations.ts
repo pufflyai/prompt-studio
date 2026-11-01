@@ -1,4 +1,4 @@
-import { createDocumentRelayConnection } from "pstdio-sync/relay";
+import type { ProjectRelayConnection } from "pstdio-sync/relay";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { deviceAutomationsOwnerId } from "../../features/extensions/device-automations";
 import { createExtensionDocumentSync } from "./documents";
@@ -9,18 +9,16 @@ export const startAutomationSync = (input: {
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
+  relay: ProjectRelayConnection;
   signal: AbortSignal;
   statusChanged: () => void;
 }) => {
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
   const owner = { workbenchId: input.config.workbenchId, extensionId: deviceAutomationsOwnerId };
-  const documents = createExtensionDocumentSync({ ...input, owner });
-  const connection = createDocumentRelayConnection({
-    origin: input.config.relayOrigin,
-    projectId: owner.workbenchId,
+  const documents = createExtensionDocumentSync({ ...input, owner, claim: (id) => connection.claim(id) });
+  const connection = input.relay.attach({
     signal,
-    access: input.access,
     synchronize: documents.synchronize,
     onStatusChange: input.statusChanged,
   });

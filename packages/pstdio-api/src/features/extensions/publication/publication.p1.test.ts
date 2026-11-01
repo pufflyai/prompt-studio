@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createProjectRelayConnection } from "pstdio-sync/relay";
 import { createNativeAccount } from "../../../services/account/native-account";
 import { createNativeStore } from "../../../services/account/native-store";
 import { createExtensionDocumentSync } from "../../../services/relay/documents";
@@ -32,6 +33,13 @@ const config = {
   renewalGrant: "grant",
 };
 const access = async () => ({ token: "wire-access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+const projectRelay = (config: { relayOrigin: string; workbenchId: string }) =>
+  createProjectRelayConnection({
+    origin: config.relayOrigin,
+    projectId: config.workbenchId,
+    access,
+    signal: controller.signal,
+  });
 const syncs: ReturnType<typeof createExtensionDocumentSync>[] = [];
 const publications: ReturnType<typeof startPublishedExtensions>[] = [];
 beforeAll(async () => {
@@ -58,7 +66,13 @@ beforeAll(async () => {
     // Discover real cloud membership while the test drives transport connections explicitly.
     app.deps.accountService.status = account.status;
     app.deps.accountService.projectSyncStatus = account.projectSyncStatus;
-    syncs[index] = createExtensionDocumentSync({ config, deps: app.deps, owner: publishedOwner(projectId), access });
+    syncs[index] = createExtensionDocumentSync({
+      config,
+      deps: app.deps,
+      owner: publishedOwner(projectId),
+      access,
+      claim: () => {},
+    });
   }
 });
 afterAll(async () => {
@@ -120,7 +134,13 @@ test("three devices discover encrypted packages, preserve private overrides and 
     const stop = apps[index]!.deps.eventBus.subscribe((event) => {
       if (event.table === "extension_instances") ready.resolve();
     });
-    const connection = startPublishedExtensions({ config, deps: apps[index]!.deps, access, signal: controller.signal });
+    const connection = startPublishedExtensions({
+      config,
+      deps: apps[index]!.deps,
+      access,
+      relay: projectRelay(config),
+      signal: controller.signal,
+    });
     publications.push(connection);
     await ready.promise;
     stop();
@@ -151,6 +171,7 @@ test("three devices discover encrypted packages, preserve private overrides and 
       deps: app.deps,
       owner: { workbenchId: projectId, extensionId: "test.unrelated" },
       access,
+      claim: () => {},
     }),
   );
   try {
@@ -257,6 +278,7 @@ test("a synced set that fails to activate keeps the current set and waits until 
     config,
     deps: { ...c.deps, extensionService },
     access,
+    relay: projectRelay(config),
     signal: controller.signal,
     statusChanged: () => passes++,
   });
@@ -322,10 +344,17 @@ test("retry keeps project files unavailable until the published extension activa
       asset,
       (await catalog.read("test.activation-retry")).revision,
     );
+    const projectConfig = {
+      ...config,
+      workbenchId: project.id,
+      managerOrigin: syncPeer.origin,
+      relayOrigin: syncPeer.origin,
+    };
     connection = startPublishedExtensions({
-      config: { ...config, workbenchId: project.id, managerOrigin: syncPeer.origin, relayOrigin: syncPeer.origin },
+      config: projectConfig,
       deps: app.deps,
       access,
+      relay: projectRelay(projectConfig),
       signal: controller.signal,
       statusChanged: () => {
         void connection

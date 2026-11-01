@@ -70,7 +70,7 @@ test("a closed socket cancels stalled synchronization before reconnecting withou
 });
 
 test("separate wakes on one connection reuse the attempt signal", async () => {
-  const { createDocumentRelayConnection } = await import("./connection");
+  const { createDocumentRelayConnection } = await import("./project-connection");
   const controller = new AbortController();
   const first = Promise.withResolvers<void>();
   const second = Promise.withResolvers<void>();
