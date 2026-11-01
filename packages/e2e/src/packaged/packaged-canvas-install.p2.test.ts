@@ -172,10 +172,13 @@ test(
       expect(button).toBeDefined();
       phase("assets and skill ready");
       browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
+      phase("browser launched");
       const page = await browser.newPage();
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
       await signInBrowser(page, started.descriptor);
+      phase("browser signed in");
       await page.goto(new URL(button.href, started.baseUrl).href);
+      phase("dashboard loaded");
       const viewer = page.frameLocator('iframe[title="UI Canvas"]');
       await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
       expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
