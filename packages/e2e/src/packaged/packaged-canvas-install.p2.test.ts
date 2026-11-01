@@ -1,8 +1,8 @@
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { type Browser, chromium } from "@playwright/test";
 import { packExtension, readExtensionPackage } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -13,7 +13,24 @@ import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } 
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
-setupPackagedSmokeTests();
+let catalogRoot: string | undefined;
+let packed: Awaited<ReturnType<typeof packExtension>>;
+setupPackagedSmokeTests(async () => {
+  catalogRoot = mkdtempSync(join(tmpdir(), "canvas-catalog-source-"));
+  const source = join(catalogRoot, "canvas");
+  cpSync(join(import.meta.dirname, "../../../../extensions/canvas"), source, {
+    recursive: true,
+    filter: (path) => basename(path) !== "node_modules",
+  });
+  const manifestPath = join(source, "package.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  // A catalog artifact has a stable version even when this checkout is a nightly snapshot.
+  writeFileSync(manifestPath, JSON.stringify({ ...manifest, version: "1.0.0" }));
+  packed = await packExtension(source);
+});
+afterAll(() => {
+  if (catalogRoot) rmSync(catalogRoot, { recursive: true, force: true });
+});
 
 // A project as `pstdio-canvas` sees it: one canvas file and a preview decorator that records the
 // theme UI Canvas sends.
@@ -48,7 +65,6 @@ test(
     const phase = (name: string) =>
       console.log(`[Canvas install +${Math.round(performance.now() - startedAt)}ms] ${name}`);
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
-    const packed = await packExtension(join(import.meta.dirname, "../../../../extensions/canvas"));
     const { files } = await readExtensionPackage(packed.bytes);
     // UI Canvas ships no previews; it renders what the project's own build wrote.
     expect([...files.keys()].filter((path) => path.includes("catalog"))).toEqual([]);

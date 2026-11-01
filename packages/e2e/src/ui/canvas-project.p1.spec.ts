@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { stopChildProcess } from "../scripts/child-process";
 
 const repoRoot = resolve(import.meta.dirname, "../../../..");
 
@@ -86,7 +87,7 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
     });
     await expect(viewer.locator("[data-ui-canvas-error]")).toHaveCount(0);
   } finally {
-    watcher?.kill();
+    await stopChildProcess(watcher);
     rmSync(root, { recursive: true, force: true });
   }
 });
