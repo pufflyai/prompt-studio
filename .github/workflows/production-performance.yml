@@ -122,6 +122,7 @@ jobs:
           path: |
             test-results/production-performance
             test-results/quarantine/workbench-benchmark
+            test-results/quarantine/subnav-benchmark
             packages/e2e/test-results
             packages/e2e/playwright-report
             packages/ui/test-results
