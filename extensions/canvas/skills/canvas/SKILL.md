@@ -57,6 +57,15 @@ pst canvas layout update --help
 
 Read the layout before updating it. `layout.update` accepts a JSON `--change` with camera, positions, or frame themes, keyed by export name.
 
+## Propose a design
+
+A proposal shows UI a ticket will add or change before production code changes. Build it from the real components, so it keeps their look, charts and tables.
+
+1. Put it in `proposals/<ticket>/` inside the package that owns the UI. Title it `Proposals/<ticket> <name>`, so it is grouped under Proposals.
+2. Import the components it leaves unchanged. Copy only the ones it changes into the folder, keep their file names, and edit the copies. Production code never imports from `proposals/`.
+3. Merge the proposal to the default branch in its own pull request, then link the canvas, frame names and folder in the ticket. Until it merges, record its pushed branch and commit SHA instead. A canvas link alone does not carry the source to another workspace.
+4. The implementation moves each copy's changes into production and deletes the folder in the same change. If production changed after the copies were made, keep those changes and apply only the proposal's differences.
+
 ## Critical checks only
 
 Require browser or visual checks only when a change risks blocking a primary task, hiding essential content or controls, breaking keyboard/focus behavior, violating preview isolation, or reintroducing a critical regression. Keep examples for exploration without a test for every example. Report the canvas file, exact export, checks run and any untested device behavior.
