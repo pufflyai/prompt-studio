@@ -90,3 +90,37 @@ test("a negotiated manifest uploader cannot downgrade a malformed child list to 
     await f.close();
   }
 });
+
+test("rate-limited requests honor Retry-After and abort immediately during renewal", async () => {
+  const controller = new AbortController();
+  const limited = Promise.withResolvers<void>();
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch() {
+      limited.resolve();
+      return new Response(null, { status: 429, headers: { "retry-after": "1" } });
+    },
+  });
+  const relay = createDocumentRelay({
+    origin: server.url.origin,
+    documentId: "document_0123456789abcdef",
+    space: { projectId: "project", spaceOwner: "private" },
+    token: async () => "token",
+    signal: controller.signal,
+  });
+  const pending = relay.read(0).then(
+    () => false,
+    () => true,
+  );
+  try {
+    await limited.promise;
+    await Bun.sleep(25);
+    controller.abort();
+    expect(await Promise.race([pending, Bun.sleep(200).then(() => false)])).toBe(true);
+  } finally {
+    controller.abort();
+    await pending;
+    await server.stop(true);
+  }
+});

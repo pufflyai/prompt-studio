@@ -21,6 +21,7 @@ test("offline saves keep known pending counts and new documents invalidate disco
   const owner = { workbenchId: project.id, extensionId: "example.notes" };
   const sync = createExtensionDocumentSync({
     owner,
+    claim() {},
     deps: app.deps,
     config: {
       accountId: "owner",

@@ -1,6 +1,7 @@
-import { sessionSchema, workspaceSchema } from "pstdio-api-contracts";
+import { type SessionMessage, sessionSchema, workspaceSchema } from "pstdio-api-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
+import { historyNamespace, type SessionLogFiles } from "./log-files";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore, type HistoryDocuments } from "./store";
 
@@ -13,7 +14,10 @@ export const createPersonalHistoryService = (input: {
   account: Pick<RouteDeps["accountService"], "status">;
   projects: Pick<RouteDeps["projectService"], "list">;
   eventBus: RouteDeps["eventBus"];
+  logs: SessionLogFiles;
 }) => {
+  type MessageListener = (update: { index: number; message: SessionMessage; live: boolean }) => void;
+  const messageListeners = new Map<string, Set<MessageListener>>();
   let identity: string | undefined;
   const visible = new Map<string, { table: string; id: string; projectId: string }>();
   const remember = (table: string, id: string, projectId: string) =>
@@ -31,6 +35,7 @@ export const createPersonalHistoryService = (input: {
         });
       }
       visible.clear();
+      messageListeners.clear();
       identity = next;
     }
     return login;
@@ -117,6 +122,20 @@ export const createPersonalHistoryService = (input: {
     return null;
   };
   return {
+    logs: input.logs,
+    /** Runs for each message another device completed or is streaming in this session. */
+    watchMessages(sessionId: string, listener: MessageListener) {
+      const listeners = messageListeners.get(sessionId) ?? new Set();
+      listeners.add(listener);
+      messageListeners.set(sessionId, listeners);
+      return () => {
+        listeners.delete(listener);
+        if (!listeners.size && messageListeners.get(sessionId) === listeners) messageListeners.delete(sessionId);
+      };
+    },
+    messageReceived(sessionId: string, update: { index: number; message: SessionMessage; live: boolean }) {
+      for (const listener of messageListeners.get(sessionId) ?? []) listener(update);
+    },
     refreshIdentity,
     links,
     async fullState(projectId?: string) {
@@ -147,7 +166,7 @@ export const createPersonalHistoryService = (input: {
     async messages(id: string, projectId: string) {
       const current = await context(projectId);
       if (!current || !(await sessions(projectId)).some((row) => row.id === id)) return null;
-      const messages = await current.history.readTranscript(id);
+      const messages = await input.logs.read(historyNamespace({ ...current.login, projectId }), id);
       await refreshIdentity();
       return current.identity === identity ? messages : null;
     },

@@ -29,6 +29,7 @@ import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
+import { createSessionLogFiles } from "./services/personal-history/log-files";
 import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
@@ -209,6 +210,7 @@ const buildApp = async (
       documents: extensionStorageDBService.documents,
       account: account.accountService,
       projects: projectService,
+      logs: createSessionLogFiles(storageRoot),
     }),
     accountService: account.accountService,
     assetTransferService,

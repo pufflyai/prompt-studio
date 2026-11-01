@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
+import { tmpdir } from "node:os";
 import { createMemoryDocumentStore } from "pstdio-sync";
 import { EventBus } from "../../features/sync/event-bus";
+import { createSessionLogFiles } from "./log-files";
 import { createPersonalHistoryService } from "./service";
 import { personalHistoryOwner } from "./store";
 
@@ -65,7 +67,10 @@ test("a document read held across an account switch cannot return or republish t
     },
     projects: { list: async () => [] },
     eventBus: events,
+    logs: createSessionLogFiles(tmpdir()),
   });
+  const delivered: unknown[] = [];
+  const stop = service.watchMessages("private-session", (message) => delivered.push(message));
   const pending = service.sessions("project");
   await started.promise;
   accountId = "bob";
@@ -73,4 +78,15 @@ test("a document read held across an account switch cannot return or republish t
   released.resolve();
   expect(await pending).toEqual([]);
   expect(events.getSince(0)).toEqual([]);
+  service.messageReceived("private-session", {
+    index: 0,
+    live: true,
+    message: {
+      id: "private",
+      role: "assistant",
+      parts: [{ type: "text", text: "Alice private message" }],
+    },
+  });
+  expect(delivered).toEqual([]);
+  stop();
 });

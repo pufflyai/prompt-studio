@@ -1,9 +1,9 @@
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync";
 import {
   createDocumentRelay,
-  createDocumentRelayConnection,
   createDocumentSync,
   fetchSyncSpaces,
+  type ProjectRelayConnection,
 } from "pstdio-sync/relay";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
@@ -21,6 +21,7 @@ export const startCoreDocumentSync = (input: {
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
+  relay: ProjectRelayConnection;
   signal: AbortSignal;
   statusChanged?: () => void;
 }) => {
@@ -52,10 +53,7 @@ export const startCoreDocumentSync = (input: {
     syncs = [];
     numbers = undefined;
   };
-  const connection = createDocumentRelayConnection({
-    origin: config.relayOrigin,
-    projectId: config.workbenchId,
-    access,
+  const connection = input.relay.attach({
     signal,
     synchronize: async (attemptSignal) => {
       const { project: space } = await fetchSyncSpaces({
@@ -63,14 +61,16 @@ export const startCoreDocumentSync = (input: {
         credential: config.renewalGrant,
         signal: attemptSignal,
       });
-      const relay = (documentId: string) =>
-        createDocumentRelay({
+      const relay = (documentId: string) => {
+        connection.claim(documentId);
+        return createDocumentRelay({
           origin: config.relayOrigin,
           space,
           documentId,
           signal: attemptSignal,
           token: async () => (await access()).token,
         });
+      };
       const quarantine = (documentId: string) =>
         createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
       if (!syncs.length || attempt !== attemptSignal || generation !== space.generation) {

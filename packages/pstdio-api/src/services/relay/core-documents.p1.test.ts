@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createProjectRelayConnection } from "pstdio-sync/relay";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { startCoreDocumentSync } from "./core-documents";
 
@@ -7,6 +8,10 @@ test("removing core document sync closes while access renewal is still pending",
   const entered = Promise.withResolvers<void>();
   const renewal = Promise.withResolvers<{ token: string; expiresAt: string }>();
   const controller = new AbortController();
+  const access = () => {
+    entered.resolve();
+    return renewal.promise;
+  };
   const connection = startCoreDocumentSync({
     deps: app.deps,
     config: {
@@ -18,10 +23,13 @@ test("removing core document sync closes while access renewal is still pending",
       renewalGrant: "grant",
     },
     signal: controller.signal,
-    access: () => {
-      entered.resolve();
-      return renewal.promise;
-    },
+    access,
+    relay: createProjectRelayConnection({
+      origin: "http://127.0.0.1:9",
+      projectId: "project",
+      access,
+      signal: controller.signal,
+    }),
   });
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

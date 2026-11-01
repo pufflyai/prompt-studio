@@ -8,15 +8,15 @@ CLI and dashboard clients call the session API. Domain services coordinate datab
 
 ## Personal history across devices
 
-For a cloud project, each device publishes its workspace summaries, session records, and full harness-neutral conversations to the user's personal space. The index is one CRDT document. Each transcript is a separate document. These use the existing encrypted document protocol, latest-state repair, and quarantine handling, with the personal-space key from the account manager. The relay cannot read their content.
+For a cloud project, each device publishes its workspace summaries, session records, and full harness-neutral conversations to the user's personal space. The index is one small CRDT document. Completed conversations use append-only encrypted message logs over the existing document protocol. Large messages use encrypted blobs. Live snapshots use the unstored channel and are fragmented within its wire limit. The relay cannot read their content. See [ADR 0130](../../adrs/0130-personal-session-message-logs.md).
 
-The local CRDT store retains downloaded history. The session and workspace read APIs, extension read APIs, and dashboard sync snapshot include the user's other devices. A downloaded conversation stays readable after its source stops and after the reader restarts offline. Signing out hides cached personal records; another account uses a separate local namespace. Local publication records their first account owner so changing accounts does not republish already-owned local records to a different personal space.
+Local page files retain downloaded conversations and their read cursors. The local CRDT store retains the index. The session and workspace read APIs, extension read APIs, and dashboard sync snapshot include the user's other devices. A downloaded conversation stays readable after its source stops and after the reader restarts offline. Signing out hides cached personal records; another account uses a separate local namespace. Local publication records their first account owner so changing accounts does not republish already-owned local records to a different personal space.
 
 Synced records include `device: { ownerId, id, name }`. They stay separate from local execution rows. The scheduler, startup recovery, workspace providers, and mutation endpoints only use local rows. Reading a foreign-device session never starts a local harness or resolves its source path on this device. The dashboard shows the device and a read-only composer. Remote commands are a separate feature.
 
 A project-key document holds shared workspace/session pointers. Each pointer contains only the resource type, opaque ID, owner ID, device ID, and device name. Shared resource anchors receive that device information without private labels, paths, or conversation content. Other project members cannot open the personal record or decrypt its transcript.
 
-Implementation: [personal history](../../../packages/pstdio-api/src/services/personal-history/service.ts), [publication](../../../packages/pstdio-api/src/services/relay/personal.ts), and [encrypted document sync](../../../packages/pstdio-sync/src/relay/document-sync.ts).
+Implementation: [personal history](../../../packages/pstdio-api/src/services/personal-history/service.ts), [publication](../../../packages/pstdio-api/src/services/relay/personal.ts), and [log receiver](../../../packages/pstdio-api/src/services/personal-history/log-receiver.ts).
 
 ## Core concepts
 

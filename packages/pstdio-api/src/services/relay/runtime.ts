@@ -1,4 +1,4 @@
-import { createRelayAccess } from "pstdio-sync/relay";
+import { createProjectRelayConnection, createRelayAccess } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
@@ -32,11 +32,25 @@ export const startRelayRuntime = async (input: {
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
   const { deps } = input;
+  // Every owner of a project's documents shares the project's one live connection.
+  const projects = createWorkbenchConnections((config) => {
+    const project = new AbortController();
+    const relay = createProjectRelayConnection({
+      origin: config.relayOrigin,
+      projectId: config.workbenchId,
+      access: access.get(config.workbenchId)!,
+      signal: AbortSignal.any([controller.signal, project.signal]),
+      onError: () =>
+        apiLogger.warn({ event: "relay.reconnecting", workbenchId: config.workbenchId }, "Relay connection will retry"),
+    });
+    return { relay, done: relay.done, close: () => project.abort() };
+  });
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
   const core = (config: RelayWorkbench) => ({
     config,
     deps,
     access: access.get(config.workbenchId)!,
+    relay: projects.get(config.workbenchId)!.relay,
     signal: controller.signal,
     statusChanged: () => statusChanged(config.workbenchId),
   });
@@ -60,6 +74,7 @@ export const startRelayRuntime = async (input: {
   };
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+    if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     for (const owners of coreOwners) owners.ensure(config);
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
@@ -87,6 +102,7 @@ export const startRelayRuntime = async (input: {
         snapshot,
         contextKey,
         access: access.get(workbenchId)!,
+        relay: projects.get(workbenchId)!.relay,
         deps,
         signal: controller.signal,
         statusChanged: () => statusChanged(workbenchId),
@@ -148,6 +164,7 @@ export const startRelayRuntime = async (input: {
   return {
     async retry(workbenchId: string) {
       await refresh();
+      personal.get(workbenchId)?.retry();
       publications.get(workbenchId)?.retry();
       automations.get(workbenchId)?.retry();
       coreDocuments.get(workbenchId)?.retry();
@@ -186,16 +203,22 @@ export const startRelayRuntime = async (input: {
           .filter(([id, current]) => canonicalJson(desired.get(id) ?? null) !== canonicalJson(current))
           .map(([id]) => id),
       );
+      // Events emitted while owners drain must not recreate them on the old shared connection.
       for (const id of changed) {
-        for (const owners of coreOwners) await owners.remove(id);
         workbenches.delete(id);
         access.delete(id);
+      }
+      for (const id of changed) {
+        for (const owners of coreOwners) await owners.remove(id);
+        // Closing the project's connection also ends its extension owners' runs before they stop below.
+        await projects.remove(id);
       }
       // Publish new owners before awaiting shutdown so an older in-flight start cannot take ownership.
       for (const [id, connection] of desired)
         if (!workbenches.has(id)) {
           workbenches.set(id, connection);
           access.set(id, createRelayAccess({ ...connection, signal: controller.signal, denied: input.denied }));
+          projects.ensure(connection);
         }
       const obsolete = [...connections].filter(([, active]) => changed.has(active.owner.workbenchId));
       await Promise.all(obsolete.map(([key, active]) => stopConnection(key, active)));
@@ -214,6 +237,7 @@ export const startRelayRuntime = async (input: {
       await running;
       for (const owners of coreOwners) await owners.done();
       await Promise.all([...connections.values()].map((connection) => connection.done));
+      await projects.done();
     },
   };
 };
