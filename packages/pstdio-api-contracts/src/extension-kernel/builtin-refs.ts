@@ -45,7 +45,6 @@ export const workbenchResourceKinds = {
 };
 
 export const workbenchPages = {
-  /** @deprecated Contribute a page with projectLanding: true and use its public page ref. */
   start: hostRef("page", "start"),
   sessions: hostRef("page", "sessions"),
   session: hostRef("page", "session"),

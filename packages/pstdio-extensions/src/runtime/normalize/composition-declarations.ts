@@ -71,7 +71,6 @@ export const pageDeclarationSchema = z
     title: localizableStringSchema,
     icon: z.string().optional(),
     path: z.string(),
-    projectLanding: z.literal(true).optional(),
     params: pageParamDefinitionsSchema.optional(),
     regionSettings: z
       .object({
@@ -114,15 +113,6 @@ export const pageDeclarationSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (
-      value.projectLanding &&
-      (value.parent || value.resource || value.mode.extensionId !== "pstdio" || value.mode.id !== "project")
-    )
-      ctx.addIssue({
-        code: "custom",
-        path: ["projectLanding"],
-        message: "a root page in project mode without a resource",
-      });
     if (value.document && !value.resource)
       ctx.addIssue({ code: "custom", path: ["document"], message: "a routed resource for document selection" });
   });

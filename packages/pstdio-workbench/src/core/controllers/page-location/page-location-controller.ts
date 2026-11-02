@@ -9,7 +9,11 @@ import {
   createPageLocationFailureHandler,
   createPageLocationHistory,
 } from "./page-location-history-entry";
-import { normalizeWorkbenchPageTarget, workbenchPageLocationsEqual } from "./page-location-normalization";
+import {
+  normalizeWorkbenchPageLocation,
+  normalizeWorkbenchPageTarget,
+  workbenchPageLocationsEqual,
+} from "./page-location-normalization";
 import { setPageLocationPreparation } from "./page-location-preparation";
 import {
   createMainViewSelector,
@@ -19,6 +23,7 @@ import {
 } from "./page-location-publish";
 import { restoreRememberedLocation } from "./page-location-restoration";
 import { createRootLevelLocationTracker } from "./page-location-root-level";
+import { createStartPageCompatibility } from "./page-location-start";
 import type {
   CreateWorkbenchPageLocationControllerInput,
   ResolvedPageLocation,
@@ -30,11 +35,6 @@ import { connectPageOwnerRemoval } from "./page-owner-removal";
 import { createPagePlacementCloser } from "./page-placement-closer";
 import { createPageResourceRemover } from "./page-resource-remover";
 import { createPageUrlResolver, isPageHistoryState } from "./page-url-resolver";
-import {
-  normalizeProjectPageLocation,
-  resolveProjectLandingPage,
-  resolveProjectLandingTarget,
-} from "./project-landing";
 
 export type {
   CreateWorkbenchPageLocationControllerInput,
@@ -54,7 +54,7 @@ export const createWorkbenchPageLocationController = <Value>(
 ): WorkbenchPageLocationController => {
   const navigation = createWorkbenchEvent<PageLocation>("page navigation subscriber");
   const internals = getWorkbenchPageRegistryInternals(input.registry);
-  const pages = input.registry.listPages;
+  const { pages, target: withStartPage } = createStartPageCompatibility(input.registry.listPages, input.startPage);
   const resources = internals.resources;
   const memory = createPageNavigationMemory({ pages, resources });
   const history = createPageLocationHistory();
@@ -95,7 +95,7 @@ export const createWorkbenchPageLocationController = <Value>(
     );
 
   const normalizeStored = (location: PageLocation) =>
-    normalizeProjectPageLocation({ location, pages: pages(), resources });
+    normalizeWorkbenchPageLocation({ location: withStartPage(location), pages: pages(), resources });
   const restoreResolved = (resolved: ResolvedPageLocation, projectId: string, removalVersion?: number) =>
     restoreRememberedLocation(
       resolved,
@@ -105,7 +105,7 @@ export const createWorkbenchPageLocationController = <Value>(
     );
   const normalizeTarget = (target: NavigationTargetPage): ResolvedPageLocation => {
     const resolved = normalizeWorkbenchPageTarget({
-      target: resolveProjectLandingTarget(pages(), target),
+      target: withStartPage(target),
       pages: pages(),
       resources,
       active: input.registry.store.getState().location,
@@ -121,7 +121,7 @@ export const createWorkbenchPageLocationController = <Value>(
 
   const start = (): ResolvedPageLocation =>
     normalizeWorkbenchPageTarget({
-      target: { kind: "page", page: resolveProjectLandingPage(pages(), input.startPage) },
+      target: { kind: "page", page: input.startPage },
       pages: pages(),
       resources,
     });

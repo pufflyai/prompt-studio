@@ -91,8 +91,6 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
   readonly path: string;
-  /** Default project destination. Must be a root page in project mode without a resource. */
-  readonly projectLanding?: true;
   readonly mode: ModeRef;
   readonly parent?: PageRef;
   readonly resource?: ResourceConstraint;
