@@ -31,6 +31,16 @@ const checkTimelineTransport = async (props: {
   await page.keyboard.up("Control");
   await expect.poll(() => timeRuler.evaluate((element) => element.clientWidth)).toBeGreaterThan(rulerWidth * 1.2);
   await expect(camera).toHaveAttribute("aria-label", cameraBefore!);
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, 10000);
+  await page.keyboard.up("Control");
+  const tracks = timeline.getByRole("group", { name: "Animation tracks", exact: true });
+  await expect
+    .poll(() =>
+      tracks.locator('[data-part="viewport"]').evaluate((element) => element.scrollWidth - element.clientWidth),
+    )
+    .toBe(0);
+  await expect(tracks.locator('[data-part="scrollbar"][data-orientation="horizontal"]')).toBeHidden();
   await expect(output).toContainText('"time":0');
 };
 
