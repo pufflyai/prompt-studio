@@ -216,7 +216,9 @@ test("dashboard opens the start page for a selected project without a saved loca
           .__projectPickerAppearedDuringStartup,
     ),
   ).toBe(false);
-  await homePage(page).getByRole("button", { name: /Recent start session/ }).click();
+  await homePage(page)
+    .getByRole("button", { name: /Recent start session/ })
+    .click();
 
   await expect(
     page.getByLabel("Main").getByText(session.title, { exact: true }).filter({ visible: true }),
