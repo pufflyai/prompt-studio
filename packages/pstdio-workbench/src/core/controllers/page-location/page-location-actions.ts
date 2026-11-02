@@ -20,7 +20,12 @@ interface PageLocationControllerActionsInput<Value> {
   resetHistory(): void;
   rootLevelTarget(): ResolvedPageLocation;
   clearRootLocation(): void;
-  restore(projectId: string, source: "boot" | "project-switch", useCurrentUrl: boolean): WorkbenchPageNavigationResult;
+  restore(
+    projectId: string,
+    source: "boot" | "project-switch",
+    useCurrentUrl: boolean,
+    selectedModeId?: string,
+  ): WorkbenchPageNavigationResult;
   resolveUrl(projectId: string, entry: WorkbenchPageBrowserEntry): ResolvedPageLocation | undefined;
   normalizeTarget(target: NavigationTargetPage): ResolvedPageLocation;
   normalizeStored(location: PageLocation): ResolvedPageLocation;
@@ -93,8 +98,9 @@ export const createPageLocationControllerActions = <Value>(
     },
     boot: (projectId) => actions.restore(projectId, "boot", true),
     switchProject(projectId) {
+      const modeId = input.registry.store.getState().activeModeId ?? input.modes.getActiveModeId?.();
       actions.clearProject(projectId);
-      return actions.restore(projectId, "project-switch", false);
+      return actions.restore(projectId, "project-switch", false, modeId);
     },
     navigate(target) {
       const projectId = input.registry.store.getState().projectId;
