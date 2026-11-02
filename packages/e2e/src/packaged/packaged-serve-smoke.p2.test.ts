@@ -1,3 +1,4 @@
+// packaged-page-params-during-mount.p2.test.ts covers host props changed during async guest initialization.
 // packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 // packaged-collection-view-order-smoke.p2.test.ts keeps Save view clickable beneath explanatory tooltips.
 import { beforeAll, expect, test } from "bun:test";
