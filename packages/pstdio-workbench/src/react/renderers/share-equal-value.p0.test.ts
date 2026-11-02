@@ -22,6 +22,35 @@ test("a reload that changes one row keeps every unchanged row", () => {
   expect(shared.rows[1]).not.toBe(rows[1]);
 });
 
+test("a changed part stays the loaded object, so lookups keyed by that object still find it", () => {
+  const sources = new WeakMap<object, string>();
+  const previous = { rows };
+  const next = structuredClone(previous);
+  next.rows[1]!.title = "Renamed";
+  sources.set(next, "load");
+  sources.set(next.rows[1]!, "renamed row");
+  const shared = shareEqualValue(previous, next);
+  expect(shared).toBe(next);
+  expect(sources.get(shared)).toBe("load");
+  expect(sources.get(shared.rows[1]!)).toBe("renamed row");
+  expect(shared.rows[0]).toBe(rows[0]);
+});
+
+test("a changed parent keeps its unchanged children", () => {
+  const child = { id: "child", label: "Child" };
+  const previous = { id: "parent", label: "Parent", children: [child] };
+  const next = { id: "parent", label: "Renamed", children: [{ id: "child", label: "Child" }] };
+  const shared = shareEqualValue(previous, next);
+  expect(shared).toBe(next);
+  expect(shared.children[0]).toBe(child);
+});
+
+test("frozen data is returned as loaded", () => {
+  const next = Object.freeze({ rows: Object.freeze([{ id: "a", title: "Changed" }, rows[1]]) });
+  const shared = shareEqualValue({ rows }, next);
+  expect(shared).toBe(next);
+});
+
 test("added and removed rows and fields are not hidden by sharing", () => {
   expect(shareEqualValue({ rows }, { rows: rows.slice(0, 1) })).toEqual({ rows: rows.slice(0, 1) });
   expect(shareEqualValue({ rows, page: 1 }, { rows })).toEqual({ rows });

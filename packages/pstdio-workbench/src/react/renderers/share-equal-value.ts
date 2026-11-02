@@ -6,10 +6,18 @@ const isPlainData = (value: unknown): value is Record<string, unknown> => {
 
 const hasId = (value: unknown): value is { id: string } => isPlainData(value) && typeof value.id === "string";
 
+// Equal parts move into the loaded value in place: views, and lookups keyed by the loaded objects, keep finding
+// each changed object as it was loaded. Frozen values and accessor properties stay as loaded.
+const replaceInPlace = (target: object, key: string | number, value: unknown) => {
+  if (Object.isFrozen(target)) return;
+  if (Object.getOwnPropertyDescriptor(target, key)?.writable) (target as Record<string | number, unknown>)[key] = value;
+};
+
 /**
- * Returns `next`, reusing every part that equals the same part of `previous`. A reload that returns
- * equal data gives back `previous` itself, so views showing it do not render again; when one row
- * changes, the other rows keep their objects. Only arrays and plain objects are compared.
+ * Returns `previous` when `next` equals it. Otherwise returns `next` itself, with every part that equals the
+ * matching part of `previous` replaced, in place, by that part. A reload that changed nothing gives back the value
+ * on screen, so views showing it do not render again; when one row changes, the other rows keep their objects and
+ * the changed row stays the object that was loaded. Only arrays and plain objects are compared.
  */
 export const shareEqualValue = <T>(previous: unknown, next: T): T => {
   if (Object.is(previous, next)) return next;
@@ -18,16 +26,23 @@ export const shareEqualValue = <T>(previous: unknown, next: T): T => {
     const byId =
       previous.every(hasId) && next.every(hasId) ? new Map(previous.map((item) => [item.id, item])) : undefined;
     const shared = next.map((item, index) => shareEqualValue(byId ? byId.get(item.id) : previous[index], item));
-    const same = shared.length === previous.length && shared.every((item, index) => item === previous[index]);
-    return (same ? previous : shared) as T;
+    if (shared.length === previous.length && shared.every((item, index) => item === previous[index])) {
+      return previous as T;
+    }
+    shared.forEach((item, index) => {
+      if (item !== next[index]) replaceInPlace(next, index, item);
+    });
+    return next;
   }
   if (isPlainData(previous) && isPlainData(next)) {
     const keys = Object.keys(next);
-    const shared = Object.fromEntries(keys.map((key) => [key, shareEqualValue(previous[key], next[key])]));
+    const shared = keys.map((key) => [key, shareEqualValue(previous[key], next[key])] as const);
     const same =
       keys.length === Object.keys(previous).length &&
-      keys.every((key) => Object.hasOwn(previous, key) && shared[key] === previous[key]);
-    return (same ? previous : shared) as T;
+      shared.every(([key, value]) => Object.hasOwn(previous, key) && value === previous[key]);
+    if (same) return previous as T;
+    for (const [key, value] of shared) if (value !== next[key]) replaceInPlace(next, key, value);
+    return next;
   }
   return next;
 };
