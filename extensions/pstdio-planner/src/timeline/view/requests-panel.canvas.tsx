@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { AutoBuildPreview, CardNeedsAttentionPreview } from "../../../proposals/PS-1038/placements-preview";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
@@ -213,4 +214,21 @@ export const CompleteTicket: Story = {
 export const UnreadableRequest: Story = {
   id: "extensions-planner-needs-attention--unreadable-request",
   args: { row: { ...row, requestErrors: ["Request broken: Request title is required."] } },
+};
+
+export const AutoBuildPopover: Story = {
+  name: "Auto Build — Needs attention inline",
+  render: () => <AutoBuildPreview requests={[proposalReview, decision]} />,
+};
+export const AutoBuildSingleRequest: Story = {
+  name: "Auto Build — one request inline",
+  render: () => <AutoBuildPreview requests={[proposalReview]} />,
+};
+export const AutoBuildSaveError: Story = {
+  name: "Auto Build — answer save error",
+  render: () => <AutoBuildPreview requests={[proposalReview]} failSave />,
+};
+export const CardModal: Story = {
+  name: "Card — open Needs attention",
+  render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [proposalReview, decision] }} />,
 };
