@@ -184,6 +184,21 @@
       "default": false,
       "bundleSource": false,
       "icon": "PanelsTopLeft"
+    },
+    {
+      "installName": "remote-workspaces",
+      "extensionId": "pstdio.remote-workspaces",
+      "displayName": "Remote Workspaces",
+      "description": "Run agent sessions in PocketCoder workspaces on another machine.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/remote-workspaces",
+        "ref": "{hostRelease}"
+      },
+      "default": false,
+      "icon": "Cloud",
+      "listed": false
     }
   ]
 }

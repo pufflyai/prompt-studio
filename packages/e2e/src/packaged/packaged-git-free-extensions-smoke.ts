@@ -1,11 +1,66 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+
+const expectExistingRemoteRecovery = async (input: {
+  root: string;
+  baseUrl: string;
+  projectId: string;
+  headers: Record<string, string>;
+}) => {
+  const { root, baseUrl, projectId, headers } = input;
+  const source = join(root, "extensions", "remote-workspaces");
+  mkdirSync(source, { recursive: true });
+  const manifest = {
+    publisher: "pstdio",
+    name: "remote-workspaces",
+    displayName: "Remote Workspaces",
+    version: "0.0.1",
+    main: "extension.ts",
+    engines: { pstdio: "^0.0.9" },
+  };
+  writeFileSync(join(source, "package.json"), JSON.stringify(manifest));
+  writeFileSync(join(source, "extension.ts"), "export default {};");
+  const retained = join(root, "project", ".pstdio", "extension-storage", "pstdio.remote-workspaces", "retained.json");
+  mkdirSync(join(retained, ".."), { recursive: true });
+  writeFileSync(retained, JSON.stringify({ workspace: "existing" }));
+  const enabled = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions/installed/remote-workspaces/enable`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      displayName: manifest.displayName,
+      extensionId: "pstdio.remote-workspaces",
+      installName: manifest.name,
+      manifest: { id: "pstdio.remote-workspaces", name: manifest.name, enginesPstdio: manifest.engines.pstdio },
+      name: manifest.name,
+      sourcePath: source,
+      sourceKind: "git",
+      version: manifest.version,
+      sourceRef: `https://github.com/pufflyai/prompt-studio@${"0".repeat(40)}#extensions/remote-workspaces`,
+    }),
+  });
+  expect(enabled.status).toBe(200);
+  const { instanceId } = (await enabled.json()) as { instanceId: string };
+  const listed = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions`, { headers });
+  expect(listed.status).toBe(200);
+  const before = (await listed.json()) as { extensions: { id: string; canUpgrade: boolean }[] };
+  expect(before.extensions).toContainEqual(expect.objectContaining({ id: instanceId, canUpgrade: true }));
+  const upgraded = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions/${instanceId}/upgrade`, {
+    method: "POST",
+    headers,
+  });
+  expect(upgraded.status).toBe(200);
+  expect(await upgraded.json()).toMatchObject({
+    changed: true,
+    extension: { extensionId: "pstdio.remote-workspaces", status: "loaded", canUpgrade: false },
+  });
+  expect(JSON.parse(readFileSync(retained, "utf8"))).toEqual({ workspace: "existing" });
+};
 
 export const expectPackagedGitFreeExtensions = async () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-no-git-"));
@@ -71,6 +126,7 @@ export const expectPackagedGitFreeExtensions = async () => {
     });
     expect(gitInstall.status).toBe(409);
     expect(await gitInstall.json()).toMatchObject({ code: "git_unavailable" });
+    await expectExistingRemoteRecovery({ root, baseUrl: started.baseUrl, projectId: project.id, headers });
   } finally {
     if (child) await stopProcess(child);
     await registry.close();
