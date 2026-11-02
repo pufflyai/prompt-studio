@@ -1,5 +1,5 @@
 import { Box, Link, Stack, Text } from "@chakra-ui/react";
-import { WorkbenchIcon } from "@pstdio/workbench/react";
+import { HomeIcon as WorkbenchIcon } from "./home-icon";
 
 export const promptStudioUrl = "https://prompt.studio";
 

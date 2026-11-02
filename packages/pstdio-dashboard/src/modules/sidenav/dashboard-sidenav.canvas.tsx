@@ -18,7 +18,7 @@ import { DesktopProjectTabsController } from "../projects/desktop-project-tabs-c
 import { createProjectsModule } from "../projects/module";
 import { createSessionsModule } from "../sessions/module";
 import { createSettingsModule } from "../settings/module";
-import { createStartModule } from "../start/module";
+import { createStartModule } from "../start/start-page.fixture";
 import { createWorkspacesModule } from "../workspaces/module";
 import { seedSidenavStory } from "./dashboard-sidenav-story-data";
 import { createSidenavModule } from "./module";

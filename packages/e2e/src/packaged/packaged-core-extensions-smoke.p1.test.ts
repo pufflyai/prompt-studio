@@ -77,12 +77,16 @@ test(
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
           expect.objectContaining({ enabled: true, installName: "harness-open-code" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-base-themes" }),
+          expect.objectContaining({ enabled: true, installName: "pstdio-home" }),
           expect.objectContaining({ canUpgrade: false, enabled: true, installName: "pstdio-planner" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
         ]),
       );
 
+      expect(metadata.pages).toContainEqual(
+        expect.objectContaining({ extensionId: "pstdio.pstdio-home", projectLanding: true, path: "home" }),
+      );
       const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
       expect(planner).toBeDefined();
       await expectPlannerIdentities({

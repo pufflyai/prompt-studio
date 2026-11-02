@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 
@@ -44,7 +45,7 @@ test("an extension page navigates through the public API and browser history", a
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/projects/${project.id}`);
 
-  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
+  await expect(homePage(page)).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('[data-workbench-panel-header="sidenav"]')).toHaveCount(0);
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expect(sidenav).toHaveCount(1);
@@ -69,7 +70,7 @@ test("an extension page navigates through the public API and browser history", a
   await page.goBack();
 
   await expect(page).toHaveURL(`/projects/${project.id}`);
-  await expect(page.getByTestId("start-page")).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   await expect(page.locator('iframe[title="Lab"]')).toBeHidden();
   await expect(sidenav.getByRole("option", { name: /Session 1 — first contact/ })).toHaveCount(0);
   await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toBeVisible();
@@ -87,13 +88,13 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/projects/${project.id}`);
 
-  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
+  await expect(homePage(page)).toBeVisible({ timeout: 30_000 });
   await page.getByRole("option", { name: "Tickets", exact: true }).click({ timeout: 30_000 });
 
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
   // Tickets is a tabless page: its board replaces Start in Main without a tab header.
   await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
-  await expect(page.getByTestId("start-page")).toBeHidden();
+  await expect(homePage(page)).toBeHidden();
   await expect(
     page.locator('[data-workbench-region="main"]').getByRole("group", { name: "Ticket filter", exact: true }),
   ).toBeVisible();
@@ -102,7 +103,7 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
   await page.goBack();
 
   await expect(page).toHaveURL(`/projects/${project.id}`);
-  await expect(page.getByTestId("start-page")).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   await expect(page.getByRole("group", { name: "Ticket filter", exact: true })).toBeHidden();
 });
 
@@ -114,7 +115,7 @@ test("Lab replaces an active session page in main", async ({ page, request }) =>
   await page.goto(`/projects/${project.id}`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
+  await expect(homePage(page)).toBeVisible({ timeout: 30_000 });
   await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
   await expect(sidenav.getByRole("option", { name: sessionTitle, exact: true })).toBeVisible();
   await sidenav.getByRole("option", { name: sessionTitle, exact: true }).click();

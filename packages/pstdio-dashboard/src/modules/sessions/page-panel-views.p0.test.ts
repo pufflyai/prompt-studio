@@ -6,7 +6,7 @@ import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardSessionResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { navigateDashboardPage, openSessionsPage } from "@/shared/workbench/page-navigation";
-import { createStartModule } from "../start/module";
+import { createStartModule } from "../start/start-page.fixture";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
 

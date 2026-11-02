@@ -6,7 +6,7 @@ import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workb
 import { createBootstrapModule } from "./bootstrap";
 import { createExtensionsModule } from "./extensions/module";
 import { emptyAppearance, flushMicrotasks, metadata } from "./extensions/module-test-fixtures";
-import { createStartModule } from "./start/module";
+import { createStartModule } from "./start/start-page.fixture";
 
 const activeViewId = (workbench: ReturnType<typeof createWorkbench>) => {
   const region = workbench.layout.getLayout().regions.main;

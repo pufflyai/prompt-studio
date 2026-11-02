@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 
@@ -207,7 +208,7 @@ test("dashboard opens the start page for a selected project without a saved loca
   await page.goto("/");
 
   await expect(page.getByRole("option", { name: "Start", exact: true })).toHaveCount(0);
-  await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   expect(
     await page.evaluate(
       () =>

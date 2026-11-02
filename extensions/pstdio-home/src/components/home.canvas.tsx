@@ -1,9 +1,7 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import type { AgentInfo } from "pstdio-api-contracts";
-import { createDashboardResource } from "@/shared/app/resources";
-import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
-import type { RecentProjectResource } from "@/shared/recents/recent-project-resources";
+import type { HomeHarness as AgentInfo, RecentProjectResource } from "../data";
+import { ProjectSetupStatus } from "./project-setup-status";
 import { StartAboutPanel } from "./start-about-panel";
 import { type StartAction, StartActionList } from "./start-action-list";
 import { StartHarnessStatus } from "./start-harness-status";
@@ -20,7 +18,7 @@ const recentResource = (
   title,
   icon,
   updatedAt,
-  resource: createDashboardResource(kind.toLowerCase(), id, title, icon, "project-1"),
+  resource: { type: kind.toLowerCase(), id, label: title, icon, projectId: "project-1" },
 });
 const resources: RecentProjectResource[] = [
   recentResource(
@@ -72,7 +70,7 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
   );
 };
 const meta: CanvasMeta<typeof StartPagePreview> = {
-  title: "Start/StartPage",
+  title: "Home/Project home",
   component: StartPagePreview,
 };
 export default meta;

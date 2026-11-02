@@ -132,6 +132,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "harness-pi",
     "local-example",
     "pstdio-artifacts",
+    "pstdio-home",
     "pstdio-base-themes",
     "pstdio-dashboard",
     "pstdio-notes",

@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 
 const WORKING_TREE_EXTENSIONS = [
+  ["pstdio-home", "extensions/pstdio-home"],
   ["harness-claude-code", "extensions/harness-claude-code"],
   ["harness-codex", "extensions/harness-codex"],
   ["harness-open-code", "extensions/harness-open-code"],

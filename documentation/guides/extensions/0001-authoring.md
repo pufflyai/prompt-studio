@@ -507,3 +507,7 @@ from core. Extensions do not keep their own copy or repair numbers after offline
 merges. The [resource numbers reference](../../references/sdk/0002-resources.md#resource-numbers)
 describes allocation, current identities, aliases, and change events available on
 `main` for the release after 0.44.0. The Bookmarks example does not need numbers.
+
+## Project Home on main
+
+The default `pstdio.pstdio-home` extension owns the project home presentation. It uses public session/workspace queries, webview commands and navigation. The shell resolves its `projectLanding: true` page and keeps project selection, settings and tool search usable if Home is disabled. See [project landing pages](../../references/extensions/0004-contribution-api.md#project-landing-pages-api-031-on-main).

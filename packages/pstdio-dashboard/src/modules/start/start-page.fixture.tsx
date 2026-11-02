@@ -7,15 +7,13 @@ import {
   registerDashboardNavigationContribution,
 } from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
-import { StartWidget } from "./components/start-widget";
-import { registerToolResources } from "./tool-resources";
 
 const registerStartWidget = (ctx: WorkbenchModuleContext) => {
   ctx.views.registerView(
     {
       id: dashboardWidgetIds.start,
       title: "Start",
-      body: { kind: "react", render: (input) => <StartWidget input={input} /> },
+      body: { kind: "react", render: () => null },
     },
     { priority: 90 },
   );
@@ -72,6 +70,6 @@ export const createStartModule = () =>
           if (pageId === dashboardViews.start.id) setDashboardSidenavSelection(ctx, undefined);
         },
       );
-      return [{ dispose: unsubscribe }, ...registerToolResources(ctx)];
+      return [{ dispose: unsubscribe }];
     },
   }) satisfies WorkbenchModuleContribution;

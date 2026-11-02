@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 import { uiOrigin } from "../ui-server";
 
 const boomboxFrames = async (page: Page) => {
@@ -96,7 +97,7 @@ test("switching projects releases the previous project's retained webviews", asy
     await picker.getByText(projects[1].name, { exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/projects/${projects[1].id}`));
     await expect.poll(() => frames.every((frame) => frame.isDetached())).toBe(true);
-    await expect(page.getByTestId("start-page")).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
   } finally {
     for (const project of projects) await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
   }

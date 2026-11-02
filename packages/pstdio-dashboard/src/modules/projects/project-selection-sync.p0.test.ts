@@ -8,7 +8,7 @@ import { createBootstrapModule } from "../bootstrap";
 import { createExtensionsModule } from "../extensions/module";
 import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "../extensions/module-test-fixtures";
 import { createSessionsModule } from "../sessions/module";
-import { createStartModule } from "../start/module";
+import { createStartModule } from "../start/start-page.fixture";
 import { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
 import { createProjectsModule } from "./module";
 

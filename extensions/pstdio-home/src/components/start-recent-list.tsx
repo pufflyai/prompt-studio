@@ -1,7 +1,7 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
-import { WorkbenchIcon } from "@pstdio/workbench/react";
-import type { RecentProjectResource } from "@/shared/recents/recent-project-resources";
+import type { RecentProjectResource } from "../data";
+import { HomeIcon as WorkbenchIcon } from "./home-icon";
 
 interface StartRecentListProps {
   resources: RecentProjectResource[];

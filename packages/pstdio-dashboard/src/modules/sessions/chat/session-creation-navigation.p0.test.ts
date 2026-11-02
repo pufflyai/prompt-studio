@@ -4,7 +4,7 @@ import { createWorkbench, type WorkbenchPanelRegion } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardSessionResource } from "@/shared/app/resources";
 import { navigateDashboardPage, openSessionsPage } from "@/shared/workbench/page-navigation";
-import { createStartModule } from "../../start/module";
+import { createStartModule } from "../../start/start-page.fixture";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionsModule } from "../module";
 import { openCreatedSessionFromDraft } from "./session-chat-actions";

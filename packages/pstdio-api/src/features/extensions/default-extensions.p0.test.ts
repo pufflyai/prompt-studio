@@ -14,6 +14,7 @@ describe("resolveDefaultExtensionsConfig", () => {
     const config = await resolveDefaultExtensionsConfig({});
 
     expect(config.defaultExtensions).toEqual([
+      "pstdio-home",
       "harness-claude-code",
       "harness-codex",
       "harness-open-code",
@@ -276,6 +277,7 @@ describe("installDefaultExtensions sources", () => {
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
     expect(calls.map((call) => call.installName)).toEqual([
+      "pstdio-home",
       "harness-claude-code",
       "harness-codex",
       "harness-open-code",
