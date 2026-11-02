@@ -1,3 +1,4 @@
+// packaged-page-params-during-mount.p2.test.ts covers host props changed during async guest initialization.
 // packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
