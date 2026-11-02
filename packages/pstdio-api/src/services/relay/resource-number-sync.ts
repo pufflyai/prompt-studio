@@ -1,5 +1,6 @@
-import type { SyncSpace } from "pstdio-sync";
-import { coreOwnerId, createMemoryDocumentStore, resourceNumbersDocumentId, type StorageOwner } from "pstdio-sync";
+import { createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
+import type { SyncSpace } from "pstdio-sync/encryption";
+import { coreOwnerId, resourceNumbersDocumentId } from "pstdio-sync/records";
 import { createDocumentSync, createRecordStreamSync, type DocumentRelay, type SyncFailure } from "pstdio-sync/relay";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 

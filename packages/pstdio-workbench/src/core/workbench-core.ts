@@ -28,10 +28,10 @@ import { createWorkbenchViewerController } from "./controllers/resource-viewers/
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
 import { createModeSidePanel } from "./controllers/side-panel/mode-side-panel";
 import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
+import { createWorkbenchPresence } from "./presence/workbench-presence";
 import { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
 import { createCommandRegistry } from "./registries/commands/command-registry";
 import { createLayoutModel } from "./registries/layout/layout-model";
-import type { LayoutPersistenceAdapter } from "./registries/layout/layout-model-types";
 import { createMenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
 import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
@@ -49,6 +49,7 @@ import { createFileIconThemeRegistry } from "./registries/themes/file-icon-theme
 import { createThemeRegistry } from "./registries/themes/theme-registry";
 import { createContextKeyService } from "./shared/context/context-key-service";
 import { createDisposable } from "./shared/disposable";
+import { disposePlacementTextGuests } from "./text-editing/placement-text-guests";
 import { createWorkbenchActivation } from "./workbench-activation";
 import {
   activeWorkbenchResource,
@@ -69,16 +70,11 @@ import { createWorkbenchKeyboard } from "./workbench-shortcut-actions";
 
 export * from "./workbench-core-types";
 
-const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefined) => {
-  // Save pending writes before the adapter releases its resources.
-  persistence?.flush?.();
-  persistence?.dispose?.();
-};
-
 import { layoutPanelGuards } from "./controllers/shell/layout-panel-policy";
 import { requirePanelOpen } from "./controllers/shell/panel-open-policy";
 import { restorePanelPolicy, workbenchPanelPolicy } from "./controllers/shell/workbench-panel-policy";
 import { createWorkbenchHost } from "./workbench-core-host";
+import { disposeLayoutPersistence } from "./workbench-core-persistence";
 
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   let core: WorkbenchCore;
@@ -243,6 +239,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     modePlacements,
     shellPlacements,
     notifications: createNotificationRegistry(() => actionErrorTarget({ focus, layout })),
+    presence: createWorkbenchPresence(),
     overlays,
     placeholders,
     pageLocations,
@@ -270,11 +267,11 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     themes: createThemeRegistry(),
     fileIconThemes: createFileIconThemeRegistry(),
 
-    getActiveResource() {
-      return activeWorkbenchResource(core);
-    },
+    getActiveResource: () => activeWorkbenchResource(core),
 
     async dispose() {
+      await disposePlacementTextGuests(core);
+      core.presence.dispose();
       locationBrowser.dispose();
       pageLocations.dispose();
       viewers.dispose();
@@ -300,9 +297,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       );
     },
 
-    registerChildModule(module) {
-      return core.registerModule(module);
-    },
+    registerChildModule: (module) => core.registerModule(module),
 
     ...createWorkbenchModuleRegistry(() => core),
   };

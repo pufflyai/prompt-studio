@@ -79,6 +79,8 @@ export interface ExtensionBlobInput {
 
 export interface ExtensionBlobsApi {
   put(input: ExtensionBlobInput): Promise<ExtensionBlobRef>;
+  /** Replace an existing file's bytes while retaining its identity and scope. */
+  update(id: string, input: ExtensionBlobInput): Promise<ExtensionBlobRef>;
   get(id: string): Promise<ExtensionBlobRef | undefined>;
   getBytes(id: string): Promise<Uint8Array>;
   list(): Promise<ExtensionBlobRef[]>;

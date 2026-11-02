@@ -77,6 +77,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
           projectId={projectId}
           resource={placementResource}
           placement={input.instance}
+          textTarget={input.textTarget}
           terminal={input.workbench.terminal}
           title={resolveLocalizableString(view.title, view.extensionId)}
           webview={webview}

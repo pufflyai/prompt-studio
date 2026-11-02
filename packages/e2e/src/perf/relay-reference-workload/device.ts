@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
 import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
-import { createSyncSpace, openState, openUpdate, type StorageOwner } from "pstdio-sync";
+import type { StorageOwner } from "pstdio-sync";
+import { createSyncSpace, openState, openUpdate } from "pstdio-sync/encryption";
 import { createDocumentRelay, createRecordStreamSync, decodeRecordFrame } from "pstdio-sync/relay";
 import type { Asset } from "pstdio-sync-contracts";
 import type { deploy } from "./deployment";

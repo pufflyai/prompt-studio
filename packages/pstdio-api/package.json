@@ -29,9 +29,10 @@
     "pstdio-paths": "workspace:*",
     "pstdio-scheduler": "workspace:*",
     "pstdio-storage": "workspace:*",
-    "pstdio-wt": "workspace:*",
     "pstdio-sync": "workspace:*",
     "pstdio-sync-contracts": "workspace:*",
+    "pstdio-wt": "workspace:*",
+    "yjs": "^13.6.29",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -108,7 +108,16 @@ export interface RuntimePrivateHandlerRecord {
   name: string;
   sourcePath: string;
   rendererId: string;
-  rendererKind: "commandPaletteResource" | "controls" | "dataTable" | "file" | "kanban" | "status" | "tab" | "tree";
+  rendererKind:
+    | "commandPaletteResource"
+    | "controls"
+    | "dataTable"
+    | "file"
+    | "kanban"
+    | "status"
+    | "tab"
+    | "tree"
+    | "textSource";
   operation: string;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with renderer-specific input
   handler: RendererCallback<any, any>;

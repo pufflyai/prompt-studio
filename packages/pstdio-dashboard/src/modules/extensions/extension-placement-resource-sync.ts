@@ -1,6 +1,9 @@
 import { resourceKey, viewDataEvents } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
-import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
+import {
+  subscribeToExtensionEventFeed,
+  subscribeToExtensionEventReset,
+} from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { toDashboardExtensionResource } from "./extension-kanban-adapter";
@@ -66,6 +69,10 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
     return result.filter((resource) => referenceKey(resource) !== primaryKey);
   };
   const applyResource = (resource: ResourceRef, result: unknown) => {
+    if (result === null) {
+      ctx.resources.removed(resource);
+      return;
+    }
     const value = toDashboardExtensionResource(result, input.projectId, input.metadata.resourceKinds);
     if (!value) return;
     const updated = {
@@ -128,12 +135,17 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
       if (resource.extensionId && isResourceRefreshEvent(event.id, resource.extensionId)) void resolve(resource);
     }
   });
+  const unsubscribeReset = subscribeToExtensionEventReset(() => {
+    for (const resource of new Map(resources().map((resource) => [referenceKey(resource), resource])).values())
+      void resolve(resource);
+  });
   return {
     dispose() {
       unsubscribeLayout();
       unsubscribePages();
       primarySubscription.dispose();
       unsubscribeEvents();
+      unsubscribeReset();
       for (const request of pending.values()) request.abort();
     },
   };

@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { NativeDocumentsClient, TextEditingTransportClient } from "@pstdio/sdk/client";
 import type { ExtensionKeybindingRecord } from "pstdio-api-contracts";
 import type {
   Disposable,
@@ -45,6 +46,8 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   kanbanAdapter?: WorkbenchExtensionKanbanRendererAdapter;
   dataTableAdapter?: WorkbenchExtensionDataTableRendererAdapter;
+  nativeDocuments?: NativeDocumentsClient;
+  textEditing?: TextEditingTransportClient;
   menuSlotsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   menuTargetsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   menuRegistrations?: readonly WorkbenchExtensionHostMenuRegistration[];
@@ -62,6 +65,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   subscribeRefreshEvents?: (listener: (event: WorkbenchExtensionRefreshEvent) => void) => Disposable;
+  subscribeRefreshReset?: (listener: () => void) => Disposable;
   webviewArtifacts?: ExtensionWebviewArtifactCapabilities;
   webviewFiles?: ExtensionWebviewFileCapabilities;
   workbench: WorkbenchModuleContext;

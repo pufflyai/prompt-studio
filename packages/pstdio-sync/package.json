@@ -4,7 +4,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./relay": "./src/relay/index.ts"
+    "./records": "./src/records/index.ts",
+    "./text": "./src/text/index.ts",
+    "./relay": "./src/relay/index.ts",
+    "./encryption": "./src/encryption/index.ts",
+    "./presence": "./src/presence/index.ts"
   },
   "scripts": {
     "test": "bun ../../scripts/ci/run-bun-tests.ts",
