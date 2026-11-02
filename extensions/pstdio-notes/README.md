@@ -21,6 +21,7 @@ Select **Notes** in the project sidebar to open its page. Use its chevron to exp
 The sidebar keeps your notes within reach while the open tab shows the note's body. This example is a Markdown note named **Reading list**, not a separate reading-list extension.
 
 - Choose **New note** next to **Notes**, or next to a folder, to start writing immediately. The note starts empty and is called **New note**.
+- **New note** in the command palette also creates and opens an empty note immediately.
 - The Notes page also offers **New note** in Main's **+** menu and in its default placeholder cards. Its Main tabs and selected note stay separate from other pages and return after navigation or reload.
 - Selecting a note opens it in a tab and keeps the project navigation in the sidebar.
 - The first nonempty save gives an untitled note a title from the beginning of its content, up to 80 characters. That title is saved in Markdown front matter and stays unchanged through later edits or clearing the body. A title you choose prevents the automatic rename.
