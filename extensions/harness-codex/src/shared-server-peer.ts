@@ -11,6 +11,8 @@ const nativeResult = (
   goalStatus?: string,
 ) => {
   switch (method) {
+    case "thread/fork":
+      return { thread: { id: "forked-thread" } };
     case "thread/goal/get":
       return { goal: goalStatus ? { status: goalStatus } : null };
     case "thread/start":

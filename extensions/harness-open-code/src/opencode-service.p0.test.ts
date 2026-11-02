@@ -150,6 +150,28 @@ describe("request timeouts", () => {
   });
 });
 
+test("fork copies the native session without submitting a prompt", async () => {
+  const requests: string[] = [];
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      requests.push(`${request.method} ${new URL(request.url).pathname}`);
+      return Response.json({ id: "forked" });
+    },
+  });
+  const service = createOpencodeService({
+    startServer: async () => ({ url: server.url.origin, dispose: async () => {} }),
+    serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
+  });
+  try {
+    expect(await service.forkSession("original", "/project")).toBe("forked");
+    expect(requests).toEqual(["POST /session/original/fork"]);
+  } finally {
+    await service.dispose();
+    server.stop(true);
+  }
+});
+
 test("the harness server store persists through host state", async () => {
   const values = new Map<string, unknown>();
   const store = createHarnessServerStore({

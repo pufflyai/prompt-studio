@@ -158,6 +158,11 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
       modelCache = undefined;
     },
     listModels,
+    fork: async (_ctx, input) => {
+      const { forkSession } = await import("@anthropic-ai/claude-agent-sdk");
+      const result = await forkSession(input.agentSessionId, { dir: input.cwd });
+      return { agentSessionId: result.sessionId };
+    },
     getCommandState: (_ctx, input) => claudeCommandState(input),
     prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),
 

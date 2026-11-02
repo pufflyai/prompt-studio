@@ -237,6 +237,20 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     return withServerUrl(abortRunningSession, { retry: true });
   };
 
+  const forkSession = (sessionId: string, cwd?: string, signal?: AbortSignal) => {
+    const directory = cwd?.trim() || process.cwd();
+    return withServerUrl(async (baseUrl) => {
+      const result = await requestJson<{ id: string }>(
+        deps.fetcher,
+        buildRequestUrl(baseUrl, `/session/${sessionId}/fork`, directory),
+        { method: "POST", headers: buildHeaders(directory), body: {}, signal },
+      );
+      requireResponseOk(result.response, result.text, "OpenCode session.fork failed");
+      if (!result.parsed?.id) throw new Error("OpenCode did not return the forked session.");
+      return result.parsed.id;
+    });
+  };
+
   const { listPendingQuestions, replyQuestion } = createQuestionApi({ fetcher: deps.fetcher, withServerUrl });
 
   return {
@@ -247,6 +261,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     sendSessionMessage,
     getSessionMessages,
     abortSession,
+    forkSession,
     listPendingQuestions,
     replyQuestion,
     ...createCommandApi({ fetcher: deps.fetcher, withServerUrl }),

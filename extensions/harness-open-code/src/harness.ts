@@ -199,6 +199,10 @@ export const createOpencodeHarness = (
     },
 
     listModels,
+    fork: (ctx, input) =>
+      services.run(ctx, async (signal) => ({
+        agentSessionId: await (await serviceFor(ctx)).forkSession(input.agentSessionId, input.cwd, signal),
+      })),
     getCommandState: (ctx, input) => services.run(ctx, async () => opencodeCommandState(input, await serviceFor(ctx))),
     prepareOperation: async (ctx, input, operation) => {
       const prepared = prepareOpencodeOperation(input, operation, await serviceFor(ctx));

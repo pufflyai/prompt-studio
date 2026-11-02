@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { homedir } from "node:os";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { buildTranscriptPath, createClaudeCodeHarness } from "./harness";
@@ -49,6 +50,48 @@ const ctx: HarnessContext = {
 };
 
 const buildTranscript = (entries: unknown[]) => entries.map((entry) => JSON.stringify(entry)).join("\n");
+
+test("fork remaps native session identities while keeping the original transcript", async () => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "claude-fork-")));
+  const originalConfig = process.env.CLAUDE_CONFIG_DIR;
+  process.env.CLAUDE_CONFIG_DIR = join(root, "config");
+  const directory = join(process.env.CLAUDE_CONFIG_DIR, "projects", root.replace(/[^a-zA-Z0-9]/g, "-"));
+  mkdirSync(directory, { recursive: true });
+  const sourceId = crypto.randomUUID();
+  const userId = crypto.randomUUID();
+  const transcript = buildTranscript([
+    { type: "user", uuid: userId, parentUuid: null, sessionId: sourceId, message: { role: "user", content: "Hello" } },
+    {
+      type: "assistant",
+      uuid: crypto.randomUUID(),
+      parentUuid: userId,
+      sessionId: sourceId,
+      message: { role: "assistant", content: [{ type: "text", text: "An answer" }] },
+    },
+  ]);
+  const path = join(directory, `${sourceId}.jsonl`);
+  writeFileSync(path, transcript);
+  try {
+    const fork = await createClaudeCodeHarness().fork!(ctx, { sessionId: "host", agentSessionId: sourceId, cwd: root });
+    expect(fork.agentSessionId).not.toBe(sourceId);
+    expect(readFileSync(path, "utf8")).toBe(transcript);
+    const copied = readFileSync(join(directory, `${fork.agentSessionId}.jsonl`), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    const messages = copied.filter((entry) => entry.type === "user" || entry.type === "assistant");
+    expect(messages.map((entry) => entry.sessionId)).toEqual([fork.agentSessionId, fork.agentSessionId]);
+    expect(messages[0].uuid).not.toBe(userId);
+    expect(messages[1].parentUuid).toBe(messages[0].uuid);
+    expect(messages.map((entry) => entry.message)).toEqual(
+      JSON.parse(`[${transcript.replaceAll("\n", ",")}]`).map((entry: { message: unknown }) => entry.message),
+    );
+  } finally {
+    if (originalConfig === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = originalConfig;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 describe("claude-code harness getMessages", () => {
   test("keeps the latest entry for duplicate UUIDs", async () => {

@@ -3,7 +3,7 @@ import { l10n, params, reconcileMessageHistory } from "@pstdio/sdk/extensions";
 import { getPiAuthentication, runPiAccountWorker } from "./authentication";
 import { detectPi, requirePiCommand } from "./detection";
 import { readPiHistory } from "./history";
-import { type PiProcessOptions, piRequest } from "./process";
+import { type PiProcessOptions, piRequest, piRequests } from "./process";
 import { startPiTurn } from "./turn";
 
 export const createPiHarness = (options: PiProcessOptions = {}) => {
@@ -61,7 +61,7 @@ export const createPiHarness = (options: PiProcessOptions = {}) => {
         ],
       }),
     },
-    capabilities: () => [],
+    capabilities: () => ["SessionFork"],
     detect: (ctx) => detectPi(ctx, options),
     getAuthentication: (ctx, input) => getPiAuthentication(ctx, input, options),
     authenticate: (ctx, input, channel) =>
@@ -85,6 +85,14 @@ export const createPiHarness = (options: PiProcessOptions = {}) => {
       }),
     start: run,
     resume: (ctx, input) => run(ctx, input),
+    fork: (ctx, input) =>
+      request(ctx, async (signal) => {
+        const command = await requirePiCommand(ctx, { ...options, signal, cwd: input.cwd });
+        const [cloned, state] = await piRequests(["clone", "get_state"], ["--session", input.agentSessionId], command);
+        if (cloned.cancelled) throw new Error("Pi cancelled the conversation fork.");
+        if (typeof state.sessionId !== "string") throw new Error("Pi did not return the forked session.");
+        return { agentSessionId: state.sessionId };
+      }),
     getMessages: (ctx, input) =>
       request(ctx, async (signal) => {
         const command = await requirePiCommand(ctx, { ...options, signal, cwd: input.cwd });

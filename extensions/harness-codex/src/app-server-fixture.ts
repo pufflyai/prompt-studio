@@ -21,6 +21,8 @@ for await (const line of createInterface({ input: process.stdin })) {
     complete();
     process.exit(0);
   }
+  if (process.env.PSTDIO_TEST_RPC_LOG) appendFileSync(process.env.PSTDIO_TEST_RPC_LOG, `${JSON.stringify(message)}\n`);
+  if (message.method === "thread/fork") emit({ id: message.id, result: { thread: { id: "forked-thread" } } });
   if (["config/read", "thread/unsubscribe"].includes(message.method ?? "")) emit({ id: message.id, result: {} });
   if (message.method === "fixture/stop" && process.env.PSTDIO_TEST_MODE === "async-cleanup-error") process.exit(1);
   if (message.method === "initialize") emit({ id: message.id, result: {} });
