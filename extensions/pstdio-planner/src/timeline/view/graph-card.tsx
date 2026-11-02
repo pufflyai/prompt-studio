@@ -8,6 +8,7 @@ import {
   renderBadgeListDisplay,
 } from "@pstdio/ui/kanban-renderer";
 import { ShieldCheck } from "lucide-react";
+import { useRef } from "react";
 import type { TicketWorkspaceBadgeItem } from "../../data/mappers";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES } from "../../data/ticket-board";
 import type { PlanRow } from "../contracts";
@@ -34,6 +35,7 @@ interface GraphCardProps {
 
 export function GraphCard(props: GraphCardProps) {
   const { row, x, y, relation, dropBefore, interaction, ...actions } = props;
+  const element = useRef<HTMLDivElement>(null);
   const source = interaction?.rows.get(row.id);
   const menu = useTicketCardActions(interaction, source);
   const fields = interaction?.attributes ?? [];
@@ -65,8 +67,12 @@ export function GraphCard(props: GraphCardProps) {
         )
     : [];
   const activate = () => {
+    element.current?.focus({ preventScroll: true });
     actions.onSelect(row.id);
-    if (interaction) void interaction.host.call("navigation.open", { target: timelineTicketPreviewTarget(row.target) });
+    if (actions.onOpenRequests && (row.requestErrors.length || row.requests.some(({ state }) => state === "open"))) {
+      actions.onOpenRequests(row);
+    } else if (interaction)
+      void interaction.host.call("navigation.open", { target: timelineTicketPreviewTarget(row.target) });
   };
   const waiting = row.flags.includes("waiting");
   let opacity = 1;
@@ -75,6 +81,7 @@ export function GraphCard(props: GraphCardProps) {
   return (
     <ResourceContextMenu actions={menu.actions} keepMountedWhenEmpty>
       <Box
+        ref={element}
         data-ticket={row.id}
         role="button"
         tabIndex={0}

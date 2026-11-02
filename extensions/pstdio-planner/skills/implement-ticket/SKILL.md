@@ -53,18 +53,26 @@ Dependency integration is part of implementing this ticket. This assignment auth
 
 ## When stuck
 
-When you cannot proceed without a person's decision or action, create a Planner review request. This records the blocker and sets Needs attention in the timeline. Do this before ending the turn. Do not only ask in chat or set a ticket status.
+Create a review request only for a genuine unresolved decision that the existing instructions and your authority cannot settle. Do not ask for routine assumptions, blanket risk acceptance, handoff acknowledgement, missing credentials, access, resources, reproduction details, or a non-decision action.
 
-Use `pst pstdio-planner request-human` with the ticket, a short title, concrete instructions, and a task or decision request. See [Review requests](https://prompt.studio/docs/extensions/planner/review-requests/). Include what you tried, the evidence, and exactly what the person must decide or do.
+For an independent non-decision blocker, discover the configured Blocked status with `pst statuses list`, then use `pst tickets update --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
+
+A decision must stand alone without logs or conversation history. Include the ticket identity and brief **Problem**, **Solutions**, and **Downsides** in plain language. Explain each choice and its cost, and clearly mark the recommended choice. Use a required choice question for the decision; optional notes are useful when they help explain the choice. Do not add confirmation or risk checklists that contain no decision.
 
 ```bash
 pst pstdio-planner request-human --ticket PS-12 \
-  --title "Confirm the missing requirement" \
-  --instructions "The ticket allows two outcomes. Choose the required behavior before implementation continues." \
-  --request '{"kind":"decision","questions":[{"id":"behavior","label":"Which behavior is required?","required":true,"input":{"kind":"text"}}]}'
+  --title "PS-12 · Choose the release scope" \
+  --instructions "**Problem:** People need to try the new export before a wider release.
+
+**Solutions:** Release to the internal project first (recommended), or release to everyone now.
+
+**Downsides:** The internal release delays wider access. Releasing to everyone exposes more people to faults." \
+  --request '{"kind":"decision","questions":[{"id":"scope","label":"Who should receive the export?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
 ```
 
-For a concrete action that needs confirmation, use `--request '{"kind":"task"}'`. In a managed workspace, pass `--workspace-id <workspace-id>` and `--session-id <implementation-session-id>` so Planner can reuse the linked conversation. Set the ticket to its blocked status before pausing, and update it again before resumed implementation. A merge-only request uses `--affected-action merge`; other unresolved decisions block implementation. An optional status guard must use the value read from the latest record.
+Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.
+
+For a decision in a managed workspace, pass `--workspace-id <workspace-id>` and `--session-id <implementation-session-id>`. Optional guards must use the latest recorded state.
 
 Keep the returned request ID. Stop work that depends on the answer. After the person answers, read `pst pstdio-planner review-requests read --request-id <request-id>`, verify the requested action or decision against the actual files and Git history, then resume. "Completion confirmed" records an answer; it does not integrate code. If the same blocker remains, inspect and repair the dependency base before requesting the same action again. Describe unchanged evidence clearly instead of treating repeated resumes as progress. Never answer your own request for the person. `run-review` is for reviewing code, not requesting human help.
 

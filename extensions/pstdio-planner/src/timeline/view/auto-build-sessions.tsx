@@ -42,7 +42,6 @@ export function AutoBuildSessions(props: AutoBuildSessionsProps) {
     starting,
     waitingTickets = [],
   } = props;
-  const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   return (
     <Stack gap="md">
       {enabled && !completed && !starting && matchingTicketCount === 0 ? (
@@ -71,27 +70,8 @@ export function AutoBuildSessions(props: AutoBuildSessionsProps) {
       {enabled && !completed && !starting && running === 0 && readyTicketCount === 0 && waitingTickets.length > 0 ? (
         <AutoBuildWaitingTickets tickets={waitingTickets} t={t} />
       ) : null}
-      <Stack gap="2xs">
-        <Text textStyle="label/2XS/medium" color="fg.muted" textTransform="uppercase">
-          {t("timeline.autoBuild.sessions", "Ongoing sessions")}
-        </Text>
-        {supervisor ? (
-          <AutoBuildSessionRow
-            session={supervisor}
-            sleeping={enabled && !completed && !supervisorActive && !failed}
-            onOpen={onOpenSession}
-          />
-        ) : (
-          <Text textStyle="paragraph/S/regular">
-            {enabled && starting
-              ? t("timeline.autoBuild.starting", "Waiting to start the supervisor")
-              : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
-          </Text>
-        )}
-      </Stack>
-      <Text textStyle="label/XS" color="fg.muted">
-        {t("timeline.autoBuild.running", "Running")} · {running} {t("timeline.autoBuild.capacity", "of")} {capacity}{" "}
-        {t("timeline.autoBuild.agents", "agents")}
+      <Text textStyle="label/2XS/medium" color="fg.muted">
+        {t("timeline.autoBuild.agents", "Agents")} ({running} {t("timeline.autoBuild.capacity", "of")} {capacity})
       </Text>
       <Stack gap="2xs">
         {sessions.map((session) => (

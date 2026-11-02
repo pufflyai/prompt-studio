@@ -4,6 +4,7 @@ import { psTheme, Tooltip } from "@pstdio/ui";
 import { CheckCircle2, ChevronsDownUp, ChevronsUpDown, MessageCircleWarning, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { isComplete } from "../model/filter";
+import { statusProgress } from "../model/status-progress";
 import { formatDay } from "./flags";
 import { InlineText } from "./inline-edit";
 import { MilestoneEta } from "./milestone-eta";
@@ -16,15 +17,20 @@ type Props = Pick<PlanViewProps, "onToggle" | "onDelete" | "onRenameDeadline" | 
 function Progress(props: { entry: ViewSection }) {
   const { entry } = props;
   const { done, total } = entry.section.counts;
+  const groups = statusProgress(entry.section.rows);
+  const summary = [`${done} of ${total} tickets done`, ...groups.map(({ name, count }) => `${name}: ${count}`)].join(
+    " · ",
+  );
   return (
-    <Tooltip content={`${done} of ${total} tickets done`}>
+    <Tooltip content={summary}>
       <Box
         role="progressbar"
         aria-label="Milestone progress"
         aria-valuemin={0}
         aria-valuemax={total || 1}
         aria-valuenow={done}
-        aria-valuetext={`${done} of ${total} tickets done`}
+        aria-valuetext={summary}
+        display="flex"
         tabIndex={0}
         w="64px"
         h="4px"
@@ -33,7 +39,16 @@ function Progress(props: { entry: ViewSection }) {
         overflow="hidden"
         flexShrink="0"
       >
-        <Box w={`${total ? (done / total) * 100 : 0}%`} h="full" bg="green.fg" borderRadius="0" />
+        {groups.map(({ id, name, color, count }) => (
+          <Box
+            key={id ?? "no-status"}
+            aria-hidden="true"
+            title={`${name}: ${count}`}
+            w={`${(count / total) * 100}%`}
+            h="full"
+            bg={color}
+          />
+        ))}
       </Box>
     </Tooltip>
   );

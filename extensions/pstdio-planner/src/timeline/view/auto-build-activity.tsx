@@ -6,6 +6,7 @@ import { type ReactElement, useRef } from "react";
 import type { AutoBuildButtonProps } from "./auto-build-button";
 import { AutoBuildHelp } from "./auto-build-help";
 import { AutoBuildRequests } from "./auto-build-requests";
+import { AutoBuildSessionRow } from "./auto-build-session-row";
 import { AutoBuildSessions } from "./auto-build-sessions";
 
 interface AutoBuildActivityProps
@@ -15,7 +16,8 @@ interface AutoBuildActivityProps
     | "paused"
     | "reviewRequests"
     | "requestErrors"
-    | "onOpenRequest"
+    | "onAnswerRequest"
+    | "onOpenRequestChat"
     | "onPause"
     | "onResume"
     | "completed"
@@ -54,20 +56,22 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
     onConfigure,
     onPause,
     onResume,
-    reviewRequests,
-    requestErrors,
-    onOpenRequest,
+    reviewRequests = [],
+    requestErrors = [],
+    onAnswerRequest,
+    onOpenRequestChat,
     actionError,
     t,
     ...sessions
   } = props;
+  const { supervisor, completed, failed, starting, onOpenSession } = sessions;
+  const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   const content = useRef<HTMLDivElement>(null);
   const danger = useRecipe({ recipe: psTheme.getRecipe("button") })({ variant: "destructive" });
   const styles = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "widget" });
   return (
     <Popover.Root
       lazyMount
-      unmountOnExit
       open={open}
       initialFocusEl={() => content.current}
       positioning={{ placement: "bottom-end" }}
@@ -98,19 +102,43 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
             <Popover.Body display="flex" flexDirection="column" minH="0" flex="1" px="md" pb="sm">
               <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
                 <Stack gap="md">
-                  <AutoBuildRequests
-                    reviewRequests={reviewRequests}
-                    requestErrors={requestErrors}
-                    onOpenRequest={onOpenRequest}
-                    t={t}
-                  />
+                  <Stack gap="2xs">
+                    <Text textStyle="label/2XS/medium" color="fg.muted">
+                      {t("timeline.autoBuild.supervisor", "Supervisor")}
+                    </Text>
+                    {supervisor ? (
+                      <AutoBuildSessionRow
+                        session={supervisor}
+                        sleeping={enabled && !completed && !supervisorActive && !failed}
+                        onOpen={onOpenSession}
+                      />
+                    ) : (
+                      <Text textStyle="paragraph/S/regular">
+                        {enabled && starting
+                          ? t("timeline.autoBuild.starting", "Waiting to start the supervisor")
+                          : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
+                      </Text>
+                    )}
+                  </Stack>
+                  <Separator />
+                  {reviewRequests.length || requestErrors.length ? (
+                    <>
+                      <AutoBuildRequests
+                        reviewRequests={reviewRequests}
+                        requestErrors={requestErrors}
+                        onAnswerRequest={onAnswerRequest}
+                        onOpenRequestChat={onOpenRequestChat}
+                        t={t}
+                      />
+                      <Separator />
+                    </>
+                  ) : null}
                   <AutoBuildSessions {...sessions} enabled={enabled} t={t} />
                 </Stack>
               </ScrollArea>
             </Popover.Body>
             <Popover.Footer flexShrink="0" px="md" pb="sm">
               <Stack w="full" alignItems="end">
-                <Separator w="full" />
                 {actionError ? (
                   <Text role="alert" color="fg.error">
                     {actionError}

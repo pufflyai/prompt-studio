@@ -19,10 +19,11 @@ const host: GuestHost = {
 };
 const client = createWebviewClient(host) as PlanClient;
 function MilestoneHeaderStory(props: {
-  state: "forecast" | "learning" | "complete" | "unstarted";
+  state: "forecast" | "learning" | "complete" | "unstarted" | "statuses";
   visible?: string[];
 }) {
   const { state, visible } = props;
+  const remainingStatus = state === "complete" ? "done" : "ready";
   const plan = buildPlan({
     workflow: { ...emptyWorkflowStatuses(), completedStatusIds: ["done"] },
     today: "2026-10-13",
@@ -45,7 +46,7 @@ function MilestoneHeaderStory(props: {
         shorthand: "P-2",
         title: "Complex work",
         content: "",
-        statusId: state === "complete" ? "done" : "ready",
+        statusId: state === "statuses" ? "in-progress" : remainingStatus,
         tags: { "default-complexity": "default-complexity-complex" },
       },
       {
@@ -53,7 +54,7 @@ function MilestoneHeaderStory(props: {
         shorthand: "P-3",
         title: "Other work",
         content: "",
-        statusId: state === "complete" ? "done" : "ready",
+        statusId: state === "statuses" ? "blocked" : remainingStatus,
         tags: { "default-complexity": "default-complexity-simple" },
       },
     ],
@@ -128,3 +129,5 @@ export const Unstarted: Story = {
   id: "extensions-planner-milestone-header--unstarted",
   args: { state: "unstarted" },
 };
+
+export const StatusGroups: Story = { name: "Progress by status", args: { state: "statuses" } };

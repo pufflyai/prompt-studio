@@ -41,7 +41,9 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.
 // packaged-notes-page.p2.spec.ts checks immediate palette creation, Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
-// packaged-planner-timeline-smoke.ts checks side-panel attention actions without leaving the board or timeline.
+// packaged-core-extensions-smoke.p1.test.ts checks all five bundled Planner workflow skills.
+// packaged-planner-timeline-smoke.ts checks shared request reads and writes without leaving the board or timeline.
+// canvas-tests/src/ui/planner/review-decisions.p1.spec.ts checks inline answers and modal keyboard focus.
 // packaged-lab-selection.p2.spec.ts checks tabless selection, retained frames, shared edits and saved transforms.
 // packaged-scribble-pages.p2.spec.ts checks native Scribble pages, drafts, favorites and group operations.
 // performance-observer.p2.test.ts checks native CPU units and memory through the compiled observer's direct startup path.

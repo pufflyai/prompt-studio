@@ -3,7 +3,7 @@ import { installPrismGlobal } from "@pstdio/ui";
 import { Play } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import type { WaitingTicket } from "../../commands/next-ticket-types";
-import type { ReviewRequestView } from "../../data/review-request-types";
+import type { ReviewRequestView, ReviewResponse } from "../../data/review-request-types";
 import { AutoBuildActivity } from "./auto-build-activity";
 import type { AutoBuildFormProps } from "./auto-build-form";
 import { AutoBuildHelp } from "./auto-build-help";
@@ -20,7 +20,8 @@ export interface AutoBuildButtonProps {
   paused?: boolean;
   reviewRequests?: ReviewRequestView[];
   requestErrors?: string[];
-  onOpenRequest?: (request: ReviewRequestView) => void;
+  onAnswerRequest?: (requestId: string, response: ReviewResponse) => Promise<unknown>;
+  onOpenRequestChat?: (requestId: string) => Promise<unknown>;
   onPause?: () => Promise<boolean>;
   onResume?: () => Promise<boolean>;
   completed?: boolean;

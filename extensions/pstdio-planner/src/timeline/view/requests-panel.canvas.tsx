@@ -1,10 +1,10 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { AutoBuildPreview, CardNeedsAttentionPreview } from "../../../proposals/PS-1038/placements-preview";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
 import { RequestsPanel } from "./requests-panel";
+import { AutoBuildPreview, CardNeedsAttentionPreview } from "./requests-panel.story-fixture";
 
 const person = { type: "human" as const, id: "person", displayName: "Human" };
 const agent = { type: "agent" as const, id: "agent", displayName: "Agent" };
@@ -231,4 +231,9 @@ export const AutoBuildSaveError: Story = {
 export const CardModal: Story = {
   name: "Card — open Needs attention",
   render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [proposalReview, decision] }} />,
+};
+
+export const ResolvedCard: Story = {
+  name: "Card — inspect a saved decision",
+  render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [answeredDecision] }} />,
 };

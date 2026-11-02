@@ -1,33 +1,27 @@
-import { Button, Stack, Text } from "@chakra-ui/react";
 import type { AutoBuildButtonProps } from "./auto-build-button";
+import { RequestsPanel } from "./requests-panel";
 
 interface AutoBuildRequestsProps
-  extends Pick<AutoBuildButtonProps, "reviewRequests" | "requestErrors" | "onOpenRequest" | "t"> {}
+  extends Pick<
+    AutoBuildButtonProps,
+    "reviewRequests" | "requestErrors" | "onAnswerRequest" | "onOpenRequestChat" | "t"
+  > {}
 
 export function AutoBuildRequests(props: AutoBuildRequestsProps) {
-  const { reviewRequests = [], requestErrors = [], onOpenRequest, t } = props;
-  if (!reviewRequests.length && !requestErrors.length) return null;
+  const { reviewRequests = [], requestErrors = [], onAnswerRequest, onOpenRequestChat } = props;
   return (
-    <Stack gap="sm">
-      <Text textStyle="label/2XS/medium" color="fg.muted" textTransform="uppercase">
-        {t("timeline.autoBuild.requests", "Needs attention")}
-      </Text>
-      {requestErrors.map((error) => (
-        <Text key={error} role="alert" color="fg.error">
-          {error}
-        </Text>
-      ))}
-      {reviewRequests.map((request) => (
-        <Stack key={request.id} gap="xs" p="sm" bg="bg.subtle" borderRadius="md">
-          <Text textStyle="label/S/medium">{request.title}</Text>
-          <Text textStyle="paragraph/S/regular" lineClamp={3}>
-            {request.instructions}
-          </Text>
-          <Button alignSelf="start" size="sm" variant="ghost" onClick={() => onOpenRequest?.(request)}>
-            {t("timeline.autoBuild.openRequest", "Open request")}
-          </Button>
-        </Stack>
-      ))}
-    </Stack>
+    <RequestsPanel
+      row={{ requests: reviewRequests, requestErrors }}
+      heading={false}
+      pendingOnly
+      onAnswer={async (id, response) => {
+        if (!onAnswerRequest) throw new Error("Answering requests is unavailable.");
+        return onAnswerRequest(id, response);
+      }}
+      onOpenChat={async (id) => {
+        if (!onOpenRequestChat) throw new Error("Opening a session is unavailable.");
+        return onOpenRequestChat(id);
+      }}
+    />
   );
 }

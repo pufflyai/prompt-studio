@@ -91,11 +91,11 @@ test("a removed supervisor pauses the run without replacing its ownership ledger
   expect(await ctx.storage.get("auto-build-supervisor")).toMatchObject({ sessionId: initial.sessionId });
 });
 
-test("unchanged full-capacity work gets an hourly stalled-progress reminder", async () => {
+test("unchanged work gets an hourly stalled-progress reminder while capacity is available", async () => {
   const start = Date.parse("2026-10-14T12:00:00Z");
   setSystemTime(start);
   try {
-    const { ctx, ticket, sessions, prompts } = await supervisorFixture(1);
+    const { ctx, ticket, sessions, prompts } = await supervisorFixture(2);
     const first = await ticket("First");
     await autoBuildCommand.run(ctx, {});
     const supervisorId = prompts[0]!.sessionId;
@@ -117,11 +117,11 @@ test("unchanged full-capacity work gets an hourly stalled-progress reminder", as
   }
 });
 
-test("implementation progress postpones an hourly reminder even while capacity is full", async () => {
+test("implementation progress postpones an hourly reminder while capacity is available", async () => {
   const start = Date.parse("2026-10-14T12:00:00Z");
   setSystemTime(start);
   try {
-    const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture(1);
+    const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture(2);
     const first = await ticket("First");
     await autoBuildCommand.run(ctx, {});
     const supervisorId = prompts[0]!.sessionId;
@@ -302,5 +302,59 @@ test("stopping during an in-flight wake preserves the session without re-enablin
   });
   await ticket("Second");
   await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(1);
+});
+
+test("hourly discovery stays asleep at full capacity and resumes when a worker completes", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture(1);
+  const first = await ticket("Running worker");
+  await ticket("Next work");
+  await autoBuildCommand.run(ctx, {});
+  const supervisor = sessions.get(prompts[0]!.sessionId)!;
+  const dispatched = await autoBuildDispatchCommand.run(ctx, { ticket: first.id, revision: "test" });
+  if (dispatched.decision !== "started") throw new Error("Expected dispatch");
+  supervisor.status = "completed";
+  setSystemTime(Date.now() + 3_600_001);
+  try {
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
+    expect(prompts).toHaveLength(2);
+    sessions.get(dispatched.sessionId)!.status = "completed";
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true, sessionId: supervisor.id });
+    expect(prompts).toHaveLength(3);
+  } finally {
+    setSystemTime();
+  }
+});
+
+test("discovery rechecks shared capacity immediately before waking", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture(2);
+  const first = await ticket("First");
+  await ticket("Next");
+  await autoBuildCommand.run(ctx, {});
+  await autoBuildDispatchCommand.run(ctx, { ticket: first.id, revision: "test" });
+  sessions.get(prompts[0]!.sessionId)!.status = "completed";
+  const all = ctx.settings.all;
+  let reads = 0;
+  ctx.settings.all = async () => {
+    const result = await all();
+    // Let query discovery see spare capacity, then occupy the last slot before delivery.
+    if (++reads > 1) return { ...result, "automation.maxInProgress": 1 };
+    return result;
+  };
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
+  expect(prompts).toHaveLength(2);
+});
+
+test.each(["paused", "stopped"])("%s during a capacity read suppresses discovery wakes", async (state) => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture();
+  await ticket("Next");
+  await autoBuildCommand.run(ctx, {});
+  sessions.get(prompts[0]!.sessionId)!.status = "completed";
+  const all = ctx.settings.all;
+  ctx.settings.all = async () => {
+    await ctx.storage.set("auto-build", { enabled: false, state, revision: "test" });
+    return all();
+  };
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
   expect(prompts).toHaveLength(1);
 });

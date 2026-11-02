@@ -10,7 +10,6 @@ import {
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { attentionPanelTarget } from "../../attention-panel";
 import { stepReview } from "../model/review";
 import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
@@ -18,6 +17,7 @@ import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { PlanLoading } from "./plan-loading";
 import { useViewSections } from "./plan-state";
+import { TicketRequestsDialog } from "./ticket-requests-dialog";
 import { reportPlannerError } from "./timeline-notice";
 import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
@@ -81,6 +81,8 @@ interface PlanContentProps extends PlanRootProps {
 function PlanContent(props: PlanContentProps) {
   const { host, t, client, plan, viewsSource } = props;
   const [search, setSearch] = useState("");
+  const [attention, setAttention] = useState<{ id: string; trigger: HTMLElement | null }>();
+  const attentionRow = plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === attention?.id);
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const displayProperties = useCollectionViewStore(
@@ -118,7 +120,7 @@ function PlanContent(props: PlanContentProps) {
             }}
             onOpenRequests={(row) => {
               viewProps.onSelect(row.id);
-              void host.call("navigation.open", { target: attentionPanelTarget(row.target.resource!, "timeline") });
+              setAttention({ id: row.id, trigger: document.activeElement as HTMLElement | null });
             }}
           />
         </Box>
@@ -145,6 +147,15 @@ function PlanContent(props: PlanContentProps) {
           </Suspense>
         ) : null}
       </Flex>
+      {attentionRow && attention ? (
+        <TicketRequestsDialog
+          row={attentionRow}
+          trigger={attention.trigger}
+          onClose={() => setAttention(undefined)}
+          onAnswer={(requestId, response) => client.commands.review({ requestId, response })}
+          onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
+        />
+      ) : null}
       {editor ? (
         <Suspense fallback={null}>
           <PlanEditor
