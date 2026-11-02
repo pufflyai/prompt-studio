@@ -685,3 +685,16 @@ test("pin selector toggles retention without reordering the tab", async () => {
   expect(core.keyboard.listTabs()[0]?.tabRetention).toBe("preview");
   expect(core.keyboard.store.getState().active).toBe(false);
 });
+
+test("a completed focus request is consumed before switching workbenches", async () => {
+  const { core, ticket } = setup();
+  ticket("first");
+  core.keyboard.open();
+  core.keyboard.finish();
+  expect(core.keyboard.store.getState().restoreFocus).toBe(true);
+  core.keyboard.completeFocusRestore();
+  core.activation.setActive(false);
+  core.activation.setActive(true);
+  expect(core.keyboard.store.getState().restoreFocus).toBe(false);
+  await core.dispose();
+});

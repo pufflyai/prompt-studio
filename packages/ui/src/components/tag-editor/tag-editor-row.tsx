@@ -1,10 +1,10 @@
-import { Badge, Button, Editable, Flex, Icon, IconButton, Menu } from "@chakra-ui/react";
+import { Badge, Button, Editable, Flex, Icon, IconButton } from "@chakra-ui/react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Check, ChevronDown, GripVertical, Trash2 } from "lucide-react";
-
 import { IconColorPicker } from "@/components/primitives/icon-color-picker";
 import type { IconColorPickerIconOption } from "@/components/primitives/icon-options";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { ListRow } from "../list-row/list-row";
 import type { TagEditorAction, TagEditorValue } from "./tag-editor.types";
 

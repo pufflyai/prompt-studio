@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { CiJob } from "./ci-failures";
-import { summarizeCiTiming } from "./ci-timing";
+import { summarizeCiHealth, summarizeCiTiming } from "./ci-timing";
 
 const job = (patch: Partial<CiJob> = {}): CiJob => ({
   workflow: "test-and-build.yml",
@@ -46,18 +46,16 @@ test("measures first-attempt wall and runner wait from distinct timestamps", () 
   });
 });
 
-test("does not count skipped or missing first attempts as passing or mix unknown PR scopes", () => {
+test("does not count skipped or missing first attempts as passing", () => {
   const summary = summarizeCiTiming([
     job({ event: "pull_request", branch: "feature/example", conclusion: "skipped" }),
     job({ runId: 2, attempt: 2, event: "pull_request" }),
-    job({ runId: 3, event: "pull_request", fullOverride: false }),
-    job({ runId: 4, event: "pull_request", fullOverride: true }),
+    job({ runId: 3, event: "pull_request" }),
   ]);
   expect(summary.runs.map((run) => [run.stage, run.firstAttemptSucceeded])).toEqual([
-    ["pull_request-unclassified", false],
-    ["pull_request-unclassified", false],
+    ["pull_request", false],
+    ["pull_request", false],
     ["pull_request", true],
-    ["pull_request-full", true],
   ]);
 });
 
@@ -80,6 +78,9 @@ test("keeps action-required runs with no jobs in the first-attempt inventory", (
     firstAttemptSucceeded: false,
     missingFirstAttempt: true,
     wallMs: null,
+    initialWaitMs: null,
+    elapsedAfterStartMs: null,
+    totalRunnerMs: null,
   });
 });
 
@@ -100,4 +101,111 @@ test("does not certify a cancelled first run even when its gate had completed", 
     ],
   );
   expect(report.runs[0].firstAttemptSucceeded).toBe(false);
+});
+
+test("separates initial scheduling delay from execution and does not sum parallel jobs into stage duration", () => {
+  const report = summarizeCiTiming([
+    job({ name: "scope", id: 1, started: "2026-10-25T00:10:00Z", completed: "2026-10-25T00:10:10Z" }),
+    job({ name: "checks", id: 2, started: "2026-10-25T00:10:10Z", completed: "2026-10-25T00:12:50Z" }),
+    job({ name: "parallel", id: 3, started: "2026-10-25T00:10:10Z", completed: "2026-10-25T00:12:40Z" }),
+    job({ id: 4, started: "2026-10-25T00:12:50Z", completed: "2026-10-25T00:13:00Z" }),
+  ]);
+  expect(report.runs[0]).toMatchObject({
+    wallMs: 780_000,
+    initialWaitMs: 600_000,
+    elapsedAfterStartMs: 180_000,
+    totalRunnerMs: 330_000,
+  });
+});
+
+test("release timing includes publication after its nested functional gate", () => {
+  const report = summarizeCiTiming([
+    job({ workflow: "release-packages.yml", name: "production / functional / production_ci_passed" }),
+    job({
+      workflow: "release-packages.yml",
+      name: "publish",
+      id: 3,
+      started: "2026-10-25T00:03:00Z",
+      completed: "2026-10-25T00:08:00Z",
+    }),
+  ]);
+  expect(report.runs[0]).toMatchObject({ wallMs: 480_000, initialWaitMs: 5_000, elapsedAfterStartMs: 475_000 });
+});
+
+test("a skipped job without timestamps does not hide the run duration", () => {
+  const report = summarizeCiTiming([
+    job({ name: "scope", id: 1, started: "2026-10-25T00:00:05Z", completed: "2026-10-25T00:00:30Z" }),
+    job({ name: "build_docker", id: 3, conclusion: "skipped", started: null, completed: null }),
+    job({ id: 4, started: "2026-10-25T00:00:30Z", completed: "2026-10-25T00:01:00Z" }),
+  ]);
+  expect(report.runs[0]).toMatchObject({ wallMs: 60_000, elapsedAfterStartMs: 55_000 });
+});
+
+test("health compares each stage with its target and counts queue runs, reruns and runner time", () => {
+  const minute = (offset: number) => new Date(Date.parse("2026-10-25T00:00:00Z") + offset * 60_000).toISOString();
+  const queue = (runId: number, minutes: number, patch: Partial<CiJob> = {}) =>
+    job({
+      runId,
+      event: "merge_group",
+      branch: `gh-readonly-queue/main/pr-${runId}`,
+      sha: `sha-${runId}`,
+      runCreated: minute(0),
+      created: minute(0),
+      started: minute(0),
+      completed: minute(minutes),
+      ...patch,
+    });
+  const jobs = [
+    queue(1, 5),
+    queue(2, 7),
+    queue(3, 12, { conclusion: "failure" }),
+    queue(3, 12, { id: 8, name: "database_tests", conclusion: "failure" }),
+    queue(3, 18, { id: 9, attempt: 2, name: "database_tests", started: minute(13) }),
+    job({
+      runId: 4,
+      event: "pull_request",
+      branch: "feature",
+      runCreated: minute(0),
+      started: minute(0),
+      completed: minute(2),
+    }),
+  ];
+  const runs = [1, 2, 3].map((id) => ({
+    id,
+    workflow: "test-and-build.yml",
+    head_sha: `sha-${id}`,
+    head_branch: "queue",
+    event: "merge_group",
+    created_at: minute(0),
+    run_attempt: id === 3 ? 2 : 1,
+  }));
+  const health = summarizeCiHealth(summarizeCiTiming(jobs), jobs, runs, 2);
+  expect(health.stages.find((stage) => stage.stage === "merge_queue")).toEqual({
+    stage: "merge_queue",
+    targetMs: 480_000,
+    runs: 3,
+    measured: 3,
+    p50Ms: 420_000,
+    p90Ms: 720_000,
+    withinTarget: 2,
+    firstAttemptFailures: 1,
+    runnerMinutes: 41,
+  });
+  expect(health.stages.find((stage) => stage.stage === "pull_request")).toMatchObject({
+    p50Ms: 120_000,
+    withinTarget: 1,
+  });
+  expect(health).toMatchObject({ queueRuns: 4, mergedPulls: 2, queueRunsPerMerge: 2, failedJobs: 1, passedOnRerun: 1 });
+});
+
+test("health leaves out runs whose gate did not finish", () => {
+  const jobs = [
+    job({ runId: 1, event: "pull_request", branch: "feature", conclusion: "cancelled" }),
+    job({ runId: 2, event: "pull_request", branch: "feature", conclusion: "skipped", started: null, completed: null }),
+    job({ runId: 3, event: "pull_request", branch: "feature" }),
+  ];
+  const pull = summarizeCiHealth(summarizeCiTiming(jobs), jobs, [], null).stages.find(
+    (stage) => stage.stage === "pull_request",
+  );
+  expect(pull).toMatchObject({ runs: 1, measured: 1, firstAttemptFailures: 0 });
 });

@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
-import { toaster } from "@pstdio/ui";
+import { useToaster } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActionError } from "@/shared/components/use-action-error";
@@ -18,6 +18,7 @@ const parseLimit = (value: string) => {
 // Global runtime settings (session queue concurrency) plus the selected project's
 // default harness, model, and run options when a project is in scope.
 export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
+  const toaster = useToaster();
   const { projectId } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("settings");

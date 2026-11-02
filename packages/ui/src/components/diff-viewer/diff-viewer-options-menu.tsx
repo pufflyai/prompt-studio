@@ -1,4 +1,4 @@
-import { Box, IconButton, Menu } from "@chakra-ui/react";
+import { Box, IconButton } from "@chakra-ui/react";
 import {
   Check,
   ChevronsDownUp,
@@ -12,6 +12,7 @@ import {
   SquareSplitHorizontal,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { ListRow } from "../list-row/list-row";
 import type { ChangedFilesViewMode, DiffViewMode } from "./types";
 

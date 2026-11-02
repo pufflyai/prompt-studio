@@ -7,11 +7,11 @@ interface DeviceRowProps {
   name: string;
   current: boolean;
   onRemove: () => void;
+  onRename: (name: string) => void;
 }
 
 const DeviceRow = (props: DeviceRowProps) => {
-  const { name, current, onRemove } = props;
-  const [label, setLabel] = useState(name);
+  const { name, current, onRemove, onRename } = props;
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(name);
   return (
@@ -20,7 +20,7 @@ const DeviceRow = (props: DeviceRowProps) => {
         {renaming ? (
           <Input size="sm" aria-label="Device name" value={draft} onChange={(event) => setDraft(event.target.value)} />
         ) : (
-          <Text>{label}</Text>
+          <Text>{name}</Text>
         )}
         <Text textStyle="label/S/regular" color="fg.muted">
           {current ? "This device" : "Online"}
@@ -30,7 +30,7 @@ const DeviceRow = (props: DeviceRowProps) => {
         size="sm"
         variant="ghost"
         onClick={() => {
-          if (renaming && draft.trim()) setLabel(draft.trim());
+          if (renaming && draft.trim()) onRename(draft.trim());
           setRenaming(!renaming);
         }}
       >
@@ -54,7 +54,10 @@ const CloudSettings = (props: CloudSettingsProps) => {
   const [local, setLocal] = useState(initialLocal);
   const [signedIn, setSignedIn] = useState(true);
   const [confirming, setConfirming] = useState(confirmInitiallyOpen);
-  const [devices, setDevices] = useState(["This Mac", "Office Linux"]);
+  const [devices, setDevices] = useState([
+    { id: "mac", name: "This Mac" },
+    { id: "linux", name: "Office Linux" },
+  ]);
   return (
     <ScrollArea h="full">
       <Stack gap="md" p="lg">
@@ -93,12 +96,17 @@ const CloudSettings = (props: CloudSettingsProps) => {
               <SimpleCardBody>
                 <Stack gap="md">
                   <Text textStyle="label/M/medium">Your devices</Text>
-                  {devices.map((name) => (
+                  {devices.map((device) => (
                     <DeviceRow
-                      key={name}
-                      name={name}
-                      current={name === "This Mac"}
-                      onRemove={() => setDevices((current) => current.filter((device) => device !== name))}
+                      key={device.id}
+                      name={device.name}
+                      current={device.id === "mac"}
+                      onRename={(name) =>
+                        setDevices((current) =>
+                          current.map((entry) => (entry.id === device.id ? { ...entry, name } : entry)),
+                        )
+                      }
+                      onRemove={() => setDevices((current) => current.filter((entry) => entry.id !== device.id))}
                     />
                   ))}
                 </Stack>

@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import { useState } from "react";
@@ -10,7 +11,7 @@ import { workspaceNavigationNode } from "./workspace-navigation";
 const WorkspaceNavigationStory = (props: { providers: WorkspaceProviderDescriptor[] }) => {
   const { providers } = props;
   const [workbench] = useState(() => {
-    const page = { kind: "page", extensionId: "preview", id: "workspace-navigation" } as const;
+    const page = workbenchPages.workspaces;
     const next = createWorkbench({ startPage: page });
     next.modes.registerMode({ id: "workspace-navigation", label: "Workspaces", activate: () => undefined });
     for (const [id, label] of [

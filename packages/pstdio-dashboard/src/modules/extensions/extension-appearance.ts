@@ -1,6 +1,6 @@
 import type { ListExtensionAppearanceResponse } from "@pstdio/sdk/api";
 import type { FileIconThemePreferenceOption, ThemePreferenceOption } from "@pstdio/ui";
-import type { WorkbenchModuleContext } from "@pstdio/workbench";
+import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import {
   localizeExtensionAppearance,
@@ -27,19 +27,46 @@ const toFileIconThemePreference = (theme: ResolvedWorkbenchExtensionAppearance["
     fonts: theme.fonts,
   }) satisfies FileIconThemePreferenceOption;
 
-export const registerExtensionAppearance = (
-  ctx: WorkbenchModuleContext,
+export const resolveExtensionAppearancePreferences = (
   rawAppearance: ListExtensionAppearanceResponse,
   owner = getRuntimeCollections(),
 ) => {
   const appearance = localizeExtensionAppearance(rawAppearance, owner);
-  const themeDisposable =
-    appearance.themes.length > 0 ? ctx.themes.register(appearance.themes.map(toThemePreference)) : undefined;
-  const fileIconThemeDisposable =
-    appearance.fileIconThemes.length > 0
-      ? ctx.fileIconThemes.register(appearance.fileIconThemes.map(toFileIconThemePreference))
-      : undefined;
   return {
+    themes: appearance.themes.map(toThemePreference),
+    fileIconThemes: appearance.fileIconThemes.map(toFileIconThemePreference),
+  };
+};
+
+export const registerExtensionAppearance = (
+  ctx: Pick<WorkbenchModuleContext, "themes" | "fileIconThemes">,
+  appearance: ReturnType<typeof resolveExtensionAppearancePreferences>,
+) => {
+  let themeDisposable: Disposable | undefined;
+  let fileIconThemeDisposable: Disposable | undefined;
+  let themeSignature: string | undefined;
+  let fileIconSignature: string | undefined;
+  const update = (next: typeof appearance) => {
+    const themes = JSON.stringify(next.themes);
+    if (themes !== themeSignature) {
+      const previous = themeDisposable;
+      themeDisposable = next.themes.length ? ctx.themes.register(next.themes) : undefined;
+      previous?.dispose();
+      themeSignature = themes;
+    }
+    const icons = JSON.stringify(next.fileIconThemes);
+    if (icons !== fileIconSignature) {
+      const previous = fileIconThemeDisposable;
+      fileIconThemeDisposable = next.fileIconThemes.length
+        ? ctx.fileIconThemes.register(next.fileIconThemes)
+        : undefined;
+      previous?.dispose();
+      fileIconSignature = icons;
+    }
+  };
+  update(appearance);
+  return {
+    update,
     dispose() {
       themeDisposable?.dispose();
       fileIconThemeDisposable?.dispose();

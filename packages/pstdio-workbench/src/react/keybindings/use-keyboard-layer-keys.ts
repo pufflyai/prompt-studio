@@ -41,8 +41,7 @@ export const useKeyboardLayerKeys = (input: {
   const { workbench, content, heading, search, browse } = input;
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
-      if (!workbench.keyboard.store.getState().active || !ownsKeyboardEvent(event, content.current, heading.current))
-        return;
+      if (!canHandleKeyboardLayerEvent(workbench, event, content.current, heading.current)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       if (event.repeat && event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -62,3 +61,13 @@ export const useKeyboardLayerKeys = (input: {
     return () => document.removeEventListener("keydown", keydown, true);
   }, [workbench, content, heading, search, browse]);
 };
+
+const canHandleKeyboardLayerEvent = (
+  workbench: WorkbenchCore,
+  event: KeyboardEvent,
+  content: HTMLElement | null,
+  heading: HTMLElement | null,
+) =>
+  workbench.activation.isActive() &&
+  workbench.keyboard.store.getState().active &&
+  ownsKeyboardEvent(event, content, heading);

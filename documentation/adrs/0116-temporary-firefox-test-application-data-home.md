@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-29
 
+Status: Accepted.
+
 ## Decision
 
 Give the CLI shutdown test's Firefox process its own application-data home through `CFFIXED_USER_HOME`, using the case's existing temporary home. Keep the real Firefox browser, dashboard event stream, shutdown assertions and existing 60-second test allowance.

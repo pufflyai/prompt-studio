@@ -1,6 +1,6 @@
-import { Dialog } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ResourceAnchorPage, ResourceRef } from "@pstdio/sdk/extensions";
+import { ScopedDialog as Dialog } from "@pstdio/ui";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { RelatedResources } from "./related-resources";
 import type { ResourceLinksService } from "./resource-links-types";

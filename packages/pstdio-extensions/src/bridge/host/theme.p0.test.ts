@@ -18,6 +18,12 @@ const withDocumentElement = (attributes: Record<string, string>, run: () => void
 };
 
 describe("resolveActiveTheme", () => {
+  test("uses the frame's scoped color mode while another workbench owns the document", () => {
+    withDocumentElement({ "data-color-mode": "light" }, () => {
+      const root = { getAttribute: (name: string) => (name === "data-theme" ? "pstdio-dark" : "dark") };
+      expect(resolveActiveTheme("light", root as HTMLElement)).toBe("dark");
+    });
+  });
   test("uses Chakra color mode when data-theme stores a preference id", () => {
     withDocumentElement({ "data-theme": "pstdio-dark", "data-color-mode": "dark" }, () => {
       expect(resolveActiveTheme("light")).toBe("dark");

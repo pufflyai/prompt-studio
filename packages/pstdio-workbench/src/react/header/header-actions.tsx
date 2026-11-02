@@ -1,5 +1,5 @@
-import { Button, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
-import { ListRow, Tooltip } from "@pstdio/ui";
+import { Button, HStack, IconButton } from "@chakra-ui/react";
+import { ListRow, ScopedMenu as Menu, Portal, Tooltip } from "@pstdio/ui";
 import { Fragment } from "react";
 import {
   getAnchorResource,

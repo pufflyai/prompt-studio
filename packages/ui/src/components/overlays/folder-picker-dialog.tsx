@@ -1,6 +1,8 @@
-import { Box, Button, Dialog, Input, InputGroup, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Button, Input, InputGroup, Text, useSlotRecipe } from "@chakra-ui/react";
 import { ArrowUp, FolderPlus, Home, Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
+import { useUiScope } from "@/utils/ui-scope";
 import { type FolderPickerDrive, FolderPickerDriveMenu } from "./folder-picker-drive-menu";
 import { FolderPickerList } from "./folder-picker-list";
 
@@ -37,12 +39,14 @@ export const FolderPicker = (props: FolderPickerProps) => {
     onNavigate,
     onCreateFolder,
   } = props;
+  const surfaceActive = useUiScope()?.active ?? true;
   const styles = useSlotRecipe({ key: "folderPicker" })({});
   const [path, setPath] = useState(currentPath);
   const [previousPath, setPreviousPath] = useState(currentPath);
   const [query, setQuery] = useState("");
   const [showHidden, setShowHidden] = useState(false);
   useEffect(() => {
+    if (!surfaceActive) return;
     const toggleHidden = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat || event.altKey) return;
       if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.code !== "Period") return;
@@ -52,7 +56,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
     };
     document.addEventListener("keydown", toggleHidden, true);
     return () => document.removeEventListener("keydown", toggleHidden, true);
-  }, []);
+  }, [surfaceActive]);
   const [creating, setCreating] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [saving, setSaving] = useState(false);

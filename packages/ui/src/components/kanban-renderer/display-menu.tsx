@@ -1,8 +1,10 @@
-import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Text } from "@chakra-ui/react";
+import { Button, HStack, Icon, IconButton, Text } from "@chakra-ui/react";
 import { Check, ChevronDown, List, Settings2, SquareKanban } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu, ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal, useUiScope } from "@/utils/ui-scope";
 import { type MenuOption, resolveSubGroupingOptions } from "./kanban-renderer-helpers";
 import type { KanbanRendererSettings } from "./types";
 
@@ -70,6 +72,7 @@ export const DisplayMenuSelect = (props: DisplayMenuSelectProps) => {
 };
 
 export const DisplayMenu = (props: DisplayMenuProps) => {
+  const surfaceActive = useUiScope()?.active ?? true;
   const {
     settings,
     groupingOptions,
@@ -83,7 +86,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    if (!open) return;
+    if (!surfaceActive || !open) return;
     const closeOnOutsidePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
@@ -92,7 +95,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
     };
     document.addEventListener("pointerdown", closeOnOutsidePointerDown);
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
-  }, [open]);
+  }, [open, surfaceActive]);
 
   return (
     <Popover.Root

@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -9,6 +9,8 @@ import { Checkbox } from "@/components/primitives/checkbox";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Switch } from "@/components/primitives/switch";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal, useUiScope } from "@/utils/ui-scope";
 import { fieldIcon } from "../collection-view/collection-view-field-icon";
 import { DisplayMenuSelect } from "../kanban-renderer/display-menu";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
@@ -113,6 +115,7 @@ const ColumnRow = (props: ColumnRowProps) => {
 
 /** Table display: every setting here is saved with the view. Column width stays local. */
 export const DataTableDisplayMenu = (props: DataTableDisplayMenuProps) => {
+  const surfaceActive = useUiScope()?.active ?? true;
   const { columns, settings, statsAvailable, onSettingsChange, onColumnVisibilityChange, onColumnReorder } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -133,7 +136,7 @@ export const DataTableDisplayMenu = (props: DataTableDisplayMenuProps) => {
   };
 
   useEffect(() => {
-    if (!open) return;
+    if (!surfaceActive || !open) return;
     // Menus inside the popover render in place, so a click outside both the trigger and the content closes it.
     const closeOnOutsidePointerDown = (event: PointerEvent) => {
       const target = event.target;
@@ -143,7 +146,7 @@ export const DataTableDisplayMenu = (props: DataTableDisplayMenuProps) => {
     };
     document.addEventListener("pointerdown", closeOnOutsidePointerDown);
     return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
-  }, [open]);
+  }, [open, surfaceActive]);
 
   return (
     <Popover.Root

@@ -1,4 +1,4 @@
-import { Box, Button, Dialog, Field, Flex, Icon, Input, Text } from "@chakra-ui/react";
+import { Box, Button, Field, Flex, Icon, Input, Text } from "@chakra-ui/react";
 import { $createCodeNode } from "@lexical/code";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $createHorizontalRuleNode } from "@lexical/react/LexicalHorizontalRuleNode";
@@ -15,11 +15,13 @@ import {
   type TextNode,
 } from "lexical";
 import { Code2, Image as ImageIcon, Minus, Table2 } from "lucide-react";
-import { type ElementType, type FormEvent, useEffect, useState } from "react";
+import { type ElementType, type FormEvent, type RefObject, useEffect, useId, useState } from "react";
 import * as ReactDOM from "react-dom";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { createEmptyMarkdownTable } from "../../shared/markdown-table";
 import { $createDataTableNode } from "../../shared/nodes/DataTableNode";
 import { $createMarkdownImageNode } from "../../shared/nodes/MarkdownImageNode";
+import { useTypeaheadScope } from "../../shared/use-typeahead-scope";
 
 interface SlashCommandOption {
   id: "table" | "image" | "code" | "divider";
@@ -68,6 +70,7 @@ const replaceSlashWithBlock = (queryNode: TextNode | null, block: LexicalNode) =
 };
 
 interface SlashCommandMenuProps {
+  anchor: RefObject<HTMLElement | null>;
   options: SlashCommandOption[];
   selectedIndex: number | null;
   onSelect: (option: SlashCommandOption, index: number) => void;
@@ -75,11 +78,13 @@ interface SlashCommandMenuProps {
 }
 
 const SlashCommandMenu = (props: SlashCommandMenuProps) => {
+  useTypeaheadScope(props.anchor);
   const { options, selectedIndex, onSelect, onHighlight } = props;
+  const menuId = useId();
 
   useEffect(() => {
-    document.getElementById(`slash-command-${selectedIndex}`)?.scrollIntoView({ block: "nearest" });
-  }, [selectedIndex]);
+    document.getElementById(`${menuId}-${selectedIndex}`)?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex, menuId]);
 
   return (
     <Box
@@ -106,7 +111,7 @@ const SlashCommandMenu = (props: SlashCommandMenuProps) => {
           <Flex
             key={option.id}
             ref={option.setRefElement}
-            id={`slash-command-${index}`}
+            id={`${menuId}-${index}`}
             role="option"
             aria-selected={selected}
             alignItems="center"
@@ -212,6 +217,7 @@ export const MarkdownSlashCommandPlugin = () => {
           if (!anchorElementRef.current) return null;
           return ReactDOM.createPortal(
             <SlashCommandMenu
+              anchor={anchorElementRef}
               options={menu.options}
               selectedIndex={menu.selectedIndex}
               onHighlight={menu.setHighlightedIndex}

@@ -1,5 +1,5 @@
-import { IconButton, Menu, Portal } from "@chakra-ui/react";
-import { ListRow, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
+import { IconButton } from "@chakra-ui/react";
+import { ListRow, ScopedMenu as Menu, PANEL_HEADER_CONTROL_SIZE, Portal, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
 import type { ResourceRef, WorkbenchCompositionAddablePanel, WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";

@@ -16,13 +16,17 @@ import {
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 
+// Backend recovery does not use an agent harness. Installing default extensions would put
+// package downloads inside the recovery deadline.
+const recoveryEnvironment = { PSTDIO_DEFAULT_EXTENSIONS: "[]" };
+
 test("automatically recovers a CLI-started backend and restores the open project", async () => {
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+    expect(await runPackagedCli(home, ["serve"], recoveryEnvironment)).toMatchObject({ exitCode: 0 });
     const original = await waitForDescriptor(home);
-    app = await launchPackagedApp(home);
+    app = await launchPackagedApp(home, recoveryEnvironment);
     expect(app.runtime.pid).toBe(original.pid);
     const project = await createPackagedProject(app, "Attached backend recovery");
     await openPackagedProject(app.page, project);
@@ -80,7 +84,7 @@ test("preserves packaged CLI shutdown intent when desktop misses the control eve
     },
   );
   try {
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+    expect(await runPackagedCli(home, ["serve"], recoveryEnvironment)).toMatchObject({ exitCode: 0 });
     await manager.start();
     await disconnected.promise;
     expect(await runPackagedCli(home, ["close"])).toMatchObject({ exitCode: 0 });

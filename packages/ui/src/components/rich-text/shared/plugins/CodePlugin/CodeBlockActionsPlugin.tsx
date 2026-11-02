@@ -1,3 +1,4 @@
+import { useUiScope } from "@/utils/ui-scope";
 import "./CodeBlockActionsPlugin.css";
 
 import { IconButton } from "@chakra-ui/react";
@@ -51,6 +52,7 @@ function getActionPosition(anchorElem: HTMLElement, codeElement: HTMLElement) {
 }
 
 export function CodeBlockActionsPlugin({ anchorElem }: { anchorElem?: HTMLElement | null }): React.JSX.Element | null {
+  const surfaceActive = useUiScope()?.active ?? true;
   const [editor] = useLexicalComposerContext();
   const [activeCodeElement, setActiveCodeElement] = useState<HTMLElement | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -135,7 +137,7 @@ export function CodeBlockActionsPlugin({ anchorElem }: { anchorElem?: HTMLElemen
   };
 
   return createPortal(
-    <div className="code-block-actions" style={style}>
+    <div hidden={!surfaceActive} className="code-block-actions" style={style}>
       <Tooltip content={isCopied ? "Copied" : "Copy code"}>
         <IconButton
           aria-label={isCopied ? "Copied" : "Copy code"}

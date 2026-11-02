@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useUiScope } from "@pstdio/ui";
+import { useLayoutEffect, useState } from "react";
 import {
   getActiveWorkbenchSubPanel,
   isWorkbenchModePanelAvailable,
@@ -58,12 +59,11 @@ const useWorkbenchPanelMenu = (
   const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const panelAvailable = isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, panel);
-  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
-  const currentRegionState = layout.regions[region];
-  const activeSubPanel = getActiveWorkbenchSubPanel(layout, panel, locationResource, {
-    ignoreOwnerResourceKey: panel === "side",
-  });
+  const currentRegionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
+  const activeSubPanel = useWorkbenchStore(workbench.layout.store, (state) =>
+    getActiveWorkbenchSubPanel(state.layout, panel, locationResource, { ignoreOwnerResourceKey: panel === "side" }),
+  );
   const activeLocationPanel = useWorkbenchLocationPanel(workbench, panel);
   const regionState = {
     ...currentRegionState,
@@ -108,17 +108,8 @@ const useWorkbenchPanelMenu = (
 };
 
 export const useWorkbenchPanelMenus = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion) => {
-  const width = useWorkbenchPanelWidth(panel);
   const views = [useWorkbenchPanelMenu(workbench, panel, "left"), useWorkbenchPanelMenu(workbench, panel, "right")];
-  const attachment = getWorkbenchPanelMenuAttachment(
-    width,
-    views.map((view) => ({
-      has: view.has,
-      open: !view.collapsed,
-      collapsible: view.collapsible,
-      minSize: view.size.minPx,
-    })),
-  );
+  const attachment = useWorkbenchPanelMenuAttachment(panel, views[0]!, views[1]!);
   return views.map((view, index) => ({
     ...view,
     canAttach: attachment[index],
@@ -132,19 +123,54 @@ export const useWorkbenchPanelMenusPresent = (workbench: WorkbenchCore, panel: W
   return left.has || right.has;
 };
 
-const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {
-  const [width, setWidth] = useState(0);
+const useWorkbenchPanelMenuAttachment = (
+  panel: WorkbenchPanelRegion,
+  left: WorkbenchPanelMenuView,
+  right: WorkbenchPanelMenuView,
+) => {
+  const root = useUiScope()?.root;
+  const { has: leftHas, collapsed: leftCollapsed, collapsible: leftCollapsible } = left;
+  const { has: rightHas, collapsed: rightCollapsed, collapsible: rightCollapsible } = right;
+  const leftMin = left.size.minPx;
+  const rightMin = right.size.minPx;
+  const [attachment, setAttachment] = useState(() =>
+    getWorkbenchPanelMenuAttachment(0, [
+      { has: leftHas, open: !leftCollapsed, collapsible: leftCollapsible, minSize: leftMin },
+      { has: rightHas, open: !rightCollapsed, collapsible: rightCollapsible, minSize: rightMin },
+    ]),
+  );
 
-  useEffect(() => {
-    const element = document.querySelector<HTMLElement>(`[data-workbench-panel="${panel}"]`);
+  useLayoutEffect(() => {
+    const element = (root?.current ?? document).querySelector<HTMLElement>(`[data-workbench-panel="${panel}"]`);
     if (!element) return;
 
-    const measure = () => setWidth(element.clientWidth);
+    const menus = [
+      { has: leftHas, open: !leftCollapsed, collapsible: leftCollapsible, minSize: leftMin },
+      { has: rightHas, open: !rightCollapsed, collapsible: rightCollapsible, minSize: rightMin },
+    ];
+    const measure = () => {
+      const width = element.clientWidth;
+      if (width === 0) return;
+      const next = getWorkbenchPanelMenuAttachment(width, menus);
+      // Split motion reports a width every frame; menus only change at attachment thresholds.
+      setAttachment((previous) => (previous.every((value, index) => value === next[index]) ? previous : next));
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [panel]);
+  }, [
+    panel,
+    root,
+    leftHas,
+    leftCollapsed,
+    leftCollapsible,
+    leftMin,
+    rightHas,
+    rightCollapsed,
+    rightCollapsible,
+    rightMin,
+  ]);
 
-  return width;
+  return attachment;
 };

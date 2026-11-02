@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-22
 
+Status: Accepted.
+
 ## Intended design
 
 A derived query projection must preserve every JSON value accepted by record

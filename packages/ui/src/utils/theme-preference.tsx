@@ -1,7 +1,7 @@
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
-
+import { createContext, type ReactNode, useContext, useEffect, useState, useSyncExternalStore } from "react";
 import {
   applyThemePreference,
+  applyThemePreferenceToElement,
   defaultThemePreferences,
   getThemePreferenceMode,
   isThemePreference,
@@ -10,6 +10,8 @@ import {
   type ThemePreferenceOption,
 } from "./apply-theme-preference";
 import { createBrowserStorage } from "./browser-storage";
+import { createPreferenceSurfaceOwner } from "./preference-surface-owner";
+import { createThemePreferenceStore, getThemePreferenceStore } from "./theme-preference-store";
 
 /** The key, or key prefix for scoped choices, under which the provider saves the chosen theme. */
 const themePreferenceStorageKey = "theme-preference";
@@ -64,12 +66,6 @@ const getStoredThemePreference = (storage: ThemePreferenceStorage, storageKey: s
   return storage.getItem(storageKey);
 };
 
-const storeThemePreference = (storage: ThemePreferenceStorage, storageKey: string, preference: ThemePreference) => {
-  if (typeof window === "undefined") return;
-
-  storage.setItem(storageKey, preference);
-};
-
 // Contributed themes register asynchronously. Keep their stored preference until
 // it registers or the user chooses another theme.
 const looksLikeContributedThemePreference = (value: string | null) => typeof value === "string" && value.includes(".");
@@ -94,15 +90,23 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
   const storageKey = props.preferenceScope
     ? `${themePreferenceStorageKey}:${props.preferenceScope}`
     : themePreferenceStorageKey;
-  const storedPreference = props.initialPreference === undefined ? getStoredThemePreference(storage, storageKey) : null;
-  const initialPreference =
-    props.initialPreference ??
-    storedPreference ??
-    props.defaultPreference ??
-    getInitialThemePreference(themePreferences, storage);
-  const [selection, setSelection] = useState({ storageKey, preference: initialPreference });
+  const [explicitSelection] = useState(() =>
+    props.initialPreference === undefined
+      ? null
+      : {
+          storage,
+          storageKey,
+          store: createThemePreferenceStore(storage, storageKey, props.initialPreference),
+        },
+  );
+  const sharedStore = getThemePreferenceStore(storage, storageKey, storage === browserStorage);
+  const store =
+    explicitSelection && explicitSelection.storage === storage && explicitSelection.storageKey === storageKey
+      ? explicitSelection.store
+      : sharedStore;
+  const choice = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  const themePreference = choice ?? props.defaultPreference ?? getInitialThemePreference(themePreferences, storage);
   const [preview, setPreview] = useState<ThemePreference | null>(null);
-  const themePreference = selection.storageKey === storageKey ? selection.preference : initialPreference;
   const resolvedThemePreference = isThemePreference(themePreference, themePreferences)
     ? themePreference
     : getDefaultThemePreference(themePreferences, getThemePreferenceMode(themePreference, themePreferences));
@@ -110,47 +114,18 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
   // The provider shows a fallback while a chosen extension theme registers. The choice
   // stays in the selection on the first render and in storage after the fallback applies.
   const pendingThemePreference =
-    [themePreference, storedPreference].find(
-      (preference) =>
-        looksLikeContributedThemePreference(preference) && !isThemePreference(preference, themePreferences),
-    ) ?? null;
+    looksLikeContributedThemePreference(themePreference) && !isThemePreference(themePreference, themePreferences)
+      ? themePreference
+      : null;
 
   useEffect(() => {
-    if (
-      storedPreference &&
-      storedPreference !== themePreference &&
-      isThemePreference(storedPreference, themePreferences)
-    ) {
-      setSelection({ storageKey, preference: storedPreference });
-      return;
-    }
-
-    if (!isThemePreference(themePreference, themePreferences)) {
-      if (!props.defaultPreference) setSelection({ storageKey, preference: resolvedThemePreference });
-      return;
-    }
-
-    applyThemePreference(shownPreview ?? themePreference, themePreferences);
-    const hasPendingStoredTheme =
-      storedPreference &&
-      storedPreference !== themePreference &&
-      looksLikeContributedThemePreference(storedPreference) &&
-      !isThemePreference(storedPreference, themePreferences);
-    if (!hasPendingStoredTheme && !props.defaultPreference) storeThemePreference(storage, storageKey, themePreference);
-  }, [
-    resolvedThemePreference,
-    shownPreview,
-    storage,
-    storedPreference,
-    themePreference,
-    themePreferences,
-    storageKey,
-    props.defaultPreference,
-  ]);
+    if (isThemePreference(themePreference, themePreferences) && !props.defaultPreference)
+      sharedStore.setChoice(themePreference);
+  }, [sharedStore, themePreference, themePreferences, props.defaultPreference]);
 
   const setThemePreference = (preference: ThemePreference) => {
-    storeThemePreference(storage, storageKey, preference);
-    setSelection({ storageKey, preference });
+    store.update(preference);
+    sharedStore.setChoice(preference);
     setPreview(null);
   };
 
@@ -172,7 +147,9 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
         toggleThemePreference,
       }}
     >
-      {children}
+      <themeSurfaces.Owner>
+        <ThemePreferenceSurface>{children}</ThemePreferenceSurface>
+      </themeSurfaces.Owner>
     </ThemePreferenceContext>
   );
 };
@@ -185,4 +162,18 @@ export const useThemePreference = () => {
   }
 
   return context;
+};
+
+const themeSurfaces = createPreferenceSurfaceOwner();
+
+/** Apply the owning preference to this surface; only an active surface owns document styling. */
+export const ThemePreferenceSurface = (props: { children: ReactNode }) => {
+  const { themePreference, themePreferences } = useThemePreference();
+  const { scope, surfaces, count } = themeSurfaces.useSurface();
+  useEffect(() => {
+    if (scope?.root.current) applyThemePreferenceToElement(scope.root.current, themePreference, themePreferences);
+    if (scope ? scope.active : count === 0 && !surfaces?.getSnapshot())
+      applyThemePreference(themePreference, themePreferences);
+  }, [themePreference, themePreferences, scope, surfaces, count]);
+  return props.children;
 };

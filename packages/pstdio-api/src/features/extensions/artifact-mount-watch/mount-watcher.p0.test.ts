@@ -172,11 +172,12 @@ describe("watchArtifactMount", () => {
     });
 
     for (const name of ["a", "b", "c"]) mkdirSync(join(root, name));
-    await waitFor(() => changes.length > 0);
+    await waitFor(() => limits === 1 && changes.some((paths) => paths.length === 0));
+    const changesAtLimit = changes.length;
     writeFileSync(join(root, "a", "x.json"), "{}");
-    await waitFor(() => changes.length > 1);
+    await waitFor(() => changes.length > changesAtLimit);
 
-    expect(changes).toEqual([[], []]);
+    expect(changes.slice(changesAtLimit)).toEqual([[]]);
     expect(limits).toBe(1);
   });
 

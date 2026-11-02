@@ -127,7 +127,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
 
       - name: Install dependencies
         run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts

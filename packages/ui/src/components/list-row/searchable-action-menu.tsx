@@ -1,5 +1,6 @@
-import { IconButton, Menu } from "@chakra-ui/react";
 import { SearchableMenu } from "@/components/overlays/searchable-menu";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { ActionIconButton } from "./action-icon-button";
 import { ListRow } from "./list-row";
 import type { ListRowAction } from "./list-row.types";
 
@@ -22,9 +23,15 @@ export const SearchableActionMenu = (props: SearchableActionMenuProps) => {
   return (
     <SearchableMenu
       trigger={
-        <IconButton variant="ghost" size="2xs" aria-label={action.label} disabled={action.disabled}>
+        <ActionIconButton
+          tooltip={action.tooltip ?? action.label}
+          variant="ghost"
+          size="2xs"
+          aria-label={action.label}
+          disabled={action.disabled}
+        >
           {action.icon}
-        </IconButton>
+        </ActionIconButton>
       }
       items={items}
       searchPlaceholder={action.searchPlaceholder ?? "Search..."}

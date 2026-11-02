@@ -1,6 +1,7 @@
-import { buildComparison, buildTrends } from "../benchmarks/analysis";
+import { buildComparison, buildTrends, type PlatformTrend } from "../benchmarks/analysis";
+import { PLATFORMS } from "../benchmarks/platforms";
 import type { BenchmarkMetricResult, BenchmarkResultFile } from "../benchmarks/result-file";
-import type { CachedResult, RunRecord } from "../benchmarks/store";
+import type { CachedResult } from "../benchmarks/store";
 import type { CommitOptionView } from "../compare/commit-picker";
 
 // Sample data for stories. Medians follow plausible release history; noise is seeded so stories are stable.
@@ -141,7 +142,8 @@ const releaseResults: CachedResult[] = versions.map((version, index) => ({
   file: resultFile(`release-${version}`, index),
 }));
 
-export const storyTrends = buildTrends(releaseResults, "linux-x64");
+const linuxTrends = buildTrends(releaseResults, ["linux-x64"]);
+export const storyTrends = { versions: linuxTrends.versions, metrics: linuxTrends.trends[0].metrics };
 
 const headEffect = (entry: SeriesDefinition) => {
   if (entry.metric === "panel-tabs/open-panel") return 1.14;
@@ -179,43 +181,22 @@ export const storyCommits: CommitOptionView[] = [
   { sha: "3ad9c7c1f0", ref: "pstdio@0.45.0", message: "Version Packages (#1223)", measured: true },
 ];
 
-export const storyRuns: RunRecord[] = [
-  {
-    id: "1043",
-    title: "Benchmarks pstdio@0.45.0,main on linux-x64",
-    status: "running",
-    progress: 0.46,
-    url: "https://github.com/pufflyai/prompt-studio/actions/runs/1043",
-    createdAt: "2026-10-22T10:12:00Z",
-    updatedAt: "2026-10-22T10:24:00Z",
-    synced: false,
-  },
-  {
-    id: "1042",
-    title: "Benchmarks 3d7f576,65d36f4 on linux-x64",
-    status: "succeeded",
-    url: "https://github.com/pufflyai/prompt-studio/actions/runs/1042",
-    createdAt: "2026-10-22T09:00:00Z",
-    updatedAt: "2026-10-22T09:41:00Z",
-    synced: true,
-  },
-  {
-    id: "1040",
-    title: "Benchmarks 1520ba3,f5c5c4b on linux-x64",
-    status: "failed",
-    failure: "linux-x64: Check out the measured commits",
-    url: "https://github.com/pufflyai/prompt-studio/actions/runs/1040",
-    createdAt: "2026-10-21T16:30:00Z",
-    updatedAt: "2026-10-21T16:36:00Z",
-    synced: true,
-  },
-  {
-    id: "1039",
-    title: "Benchmarks 87abbbf,1520ba3 on linux-x64",
-    status: "cancelled",
-    url: "https://github.com/pufflyai/prompt-studio/actions/runs/1039",
-    createdAt: "2026-10-21T14:02:00Z",
-    updatedAt: "2026-10-21T14:11:00Z",
-    synced: true,
-  },
-];
+// Each platform is slower or faster by a steady factor; Windows has no results for the first three releases.
+const PLATFORM_FACTOR: Record<string, number> = {
+  "linux-x64": 1,
+  "darwin-arm64": 0.72,
+  "darwin-x64": 1.35,
+  "win32-x64": 1.6,
+};
+
+export const storyPlatformTrends: PlatformTrend[] = PLATFORMS.map(({ id }) => ({
+  platform: id,
+  metrics: storyTrends.metrics.map((metric) => ({
+    ...metric,
+    points: metric.points.map((point, index) => {
+      if (!point || (id === "win32-x64" && index < 3)) return null;
+      const factor = PLATFORM_FACTOR[id];
+      return { ...point, median: point.median * factor, low: point.low * factor, high: point.high * factor };
+    }),
+  })),
+}));

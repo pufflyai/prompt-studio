@@ -1,7 +1,8 @@
-import { Button, Icon as ChakraIcon, Flex, IconButton, Menu, Portal, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Button, Icon as ChakraIcon, Flex, IconButton, Spinner, Stack, Text } from "@chakra-ui/react";
 import { Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-
 import { NumberInputField, NumberInputRoot } from "@/components/primitives/number-input";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { ListRow } from "../list-row/list-row";
 
 interface PaginationFooterProps {

@@ -256,8 +256,15 @@ export async function* normalizeClaudeCodeStream(
   options: { compact?: boolean } = {},
 ): AsyncGenerator<SessionMessage> {
   const ctx: StreamContext = { index: 0, toolMap: new Map() };
+  let compact = options.compact;
 
   for await (const event of raw) {
+    if (event.type === "user_message") {
+      compact = false;
+      yield event.message;
+      ctx.index += 1;
+      continue;
+    }
     if (event.type === "stderr") {
       yield {
         id: `stream-error-${ctx.index}`,
@@ -274,7 +281,7 @@ export async function* normalizeClaudeCodeStream(
 
     const parsed = parseStdoutLine(event.data);
     if (!parsed) continue;
-    if (options.compact && parsed.type === "assistant") continue;
+    if (compact && parsed.type === "assistant") continue;
     if (parsed.local_command_source) ctx.localReply = true;
 
     const createdAt = parseTimestamp(parsed.timestamp) ?? Date.now();

@@ -5,12 +5,16 @@ import type { StorageObserver, StorageOwner } from "./types";
 
 export interface DocumentState {
   document: Y.Doc;
+  /** Revision at transaction entry, when the store provides cheap revision reads. */
+  revision?: number;
   migrationSeed?: string;
   migrationHistory?: DocumentHistory;
   operation(id: string): Promise<string | undefined>;
   remember(id: string, fingerprint: string): void;
 }
 export interface DocumentStore {
+  /** Reads committed metadata without opening document content. Missing documents have revision zero. */
+  revision?(owner: StorageOwner): Promise<number>;
   queries?: (owner: StorageOwner) => StorageRecordQueries;
   observer?: StorageObserver;
   transaction<T>(owner: StorageOwner, action: (state: DocumentState) => Promise<T>): Promise<T>;

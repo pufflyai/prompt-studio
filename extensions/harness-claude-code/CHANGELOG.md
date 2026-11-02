@@ -1,5 +1,20 @@
 # harness-claude-code
 
+## 0.46.0
+
+_2026-10-31_
+
+### Minor Changes
+
+- d309109: Install private native CLIs, prefer existing installations, and offer provider sign-in inside Prompt Studio.
+- 4eeef83: Declare and verify supported extension API baselines for independently published core extensions.
+- 22ccce1: Allow live corrections in active Claude sessions with acknowledged delivery and recoverable history.
+
+### Patch Changes
+
+- 8d64cf1: Show Claude plan approval in the live question flow and continue after explicit approval.
+- 5e25e20: Accept extension API 0.3, which refuses storage records over 256 KiB and commits over 4 MiB.
+
 ## 0.45.0
 
 _2026-10-22_

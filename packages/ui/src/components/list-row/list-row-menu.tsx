@@ -1,5 +1,7 @@
-import { Box, HStack, Icon, Menu, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { Fragment, type ReactElement, useRef } from "react";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import type { ResourceContextAction } from "../overlays/resource-context-menu";
 import { ResourceMenuItems } from "../overlays/resource-menu-items";
 import type { ListRowActionMenuItem, ListRowMenuPlacement } from "./list-row.types";

@@ -1,9 +1,9 @@
 import type { ThemePreference } from "../contract";
 
-export const collectChakraThemeVariables = () => {
+export const collectChakraThemeVariables = (root?: HTMLElement | null) => {
   if (typeof document === "undefined") return {};
 
-  const computed = getComputedStyle(document.documentElement);
+  const computed = getComputedStyle(root ?? document.documentElement);
   const variables: Record<string, string> = {};
   for (let index = 0; index < computed.length; index += 1) {
     const name = computed.item(index);
@@ -14,12 +14,13 @@ export const collectChakraThemeVariables = () => {
   return variables;
 };
 
-export const resolveActiveTheme = (fallback: ThemePreference): ThemePreference => {
+export const resolveActiveTheme = (fallback: ThemePreference, root?: HTMLElement | null): ThemePreference => {
   if (typeof document === "undefined") return fallback;
-  const value = document.documentElement.getAttribute("data-theme");
+  const target = root ?? document.documentElement;
+  const value = target.getAttribute("data-theme");
   if (value === "dark" || value === "light") return value;
 
-  const colorMode = document.documentElement.getAttribute("data-color-mode");
+  const colorMode = target.getAttribute("data-color-mode");
   return colorMode === "dark" || colorMode === "light" ? colorMode : fallback;
 };
 

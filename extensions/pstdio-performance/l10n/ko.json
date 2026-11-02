@@ -31,6 +31,7 @@
   "popover.remoteBackend": "원격 백엔드",
   "popover.responseSummary": "평균 {{avg}} · 최대 {{max}}",
   "popover.responseTime": "응답 시간",
+  "popover.resuming": "재개 중 · 프로세스 샘플 대기 중",
   "popover.resume": "재개",
   "popover.resumeLabel": "{{name}} 재개",
   "popover.roles.extension-frames": "확장 프로그램 프레임",

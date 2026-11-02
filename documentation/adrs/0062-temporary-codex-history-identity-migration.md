@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-02
 
+Status: Accepted.
+
 ## Decision
 
 Use native turn and item IDs for live events and history. Support Codex 0.159.3's protocol. Keep complete saved messages and host attachment references after native compaction.

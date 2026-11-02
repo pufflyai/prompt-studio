@@ -66,6 +66,7 @@ import type { WorkbenchViewRegistry } from "./registries/views/view-registry";
 import type { ContextKeyService } from "./shared/context/context-key-service";
 import type { ContributionSource } from "./shared/contributions/metadata";
 import type { Disposable } from "./shared/disposable";
+import type { WorkbenchActivation } from "./workbench-activation";
 
 export type WorkbenchLayoutModel = LayoutModel & MenuRegistry;
 
@@ -158,6 +159,8 @@ export interface WorkbenchPersistenceAdapter {
 }
 
 export interface WorkbenchHost {
+  /** Stable identity for this host's saved UI state. Unset preserves standalone keys. */
+  storageScope?: string;
   getOpenPlacements(): WorkbenchWidgetPlacement[];
   getOpenPlacementIds(): ReadonlySet<string>;
   getSnapshot(): WorkbenchSnapshot;
@@ -167,6 +170,7 @@ export interface WorkbenchHost {
 }
 
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
+  activation: WorkbenchActivation;
   dispose(): Promise<void>;
   host: WorkbenchHost;
   layout: WorkbenchLayoutModel;
@@ -191,6 +195,9 @@ export interface WorkbenchPagePersistenceScope {
 }
 
 export interface createWorkbenchInput {
+  /** Whether this workbench owns window effects. Defaults to true for single-workbench hosts. */
+  active?: boolean;
+  storageScope?: string;
   isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
   layoutPersistence?: LayoutPersistenceAdapter;
   pageLocationBrowser?: WorkbenchPageLocationBrowser;

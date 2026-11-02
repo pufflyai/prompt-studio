@@ -19,6 +19,9 @@ import {
 import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 import { waitForVisibleElement } from "./visible-element-timing";
 
+// Startup recovery does not use an agent harness.
+const recoveryEnvironment = { PSTDIO_DEFAULT_EXTENSIONS: "[]" };
+
 test("keeps waiting for a slow runtime and opens automatically without replacing its owner", async ({
   browserName: _browserName,
 }, testInfo) => {
@@ -26,14 +29,14 @@ test("keeps waiting for a slow runtime and opens automatically without replacing
   let app: PackagedWindow | null = null;
   let suspendedPid: number | null = null;
   try {
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+    expect(await runPackagedCli(home, ["serve"], recoveryEnvironment)).toMatchObject({ exitCode: 0 });
     const runtime = await waitForDescriptor(home);
     const descriptorPath = join(home, "runtime.json");
     const originalDescriptor = readFileSync(descriptorPath, "utf8");
     suspendProcess(runtime.pid);
     suspendedPid = runtime.pid;
 
-    app = await launchPackagedWindow(home);
+    app = await launchPackagedWindow(home, recoveryEnvironment);
     await expect(app.lifecyclePage.getByRole("status")).toContainText("Opening Prompt Studio");
     // Advance the renderer's notice timer without delaying process startup or changing the test allowance.
     const now = Date.now();
@@ -80,14 +83,14 @@ test("keeps an uncertain runtime owner intact until its descriptor is repaired",
   const home = createPackagedHome();
   let app: PackagedWindow | null = null;
   try {
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+    expect(await runPackagedCli(home, ["serve"], recoveryEnvironment)).toMatchObject({ exitCode: 0 });
     const runtime = await waitForDescriptor(home);
     const descriptorPath = join(home, "runtime.json");
     const originalDescriptor = readFileSync(descriptorPath, "utf8");
     const mismatchedDescriptor = JSON.stringify({ ...runtime, instanceId: "different-runtime-instance" });
     writeFileSync(descriptorPath, mismatchedDescriptor);
 
-    app = await launchPackagedWindow(home);
+    app = await launchPackagedWindow(home, recoveryEnvironment);
     await expect(app.lifecyclePage.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
     expect(await app.lifecyclePage.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
       kind: "recovery",
@@ -126,7 +129,7 @@ test("quits from recovery after the runtime crashes", async () => {
   const home = createPackagedHome();
   let app: PackagedWindow | null = null;
   try {
-    const launched = await launchPackagedApp(home);
+    const launched = await launchPackagedApp(home, recoveryEnvironment);
     app = launched;
     crashPackagedRuntime(launched.runtime.pid);
     await waitForAutomaticRecovery(launched);

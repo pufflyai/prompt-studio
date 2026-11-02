@@ -49,4 +49,4 @@ See [cross-platform requirements](../../requirements/platform/0001-cross-platfor
 
 Use `bun run --cwd packages/e2e test:packaged` for compiled CLI coverage. After building a desktop package, use `bun run --cwd clients/desktop test:packaged`. Tests own temporary homes and process cleanup. Never point package validation at production state.
 
-For user-visible changes, complete the [manual installed-product walkthrough](../../lessons-learned/0013-manually-check-installed-user-flows.md) as well. A source build does not prove the installed artifact has every required file or dependency.
+When installed behavior changes, follow the [installed-product checks](../../guides/development/0002-testing.md#installed-product-checks). A source build does not prove the installed artifact has every required file or dependency.

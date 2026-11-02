@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-23
 
+Status: Accepted.
+
 ## Intended behavior
 
 Tab title tooltips appear only when their labels are clipped. Labels and their observers stay mounted when a resize or rename changes that condition. Disabling a tooltip must close it, clear its hover state, and release keyboard handling. Hovering it again after it becomes eligible must work on the first attempt.

@@ -2,9 +2,7 @@
 
 Proposed: 2026-08-27
 
-## Status
-
-Accepted as a temporary workaround. This is the shipped behavior: every desktop and `pst serve` install stores connection secrets in files. No production host injects another store. Corrected on 2026-10-06 (PS-503) to say so and to remove an isolation claim the runtime does not enforce.
+Status: Accepted as a temporary workaround. This is the shipped behavior: every desktop and `pst serve` install stores connection secrets in files. No production host injects another store. Corrected on 2026-10-06 (PS-503) to say so and to remove an isolation claim the runtime does not enforce.
 
 Owner: Aurélien Franky (maintainer). Removal target: 2027-01-31, tracked in PS-527.
 

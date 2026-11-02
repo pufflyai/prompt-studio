@@ -1,5 +1,5 @@
-import { Button, HStack, Icon, Popover, Portal, Stack, Tag, Text } from "@chakra-ui/react";
-import { AlertMessage, ScrollArea } from "@pstdio/ui";
+import { Button, HStack, Icon, Stack, Tag, Text } from "@chakra-ui/react";
+import { AlertMessage, ScopedPopover as Popover, Portal, ScrollArea } from "@pstdio/ui";
 import { TriangleAlert } from "lucide-react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";

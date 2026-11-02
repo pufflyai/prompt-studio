@@ -46,7 +46,12 @@ export const createMessageAccumulator = (sink: HarnessEventSink, options: Accumu
     const lastMessage = messages[lastIdx];
     const lastPart = lastMessage?.parts[0];
 
-    if (firstPart.type === "text" && lastPart?.type === "text" && message.role === lastMessage.role) {
+    if (
+      message.role !== "user" &&
+      firstPart.type === "text" &&
+      lastPart?.type === "text" &&
+      message.role === lastMessage.role
+    ) {
       const updated = { ...lastMessage, parts: [{ ...lastPart, text: lastPart.text + firstPart.text }] };
       messages[lastIdx] = updated;
       sink.push({ op: "replace", path: toPath(lastIdx), value: updated });

@@ -1,11 +1,11 @@
 import type { ToastStatusChangeDetails } from "@chakra-ui/react";
-import { toaster } from "@pstdio/ui";
+import { useToaster } from "@pstdio/ui";
 import { useEffect, useRef } from "react";
 import type { RegisteredWorkbenchNotification, WorkbenchCore, WorkbenchNotificationAction } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 
 // System errors belong to the status bar. Action errors belong to their view.
-// Other notifications use the shared toaster rendered once by the shell.
+// Other notifications use their workbench's toaster while it is active.
 interface WorkbenchNotificationHostProps {
   workbench: WorkbenchCore;
 }
@@ -17,13 +17,16 @@ const executeNotificationAction = (input: { action: WorkbenchNotificationAction;
 
 export const WorkbenchNotificationHost = (props: WorkbenchNotificationHostProps) => {
   const { workbench } = props;
+  const toaster = useToaster();
   const shownNotificationIds = useRef(new Set<string>());
   useEffect(() => {
+    let disposed = false;
     const showNotification = (notification: RegisteredWorkbenchNotification) => {
       if (notification.level === "error" || notification.inlineTarget) {
         if (shownNotificationIds.current.delete(notification.id)) toaster.dismiss(notification.id);
         return;
       }
+      if (!workbench.activation.isActive()) return;
       const action = notification.actions?.[0];
       const toastAction = action
         ? {
@@ -40,6 +43,7 @@ export const WorkbenchNotificationHost = (props: WorkbenchNotificationHostProps)
         closable: true,
         onStatusChange: (details: ToastStatusChangeDetails) => {
           if (
+            !disposed &&
             details.status === "unmounted" &&
             workbench.notifications.store.getState().notifications[notification.id] === notification
           )
@@ -56,7 +60,16 @@ export const WorkbenchNotificationHost = (props: WorkbenchNotificationHostProps)
       toaster.create(toastOptions);
     };
 
-    for (const notification of workbench.notifications.listNotifications()) showNotification(notification);
+    const refresh = () => {
+      if (!workbench.activation.isActive()) {
+        toaster.pause();
+        return;
+      }
+      for (const notification of workbench.notifications.listNotifications()) showNotification(notification);
+      toaster.resume();
+    };
+    const unsubscribeActivation = workbench.activation.store.subscribe(refresh);
+    refresh();
 
     const subscription = workbench.notifications.subscribe((event) => {
       if (event.type === "show") {
@@ -69,11 +82,13 @@ export const WorkbenchNotificationHost = (props: WorkbenchNotificationHostProps)
     });
 
     return () => {
+      disposed = true;
+      unsubscribeActivation();
       subscription.dispose();
       for (const id of shownNotificationIds.current) toaster.dismiss(id);
       shownNotificationIds.current.clear();
     };
-  }, [workbench]);
+  }, [workbench, toaster]);
 
   return null;
 };

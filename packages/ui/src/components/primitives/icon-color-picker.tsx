@@ -1,4 +1,6 @@
-import { Box, chakra, Grid, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, chakra, Grid, Stack, Text } from "@chakra-ui/react";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { type IconColorPickerIconOption, optionColors, optionIcons } from "./icon-options";
 import { IconPickerGrid } from "./icon-picker-grid";
 import { TagSwatch } from "./tag-swatch";

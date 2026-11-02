@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { bunRunIdentity } from "./bun-test-evidence";
+import { selectedQuarantineRegistry } from "./quarantine-test-files";
 import { runCiChecks } from "./run-ci-checks";
 import {
   browserQuarantineReportPath,
   matchesPlatform,
   quarantineDirectory,
-  quarantineRegistry,
+  type quarantineRegistry,
 } from "./test-quarantine";
 import { readWorkspacePackages } from "./workspace-packages";
 
@@ -63,7 +64,7 @@ if (import.meta.main) {
   const scope = scopeAt < 0 ? undefined : args[scopeAt + 1];
   if (scopeAt >= 0 && !scope) throw new Error("Missing quarantine scope");
   const groups = quarantineGroups(
-    quarantineRegistry,
+    selectedQuarantineRegistry(root, args),
     readWorkspacePackages(root),
     runner,
     process.platform,

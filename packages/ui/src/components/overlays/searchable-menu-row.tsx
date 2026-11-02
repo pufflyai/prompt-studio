@@ -1,7 +1,8 @@
-import { Box, HStack, Icon, Menu, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, Text } from "@chakra-ui/react";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListRow } from "@/components/list-row/list-row";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import type { SearchableMenuItem } from "./searchable-menu";
 
 interface SearchableMenuRowProps {

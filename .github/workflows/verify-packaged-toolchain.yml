@@ -61,7 +61,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install native dependencies and restore host build cache
         uses: ./.github/actions/setup-ci-cache
         with:
@@ -80,6 +80,9 @@ jobs:
         run: |
           bun scripts/ci/production-payload.ts check
           tar -xzf release-build.tar.gz
+      - name: Build source fixtures for packaged runtime tests
+        if: inputs.profile == 'full' && inputs.artifact_run_id == ''
+        run: bun run build -- --scope e2e --include-dependencies
       - name: Install Chromium for packaged extension smoke tests
         if: inputs.profile == 'full' && runner.os != 'Windows'
         run: bunx playwright@1.60.0 install chromium --with-deps
@@ -87,6 +90,7 @@ jobs:
         id: toolchain
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
+          TEST_PRIORITIES: ${{ matrix.priorities }}
         # Git Bash pipelines give Windows children an inherited Ctrl+C-ignore attribute.
         # Use the native shell and direct arguments so real terminal interrupts reach the CLI.
         run: >-

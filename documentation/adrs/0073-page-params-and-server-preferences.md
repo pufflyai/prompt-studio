@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-06
 
+Status: Accepted.
+
 ## Context
 
 Extension pages need shareable view state. Webview preferences currently drop unknown names in the dashboard. Extensions cannot own the browser URL or persist data from an iframe with an opaque origin.

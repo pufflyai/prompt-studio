@@ -1,5 +1,6 @@
 import { Box, ColorPicker, type ColorPickerValueChangeDetails, Flex, parseColor } from "@chakra-ui/react";
 import { type FocusEvent as ReactFocusEvent, useEffect, useRef, useState } from "react";
+import { useUiScope } from "@/utils/ui-scope";
 import { ParamEditorLabel } from "../param-editor-label";
 import { ParamEditorReadOnlyValue } from "../param-editor-read-only-value";
 
@@ -17,6 +18,9 @@ interface ColorInputProps {
 }
 
 export const ColorInput = (props: ColorInputProps) => {
+  const surfaceActive = useUiScope()?.active ?? true;
+  const activeRef = useRef(surfaceActive);
+  activeRef.current = surfaceActive;
   const {
     id,
     defaultValue,
@@ -50,6 +54,7 @@ export const ColorInput = (props: ColorInputProps) => {
       return rootRef.current?.contains(node) || contentRef.current?.contains(node);
     };
 
+    if (!surfaceActive) return;
     const handleOutsideInteraction = (event: FocusEvent | PointerEvent) => {
       if (isInsidePicker(event.target)) return;
 
@@ -65,7 +70,7 @@ export const ColorInput = (props: ColorInputProps) => {
       document.removeEventListener("pointerdown", handleOutsideInteraction, true);
       document.removeEventListener("click", handleOutsideInteraction, true);
     };
-  }, [open]);
+  }, [open, surfaceActive]);
 
   const handleChange = (newColor: string) => {
     setValue(newColor);
@@ -76,7 +81,7 @@ export const ColorInput = (props: ColorInputProps) => {
     const root = event.currentTarget;
 
     setTimeout(() => {
-      if (!root.contains(root.ownerDocument.activeElement)) setOpen(false);
+      if (activeRef.current && !root.contains(root.ownerDocument.activeElement)) setOpen(false);
     });
   };
 
@@ -115,10 +120,16 @@ export const ColorInput = (props: ColorInputProps) => {
 
   const rootProps = {
     value: parseColor(value),
-    open,
-    onOpenChange: (details: { open: boolean }) => setOpen(details.open),
-    onFocusOutside: () => setOpen(false),
-    onInteractOutside: () => setOpen(false),
+    open: surfaceActive && open,
+    onOpenChange: (details: { open: boolean }) => {
+      if (surfaceActive) setOpen(details.open);
+    },
+    onFocusOutside: () => {
+      if (surfaceActive) setOpen(false);
+    },
+    onInteractOutside: () => {
+      if (surfaceActive) setOpen(false);
+    },
     onBlur: handleBlur,
     onValueChange: (details: ColorPickerValueChangeDetails) => handleChange(details.value.toString("hex")),
     disabled: readOnly,

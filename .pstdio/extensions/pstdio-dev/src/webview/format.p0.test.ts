@@ -16,5 +16,6 @@ describe("benchmark value formatting", () => {
     expect(verdictText(change, "ms")).toBe("↑ 12.0% slower");
     expect(verdictText(change, "bytes")).toBe("↑ 12.0% more memory");
     expect(verdictText({ ...change, verdict: "unchanged" }, "bytes")).toBe("≈ no change");
+    expect(verdictText({ ...change, verdict: "inconclusive" }, "ms")).toBe("+12.0%, too little evidence");
   });
 });

@@ -1,6 +1,6 @@
-import { Button, HStack, Input, Menu, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import { type ResourceRole, resourceKey } from "@pstdio/sdk/extensions";
-import { AlertMessage, ListRow, ScrollArea } from "@pstdio/ui";
+import { AlertMessage, ListRow, ScopedMenu as Menu, ScrollArea } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { WorkbenchIcon } from "../shared/icon";
 import type { ResourceLinkCandidate, ResourceLinksService } from "./resource-links-types";

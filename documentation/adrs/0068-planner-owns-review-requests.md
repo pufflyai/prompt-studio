@@ -2,9 +2,7 @@
 
 Proposed: 2026-10-10
 
-## Status
-
-Accepted for PS-579. Implemented in the PS-545 timeline pull request.
+Status: Accepted for PS-579. Implemented in the PS-545 timeline pull request.
 
 ## Context
 

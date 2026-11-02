@@ -1,7 +1,16 @@
-import { expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, jest, test } from "bun:test";
 import { createClient } from "./client";
 
-const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+// Fake timers leave setImmediate real, so a tick still lets the mocked requests settle.
+const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 const retentionServer = (status: number, code?: string) => {
   let posts = 0;
@@ -36,7 +45,9 @@ test.each([400, 401, 403, 404, 410])("retention stops after a definitive HTTP %s
   const second = client.sessions.retainResources("also-deleted");
   const live = client.sessions.connectStream("working", {});
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await tick();
+    jest.advanceTimersByTime(1100);
+    await tick();
     expect(server.posts()).toBe(2);
     expect(server.deletes()).toBe(0);
     expect(server.connections()).toBe(1);
@@ -51,7 +62,9 @@ test.each([408, 429, 503])("retention retries a transient HTTP %s response", asy
   const server = retentionServer(status);
   const retained = createClient({ baseUrl: "http://test", fetch: server.fetch }).sessions.retainResources("saved");
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await tick();
+    jest.advanceTimersByTime(1100);
+    await tick();
     expect(server.posts()).toBe(2);
   } finally {
     retained.close();
@@ -65,7 +78,9 @@ test("a missing stream reconnects instead of treating the retained session as de
   const live = client.sessions.connectStream("working", {});
   try {
     await tick();
-    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await tick();
+    jest.advanceTimersByTime(1100);
+    await tick();
     expect(server.connections()).toBe(2);
     expect(server.posts()).toBe(2);
   } finally {
@@ -84,7 +99,9 @@ test.each([401, 404])("retention stops if opening the shared stream is rejected 
     }) as unknown as typeof fetch,
   }).sessions.retainResources("saved");
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await tick();
+    jest.advanceTimersByTime(1100);
+    await tick();
     expect(attempts).toBe(1);
   } finally {
     retained.close();

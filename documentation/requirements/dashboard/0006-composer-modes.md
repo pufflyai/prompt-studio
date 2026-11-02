@@ -29,7 +29,7 @@ The the live Canvas designs defines these frames:
 - `IK1YY`: the next independent async question appears after the first answer.
 - `k8PBtH`: the saved draft and attachment return after all pending requests finish.
 
-Follow the [shared design rules](../../../design/DESIGN.md). Send uses the existing primary IconButton; attach and model controls use ghost styling. Goal and Plan use the same subtle pill styling as ticket tags, at a matching 28 px height. Tags follow model parameters. Slash menus use shared Menu rows without leading icons or outer padding. Do not add status cards, argument dialogs or Reset to default.
+Follow the [shared design rules](../../guidance/0002-design.md). Send uses the existing primary IconButton; attach and model controls use ghost styling. Goal and Plan use the same subtle pill styling as ticket tags, at a matching 28 px height. Tags follow model parameters. Slash menus use shared Menu rows without leading icons or outer padding. Do not add status cards, argument dialogs or Reset to default.
 
 ## Provider findings
 

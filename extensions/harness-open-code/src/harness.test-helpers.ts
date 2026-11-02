@@ -31,4 +31,5 @@ export const serviceOverrides = () => ({
 export const harnessDefaults = () => ({
   detect: async () => ({ available: true }),
   getModelsOutput: async () => "",
+  pollIntervalMs: 1,
 });

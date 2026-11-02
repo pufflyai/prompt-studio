@@ -1,21 +1,21 @@
-# Keep session status side effects in one service
+# Keep status changes and their side effects together
 
-## What went wrong
+## 1. When to use
 
-Session status changed through several paths: the status endpoint, process exit, startup recovery, spawn failure, approval, and follow-up. Some paths updated the database and sent sync events but omitted lifecycle hooks. Automation therefore depended on how a session reached the same status.
+- Adding a session status change, recovery path, queue operation, or lifecycle hook.
 
-## Why
+## 2. Failure
 
-Callers each implemented part of the transition. Adding a hook call to one endpoint did not protect process-exit or recovery paths from the same omission.
+- Some paths updated status and sent sync events but omitted hooks. Automation behaved differently after an endpoint call, process exit, or startup recovery.
 
-## Current contract
+## 3. Prevention
 
-The [session service](../../packages/pstdio-api/src/services/session-service.ts) owns status mutations, sync events, and lifecycle callbacks. Callers use its transition, resume, and queue methods rather than writing directly to the database and emitting events themselves. Queue operations also preserve the durable queue entry that a queued session requires.
+- Use the session service's transition, resume, and queue methods.
+- Keep database changes, sync events, hooks, and required queue entries with their owner.
+- Do not repeat part of a transition in a caller.
+- Cover secondary paths such as spawn failure and recovery, including guarded transitions that update no row.
 
-The service logs `sync_emit_skipped` when a guarded write returns no updated row. That makes a skipped transition visible; it does not replace the requirement to keep side effects together.
+## 4. Evidence
 
-See the [session status lifecycle](../references/architecture/0019-session-status-lifecycle.md) for the full contract.
-
-## Key takeaway
-
-When several entry points change the same state, put its required side effects in the service that owns that state. Cover secondary paths such as startup recovery and spawn failure as well as the normal endpoint.
+- [Session service](../../packages/pstdio-api/src/services/session-service.ts)
+- [Session status lifecycle](../references/architecture/0019-session-status-lifecycle.md)

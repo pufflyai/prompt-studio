@@ -166,6 +166,9 @@ test("project picker stays open when the background is clicked", async ({ page, 
   }, firstProject.id);
 
   await page.goto("/");
+  await expect(
+    page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: /First Project/ }),
+  ).toBeVisible();
   await navSwitchProjectButton(page).click();
 
   const picker = page.getByRole("dialog", { name: "Projects", exact: true });

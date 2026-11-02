@@ -1,5 +1,6 @@
 import type { Argv } from "yargs";
 import { formatSmokeResult } from "@/features/extensions/smoke-result";
+import { onTerminalInterrupt } from "@/features/terminal-interrupt";
 
 export const command = "test <source>";
 export const describe = "Run isolated initial-load extension smoke checks in Chromium";
@@ -28,6 +29,7 @@ export const handler = async (argv: { source: string; projectPath?: string; json
   const sigterm = () => interrupt("SIGTERM");
   process.once("SIGINT", sigint);
   process.once("SIGTERM", sigterm);
+  const stopTerminal = process.platform === "win32" ? onTerminalInterrupt(sigint) : () => {};
   try {
     const { runExtensionSmoke } = await import("@/features/extensions/smoke-runner");
     const result = await runExtensionSmoke({ ...argv, signal: controller.signal });
@@ -36,6 +38,7 @@ export const handler = async (argv: { source: string; projectPath?: string; json
   } catch (error) {
     if (!interrupted) throw error;
   } finally {
+    stopTerminal();
     process.off("SIGINT", sigint);
     process.off("SIGTERM", sigterm);
     if (interrupted) process.exitCode = interrupted === "SIGINT" ? 130 : 143;

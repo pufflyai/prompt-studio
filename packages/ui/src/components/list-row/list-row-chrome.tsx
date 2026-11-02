@@ -1,7 +1,9 @@
-import { Tooltip as ChakraTooltip, Icon, Portal } from "@chakra-ui/react";
+import { Icon } from "@chakra-ui/react";
 import { type ReactElement, useId } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { tooltipOpenDelay } from "@/components/primitives/tooltip";
+import { ScopedTooltip as ChakraTooltip } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import type { ListRowItem } from "./list-row.types";
 import { ListRowMenu } from "./list-row-menu";
 

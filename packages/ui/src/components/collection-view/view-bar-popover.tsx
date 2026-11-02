@@ -1,5 +1,6 @@
-import { Popover, Portal } from "@chakra-ui/react";
 import { createContext, type ReactNode, type RefObject, useContext } from "react";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 
 const ViewBarPopoverContext = createContext(false);
 

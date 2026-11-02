@@ -1,4 +1,9 @@
-import { defaultConfig, type SystemConfig } from "@chakra-ui/react";
+import { defaultBaseConfig } from "@chakra-ui/react/preset-base";
+import { mergeConfigs, type SystemConfig } from "@chakra-ui/react/styled-system";
+import { defaultThemeConfig } from "@chakra-ui/react/theme";
+
+// Reading the preset also constructs its unused default system before ours.
+const defaultConfig = mergeConfigs(defaultBaseConfig, defaultThemeConfig);
 
 // this is an escape hatch:
 // remove unwanted chakra default programmatically

@@ -5,12 +5,16 @@ import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
 import { evaluateCiGate } from "./test-policy";
 
 test("required matrix identities come from discovered priority rows", () => {
-  const scope = resolveCiScope({ ...scopeFixture(), event: "merge_group" });
+  const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
   const plan = plannedCiJobs(scope);
   expect(plan.find((job) => job.id === "database_tests_P0")?.priority).toBe("P0");
   expect(plan.find((job) => job.id === "database_tests_P1")?.priority).toBe("P1");
-  expect(plan.find((job) => job.id === "components_P1")?.count).toBe(scope.componentMatrix.length);
-  expect(plan.find((job) => job.id === "e2e_P1")?.count).toBe(scope.appMatrix.length);
+  expect(plan.find((job) => job.id === "components_P1")?.count).toBe(
+    scope.componentMatrix.filter((row) => row.priority === "P1").length,
+  );
+  expect(plan.find((job) => job.id === "e2e_P1")?.count).toBe(
+    scope.appMatrix.filter((row) => row.priority === "P1").length,
+  );
   const observed = plan.flatMap((job) =>
     job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
   );
@@ -27,11 +31,10 @@ test("production requires breadth while main requires provenance and smoke", () 
   expect(requiredCiJobs(main)).toEqual(["scope", "static_checks", "browser_smoke"]);
 });
 
-test("queue native owners provide delivered integrity while production requires all six independent toolchains", () => {
+test("queue requires startup smoke while production requires all six independent toolchains", () => {
   const input = scopeFixture();
   const queue = plannedCiJobs(resolveCiScope({ ...input, event: "merge_group" }));
-  const delivered = queue.find((job) => job.id === "build_clients")!;
-  expect(delivered.names).toEqual(["build_clients (linux-x64 1/1)", "build_clients (darwin-arm64 1/1)"]);
+  expect(queue.find((job) => job.id === "browser_smoke")?.names).toEqual(["browser_smoke"]);
   const completed = queue
     .filter((job) => job.id !== "packaged_toolchain")
     .flatMap((job) => job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })));
@@ -39,13 +42,13 @@ test("queue native owners provide delivered integrity while production requires 
   expect(
     evaluateCiGate(
       queue,
-      completed.filter((job) => job.name !== "build_clients (darwin-arm64 1/1)"),
+      completed.filter((job) => job.name !== "browser_smoke"),
       false,
       true,
     ).outcome,
   ).toBe("failure");
   const production = plannedCiJobs(resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" }));
-  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(7);
+  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(8);
 });
 
 test("production cannot pass without native UI quarantine execution", () => {

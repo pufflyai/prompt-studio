@@ -5,6 +5,7 @@ export const useTanStackWorkbenchHotkeys = (registrations: WorkbenchHotkeyRegist
   const hotkeys: UseHotkeyDefinition[] = registrations.map((registration) => ({
     hotkey: registration.hotkey as UseHotkeyDefinition["hotkey"],
     callback: (event) => {
+      if (!registration.enabled) return;
       event.preventDefault();
       void registration.execute();
     },

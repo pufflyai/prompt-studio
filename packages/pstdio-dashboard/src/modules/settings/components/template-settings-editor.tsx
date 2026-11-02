@@ -1,5 +1,5 @@
 import { Button, HStack, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
-import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
+import { DeleteConfirmationModal, useToaster } from "@pstdio/ui";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ProjectTemplateAsset } from "../data/template-provider-api";
@@ -13,6 +13,7 @@ interface TemplateSettingsEditorProps {
 // Per-template editor for the Templates collection. The component is keyed by
 // template id at the call site, so local edit state resets per template.
 export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
+  const toaster = useToaster();
   const { template, onDeleted } = props;
   const { data, isLoading } = useProjectTemplate(template);
   const updateTemplate = useUpdateProjectTemplate(template);

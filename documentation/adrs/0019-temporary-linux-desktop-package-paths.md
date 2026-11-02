@@ -2,10 +2,7 @@
 
 Proposed: 2026-09-08
 
-## Status
-
-Temporary workaround for PS-219. Remove the path restriction when Electron's
-Linux SUID sandbox supports executable paths containing spaces.
+Status: Accepted. Temporary workaround for PS-219. Remove the path restriction when Electron's Linux SUID sandbox supports executable paths containing spaces.
 
 ## Ideal design
 

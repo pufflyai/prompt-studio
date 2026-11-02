@@ -16,3 +16,17 @@ test("extension wrapper menus show the original action's exact-argument shortcut
     action: { commandId: "original", args },
   });
 });
+
+test("ordinary menu hints avoid measuring unrelated panel shortcuts", () => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand({ id: "rename", label: "Rename" }, { execute() {} });
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "rename" },
+    keybinding: "Alt+R",
+  });
+  workbench.layout.registerMenuItem(["extension"], { commandId: "rename" });
+  workbench.keyboard.registerVisibleRegion("main", () => {
+    throw new Error("Rendering an unrelated menu must not measure panel navigation");
+  });
+  expect(resolveMenuEntries({ workbench, menuPath: ["extension"] })[0]?.binding).toBe("Alt+R");
+});

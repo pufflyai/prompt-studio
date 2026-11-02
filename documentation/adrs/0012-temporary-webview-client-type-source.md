@@ -2,9 +2,7 @@
 
 Proposed: 2026-08-25
 
-## Status
-
-Accepted (temporary workaround)
+Status: Accepted (temporary workaround)
 
 ## How the system should ideally work
 

@@ -79,10 +79,7 @@ export const suites: BenchmarkSuite[] = [
       {
         command: [
           "bun",
-          "run",
-          "src/scripts/run-playwright.ts",
-          "-c",
-          "playwright.perf.config.ts",
+          "../../scripts/ci/run-workbench-benchmarks.ts",
           ...files.filter((file) => file.includes("/perf/")).map((file) => file.replace("packages/e2e/", "")),
         ],
         cwd: "packages/e2e",

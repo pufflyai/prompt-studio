@@ -196,10 +196,10 @@ test("allow-empty cannot certify an accidentally emptied registered file or an u
   }
 });
 
-test("only explicit allow-empty is marked unselected and quarantine still executes its case", async () => {
+test("a broad selection is not marked unselected and quarantine still executes its case", async () => {
   const fixture = await registeredFixture();
   try {
-    expect((await fixture.run(["./registered.test.ts"])).evidence.outcome).toBeUndefined();
+    expect((await fixture.run([])).evidence.outcome).toBeUndefined();
     const result = await fixture.run([], true);
     expect(result.code).toBe(0);
     expect(result.evidence.executedCases).toBe(1);
@@ -298,5 +298,43 @@ test("quarantine collects registered failures and later cases without retries", 
     expect(result.evidence.cases.filter((c: { outcome: string }) => c.outcome === "failure")).toHaveLength(1);
   } finally {
     await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test("a scoped quarantine-only file has no stable cases and still executes once in quarantine", async () => {
+  const fixture = await registeredFixture();
+  try {
+    await writeFile(join(fixture.cwd, "preload.ts"), "export {};\n");
+    const result = await fixture.run(
+      ["--preload", "./preload.ts", "--timeout", "30000", "./registered.test.ts"],
+      false,
+      { CI_PRIORITY: "P1" },
+    );
+    expect(result.code).toBe(0);
+    expect(result.evidence).toMatchObject({ outcome: "unselected", complete: true, executedCases: 0 });
+    expect(await Bun.file(fixture.marker).exists()).toBe(false);
+    const quarantine = await fixture.run(["./registered.test.ts"], true);
+    expect(quarantine.code).toBe(0);
+    expect(quarantine.evidence.executedCases).toBe(1);
+    expect(await Bun.file(fixture.marker).text()).toBe("ran");
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("automatic quarantine handoff rejects missing or unregistered skipped cases", async () => {
+  const fixture = await registeredFixture(
+    'import {test} from "bun:test"; test("registered case", () => {}); test.skip("unregistered skip", () => {});',
+  );
+  try {
+    const mixed = await fixture.run(["./registered.test.ts"]);
+    expect(mixed.code).not.toBe(0);
+    expect(mixed.evidence.complete).toBe(false);
+    await writeFile(join(fixture.cwd, "registered.test.ts"), "export {};\n");
+    const missing = await fixture.run(["./registered.test.ts"]);
+    expect(missing.code).not.toBe(0);
+    expect(missing.evidence.complete).toBe(false);
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
   }
 });

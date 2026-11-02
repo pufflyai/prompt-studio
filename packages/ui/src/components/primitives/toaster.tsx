@@ -1,22 +1,17 @@
-import { Toaster as ChakraToaster, createToaster, Portal, Spinner, Stack, Toast } from "@chakra-ui/react";
+import { Toaster as ChakraToaster, type createToaster, Spinner, Stack, Toast } from "@chakra-ui/react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { createUiToaster } from "@/utils/create-ui-toaster";
+import { Portal, useUiScope } from "@/utils/ui-scope";
 
-export const toaster: ReturnType<typeof createToaster> = createToaster({
-  placement: "top",
-  pauseOnPageIdle: true,
-  duration: 10000,
-  offsets: {
-    top: "var(--pstdio-toast-top-offset, var(--chakra-spacing-md))",
-    bottom: "var(--chakra-spacing-md)",
-    left: "var(--chakra-spacing-md)",
-    right: "var(--chakra-spacing-md)",
-  },
-});
+export const toaster: ReturnType<typeof createToaster> = createUiToaster();
+
+export const useToaster: () => ReturnType<typeof createToaster> = () => useUiScope()?.toaster ?? toaster;
 
 export const Toaster = () => {
+  const scopedToaster = useToaster();
   return (
     <Portal>
-      <ChakraToaster toaster={toaster} insetInline={{ mdDown: "4" }}>
+      <ChakraToaster toaster={scopedToaster} insetInline={{ mdDown: "4" }}>
         {(toast) => (
           <Toast.Root width={{ md: "sm" }} alignItems="start" borderRadius="xs" gap="xs" px="sm" py="xs" minH="auto">
             {toast.type === "loading" ? <Spinner size="sm" color="blue.solid" /> : <Toast.Indicator />}

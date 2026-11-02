@@ -5,7 +5,7 @@ description: Write, illustrate, preview, and publish Prompt Studio blog posts, i
 
 # Write a blog post
 
-Blog posts live in `clients/landing-page/src/content/blog/`. Read the repository `MISSION.md` and the blog section of `documentation/guides/0001-documentation.md` first.
+Blog posts live in `clients/landing-page/src/content/blog/`. Read the repository `documentation/guidance/0001-mission.md` and the blog section of `documentation/guides/0001-documentation.md` first.
 
 ## Shape of a release post
 
@@ -76,6 +76,10 @@ For SDK, extension API, and CLI changes, show what the change lets people build.
 - Keep examples short and realistic. Break lines before they reach about 90 characters so the block does not scroll sideways.
 - Run every example against the real SDK or CLI before publishing, and type-check TypeScript examples. Use the SDK's test helpers, such as `@pstdio/sdk/testing`, as a stand-in for `ctx`.
 - Follow the examples with short bullets for smaller API additions.
+
+## Copyable prompts
+
+Write prompts for readers in fenced `markdown` code blocks, not blockquotes. Introduce each prompt with a short sentence. Check the rendered block has a visible, keyboard-accessible copy icon and that it copies the complete prompt without the fence markers. Keep prompt text readable on mobile without horizontal scrolling.
 
 ## GIFs and screenshots
 

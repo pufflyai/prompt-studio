@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, useContext, useState } from "react";
 import { createJSONStorage } from "zustand/middleware";
 import { createBrowserStorage } from "./browser-storage";
 
@@ -55,4 +55,23 @@ export const createHostStoreRegistry = <Store, Args extends unknown[]>(
     registry.set(storageKey, store);
     return store;
   };
+};
+
+const defaultHostStorage = createBrowserStorage();
+
+export const HostStorageScope = (props: { scope?: string; children: ReactNode }) => {
+  const { scope, children } = props;
+  const storage = useHostStorage() ?? defaultHostStorage;
+  const create = () => ({
+    scope,
+    storage,
+    scoped: {
+      getItem: (key: string) => storage.getItem(JSON.stringify([scope, key])),
+      setItem: (key: string, value: string) => storage.setItem(JSON.stringify([scope, key]), value),
+      removeItem: (key: string) => storage.removeItem?.(JSON.stringify([scope, key])),
+    },
+  });
+  const [state, setState] = useState(create);
+  if (state.scope !== scope || state.storage !== storage) setState(create());
+  return <HostStorageProvider storage={scope ? state.scoped : storage}>{children}</HostStorageProvider>;
 };

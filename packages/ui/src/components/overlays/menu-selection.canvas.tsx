@@ -1,7 +1,8 @@
-import { Button, Icon, Menu, Stack, Text } from "@chakra-ui/react";
+import { Button, Icon, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Check, GitBranch, RotateCcw } from "lucide-react";
 import { useState } from "react";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { ResourceActionMenu } from "./resource-context-menu";
 import { SearchableMenu } from "./searchable-menu";
 

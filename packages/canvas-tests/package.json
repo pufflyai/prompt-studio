@@ -6,7 +6,7 @@
     "test": "bun ../../scripts/ci/run-ci-checks.ts --plan checks.json",
     "test:browser": "bun src/scripts/run-browser.ts",
     "perf:startup": "bun x --no-install lerna run build:previews --scope canvas-tests && bun run test:browser --config playwright.startup-perf.config.ts",
-    "typecheck": "bun check",
+    "typecheck": "bun check && bun src/scripts/typecheck-canvas-files.ts",
     "lint": "bun run typecheck && biome check .",
     "report": "playwright show-report",
     "build:previews": "bun src/scripts/build-previews.ts"
@@ -36,7 +36,8 @@
           "^build"
         ],
         "outputs": [
-          "{workspaceRoot}/__test-tmp__/native-canvas-verification/dist"
+          "{workspaceRoot}/__test-tmp__/canvas-verification/build",
+          "{workspaceRoot}/__test-tmp__/canvas-verification/dist"
         ]
       }
     },

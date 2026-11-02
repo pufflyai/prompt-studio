@@ -33,9 +33,7 @@
     "verify:sdk-reference": "bun --cwd .. ./scripts/verify/docs-sdk-reference.ts",
     "verify:published-extensions": "bun --cwd .. ./scripts/verify/verify-published-extensions.ts",
     "verify:packages": "bun --cwd .. ./scripts/verify/verify-packages.ts",
-    "verify:translations": "bun --cwd .. ./scripts/verify/verify-translations.ts",
-    "canvas:build": "bun run --cwd ../extensions/canvas catalog:build",
-    "canvas:verify": "bun run --cwd ../extensions/canvas catalog:verify"
+    "verify:translations": "bun --cwd .. ./scripts/verify/verify-translations.ts"
   },
   "dependencies": {
     "pstdio-api-contracts": "workspace:*",

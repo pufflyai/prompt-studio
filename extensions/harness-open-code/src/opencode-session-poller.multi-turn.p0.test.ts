@@ -105,5 +105,5 @@ describe("pollOpencodeMessages multi-turn conversation", () => {
 
     expect(await poll3).toEqual({ status: "completed" });
     expect(lastStatusPatch(turn3.patches)?.value).toBe("completed");
-  }, 30_000);
+  }, 15_000);
 });

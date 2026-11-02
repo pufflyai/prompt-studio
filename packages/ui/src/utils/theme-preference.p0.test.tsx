@@ -227,3 +227,104 @@ describe("ThemePreferenceProvider preview", () => {
     expect(storage.getItem("theme-preference")).toBe("pstdio-dark");
   });
 });
+
+test("a failed theme write does not restore the old stored choice on a rerender", async () => {
+  const { act, create } = await import("react-test-renderer");
+  installWindow();
+  const storage = installMockLocalStorage();
+  storage.setItem("theme-preference", "pstdio-light");
+  storage.setItem = () => {
+    throw new Error("Storage unavailable");
+  };
+  let context: ReturnType<typeof useThemePreference>;
+  const Probe = () => {
+    context = useThemePreference();
+    return null;
+  };
+  let renderer: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <ThemePreferenceProvider>
+        <Probe />
+      </ThemePreferenceProvider>,
+    );
+  });
+  await act(async () => context.setThemePreference("pstdio-dark"));
+  await act(async () =>
+    renderer.update(
+      <ThemePreferenceProvider>
+        <Probe />
+      </ThemePreferenceProvider>,
+    ),
+  );
+  expect(context.themePreference).toBe("pstdio-dark");
+  expect(storage.getItem("theme-preference")).toBe("pstdio-light");
+  await act(async () => renderer.unmount());
+});
+
+test("providers sharing host storage share the live choice even after a failed write", async () => {
+  const { act, create } = await import("react-test-renderer");
+  installWindow();
+  installMockLocalStorage();
+  const storage = { getItem: () => "pstdio-light", setItem: () => {} };
+  const contexts: Record<string, ReturnType<typeof useThemePreference>> = {};
+  const Probe = (props: { id: string }) => {
+    contexts[props.id] = useThemePreference();
+    return null;
+  };
+  const Scene = (props: { generation: number }) => (
+    <>
+      <ThemePreferenceProvider storage={storage}>
+        <Probe id="a" />
+      </ThemePreferenceProvider>
+      <ThemePreferenceProvider key={props.generation} storage={storage}>
+        <Probe id="b" />
+      </ThemePreferenceProvider>
+    </>
+  );
+  let renderer: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(<Scene generation={0} />);
+  });
+  await act(async () => contexts.a.setThemePreference("pstdio-dark"));
+  expect(contexts.b.themePreference).toBe("pstdio-dark");
+  await act(async () => renderer.update(<Scene generation={1} />));
+  expect(contexts.b.themePreference).toBe("pstdio-dark");
+  await act(async () => renderer.unmount());
+});
+
+test("explicit initial themes keep their override and publish later user choices", async () => {
+  const { act, create } = await import("react-test-renderer");
+  installWindow();
+  installMockLocalStorage();
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+  };
+  const contexts: Record<string, ReturnType<typeof useThemePreference>> = {};
+  const Probe = (props: { id: string }) => {
+    contexts[props.id] = useThemePreference();
+    return null;
+  };
+  let renderer: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <>
+        <ThemePreferenceProvider storage={storage} initialPreference="pstdio-dark">
+          <Probe id="explicit" />
+        </ThemePreferenceProvider>
+        <ThemePreferenceProvider storage={storage}>
+          <Probe id="shared" />
+        </ThemePreferenceProvider>
+      </>,
+    );
+  });
+  await act(async () => contexts.shared.setThemePreference("pstdio-light"));
+  expect(contexts.explicit.themePreference).toBe("pstdio-dark");
+  await act(async () => contexts.explicit.setThemePreference("pstdio-dark"));
+  expect(contexts.shared.themePreference).toBe("pstdio-dark");
+  await act(async () => renderer.unmount());
+});

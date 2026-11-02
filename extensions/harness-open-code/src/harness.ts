@@ -33,6 +33,8 @@ const readOpencodeModels = async (ctx: HarnessContext) => {
 type OpencodeHarnessDeps = {
   detect: NonNullable<HarnessProvider["detect"]>;
   getModelsOutput: (ctx: HarnessContext) => Promise<string>;
+  // Tests shorten the session poll interval; the pollers own the default.
+  pollIntervalMs?: number;
 };
 
 const defaultDeps: OpencodeHarnessDeps = {
@@ -168,6 +170,7 @@ export const createOpencodeHarness = (
       questionResponse,
       messageComplete,
       abortSignal: abortController.signal,
+      pollIntervalMs: deps.pollIntervalMs,
     });
 
     return services.track(
@@ -237,6 +240,7 @@ export const createOpencodeHarness = (
           baselineCount: 0,
           messageComplete,
           abortSignal: abortController.signal,
+          pollIntervalMs: deps.pollIntervalMs,
         });
 
         return services.track(
@@ -278,6 +282,7 @@ export const createOpencodeHarness = (
           baselineCount,
           messageComplete,
           abortSignal: abortController.signal,
+          pollIntervalMs: deps.pollIntervalMs,
         });
 
         return services.track(
@@ -302,6 +307,7 @@ export const createOpencodeHarness = (
           events: input.events,
           onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
           abortSignal: abortController.signal,
+          pollIntervalMs: deps.pollIntervalMs,
         });
 
         return services.track(

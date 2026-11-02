@@ -39,7 +39,7 @@ import {
 } from "@/shared/extensions/workbench-extension-contributions";
 import { syncActiveResourceContext } from "./active-resource-context";
 import { registerDashboardActivityRail } from "./extension-activity-rail";
-import { registerExtensionAppearance } from "./extension-appearance";
+import { registerExtensionAppearance, resolveExtensionAppearancePreferences } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { omitExtensionMetadata, registerHealthyExtensions } from "./extension-contribution-isolation";
 import {
@@ -90,7 +90,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       let rawMetadata: DashboardExtensionMetadata | undefined;
       let metadata: ResolvedWorkbenchExtensionMetadata | undefined;
       let projectGeneration = 0;
-      let appearanceDisposable: Disposable | undefined;
+      let appearanceDisposable: ReturnType<typeof registerExtensionAppearance> | undefined;
       let translationDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
       let displacedPageLocation: PageLocation | undefined;
@@ -115,10 +115,12 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         clearTranslations();
         translationDisposable = registerExtensionTranslationBundles(nextAppearance, owner);
         rawAppearance = nextAppearance;
+        const preferences = resolveExtensionAppearancePreferences(nextAppearance, owner);
+        // Theme sources can move between projects while their resolved visuals stay
+        // identical. Retain that catalog so every theme consumer need not rerender.
         batchWorkbenchChanges(() => {
-          const previousAppearance = appearanceDisposable;
-          appearanceDisposable = registerExtensionAppearance(ctx, nextAppearance, owner);
-          previousAppearance?.dispose();
+          if (appearanceDisposable) appearanceDisposable.update(preferences);
+          else appearanceDisposable = registerExtensionAppearance(ctx, preferences);
         });
       };
 

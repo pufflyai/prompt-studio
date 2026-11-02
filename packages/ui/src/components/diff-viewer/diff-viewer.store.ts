@@ -1,4 +1,6 @@
-import { create } from "zustand";
+import { useState } from "react";
+import { useStore } from "zustand";
+import { createStore } from "zustand/vanilla";
 import type { ChangedFilesViewMode, DiffViewMode } from "./types";
 
 interface DiffViewerState {
@@ -20,27 +22,33 @@ interface DiffViewerState {
   collapseAll: () => void;
 }
 
-export const useDiffViewerStore = create<DiffViewerState>((set) => ({
-  isTreePanelOpen: true,
-  viewMode: "nested",
-  diffViewMode: "unified",
-  searchQuery: "",
-  selectedPath: null,
-  expandedFolderIds: new Set(),
-  setTreePanelOpen: (isTreePanelOpen) => set({ isTreePanelOpen }),
-  toggleTreePanel: () => set((state) => ({ isTreePanelOpen: !state.isTreePanelOpen })),
-  setViewMode: (viewMode) => set({ viewMode }),
-  setDiffViewMode: (diffViewMode) => set({ diffViewMode }),
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
-  setSelectedPath: (selectedPath) => set({ selectedPath }),
-  setExpandedFolderIds: (folderIds) => set({ expandedFolderIds: new Set(folderIds) }),
-  toggleFolder: (folderId) =>
-    set((state) => {
-      const expandedFolderIds = new Set(state.expandedFolderIds);
-      if (expandedFolderIds.has(folderId)) expandedFolderIds.delete(folderId);
-      else expandedFolderIds.add(folderId);
-      return { expandedFolderIds };
-    }),
-  expandAll: (folderIds) => set({ expandedFolderIds: new Set(folderIds) }),
-  collapseAll: () => set({ expandedFolderIds: new Set() }),
-}));
+export const createDiffViewerStore = () =>
+  createStore<DiffViewerState>((set) => ({
+    isTreePanelOpen: true,
+    viewMode: "nested",
+    diffViewMode: "unified",
+    searchQuery: "",
+    selectedPath: null,
+    expandedFolderIds: new Set(),
+    setTreePanelOpen: (isTreePanelOpen) => set({ isTreePanelOpen }),
+    toggleTreePanel: () => set((state) => ({ isTreePanelOpen: !state.isTreePanelOpen })),
+    setViewMode: (viewMode) => set({ viewMode }),
+    setDiffViewMode: (diffViewMode) => set({ diffViewMode }),
+    setSearchQuery: (searchQuery) => set({ searchQuery }),
+    setSelectedPath: (selectedPath) => set({ selectedPath }),
+    setExpandedFolderIds: (folderIds) => set({ expandedFolderIds: new Set(folderIds) }),
+    toggleFolder: (folderId) =>
+      set((state) => {
+        const expandedFolderIds = new Set(state.expandedFolderIds);
+        if (expandedFolderIds.has(folderId)) expandedFolderIds.delete(folderId);
+        else expandedFolderIds.add(folderId);
+        return { expandedFolderIds };
+      }),
+    expandAll: (folderIds) => set({ expandedFolderIds: new Set(folderIds) }),
+    collapseAll: () => set({ expandedFolderIds: new Set() }),
+  }));
+
+export const useDiffViewerStore = () => {
+  const [store] = useState(createDiffViewerStore);
+  return useStore(store);
+};

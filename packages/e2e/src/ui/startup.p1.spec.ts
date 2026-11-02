@@ -35,7 +35,7 @@ test("dashboard keeps project selection open when no project is selected", async
   const projectPicker = page.getByRole("dialog").filter({ hasText: "No projects yet" });
   await expect(projectPicker).toBeVisible();
   await expect(projectPicker.getByRole("button", { name: "Close Projects" })).toHaveCount(0);
-  for (const control of await page.locator("#root button").all()) {
+  for (const control of await page.locator('#root button:not([role="dialog"] *)').all()) {
     await expect(control).toBeHidden();
   }
   await expect(page.getByRole("option", { name: "Search", exact: true })).toHaveCount(0);
@@ -71,6 +71,15 @@ test("dashboard keeps project selection open when no project is selected", async
   await expect(projectPicker).not.toBeVisible();
 
   await page.reload();
+  await expect(projectPicker).toBeVisible();
+});
+
+test("creating the first folder project opens Home", async ({ page, request }) => {
+  test.setTimeout(20_000);
+  await deleteAllProjects(request);
+  await page.goto("/");
+
+  const projectPicker = page.getByRole("dialog").filter({ hasText: "No projects yet" });
   await expect(projectPicker).toBeVisible();
 
   const folder = folderProjectInput({}).initial_workspace.params.path;

@@ -10,7 +10,7 @@ import { createRecordAssets } from "../../features/extensions/command-environmen
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { PublicationUpdateRequiredError } from "../../features/extensions/publication/types";
 import { artifactTreeReader } from "./artifact-tree-reader";
-import { createFileProjectionIO } from "./file-io";
+import { createFileProjectionIO, sameFile } from "./file-io";
 import { createFileReconciler } from "./file-reconciliation";
 import { fileProjection, serializeFiles } from "./file-state";
 import { createFileTree, type FileNode, fileRecordId, within } from "./file-tree";
@@ -79,7 +79,25 @@ export const createSharedArtifactMount = (
     signal: input.signal,
     assertWritable: input.assertWritable,
   });
-  const run = <T>(action: (storage: Awaited<ReturnType<typeof open>>) => Promise<T>) =>
+  // A point read can reuse its projection when both the journal and local bytes still match.
+  // Recheck ancestors and the real-path boundary each time; remote edits and deletes fall back
+  // to reconciliation, as do external filesystem edits and cold reads.
+  const unchanged = async (path: string) => {
+    await assertBoundary(path);
+    const target = fullPath(path);
+    const storage = await open();
+    const state = await projection.read();
+    for (const current of [...tree.ancestors(target), target]) {
+      const previous = state[current];
+      if (!previous?.node) return;
+      const record = await storage.records.read(fileRecordId(current));
+      if (!record.exists || record.deleted || record.revision !== previous.revision) return;
+      const disk = await io.source(current);
+      if (!disk || !sameFile(disk, { kind: previous.node.kind, hash: previous.hash })) return;
+    }
+    return storage;
+  };
+  const run = <T>(action: (storage: Awaited<ReturnType<typeof open>>) => Promise<T>, readPath?: string) =>
     serializeFiles(key, async () => {
       try {
         await input.assertWritable?.();
@@ -87,7 +105,8 @@ export const createSharedArtifactMount = (
         if (!(error instanceof PublicationUpdateRequiredError)) throw error;
         return action(await open());
       }
-      return action(await withoutStorageObservation(reconcile));
+      const storage = readPath === undefined ? undefined : await unchanged(readPath);
+      return action(storage ?? (await withoutStorageObservation(reconcile)));
     });
   const write = (path: string, value: Blob, update: boolean) =>
     run(async (storage) => {
@@ -142,9 +161,9 @@ export const createSharedArtifactMount = (
       const entry = tree.active(await storage.records.list()).live.get(fullPath(path));
       if (entry?.node.kind !== "file" || !entry.record.asset) throw missing(path);
       return assets.read(owner, entry.record.asset, input.signal);
-    });
+    }, path);
   const api: ArtifactMount = {
-    exists: (path) => run(async (storage) => artifactTreeReader(storage, prefix, roots).exists(fullPath(path))),
+    exists: (path) => run(async (storage) => artifactTreeReader(storage, prefix, roots).exists(fullPath(path)), path),
     readText: async (path) => new Response(await read(path)).text(),
     readBytes: async (path) => new Uint8Array(await new Response(await read(path)).arrayBuffer()),
     writeText: (path, value) => write(path, new Blob([value], { type: "text/plain" }), false),

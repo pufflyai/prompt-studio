@@ -5,6 +5,8 @@ import { type DocumentState, type DocumentStore, memoryDocumentState } from "./d
 export const createMemoryDocumentStore = () => {
   const document = new Y.Doc();
   const state: DocumentState = memoryDocumentState(document);
+  let revision = 0;
+  document.on("update", () => revision++);
   let previous = Promise.resolve();
   let previousMigration = Promise.resolve();
   const transaction: DocumentStore["transaction"] = async (_owner, action) => {
@@ -13,13 +15,17 @@ export const createMemoryDocumentStore = () => {
     previous = promise;
     await pending;
     try {
-      return await action(state);
+      return await action({ ...state, revision });
     } finally {
       resolve();
     }
   };
   return {
     transaction,
+    revision: async () => {
+      await previous;
+      return revision;
+    },
     async duringMigration<T>(key: string, run: () => Promise<T>) {
       const pending = previousMigration;
       const { promise, resolve } = Promise.withResolvers<void>();

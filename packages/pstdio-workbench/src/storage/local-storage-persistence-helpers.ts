@@ -19,6 +19,8 @@ export type WorkbenchStoragePersistenceKind =
   | "tree";
 
 export interface CreateWorkbenchStoragePersistenceInput {
+  /** Stable project or workbench scope for independent view state. */
+  scope?: string;
   debounceMs?: number;
   eventTarget?: {
     addEventListener(type: "pagehide", listener: () => void): void;
@@ -33,6 +35,16 @@ export const workbenchStoragePersistenceKey = (
   kind: WorkbenchStoragePersistenceKind,
   scope: string | undefined,
 ) => `${namespace}:${kind}:${scope ?? "global"}`;
+
+/** Preserve the legacy host key while keeping every explicit scope distinct. */
+export const workbenchHostStorageKey = (
+  namespace: string,
+  kind: "status-bar" | "layout-generation",
+  scope: string | undefined,
+) =>
+  scope === undefined
+    ? workbenchStoragePersistenceKey(namespace, kind, undefined)
+    : `${namespace}:${kind}:scope:${JSON.stringify(scope)}`;
 
 const createMemoryStorage = (): WorkbenchStorageLike => {
   const map = new Map<string, string>();

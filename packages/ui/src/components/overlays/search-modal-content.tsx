@@ -1,6 +1,7 @@
-import { Box, CloseButton, Dialog, Input, InputGroup } from "@chakra-ui/react";
+import { Box, CloseButton, Input, InputGroup } from "@chakra-ui/react";
 import type { KeyboardEventHandler, ReactNode, Ref } from "react";
 import { ScrollArea, type ScrollAreaProps } from "@/components/primitives/scroll-area";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 
 export interface SearchModalContentProps {
   children: ReactNode;

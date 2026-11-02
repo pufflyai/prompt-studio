@@ -6,6 +6,36 @@ import { sampleOrder } from "./schedule";
 import { sampleSuite } from "./steps";
 import type { BenchmarkSuite } from "./suite-types";
 
+test("benchmark steps retain P3 selection and finish independent work after failure", async () => {
+  const root = await mkdtemp(join(tmpdir(), "benchmark-priority-"));
+  try {
+    const observed = join(root, "environment.json");
+    const continued = join(root, "continued.txt");
+    const suite: BenchmarkSuite = {
+      id: "priority",
+      label: "Priority",
+      files: [],
+      sample: () => [
+        {
+          command: [
+            process.execPath,
+            "-e",
+            `await Bun.write(${JSON.stringify(observed)},JSON.stringify({priority:process.env.CI_PRIORITY,priorities:process.env.TEST_PRIORITIES}));process.exit(1);`,
+          ],
+          env: { CI_PRIORITY: "P1", TEST_PRIORITIES: "P1" },
+        },
+        { command: [process.execPath, "-e", `await Bun.write(${JSON.stringify(continued)},"executed");`] },
+      ],
+    };
+    const context = { root, cacheDir: root, sha: "priority", platform: `${process.platform}-${process.arch}` };
+    expect(await sampleSuite(context, suite, join(root, "results.jsonl"))).toBe(false);
+    expect(JSON.parse(await readFile(observed, "utf8"))).toEqual({ priority: "P3", priorities: "P3" });
+    expect(await readFile(continued, "utf8")).toBe("executed");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("ten runner samples execute a standalone benchmark ten times without nested repeats", async () => {
   const root = await mkdtemp(join(tmpdir(), "benchmark-sampling-"));
   try {

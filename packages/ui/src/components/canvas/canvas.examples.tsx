@@ -1,5 +1,7 @@
-import { Box, Button, Dialog, Flex, Input, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import { useLayoutEffect, useRef, useState } from "react";
+import { ScopedDialog as Dialog, ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { ScrollArea } from "../primitives/scroll-area";
 import { Canvas } from "./canvas";
 import type { CanvasCamera, CanvasNavigation, CanvasPoint, CanvasProps, CanvasZoomChange } from "./canvas.types";

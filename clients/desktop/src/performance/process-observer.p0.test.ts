@@ -3,12 +3,10 @@ import { fileURLToPath } from "node:url";
 import { createProcessObserver } from "./process-observer";
 
 test("reads real process metrics over the private pipe and closes it on disable", async () => {
-  const source = fileURLToPath(
-    new URL("../../../../packages/pstdio/src/features/performance/process-observer.ts", import.meta.url),
-  );
+  const source = fileURLToPath(new URL("../../../../packages/pstdio/src/index.ts", import.meta.url));
   const observer = createProcessObserver({
     executable: process.execPath,
-    args: ["--eval", `import {runProcessObserver} from ${JSON.stringify(source)}; await runProcessObserver();`],
+    args: ["--conditions=source", source, "performance-observer"],
   });
   try {
     for (let sample = 0; sample < 3; sample++) {

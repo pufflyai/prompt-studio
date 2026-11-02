@@ -32,6 +32,7 @@
   "popover.remoteBackend": "Backend remoto",
   "popover.responseSummary": "media {{avg}} · máx. {{max}}",
   "popover.responseTime": "Tiempo de respuesta",
+  "popover.resuming": "Reanudando · esperando una muestra del proceso",
   "popover.resume": "Reanudar",
   "popover.resumeLabel": "Reanudar {{name}}",
   "popover.roles.extension-frames": "Marcos de extensiones",

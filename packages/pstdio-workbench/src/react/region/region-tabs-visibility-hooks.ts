@@ -1,4 +1,4 @@
-import { filterVisibleTabs, getTabVisibilityStore, useTabVisibilityStore } from "@pstdio/ui";
+import { filterVisibleTabs, getTabVisibilityStore, useHostStorage, useTabVisibilityStore } from "@pstdio/ui";
 import { useEffect } from "react";
 import {
   getActiveWorkbenchLocationPanel,
@@ -57,6 +57,7 @@ export const useWorkbenchRegionTabsState = (
   region: WorkbenchRegion,
   visibilityStorageKey?: string,
 ) => {
+  const hostStorage = useHostStorage();
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
@@ -68,9 +69,11 @@ export const useWorkbenchRegionTabsState = (
   const storageKey = visibilityStorageKey ?? `${workbench.layout.getPersistenceScope() ?? "unscoped"}/${region}`;
   const tabStore = useTabVisibilityStore(storageKey, (state) => state);
   useEffect(() => {
-    const subscription = workbench.onDidResetLayout(() => getTabVisibilityStore(storageKey).getState().reset());
+    const subscription = workbench.onDidResetLayout(() =>
+      getTabVisibilityStore(storageKey, hostStorage).getState().reset(),
+    );
     return () => subscription.dispose();
-  }, [workbench, storageKey]);
+  }, [workbench, storageKey, hostStorage]);
   const regionState = layoutState.layout.regions[region];
   const pageState = useWorkbenchStore(workbench.pages.store, (state) => state);
   const pageContent = region === "main" && isSingleViewPage(pageState.pages[pageState.activePageId ?? ""]);

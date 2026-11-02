@@ -50,23 +50,57 @@ export const resolveLocalizableString = (
 
   return i18n.t(value.$l10n, {
     defaultValue,
+    // The global language hierarchy already includes locale and fallback variants.
+    // Rebuilding it for every label repeatedly canonicalizes the same locale codes.
+    lngs: i18n.languages,
     ns: namespaceFor(extensionId, owner),
     replace: args,
   });
 };
 
-const resolveValue = (value: unknown, extensionId: string | undefined, owner = getRuntimeCollections()): unknown => {
-  if (isLocalizedString(value)) return resolveLocalizableString(value, extensionId, undefined, owner);
-  if (Array.isArray(value)) return value.map((item) => resolveValue(item, extensionId, owner));
+const resolveValue = (
+  value: unknown,
+  extensionId: string | undefined,
+  owner = getRuntimeCollections(),
+  labels = new Map<string, string>(),
+): unknown => {
+  if (isLocalizedString(value)) {
+    const key = JSON.stringify([extensionId, value.$l10n, value.default]);
+    const cached = labels.get(key);
+    if (cached !== undefined) return cached;
+    const resolved = resolveLocalizableString(value, extensionId, undefined, owner);
+    labels.set(key, resolved);
+    return resolved;
+  }
+  if (Array.isArray(value)) {
+    let next: unknown[] | undefined;
+    for (let index = 0; index < value.length; index++) {
+      const item = resolveValue(value[index], extensionId, owner, labels);
+      if (item !== value[index]) {
+        next ??= value.slice();
+        next[index] = item;
+      }
+    }
+    return next ?? value;
+  }
   if (typeof value !== "object" || value === null) return value;
 
   const nextExtensionId =
     "extensionId" in value && typeof (value as { extensionId?: unknown }).extensionId === "string"
       ? (value as { extensionId: string }).extensionId
       : extensionId;
-  const next: Record<string, unknown> = {};
-  for (const [key, item] of Object.entries(value)) next[key] = resolveValue(item, nextExtensionId, owner);
-  return next;
+  // Large theme and schema payloads usually contain no labels. Retain those branches
+  // instead of cloning the whole catalog on every project switch and locale refresh.
+  const record = value as Record<string, unknown>;
+  let next: Record<string, unknown> | undefined;
+  for (const key of Object.keys(record)) {
+    const item = resolveValue(record[key], nextExtensionId, owner, labels);
+    if (item !== record[key]) {
+      next ??= { ...record };
+      next[key] = item;
+    }
+  }
+  return next ?? value;
 };
 
 export const localizeExtensionMetadata = (metadata: WorkbenchExtensionMetadata, owner = getRuntimeCollections()) =>

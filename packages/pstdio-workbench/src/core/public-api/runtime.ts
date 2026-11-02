@@ -16,6 +16,7 @@ export type {
   WorkbenchStoreSelectorListener,
 } from "../shared/store/workbench-store";
 export { createWorkbenchStore } from "../shared/store/workbench-store";
+export type { WorkbenchActivation } from "../workbench-activation";
 export type {
   createWorkbenchInput,
   WorkbenchCore,

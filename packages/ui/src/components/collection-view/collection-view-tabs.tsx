@@ -1,4 +1,4 @@
-import { Box, Button, Dialog, Icon, IconButton, Input, Tabs } from "@chakra-ui/react";
+import { Box, Button, Icon, IconButton, Input, Tabs } from "@chakra-ui/react";
 import {
   DndContext,
   type DragOverEvent,
@@ -14,6 +14,7 @@ import { type FormEvent, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { CollectionViewTab } from "./collection-view-tab";
 import type { CollectionSavedView, CollectionViewState, CollectionViewsSource } from "./collection-view-types";
 

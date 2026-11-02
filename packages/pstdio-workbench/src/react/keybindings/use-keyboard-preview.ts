@@ -1,13 +1,18 @@
 import { useEffect } from "react";
 import type { WorkbenchCore } from "../../core";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 /** Holding Option/Alt previews shortcut hints. Ctrl and Cmd chords are not shortcut previews. */
 export const useKeyboardPreview = (workbench: WorkbenchCore) => {
+  const active = useWorkbenchStore(workbench.activation.store, (state) => state.active);
   useEffect(() => {
-    const sync = (event: KeyboardEvent) =>
+    if (!active) return;
+    const sync = (event: KeyboardEvent) => {
+      if (!workbench.activation.isActive()) return;
       workbench.keyboard.setPreview(
         event.key === "Alt" ? event.type === "keydown" : event.altKey && !event.ctrlKey && !event.metaKey,
       );
+    };
     // Focus can leave for a webview or another window before Alt is released.
     const hide = () => workbench.keyboard.setPreview(false);
     window.addEventListener("keydown", sync, true);
@@ -19,5 +24,5 @@ export const useKeyboardPreview = (workbench: WorkbenchCore) => {
       window.removeEventListener("blur", hide);
       hide();
     };
-  }, [workbench]);
+  }, [workbench, active]);
 };

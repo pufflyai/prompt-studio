@@ -1,10 +1,11 @@
-import { Icon as ChakraIcon, chakra, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
+import { Icon as ChakraIcon, chakra, IconButton, Text } from "@chakra-ui/react";
 import type { CellContext, HeaderContext } from "@tanstack/react-table";
 import { Check, ChevronDown, CircleHelp, Minus } from "lucide-react";
 import { type CSSProperties, cloneElement, isValidElement, type ReactNode } from "react";
-
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { HighlightedText } from "../collection-view/highlighted-text";
 import { ListRow } from "../list-row/list-row";
 import { CategoricalColorCell, resolveCategoricalColor } from "./categorical-color-cell";

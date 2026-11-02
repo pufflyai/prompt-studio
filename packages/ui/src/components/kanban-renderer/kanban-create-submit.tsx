@@ -1,5 +1,7 @@
-import { Button, ButtonGroup, Icon, IconButton, Menu, Portal } from "@chakra-ui/react";
+import { Button, ButtonGroup, Icon, IconButton } from "@chakra-ui/react";
 import { ChevronDown } from "lucide-react";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 
 interface KanbanCreateSubmitProps {
   label: string;

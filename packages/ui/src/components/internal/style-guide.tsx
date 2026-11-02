@@ -1,4 +1,4 @@
-import { Box, Button, CloseButton, Dialog, HStack, Input, Separator, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, CloseButton, HStack, Input, Separator, Stack, Text } from "@chakra-ui/react";
 import { Download, Palette, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
 import { TokenValueEditor } from "@/components/internal/token-editor-controls";
@@ -15,6 +15,7 @@ import {
   getDefaultTokenEditorPresetId,
   getDefaultTokenEditorValues,
 } from "@/components/internal/token-editor-state";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 
 type TokenEditorStyle = CSSProperties & Record<`--${string}`, string>;
 

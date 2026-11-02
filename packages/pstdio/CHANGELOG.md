@@ -1,5 +1,135 @@
 # pstdio
 
+## 0.46.0
+
+_2026-10-31_
+
+### Minor Changes
+
+- 187bede: Restore a cloud project, or one extension in it, to a recovery point from the last hour, 12 hours or day with `pst projects restore`.
+- 4f3928b: Store each extension record in its own document so saves stay fast and memory stays bounded in large projects.
+- 65d36f4: Control Cloud early access per account and expose relay feature grants in account status.
+- 17e518d: Get your cloud projects back on a new or reset device after signing in, and give a project its folder later by cloning its git remote or choosing a checkout.
+- c157b26: Run cloud automations only on their assigned device and record missed occurrences without catch-up.
+- 1d59445: Show closable tabs, page-scoped headers, compact tab cards with explicit creation actions, freely movable and pinnable tabs, and collection tab restoration across navigation.
+- f5cbfe6: Add an optional Pi coding agent harness with native session history and streaming tool results.
+- c938135: Add deterministic initial order positions for storage migrations.
+- 3cac00c: Preserve startup performance evidence and export saved recordings for benchmarks.
+- 856afcf: Keep retained workbenches isolated while switching between projects.
+- 85a84ff: Keep pages and reusable viewers independent, derive headers from page presentation, and preserve navigation and focus.
+- 1a7f935: Add a shared dotted Canvas viewport with floating zoom controls, configurable scale limits, and shared navigation gestures.
+- 7116e1b: Let collection badges open panels and other navigation actions.
+- 85a84ff: Support independent resource viewers in tabbed collections and safe replacement from resource-free landing pages.
+- 34f8998: Expose device-owned performance captures, recording exports, and Developer settings controls.
+- dd5f406: Add optional bounded table and board queries with indexed page navigation and aggregate counts.
+- 2ff78f4: Add shared keyboard actions and contextual targets across core extensions and repository tools, with G R for Scribble navigation.
+- 714def5: Expose native harness account status and /login and /logout commands, with session setup states for missing harnesses and required sign-in.
+- e3b8456: Move the performance meter and its details to the Prompt Studio Performance Monitoring extension, measure while that extension is loaded, remove the connection status badge, and keep status widget popover headers fixed with the scrollbar at the edge.
+- 9931aa2: Breaking: 0.46 starts with a new database; data from older releases is exported as JSON to `~/.pstdio/backups/pre-0.46-*` for agents to re-import, and `ctx.storage.readLegacy` now always returns undefined.
+- def084b: Add indexed record pages, aggregates and batch reads without hydrating owner documents, with safe runtime index activation and recovery of stale record and resource projections.
+- ec820b7: Use hosted Cloud login by default while preserving self-hosted account service overrides.
+- 37383ef: Sync extension records between devices again: each save travels as one encrypted update in a per-extension record stream.
+- c37aad4: Version core extensions independently, store extension data under full `<publisher>.<name>` IDs where each extension starts fresh, and add opt-in PSX registry installs.
+- add1413: Add reusable outliner previews, persistent controls, multiselection, and keyboard reordering.
+- bf6b2d1: Add JSON session lists and restore harness control hover feedback with explanatory tooltips.
+- 85a84ff: Preserve each viewer's navigation context and prevent stale actions from crossing project or deletion boundaries.
+- 4212050: Add shared keyboard actions, global panel/fullscreen toggles, Ctrl+Tab and numbered tab selection, automatic exit after completed actions, and a grouped palette reference with one default shortcut per action.
+- 961fa89: Refuse extension storage records over 256 KiB and commits over 4 MiB, and export `storageLimits` and `isStorageLimitError`; this moves the extension API to 0.3.0, so store large content as files.
+- 9f0140e: Add explicit CLI live steering with guarded delivery and no automatic queue fallback.
+- 35226d1: Let extension status items open detail views in a host popover.
+- d91e4da: Sync cloud project extension sets with encrypted packages, atomic activation, and version-gated data writes.
+- 1a7f935: Add a dependency timeline through its own package entry with shared Canvas navigation.
+- 85a84ff: Support page-owned Main content, non-rendering page groups, and independent panel views with mode-owned fullscreen policy.
+
+### Patch Changes
+
+- 0c1d165: Avoid constructing Chakra's unused default theme system during UI startup and require Chakra 3.21 or newer for its theme entry point.
+- b86f345: Add Home above Sessions, keep project navigation stable when entering and leaving tickets, place the mode return first in subnavigation content, and remove the desktop project breadcrumb button.
+- e9ddc6b: Restore graceful Ctrl+C interruption for extension smoke commands in Windows terminals.
+- 3ae8c53: Bundle catalog extension sources, guard optional system Git features, and cap core binaries at 200 MB.
+- 8271995: Prepare local folders and restore synced files when opening cloud projects on a new machine.
+- 2f9afd0: Keep themes steady across projects, share theme conversion, and add Prompt Contrast Light and Dark.
+- 969d652: Give user chat messages a background that stands apart from the app background in imported VS Code themes such as Monokai and Dracula.
+- d5b11df: Answer unfiltered record totals from a stored count so large views with many deleted records open quickly.
+- cbafa28: Keep a closed collection landing tab, such as the Artifacts library, closed after reload.
+- 63f0303: Publish `@pstdio/canvas` with a `pstdio-canvas` command that builds and watches a project's `.canvas.tsx` files for UI Canvas.
+- 8e004ed: Breaking for `@pstdio/canvas`: decorators now receive the frame's theme as `{ id, mode, tokens? }` instead of a string, `setup` is removed, `CanvasVariant` and `CanvasProject` are renamed to `CanvasFrame` and `CanvasPreview`; builds also support Vite `?raw` and `?url` imports, keep state for common controls, record each frame's `defaultTheme`, and rebuild when `tsconfig.json` files or the builder change.
+- 22ccce1: Show live steering messages immediately and restore rejected requests without unconfirmed delivery notices.
+- 8db3deb: Publish project identity and name together when selecting or clearing a project.
+- af71240: Start the database faster from a prebuilt locale-aware engine and drain session hooks before shutdown.
+- 4a7e459: Allow cards to move between every board column and remove drag permission settings.
+- f4f5498: Allow searchable menus to portal inside their owning dialog for accessible search and selection.
+- a5aaf39: Expose full project session controls, conversation streaming, approvals, attachments, and native commands to extensions.
+- b85d464: Open the Side Panel without an error when its bubble is clicked while a project is still loading, and offer mode panels only in their own mode.
+- b5d3e2c: Replace Storybook preview tooling with native Canvas composition and critical Playwright checks; limit visual verification guidance to critical risks; distribute UI Canvas as an optional extension with a working-with-Canvas skill and dependency-scoped frame startup.
+- d2d175f: Keep desktop startup waiting through long database work and show its progress.
+- d2d73b8: Preserve live webviews and unsaved state when switching session previews.
+- 422d8cb: Keep panel and fullscreen controls visible beside native window buttons on Linux and Windows.
+- 3cac00c: Report accurate backend CPU usage on macOS.
+- d07cb26: Move an older database aside on Windows after temporary file readers release their handles.
+- d72e610: Recover relay uploads after a database connection failure.
+- 64513fa: Record native performance collection on time and reduce desktop checksum allocation work.
+- 371aa05: Reuse installed local default extensions when project setup follows startup.
+- d8118ff: Exclude generated Canvas and test output from extension source archives.
+- 2cd86db: Improve chat activity placement and Solarized contrast and tag colors.
+- 8be4ead: Count large record frames and downloaded update tails toward relay compaction.
+- 85a84ff: Keep split frames fixed, respect focus choices, and remove the hidden-header hotspot.
+- 9931aa2: Save groups of large extension records without running out of database memory.
+- f389891: Reduce repeated label resolution and row layout during workbench interactions, and start the desktop metrics helper without loading unrelated CLI commands.
+- 107a58b: Accept semantic prerelease versions when packaging nightly core extensions.
+- 3af6c31: Retain encrypted manifest descendants until their final relay reference retires.
+- 2b48d68: Prepare default tools before concurrent projects become visible.
+- cf4a55e: Complete interrupted default extension installs when creating a project.
+- e68ddda: Open workspace files without diff computation, preload Monaco alongside file reads, save workspace edits explicitly, and keep compact file trees within their viewport.
+- 96be793: Hide dot-prefixed folders by default in the project folder picker and toggle them with Cmd/Ctrl+Shift+Period.
+- 85a84ff: Scope Main tabs and choices to their page, preserve viewer context and safe history replay, and resolve declared breadcrumb icons.
+- 3c60fb2: Show the active Workspaces page and tooltips for navigation actions.
+- fff7222: Restore page resources through history when a related preview closes and preserve legacy page headers.
+- 077436b: Build the dashboard before embedding its assets in the CLI.
+- 0c308d9: Reuse installed default extensions and preserve hidden collection page state while deferring rendering until the page is visible.
+- ec3e14f: Keep card gestures owned by the nested control where the pointer press began.
+- f874480: Hide command-controlled harness fields in run options and explain when to explore another implementation variant.
+- fc61aec: Keep project switching and panel controls responsive, and preserve native performance sampling while a backend reply is pending.
+- 1d15cbb: Load only each Canvas frame's compiled dependencies, cache immutable preview assets, and prioritize visible frame startup while preserving sandbox isolation and drafts.
+- 141d765: Keep indexed extension record pages fast in large projects by giving the query planner statistics for declared indexes.
+- e6cd77e: Keep published extensions consistent across devices when a leftover copy is disabled, a switch loses to a newer choice, or an uninstall fails.
+- b393779: Hold Alt to preview keyboard shortcuts, select numbered tabs without entering shortcut mode, add G → H for Home, show Mod+P on Search, deprecate the Help shortcut layer, and stop looking up shortcuts while typing plain keys.
+- ccb446b: Name extensions in the performance popover when the meter appeared before the project was selected.
+- e9ddc6b: Reduce shortcut discovery, unrelated region renders, and panel menu updates during resizing.
+- d363d4b: Close a deleted resource's tab when deleting it returns to its parent collection page.
+- 2523fc7: Keep typing responsive while projects sync: storage changes reload only the changed project's views, once per burst of writes, and sync rounds that change nothing no longer reload views.
+- f92b55d: Keep extension packaging local and report interrupted extension checks consistently.
+- bf6b2d1: Use a 380 ms first-hover tooltip delay, show harness setting labels, reveal clipped tab titles, and keep full prompt history navigable while drafts are saved.
+- 2b48d68: Keep extension metadata stable, relocate installed assets, preserve source sync errors while refreshing outside locks, and validate explicit workspace bases directly.
+- 414e7b2: Give a Windows database home the same path whether it is opened through a short or a long folder name.
+- 08d82a4: Publish SDK API metadata and support SDK/UI previews without a host release.
+- 066cd94: Show the session in a Side Panel opened while a project is still loading, instead of an empty panel.
+- ac61af8: Use recorded observation timestamps when checking settled performance memory.
+- 27ef0a3: Negotiate relay support before uploading encrypted manifests with immutable child references.
+- ac3423d: Keep resource numbers fast with per-record sync and preserve aliases after offline repairs.
+- 3801ad9: Keep Cloud access renewal working when concurrent requests fill the database pool.
+- 9ba0f5b: Keep extension package hashes stable across repeated packing.
+- 2cd86db: Match content panel surfaces and keep elapsed activity in the workspace header.
+- d9e588c: Validate replacement webviews together so source extensions refresh faster.
+- 85a84ff: Scope static Main browsers to their page, offer resource viewers across pages, and preserve native navigation ownership and current resource breadcrumbs.
+- 8729077: Keep host-required extensions enabled across projects and add app-wide panels with device settings.
+- fff7222: Use tabless Home and Sessions pages with independent viewers, consistent session icons, and a non-clickable Sessions breadcrumb group.
+- 5bcd317: Retain identical resolved theme catalogs when switching projects to avoid redundant theme renders.
+- 9a5b1f4: Keep synced projects online when relay access renews on schedule, instead of briefly showing them offline every five minutes.
+- c241f7d: Keep the workbench panels, navigation header and status bar mounted when switching projects; only the previous project's views are released.
+- 597ee3b: Keep navigation group drags from activating panel dropzones.
+- 35a2ab0: Focus a terminal opened from a menu even when the closing menu returns focus to its trigger.
+- 300f514: Show Settings in the project picker, hide background controls, and reuse installed defaults when opening the first project without reloading.
+- b988745: Show navigation section groups without icons.
+- d54da21: Show a minimal, borderless Main header with view menu openers on tabless pages, and keep those menus with their page content.
+- 0c308d9: Initialize fresh homes with one database engine and avoid unused performance-monitoring work.
+- 36aa19a: Bound manifest downloads by their authenticated ciphertext length before buffering response bodies.
+- ce95125: Close extension test hosts through runtime control before cleaning up.
+- 216b519: Bound ticket descriptions and use shared scrollbars in create dialogs.
+- 414e7b2: Start normally after a first start was stopped while it began preparing the database.
+- f5c5c4b: Keep variable alerts bounded with full-message copying and matching scrollbars, and prevent offline icon lookups from crashing the runtime.
+- ccefd1d: Render native view toolbar actions as xs buttons with a leading separator.
+
 ## 0.45.0
 
 _2026-10-22_

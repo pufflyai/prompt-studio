@@ -1,5 +1,5 @@
-import { Menu, Portal, type UseMenuReturn, VisuallyHidden } from "@chakra-ui/react";
-import { type ResourceContextAction, ResourceMenuItems } from "@pstdio/ui";
+import { type UseMenuReturn, VisuallyHidden } from "@chakra-ui/react";
+import { ScopedMenu as Menu, Portal, type ResourceContextAction, ResourceMenuItems, useUiScope } from "@pstdio/ui";
 import { useId, useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
@@ -19,6 +19,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
   const { menu, label, groups, placement, workbench } = props;
   const labelId = useId();
   useWorkbenchResourceActionResolver(workbench);
+  const root = useUiScope()?.root;
   const pending = useRef<ResourceContextAction | null>(null);
   const currentRegion = findPlacementByWidgetId(workbench.layout.getLayout(), placement.widgetId)?.regionId;
   const destinations = workbench.getPanelDestinations(placement.widgetId).filter((region) => region !== currentRegion);
@@ -66,12 +67,17 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
         pending.current = null;
         if (action) {
           const contentId = menu.api.getContentProps().id;
-          const content = contentId ? document.getElementById(contentId) : null;
+          const content = contentId
+            ? (root?.current ?? document).querySelector<HTMLElement>(`#${CSS.escape(contentId)}`)
+            : null;
           const focused = document.activeElement;
           // A newer menu or input keeps the focus it received while this menu was closing.
           if (focused === document.body || content?.contains(focused)) {
             const triggerId = menu.api.getTriggerProps().id;
-            if (triggerId) document.getElementById(triggerId)?.focus({ preventScroll: true });
+            if (triggerId)
+              (root?.current ?? document)
+                .querySelector<HTMLElement>(`#${CSS.escape(triggerId)}`)
+                ?.focus({ preventScroll: true });
           }
         }
         void action?.onClick?.();

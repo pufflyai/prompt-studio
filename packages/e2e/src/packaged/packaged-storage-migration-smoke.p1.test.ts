@@ -50,7 +50,9 @@ test("packaged extensions own retryable data versions across concurrent calls an
           await ctx.storage.migrate(params.version, async (previous, migration) => {
             const id = migration.id("source", "nt");
             await ctx.storage.records.commit({
-              operationId: migration.id("import", "op"), edits: [{ recordId: id, replace: { source: "imported" } }]
+              operationId: migration.id("import", "op"), edits: [{ recordId: id, replace: {
+                source: "imported", position: migration.position(0, "source")
+              } }]
             });
             await ctx.storage.set("sourceId", id);
             await ctx.storage.set("attempts", (await ctx.storage.get("attempts") ?? 0) + 1);
@@ -62,6 +64,7 @@ test("packaged extensions own retryable data versions across concurrent calls an
           return { id: ctx.storage.ids.create("nt"), allocated: await ctx.resources.allocate({kind: "note", idPrefix: "nt"}),
             positions: [position, ctx.storage.positions.between(position)],
             sourceId: await ctx.storage.get("sourceId"),
+            importedPosition: (await ctx.storage.records.read(await ctx.storage.get("sourceId"))).value.position,
             imports: (await ctx.storage.records.list()).filter(record => record.value?.source === "imported").length,
             attempts: await ctx.storage.get("attempts"), previous: await ctx.storage.get("previous"),
             recordAttempts: (await ctx.storage.records.read(ctx.storage.records.id("attempts"))).value,
@@ -83,12 +86,13 @@ test("packaged extensions own retryable data versions across concurrent calls an
         { params },
       );
       if (result.outcome.ok) {
-        const { id, positions, sourceId, allocated } = result.outcome.value;
+        const { id, positions, sourceId, allocated, importedPosition } = result.outcome.value;
         expect(id).toMatch(/^nt_[0-9A-Za-z]{22}$/);
         expect(sourceId).toMatch(/^nt_[0-9A-Za-z]{22}$/);
         expect(allocated.id).toMatch(/^nt_[0-9A-Za-z]{22}$/);
         expect(allocated.shorthand).toMatch(/^NT-\d+$/);
         expect(positions[0] < positions[1]).toBe(true);
+        expect(importedPosition < positions[0]).toBe(true);
       }
       return result;
     };
@@ -107,6 +111,7 @@ test("packaged extensions own retryable data versions across concurrent calls an
     child = runtime.child;
     const restarted = await execute({ version: 2 });
     expect(restarted.outcome.value.sourceId).toBe(concurrent[0].outcome.value.sourceId);
+    expect(restarted.outcome.value.importedPosition).toBe(concurrent[0].outcome.value.importedPosition);
     expect(restarted).toMatchObject({
       outcome: { ok: true, value: { attempts: 3, recordAttempts: 3, previous: 1, imports: 2 } },
     });

@@ -139,6 +139,37 @@ const createBaselineHarness = () => {
 };
 
 describe("project-switch extension refresh", () => {
+  test("retains an identical visual catalog across projects and applies changed tokens", async () => {
+    const harness = createBaselineHarness();
+    try {
+      const appearance = translatedAppearance("Shared theme");
+      harness.appearanceRequests.get("project-a")?.resolve(appearance);
+      await flushMicrotasks();
+      const catalog = harness.workbench.themes.listThemes();
+      selectDashboardProject(harness.workbench, { id: "project-b", name: "Project B" });
+      harness.appearanceRequests.get("project-b")?.resolve({
+        ...appearance,
+        themes: appearance.themes.map((theme) => ({
+          ...theme,
+          source: { ...theme.source, baseUrl: "file:///another-project/extension.ts" },
+        })),
+      });
+      await flushMicrotasks();
+      expect(harness.workbench.themes.listThemes()).toBe(catalog);
+      selectDashboardProject(harness.workbench, { id: "project-c", name: "Project C" });
+      harness.appearanceRequests.get("project-c")?.resolve({
+        ...appearance,
+        themes: appearance.themes.map((theme) => ({ ...theme, tokens: { "colors.bg": "#111111" } })),
+      });
+      await flushMicrotasks();
+      expect(harness.workbench.themes.listThemes()).not.toBe(catalog);
+      expect(harness.workbench.themes.listThemes()[0]?.tokens).toEqual({ "colors.bg": "#111111" });
+    } finally {
+      harness.dispose();
+    }
+    expect(harness.workbench.themes.listThemes()).toEqual([]);
+  });
+
   test("localizes a destination theme without the previous catalog's bundles", async () => {
     const harness = createBaselineHarness();
     try {

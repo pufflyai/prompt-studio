@@ -83,3 +83,12 @@ test("P3 benchmark names keep browser and standalone files on their owning runne
   expect(plan.find((run) => run.files.includes(standalone))?.command).toEqual(["bun", "src/perf/subnav.p3.bench.ts"]);
   expect(plan).toHaveLength(2);
 });
+
+test("a Playwright file whose cases are all quarantined here may select no stable cases", () => {
+  const desktop = { name: "@pstdio/desktop", dir: "clients/desktop", dependencies: [], scripts: {} };
+  const files = ["clients/desktop/src/e2e/packaged-app.p1.spec.ts", "packages/example/src/isolation.p1.test.ts"];
+  const plan = createPriorityPlan(files, [...packages, desktop], "P1", { allowQuarantineOnly: true });
+  expect(plan.find((run) => run.runner === "desktop")?.command.at(-1)).toBe("--pass-with-no-tests");
+  expect(plan.find((run) => run.runner === "bun")?.command).not.toContain("--pass-with-no-tests");
+  expect(createPriorityPlan(files, [...packages, desktop], "P1")[0]?.command).not.toContain("--pass-with-no-tests");
+});

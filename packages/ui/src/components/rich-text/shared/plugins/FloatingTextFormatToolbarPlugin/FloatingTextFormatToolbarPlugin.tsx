@@ -25,6 +25,7 @@ import {
 import type React from "react";
 import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useUiScope } from "@/utils/ui-scope";
 import { TOGGLE_LINK_EDIT_MODE_COMMAND } from "../LinkEditorPlugin/commands";
 import { getSelectedNode } from "../LinkEditorPlugin/utils/getSelectedNode";
 import { setFloatingElemPos } from "../LinkEditorPlugin/utils/setFloatingElemPos";
@@ -46,6 +47,7 @@ function FloatingTextToolbar({
   isToolbarActive: boolean;
   setIsToolbarActive: Dispatch<boolean>;
 }): React.JSX.Element {
+  const surfaceActive = useUiScope()?.active ?? true;
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [blockType, setBlockType] = useState<BlockType>("paragraph");
   const [isBold, setIsBold] = useState(false);
@@ -251,7 +253,12 @@ function FloatingTextToolbar({
   }, [editor]);
 
   return (
-    <Box ref={editorRef} zIndex="tooltip" className={`floating-text-format-toolbar ${isToolbarActive ? "active" : ""}`}>
+    <Box
+      hidden={!surfaceActive}
+      ref={editorRef}
+      zIndex="tooltip"
+      className={`floating-text-format-toolbar ${isToolbarActive ? "active" : ""}`}
+    >
       <FloatingToolbarButtons
         editor={editor}
         blockType={blockType}

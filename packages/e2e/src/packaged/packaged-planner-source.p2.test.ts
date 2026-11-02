@@ -13,6 +13,25 @@ interface ExtensionLock {
 let root = "";
 afterEach(() => rm(root, { recursive: true, force: true }));
 
+test("preparing an SDK-only extension does not add an undeclared UI dependency", async () => {
+  root = await mkdtemp(join(tmpdir(), "sdk-only-extension-source-"));
+  const original = join(root, "original");
+  await mkdir(original);
+  await Bun.write(
+    join(original, "package.json"),
+    JSON.stringify({
+      name: "sdk-only-fixture",
+      version: "1.0.0",
+      dependencies: { "@pstdio/sdk": "0.45.0" },
+    }),
+  );
+  const source = await preparePackagedExtensionSource(join(root, "prepared"), original);
+  const manifest = await Bun.file(join(source, "package.json")).json();
+  expect(manifest.dependencies["@pstdio/sdk"]).toStartWith("file:");
+  expect(manifest.dependencies["@pstdio/ui"]).toBeUndefined();
+  expect(manifest.overrides["@pstdio/ui"]).toBeUndefined();
+});
+
 test("keeps locked third-party versions when substituting public workspace packages", async () => {
   root = await mkdtemp(join(tmpdir(), "locked-extension-source-"));
   const original = join(root, "original");

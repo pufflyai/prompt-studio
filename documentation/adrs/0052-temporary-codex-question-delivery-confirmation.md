@@ -2,9 +2,7 @@
 
 Proposed: 2026-10-01
 
-## Status
-
-Accepted in PS-456.
+Status: Accepted in PS-456.
 
 ## Intended design
 

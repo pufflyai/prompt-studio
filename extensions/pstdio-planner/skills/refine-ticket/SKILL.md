@@ -2,7 +2,7 @@
 name: refine-ticket
 description: "Provide additional information to a ticket by researching the codebase and documentation, and/or format a ticket given a template. Use when asked to refine, improve, expand, or format an existing ticket."
 metadata:
-  version: 0.0.5
+  version: 0.0.6
 ---
 
 Refine a Planner ticket by adding researched detail and applying a template when useful.
@@ -20,7 +20,7 @@ Refine a Planner ticket by adding researched detail and applying a template when
 5. Read the project workflow options with `pst pstdio-planner refinement-policy`. People can toggle **Update canvas designs for UI changes** in Project Planner settings. For tickets that add or change UI, when `updateCanvasDesign` is enabled:
    - Follow the project’s canvas skill. Update the relevant live canvas design before completing refinement or changing production UI. Reuse existing canvases and preserve unrelated designs. Use safe sample data and cover the proposed interactions and relevant empty or error states.
    - Add the canvas page link, exact preview names, source paths, and a short walkthrough to the ticket. For alternatives, preserve the original and give each variation a distinct name.
-   - Complete the canvas skill's source handoff before finishing refinement. For Git projects, push the reviewed design source and record its branch and commit SHA so a new implementation workspace can fetch and include it. A page link alone does not carry uncommitted changes.
+   - Complete the canvas skill's source handoff before finishing refinement. Record where a new implementation workspace finds the reviewed design source: a proposal folder merged to the default branch, or for Git projects a pushed branch and commit SHA. A page link alone does not carry uncommitted changes.
    - Do not publish an artifact prototype for this requirement. The canvas design replaces that step.
    - Do not finish refinement or mark a proposal ready until the canvas is updated and linked. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically.
    If the option is off, record why the design step was skipped. If the policy cannot be read, resolve or report the failure before completing refinement. Tickets without UI changes do not require a canvas update.

@@ -44,7 +44,7 @@ export interface ListRowAction {
   disabled?: boolean;
   /** Accessible state for persistent toggle actions. */
   pressed?: boolean;
-  /** Tooltip shown when the action button is hovered or focused. Can include label + Kbd hint. */
+  /** Tooltip shown on hover or focus. Defaults to the label. Can include label + Kbd hint. */
   tooltip?: ReactNode;
   searchPlaceholder?: string;
   emptyMenuLabel?: string;

@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import { cpus, totalmem } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { type Browser, chromium, expect } from "@playwright/test";
-import { benchmarkSampleCount, findBudgetFailures, isBelowBudget, subnavBudgets } from "pstdio-benchmarks";
+import { benchmarkSampleCount, isBelowBudget, subnavBudgets } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { PROVISIONED_CHROMIUM } from "../packaged/packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
@@ -15,6 +15,7 @@ import {
   type SubnavSample,
 } from "./subnav-benchmark-clock";
 import { startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
+import { subnavBenchmarkResults } from "./subnav-benchmark-results";
 
 // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 293 / 1,263 / 1,089 ms) plus about 20%.
 const SUBNAV_BUDGETS = {
@@ -29,6 +30,9 @@ let browser: Browser | undefined;
 const samples: SubnavSample[] = [];
 const errors: string[] = [];
 const output = join(subnavFixtureRoot, "results", label);
+let executionReport:
+  | { suites: { specs: ReturnType<typeof subnavBenchmarkResults>["specs"] }[]; errors: { message: string }[] }
+  | undefined;
 try {
   await mkdir(output, { recursive: true });
   browser = await chromium.launch(PROVISIONED_CHROMIUM);
@@ -166,34 +170,7 @@ try {
     record("dataMs", "data", sample.dataMs);
     record("editorMs", "editor", sample.editorMs);
   }
-  errors.push(
-    ...samples.flatMap((sample) =>
-      findBudgetFailures([
-        {
-          name: `${sample.destination}/${sample.visit} structure`,
-          unit: "ms",
-          value: sample.structureMs,
-          budget: SUBNAV_BUDGETS.structureMs,
-        },
-        {
-          name: `${sample.destination}/${sample.visit} data`,
-          unit: "ms",
-          value: sample.dataMs,
-          budget: SUBNAV_BUDGETS.dataMs,
-        },
-        ...(sample.destination === "ticket"
-          ? [
-              {
-                name: `${sample.destination}/${sample.visit} editor`,
-                unit: "ms" as const,
-                value: sample.editorMs ?? Number.NaN,
-                budget: SUBNAV_BUDGETS.editorMs,
-              },
-            ]
-          : []),
-      ]),
-    ),
-  );
+  const budgetResult = subnavBenchmarkResults(samples, sampleCount);
   const report = {
     label,
     measuredAt: new Date().toISOString(),
@@ -226,7 +203,10 @@ try {
         .map((request) => `${sample.destination}/${sample.visit}: ${JSON.stringify(request)}`),
     ),
   );
+  const browserErrors = errors.map((message) => ({ message }));
+  errors.push(...budgetResult.budgetErrors);
   await Bun.write(join(output, "results.json"), JSON.stringify(report, null, 2));
+  executionReport = { suites: [{ specs: budgetResult.specs }], errors: browserErrors };
   console.info(JSON.stringify({ label, summary, errors }, null, 2));
   if (errors.length || summary.some((row) => row.structureMisses || row.dataMisses || row.editorMisses))
     process.exitCode = 1;
@@ -237,3 +217,15 @@ try {
     await fixture.stop();
   }
 }
+// Publish execution evidence only after browser and runtime cleanup both complete.
+if (!executionReport) throw new Error("Incomplete navigation benchmark execution");
+await Bun.write(
+  resolve(import.meta.dir, "../../test-results/subnav-benchmarks.json"),
+  JSON.stringify({
+    config: {
+      rootDir: resolve(import.meta.dir, "../.."),
+      metadata: { quarantineAttempt: process.env.CI_QUARANTINE_ATTEMPT },
+    },
+    ...executionReport,
+  }),
+);

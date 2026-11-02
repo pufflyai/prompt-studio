@@ -1,4 +1,5 @@
 import type { CombineQueuedFollowUpsInput, SteerQueuedFollowUpInput, UpdateQueuedFollowUpInput } from "@pstdio/sdk/api";
+import type { QueuedFollowUp } from "@pstdio/ui/chat-ui";
 import { useMutation } from "@tanstack/react-query";
 import { getApiClient } from "@/lib/api";
 
@@ -49,11 +50,16 @@ export const useCombineQueuedFollowUps = () =>
         targetRevision: input.targetRevision,
       }),
   });
-export const useSteerQueuedFollowUp = () =>
+export const useSteerQueuedFollowUp = (refreshQueue: () => unknown) =>
   useMutation({
-    mutationFn: (input: QueueTarget & SteerQueuedFollowUpInput) =>
+    mutationFn: (
+      input: QueueTarget & SteerQueuedFollowUpInput & { item: QueuedFollowUp; previousUserMessageIds: string[] },
+    ) =>
       getApiClient().sessions.steerQueuedFollowUp(input.sessionId, input.queuePosition, {
         expectedRevision: input.expectedRevision,
         expectedRunStartedAt: input.expectedRunStartedAt,
       }),
+    onSettled: async () => {
+      await refreshQueue();
+    },
   });

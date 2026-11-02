@@ -1,5 +1,5 @@
 import type { UpdateQueuedFollowUpInput } from "@pstdio/sdk/api";
-import type { QueuedFollowUp } from "@pstdio/ui/chat-ui";
+import type { QueuedFollowUp, SessionMessage } from "@pstdio/ui/chat-ui";
 import { useState } from "react";
 import {
   useCombineQueuedFollowUps,
@@ -12,19 +12,20 @@ import {
 interface QueuedSessionInput {
   sessionId: string | null;
   queuedFollowUps: QueuedFollowUp[];
+  messages: SessionMessage[];
   activeRunStartedAt?: string | null;
   editRequest(itemId: string, prompt: string): UpdateQueuedFollowUpInput;
   afterUpdate(itemId: string): void;
-  refreshQueue(): void;
+  refreshQueue(): unknown;
 }
 export const useQueuedSessionMessages = (input: QueuedSessionInput) => {
-  const { sessionId, queuedFollowUps, activeRunStartedAt, editRequest, afterUpdate, refreshQueue } = input;
+  const { sessionId, queuedFollowUps, messages, activeRunStartedAt, editRequest, afterUpdate, refreshQueue } = input;
   const [actionError, setActionError] = useState<string | null>(null);
   const update = useUpdateQueuedFollowUp();
   const remove = useRemoveQueuedFollowUp();
   const move = useMoveQueuedFollowUp();
   const combine = useCombineQueuedFollowUps();
-  const steer = useSteerQueuedFollowUp();
+  const steer = useSteerQueuedFollowUp(refreshQueue);
   const requireTarget = (item: QueuedFollowUp) => {
     if (!sessionId || item.position === undefined) throw new Error("The queued request is no longer available.");
     return { sessionId, queuePosition: item.position };
@@ -85,11 +86,28 @@ export const useQueuedSessionMessages = (input: QueuedSessionInput) => {
       ...requireTarget(item),
       expectedRevision: item.revision,
       expectedRunStartedAt: activeRunStartedAt,
+      item,
+      previousUserMessageIds: messages.filter((message) => message.role === "user").map((message) => message.id),
     });
-    refreshQueue();
-    if (result.status !== "accepted") throw new Error(result.message);
+    if (result.status === "rejected") throw new Error(result.message);
   };
+  const retainSubmission = steer.isPending || (steer.isSuccess && steer.data.status !== "rejected");
+  const submission = retainSubmission && steer.variables?.sessionId === sessionId ? steer.variables : undefined;
+  const steeringItem =
+    submission &&
+    (queuedFollowUps.find(
+      (item) => item.position === submission.queuePosition && item.revision === submission.expectedRevision,
+    ) ??
+      submission.item);
   return {
+    steeringSubmission:
+      steeringItem && submission
+        ? {
+            item: steeringItem,
+            previousUserMessageIds: submission.previousUserMessageIds,
+            deliveryId: steer.data && steer.data.status !== "rejected" ? steer.data.deliveryId : undefined,
+          }
+        : null,
     handleQueuedFollowUpUpdate,
     handleQueuedFollowUpRemove,
     handleQueuedFollowUpMove,

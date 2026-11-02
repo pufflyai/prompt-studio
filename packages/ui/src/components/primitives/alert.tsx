@@ -25,7 +25,7 @@ export const AlertMessage = React.forwardRef<HTMLDivElement, AlertProps>(functio
       <ButtonPropsProvider value={{ variant: "ghost", size: "2xs" }}>
         <ChakraAlert.Content>
           <Box position="relative" minW="0" minH="0" flex="1">
-            <ScrollArea contentRef={contentRef} viewportProps={{ overscrollBehavior: "contain" }}>
+            <ScrollArea contentRef={contentRef}>
               <Box paddingEnd={onClose ? "xl" : undefined}>
                 <ChakraAlert.Title>{title}</ChakraAlert.Title>
                 {children ? <ChakraAlert.Description>{children}</ChakraAlert.Description> : null}

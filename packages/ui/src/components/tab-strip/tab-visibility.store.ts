@@ -1,7 +1,12 @@
 import { useStore } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
-import { createBrowserStorage } from "../../utils/browser-storage";
+import {
+  createHostPersistStorage,
+  createHostStoreRegistry,
+  type HostStorage,
+  useHostStorage,
+} from "../../utils/host-storage";
 import type { VisibilityOverride } from "../tree-list/tree-list-visibility.store";
 
 interface TabVisibilitySnapshot {
@@ -17,6 +22,7 @@ interface TabVisibilityState extends TabVisibilitySnapshot {
 
 interface CreateTabVisibilityStoreOptions {
   storageKey: string;
+  storage?: HostStorage;
 }
 
 const DEFAULT_SNAPSHOT: TabVisibilitySnapshot = { tabOverrides: {} };
@@ -64,24 +70,18 @@ export const createTabVisibilityStore = (options: CreateTabVisibilityStoreOption
       }),
       {
         name: toStorageName(options.storageKey),
-        storage: createJSONStorage(createBrowserStorage),
+        storage: createHostPersistStorage(options.storage),
         partialize: getPersistedSnapshot,
       },
     ),
   );
 
-const storeRegistry = new Map<string, ReturnType<typeof createTabVisibilityStore>>();
-
-export const getTabVisibilityStore = (storageKey: string) => {
-  const existing = storeRegistry.get(storageKey);
-  if (existing) return existing;
-  const store = createTabVisibilityStore({ storageKey });
-  storeRegistry.set(storageKey, store);
-  return store;
-};
+export const getTabVisibilityStore = createHostStoreRegistry((storageKey: string, storage: HostStorage | undefined) =>
+  createTabVisibilityStore({ storageKey, storage }),
+);
 
 export const useTabVisibilityStore = <T>(storageKey: string, selector: (state: TabVisibilityState) => T) => {
-  const store = getTabVisibilityStore(storageKey);
+  const store = getTabVisibilityStore(storageKey, useHostStorage());
   return useStore(store, selector);
 };
 

@@ -1,15 +1,17 @@
 import { resolveArrangement } from "../../registries/layout/panel-positions";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import type { KeyboardPresentation } from "./keyboard-presentations";
 
 export const registerKeyboardPanelNavigation = (core: WorkbenchCore) => {
   const destination = (direction: string) => {
     const state = core.keyboard.store.getState();
-    const active = core.keyboard
-      .visibleTargets()
-      .find((target) => target.id === core.layout.getLayout().activeWidgetId);
+    let targets: KeyboardPresentation[] | undefined;
+    const visibleTargets = () => (targets ??= core.keyboard.visibleTargets());
     const current = state.active
       ? (state.selectedRegion ?? "main")
-      : (core.focus.getActiveRegion() ?? active?.region ?? "main");
+      : (core.focus.getActiveRegion() ??
+        visibleTargets().find((target) => target.id === core.layout.getLayout().activeWidgetId)?.region ??
+        "main");
     const arrangement = resolveArrangement(core.layout.getLayout().arrangement);
     const transitions: Record<string, Record<string, string>> = {
       main: { [arrangement.side]: "side", [arrangement.secondary === "top" ? "up" : "down"]: "secondary" },
@@ -17,7 +19,8 @@ export const registerKeyboardPanelNavigation = (core: WorkbenchCore) => {
       side: { [arrangement.side === "left" ? "right" : "left"]: "main" },
     };
     const region = transitions[current]?.[direction];
-    return core.keyboard.visibleTargets().find((target) => target.region === region);
+    if (!region) return;
+    return visibleTargets().find((target) => target.region === region);
   };
   for (const [direction, keybinding] of [
     ["left", "H"],

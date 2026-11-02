@@ -1,8 +1,10 @@
-import { Box, Button, HStack, IconButton, Popover, Portal, Stack } from "@chakra-ui/react";
+import { Box, Button, HStack, IconButton, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Folder, ListTree, PanelBottom, PanelRight, Plus } from "lucide-react";
 import { useState } from "react";
 import { ResourceActionMenu, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { WindowTabs } from "./window-tabs";
 import { WindowTitleBar } from "./window-title-bar";
 

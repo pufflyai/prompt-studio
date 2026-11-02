@@ -1,6 +1,8 @@
-import { Button, Dialog, Icon, IconButton, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
 import { Download, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 
 interface MermaidFullscreenProps {
   children: ReactNode;

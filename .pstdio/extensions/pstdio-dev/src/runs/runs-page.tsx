@@ -3,40 +3,36 @@ import { useCommandQuery } from "@pstdio/sdk/extensions/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { DEFAULT_PLATFORM, DEFAULT_SUITES } from "../benchmarks/platforms";
+import { DEFAULT_PLATFORM, DEFAULT_SUITES, runsOn, SUITES } from "../benchmarks/platforms";
 import { useBenchmarks, useBenchmarksRefresh, useOpenLink } from "../webview/client";
 import { PageFrame } from "../webview/page-frame";
+import { SyncFailed } from "../webview/result-notices";
 import { useSyncOnOpen } from "../webview/use-sync";
 import { RunForm, type RunRequest } from "./run-form";
 import { RunList } from "./run-list";
 
-const quickCommits = (commits: { ref: string }[] = []) => {
-  const releases = commits.filter((commit) => commit.ref.startsWith("pstdio@"));
-  return [
-    ...(releases[0] ? [{ label: "Latest release", ref: releases[0].ref }] : []),
-    ...(releases[1] ? [{ label: "Previous release", ref: releases[1].ref }] : []),
-    { label: "main", ref: "main" },
-  ];
-};
-
 export const RunsPage = () => {
   const { client } = useBenchmarks();
   const openLink = useOpenLink();
-  useSyncOnOpen();
+  const sync = useSyncOnOpen();
   const [request, setRequest] = useState<RunRequest>({
     commits: [],
     suites: DEFAULT_SUITES,
     platforms: [DEFAULT_PLATFORM],
-    samples: 10,
   });
   useBenchmarksRefresh();
   const runs = useCommandQuery({ queryKey: ["runs"], command: () => client.commands["benchmarks.runs"]() });
+  // Measured means results for every chosen suite each chosen platform can run, so the list follows the form.
+  // A suite the platforms cannot run stays chosen in the form but disabled, so it is left out here too.
+  const suites = SUITES.filter(
+    (suite) => request.suites.includes(suite.id) && request.platforms.some((platform) => runsOn(suite, platform)),
+  ).map((suite) => suite.id);
   const commits = useCommandQuery({
-    queryKey: ["commits", DEFAULT_PLATFORM],
-    command: () => client.commands["benchmarks.commits"]({ platform: DEFAULT_PLATFORM }),
+    queryKey: ["commits", request.platforms, suites],
+    command: () => client.commands["benchmarks.commits"]({ platforms: request.platforms, suites }),
   });
   const start = useMutation({
-    mutationFn: () => client.commands["benchmarks.start-run"](request),
+    mutationFn: (effective: RunRequest) => client.commands["benchmarks.start-run"](effective),
     onSuccess: () => setRequest((current) => ({ ...current, commits: [] })),
   });
   const cancel = useMutation({
@@ -44,15 +40,32 @@ export const RunsPage = () => {
   });
   return (
     <PageFrame>
+      {sync.error ? (
+        <SyncFailed error={sync.error} syncedAt={sync.syncedAt} retrying={sync.retrying} onRetry={sync.retry} />
+      ) : null}
+      {start.data?.dispatched && !start.data.runId ? (
+        <AlertMessage status="info" title="The run started">
+          GitHub has not listed it yet. It appears below after the next sync.
+        </AlertMessage>
+      ) : null}
+      {start.data && !start.data.dispatched ? (
+        <AlertMessage status="info" title="Nothing new to measure">
+          Every commit already has results for these suites and platforms. Compare them instead.
+        </AlertMessage>
+      ) : null}
       <Flex gap="lg" wrap="wrap" align="flex-start">
         <Stack flex="1 1 24rem" minW="0" maxW="lg">
           <RunForm
             value={request}
-            quick={quickCommits(commits.data)}
+            refs={(commits.data ?? []).map((commit) => ({
+              ref: commit.ref || commit.sha,
+              sha: commit.sha,
+              measured: commit.measured,
+            }))}
             pending={start.isPending}
-            error={start.error?.message}
+            error={start.error?.message ?? commits.error?.message}
             onChange={setRequest}
-            onStart={() => start.mutate()}
+            onStart={(effective) => start.mutate(effective)}
           />
         </Stack>
         <Stack flex="999 1 32rem" minW="0" gap="sm">

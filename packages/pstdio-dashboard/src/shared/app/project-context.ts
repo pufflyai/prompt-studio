@@ -1,4 +1,4 @@
-import type { WorkbenchModuleContext } from "@pstdio/workbench";
+import { batchWorkbenchChanges, type WorkbenchModuleContext } from "@pstdio/workbench";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
 
 export const dashboardSelectedProjectIdContextKey = "dashboard.project.id";
@@ -25,18 +25,22 @@ export const selectDashboardProject = (
   project: DashboardProjectSelection,
   persistence?: DashboardProjectSelectionPersistence,
 ) => {
-  persistence?.setSelectedProjectId(project.id);
-  ctx.context.set(dashboardSelectedProjectIdContextKey, project.id);
-  ctx.context.set(dashboardSelectedProjectNameContextKey, project.name);
+  batchWorkbenchChanges(() => {
+    persistence?.setSelectedProjectId(project.id);
+    ctx.context.set(dashboardSelectedProjectIdContextKey, project.id);
+    ctx.context.set(dashboardSelectedProjectNameContextKey, project.name);
+  });
 };
 
 export const clearDashboardProjectSelection = (
   ctx: DashboardProjectSelectionContext,
   persistence?: DashboardProjectSelectionPersistence,
 ) => {
-  ctx.context.delete(dashboardSelectedProjectIdContextKey);
-  ctx.context.delete(dashboardSelectedProjectNameContextKey);
-  persistence?.setSelectedProjectId(undefined);
+  batchWorkbenchChanges(() => {
+    ctx.context.delete(dashboardSelectedProjectIdContextKey);
+    ctx.context.delete(dashboardSelectedProjectNameContextKey);
+    persistence?.setSelectedProjectId(undefined);
+  });
 };
 
 export const subscribeDashboardSelectedProject = (ctx: DashboardProjectContext, listener: () => void) =>

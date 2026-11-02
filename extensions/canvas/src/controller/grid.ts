@@ -1,4 +1,4 @@
-import type { CanvasDefinition } from "../canvases/definitions";
+import type { CanvasDefinition } from "../canvas-model";
 import type { Layout } from "../layout";
 
 export const arrangeGrid = (

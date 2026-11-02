@@ -48,7 +48,7 @@ export const runCli = async (args: string[]) => {
         process.once("SIGINT", done);
         process.once("SIGTERM", done);
       });
-      watcher.close();
+      await watcher.close();
       return 0;
     }
     default:

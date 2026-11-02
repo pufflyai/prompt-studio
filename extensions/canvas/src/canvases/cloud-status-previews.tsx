@@ -18,7 +18,7 @@ const CloudDetails = (props: CloudStatusProps) => {
   return (
     <Stack gap="md">
       <Stack gap="xs">
-        <Text textStyle="label/M/medium">Prompt Studio Cloud</Text>
+        <Popover.Title textStyle="label/M/medium">Prompt Studio Cloud</Popover.Title>
         <Text textStyle="paragraph/S/regular" color={warningStates.has(state) ? "fg.warning" : "fg.muted"}>
           {earlyAccess ? state : "Cloud sync · Coming soon"}
         </Text>
@@ -45,7 +45,7 @@ const CloudDetails = (props: CloudStatusProps) => {
         <Text textStyle="paragraph/S/regular">{signedIn ? "Alex Morgan" : "Not signed in"}</Text>
       </Stack>
       <Button size="sm" variant="display-link" asChild>
-        <a href="#canvas-item=cloud-settings">Cloud settings</a>
+        <a href="#canvas-item=CloudSettingsConnected">Cloud settings</a>
       </Button>
     </Stack>
   );

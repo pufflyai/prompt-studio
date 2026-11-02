@@ -215,13 +215,24 @@ const earlier = ctx.storage.positions.between(undefined, first);
 
 Omit either neighbour to insert at an end. Compare strings with `<` and `>` or
 default string `sort()`. Do not use `localeCompare` or parse positions as numbers.
-Positions include the creating device's identity and a random hexadecimal suffix. Concurrent
+Positions from `between` include the creating device's identity and a random hexadecimal suffix. Concurrent
 positions remain distinct, and a new position can fit between them. Existing
 positions never need rebalancing; strings can grow as gaps are divided.
 
 Keep each item once, keyed by its stable record ID, and update its position when
 moving it. The record merge chooses one position for concurrent moves of the same
 item. Sort the resulting records by position on every device.
+
+When a migration replaces an existing order, use `migration.position(rank, key)` for
+each zero-based rank. It returns the same initial position on every device and
+retry, without device identity, time or randomness. Rank must be a nonnegative
+safe integer. Sort the source items by the old order and a stable record ID before
+assigning ranks; never depend on read or arrival order. Pass the existing record ID
+as the stable unique key. This separates equal ranks when devices have different
+offline source lists. Keep existing record IDs.
+After migration, use `storage.positions.between` for every insertion and move,
+including moves between these initial positions. The migration helper deliberately
+returns the same position for the same rank and key; do not use it for concurrent new items.
 
 Tests can simulate the same owner on two devices with
 `createMemoryStorage({ workbenchId: "shared", extensionId: "example.notes", deviceId: "device-a" })`

@@ -1,5 +1,5 @@
-import { Box, Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, handleDialogAcceptShortcut, ScrollArea } from "@pstdio/ui";
+import { Box, Button, CloseButton, HStack, Stack, Text } from "@chakra-ui/react";
+import { AlertMessage, ScopedDialog as Dialog, handleDialogAcceptShortcut, ScrollArea } from "@pstdio/ui";
 import { Fragment, useState } from "react";
 import type { Command, RegisteredMenuItem, WorkbenchCommandExecutionContext } from "../../core";
 import type { ExecuteOptionCommand } from "./command-option-resolver";

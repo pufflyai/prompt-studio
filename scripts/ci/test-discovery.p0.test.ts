@@ -34,6 +34,7 @@ describe("test priority discovery", () => {
     expect(testRunner("packages/e2e/src/packaged/startup.p1.test.ts")).toBe("packaged-cli");
     expect(testRunner("packages/e2e/src/packaged/startup.p1.spec.ts")).toBe("packaged-browser");
     expect(testRunner("clients/desktop/src/e2e/desktop-startup.p1.spec.ts")).toBe("desktop");
+    expect(testRunner("packages/e2e/src/packaged/runner.p0.test.ts")).toBe("bun");
     expect(testRunner("src/action.p0.test.ts")).toBe("bun");
   });
 });

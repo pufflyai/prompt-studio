@@ -1,6 +1,6 @@
-export const partitionPackageChecks = (packages: string[]) => {
+export const partitionPackageChecks = (packages: string[], maximum = 4) => {
   const selected = [...new Set(packages)].sort();
-  const rows = Array.from({ length: Math.min(4, selected.length) }, () => [] as string[]);
+  const rows = Array.from({ length: Math.min(maximum, selected.length) }, () => [] as string[]);
   selected.forEach((name, index) => {
     rows[index % rows.length].push(name);
   });

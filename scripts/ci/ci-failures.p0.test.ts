@@ -91,6 +91,20 @@ test("excludes summary jobs and earlier passing runs from rerun counts", () => {
   expect(summary.failures[0]?.passedOnRerun).toBe(0);
 });
 
+test("a failed gate counts only when nothing else in its attempt failed", () => {
+  const gate = (runId: number, name: string) => job({ runId, id: runId * 10, name, failedSteps: ["Check results"] });
+  const summary = summarizeFailures([
+    job({ runId: 1, failures: ["test failure"] }),
+    gate(1, "production / functional / validation_results"),
+    gate(1, "production_ci_passed"),
+    gate(2, "validation_results"),
+  ]);
+  expect(summary.steps.map((step) => step.signature)).toEqual([
+    "step | desktop / win32-x64 | Smoke packaged app",
+    "step | validation_results | Check results",
+  ]);
+});
+
 test("groups failed steps even when the job log names a failing test", () => {
   const summary = summarizeFailures([job({ failures: ["test failure"] })]);
   expect(summary.steps).toEqual([

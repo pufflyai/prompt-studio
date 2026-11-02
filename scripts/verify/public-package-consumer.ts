@@ -5,6 +5,7 @@ import { freshInstallArgs } from "./fresh-install";
 import { verifyMonacoPackageAssets } from "./monaco-package-assets";
 import { verifyProviderPackageConsumer } from "./provider-package-consumer";
 import { writeStoragePackageConsumer } from "./storage-package-consumer";
+import { writeWorkbenchPackageConsumer } from "./workbench-package-consumer";
 
 const run = (cwd: string, args: string[]) => {
   const result = Bun.spawnSync(["bun", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
@@ -213,6 +214,7 @@ void [invalidAttribute, invalidColumn];
         : ""),
   );
   writeStoragePackageConsumer(directory);
+  writeWorkbenchPackageConsumer(directory, react);
   if (react && dependencies["@pstdio/ui"]) {
     cpSync(join(directory, "node_modules/@pstdio/ui/examples/performance"), join(directory, "performance-example"), {
       recursive: true,
@@ -232,11 +234,18 @@ void [invalidAttribute, invalidColumn];
         jsx: "react-jsx",
         types: react ? ["node", "vite/client"] : [],
       },
-      include: ["consumer.ts", "storage-consumer.ts", "performance-example/*.ts", "performance-example/*.tsx"],
+      include: [
+        "consumer.ts",
+        "storage-consumer.ts",
+        "workbench-consumer.ts",
+        "performance-example/*.ts",
+        "performance-example/*.tsx",
+      ],
     }),
   );
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
   run(directory, ["check", "-p", "tsconfig.json"]);
+  run(directory, ["workbench-consumer.ts"]);
   if (react) {
     writeFileSync(
       join(directory, "vite.config.ts"),

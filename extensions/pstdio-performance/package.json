@@ -1,6 +1,6 @@
 {
   "name": "pstdio-performance",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "displayName": "Prompt Studio Performance Monitoring",
   "description": "See frame rate, backend response time, CPU and memory in the status bar.",
   "publisher": "pstdio",

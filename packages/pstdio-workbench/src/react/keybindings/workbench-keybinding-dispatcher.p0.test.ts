@@ -2,6 +2,29 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "../../core";
 import { createWorkbenchHotkeyRegistrations, normalizeWorkbenchKeybinding } from "./workbench-keybinding-dispatcher";
 
+test("excluded shortcuts do not evaluate command availability", () => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand(
+    { id: "other-dispatcher", label: "Owned by another dispatcher" },
+    {
+      execute() {},
+      isEnabled: () => {
+        throw new Error("This dispatcher must not measure another dispatcher's command");
+      },
+    },
+  );
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "other-dispatcher" },
+    keybinding: "Alt+J",
+    allowInInputs: true,
+  });
+  expect(
+    createWorkbenchHotkeyRegistrations({ workbench, filterKeybinding: (binding) => !binding.allowInInputs }).map(
+      (entry) => entry.id,
+    ),
+  ).not.toContain("other-dispatcher");
+});
+
 test("direct shortcuts do not inspect unrelated actions without an assigned chord", async () => {
   const workbench = createWorkbench();
   workbench.commands.registerCommand(
@@ -204,4 +227,39 @@ test("a failed keybinding reports its command once and consumes the rejection", 
   expect(workbench.notifications.listNotifications()).toMatchObject([
     { title: "Save project failed", message: "Connection lost", level: "error" },
   ]);
+});
+
+test("only the active workbench executes shortcuts, including registrations captured before switching", async () => {
+  const a = createWorkbench();
+  const b = createWorkbench({ active: false });
+  let aCalls = 0;
+  let bCalls = 0;
+  a.commands.registerCommand(
+    { id: "shared", label: "Shared action" },
+    {
+      execute: () => {
+        aCalls++;
+      },
+    },
+  );
+  b.commands.registerCommand(
+    { id: "shared", label: "Shared action" },
+    {
+      execute: () => {
+        bCalls++;
+      },
+    },
+  );
+  for (const workbench of [a, b])
+    workbench.keybindings.registerKeybinding({ action: { kind: "command", commandId: "shared" }, keybinding: "Alt+J" });
+  const old = createWorkbenchHotkeyRegistrations({ workbench: a }).find((entry) => entry.id === "shared")!;
+  expect(createWorkbenchHotkeyRegistrations({ workbench: b })).toEqual([]);
+  a.activation.setActive(false);
+  b.activation.setActive(true);
+  await old.execute();
+  await createWorkbenchHotkeyRegistrations({ workbench: b })
+    .find((entry) => entry.id === "shared")!
+    .execute();
+  expect(aCalls).toBe(0);
+  expect(bCalls).toBe(1);
 });

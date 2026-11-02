@@ -7,7 +7,7 @@ import { basename, join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
-import { preparePlannerSource } from "./packaged-planner-source";
+import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 // Keep the existing allowance for cold core-extension installation on Intel macOS.
@@ -51,16 +51,21 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     });
     closeRegistry = registry.close;
     phase("registry ready");
-    const plannerSource = await preparePlannerSource(tempRoot);
-    phase("Planner source ready");
+    const defaultExtensions = await Promise.all(
+      CORE_DEFAULT_EXTENSION_NAMES.map(async (installName) => ({
+        installName,
+        source: await preparePackagedExtensionSource(
+          join(tempRoot, "sources", installName),
+          join(REPO_ROOT, "extensions", installName),
+        ),
+      })),
+    );
+    phase("core sources ready");
     const started = await startPackagedServe(tempRoot, {
       NPM_CONFIG_USERCONFIG: npmConfigPath,
       PSTDIO_LOG_PATH: join(evidenceRoot, `${basename(tempRoot)}.jsonl`),
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-        defaultExtensions: CORE_DEFAULT_EXTENSION_NAMES.map((installName) => ({
-          installName,
-          source: installName === "pstdio-planner" ? plannerSource : join(REPO_ROOT, "extensions", installName),
-        })),
+        defaultExtensions,
       }),
     });
     child = started.child;

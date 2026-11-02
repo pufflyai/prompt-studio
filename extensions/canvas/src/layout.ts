@@ -1,5 +1,8 @@
 import { boundedCamera, boundedPoint, type Camera, finite, type Point } from "./controller/geometry";
-import { type FrameTheme, isFrameTheme } from "./frame-themes";
+// A frame theme is an id: a built-in theme, "app", or a theme only the project knows.
+export type FrameTheme = string;
+export const isFrameTheme = (value: unknown): value is FrameTheme =>
+  typeof value === "string" && value.length > 0 && value.length <= 200;
 export interface Layout {
   version: 1;
   camera: Camera;

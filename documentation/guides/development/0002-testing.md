@@ -57,9 +57,9 @@ bun run --cwd packages/pstdio-dashboard test -- src/workbench.p0.test.ts
 
 The script runs `bun test --conditions production --tsconfig-override tsconfig.app.json`. `--tsconfig-override tsconfig.app.json` loads the `@/*` path alias; a plain `bun test <file>` in the dashboard fails with `Cannot find module '@/...'`. `--conditions production` makes dependencies resolve their `production` export condition, as the built dashboard does. `test:coverage` uses the same flags. The dashboard imports `@pstdio/ui` and `@pstdio/workbench` from their `dist` folders, so build them first after changing them.
 
-Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks described in `AGENTS.md`. Documentation-reference-only edits do not.
+Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks in the [testing guidance](../../guidance/0005-testing.md#5-packaged-files). Documentation-reference-only edits do not.
 
-During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../../AGENTS.md#finishing-a-pull-request), including the full test run after integrating main for behavioral features and meaningful regressions. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
+During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../guidance/0004-ci.md#1-finishing-a-pull-request), including the full test run after integrating main for behavioral features and meaningful regressions. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
 
 The complete local test run schedules one workspace suite at a time. Suites such as the API already own worker pools; running several suites together multiplies those pools and can starve native CLI fixtures. Priority and CI commands retain their own scheduling. The complete local run may take longer because workspace suites do not overlap.
 
@@ -142,6 +142,15 @@ Signed macOS builds submit the app with native `notarytool` from Forge's `postPa
 
 Every attempt logs its status and output. Other errors fail at once. This retries an external service call; test retries remain disabled. Validate a change to this path with a full stable release candidate that builds, notarizes, staples, and verifies both macOS targets. Nightly runs cover Apple Silicon only.
 
+## Installed-product checks
+
+- Check the installed behavior affected by the change. A source workspace can supply unpublished SDK APIs, dependencies, or files that the installed product lacks.
+- Use the packaged app when packaging or file inclusion changes. Install extensions outside the monorepo against their declared published dependencies; see [published extension dependencies](#published-extension-dependencies).
+- Use disposable projects and isolated runtime data. Choose a representative affected flow: create a project, install and use a tool, update it, or remove it. Check reopen and restart when persistence or cleanup changes.
+- Compare cold and warm setup when installation or startup performance changes. Record whether the home and download cache were fresh or reused.
+- Require a manual browser or native-app walkthrough only for the critical risks in the [testing guidance](../../guidance/0005-testing.md#4-prove-it-works). Keep relevant automated packaged checks; a successful API response alone does not prove that the primary task works.
+- Record the build, platform, dependency versions, actions, expected and observed results, and useful logs. Include timings for performance changes and state what remains unchecked.
+
 ## Published extension dependencies
 
 Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `bun check`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. It copies build output that is already in the extension folder, so build Canvas first with `bun run build -- --scope canvas --include-dependencies`: its preview catalog is built from this repo's UI and is not committed. Failures name the extension and command; output shows the resolved SDK and UI versions.
@@ -169,7 +178,7 @@ bun run build -- --scope pstdio-dashboard --include-dependencies
 bun run --cwd scripts build:host
 export PLAYWRIGHT_BROWSERS_PATH="$(mktemp -d)" PSTDIO_HOME="$(mktemp -d)" E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
 dist/pstdio extensions install-browser
-cd packages/e2e && bun test src/packaged/packaged-serve-helpers.p2.test.ts src/packaged/extension-browser-install.p2.test.ts
+cd packages/e2e && bun test src/packaged/packaged-serve-helpers.p2.test.ts src/packaged/extension-browser-install.p1.test.ts
 ```
 
 Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the copy when another task may rebuild the binary at the same time.
@@ -177,6 +186,8 @@ Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the
 ## Isolation
 
 Packaged desktop update-channel and database-recovery tests use `PSTDIO_DEFAULT_EXTENSIONS=[]`. They keep real project creation, Settings and CLI checks, database ownership conflicts, damaged control files, and recovery after repair. These host checks do not use an agent harness. Navigation customization keeps its workbench fixture extension configuration across relaunches. Cold default-extension installation remains covered by `packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts`, which runs in the native packaged toolchain checks, including Windows, with its existing workload and allowance. Attached backend-recovery tests keep their existing cold extension setup.
+
+The signed Windows installation check follows [the 0.46 database baseline](../../adrs/0103-database-baseline-replaces-in-place-upgrades.md). Updating an older baseline must retain the raw database and the original project's JSON export, preserve workspace files, and support a new project in the fresh database. Updates within the current baseline must preserve the active project. Installer, signature, launcher, CLI, and Squirrel feed checks run for both transitions.
 
 When an assertion waits for child-process or socket output, await the operation before asserting on its result or captured error. Bun's `expect(promise).rejects` and `.resolves` can synchronously drive a nested event loop and block Windows I/O callbacks. See [the pipe-read lesson](../../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md) for the safe rejection pattern.
 
@@ -259,14 +270,6 @@ bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.p2.spec.ts
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
 
-The Marketplace install/delete/disable/enable lifecycle is manual-only. Run it explicitly with:
-
-```bash
-E2E_MANUAL_MARKETPLACE_LIFECYCLE=1 bun run --cwd packages/e2e test:ui -- src/ui/marketplace-extension-lifecycle.p1.spec.ts --grep "deletes, installs, disables, and enables a Marketplace extension"
-```
-
-Normal UI runs skip that lifecycle check. The separate extension automation toggle test still runs automatically.
-
 App UI tests in `packages/e2e` never build or start Canvas. Component browser interactions live in the private `packages/canvas-tests` package, while story source stays beside its component. This suite starts only Canvas servers; it has no application API, database, or app web server.
 
 Run critical component contracts with `bun test:p1 --runner component`. The command builds the selected owners and serves their static Canvas previews. To run a single spec, build its owner with `bun run --cwd packages/pstdio-workbench build:preview-tests`, then use `CANVAS_TEST_PACKAGES=pstdio-workbench bun run --cwd packages/canvas-tests test:browser -- src/ui/pstdio-workbench/panel-tabs.p1.spec.ts`. Static output lives under each owner's `canvas-test-static` directory. Servers load a real story before tests begin, preserve story play completion waits, and keep the existing 60-second startup allowance. Reports and traces live under `packages/canvas-tests/playwright-report` and `packages/canvas-tests/test-results`.
@@ -277,13 +280,13 @@ Keep the existing job and test time limits. A timeout needs an investigation of 
 
 The Windows job tests native dependency installation, relative workspace links, scoped dependency watcher events, and concurrent attachment reads before building. After building the SDK dependencies, command discovery tests exercise real process launches with PATH overrides, PATHEXT order, PowerShell siblings, explicit wrapper paths, custom npm prefixes, spaces, Unicode, shell operators, conflicting installations, missing targets, and timeout cleanup. npm fixtures use the pinned `cmd-shim` generator and check both adjacent Node and PATH fallback. Argument round trips include literal percent signs, exclamation marks, and variable-like strings with values present in the child environment. Environment tests cover Windows case-insensitive names without passing host secrets to extensions. The same portable cases run on Linux.
 
-`harness-npm-detection.p2.test.ts` runs the compiled runtime with deterministic OpenCode, Codex, and Claude Code CLI fixtures. It checks detection, versions written to stderr or with terminal colors, a healthy harness alongside failed and hanging probes, project extension filtering, and OpenCode model discovery. It changes installations for the same project and checks discovery again after the availability cache expires. Model requests for all three harnesses must return empty lists when version probes hang, and their child processes must exit. The runtime parent stays alive, and repaired commands must recover detection and model listing in the same runtime after the existing cache expires. The version-probe deadline applies to model listing as well as availability checks. No provider accounts, API keys, or live agent services are required. Harness changes receive affected fast checks; the queue retains Linux/macOS integrity. Windows npm detection and the full native matrix run in production functional validation. Add `ci:full` to request separate full functional diagnostics for an internal PR. Keep these tests within the existing CI time limits.
+`harness-npm-detection.p1.test.ts` runs the compiled runtime with deterministic OpenCode, Codex, and Claude Code CLI fixtures. It checks detection, versions written to stderr or with terminal colors, a healthy harness alongside failed and hanging probes, project extension filtering, and OpenCode model discovery. It changes installations for the same project and checks discovery again after the availability cache expires. Model requests for all three harnesses must return empty lists when version probes hang, and their child processes must exit. The runtime parent stays alive, and repaired commands must recover detection and model listing in the same runtime after the existing cache expires. The version-probe deadline applies to model listing as well as availability checks. No provider accounts, API keys, or live agent services are required. Harness changes receive affected fast checks; the queue retains Linux/macOS integrity. Windows npm detection and the full native matrix run in production functional validation. Add `ci:full` to request separate full functional diagnostics for an internal PR. Keep these tests within the existing CI time limits.
 
 These tests simulate different inherited environments. Real Explorer/login PATH refresh, PowerShell aliases, WSL-only installations, and organization-managed execution policies still need targeted manual checks. Codex and Claude model/session protocols and OpenCode server startup use separate launch paths; this discovery suite does not establish their Windows compatibility. Those paths need dedicated protocol fixtures before changing their launch behavior.
 
 The npm `cmd-shim@7.0.0` batch wrapper assigns its installation directory without quotes. A prefix containing `&` truncates that directory and fails even when the wrapper runs directly under `cmd.exe`. A native regression checks this failure outside the process API and confirms the API reports the failure too. The healthy npm fixtures use spaces and Unicode; a separate controlled wrapper checks our launcher with `&` in its directory.
 
-Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. Each Windows database/API shard runs only one package to avoid competing database startups on the same runner. The API suite uses two file workers, then runs `process-discovery.p1.test.ts` alone in its assigned shard so PowerShell startup does not compete with a PGlite cold start. The runner logs when that file starts alone. The separate Windows npm shim check still runs it too.
+Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. Each Windows database/API shard runs only one package to avoid competing database startups on the same runner. The API suite uses two file workers, then runs each `*.exclusive.p[0-3].test.ts` file alone in its assigned shard, so slow process startup does not compete with a PGlite cold start. The runner logs when such a file starts alone.
 
 Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
 
@@ -330,7 +333,7 @@ To review a timeout:
 3. Collect timings from representative local runs with the same workload and build mode as CI. Include cold setup when the test needs it.
 4. Inspect several runs on each applicable CI platform, including slow successes and failures. Keep local and CI timings separate; do not average different environments. Record the revision, command, OS and architecture, runner, and cold or warm state.
 5. Propose an exact value that covers the slowest legitimate phase with stated headroom. Use platform-specific values only when the evidence shows different work. When relevant local or CI evidence is missing, say so and collect it first.
-6. Get approval for that exact value (see AGENTS.md), then verify it locally and in the affected CI jobs. Check that a never-ready case still fails and cleanup still completes.
+6. Get approval for that exact value (see [timeout approval](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets)), then verify it locally and in the affected CI jobs. Check that a never-ready case still fails and cleanup still completes.
 
 When tests are added, review the job allowance or sharding. Do not lengthen the per-test limit because a suite has more tests.
 
@@ -340,24 +343,13 @@ On 2026-10-28 the user approved a 60-second Windows allowance for two packaged c
 
 ## Desktop benchmarks
 
-Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) remain the advisory product targets. Regular performance coverage runs in nightly CI and stable-release validation.
-
-## Live provider tests
-
-These commands opt into real agent sessions:
-
-```bash
-E2E_AGENTS=claude-code bun run --cwd packages/e2e test:ui -- src/ui/session-follow-up-completion-claude.p2.spec.ts
-E2E_AGENTS=opencode bun run --cwd packages/e2e test:ui -- src/ui/session-follow-up-ordering-opencode.p2.spec.ts
-```
-
-They require the selected provider and its credentials. They are separate from ordinary fixture-based CI coverage.
+Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../guidance/0003-nonfunctional-requirements.md) set mandatory product targets. Regular performance coverage runs in nightly CI and stable-release validation.
 
 Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The Windows x64 Pi 0.73.1 cold detection/model case runs once in its version-specific quarantine before the blocking tool/session-resume case. Its report must prove exactly one first attempt; the 3000 ms probe remains unchanged.
 
 The final full battery additionally confirmed Intel macOS harness-submenu dismissal and compiled collection-view restart flakes. Both complete cases passed in the prior battery with unchanged sources. Their exact darwin-x64 cases join the existing native quarantine lanes; other platforms remain blocking and no deadline or assertion changes.
 
-Desktop benchmarks retain one complete ordered Playwright invocation: launch cases (including quarantined warm attach and cold start) precede renderer cases. The runner classifies the resulting first-attempt report: stable/setup failures block CI, quarantined failures remain visible in a separate mandatory report. Comparison artifacts retain all measurements and the quarantine evidence. No second invocation repeats or moves the cold scenario after renderer work.
+Desktop benchmarks retain one complete ordered Playwright invocation: launch cases (including the quarantined cold start) precede renderer cases. The runner classifies the resulting first-attempt report: stable/setup failures block CI, quarantined failures remain visible in a separate mandatory report. Comparison artifacts retain all measurements and the quarantine evidence. No second invocation repeats or moves the cold scenario after renderer work.
 
 ## Critical UI checks
 

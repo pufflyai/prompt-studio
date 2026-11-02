@@ -1,6 +1,9 @@
-import { Box, HStack, IconButton, Menu, Portal, useRecipe } from "@chakra-ui/react";
-import { Fragment, type ReactElement } from "react";
+import { Box, HStack, useRecipe } from "@chakra-ui/react";
+import { Fragment } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
+import { ActionIconButton } from "./action-icon-button";
 import type { ListRowAction } from "./list-row.types";
 import { preventRowAccessoryDrag } from "./list-row-accessory-events";
 import { SearchableActionMenu } from "./searchable-action-menu";
@@ -10,17 +13,6 @@ interface RowActionsProps {
   context: { sectionId?: string; nodeId?: string };
   alwaysVisible?: boolean;
 }
-
-const keyedTooltip = (action: ListRowAction, child: ReactElement) => {
-  if (action.tooltip) {
-    return (
-      <Tooltip key={action.id} content={action.tooltip}>
-        {child}
-      </Tooltip>
-    );
-  }
-  return <Fragment key={action.id}>{child}</Fragment>;
-};
 
 export const RowActions = (props: RowActionsProps) => {
   const { actions, alwaysVisible = false, context } = props;
@@ -42,13 +34,18 @@ export const RowActions = (props: RowActionsProps) => {
         }
 
         if (action.menuItems && action.menuItems.length > 0) {
-          return keyedTooltip(
-            action,
-            <Menu.Root>
+          return (
+            <Menu.Root key={action.id}>
               <Menu.Trigger asChild>
-                <IconButton variant="ghost" size="2xs" aria-label={action.label} disabled={action.disabled}>
+                <ActionIconButton
+                  tooltip={action.tooltip ?? action.label}
+                  variant="ghost"
+                  size="2xs"
+                  aria-label={action.label}
+                  disabled={action.disabled}
+                >
                   {action.icon}
-                </IconButton>
+                </ActionIconButton>
               </Menu.Trigger>
               <Portal>
                 <Menu.Positioner>
@@ -78,13 +75,14 @@ export const RowActions = (props: RowActionsProps) => {
                   </Menu.Content>
                 </Menu.Positioner>
               </Portal>
-            </Menu.Root>,
+            </Menu.Root>
           );
         }
 
-        return keyedTooltip(
-          action,
-          <IconButton
+        return (
+          <ActionIconButton
+            key={action.id}
+            tooltip={action.tooltip ?? action.label}
             variant="ghost"
             size="2xs"
             aria-label={action.label}
@@ -96,7 +94,7 @@ export const RowActions = (props: RowActionsProps) => {
             }}
           >
             {action.icon}
-          </IconButton>,
+          </ActionIconButton>
         );
       })}
     </HStack>

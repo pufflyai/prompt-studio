@@ -1,8 +1,10 @@
-import { Box, HStack, Icon, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, IconButton, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Circle, CircleDot, MoreHorizontal, Paperclip, Pin, PinOff, Tag, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Portal } from "@/utils/ui-scope";
 import { Activity, type ActivityActor } from "./index";
 
 const author: ActivityActor = {

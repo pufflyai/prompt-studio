@@ -1,9 +1,9 @@
-import { Badge, HStack, Icon, IconButton, Menu, Spacer, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Badge, HStack, Icon, IconButton, Spacer, Text, useSlotRecipe } from "@chakra-ui/react";
 import { MoreHorizontal, Plus } from "lucide-react";
-
 import { ListRow } from "@/components/list-row/list-row";
 import { getIconComponent } from "@/components/primitives/icon-options";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import type { KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
 interface ColumnHeaderProps {

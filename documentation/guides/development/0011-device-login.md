@@ -4,6 +4,8 @@ The native host keeps one device credential per login. The account manager owns 
 
 See [Log in and sync cloud projects](../sdk/0004-device-login.md) for the commands, the native file path and SDK usage.
 
+The native credential file remembers a rejected device ID and a hash of the rejected credential, without retaining the credential itself. The hash lets an in-flight sign-out clear that rejection without clearing a newer login. The public account status exposes `signInRequired` for the same device, so an extension can offer Sign in again after a restart. A successful sign-in or explicit sign-out clears it. A network failure, project removal, and early-access denial do not set it. Sync progress is derived from the workers and document revision metadata; polling status does not load document content. The [Cloud account reference](../../references/extensions/0003-command-and-process-api.md#cloud-account-and-sync-status) defines the document-count units and unknown download totals.
+
 `pst login` and `client.account.login()` use `https://base.prompt.studio/accounts` by default. The native account service resolves the address once per login: an explicit `--manager` or SDK argument first, then `PSTDIO_ACCOUNT_MANAGER_ORIGIN` from the host's environment, then the hosted default. An invalid configured address fails validation; it never silently switches services. Restart the host after changing its environment. Extensions use the same resolution through `ctx.account.login()` and the webview account client.
 
 ## Account service setup

@@ -1,6 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
 import { useLayoutEffect, useRef } from "react";
-import type { CanvasDefinition } from "../canvases/definitions";
+import type { CanvasDefinition } from "../canvas-model";
 import { installItemMovement } from "../controller/item-movement";
 import type { CanvasRuntime } from "../controller/runtime";
 import { CanvasViewport } from "./canvas-viewport";

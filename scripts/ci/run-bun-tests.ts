@@ -3,6 +3,7 @@ import { dirname, relative, resolve } from "node:path";
 import { bunRunIdentity, junitCases, registeredUnselectedScope } from "./bun-test-evidence";
 import { assertStableQuarantineExclusions, verifyQuarantineReport } from "./quarantine-reports";
 import { priorityIgnorePatterns, readTestPriorities } from "./test-discovery";
+import { stopsAtFirstFailure } from "./test-policy";
 import { bunTestSelection, narrowStablePattern, quarantineDirectory } from "./test-quarantine";
 import cases from "./test-quarantine.json";
 
@@ -99,13 +100,25 @@ if (quarantine && !selection.files.length) {
   const timingArgs = args.some((arg) => arg.startsWith("--timings"))
     ? []
     : [`--timings=${timings}`, "--update-timings"];
+  // A single-file edited check can contain only registered quarantine cases.
+  // Bun otherwise exits 1 before the separate quarantine lane gets its result.
+  const registeredScope =
+    !quarantine &&
+    scopedPaths.length > 0 &&
+    scopedPaths.every(
+      (path) =>
+        /\.test\.tsx?$/.test(path) && selection.cases.some((entry) => resolve(root, entry.file) === resolve(cwd, path)),
+    );
+  const allowEmpty = registeredScope || args.includes("--pass-with-no-tests");
+  const evidenceArgs = [...scopedPaths, ...(allowEmpty ? ["--pass-with-no-tests"] : [])];
   const command = [
     "test",
     ...args,
+    ...(registeredScope && !args.includes("--pass-with-no-tests") ? ["--pass-with-no-tests"] : []),
     ...(quarantine ? [] : priorityIgnorePatterns(readTestPriorities())).map(
       (pattern) => `--path-ignore-patterns=${pattern}`,
     ),
-    ...(priority === "P1" ? ["--bail=1"] : []),
+    ...(stopsAtFirstFailure(priority) ? ["--bail=1"] : []),
     ...(quarantine ? selection.files.map((file) => `./${file}`) : []),
     ...(pattern ? ["--test-name-pattern", pattern] : []),
     "--reporter=junit",
@@ -144,15 +157,26 @@ if (quarantine && !selection.files.length) {
     if (quarantine) {
       const summary = verifyQuarantineReport(xml, selection.cases, root, cwd);
       if (exitCode !== 0 && summary.failures === 0) throw new Error("Quarantine failed outside its registered cases");
-    } else assertStableQuarantineExclusions(reported, selection.cases);
+    } else {
+      assertStableQuarantineExclusions(reported, selection.cases);
+      if (
+        registeredScope &&
+        reported.every((entry) => entry.outcome === "skipped") &&
+        !registeredUnselectedScope(root, cwd, evidenceArgs, cases, runner, reported)
+      )
+        throw new Error("Empty stable scope does not match its registered quarantine cases");
+    }
   } catch (error) {
     reportError = String(error);
   }
   const complete =
-    !reportError && reported.length > 0 && !(priority === "P1" && exitCode !== 0) && child.signalCode === null;
+    !reportError &&
+    reported.length > 0 &&
+    !(stopsAtFirstFailure(priority) && exitCode !== 0) &&
+    child.signalCode === null;
   const unselectedReason =
     !quarantine && complete && exitCode === 0
-      ? registeredUnselectedScope(root, cwd, args, cases, runner, reported)
+      ? registeredUnselectedScope(root, cwd, evidenceArgs, cases, runner, reported)
       : null;
   await Bun.write(
     evidencePath,

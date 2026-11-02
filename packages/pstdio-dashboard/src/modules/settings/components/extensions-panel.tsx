@@ -1,7 +1,7 @@
 import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { PstdioApiError } from "@pstdio/sdk/client";
-import { toaster } from "@pstdio/ui";
+import { useToaster } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,6 +28,7 @@ interface ExtensionsPanelProps {
 }
 
 export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
+  const toaster = useToaster();
   const { projectId, settingsInput } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
