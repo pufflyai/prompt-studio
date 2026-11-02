@@ -56,4 +56,4 @@ test("a style-only edit gives only that canvas a new revision, so only its frame
 
   expect(after["src/button.canvas.tsx"]).not.toBe(before["src/button.canvas.tsx"]);
   expect(after["src/card.canvas.tsx"]).toBe(before["src/card.canvas.tsx"]);
-}, 60_000);
+}, 15_000);

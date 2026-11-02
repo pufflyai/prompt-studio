@@ -23,7 +23,7 @@
 1. Commit `bun.lock` and `extensions/*/bun.lock` only when dependencies change. Sync extension lockfiles with `bun run --cwd scripts release:extension-lockfiles:sync`.
 2. Commit migrations under `packages/pstdio-db/drizzle/**`, `services/account-manager/drizzle/**`, `services/relay/drizzle/**`, and `services/psx/drizzle/**` only for schema changes. Generate them with the package's `db:generate` script; follow section 6.
 3. Only the Changesets release process writes committed `CHANGELOG.md` files and `package.json` versions. Feature PRs add `.changeset/*.md` files.
-4. Commit `packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js` only when its source in `packages/pstdio-extensions/src/bridge` changes. Rebuild it from that source.
+4. Commit `packages/pstdio-extensions/src/bridge/webview-runtime/runtime.bundle.js` whenever rebuilding it changes it: its source in `packages/pstdio-extensions/src/bridge` changed, or a dependency it bundles changed, such as the public SDK. Rebuild it with `bun run --cwd packages/pstdio-extensions build:runtime`; never edit it by hand.
 5. Commit `extensions/harness-codex/src/protocol/**` only when the supported Codex app-server protocol changes. Copy these types from Codex's ts-rs output; do not edit them by hand.
 6. For the Prompt Studio 0.46 and UI Canvas posts, commit final PNG banners and JSON recipes under `clients/landing-page/src/content/blog/images/blog-prompt-studio-0-46*` and `blog-ui-canvas*`, plus GIF workflows and SVG screenshots under `documentation/images/prompt-studio-0-46-*` and `ui-canvas-*`. Raw captures, preview catalogs, and site build output remain excluded.
 

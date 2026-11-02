@@ -26,6 +26,7 @@ import type { createSessionService } from "../services/session-service";
 import type { createSettingsService } from "../services/settings-service";
 import type { createSkillService } from "../services/skill-service";
 import type { createSyncService } from "../services/sync-service";
+import type { createWorkspaceCapacityService } from "../services/workspace-capacity-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createAutomationService } from "./automation/automation-service";
@@ -65,6 +66,7 @@ export interface RouteDeps {
   sessionQueueEntriesService: ReturnType<typeof createSessionQueueEntriesDBService>;
   sessionQueueLifecycle: ReturnType<typeof createSessionQueueLifecycle>;
   settingsService: ReturnType<typeof createSettingsService>;
+  workspaceCapacityService: ReturnType<typeof createWorkspaceCapacityService>;
   workspaceService: ReturnType<typeof createWorkspaceService>;
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
   skillService: ReturnType<typeof createSkillService>;

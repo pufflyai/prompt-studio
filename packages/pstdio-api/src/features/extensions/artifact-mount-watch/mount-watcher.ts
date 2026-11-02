@@ -97,6 +97,8 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
     maxDirectories: input.maxFolders ?? MAX_FOLDERS,
     onDirectoryLimit: () => {
       incomplete = true;
+      // Folder-only change events are ignored, but incomplete watches still need a full reload.
+      scheduleFlush();
       input.onFolderLimit();
     },
     watch: input.watch,

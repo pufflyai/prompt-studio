@@ -7,6 +7,7 @@ import { connectAppRelay } from "../relay/runtime";
 import { createNativeAccount, nativeAccountFile } from "./native-account";
 import { createProjectSyncEvents } from "./project-sync-events";
 import { startRecoveryCapture } from "./recovery-capture";
+import { createStatusEvents } from "./status-events";
 
 export const createAppAccount = (
   config: AppConfig,
@@ -20,7 +21,15 @@ export const createAppAccount = (
   });
   let stopEvents = () => {};
   let stopRecovery = async () => {};
+  let stopAccount = () => {};
   const connectAccountRelay = <T extends { deps: RouteDeps; close: () => Promise<void> }>(app: T) => {
+    const accountEventsOwner = createStatusEvents({
+      status: () => accountService.status(),
+      publish: async (_id, status) => {
+        for (const project of await projects.list())
+          fireExtensionEventAsync(app.deps, project.id, accountEvents.changed, status);
+      },
+    });
     const syncEvents = createProjectSyncEvents({
       status: (projectId) => accountService.projectSyncStatus(projectId),
       publish: (projectId, status) =>
@@ -32,6 +41,8 @@ export const createAppAccount = (
         close: async () => {
           await stopRecovery();
           stopEvents();
+          stopAccount();
+          await accountEventsOwner.close();
           await syncEvents.close();
           await accountService.close();
           await app.close();
@@ -42,6 +53,8 @@ export const createAppAccount = (
         denied: () => void accountService.refresh(),
         statusChanged: (projectId) => void syncEvents.changed(projectId),
         ready: async (relay) => {
+          await accountEventsOwner.changed("account");
+          stopAccount = accountService.watch(() => void accountEventsOwner.changed("account"));
           // A project created or bound here may already be a cloud project of this account.
           stopEvents = app.deps.eventBus.subscribe((event) => {
             if (event.table === "projects") void accountService.refresh();

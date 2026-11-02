@@ -74,7 +74,7 @@ The timing report keeps initial scheduling delay, elapsed time after the first j
 - Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.
 - Complete P1/P2/P3 matrices run in nightly and stable validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
 - A new push cancels the PR's older run. Adding or removing labels does not rerun CI; `ci:full` requests diagnostics through its own workflow.
-- The Version Packages PR gets its checks from Release Packages. Its pushes use the workflow token, so GitHub holds their `pull_request` runs for a maintainer's approval. After updating the PR, Release Packages dispatches Test and Build with `profile=pull_request`, which runs the same PR checks on the branch. The PR changes every package, so each update runs P0 for all of them; a newer update cancels the older run. The profile refuses other branches, because a dispatch compares only the last commit.
+- The Version Packages PR is pushed with the workflow token, so GitHub holds its `pull_request` runs until a maintainer approves them. Approve the latest run before queueing the PR. A dispatched run does not help: a PR's check list leaves out `workflow_dispatch` runs, so their `ci_passed` does not satisfy the required check.
 
 ## Merge queue
 
@@ -180,7 +180,7 @@ None of these replace the real queue run or release certification.
 
 ## Failure handling
 
-- **P1 stops early.** When a P1 job fails, other P1 jobs stop their own work. They never cancel the whole workflow. [ADR 0108](../../adrs/0108-temporary-cooperative-p1-cancellation.md) explains this temporary design.
+- **P1 stops early in PR and queue runs.** When a P1 job fails, other P1 jobs stop their own work. They never cancel the whole workflow. Nightly and stable validation (profile `production`) run every P1 job and file to the end, so one run reports every failure. [ADR 0108](../../adrs/0108-temporary-cooperative-p1-cancellation.md) explains this temporary design.
 - **P0, P2 and P3 finish.** They run all their selected work and report every failure. Matrices with mixed priorities do not use GitHub's fail-fast.
 - **A failed setup step blocks the jobs that need it.** It can never let them pass.
 - **`validation_results`** starts after all execution jobs finish, then reads the job list from the GitHub API. This avoids occupying a runner and exhausting its allowance while other jobs wait for runners. Individual P1 failures and cooperative stopping remain immediate; the aggregate required result waits for the remaining diagnostics. Missing, duplicated, skipped, cancelled or failed selected jobs fail it. Unselected jobs may skip. If GitHub refuses a read because of a rate limit or a server error, it waits and reads again.
@@ -214,7 +214,7 @@ Quarantine is manual, never automatic. Entries live in `scripts/ci/test-quaranti
 
 Package-check jobs use shallow checkouts because they read the current source tree; scope/static jobs keep the history required for comparisons and provenance.
 
-P0 package rows build their packages and dependencies once, then run lint and unit checks side by side. These checks call package scripts directly so Nx cannot rebuild a dependency while tests read it. API and database tests have a separate row for each priority. API test files keep a fresh process each, with at most two at once. A file that needs the whole process pool uses `.exclusive.p1.test.ts` and runs alone ([ADR 0018](../../adrs/0018-temporary-api-test-process-isolation.md)).
+P0 package rows build their packages and dependencies once, then run lint and unit checks side by side. These checks call package scripts directly so Nx cannot rebuild a dependency while tests read it. API and database tests have a separate row for each priority. API test files keep a fresh process each, with at most two at once. A file that needs the whole process pool uses `.exclusive.p1.test.ts` and runs alone ([ADR 0018](../../adrs/0018-temporary-api-test-process-isolation.md)). A file still running after 5 minutes counts as stalled: the runner fails it and saves the states, threads, wait channels, open files and kernel stacks of its processes to `files/<index>/stall.txt` in the job's `test-results/ci/api` artifact (macOS saves `sample` output; Windows records nothing). Bun's per-test timeout cannot stop a test that blocks its own process. A stalled or cancelled file's whole process tree is killed, because a blocked `bun test` survives its wrapper.
 
 ## CI health report
 

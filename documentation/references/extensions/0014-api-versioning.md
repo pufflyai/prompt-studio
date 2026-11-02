@@ -338,6 +338,7 @@ additions ship in the release after 0.45.0. See [Restore project data](../../gui
 
 Cloud status adds optional `ProjectSyncStatus.pendingItems`, `ProjectSyncStatus.download`,
 and `AccountStatus.signInRequired` in API 0.3.1. Existing state values and methods stay available.
+`accountEvents.changed` announces public account changes, including sign-in recovery, independently of project sync events.
 Counts and progress use verified sync documents, including their files; unknown directories
 leave the count absent and the download total null. Publish the SDK and matching host before
 extensions consume these fields. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).

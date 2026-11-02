@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { createStoragePositions } from "pstdio-api-contracts";
@@ -34,6 +35,7 @@ import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-ca
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
 import { createSkillService } from "./services/skill-service";
+import { createWorkspaceCapacityService } from "./services/workspace-capacity-service";
 import type { AppBindings } from "./types";
 
 const AUTOMATION_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -200,6 +202,12 @@ const buildApp = async (
     onCapacityAvailable: () => drainSessionQueue(),
   });
 
+  const workspaceCapacityService = createWorkspaceCapacityService({
+    path: join(storageRoot, "device-workspace-capacity.json"),
+    deviceId: environmentId,
+    activeWorkspaceIds: workspaceSessionService.activeWorkspaceIds,
+    onCapacityAvailable: () => drainSessionQueue(),
+  });
   const terminalSupervisor = createAppTerminalSupervisor();
   const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
 
@@ -228,6 +236,7 @@ const buildApp = async (
     sessionQueueLifecycle,
     sessionService,
     settingsService,
+    workspaceCapacityService,
     workspaceService,
     workspaceSessionService,
     skillService,

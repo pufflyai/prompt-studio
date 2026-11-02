@@ -6,6 +6,7 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgents } from "@/shared/agents/use-agents";
+import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
 import { useActionError } from "@/shared/components/use-action-error";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import {
@@ -24,8 +25,11 @@ import { ExtensionsPanelView } from "./extensions-panel-view";
 
 interface ExtensionsPanelProps {
   projectId: string | undefined;
-  settingsInput?: WorkbenchPanelRenderInput;
+  settingsInput: WorkbenchPanelRenderInput;
 }
+
+const selectedExtension = (id: string | undefined, kind: string) =>
+  id?.startsWith(`${kind}:`) ? id.slice(kind.length + 1) : null;
 
 export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const toaster = useToaster();
@@ -44,8 +48,17 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const replacementDialog = (
     <ExtensionReplacementConfirmation replacement={replacement} onClose={() => setReplacement(null)} />
   );
-  const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
-  const [selectedMarketplaceName, setSelectedMarketplaceName] = useState<string | null>(null);
+  const selection = settingsInput.instance.resource?.id;
+  const selectedInstanceId = selectedExtension(selection, "installed");
+  const selectedMarketplaceName = selectedExtension(selection, "marketplace");
+  const openList = () =>
+    settingsInput.workbench.pageLocations.navigate({ kind: "page", page: dashboardExtensionsPage });
+  const openDetail = (id: string, displayName: string) =>
+    settingsInput.workbench.pageLocations.navigate({
+      kind: "page",
+      page: dashboardExtensionDetailPage,
+      resource: { type: "extension", extensionId: "pstdio", id, label: displayName },
+    });
   const [installingMarketplaceNames, setInstallingMarketplaceNames] = useState<string[]>([]);
   const [upgradingInstanceIds, setUpgradingInstanceIds] = useState<string[]>([]);
   const marketplaceContributions = useMarketplaceExtensionContributions(
@@ -89,7 +102,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         type: "success",
         title: t("projectSettings.extensionsPanel.marketplace.installSucceeded", { name: extension.displayName }),
       });
-      if (selectedMarketplaceName === extension.installName) setSelectedMarketplaceName(null);
+      if (selectedMarketplaceName === extension.installName) openList();
     } catch (error) {
       if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !force) {
         setReplacement({ name: extension.displayName, retry: () => handleInstallMarketplace(extension, true) });
@@ -112,7 +125,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         metadata={metadataQuery.data}
         agents={agents}
         settingsInput={settingsInput}
-        onBack={() => setSelectedInstanceId(null)}
+        onBack={() => openList()}
       />
     );
   }
@@ -130,7 +143,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
           }
           loadingContributions={marketplaceContributions.isLoading}
           installing={installingMarketplaceNames.includes(selectedMarketplace.installName)}
-          onBack={() => setSelectedMarketplaceName(null)}
+          onBack={() => openList()}
           onInstall={() => void handleInstallMarketplace(selectedMarketplace)}
         />
       </>
@@ -243,9 +256,9 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         installingMarketplaceNames={installingMarketplaceNames}
         onToggle={handleToggle}
         onUpgrade={(extension) => void handleUpgrade(extension)}
-        onOpen={(extension) => setSelectedInstanceId(extension.id)}
+        onOpen={(extension) => openDetail(`installed:${extension.id}`, extension.displayName)}
         onInstallMarketplace={(extension) => void handleInstallMarketplace(extension)}
-        onOpenMarketplace={(extension) => setSelectedMarketplaceName(extension.installName)}
+        onOpenMarketplace={(extension) => openDetail(`marketplace:${extension.installName}`, extension.displayName)}
         upgradingAll={extensions.some(
           (extension) => extension.canUpgrade && upgradingInstanceIds.includes(extension.id),
         )}

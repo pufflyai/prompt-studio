@@ -7,10 +7,13 @@ const createAccountHost = () => {
   const calls: { method: string; params: unknown }[] = [];
   const listeners = new Set<(payload: unknown) => void>();
   let state = "waiting-to-sync";
+  let signInRequired = false;
   const host: GuestHost = {
     extensionId: "pstdio.cloud",
     call: async <TResult>(method: string, params?: unknown) => {
       calls.push({ method, params });
+      if ((params as { op?: string })?.op === "status")
+        return { login: null, cloudProjects: [], cloudProjectsLoaded: true, features: null, signInRequired } as TResult;
       return {
         state,
         offlineReady: true,
@@ -27,10 +30,25 @@ const createAccountHost = () => {
     state = next;
     for (const listener of listeners) listener({ type: "changed", id: "account.project-sync.changed" });
   };
-  return { host, calls, syncChanged };
+  const rejected = () => {
+    signInRequired = true;
+    for (const listener of listeners) listener({ type: "changed", id: accountEvents.changed.id });
+  };
+  return { host, calls, syncChanged, rejected };
 };
 
 describe("webview account client", () => {
+  test("a webview reads sign-in recovery after the public account change event", async () => {
+    const { host, rejected } = createAccountHost();
+    const client = createWebviewClient<Record<never, never>>(host);
+    expect((await client.account.status()).signInRequired).toBe(false);
+    const changed = Promise.withResolvers<void>();
+    const stop = client.events.subscribe(accountEvents.changed, () => changed.resolve());
+    rejected();
+    await changed.promise;
+    expect((await client.account.status()).signInRequired).toBe(true);
+    stop();
+  });
   test("an extension reads the project sync state again after a change event", async () => {
     const { host, calls, syncChanged } = createAccountHost();
     const client = createWebviewClient<Record<never, never>>(host);

@@ -19,6 +19,7 @@ export const StaticPlacement: Story = {
 export const ResourceTabs: Story = {
   id: "pstdio-workbench-guides-panels-and-pages--resource-tabs",
   name: "Resource placement (many)",
+  description: "Right-click a resource tab for its actions. Clicking the tab again closes that menu.",
   render: () => <ResourceTabsExample />,
 };
 export const ResourceRebind: Story = {

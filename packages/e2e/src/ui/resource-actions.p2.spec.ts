@@ -120,7 +120,6 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
 });
 
 test("keeps ticket creation and ticket status settings available", async ({ page, request }) => {
-  test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id, "");
   await page.goto(`/projects/${project.id}/tickets`);

@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  maxFailures: process.env.CI_PRIORITY === "P1" ? 1 : 0,
+  maxFailures: process.env.CI_PRIORITY === "P1" && process.env.CI_PROFILE !== "production" ? 1 : 0,
   outputDir: "test-results/electron",
   testDir: "src/e2e",
   testMatch:

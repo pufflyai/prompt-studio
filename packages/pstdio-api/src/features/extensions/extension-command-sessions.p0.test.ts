@@ -91,6 +91,7 @@ const createSessionEnvironment = (
         get: async () => ({ start: harness.start, listModels: () => [], params: harness.params }),
         list: async () => [{ id: "fake-agent" }],
       },
+      workspaceCapacityService: { hasCapacity: async () => true },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },

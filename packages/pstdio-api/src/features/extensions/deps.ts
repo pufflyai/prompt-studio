@@ -26,6 +26,7 @@ export type ExtensionsRouteDeps = Pick<
   | "settingsService"
   | "storagePositions"
   | "skillService"
+  | "workspaceCapacityService"
   | "workspaceSessionService"
 > & {
   automationService: RouteDeps["automationService"];

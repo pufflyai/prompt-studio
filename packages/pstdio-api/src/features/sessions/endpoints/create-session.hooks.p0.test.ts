@@ -80,6 +80,7 @@ describe("createSessionHandler hooks", () => {
         createDispatchStarted: async () => ({ queue_position: 1 }),
         remove: async () => {},
       },
+      workspaceCapacityService: { hasCapacity: async () => true },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },
@@ -158,6 +159,7 @@ describe("createSessionHandler hooks", () => {
         transitionStatus: mock(async () => null),
         store: createTrackedSessionStore(),
       },
+      workspaceCapacityService: { hasCapacity: async () => true },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },
@@ -222,6 +224,7 @@ describe("createSessionHandler hooks", () => {
         createDispatchStarted: async () => ({ queue_position: 1 }),
         remove: async () => {},
       },
+      workspaceCapacityService: { hasCapacity: async () => true },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },
