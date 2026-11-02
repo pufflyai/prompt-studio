@@ -45,7 +45,10 @@ export const pendingQueuedFollowUpsHandler =
   (deps: SessionsRouteDeps): AppRouteHandler<typeof pendingQueuedFollowUpsRoute> =>
   async (c) => {
     const { id } = c.req.valid("param");
-    if (!(await deps.sessionService.get(id))) return c.json({ error: "Session not found." }, 404);
+    if (!(await deps.sessionService.get(id))) {
+      const shared = await deps.personalHistoryService.queuedMessages(id);
+      return shared ? c.json(shared.queue, 200) : c.json({ error: "Session not found." }, 404);
+    }
     return c.json(await pendingQueuedRequests(deps, id), 200);
   };
 export const combineQueuedFollowUpsHandler =

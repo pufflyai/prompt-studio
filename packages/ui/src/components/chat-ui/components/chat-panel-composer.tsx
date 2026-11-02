@@ -93,6 +93,13 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           </Flex>
         )}
         {composerHeader}
+        {composerFallback && (
+          <QueuedFollowUpList
+            items={queuedFollowUps}
+            steeringUnavailableReason={queueSteeringUnavailableReason}
+            readOnly
+          />
+        )}
         {composerFallback}
         {!composerFallback && (
           <>

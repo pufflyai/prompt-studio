@@ -24,6 +24,8 @@ interface QueuedFollowUpListProps {
   retainedEditorPosition?: number;
   dirtyItemIds?: string[];
   steeringUnavailableReason?: string | null;
+  /** Show the queue without editing, removing, reordering or sending its requests. */
+  readOnly?: boolean;
   onEdit?: (item: QueuedFollowUp) => void;
   onRemove?: (itemId: string) => void;
   onMove?: (
@@ -46,6 +48,7 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
     retainedEditorPosition,
     dirtyItemIds = [],
     steeringUnavailableReason,
+    readOnly = false,
     onEdit,
     onRemove,
     onMove,
@@ -159,6 +162,7 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
                 unavailableReason={destination?.kind === "combine" ? combineReason(item) : null}
                 editing={editingItemId === item.id}
                 editor={editingItemId === item.id ? editor : undefined}
+                readOnly={readOnly}
                 onEdit={onEdit}
                 onRemove={onRemove}
               />

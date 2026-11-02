@@ -19,9 +19,23 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
     arrived.push(update);
     wake?.();
   });
+  // The session row changes whenever its device changes the queue, so a row event wakes the reader.
+  const unsubscribe = deps.eventBus.subscribe((event) => {
+    if (event.table === "sessions" && (event.data as { id?: string }).id === id) wake?.();
+  });
+  let sentQueue: string | undefined;
+  const sendQueue = async () => {
+    const shared = await deps.personalHistoryService.queuedMessages(id, projectId);
+    if (!shared || sink.aborted) return;
+    const value = JSON.stringify(shared);
+    if (value === sentQueue) return;
+    sentQueue = value;
+    await sink.write("queued_messages", shared);
+  };
   try {
     let messages = (await deps.personalHistoryService.messages(id, projectId)) ?? [];
     await sink.write("patch", { op: "replace", path: "/messages", value: messages });
+    await sendQueue();
     let pendingLive: (typeof arrived)[number] | undefined;
     const apply = async ({ index, message, live }: (typeof arrived)[number]) => {
       if (sink.aborted || !(await deps.personalHistoryService.getSession(id))) return;
@@ -53,6 +67,7 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
     while (!sink.aborted) {
       if (!(await deps.personalHistoryService.getSession(id))) break;
       await flush();
+      await sendQueue();
       if (sink.aborted || finished.includes(session?.status ?? "")) break;
       if (!arrived.length) await Promise.race([sink.sleep(2000), new Promise<void>((resolve) => (wake = resolve))]);
       wake = undefined;
@@ -60,6 +75,7 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
     }
   } finally {
     stop();
+    unsubscribe();
   }
   if (!sink.aborted) await sink.write("end", { status: session?.status ?? "unknown" });
   return true;

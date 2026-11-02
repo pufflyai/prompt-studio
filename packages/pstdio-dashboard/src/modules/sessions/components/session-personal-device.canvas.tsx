@@ -33,3 +33,22 @@ export const OfflineSource: Story = {
 export const Dark: Story = {
   id: "modules-sessions-personal-device--dark",
 };
+// Queued messages on the other device stay visible here, read-only.
+export const QueuedOnDevice: Story = {
+  id: "modules-sessions-personal-device--queued-on-device",
+  render: (args) => (
+    <Box h="lg">
+      <ChatPanel
+        emptyStateTitle="Conversation"
+        emptyStateDescription="Read the saved conversation."
+        chatInputPlaceholder="Reply to the agent..."
+        messages={[{ id: "message", role: "assistant", parts: [{ type: "text", text: "Running the checks now." }] }]}
+        queuedFollowUps={[
+          { id: "queued-1", prompt: "Then update the changelog.", position: 1 },
+          { id: "queued-2", prompt: "Open a draft pull request.", position: 2 },
+        ]}
+        composerFallback={<SessionPersonalDevice {...args} />}
+      />
+    </Box>
+  ),
+};

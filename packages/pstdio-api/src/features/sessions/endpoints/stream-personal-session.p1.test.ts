@@ -13,7 +13,9 @@ test("a live preview arriving before earlier completed messages is shown as soon
   const message = (id: string): SessionMessage => ({ id, role: "assistant", parts: [{ type: "text", text: id }] });
   const deps = {
     sessionService: { get: async () => null },
+    eventBus: { subscribe: () => () => {} },
     personalHistoryService: {
+      queuedMessages: async () => null,
       getSession: async () => ({ id: "session", project_id: "project", status: "in_progress" }),
       messages: async () => [],
       watchMessages: (_id: string, callback: (update: Update) => void) => {
@@ -74,7 +76,9 @@ test.each([
   const finalWrites: unknown[] = [];
   const deps = {
     sessionService: { get: async () => null },
+    eventBus: { subscribe: () => () => {} },
     personalHistoryService: {
+      queuedMessages: async () => null,
       getSession: async () => row,
       messages: async () => [],
       watchMessages: (_id: string, callback: (update: Update) => void) => {

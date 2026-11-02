@@ -2,11 +2,16 @@ import { type SessionMessage, sessionSchema, workspaceSchema } from "pstdio-api-
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { historyNamespace, type SessionLogFiles } from "./log-files";
+import { sharedQueueResponse, sharedQueueSchema } from "./queue-snapshot";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore, type HistoryDocuments } from "./store";
 
 const deviceSchema = z.object({ ownerId: z.string(), id: z.string(), name: z.string() });
-const personalSessionSchema = sessionSchema.extend({ device: deviceSchema, workspace_id: z.string().nullable() });
+const personalSessionSchema = sessionSchema.extend({
+  device: deviceSchema,
+  workspace_id: z.string().nullable(),
+  queue: sharedQueueSchema.optional(),
+});
 const personalWorkspaceSchema = workspaceSchema.extend({ device: deviceSchema });
 
 export const createPersonalHistoryService = (input: {
@@ -49,7 +54,7 @@ export const createPersonalHistoryService = (input: {
       history: createPersonalHistoryStore({ ...login, projectId, documents: input.documents }),
     };
   };
-  const sessions = async (projectId: string) => {
+  const sessionRecords = async (projectId: string) => {
     const current = await context(projectId);
     if (!current) return [];
     const rows = await current.history.readRecords("sessions");
@@ -62,12 +67,13 @@ export const createPersonalHistoryService = (input: {
           row.device.ownerId === current.login.accountId &&
           row.device.id !== current.login.deviceId &&
           row.project_id === projectId,
-      )
-      .map((row) => {
-        remember("sessions", row.id, projectId);
-        return { ...row, usage_json: row.usage_json ?? null };
-      });
+      );
   };
+  const sessions = async (projectId: string) =>
+    (await sessionRecords(projectId)).map(({ queue: _queue, ...row }) => {
+      remember("sessions", row.id, projectId);
+      return { ...row, usage_json: row.usage_json ?? null };
+    });
   const workspaces = async (projectId: string) => {
     const current = await context(projectId);
     if (!current) return [];
@@ -158,6 +164,11 @@ export const createPersonalHistoryService = (input: {
     sessions,
     workspaces,
     getSession: (id: string, projectId?: string) => find(sessions, id, projectId),
+    /** The queued messages of another device's session, read-only. Null when it is not one. */
+    async queuedMessages(id: string, projectId?: string) {
+      const record = await find(sessionRecords, id, projectId);
+      return record ? sharedQueueResponse(id, record.queue ?? []) : null;
+    },
     getWorkspace: (id: string, projectId?: string) => find(workspaces, id, projectId),
     async getWorkspaceByShorthand(projectId: string, shorthand: string) {
       const matches = (await workspaces(projectId)).filter((row) => row.workspace_shorthand === shorthand);

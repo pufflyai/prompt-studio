@@ -15,12 +15,13 @@ interface QueuedFollowUpRowProps {
   destination?: string;
   unavailableReason?: string | null;
   editing: boolean;
+  readOnly?: boolean;
   onEdit?: (item: QueuedFollowUp) => void;
   onRemove?: (id: string) => void;
 }
 export const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
-  const { item, index, editor, source, destination, unavailableReason, editing, onEdit, onRemove } = props;
-  const disabled = Boolean(item.sending || item.steeringDelivery);
+  const { item, index, editor, source, destination, unavailableReason, editing, readOnly, onEdit, onRemove } = props;
+  const disabled = Boolean(readOnly || item.sending || item.steeringDelivery);
   const drag = useDraggable({ id: item.id, data: { item }, disabled });
   const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
   const [hovered, setHovered] = useState(false);
@@ -60,29 +61,31 @@ export const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
       }}
       onClick={(event) => {
-        if (!item.sending && compact && !(event.target as Element).closest("button")) onEdit?.(item);
+        if (!readOnly && !item.sending && compact && !(event.target as Element).closest("button")) onEdit?.(item);
       }}
     >
-      <IconButton
-        ref={drag.setActivatorNodeRef}
-        {...drag.listeners}
-        {...drag.attributes}
-        aria-label={`Drag queued follow-up ${index + 1}`}
-        size="2xs"
-        variant="ghost"
-        css={styles.handle}
-        disabled={disabled}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <GripVertical size={14} />
-      </IconButton>
+      {readOnly ? null : (
+        <IconButton
+          ref={drag.setActivatorNodeRef}
+          {...drag.listeners}
+          {...drag.attributes}
+          aria-label={`Drag queued follow-up ${index + 1}`}
+          size="2xs"
+          variant="ghost"
+          css={styles.handle}
+          disabled={disabled}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <GripVertical size={14} />
+        </IconButton>
+      )}
       <Stack flex="1" minW="0" gap="2xs">
         {editor ?? (
           <Box asChild css={styles.content}>
             <button
               type="button"
-              disabled={item.sending}
-              aria-label={`Edit queued message: ${item.prompt}`}
+              disabled={item.sending || readOnly}
+              aria-label={readOnly ? `Queued message: ${item.prompt}` : `Edit queued message: ${item.prompt}`}
               onClick={() => onEdit?.(item)}
             >
               <Text lineClamp={2}>{item.prompt}</Text>
