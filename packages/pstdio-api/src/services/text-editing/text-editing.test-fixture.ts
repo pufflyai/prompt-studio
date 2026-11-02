@@ -12,6 +12,7 @@ import { createTextEditingService } from "./service";
 export const textEditingFixture = async (
   options: {
     beforeDocumentLoad?: () => Promise<void>;
+    onDocumentLoadError?: (error: unknown) => void;
     beforeDocumentAccess?: () => Promise<void>;
     beforeProjection?: () => Promise<void>;
     afterProjection?: () => void;
@@ -60,9 +61,10 @@ export const textEditingFixture = async (
   );
   await writeFile(join(extension.root, "editor-owned.txt"), "Editor owned");
   let enabled = true;
+  let providerEnabled = true;
   extension.deps.extensionService.listEnabledSourcesForProject = async () =>
     [
-      extension.source,
+      ...(providerEnabled ? [extension.source] : []),
       ...(enabled
         ? [
             {
@@ -87,9 +89,15 @@ export const textEditingFixture = async (
       return access(input);
     },
     storage: deps.extensionStorageService,
+    catalog: deps.extensionRuntimeCatalog,
     load: async (input) => {
       await options.beforeDocumentLoad?.();
-      return load(input);
+      try {
+        return await load(input);
+      } catch (error) {
+        options.onDocumentLoadError?.(error);
+        throw error;
+      }
     },
     save: async (input) => {
       await options.beforeProjection?.();
@@ -116,6 +124,10 @@ export const textEditingFixture = async (
     documents,
     deps,
     root: extension.root,
+    setProviderEnabled(value: boolean) {
+      providerEnabled = value;
+      deps.extensionRuntimeCatalog.invalidate({ projectId: "project-1", reason: "enablement_changed" });
+    },
     disableEditor() {
       enabled = false;
       deps.extensionRuntimeCatalog.invalidate({ projectId: "project-1", reason: "enablement_changed" });

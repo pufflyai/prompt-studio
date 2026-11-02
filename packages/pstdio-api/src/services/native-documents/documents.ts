@@ -48,6 +48,7 @@ const recoverSource = async (documentKey: string, action: () => Promise<unknown>
 /** Acknowledgements follow both room persistence and canonical integration. */
 export const createNativeDocumentService = (deps: {
   storage: ExtensionsRouteDeps["extensionStorageService"];
+  catalog?: ExtensionsRouteDeps["extensionRuntimeCatalog"];
   load: (input: Parameters<typeof loadNativeMarkdownFile>[1]) => ReturnType<typeof loadNativeMarkdownFile>;
   access: Parameters<typeof validateWritableSource>[0];
   save: (input: Parameters<typeof saveNativeMarkdownFile>[1]) => ReturnType<typeof saveNativeMarkdownFile>;
@@ -80,7 +81,7 @@ export const createNativeDocumentService = (deps: {
     void work.finally(() => pending.delete(work)).catch(() => {});
     return work;
   };
-  const stopProjectionWatch = watchNativeProjections(storage, files.request, track);
+  const stopProjectionWatch = watchNativeProjections(storage, files.request, track, deps.catalog);
   const canonical = (room: Pick<Room, "owner" | "documentKey">) =>
     storage.openNativeTextDocument({ owner: room.owner, fileId: room.documentKey });
   const integrate = (owner: StorageOwner, roomId: string) => integrateNativeRoom(storage, owner, roomId);

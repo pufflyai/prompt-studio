@@ -28,7 +28,7 @@ export const prepareNativeFileWrite = async (projectionKey: string, bytes: Uint8
       throw new Error("The workspace changed while saving this text source");
     return undefined;
   }
-  const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  const source = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
   const projected = await editProjectedText(current.state, source);
   try {
     const state = Y.encodeStateAsUpdate(projected);

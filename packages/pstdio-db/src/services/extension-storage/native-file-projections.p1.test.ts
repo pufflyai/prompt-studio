@@ -52,3 +52,18 @@ test("file projection initialization preserves the first baseline and scopes it 
   await f.projections.begin({ ...address, state: f.state });
   expect(await Array.fromAsync(f.projections.pending())).toEqual([address]);
 });
+
+test("pending projection discovery filters by project and excludes completed sources", async () => {
+  const f = await fixture();
+  const first = { owner: f.owner, documentKey: f.documentKey };
+  const second = { owner: { ...f.owner, workbenchId: f.projectBId }, documentKey: f.documentKey };
+  for (const address of [first, second]) {
+    await f.projections.initialize({ ...address, state: f.state });
+    await f.projections.begin({ ...address, state: f.state });
+  }
+  expect(await Array.fromAsync(f.projections.pending(f.owner.workbenchId))).toEqual([first]);
+  expect(await Array.fromAsync(f.projections.pending(f.projectBId))).toEqual([second]);
+  await f.projections.complete({ ...first, state: f.state });
+  expect(await Array.fromAsync(f.projections.pending(f.owner.workbenchId))).toEqual([]);
+  expect(await Array.fromAsync(f.projections.pending())).toEqual([second]);
+});

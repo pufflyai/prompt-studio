@@ -102,10 +102,12 @@ const createAppNativeDocuments = (
   account: ReturnType<typeof createAppAccount>["accountService"],
   getDeps: () => RouteDeps,
   storage: RouteDeps["extensionStorageService"],
+  catalog: RouteDeps["extensionRuntimeCatalog"],
 ) => {
   return createNativeDocumentService({
     deviceId: deviceId,
     presenceIdentity: () => nativePresenceIdentity(account),
+    catalog,
     storage,
     load: (input) => loadNativeMarkdownFile(getDeps(), input),
     access: (input) => resolveNativeTextAccess(getDeps(), input),
@@ -244,6 +246,7 @@ const buildApp = async (
     account.accountService,
     () => deps,
     extensionStorageDBService,
+    extensionRuntimeCatalog,
   );
 
   deps = {
