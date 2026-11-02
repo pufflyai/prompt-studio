@@ -13,12 +13,17 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 interface NativeCall {
   pid: number;
   method: string;
-  params: { config?: Record<string, unknown>; threadId?: string; serviceTier?: string };
+  params: {
+    config?: Record<string, unknown>;
+    threadId?: string;
+    serviceTier?: string;
+    deferGoalContinuation?: boolean;
+  };
 }
 setupPackagedSmokeTests();
 
 test.each([false, true])(
-  "packaged Codex sessions steer and stop independently (existing goal turn=%s)",
+  "packaged Codex sessions fork, steer and stop independently (existing goal turn=%s)",
   async (existingGoalTurn) => {
     const root = mkdtempSync(join(tmpdir(), "packaged-shared-codex-"));
     let runtime: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
@@ -139,6 +144,22 @@ test.each([false, true])(
       ]);
       expect((await request(`/sessions/${sessions[1].id}`)).status).toBe("in_progress");
       expect(calls().filter((call) => call.method === "turn/interrupt")).toHaveLength(1);
+      const source = await request(`/sessions/${sessions[0].id}`);
+      const history = await request(`/sessions/${source.id}/conversation`);
+      const fork = await request(`/sessions/${source.id}/fork`, "POST");
+      expect(fork.original_session_id).toBe(source.id);
+      expect(fork.agent_session_id).not.toBe(source.agent_session_id);
+      expect((await request(`/sessions/${fork.id}/conversation`)).messages).toEqual(history.messages);
+      expect(calls().filter((call) => call.method === "turn/start")).toHaveLength(2);
+      expect(calls().filter((call) => call.method === "thread/fork")).toMatchObject([
+        { params: { threadId: source.agent_session_id, deferGoalContinuation: true } },
+      ]);
+      expect(calls()).toContainEqual(
+        expect.objectContaining({
+          method: "thread/unsubscribe",
+          params: { threadId: fork.agent_session_id },
+        }),
+      );
       const exited = new Promise<number | null>((resolve) => runtime!.child.once("exit", resolve));
       const shutdown = await fetch(`${runtime.baseUrl}/runtime/shutdown`, {
         method: "POST",

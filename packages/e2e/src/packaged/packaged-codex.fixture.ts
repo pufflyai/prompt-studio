@@ -26,6 +26,12 @@ for await (const line of createInterface({ input: process.stdin })) {
   if (message.method === "thread/resume")
     result = { thread: { ...threads.get(params.threadId), path: null }, model: "fixture" };
   if (message.method === "thread/read") result = { thread: threads.get(params.threadId) };
+  if (message.method === "thread/fork") {
+    const thread = structuredClone(threads.get(params.threadId)!);
+    thread.id = `thread-${++sequence}`;
+    threads.set(thread.id, thread);
+    result = { thread };
+  }
   if (message.method === "thread/goal/get") {
     const thread = threads.get(params.threadId)!;
     if (process.env.PSTDIO_CODEX_PEER_STEER_GOAL === "1" && thread.turns.length === 0) {
