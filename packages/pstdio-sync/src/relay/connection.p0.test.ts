@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { type AddressInfo, createServer } from "node:net";
-import { createRelayConnection, createRelaySocket } from "./connection";
+import { createDocumentRelayConnection, createRelayConnection, createRelaySocket } from "./connection";
 
 test("an established socket failure reconnects without an HTTP handshake probe", async () => {
   const controller = new AbortController();
@@ -119,7 +119,6 @@ test("a closed socket cancels stalled synchronization before reconnecting withou
 });
 
 test("separate wakes on one connection reuse the attempt signal", async () => {
-  const { createDocumentRelayConnection } = await import("./project-connection");
   const controller = new AbortController();
   const first = Promise.withResolvers<void>();
   const second = Promise.withResolvers<void>();
