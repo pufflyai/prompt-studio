@@ -66,7 +66,7 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
       .set({ pending: null })
       .where(and(where(input), eq(projections.pending, input.state)));
   },
-  async *pending() {
+  async *pending(workbenchId?: string) {
     let cursor: string[] | undefined;
     while (true) {
       const rows = await db
@@ -88,6 +88,7 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
           and(
             or(isNotNull(projections.pending), gt(storage_documents.revision, projections.completed_revision)),
             eq(projections.projection_key, "handler"),
+            workbenchId ? eq(projections.workbench_id, workbenchId) : undefined,
             cursor
               ? sql`(${projections.workbench_id}, ${projections.extension_id}, ${projections.document_key}) > (${cursor[0]}, ${cursor[1]}, ${cursor[2]})`
               : undefined,

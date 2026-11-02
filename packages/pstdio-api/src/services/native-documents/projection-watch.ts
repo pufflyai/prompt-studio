@@ -6,8 +6,9 @@ export const watchNativeProjections = (
   storage: ExtensionsRouteDeps["extensionStorageService"],
   request: ReturnType<typeof createNativeProjectionQueue>["request"],
   admit: (action: () => Promise<void>) => Promise<void>,
-) =>
-  storage.watch(({ documentId: name, ...owner }) => {
+  catalog?: ExtensionsRouteDeps["extensionRuntimeCatalog"],
+) => {
+  const stopStorage = storage.watch(({ documentId: name, ...owner }) => {
     if (!name?.startsWith('["native-markdown",')) return;
     const documentKey = (JSON.parse(name) as string[])[1];
     void admit(async () => {
@@ -15,3 +16,34 @@ export const watchNativeProjections = (
       if (await storage.nativeRooms.source(address)) await request(address);
     }).catch(() => {});
   });
+  const projects = new Set<string | undefined>();
+  let scanning = false;
+  let closed = false;
+  const stopCatalog = catalog?.subscribeInvalidation(({ projectId, reason }) => {
+    if (reason === "webviews_built" || reason === "runtime_refresh") return;
+    projects.add(projectId);
+    if (scanning) return;
+    scanning = true;
+    void admit(async () => {
+      try {
+        while (projects.size && !closed) {
+          const project = projects.values().next().value;
+          projects.delete(project);
+          // This reads only dirty projection addresses, in bounded metadata pages.
+          for await (const address of storage.nativeFileProjections.pending(project)) {
+            if (closed) return;
+            await request(address).catch(() => {});
+          }
+        }
+      } finally {
+        scanning = false;
+      }
+    }).catch(() => {});
+  });
+  return () => {
+    closed = true;
+    projects.clear();
+    stopStorage();
+    stopCatalog?.();
+  };
+};
