@@ -92,7 +92,8 @@ export const WithWorkspace: Story = {
 };
 
 export const DeliveryHandoff: Story = {
-  description: "A new user turn fades once. Server confirmation and native message replacement do not replay it.",
+  description:
+    "A new user turn fades once. Server confirmation and native message replacement keep the same visible row and do not replay it.",
   render: (args) => {
     const [messages, setMessages] = useState<SessionMessage[]>(args.messages);
     const replaceLastUser = (id: string) =>

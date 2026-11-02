@@ -4,6 +4,8 @@ import type { SetStateAction } from "react";
 import type { SessionNotice } from "../data/session-notice";
 
 export type PendingFollowUpState = {
+  /** The draft whose live conversation is handed to a newly created session. */
+  sourceConversationKey?: string;
   destination: "conversation" | "queue";
   prompt: string;
   messageCount: number;

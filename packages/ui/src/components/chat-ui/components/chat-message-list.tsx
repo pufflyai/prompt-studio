@@ -42,7 +42,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     count: rows.length,
     getScrollElement: () => scrollRef.current as HTMLDivElement | null,
     estimateSize: (index) => ESTIMATED_MESSAGE_HEIGHT + (hasChatRowGap(rows, index) ? VIRTUAL_LIST_GAP : 0),
-    getItemKey: (index) => rows[index].key,
+    getItemKey: (index) => rows[index].message.animationKey ?? rows[index].key,
     overscan: VIRTUAL_LIST_OVERSCAN,
     initialRect: { width: 0, height: initialHeight },
     initialOffset: () =>
