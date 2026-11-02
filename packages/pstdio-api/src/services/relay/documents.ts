@@ -1,3 +1,4 @@
+import type { SubscribeDocument } from "pstdio-sync/relay";
 import { createDocumentRelay, createDocumentSync, createRecordStreamSync, fetchSyncSpaces } from "pstdio-sync/relay";
 import type { LiveServerMessage } from "pstdio-sync-contracts";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
@@ -13,6 +14,7 @@ export const createExtensionDocumentSync = (input: {
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
   discoveryNeeded?: () => void;
+  subscribe?: SubscribeDocument;
   statusChanged?: () => void;
 }) => {
   const initialize = async (signal: AbortSignal, space: Awaited<ReturnType<typeof fetchSyncSpaces>>["project"]) => {
@@ -21,6 +23,7 @@ export const createExtensionDocumentSync = (input: {
     const workSignal = AbortSignal.any([signal, controller.signal]);
     const relay = (documentId: string) =>
       createDocumentRelay({
+        subscribe: input.subscribe,
         origin: config.relayOrigin,
         space,
         documentId,
@@ -185,7 +188,7 @@ export const createExtensionDocumentSync = (input: {
     synchronizeDocument,
     prepare,
     hasDocument: (name: string) => !!current?.jobs.has(name),
-    acceptsChange(change: Extract<LiveServerMessage, { type: "changed" }>) {
+    acceptsChange(change: Extract<LiveServerMessage, { type: "changed" | "discovered" }>) {
       const active = current;
       return (
         change.spaceOwner === null &&
@@ -195,7 +198,7 @@ export const createExtensionDocumentSync = (input: {
           active.jobs.nameFor(change.documentId) !== undefined)
       );
     },
-    synchronizeChanged(change: Extract<LiveServerMessage, { type: "changed" }>, signal: AbortSignal) {
+    synchronizeChanged(change: Extract<LiveServerMessage, { type: "changed" | "discovered" }>, signal: AbortSignal) {
       if (change.spaceOwner !== null) return Promise.resolve(true);
       const active = current;
       if (!active || active.signal !== signal) return Promise.resolve(false);
