@@ -1,5 +1,4 @@
 import {
-  type LiveClientMessage,
   type LiveServerMessage,
   liveProtocolHeader,
   liveProtocolVersion,
@@ -11,9 +10,10 @@ import {
 } from "pstdio-sync-contracts";
 import { createRelaySocket } from "./connection";
 import { serviceAddress, serviceUrl } from "./http";
+import { createLiveControls } from "./live-controls";
 
 export type LiveTopic = { spaceOwner: string | null; topic: string };
-export type LiveEvent = LiveServerMessage | { type: "disconnected" };
+export type LiveEvent = LiveServerMessage | { type: "disconnected" } | ({ type: "subscribed" } & LiveTopic);
 const keyOf = (topic: LiveTopic) => JSON.stringify([topic.spaceOwner, topic.topic]);
 
 // WebSocket errors hide HTTP bodies. Probe only failed handshakes to expose the R29 update message.
@@ -52,14 +52,29 @@ export const createLiveConnection = (input: {
 }) => {
   const controller = new AbortController();
   let protocolUnsupported = false;
+  let controlRefused = false;
   const unsupported = () => {
     protocolUnsupported = true;
     controller.abort();
     input.onStatusChange?.();
   };
-  const desired = new Map<string, { message: LiveClientMessage; count: number }>();
+  const controls = createLiveControls(
+    (message) => transport.send(message),
+    () => {
+      controlRefused = true;
+      input.onError?.();
+      input.onStatusChange?.();
+      controller.abort();
+    },
+    (message) => {
+      if (message.type === "subscribe")
+        for (const listener of listeners)
+          listener({ type: "subscribed", spaceOwner: message.spaceOwner, topic: message.topic });
+    },
+  );
   const listeners = new Set<(event: LiveEvent) => void>();
   const presence = new Map<string, Set<(active: boolean) => void>>();
+  const readerState = new Map<string, boolean>();
   const calls = new Map<
     string,
     {
@@ -79,6 +94,8 @@ export const createLiveConnection = (input: {
   >();
   const invocations = new Map<string, AbortController>();
   const disconnected = () => {
+    controls.reset();
+    readerState.clear();
     for (const callbacks of presence.values()) for (const callback of callbacks) callback(false);
     for (const call of calls.values()) {
       call.cleanup();
@@ -123,12 +140,17 @@ export const createLiveConnection = (input: {
     }
   };
   const updatePresence = (event: Extract<LiveServerMessage, { type: "subscribers" }>) => {
-    for (const callback of presence.get(keyOf(event)) ?? []) callback(event.active);
+    const key = keyOf(event);
+    const callbacks = presence.get(key);
+    if (!callbacks) return;
+    readerState.set(key, event.active);
+    for (const callback of callbacks) callback(event.active);
   };
   const receive = (event: LiveServerMessage) => {
     if (event.type === "ready") {
-      for (const { message } of desired.values()) transport.send(message);
+      controls.ready();
     }
+    if (event.type === "control-result") return controls.result(event);
     if (event.type === "subscribers") updatePresence(event);
     if (event.type === "result" || event.type === "call-error") result(event);
     if (event.type === "cancelled") {
@@ -163,27 +185,10 @@ export const createLiveConnection = (input: {
       if (await unsupportedHandshake(input, access.token, signal)) unsupported();
     },
   });
-  const retain = (key: string, message: LiveClientMessage, remove: LiveClientMessage) => {
-    const entry = desired.get(key);
-    if (entry) entry.count++;
-    else {
-      desired.set(key, { message, count: 1 });
-      transport.send(message);
-    }
-    let active = true;
-    return () => {
-      if (!active) return;
-      active = false;
-      const entry = desired.get(key);
-      if (entry && --entry.count === 0) {
-        desired.delete(key);
-        transport.send(remove);
-      }
-    };
-  };
+  const retain = controls.retain;
   return {
     done: transport.done,
-    status: () => ({ ...transport.status(), protocolUnsupported }),
+    status: () => ({ ...transport.status(), protocolUnsupported, controlRefused }),
     retry: transport.retry,
     reconnect: transport.reconnect,
     close: () => controller.abort(),
@@ -204,13 +209,12 @@ export const createLiveConnection = (input: {
       const callbacks = presence.get(key) ?? new Set();
       callbacks.add(callback);
       presence.set(key, callbacks);
-      callback(false);
+      callback(readerState.get(key) ?? false);
       const release = retain(`follow:${key}`, { type: "follow", ...topic }, { type: "unfollow", ...topic });
-      // Request the current state even when another local follower already retains the subscription.
-      transport.send({ type: "follow", ...topic });
       return () => {
         callbacks.delete(callback);
         if (!callbacks.size) presence.delete(key);
+        if (!callbacks.size) readerState.delete(key);
         release();
       };
     },

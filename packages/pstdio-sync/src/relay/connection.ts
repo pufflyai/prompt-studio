@@ -125,8 +125,13 @@ export const createRelaySocket = (input: RelaySocketInput) => {
           if (message) wake();
         });
         let handshakeFailure: Promise<void> | undefined;
+        let opened = false;
+        connection.addEventListener("open", () => {
+          opened = true;
+        });
         connection.addEventListener("error", () => {
           connection.close();
+          if (opened) return;
           handshakeFailure = Promise.resolve(input.onHandshakeError?.(access, attemptSignal))
             .catch(() => {})
             .finally(closed.resolve);

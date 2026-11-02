@@ -49,7 +49,7 @@ test("committed writes in a synced project announce storage changes for that pro
   }
 });
 
-test("an unsupported relay live version reaches the existing account error display as an update request", async () => {
+test.each(["version", "quota"])("a refused live channel reaches the account error display: %s", async (refusal) => {
   const app = await createTestApp();
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -62,9 +62,13 @@ test("an unsupported relay live version reaches the existing account error displ
     },
     websocket: {
       open(socket) {
-        socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
+        socket.send(JSON.stringify({ type: "ready", protocolVersion: refusal === "version" ? 1 : 2 }));
       },
-      message() {},
+      message(socket, data) {
+        const message = JSON.parse(String(data));
+        if (message.requestId)
+          socket.send(JSON.stringify({ type: "control-result", requestId: message.requestId, retryAfterMs: null }));
+      },
     },
   });
   const relay = await startRelayRuntime({ deps: app.deps });
@@ -90,7 +94,9 @@ test("an unsupported relay live version reaches the existing account error displ
       if (!error) await Bun.sleep(1);
     }
     expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toContain("Update Prompt Studio or the relay");
+    expect((error as Error).message).toContain(
+      refusal === "version" ? "Update Prompt Studio or the relay" : "rate limits prevent Cloud subscriptions",
+    );
   } finally {
     await relay.close();
     await server.stop(true);

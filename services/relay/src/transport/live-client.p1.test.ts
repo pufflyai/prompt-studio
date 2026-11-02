@@ -1,8 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { createDocumentRelayConnection, createLiveConnection, type LiveConnection } from "pstdio-sync/relay";
-import { liveProtocolHeader, liveProtocolVersion } from "pstdio-sync-contracts";
+import { liveProtocolHeader, liveProtocolVersion, syncPath } from "pstdio-sync-contracts";
 import { defaultRelayLimits } from "../limits";
 import { createLiveHub } from "./live";
+import { createRateLimit } from "./rate-limit";
 import type { RelaySocket } from "./sockets";
 
 const cleanups: (() => Promise<unknown>)[] = [];
@@ -26,16 +27,18 @@ const barrier = async (channel: LiveConnection) => {
   release();
   stop();
 };
-const fixture = () => {
-  const hub = createLiveHub(defaultRelayLimits, () => true);
+const fixture = (limits = defaultRelayLimits) => {
+  const allow = createRateLimit(limits.requestsPerSecond, limits.requestBurst);
+  const hub = createLiveHub(limits, allow);
   let opens = 0;
+  const received: { type: string; topic?: string; requestId?: string }[] = [];
   const server = Bun.serve<{ handler: RelaySocket }>({
     hostname: "127.0.0.1",
     port: 0,
     fetch(request, server) {
       expect(request.headers.get(liveProtocolHeader)).toBe(String(liveProtocolVersion));
       const handler = hub.connect({
-        projectKey: "project",
+        projectKey: new URL(request.url).pathname,
         accountId: "owner",
         deviceId: request.headers.get("authorization")!,
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
@@ -49,6 +52,7 @@ const fixture = () => {
         socket.data.handler.open(socket);
       },
       message(socket, message) {
+        received.push(JSON.parse(String(message)));
         socket.data.handler.message(message);
       },
       close(socket) {
@@ -57,10 +61,10 @@ const fixture = () => {
     },
   });
   cleanups.push(() => server.stop(true));
-  const client = (deviceId: string, lifetime = 60_000) => {
+  const client = (deviceId: string, lifetime = 60_000, projectId = "project") => {
     const channel = createLiveConnection({
       origin: server.url.origin,
-      projectId: "project",
+      projectId,
       signal: new AbortController().signal,
       access: async () => ({ token: deviceId, expiresAt: new Date(Date.now() + lifetime).toISOString() }),
     });
@@ -70,7 +74,16 @@ const fixture = () => {
     });
     return channel;
   };
-  return { hub, client, opens: () => opens };
+  return {
+    hub: {
+      changed: (change: Parameters<typeof hub.changed>[0]) =>
+        hub.changed({ ...change, projectKey: syncPath({ kind: "live", projectId: change.projectKey }) }),
+    },
+    client,
+    received,
+    allow,
+    opens: () => opens,
+  };
 };
 
 test("many document owners share one socket and existing changes wake only the interested owner", async () => {
@@ -101,9 +114,11 @@ test("many document owners share one socket and existing changes wake only the i
   await until(() => counts.every((count) => count === 1));
   expect(f.opens()).toBe(1);
   await barrier(live);
+  await until(() => owners.every((owner) => !owner.status().busy));
+  const before = [...counts];
   f.hub.changed({ projectKey: "project", spaceOwner: null, documentId: topic.topic, lastSequence: 2, stateId: null });
-  await until(() => counts[0] === 2);
-  expect(counts[1]).toBe(1);
+  await until(() => counts[0] === before[0]! + 1);
+  expect(counts[1]).toBe(before[1]);
   expect(owners.every((owner) => owner.status().connected)).toBe(true);
 });
 
@@ -120,7 +135,7 @@ test("reader state and subscriptions restore after reconnect and short access re
   reader.retry();
   await until(() => states.slice(2).includes(false) && states.at(-1) === true);
   expect(Date.now() - before).toBeLessThan(1000);
-  await until(() => f.opens() >= 4);
+  await until(() => f.opens() >= 4 && states.at(-1) === true);
   expect(states.at(-1)).toBe(true);
   release();
   await until(() => states.at(-1) === false);
@@ -363,4 +378,93 @@ test("an older ready version also exposes the update requirement", async () => {
   });
   await live.done;
   expect(live.status().protocolUnsupported).toBe(true);
+});
+
+test("routing state restores across projects and reconnect after the device bucket is exhausted", async () => {
+  const limits = { ...defaultRelayLimits, requestsPerSecond: 200, requestBurst: 4 };
+  const f = fixture(limits);
+  const a = f.client("desktop");
+  const b = f.client("desktop", 60_000, "another-project");
+  // Document HTTP reads share this exact device bucket with both project sockets.
+  while (f.allow("Bearer desktop")) {}
+  const releases = Array.from({ length: 18 }, (_, index) => {
+    const topic = { spaceOwner: null, topic: `opaque_topic_${String(index).padStart(6, "0")}` };
+    const channel = index % 2 ? a : b;
+    const release = channel.subscribe(topic);
+    channel.follow(topic, () => {});
+    return release;
+  });
+  let replies = 0;
+  a.listen((event) => {
+    if (event.type === "subscribers") replies++;
+  });
+  b.listen((event) => {
+    if (event.type === "subscribers") replies++;
+  });
+  await until(() => replies === 18);
+  expect(f.opens()).toBe(2);
+  a.reconnect();
+  await until(() => replies === 27);
+  expect(f.opens()).toBe(3);
+  for (const release of releases) release();
+});
+
+test("a reader removed while throttled is not restored after its retry window", async () => {
+  const f = fixture({ ...defaultRelayLimits, requestsPerSecond: 20, requestBurst: 1 });
+  const a = f.client("desktop");
+  while (f.allow("Bearer desktop")) {}
+  const release = a.subscribe(topic);
+  await until(() => f.received.length === 1);
+  release();
+  await Bun.sleep(75);
+  expect(f.received).toHaveLength(1);
+  expect(f.opens()).toBe(1);
+});
+
+test("disabled live quotas report a permanent refusal instead of reconnecting", async () => {
+  const f = fixture({ ...defaultRelayLimits, requestsPerSecond: 0, requestBurst: 0 });
+  const a = f.client("desktop");
+  a.subscribe(topic);
+  await a.done;
+  expect(a.status().controlRefused).toBe(true);
+  expect(f.opens()).toBe(1);
+});
+
+test("an owner catches writes made between its HTTP read and delayed subscription admission", async () => {
+  const f = fixture({ ...defaultRelayLimits, requestsPerSecond: 100, requestBurst: 1 });
+  const live = f.client("desktop");
+  const controller = new AbortController();
+  let stored = 0;
+  let observed = -1;
+  let runs = 0;
+  const owner = createDocumentRelayConnection({
+    origin: "unused",
+    projectId: "project",
+    signal: controller.signal,
+    live,
+    access: async () => {
+      throw new Error("shared access");
+    },
+    synchronize: async (_, subscribe) => {
+      subscribe(null, topic.topic);
+      observed = stored;
+      if (++runs === 1) {
+        stored = 1;
+        f.hub.changed({
+          projectKey: "project",
+          spaceOwner: null,
+          documentId: topic.topic,
+          lastSequence: 1,
+          stateId: null,
+        });
+      }
+    },
+  });
+  cleanups.push(async () => {
+    controller.abort();
+    await owner.done;
+  });
+  await until(() => observed === 1);
+  expect(runs).toBe(2);
+  expect(f.opens()).toBe(1);
 });

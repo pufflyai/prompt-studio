@@ -44,6 +44,8 @@ export const createPeerLive = () => {
         if (message.type === "discover") socket.data.discovery.add(message.spaceOwner);
         if (message.type === "undiscover") socket.data.discovery.delete(message.spaceOwner);
         if ("topic" in message) topicMessage(socket, message);
+        if ("requestId" in message && message.requestId)
+          socket.send(JSON.stringify({ type: "control-result", requestId: message.requestId, retryAfterMs: 0 }));
       },
       close(socket: Bun.ServerWebSocket<PeerLiveData>) {
         sockets.delete(socket);

@@ -99,8 +99,17 @@ A slow socket (`send` returns zero or less) closes with 1013. Reconnect and read
 Malformed messages and unauthorized private spaces close with 1008. Oversized messages close
 with 1009. Rate or routing-state limits close with 1013. Operator defaults are 64 KiB decoded
 payload, 4096 combined topic subscriptions/followers/discovery/registrations, and 128 active calls
-per connection. Existing per-device rate limits also apply to control messages. Restore bounded
-subscriptions within that rate. No per-topic polling or timers run on an idle channel.
+per connection. HTTP requests and live messages share the authenticated device's rate bucket across
+projects. Retained routing operations carry a `requestId`; the relay answers with `control-result`
+with that ID and `retryAfterMs`: zero when applied, a positive delay when throttled, or null when
+operator limits disable live work. A throttled operation is not applied. Sending another routing
+operation before its retry window closes the socket with 1013.
+
+The client reconciles desired routing state one acknowledged operation at a time, removing retired
+state before additions. On throttle it waits, then derives an operation from current desired state.
+It retains no live payload or call for retry. Disconnect clears applied state and pending responses;
+ready replays current desired state. A permanent refusal reaches the existing account error display.
+No per-topic polling or timers run on an idle channel.
 
 Routing runs inside one relay process. Several processes will require a forwarding layer while
 preserving these project, space and device boundaries.

@@ -165,6 +165,10 @@ export const startRelayRuntime = async (input: {
         throw new AccountRequestError(
           "Update Prompt Studio or the relay to continue Cloud sync: the live channel version is unsupported.",
         );
+      if (live.get(workbenchId)?.status().controlRefused)
+        throw new AccountRequestError(
+          "The relay's rate limits prevent Cloud subscriptions. Ask its operator to enable live requests, then reconnect Cloud.",
+        );
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
         coreDocuments.get(workbenchId),

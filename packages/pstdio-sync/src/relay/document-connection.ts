@@ -13,10 +13,14 @@ export const createDocumentRelayConnection = (input: {
 }) => {
   const live = input.live ?? createLiveConnection(input);
   const topics = new Map<string, () => void>();
+  const awaiting = new Set<string>();
   const subscribe: SubscribeDocument = (spaceOwner, documentId) => {
     if (input.signal.aborted) return;
     const key = JSON.stringify([spaceOwner, documentId]);
-    if (!topics.has(key)) topics.set(key, live.subscribe({ spaceOwner, topic: documentId }));
+    if (!topics.has(key)) {
+      awaiting.add(key);
+      topics.set(key, live.subscribe({ spaceOwner, topic: documentId }));
+    }
   };
   let attempt = new AbortController();
   let attemptSignal = AbortSignal.any([attempt.signal, input.signal]);
@@ -69,10 +73,17 @@ export const createDocumentRelayConnection = (input: {
       input.onStatusChange?.();
     }
     if (event.type === "ready") {
+      for (const key of topics.keys()) awaiting.add(key);
       resetAttempt();
       input.onStatusChange?.();
       wake();
     }
+    if (
+      event.type === "subscribed" &&
+      awaiting.delete(JSON.stringify([event.spaceOwner, event.topic])) &&
+      !awaiting.size
+    )
+      wake();
     // Discovery can introduce a document whose first content is a latest state (sequence zero).
     if (
       event.type === "discovered" ||
@@ -91,6 +102,7 @@ export const createDocumentRelayConnection = (input: {
     releaseDiscovery();
     for (const release of topics.values()) release();
     topics.clear();
+    awaiting.clear();
     if (!input.live) live.close();
     void Promise.resolve(running).then(() => done.resolve());
   };

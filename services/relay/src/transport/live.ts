@@ -7,6 +7,7 @@ import {
 } from "pstdio-sync-contracts";
 import type { RelayLimits } from "../limits";
 import type { DocumentChange } from "../storage/documents";
+import { createLiveAdmission } from "./live-admission";
 import { createLiveCalls, liveKey } from "./live-calls";
 import type { RateLimit } from "./rate-limit";
 
@@ -105,6 +106,7 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
           if (!stopped && socket && socket.send(JSON.stringify(message)) <= 0) close(1013);
         },
       };
+      const admit = createLiveAdmission({ limits, allow, deviceId: identity.deviceId, send: connection.send, close });
       const expiry = new Date(identity.expiresAt).getTime();
       const scheduleExpiry = () => {
         if (stopped) return;
@@ -172,8 +174,10 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
           if (Date.now() >= expiry) return close(1008);
           const message = parse(data, limits, identity);
           if (typeof message === "number") return close(message);
-          if (!allow(identity.deviceId)) return close(1013);
+          const requestId = "requestId" in message ? message.requestId : undefined;
+          if (!admit(message)) return;
           dispatch(message);
+          if (requestId && !stopped) connection.send({ type: "control-result", requestId, retryAfterMs: 0 });
         },
         close,
       };
