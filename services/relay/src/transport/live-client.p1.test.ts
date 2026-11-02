@@ -27,8 +27,8 @@ const barrier = async (channel: LiveConnection) => {
   release();
   stop();
 };
-const fixture = (limits = defaultRelayLimits) => {
-  const allow = createRateLimit(limits.requestsPerSecond, limits.requestBurst);
+const fixture = (limits = defaultRelayLimits, now = () => Date.now()) => {
+  const allow = createRateLimit(limits.requestsPerSecond, limits.requestBurst, now);
   const hub = createLiveHub(limits, allow);
   let opens = 0;
   const received: { type: string; topic?: string; requestId?: string }[] = [];
@@ -410,7 +410,7 @@ test("routing state restores across projects and reconnect after the device buck
 });
 
 test("a reader removed while throttled is not restored after its retry window", async () => {
-  const f = fixture({ ...defaultRelayLimits, requestsPerSecond: 20, requestBurst: 1 });
+  const f = fixture({ ...defaultRelayLimits, requestsPerSecond: 20, requestBurst: 1 }, () => 0);
   const a = f.client("desktop");
   while (f.allow("Bearer desktop")) {}
   const release = a.subscribe(topic);
