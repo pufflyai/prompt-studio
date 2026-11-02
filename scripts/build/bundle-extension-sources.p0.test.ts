@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { unpackExtension } from "pstdio-extensions/distribution";
 import { bundleExtensionSources } from "./bundle-extension-sources";
+import { extensionIconAssetName } from "pstdio-extensions";
 
 test.each(["1.0.0", "0.46.0-nightly.20261028030226"])("bundles host catalog sources at %s with reproducible content and locked dependencies", async (version) => {
   const root = mkdtempSync(join(tmpdir(), "bundle-extension-sources-"));
@@ -12,12 +13,13 @@ test.each(["1.0.0", "0.46.0-nightly.20261028030226"])("bundles host catalog sour
     write("package.json", JSON.stringify({ repository: { url: "https://example.com/repository.git" } }));
     write("packages/pstdio/package.json", JSON.stringify({ version }));
     write("packages/pstdio-api/files/extension-catalog.json", JSON.stringify({ extensions: [
-      { installName: "demo", origin: { url: "https://example.com/repository", path: "extensions/demo", ref: "{hostRelease}" } },
+      { installName: "demo", icon: "./assets/logo.svg", origin: { url: "https://example.com/repository", path: "extensions/demo", ref: "{hostRelease}" } },
       { installName: "external", origin: { url: "https://example.com/third-party", path: "not-shipped", ref: "main" } },
       { installName: "download", bundleSource: false, origin: { url: "https://example.com/repository", path: "not-shipped", ref: "{hostRelease}" } },
     ] }));
     write("extensions/demo/package.json", JSON.stringify({ publisher: "test", name: "demo", version, main: "extension.ts", files: ["extension.ts"], engines: { pstdio: "^0.3.0" } }));
     write("extensions/demo/extension.ts", "export default {};");
+    write("extensions/demo/assets/logo.svg", '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h1v1z"/></svg>');
     write("extensions/demo/bun.lock", "locked dependency inputs");
     for (const args of [["init", "-q"], ["add", "."], ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "Source"]]) {
       const git = Bun.spawnSync(["git", ...args], { cwd: root });
@@ -29,6 +31,9 @@ test.each(["1.0.0", "0.46.0-nightly.20261028030226"])("bundles host catalog sour
     const second = await bundleExtensionSources(root);
     expect(first).toEqual(second);
     expect(readFileSync(archive)).toEqual(bytes);
+    const name = extensionIconAssetName({ installName: "demo", icon: "./assets/logo.svg", origin: { url: "https://example.com/repository", path: "extensions/demo", ref: "{hostRelease}" } });
+    expect(readFileSync(join(root, "packages/pstdio/files/extension-sources/icons", name), "utf8"))
+      .toBe(readFileSync(join(root, "extensions/demo/assets/logo.svg"), "utf8"));
     expect(first.sources).toHaveLength(1);
     expect(first.sources[0]?.version).toBe(version);
     const target = join(root, "installed");

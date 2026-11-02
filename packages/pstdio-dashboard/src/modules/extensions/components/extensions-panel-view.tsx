@@ -64,8 +64,8 @@ const matchesSearch = (extension: ProjectExtensionInstance, search: string) => {
 const matchesMarketplaceSearch = (extension: MarketplaceExtension, search: string) => {
   const query = search.trim().toLowerCase();
   if (!query) return true;
-  return [extension.displayName, extension.installName, extension.description].some((value) =>
-    value.toLowerCase().includes(query),
+  return [extension.displayName, extension.installName, extension.extensionId ?? "", extension.description].some(
+    (value) => value.toLowerCase().includes(query),
   );
 };
 

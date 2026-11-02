@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   EXTENSION_API_VERSION,
   parseExtensionApiDeclaration,
@@ -18,6 +18,7 @@ export interface PackageManifest {
   version: string;
   displayName?: string;
   description?: string;
+  icon?: string;
   publisher: string;
   main: string;
   enginesPstdio: string;
@@ -36,6 +37,8 @@ export type ReadPackageManifestResult = {
 
 const isStringRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const optionalString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
 
 const requireField = (
   diagnostics: ExtensionDiagnostic[],
@@ -126,70 +129,6 @@ const validatePstdioMetadata = (
     ...(scope ? { scope } : {}),
     ...(projectFiles ? { projectFiles: { tracked: projectFiles.tracked as boolean } } : {}),
   };
-};
-
-const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, packageDir: string, main: string) => {
-  if (isAbsolute(main)) {
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_manifest_invalid_value",
-        message: `main "${main}" must be a relative path`,
-        sourcePath: packagePath,
-      }),
-    );
-    return null;
-  }
-
-  const resolved = resolve(packageDir, main);
-  const rel = relative(packageDir, resolved);
-  if (rel.startsWith("..") || isAbsolute(rel)) {
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_manifest_invalid_value",
-        message: `main "${main}" resolves outside the package directory`,
-        sourcePath: packagePath,
-      }),
-    );
-    return null;
-  }
-
-  if (!existsSync(resolved)) {
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_entry_not_found",
-        message: `main "${main}" resolves to ${resolved} which does not exist`,
-        sourcePath: packagePath,
-      }),
-    );
-    return null;
-  }
-
-  const realPackageDir = realpathSync(packageDir);
-  const realResolved = realpathSync(resolved);
-  const realRel = relative(realPackageDir, realResolved);
-  if (realRel.startsWith("..") || isAbsolute(realRel)) {
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_manifest_invalid_value",
-        message: `main "${main}" resolves outside the package directory`,
-        sourcePath: packagePath,
-      }),
-    );
-    return null;
-  }
-
-  if (!statSync(resolved).isFile()) {
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_manifest_invalid_value",
-        message: `main "${main}" must point to a file`,
-        sourcePath: packagePath,
-      }),
-    );
-    return null;
-  }
-
-  return resolved;
 };
 
 /**
@@ -303,17 +242,30 @@ export const readPackageManifestMetadata = (packageDir: string): ReadPackageMani
 
   if (!ok) return { manifest: null, entryPath: null, diagnostics };
 
+  let icon = optionalString(raw.icon);
+  try {
+    readExtensionIcon(packageDir, icon);
+  } catch (error) {
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_manifest_invalid_value",
+        severity: "warning",
+        message: `icon is unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        sourcePath: packagePath,
+      }),
+    );
+    icon = undefined;
+  }
+
   const entryPath = resolveEntry(diagnostics, packagePath, packageDir, main as string);
   if (!entryPath) return { manifest: null, entryPath: null, diagnostics };
-
-  const displayName = typeof raw.displayName === "string" && raw.displayName.length > 0 ? raw.displayName : undefined;
-  const description = typeof raw.description === "string" && raw.description.length > 0 ? raw.description : undefined;
 
   const manifest: PackageManifest = {
     name: name as string,
     version: version as string,
-    displayName,
-    description,
+    displayName: optionalString(raw.displayName),
+    description: optionalString(raw.description),
+    icon,
     publisher: publisher as string,
     main: main as string,
     enginesPstdio: enginesPstdio as string,
@@ -347,3 +299,6 @@ export const readPackageManifest = (
     ],
   };
 };
+
+import { readExtensionIcon } from "./extension-icon";
+import { resolveEntry } from "./package-entry";
