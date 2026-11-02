@@ -109,3 +109,40 @@ test("drag the playhead from track space and along its full height", async ({ pa
   await expect(preview.getByRole("button", { name: "Opacity keyframe 0:00:00", exact: true })).toBeVisible();
   await expect(preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true })).toBeVisible();
 });
+
+// Critical: the ruler, keys, markers and drag hit area must indicate the same moment.
+test("ruler and marker positions align with the full-height playhead", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Animation",
+  );
+  const ruler = preview.getByRole("slider", { name: "Timeline playhead", exact: true });
+  const tracks = preview.getByRole("group", { name: "Animation tracks", exact: true });
+  const bodyLine = tracks.locator('[aria-hidden="true"] > div');
+  const rulerLine = ruler.locator(":scope > div").last();
+  const marker = preview.getByRole("button", { name: "Settled", exact: true });
+  await marker.click();
+  await expect(ruler).toHaveAttribute("aria-valuenow", "1.5");
+  const geometry = async () => {
+    const body = (await bodyLine.boundingBox())!;
+    const line = (await rulerLine.boundingBox())!;
+    const mark = (await marker.boundingBox())!;
+    return { body, line, mark };
+  };
+  const positions = await geometry();
+  expect(Math.abs(positions.body.x - (positions.mark.x + positions.mark.width / 2))).toBeLessThanOrEqual(1);
+  expect(Math.abs(positions.body.x - positions.line.x)).toBeLessThanOrEqual(1);
+  const authored = preview.getByRole("button", { name: "Top keyframe 0:00:06", exact: true });
+  await authored.click();
+  await expect(ruler).toHaveAttribute("aria-valuenow", "0.25");
+  const key = (await authored.boundingBox())!;
+  const keyed = await geometry();
+  expect(Math.abs(keyed.body.x - (key.x + key.width / 2))).toBeLessThanOrEqual(1);
+  expect(Math.abs(keyed.body.x - keyed.line.x)).toBeLessThanOrEqual(1);
+  await ruler.press("Home");
+  const start = await geometry();
+  expect(Math.abs(start.body.x - start.line.x)).toBeLessThanOrEqual(1);
+  await ruler.press("End");
+  const end = await geometry();
+  expect(Math.abs(end.body.x - end.line.x)).toBeLessThanOrEqual(1);
+});

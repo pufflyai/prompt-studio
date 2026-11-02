@@ -109,6 +109,9 @@ Group expansion is temporary.
 
 Arrow keys on the ruler seek by one frame; Shift seeks ten; Home/End seek the bounds.
 Drag the playhead at any point along its height, or drag empty track space to scrub.
+Selecting an authored key or marker preserves its exact time, including between-frame
+positions, so its diamond aligns with the playhead. Dragging and keyboard timing edits
+still snap to the frame grid.
 Arrow keys on a focused key move it, and Delete removes it then focuses its track.
 Pointer dragging uses the same snapping/collision rules. The timecode uses the
 rounded nominal frame rate (non-drop-frame); timeline positions use seconds.

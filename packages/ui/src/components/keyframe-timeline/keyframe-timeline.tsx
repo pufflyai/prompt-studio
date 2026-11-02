@@ -57,8 +57,10 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
     select(null);
     labels.current.get(owner.id)?.focus({ preventScroll: true });
   };
-  const seek = (time: number) => props.onTimeChange(snapTime(time, duration, fps));
-  const scrub = useTimelineScrub({ ruler, duration, onSeek: seek });
+  const seek = (time: number) => props.onTimeChange(Math.max(0, Math.min(duration, time)));
+  // Timing input snaps to frames; selecting authored keys and markers keeps their original time.
+  const seekFrame = (time: number) => seek(snapTime(time, duration, fps));
+  const scrub = useTimelineScrub({ ruler, duration, onSeek: seekFrame });
   const groups = [...new Set(tracks.map((entry) => entry.group ?? ""))];
   const step = 10 ** Math.floor(Math.log10(Math.max(duration / (width / metrics.pixelsPerSecond), 1 / fps)));
   const ticks = Array.from({ length: Math.floor(duration / step) + 1 }, (_, index) => index * step);
@@ -166,11 +168,11 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
                 const change = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
                 if (change) {
                   event.preventDefault();
-                  seek(currentTime + (change * (event.shiftKey ? 10 : 1)) / fps);
+                  seekFrame(currentTime + (change * (event.shiftKey ? 10 : 1)) / fps);
                 }
                 if (event.key === "Home" || event.key === "End") {
                   event.preventDefault();
-                  seek(event.key === "Home" ? 0 : duration);
+                  seekFrame(event.key === "Home" ? 0 : duration);
                 }
               }}
             >
