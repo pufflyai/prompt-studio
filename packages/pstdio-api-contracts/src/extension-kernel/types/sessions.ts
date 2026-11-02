@@ -101,8 +101,8 @@ export interface ExtensionSessionQuery {
   agent?: string;
   workspaceId?: string;
   anchor?: Pick<ResourceRef, "type" | "id" | "extensionId" | "projectId">;
-  /** Default created. Both orders use id descending to break ties. */
-  orderBy?: "created" | "lastActivity";
+  /** Default created. All orders use id descending to break ties. */
+  orderBy?: "created" | "lastActivity" | "updated";
   /** Inclusive ISO timestamp bounds. */
   createdFrom?: string;
   createdTo?: string;

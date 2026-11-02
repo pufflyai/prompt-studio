@@ -26,7 +26,7 @@ const querySchema = z
     anchorId: z.string().optional(),
     anchorExtensionId: z.string().optional(),
     anchorProjectId: z.string().optional(),
-    orderBy: z.enum(["created", "lastActivity"]).optional(),
+    orderBy: z.enum(["created", "lastActivity", "updated"]).optional(),
   })
   .strict()
   .refine(

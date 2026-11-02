@@ -118,6 +118,9 @@ test("disables and enables an extension automation", async ({ page, request }) =
   await enableAutomationReads.wait();
   await enableAutomationReads.release();
 
+  // Settings persists with page layout; close it before testing a fresh reopen.
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("extensions-panel")).not.toBeVisible();
   await openExtensions(page, project.id);
   await expect(installedRow.getByTestId("extension-automation-status")).toContainText("1/1");
 });

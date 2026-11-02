@@ -42,7 +42,9 @@ export const createRootLevelLocationTracker = (input: RootLevelLocationTrackerIn
     target() {
       if (!saved) return input.start();
       try {
-        return input.normalize(saved);
+        const resolved = input.normalize(saved);
+        const root = resolveRootLevelLocation({ ...input.levels, location: resolved.location, pages: input.pages() });
+        return root ? input.normalize(root) : input.start();
       } catch {
         return input.start();
       }
