@@ -96,3 +96,39 @@ test("timeline tickets with pending input keep the planner visible while opening
     await request.delete(`${uiOrigin}/v1/projects/${id}`);
   }
 });
+
+test("selecting a gate preview keeps its gate review controls accessible", async ({ page, request }) => {
+  // Critical risk: preview selection must not hide the only way to review a gate.
+  const created = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Timeline gate selection" }),
+  });
+  expect(created.ok()).toBe(true);
+  const { id } = await created.json();
+  try {
+    const configured = await request.patch(`${uiOrigin}/v1/projects/${id}`, {
+      data: { default_agent_id: "pstdio.workbench-fixture.harness.fake" },
+    });
+    expect(configured.ok()).toBe(true);
+    const gate = await executePlannerCommand<{ ticket: { id: string } }>(
+      request,
+      uiOrigin,
+      id,
+      "timeline.gate.create",
+      { content: "# Review dependency gate" },
+    );
+    await page.addInitScript(() => {
+      if (window === window.top) localStorage.setItem("onboarding-complete", "true");
+    });
+    const timelinePath = `/projects/${id}/extensions/pstdio.pstdio-planner/ticket-timeline`;
+    await page.goto(timelinePath);
+    const timeline = page.frameLocator('iframe[title="Project Timeline"]');
+    await timeline.locator(`[data-ticket="${gate.ticket.id}"]`).click();
+    await expect(
+      page.locator('[data-workbench-panel="side"]').getByRole("tab", { name: /Review dependency gate/ }),
+    ).toBeVisible();
+    await expect(timeline.getByRole("button", { name: "Review gate", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(timelinePath);
+  } finally {
+    await request.delete(`${uiOrigin}/v1/projects/${id}`);
+  }
+});

@@ -22,7 +22,7 @@ export function usePlanActions({
   plan: Plan | undefined;
 } & Pick<ReturnType<typeof useViewSections>, "sections" | "toggle"> &
   Pick<PlanViewProps, "tracks">) {
-  // Preview highlighting must not also open the review and creation flows' inline details.
+  // Ordinary previews highlight the graph without also opening inline details.
   const [selection, setSelection] = useState<{ id: string; presentation: "preview" | "details" }>();
   const selectedId = selection?.id;
   const setSelectedId = (id?: string) => setSelection(id ? { id, presentation: "details" } : undefined);
@@ -74,7 +74,7 @@ export function usePlanActions({
   };
   return {
     viewProps,
-    selected: selection?.presentation === "details" ? selected : undefined,
+    selected: selected?.gate || selection?.presentation === "details" ? selected : undefined,
     open,
     review,
     editor,
