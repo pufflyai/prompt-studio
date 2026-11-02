@@ -3,25 +3,6 @@ import { expect, type Page } from "@playwright/test";
 export const homeFrame = (page: Page) => page.frameLocator('iframe[title="Home"]');
 export const homePage = (page: Page) => homeFrame(page).getByTestId("start-page");
 
-export const observeHomeLoading = async (page: Page) => {
-  await page.addInitScript(() => {
-    const observations = { defaultPlaceholderShown: false };
-    Object.assign(window, { homeLoadingObservations: observations });
-    new MutationObserver(() => {
-      if (document.querySelector('[data-workbench-panel="main"] [aria-label="Available tabs"]')) {
-        observations.defaultPlaceholderShown = true;
-      }
-    }).observe(document, { subtree: true, childList: true });
-  });
-};
-
-export const expectNoDefaultHomePlaceholder = async (page: Page) => {
-  const observations = await page.evaluate(
-    () => Reflect.get(window, "homeLoadingObservations") as { defaultPlaceholderShown: boolean },
-  );
-  expect(observations.defaultPlaceholderShown).toBe(false);
-};
-
 export const verifyPageHeaders = async (page: Page) => {
   const header = page.getByLabel("Main panel header", { exact: true });
   await expect(header).toHaveCount(0);
