@@ -201,8 +201,10 @@ test.describe
       await dialog.getByRole("button", { name: "Delete", exact: true }).click();
       expect((await deleteResponse).status()).toBe(204);
 
-      await expect(page.getByTestId("extensions-panel")).toBeVisible();
-      await expect(page.getByTestId("extension-entry").filter({ hasText: "Local Example" })).toHaveCount(0);
+      const extensions = page.getByTestId("extensions-panel").filter({ visible: true });
+      await expect(extensions).toHaveCount(1);
+      await expect(extensions).toBeVisible();
+      await expect(extensions.getByTestId("extension-entry").filter({ hasText: "Local Example" })).toHaveCount(0);
       expect(existsSync(join(repoPath, ".pstdio", "extensions", localExtensionName))).toBe(false);
       await heldReads.wait();
       await heldReads.release();

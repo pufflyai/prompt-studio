@@ -17,6 +17,8 @@ New projects already have the agent harnesses, the base themes, and Prompt Studi
 
 ## Install from the dashboard
 
+In 0.43.x, open **Settings → Extensions**. The footer entry and direct shortcut below apply to builds with the dedicated Extensions page.
+
 1. Choose **Browse extensions** on the project's Start page. You can also choose **Extensions** in the nav panel footer or press Alt+Shift+O (Option+Shift+O on macOS).
 2. Find the extension under **Available**.
 3. Choose **Install**.
