@@ -1,3 +1,4 @@
+// packaged-page-params-during-mount.p2.test.ts covers host props changed during async guest initialization.
 // packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 // packaged-collection-view-order-smoke.p2.test.ts keeps Save view clickable beneath explanatory tooltips.
 // packaged-extension-icons.p1.spec.ts covers public SVG assets and light/dark image colors.
@@ -14,6 +15,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
 // packaged-native-settings.p2.spec.ts checks the Extensions nav page, direct routes, reload, native settings and scrolling.
 // packaged-marketplace-search.p1.spec.ts finds downloads by their visible full ID.
+// Git-free installation preserves bundled extension IDs, names and icon metadata.
 // packaged-extension-settings-smoke.p2.test.ts checks device settings across projects and restarts.
 // packaged-independent-extensions-smoke.p2.test.ts checks stable and nightly extension package versions.
 // Native actions retain failed outcomes for the UI entry point to report.
