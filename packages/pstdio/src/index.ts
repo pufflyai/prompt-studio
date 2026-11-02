@@ -13,7 +13,14 @@ if (rawArgs.length === 1 && (rawArgs[0] === "--version" || rawArgs[0] === "-v"))
   process.exit(0);
 }
 
-// Bind before importing commands: their defaults capture `console.log` when they load.
-const { exit } = bindCliOutput();
-const { runCli } = await import("./cli-main");
-await runCli(rawArgs, exit);
+if (rawArgs.length === 1 && rawArgs[0] === "performance-observer") {
+  // The desktop's private sampler must answer its first probe without loading
+  // commands, the API, and embedded extension assets alongside the starting app.
+  const { runProcessObserver } = await import("./features/performance/process-observer");
+  await runProcessObserver();
+} else {
+  // Bind before importing commands: their defaults capture `console.log` when they load.
+  const { exit } = bindCliOutput();
+  const { runCli } = await import("./cli-main");
+  await runCli(rawArgs, exit);
+}

@@ -6,7 +6,7 @@ Status: Accepted for the host and SDK stage of PS-490.
 
 ## Context
 
-Resource links are shared plumbing under [MISSION.md](../../MISSION.md). Extensions own their content, but workspace and session records previously owned separate anchor arrays. Other resource pairs had no shared store or reverse query.
+Resource links are shared plumbing under [the mission](../guidance/0001-mission.md). Extensions own their content, but workspace and session records previously owned separate anchor arrays. Other resource pairs had no shared store or reverse query.
 
 ## Decision
 

@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import type { BenchmarkResultFile } from "./result-file";
-import { readResults, readRuns, syncAll, writeRuns } from "./store";
+import { readReleases, readResults, readRuns, readSyncedAt, syncAll, writeRuns } from "./store";
 
 const result = (sha: string, suite = "storage"): BenchmarkResultFile => ({
   format: 1,
@@ -16,61 +16,121 @@ const result = (sha: string, suite = "storage"): BenchmarkResultFile => ({
   metrics: [{ suite, metric: `${suite}-metric`, label: suite, unit: "ms", values: [9, 8.8, 8.9] }],
 });
 
+// gh api --paginate --jq prints one JSON value per line; the mocks answer as GitHub would and apply the jq.
+const paged = (args: string[], value: unknown) => {
+  if (!args.includes("--paginate")) return value;
+  type Refs = { data?: { repository: { refs: { nodes: { name: string; target: { oid: string } }[] } } } };
+  const refs = (value as Refs).data?.repository.refs.nodes.map((node) => ({ name: node.name, sha: node.target.oid }));
+  const list = Array.isArray(value) ? value : (refs ?? (value as { artifacts: unknown[] }).artifacts);
+  return list.map((entry) => JSON.stringify(entry)).join("\n");
+};
+const withoutPaging = (args: string[]) =>
+  args.filter((arg, index) => arg !== "--paginate" && arg !== "--jq" && args[index - 1] !== "--jq");
+
+// Run 8 is still running its runtime job; every other run has finished.
+const runView = (runId: string) => {
+  const running = runId === "8";
+  return {
+    status: running ? "in_progress" : "completed",
+    conclusion: running ? null : "success",
+    jobs: [
+      {
+        name: "linux-x64 · storage",
+        status: "completed",
+        conclusion: "success",
+        steps: [{ name: "Run benchmarks", status: "completed", conclusion: "success" }],
+      },
+      {
+        name: "linux-x64 · runtime",
+        status: running ? "in_progress" : "completed",
+        conclusion: running ? null : "success",
+        steps: [{ name: "Run benchmarks", status: running ? "in_progress" : "completed", conclusion: null }],
+      },
+    ],
+  };
+};
+
 // gh is the boundary to GitHub, so the test answers its commands the way GitHub does.
+// Fixed GitHub answers, keyed by gh subcommand and path.
+const ANSWERS: Record<string, unknown> = {
+  "api repos/{owner}/{repo}/releases": [
+    {
+      tag_name: "pstdio@0.46.0",
+      published_at: "2026-10-22",
+      draft: false,
+      assets: [{ id: 1, name: "benchmarks-linux-x64.json" }],
+    },
+    {
+      tag_name: "pstdio@0.46.1-nightly.1",
+      published_at: "2026-10-23",
+      draft: false,
+      assets: [{ id: 2, name: "benchmarks-linux-x64.json" }],
+    },
+    {
+      tag_name: "pstdio@0.47.0",
+      published_at: null,
+      draft: true,
+      assets: [{ id: 3, name: "benchmarks-linux-x64.json" }],
+    },
+  ],
+  "api repos/{owner}/{repo}/releases/assets/1": result("release-sha"),
+  "api graphql": {
+    data: { repository: { refs: { nodes: [{ name: "pstdio@0.46.0", target: { oid: "release-sha" } }] } } },
+  },
+  "run list": [
+    {
+      databaseId: 7,
+      displayTitle: "Benchmarks a,b on linux-x64",
+      status: "completed",
+      conclusion: "success",
+      url: "https://github.com/runs/7",
+      createdAt: "2026-10-22T09:00:00Z",
+      updatedAt: "2026-10-22T10:00:00Z",
+    },
+    {
+      databaseId: 8,
+      displayTitle: "Benchmarks c on linux-x64,win32-x64",
+      status: "in_progress",
+      conclusion: null,
+      url: "https://github.com/runs/8",
+      createdAt: "2026-10-22T11:00:00Z",
+      updatedAt: "2026-10-22T11:05:00Z",
+    },
+  ],
+  "api repos/{owner}/{repo}/actions/runs/7/artifacts": {
+    artifacts: [
+      { id: 70, name: "benchmark-results-linux-x64-storage", expired: false },
+      { id: 71, name: "benchmark-results-linux-x64-runtime", expired: false },
+    ],
+  },
+};
+
 const github = () => {
   const calls: string[][] = [];
   const answer = async (args: string[]) => {
     const [command, path] = args;
-    if (command === "api" && path === "repos/{owner}/{repo}/releases?per_page=100")
-      return [
-        {
-          tag_name: "pstdio@0.46.0",
-          published_at: "2026-10-22",
-          draft: false,
-          assets: [{ id: 1, name: "benchmarks-linux-x64.json" }],
-        },
-        {
-          tag_name: "pstdio@0.46.1-nightly.1",
-          published_at: "2026-10-23",
-          draft: false,
-          assets: [{ id: 2, name: "benchmarks-linux-x64.json" }],
-        },
-        {
-          tag_name: "pstdio@0.47.0",
-          published_at: null,
-          draft: true,
-          assets: [{ id: 3, name: "benchmarks-linux-x64.json" }],
-        },
-      ];
-    if (command === "api" && path === "repos/{owner}/{repo}/releases/assets/1") return result("release-sha");
-    if (command === "run" && path === "list")
-      return [
-        {
-          databaseId: 7,
-          displayTitle: "Benchmarks a,b",
-          status: "completed",
-          conclusion: "success",
-          url: "https://github.com/runs/7",
-          createdAt: "2026-10-22T09:00:00Z",
-          updatedAt: "2026-10-22T10:00:00Z",
-        },
-        {
-          databaseId: 8,
-          displayTitle: "Benchmarks c",
-          status: "in_progress",
-          conclusion: null,
-          url: "https://github.com/runs/8",
-          createdAt: "2026-10-22T11:00:00Z",
-          updatedAt: "2026-10-22T11:05:00Z",
-        },
-      ];
-    if (command === "api" && path === "repos/{owner}/{repo}/actions/runs/7/artifacts")
+    const fixed = ANSWERS[`${command} ${path}`];
+    if (fixed !== undefined) return fixed;
+    if (command === "run" && path === "view") return runView(args[2]);
+    if (command === "api" && path === "repos/{owner}/{repo}/actions/runs/9/artifacts")
       return {
         artifacts: [
-          { id: 70, name: "benchmark-results-linux-x64-storage", expired: false },
-          { id: 71, name: "benchmark-results-linux-x64-runtime", expired: false },
+          { id: 90, name: "benchmark-results-linux-x64-storage", expired: false },
+          { id: 91, name: "benchmark-results-win32-x64-storage", expired: false },
         ],
       };
+    if (command === "run" && path === "download" && args[2] === "9") {
+      // A release run measures the tag's SHA; Windows runners used to append a CR to the ref.
+      const dir = args[args.indexOf("--dir") + 1];
+      const platform = args[args.indexOf("--name") + 1].includes("win32") ? "win32-x64" : "linux-x64";
+      const file = {
+        ...result("tag-sha"),
+        platform,
+        commit: { sha: "tag-sha", ref: platform === "win32-x64" ? "tag-sha\r" : "tag-sha" },
+      };
+      await writeFile(join(dir, `tag-sha-${platform}.json`), JSON.stringify(file));
+      return "";
+    }
     if (command === "run" && path === "download") {
       const dir = args[args.indexOf("--dir") + 1];
       const suite = args[args.indexOf("--name") + 1].split("-").at(-1);
@@ -83,7 +143,7 @@ const github = () => {
   const run = async (input: { command: string[] }) => {
     const args = input.command.slice(1);
     calls.push(args);
-    const value = await answer(args);
+    const value = paged(args, await answer(withoutPaging(args).map((arg) => arg.replace("?per_page=100", ""))));
     return { exitCode: 0, stdout: typeof value === "string" ? value : JSON.stringify(value), stderr: "" };
   };
   return { calls, run };
@@ -123,6 +183,22 @@ describe("benchmark result cache", () => {
     ]);
   });
 
+  test("records what each run measures, its suites' outcomes, releases, and the sync time", async () => {
+    const { ctx } = setup();
+    await syncAll(ctx);
+    const [running, done] = await readRuns(ctx);
+    expect(running).toMatchObject({
+      commits: [{ ref: "c" }],
+      platforms: ["linux-x64", "win32-x64"],
+      detail: "Storage finished\nRuntime running",
+    });
+    expect(done.commits).toEqual([{ ref: "a" }, { ref: "b" }]);
+    expect(await readReleases(ctx)).toEqual([
+      { version: "0.46.0", publishedAt: "2026-10-22", sha: "release-sha", platforms: ["linux-x64"] },
+    ]);
+    expect(await readSyncedAt(ctx)).toBeString();
+  });
+
   test("does not download cached results again", async () => {
     const { ctx, gh } = setup();
     await syncAll(ctx);
@@ -133,22 +209,103 @@ describe("benchmark result cache", () => {
     expect(gh.calls.filter((args) => args[1] === "repos/{owner}/{repo}/releases/assets/1")).toHaveLength(1);
   });
 
+  test("a run synced before artifact lists were paged fetches only the artifacts it missed", async () => {
+    const { ctx, gh } = setup();
+    await writeRuns(ctx, [
+      {
+        id: "7",
+        title: "Benchmarks a,b on linux-x64",
+        status: "succeeded",
+        commits: [{ ref: "a" }, { ref: "b" }],
+        platforms: ["linux-x64"],
+        url: "https://github.com/runs/7",
+        createdAt: "2026-10-22T09:00:00Z",
+        updatedAt: "2026-10-22T10:00:00Z",
+        synced: true,
+      },
+    ]);
+    await ctx.extensionFiles?.writeText(
+      "benchmarks/runs/7/benchmark-results-linux-x64-storage-base.json",
+      JSON.stringify(result("base")),
+    );
+    await syncAll(ctx);
+    const downloads = gh.calls.filter((args) => args[0] === "run" && args[1] === "download");
+    expect(downloads.map((args) => args[args.indexOf("--name") + 1])).toEqual(["benchmark-results-linux-x64-runtime"]);
+    expect((await readRuns(ctx)).find((run) => run.id === "7")?.complete).toBe(true);
+  });
+
+  test("a release run titled by its tag takes the one SHA its results measured", async () => {
+    const { ctx } = setup();
+    await writeRuns(ctx, [
+      {
+        id: "9",
+        title: "Benchmarks pstdio@0.46.0 on linux-x64,win32-x64",
+        status: "failed",
+        commits: [{ ref: "pstdio@0.46.0" }],
+        platforms: ["linux-x64", "win32-x64"],
+        url: "https://github.com/runs/9",
+        createdAt: "2026-11-01T02:42:00Z",
+        updatedAt: "2026-11-01T03:42:00Z",
+        synced: false,
+      },
+    ]);
+    await syncAll(ctx);
+    expect((await readRuns(ctx)).find((run) => run.id === "9")?.commits).toEqual([
+      { ref: "pstdio@0.46.0", sha: "tag-sha" },
+    ]);
+  });
+
+  test("a release run cached before SHAs were filled gets its SHA from the cache", async () => {
+    const { ctx, gh } = setup();
+    await writeRuns(ctx, [
+      {
+        id: "9",
+        title: "Benchmarks pstdio@0.46.0 on linux-x64",
+        status: "failed",
+        commits: [{ ref: "pstdio@0.46.0" }],
+        platforms: ["linux-x64"],
+        url: "https://github.com/runs/9",
+        createdAt: "2026-11-01T02:42:00Z",
+        updatedAt: "2026-11-01T03:42:00Z",
+        synced: true,
+        complete: true,
+      },
+    ]);
+    const cached = { ...result("tag-sha"), commit: { sha: "tag-sha", ref: "tag-sha" } };
+    await ctx.extensionFiles?.writeText(
+      "benchmarks/runs/9/benchmark-results-linux-x64-storage-tag-sha.json",
+      JSON.stringify(cached),
+    );
+    await syncAll(ctx);
+    expect((await readRuns(ctx)).find((run) => run.id === "9")?.commits).toEqual([
+      { ref: "pstdio@0.46.0", sha: "tag-sha" },
+    ]);
+    expect(gh.calls.some((args) => args.includes("repos/{owner}/{repo}/actions/runs/9/artifacts?per_page=100"))).toBe(
+      false,
+    );
+  });
+
   test("a run that cannot sync does not stop the others", async () => {
     const { ctx } = setup();
     // Run 6 has dropped out of GitHub's recent list and its artifacts can no longer be listed.
     await writeRuns(ctx, [
       {
         id: "6",
-        title: "Benchmarks old",
+        title: "Benchmarks old on linux-x64",
         status: "succeeded",
+        commits: [{ ref: "old" }],
+        platforms: ["linux-x64"],
         url: "https://github.com/runs/6",
         createdAt: "2026-10-20T09:00:00Z",
         updatedAt: "2026-10-20T10:00:00Z",
         synced: false,
       },
     ]);
-    await expect(syncAll(ctx)).rejects.toThrow("Run 6");
+    // The run keeps its error on its own row; the sync still succeeds for everything else.
+    await syncAll(ctx);
+    expect(await readSyncedAt(ctx)).toBeString();
     const runs = await readRuns(ctx);
+    expect(runs.find((run) => run.id === "6")?.syncError).toStartWith("Results could not be downloaded");
     expect(runs.map((run) => [run.id, run.synced])).toEqual([
       ["8", false],
       ["7", true],

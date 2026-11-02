@@ -4,11 +4,12 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { chromium, expect } from "@playwright/test";
+import { chromium, expect, type Page } from "@playwright/test";
 import { gt, valid } from "semver";
 import { openPackagedProject } from "../src/e2e/packaged-project-helpers";
 import { prepareDesktopReleaseArtifacts } from "../src/release/release-artifacts";
 import { validateSidecarArtifact } from "../src/runtime/sidecar-artifact";
+import { verifyWindowsUpdateData } from "./windows-update-data";
 
 if (process.platform !== "win32" || !process.env.CI) {
   throw new Error("Installation verification requires a disposable Windows CI runner");
@@ -156,6 +157,24 @@ const closeInstalled = async (app: Awaited<ReturnType<typeof launchInstalled>>) 
   await app.browser.close().catch(() => {});
 };
 
+const createInstalledProject = async (page: Page, path: string) => {
+  mkdirSync(path);
+  const project = await page.evaluate(async (path) => {
+    const response = await fetch("/v1/projects", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
+      },
+      body: JSON.stringify({ initial_workspace: { provider_id: "pstdio.root", params: { path } } }),
+    });
+    if (!response.ok) throw new Error(`Project creation failed: ${response.status}`);
+    return (await response.json()) as { id: string; name: string; extension_warnings?: unknown[] };
+  }, path);
+  assert.deepEqual(project.extension_warnings ?? [], []);
+  return project;
+};
+
 const requests: string[] = [];
 const feedRoot = `/pufflyai/prompt-studio/releases/download/pstdio@${candidate.version}`;
 const feedFiles = new Map([
@@ -197,20 +216,7 @@ try {
   assert(shortcuts.includes("Prompt Studio.exe"), "Start menu shortcut must launch the installed app");
   active = await launchInstalled(baseline.version);
   const projectPath = join(home, "Windows installed project");
-  mkdirSync(projectPath);
-  const project = await active.page.evaluate(async (path) => {
-    const response = await fetch("/v1/projects", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
-      },
-      body: JSON.stringify({ initial_workspace: { provider_id: "pstdio.root", params: { path } } }),
-    });
-    if (!response.ok) throw new Error(`Project creation failed: ${response.status}`);
-    return (await response.json()) as { id: string; name: string; extension_warnings?: unknown[] };
-  }, projectPath);
-  assert.deepEqual(project.extension_warnings ?? [], []);
+  const project = await createInstalledProject(active.page, projectPath);
   await openPackagedProject(active.page, project);
   await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
   await expect(active.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
@@ -236,11 +242,27 @@ try {
     id: string;
     name: string;
   }>;
-  assert(projects.some((item) => item.id === project.id && item.name === project.name));
-  await openPackagedProject(active.page, project);
-  await expect(active.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+  const retirement = verifyWindowsUpdateData({
+    home,
+    baselineVersion: baseline.version,
+    candidateVersion: candidate.version,
+    project,
+    projects,
+  });
+  if (retirement)
+    writeFileSync(
+      join(evidence, "database-retirement.json"),
+      `${JSON.stringify({ project, ...retirement }, null, 2)}\n`,
+    );
+  const updatedProject = retirement
+    ? await createInstalledProject(active.page, join(home, "Windows updated project"))
+    : project;
+  await openPackagedProject(active.page, updatedProject);
+  if (retirement) await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
+  // Installed harnesses can replace the empty-state title with account setup.
+  await expect(active.page.getByLabel("Main").getByRole("log")).toBeVisible();
   assert.equal(readFileSync(join(projectPath, "persisted.txt"), "utf8"), "Signed Windows update preservation\n");
-  assert((await run(updated.sidecar, ["projects", "list"])).includes(project.id));
+  assert((await run(updated.sidecar, ["projects", "list"])).includes(updatedProject.id));
   await active.page.screenshot({ path: join(evidence, "updated-workbench.png") });
   await closeInstalled(active);
   active = undefined;
@@ -267,6 +289,8 @@ try {
         baseline: baseline.version,
         candidate: candidate.version,
         projectId: project.id,
+        updatedProjectId: updatedProject.id,
+        databaseRetirement: retirement,
         requests,
         installedUpdater: updater,
         status: "passed",
@@ -280,8 +304,19 @@ try {
     )}\n`,
   );
   console.log(
-    "Signed Setup installation, native Squirrel update, installed signatures, and project preservation passed.",
+    "Signed Setup installation, native Squirrel update, installed signatures, and database transition checks passed.",
   );
+} catch (error) {
+  writeFileSync(join(evidence, "failure.txt"), error instanceof Error ? (error.stack ?? error.message) : String(error));
+  if (active) {
+    await active.page.screenshot({ path: join(evidence, "failure.png"), timeout: 5_000 }).catch(() => {});
+    const snapshot = await active.page
+      .locator("body")
+      .ariaSnapshot({ timeout: 5_000 })
+      .catch(() => "Page unavailable");
+    writeFileSync(join(evidence, "failure-aria.yml"), snapshot);
+  }
+  throw error;
 } finally {
   if (active) await closeInstalled(active).catch(() => {});
   // Only this disposable installation and its isolated runtime belong to this check.
@@ -290,6 +325,8 @@ try {
     if (existsSync(sidecar)) await run(sidecar, ["close"]).catch(() => {});
   }
   await feed.stop(true);
+  const runtimeLog = join(home, "logs.jsonl");
+  if (existsSync(runtimeLog)) cpSync(runtimeLog, join(evidence, "runtime.jsonl"));
   for (const log of [
     join(installRoot, "SquirrelSetup.log"),
     join(process.env.LOCALAPPDATA!, "SquirrelTemp/SquirrelSetup.log"),

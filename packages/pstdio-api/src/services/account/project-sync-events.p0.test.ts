@@ -2,6 +2,24 @@ import { expect, test } from "bun:test";
 import type { ProjectSyncStatus } from "pstdio-api-contracts";
 import { createProjectSyncEvents } from "./project-sync-events";
 
+test("progress changes are announced while the coarse project state stays the same", async () => {
+  let completed = 0;
+  const published: ProjectSyncStatus[] = [];
+  const events = createProjectSyncEvents({
+    status: async () => ({
+      state: "first-download-incomplete",
+      offlineReady: false,
+      pendingItems: 0,
+      download: { completed, total: 3 },
+    }),
+    publish: (_projectId, status) => published.push(status),
+  });
+  await events.changed("project");
+  completed = 1;
+  await events.changed("project");
+  expect(published).toMatchObject([{ state: "first-download-incomplete", download: { completed: 1, total: 3 } }]);
+});
+
 test("a project's sync event fires only when its derived status changes from the first one read", async () => {
   const states = new Map<string, ProjectSyncStatus>([
     ["cloud", { state: "first-download-incomplete", offlineReady: false }],

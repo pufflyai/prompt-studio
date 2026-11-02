@@ -74,7 +74,7 @@ BENCHMARK_SAMPLES=10 bun run --cwd packages/e2e perf:subnav
 BENCHMARK_SAMPLES=3 bun run --cwd packages/ui perf:chat -- chat-rendering.p3.bench.ts
 ```
 
-Choose committed CI runs for comparisons; local runs validate the harness but competing work can distort their measurements. Start a paired run through the Performance Runs page or the [Benchmarks workflow](../../../.github/workflows/benchmarks.yml). See the [runner commands and result schema](../../references/performance/0006-benchmark-results.md).
+Choose committed CI runs for comparisons; local runs validate the harness but competing work can distort their measurements. CI runs each benchmark once, so a CI comparison shows the difference and budget outcome but no interval or improved/regressed verdict. Start a paired run through the Performance Runs page or the [Benchmarks workflow](../../../.github/workflows/benchmarks.yml). See the [runner commands and result schema](../../references/performance/0006-benchmark-results.md).
 
 ## Share browser helpers
 
@@ -84,7 +84,7 @@ Measure input and readiness in the same browser clock. e2e's `perf-helpers.ts` p
 
 ## Desktop benchmarks
 
-The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) describe advisory targets, including a 2-second M5 cold start and 1 GB average memory. Regular performance coverage runs in nightly CI and stable-release validation. Agents **SHOULD** run relevant benchmarks locally when they expect significant performance impact from a change. The existing CI budgets below use hosted hardware and a visible-workbench milestone; dedicated M5, aggregate-download, and average-memory checks are not implemented yet.
+The [nonfunctional requirements](../../guidance/0003-nonfunctional-requirements.md) set mandatory targets, including a 2-second M5 cold start and 2 GB average memory. Regular performance coverage runs in nightly CI and stable-release validation. Agents **SHOULD** run relevant benchmarks locally when they expect significant performance impact from a change. The existing CI budgets below use hosted hardware and a visible-workbench milestone; dedicated M5, aggregate-download, and average-memory checks are not implemented yet.
 
 Every benchmark, including these, also reports to the shared result format that the Benchmarks workflow and the Performance pages use. See [Benchmark results](../../references/performance/0006-benchmark-results.md).
 
@@ -95,14 +95,13 @@ bun run --cwd clients/desktop package
 bun run --cwd clients/desktop test:benchmark
 ```
 
-The release workflow runs them in a separate step before the functional packaged suite. One worker runs files in name order and tests in declaration order. Intel macOS runs only the benchmark tagged `@essential`, the cold start, so it measures the first launch of the freshly signed app, including macOS launch checks. Other platforms run the cold start after the warm-attach and recovery launches. Before benchmarks were separated, it ran after two other packaged launches there too, so their budgets do not cover first-launch checks. The functional packaged suite and package checks still run after a benchmark failure, and the job still fails. The Windows signing workflow runs the benchmarks the same way. Benchmarks run without Electron traces, because trace screenshots and DOM snapshots add renderer work. Use the traced functional suite or a separate profile to diagnose a failure.
+The release workflow runs them in a separate step before the functional packaged suite. One worker runs files in name order and tests in declaration order. Intel macOS runs only the benchmark tagged `@essential`, the cold start, so it measures the first launch of the freshly signed app, including macOS launch checks. Other platforms run the cold start after the recovery launch. Before benchmarks were separated, it ran after two other packaged launches there too, so their budgets do not cover first-launch checks. The functional packaged suite and package checks still run after a benchmark failure, and the job still fails. The Windows signing workflow runs the benchmarks the same way. Benchmarks run without Electron traces, because trace screenshots and DOM snapshots add renderer work. Use the traced functional suite or a separate profile to diagnose a failure.
 
 Each benchmark attaches `benchmark-<name>.json` before checking its budgets. It records the scenario, workload, measured process, start and end events, every metric with its unit and budget, the source revision, the sidecar checksum, and the runner. A metric must be below its budget. A missing or non-finite measurement fails the benchmark. `test-results/packaged-benchmarks.json` collects the run.
 
 | Benchmark | Measured interval | Budget |
 | --- | --- | --- |
 | Cold start (empty home) | Process spawn to visible workbench root; process spawn to visible startup window | 8 s cold start (10 s on Windows, 28 s on Intel macOS); startup window 1.5 s on macOS (10 s on Intel), 1 s on Linux and Windows |
-| Warm attach | Process spawn against a persistent runtime with one open project to visible workbench root; startup window as above | 3 s; startup window as above |
 | Sidecar crash recovery | Runtime kill to visible recovery heading | 500 ms |
 | Idle workbench, monitoring off or on | Renderer CPU share over 10 s after a 2 s settle | See the renderer table below; Electron main below 10% of one core with monitoring on |
 | Idle extension preview | Workbench and Lab renderer CPU share over 10 s after a 2 s settle | See the renderer table below |
@@ -130,3 +129,13 @@ The fake agent replays the long conversation when a prompt contains `__fake_long
 The streaming benchmark opens an empty session before submitting that prompt. Its counter interval covers the full replay, including the last rendered turn. It does not wait for Step 1 to be visible: auto-follow can move that row out of view before an assertion sees it.
 
 `packages/e2e/src/ui/performance-monitoring.p2.spec.ts` covers the Prompt Studio Performance Monitoring extension in a browser tab. It checks that the loaded extension's meter shows measurements without any setting, and that its details show the desktop-only CPU note and no switch. A browser tab cannot measure processes, so pausing is covered only by the desktop spec. This spec has no time budget.
+
+## M5 and average-memory reference procedure
+
+- Use a production desktop build with default extensions on a native Apple M5 Mac with 10 CPU cores and 32 GiB RAM. Record the source revision, artifact, macOS version, power mode, cache state, and OS first-launch checks.
+- Measure 10 independent cold launches, each with an empty app home and no app-owned process or persistent runtime running. Time process launch to a visible, interactive workbench with the authenticated core API and default tools ready. Retain separate phase timings.
+- Report every launch sample, median, p95, and maximum against the 2,000 ms target. Saved-project launches and warm attachment are separate scenarios. These are planned measurements, not retries that replace failed results.
+- For memory, use one local project, default extensions, a completed 100-message conversation, one open file, and one idle terminal. After a 30-second settle, record 10 minutes of a fixed sequence of opening and closing the conversation, file, and panels.
+- Sample at least once per second. Include every app-owned process: desktop main, renderers, GPU and utility helpers, local runtime, and extension hosts.
+- Compute the time-weighted average as `sum(total process-tree memory × sample duration) / sum(sample durations)`. On macOS, use OS-attributed physical footprint including compressed memory; keep RSS and JavaScript heap separate.
+- Retain raw samples, missing-sample information, process counts, startup and steady-state peaks, and memory after repeated open/close cycles. Do not replace missing readings with zero. Other platforms must identify their native memory metric.

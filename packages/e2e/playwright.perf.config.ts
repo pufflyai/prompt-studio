@@ -15,7 +15,12 @@ export default defineConfig({
   retries: 0,
   repeatEach: 1,
   outputDir: `test-results/perf-${e2eRunId}`,
-  reporter: [["html", { open: "never", outputFolder: `playwright-report/perf-${e2eRunId}` }], ["list"]],
+  metadata: { quarantineAttempt: process.env.CI_QUARANTINE_ATTEMPT },
+  reporter: [
+    ["html", { open: "never", outputFolder: `playwright-report/perf-${e2eRunId}` }],
+    ["list"],
+    ["json", { outputFile: "test-results/workbench-benchmarks.json" }],
+  ],
   use: {
     baseURL: uiOrigin,
     trace: process.env.PLAYWRIGHT_TRACE === "on" ? "on" : "off",

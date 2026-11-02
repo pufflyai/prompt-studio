@@ -18,6 +18,20 @@ const fixture = async () => {
   return { ...f, owner, service, storage };
 };
 
+test("document revisions can be read cold without opening owner or record content", async () => {
+  const f = await fixture();
+  const document = f.service.documents.open("notes.md");
+  expect(await document.revision(f.owner)).toBe(0);
+  await document.transaction(f.owner, async ({ document }) => document.getText("content").insert(0, "Saved"));
+  let loaded = 0;
+  const cold = createDocumentStorageDBService(f.db, undefined, (event) => {
+    if (event.phase === "document-loaded") loaded++;
+  });
+  expect(await cold.documents.open("notes.md").revision(f.owner)).toBe(1);
+  expect(await cold.documents.open("records").revision(f.owner)).toBe(0);
+  expect(loaded).toBe(0);
+});
+
 test("clearing owner data refreshes every open store and allows operation IDs to be reused", async () => {
   const f = await fixture();
   const other = createDocumentStorageDBService(f.db).open({ owner: f.owner });

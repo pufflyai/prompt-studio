@@ -1,33 +1,27 @@
-# ADR 0103: A database baseline replaces in-place upgrades
+# A database baseline replaces in-place upgrades
 
 Proposed: 2026-10-24
 
-## Status
-
-Accepted.
+Status: Accepted. Consolidates the retired Drizzle migration-selection adapter (ADR 0078) and PGlite engine-transfer adapter (ADR 0098).
 
 ## Context
 
-Until 0.45, every release upgraded the local database in place. Startup replayed 53 Drizzle migrations and ran about a dozen hand-written repair steps between them. Release 0.46 also changed the PGlite engine ([ADR 0098](0098-superseded-temporary-pglite-minor-upgrade-adapter.md)) and moved extension records into one document each ([ADR 0100](0100-one-document-per-resource.md)). Both steps needed their own one-time upgrade.
-
-On a real two-year-old database both upgrades failed. Four rows broke their own foreign keys, so the engine transfer stopped. After that was repaired, moving 78 MB of Planner tickets into per-record documents ran out of PGlite memory, and the backend stayed unavailable. The [lesson](../lessons-learned/0018-in-place-upgrades-meet-real-data-last.md) has the full timeline.
+- Startup replayed 53 migrations and many repairs. Release 0.46 also changed the engine and [record document boundaries](0100-one-document-per-resource.md).
+- A real two-year-old database contained four broken foreign-key rows, stopping engine transfer. After repair, converting 78 MB of Planner data exhausted PGlite memory.
+- Small and synthetic transfer probes had passed. They did not qualify real histories, large values, or every platform. The [upgrade lesson](../lessons-learned/0018-in-place-upgrades-meet-real-data-last.md) retains the failure evidence.
 
 ## Decision
 
-0.46 is a breaking release for local data.
-
-- `pstdio-db/drizzle` holds one generated baseline migration for the 0.46 schema. Later schema changes add generated migrations on top of it.
-- The engine marker `.pstdio-engine.json` names the baseline (`{ "baseline": "0.46" }`). A home without that exact marker is *retired*: startup exports it to JSON, moves it to `backups/pre-0.46-<time>-<folder>/` next to the database, and creates an empty database from the built image.
-- The export worker opens the old home with the engine that wrote it (`pglite-previous` for an unmarked home). It writes every table as JSON lines and decodes extension records from their Yjs documents into plain records. A failed export writes `export-error.txt` and still moves the folder aside, so nobody is locked out.
-- People bring data back by asking an agent to read the export and recreate it with the `pst` CLI. Core has no import code.
-- The public `ctx.storage.readLegacy` API stays and resolves to `undefined`. Its `@deprecated` marker ships in a separate SDK change, because one pull request may not change both the SDK and extensions. `ctx.storage.migrate` is unchanged.
+1. Release 0.46 breaks local-data compatibility. Start from one generated schema baseline; add later generated migrations on top.
+2. Require `.pstdio-engine.json` to contain the exact baseline marker `{ "baseline": "0.46" }`. Retire homes without it: export them, move them to `backups/pre-0.46-<time>-<folder>/` beside the database, and create a fresh database from the built image.
+3. Export with the engine that wrote the old home, using `pglite-previous` for unmarked homes. Write every table as JSON lines and decode extension Yjs records into plain records.
+4. If export fails, write `export-error.txt`, preserve the old folder, and continue with a fresh home instead of blocking startup.
+5. Restore selected data through an agent using the `pst` CLI. Core provides no import path.
+6. Keep `ctx.storage.readLegacy` as an API returning `undefined`; deprecate it in the separate SDK change. `ctx.storage.migrate` is unchanged.
 
 ## Consequences
 
-Startup has no upgrade code paths, and no test needs an old database except the export tests. The removed code includes the engine transfer, `migrateThrough`, the workspace, board view, queued request and capability repairs, retired-table snapshots, the journal and owner-document storage upgrades, the grouped-storage service with its journal, key-value, collection, data-version and unused `ydoc_*` tables, and the upgrade test from 0.45.
-
-Users lose in-app history from before 0.46 until an agent re-imports it. The raw folder and the export stay on disk.
-
-The legacy `pstdio.db.lock` fence ([ADR 0079](0079-temporary-legacy-database-lock-fence.md)) stays, because it stops a still-running older release from opening the new home.
-
-A future baseline repeats this process with a new marker value. See [Database upgrades](../references/architecture/0025-database-upgrades.md).
+- Remove engine transfer, private migration-prefix selection, retired-table archives, and legacy storage/repair paths. Ordinary baseline migrations use Drizzle's public migrator.
+- In-app history before 0.46 is unavailable until re-imported. Raw homes and exports remain on disk.
+- Keep the [legacy lock fence](0079-temporary-legacy-database-lock-fence.md) to exclude older binaries.
+- A future baseline repeats the process with a new marker. See [database upgrades](../references/architecture/0025-database-upgrades.md).

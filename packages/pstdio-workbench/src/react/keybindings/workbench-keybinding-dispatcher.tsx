@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { WorkbenchCore } from "../../core";
+import type { RegisteredKeybinding, WorkbenchCore } from "../../core";
 import { getKeybindingSteps } from "../../core";
 import { useTanStackWorkbenchHotkeys } from "./tanstack-hotkey-adapter";
 import { useGlobalKeyboardShortcuts } from "./use-global-keyboard-shortcuts";
@@ -13,10 +13,15 @@ export interface WorkbenchKeybindingDispatcherProps {
   commandIds?: readonly string[];
 }
 
+// Single global input chords belong to useGlobalKeyboardShortcuts. Do not
+// evaluate their command availability just to discard their registrations.
+const filterKeybinding = (binding: RegisteredKeybinding) =>
+  !binding.allowInInputs || getKeybindingSteps(binding.keybinding).length > 1;
+
 export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatcherProps) => {
   const { workbench, disabled, commandIds } = props;
   const [registrations, setRegistrations] = useState(() =>
-    createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }),
+    createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds, filterKeybinding }),
   );
   useEffect(() => {
     let disposed = false;
@@ -28,7 +33,8 @@ export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatch
       pending = true;
       queueMicrotask(() => {
         pending = false;
-        if (!disposed) setRegistrations(createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }));
+        if (!disposed)
+          setRegistrations(createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds, filterKeybinding }));
       });
     };
     const subscriptions = [
@@ -51,11 +57,7 @@ export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatch
     };
   }, [workbench, disabled, commandIds]);
   useGlobalKeyboardShortcuts(workbench, disabled, commandIds);
-  useTanStackWorkbenchHotkeys(
-    registrations.filter(
-      (registration) => registration.ignoreInputs || getKeybindingSteps(registration.hotkey).length > 1,
-    ),
-  );
+  useTanStackWorkbenchHotkeys(registrations);
 
   return null;
 };

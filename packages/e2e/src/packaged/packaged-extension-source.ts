@@ -23,6 +23,7 @@ export async function preparePackagedExtensionSource(
   const manifest = JSON.parse(readFileSync(path, "utf8"));
   manifest.overrides = {};
   for (const name of ["sdk", "ui"]) {
+    if (!manifest.dependencies?.[`@pstdio/${name}`]) continue;
     const tarball = `file:${packWorkspacePackageTarball(join(repoRoot, "packages", name), root)}`;
     manifest.dependencies[`@pstdio/${name}`] = tarball;
     manifest.overrides[`@pstdio/${name}`] = tarball;

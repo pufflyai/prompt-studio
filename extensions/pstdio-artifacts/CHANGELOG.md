@@ -1,5 +1,25 @@
 # pstdio-artifacts
 
+## 0.46.0
+
+_2026-10-31_
+
+### Minor Changes
+
+- e30c373: Keep the Artifacts library and resource viewers in independent panel placements.
+- 2ff78f4: Add shared keyboard actions and contextual targets across core extensions and repository tools, with G R for Scribble navigation.
+- 2ff78f4: Add one default shortcut per resource creation and navigation action through existing UI flows.
+- 4eeef83: Keep extension files in the full-ID `.pstdio/extension-storage/pstdio.<name>/` folder; earlier name-only folders are not read.
+
+### Patch Changes
+
+- 8e004ed: Theme Artifacts canvases from their own preview so `@pstdio/canvas` builds render them.
+- b5d3e2c: Replace Storybook preview tooling with native Canvas composition and critical Playwright checks; limit visual verification guidance to critical risks; distribute UI Canvas as an optional extension with a working-with-Canvas skill and dependency-scoped frame startup.
+- 4eeef83: Require extension API 0.2 or newer, because the chat link support uses resource-kind APIs that API 0.1.7 hosts do not have.
+- 5e25e20: Accept extension API 0.3, which refuses storage records over 256 KiB and commits over 4 MiB.
+- e30c373: Keep one artifact list tab, offer it in Main while closed, and let users move it between panels.
+- 16d0979: Use core record IDs in Planner, Reports, Notes and Artifacts and preserve stable migration imports.
+
 ## 0.45.0
 
 _2026-10-22_

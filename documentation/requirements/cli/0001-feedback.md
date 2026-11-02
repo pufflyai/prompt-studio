@@ -57,7 +57,7 @@ Commands:
 
 ## Complete output
 
-Command output reaches its reader in full, whether stdout is a terminal, a file, or a pipe. A `--json` result larger than 64 KiB stays valid JSON when piped through a slow reader such as `tee`. The CLI waits for pending output before it exits. The current mechanism is a temporary workaround for a Bun limitation; see [ADR 0081](../../adrs/0081-temporary-cli-console-stream-binding.md).
+Command output reaches its reader in full, whether stdout is a terminal, a file, or a pipe. A `--json` result larger than 64 KiB stays valid JSON when piped through a slow reader such as `tee`. The CLI waits for pending output before it exits. The current mechanism is a temporary workaround for a Bun limitation; see [ADR 0127](../../adrs/0127-temporary-cli-console-stream-binding.md).
 
 ## Rules for new command groups
 
@@ -80,7 +80,7 @@ Checked on 2026-10-18 against main commit `45580feb` and this branch's uncommitt
 | Field | Record |
 | --- | --- |
 | Status | Delivered in source on this branch. Not on `main` and not released. |
-| Implementation | `packages/pstdio/src/adapters/cli/command-group.ts` (`defineCommandGroup` and `commandGroupPaths`), used by all 12 group modules under `packages/pstdio/src/adapters/cli/commands/`, including `resources`, which no longer uses `demandCommand`. Complete piped output: `packages/pstdio/src/features/cli-output.ts`, installed by the CLI entry point under ADR 0081. |
+| Implementation | `packages/pstdio/src/adapters/cli/command-group.ts` (`defineCommandGroup` and `commandGroupPaths`), used by all 12 group modules under `packages/pstdio/src/adapters/cli/commands/`, including `resources`, which no longer uses `demandCommand`. Complete piped output: `packages/pstdio/src/features/cli-output.ts`, installed by the CLI entry point under ADR 0127. |
 | Availability | In `pstdio@0.43.1` and on `main`, a bare group can exit 1 without help when automatic API start is disabled, and piped `console.log` output can stop at 65,536 bytes. Neither fix is released. |
-| Remaining work | Merge and release. Remove the ADR 0081 binding when its removal condition is met. |
+| Remaining work | Merge and release. Remove the ADR 0127 binding when its removal condition is met. |
 | Evidence | Integration tests, passed locally on 2026-10-18 against this branch: `packages/e2e/src/cli/feedback.p2.test.ts` (15 tests: bare-group help offline for 12 groups, unknown subcommand and unknown command errors with help and exit code) and `packages/e2e/src/cli/piped-output.p2.test.ts` (2 tests). |

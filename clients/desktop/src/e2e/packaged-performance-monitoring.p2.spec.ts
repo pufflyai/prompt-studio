@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
 import { test } from "../testing/packaged-fixture";
 import {
   createPackagedHome,
@@ -62,28 +63,48 @@ const rowCountsWhile = async (page: Page, key: string, ms: number) => {
 const forceSlowFrame = (page: Page) =>
   page.evaluate(
     () =>
-      new Promise<void>((resolve) =>
+      new Promise<{ startedAt: number; endedAt: number }>((resolve) =>
         setTimeout(() => {
+          const startedAt = performance.timeOrigin + performance.now();
           const end = performance.now() + 120;
           while (performance.now() < end) {}
-          resolve();
+          resolve({ startedAt, endedAt: performance.timeOrigin + performance.now() });
         }),
       ),
   );
+
+const overlapsTask = (frame: PerformanceSnapshot["frames"][number], task: { startedAt: number; endedAt: number }) => {
+  const startedAt = Date.parse(frame.startedAt);
+  return startedAt < task.endedAt && startedAt + frame.durationMs > task.startedAt;
+};
 
 test("keeps reporting slow frames after the workbench reloads", async () => {
   let app: PackagedApp | null = null;
   try {
     ({ app } = await launchProject("Reload", { monitoring: true }));
-    const frames = async () => (await readSnapshot(app!.page))?.frames.length ?? 0;
-    await forceSlowFrame(app.page);
-    await expect.poll(frames).toBeGreaterThan(0);
+    const frames = async () => (await readSnapshot(app!.page))?.frames ?? [];
+    await expect
+      .poll(async () => (await readSnapshot(app!.page))?.capabilities.slowFrames)
+      .toMatch(/^(long-animation-frame|longtask)$/);
+    const firstTask = await forceSlowFrame(app.page);
+    await expect.poll(async () => (await frames()).some((frame) => overlapsTask(frame, firstTask))).toBe(true);
 
-    const before = await frames();
+    await app.page.addInitScript(() => {
+      const observe = PerformanceObserver.prototype.observe;
+      PerformanceObserver.prototype.observe = function (options) {
+        observe.call(this, options);
+        if (options?.type === "long-animation-frame" || options?.type === "longtask")
+          (window as unknown as { slowFrameObserverReady: boolean }).slowFrameObserverReady = true;
+      };
+    });
     await app.page.reload();
     await expect(app.page.getByTestId("start-page")).toBeVisible();
-    await forceSlowFrame(app.page);
-    await expect.poll(frames).toBeGreaterThan(before);
+    await expect.poll(async () => (await readSnapshot(app!.page)) !== null).toBe(true);
+    await app.page.waitForFunction(
+      () => (window as unknown as { slowFrameObserverReady?: boolean }).slowFrameObserverReady === true,
+    );
+    const secondTask = await forceSlowFrame(app.page);
+    await expect.poll(async () => (await frames()).some((frame) => overlapsTask(frame, secondTask))).toBe(true);
   } finally {
     await disposePackagedApp(app);
   }
@@ -100,9 +121,17 @@ test("names the process that hosts an extension and ends its frames when paused"
       new Set(process.extensionFrames.map((frame) => frame.installedExtensionId));
 
     await openLabPreview(app.page);
-    await expect.poll(async () => (await extensionProcesses()).length).toBeGreaterThan(0);
-    const fixtureProcess = (await extensionProcesses())[0]!;
-    const fixtureId = [...hostedIds(fixtureProcess)][0]!;
+    const source = await app.page
+      .frameLocator('iframe[title="Lab"]')
+      .locator("html")
+      .evaluate(() => location.pathname);
+    const scope = parseExtensionWebviewPath(source)?.scope;
+    expect(scope).toBeDefined();
+    const fixtureId = scope!.installedExtensionId;
+    await expect
+      .poll(async () => (await extensionProcesses()).some((process) => hostedIds(process).has(fixtureId)))
+      .toBe(true);
+    const fixtureProcess = (await extensionProcesses()).find((process) => hostedIds(process).has(fixtureId))!;
     const workbench = (await processes()).find((process) => process.role === "workbench");
     expect(fixtureProcess.pid).not.toBe(workbench?.pid);
 
@@ -113,17 +142,23 @@ test("names the process that hosts an extension and ends its frames when paused"
       .getByTestId("performance-cpu-row")
       .filter({ hasText: "workbench-fixture" });
     await expect(row).toBeVisible();
+    const pause = row.getByRole("button", { name: "Pause workbench-fixture", exact: true });
+    // Enter the live CPU list before clicking: pointer entry freezes its order,
+    // which can otherwise move the target between Playwright's stability check and input.
+    await pause.hover();
     // Pausing and resuming must never show the extension twice or drop its row.
     let rows = rowCountsWhile(app.page, fixtureId, 4_000);
-    await row.getByRole("button", { name: "Pause workbench-fixture", exact: true }).click();
+    await pause.click();
     expect(await rows).toEqual([1]);
     await expect(app.page.locator('iframe[title="Lab"]')).toHaveCount(0);
     await expect.poll(async () => (await readSnapshot(app!.page))?.pausedExtensionIds).toEqual([fixtureId]);
     await expect.poll(async () => (await processes()).some((process) => hostedIds(process).has(fixtureId))).toBe(false);
 
     // A paused row keeps the name it had while its views ran.
+    const resume = row.getByRole("button", { name: "Resume workbench-fixture", exact: true });
+    await resume.hover();
     rows = rowCountsWhile(app.page, fixtureId, 4_000);
-    await row.getByRole("button", { name: "Resume workbench-fixture", exact: true }).click();
+    await resume.click();
     expect(await rows).toEqual([1]);
     await expect(app.page.locator('iframe[title="Lab"]')).toHaveCount(1);
   } finally {

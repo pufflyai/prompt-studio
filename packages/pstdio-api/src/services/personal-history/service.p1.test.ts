@@ -228,6 +228,7 @@ test("personal history is readable offline after restart, private to the account
       const document = open(name);
       if (name !== history.transcriptName(session.id)) return document;
       return {
+        ...document,
         transaction: async (owner, action) => {
           startedRead.resolve();
           await releaseRead.promise;

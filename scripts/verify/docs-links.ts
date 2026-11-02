@@ -6,6 +6,7 @@
  * - GitHub links to this repository's `main` branch must reach an existing path.
  * - Exported skills must work when copied alone: links stay in the skill folder and reach exported files.
  * - Public pages and skills must not link to private documentation, and the website must not publish it.
+ * - ADR numbers must identify exactly one decision.
  *
  * External sites are checked on a schedule by docs-external-links.ts instead, so their availability
  * cannot fail unrelated pull requests.
@@ -65,6 +66,26 @@ const checkAllowList = (topics: DocsTopic[]) =>
       line: 1,
       message: `publishes "${folder}", which the website must not publish.`,
     }));
+
+const checkAdrNumbers = (files: Set<string>) => {
+  const owners = new Map<string, string>();
+  const problems: DocsProblem[] = [];
+  for (const file of [...files].sort()) {
+    const number = file.match(/^documentation\/adrs\/(\d{4})-[^/]+\.md$/)?.[1];
+    if (!number) continue;
+    const owner = owners.get(number);
+    if (owner) {
+      problems.push({
+        file,
+        line: 1,
+        message: `reuses ADR number ${number} from "${owner}". Use a new number.`,
+      });
+    } else {
+      owners.set(number, file);
+    }
+  }
+  return problems;
+};
 
 const checkSkillFiles = (root: string, folder: string, files: Set<string>) => {
   const problems: DocsProblem[] = [];
@@ -156,6 +177,7 @@ export const checkDocsLinks = (root: string) => {
   };
 
   const problems: DocsProblem[] = [
+    ...checkAdrNumbers(repo.files),
     ...checkAllowList(topics),
     ...[...context.exported].flatMap(([folder, files]) => checkSkillFiles(root, folder, files)),
   ];

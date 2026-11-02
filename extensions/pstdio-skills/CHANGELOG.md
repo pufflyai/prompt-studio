@@ -1,5 +1,18 @@
 # Prompt Studio Skills
 
+## 0.45.1
+
+_2026-10-31_
+
+### Patch Changes
+
+- fbadf1a: Document tabless pages, independent panel views and guarded viewer navigation for extension authors.
+- 4eeef83: Keep extension files in the full-ID `.pstdio/extension-storage/pstdio.<name>/` folder; earlier name-only folders are not read.
+- 5e25e20: Tell extension authors to keep storage records small and store large content as files, because 0.46 refuses records over 256 KiB and commits over 4 MiB; the Scribble example now saves note bodies as files.
+- 09e0703: Document collection badge actions and their required host API in the extension authoring skill.
+- 2d863cb: Document public editing sessions and atomic extension save commands.
+- 4cc9445: Remove obsolete board drag settings from Planner and Extension Lab.
+
 ## 0.45.0
 
 _2026-10-22_

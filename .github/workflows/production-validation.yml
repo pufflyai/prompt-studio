@@ -57,6 +57,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       desktop_matrix: ${{ steps.platforms.outputs.desktop_matrix }}
+      performance_matrix: ${{ steps.platforms.outputs.performance_matrix }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -134,6 +135,7 @@ jobs:
       artifact_attempt: ${{ inputs.artifact_attempt }}
       channel: ${{ inputs.channel }}
       desktop_platforms: ${{ needs.candidate.outputs.desktop_matrix }}
+      workloads: ${{ needs.candidate.outputs.performance_matrix }}
   services:
     needs: candidate
     uses: ./.github/workflows/production-services.yml

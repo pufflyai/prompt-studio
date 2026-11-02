@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import themes from "./catalog/generated/frame-themes.json";
+import { frameThemePreferences as themes } from "./frame-themes";
 import { readLayout, updateLayout } from "./layout";
 
 const items = [

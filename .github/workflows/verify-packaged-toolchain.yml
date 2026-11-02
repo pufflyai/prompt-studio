@@ -61,7 +61,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: "24.22.1"
       - name: Install native dependencies and restore host build cache
         uses: ./.github/actions/setup-ci-cache
         with:
@@ -90,6 +90,7 @@ jobs:
         id: toolchain
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
+          TEST_PRIORITIES: ${{ matrix.priorities }}
         # Git Bash pipelines give Windows children an inherited Ctrl+C-ignore attribute.
         # Use the native shell and direct arguments so real terminal interrupts reach the CLI.
         run: >-

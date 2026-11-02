@@ -3,7 +3,10 @@ import { openCanvasPreview } from "../preview";
 
 // Critical: run options must remain reachable above their containing dialog.
 test("run option menus stay usable inside a dialog", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "ui-components-param-editor-harness-run-options--inside-dialog");
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/param-editor/harness-param-editor.canvas.tsx#InsideDialog",
+  );
   await expect(preview.getByRole("button", { name: "GPT-5.3 Codex", exact: true })).toBeVisible();
   await expect(preview.getByRole("button", { name: "PS-10_A1", exact: true })).toBeVisible();
   await expect(preview.getByText("Collaboration", { exact: true })).toHaveCount(0);
@@ -25,7 +28,10 @@ test("run option menus stay usable inside a dialog", async ({ page }) => {
 
 // Critical: native window controls must not obscure project tabs or panel controls.
 test("title bar controls fit the native window reservation", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "ui-components-navigation-window-title-bar--embedded-native-geometry");
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/tab-strip/window-title-bar.canvas.tsx#EmbeddedNativeGeometry",
+  );
   const geometry = await preview.locator("[data-window-title-bar]").evaluate((element) => {
     const bar = element.getBoundingClientRect();
     const content = element.querySelector<HTMLElement>(".ps-window-title-bar__content")!.getBoundingClientRect();

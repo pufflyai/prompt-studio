@@ -1,24 +1,24 @@
-# Load conversation history before applying follow-up patches
+# Load history before applying follow-up patches
 
-## What went wrong
+## 1. When to use
 
-Claude Code follow-up messages appeared before the original conversation. The harness emitted indexed patches, but a failed history lookup made the message offset fall back to zero. Merging an `add /messages/0` patch with existing messages inserted the follow-up at the beginning.
+- Changing conversation resume, message indexing, snapshots, or reconnects.
 
-The live stream had a related problem: its fresh event store contained only follow-up patches, so reconnecting clients could miss the earlier conversation.
+## 2. Failure
 
-## Why
+- A failed history lookup defaulted the append offset to zero, placing follow-up messages before earlier messages.
+- Reconnecting clients also lost history when a fresh delivery log was treated as the conversation.
 
-The implementation mixed three different things: persisted conversation history, a delivery log of patches, and the provider's patch indexing. A delivery log for one turn was treated as enough information to reconstruct the full conversation.
+## 3. Prevention
 
-## Current contract
+- Load existing history before starting the resumed harness or deriving append positions.
+- Keep conversation state with one owner; persistence and live delivery use that state.
+- Acquire the snapshot and subscription together so events cannot fall between them.
+- Use the bounded delivery log for transport, not history reconstruction.
+- Fix missing history at its source instead of guessing offsets in several layers.
 
-The original patch-index shifting helpers have been replaced by a conversation owner:
+## 4. Evidence
 
-1. [Conversation initialization](../../packages/pstdio-api/src/features/sessions/initialize-conversation.ts) loads history before the resumed harness starts.
-2. [Session spawning](../../packages/pstdio-api/src/features/sessions/spawn-agent.ts) passes the loaded conversation's message count as `messageOffset`.
-3. The [conversation owner](../../packages/pstdio-api/src/features/sessions/session-conversation.ts) applies patches to the same message state used for snapshots. Its bounded delivery log is not used to reconstruct history.
-4. Snapshot and subscription are acquired together so clients receive a consistent starting conversation and subsequent events.
-
-## Key takeaway
-
-Load the existing conversation before deriving append positions. Keep conversation state with one owner, and make persistence and live delivery use that state. Do not compensate for missing history by guessing patch offsets in several layers.
+- [Conversation initialization](../../packages/pstdio-api/src/features/sessions/initialize-conversation.ts)
+- [Conversation owner](../../packages/pstdio-api/src/features/sessions/session-conversation.ts)
+- [Harness spawning](../../packages/pstdio-api/src/features/sessions/spawn-agent.ts)

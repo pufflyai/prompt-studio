@@ -184,7 +184,7 @@ The page layout and preview styles use the local `landingStory` and `landingTool
 recipes. The app's Canvas covers desktop and narrow-panel layouts. Preview panels respond
 to their actual container width.
 
-Browse these component variants under Landing Page in Canvas. Rebuild with `bun run --cwd scripts canvas:build`.
+Browse these component variants under Landing Page in Canvas. Keep `bun run canvas` running to rebuild them.
 The reusable component stories remain in the UI package's Canvas.
 
 The page catalog supplies static routes, unique metadata, canonical links, and

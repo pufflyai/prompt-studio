@@ -10,6 +10,8 @@ export interface DeviceLogin {
 
 export interface AccountStatus {
   login: DeviceLogin | null;
+  /** True after the manager rejects this device credential. Cleared by a new sign-in or explicit sign-out. */
+  signInRequired?: boolean;
   /** Last loaded account grants, or null before discovery or when signed out. Relay enables Cloud early access. */
   features: { relay: boolean } | null;
   /** Cloud projects of the account. This device syncs the ones that exist on it. */

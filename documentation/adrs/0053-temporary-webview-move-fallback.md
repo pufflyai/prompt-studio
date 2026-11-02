@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-05
 
+Status: Accepted.
+
 ## Intended behavior
 
 Moving a workbench tab changes its panel while preserving its live view. An iframe must keep its browsing context, unsaved input, and running work. Hidden retained views remain connected to their last panel until they are shown again or released by their owner.

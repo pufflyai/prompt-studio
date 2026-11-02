@@ -106,7 +106,10 @@ test(
       await client.account.syncProject(project.id);
       await waitFor(() => peer.states() > 0);
       await waitFor(async () => (await syncState()) === "synced");
-      expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "synced", offlineReady: true });
+      const status = await client.account.projectSyncStatus(project.id);
+      expect(status).toMatchObject({ state: "synced", offlineReady: true, pendingItems: 0 });
+      expect(status.download!.total).toBeGreaterThan(0);
+      expect(status.download!.completed).toBe(status.download!.total!);
       const space = await createSyncSpace({ projectId: project.id, spaceOwner: null, keys: [packagedProjectKey] });
       const streamId = await space.documentId(JSON.stringify(["example.shared-notes", "record-stream"]));
       const stream = peer.documents.get(`~${streamId}`)!;

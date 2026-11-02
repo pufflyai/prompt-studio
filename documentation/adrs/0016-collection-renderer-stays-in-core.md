@@ -2,9 +2,7 @@
 
 Proposed: 2026-08-28
 
-## Status
-
-Accepted. The shared contracts use `badge-list` displays and query-owned `boardColumnConfigs`.
+Status: Accepted. The shared contracts use `badge-list` displays and query-owned `boardColumnConfigs`.
 
 ## Context
 

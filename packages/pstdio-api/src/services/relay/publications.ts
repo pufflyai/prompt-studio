@@ -33,7 +33,7 @@ export const startPublishedExtensions = (input: {
       signal.removeEventListener("abort", abort);
     }
   };
-  const documents = createExtensionDocumentSync({ config, owner, deps, access });
+  const documents = createExtensionDocumentSync({ config, owner, deps, access, statusChanged: input.statusChanged });
   // A set that failed to activate is tried again after a growing delay, or at once when it changes.
   // Retrying on every reconnect would repeat package checks, installs and webview builds each time.
   let failed: { key: string; delay: number; waiting: boolean } | undefined;

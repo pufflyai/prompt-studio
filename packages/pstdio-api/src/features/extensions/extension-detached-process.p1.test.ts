@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, watch } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, unwatchFile, watchFile } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,12 +14,15 @@ test.each([0, 1500])("a detached extension command outlives its host after %ims 
   const ready = Promise.withResolvers<{ pid: number; tick: number }>();
   const continued = Promise.withResolvers<{ pid: number; tick: number }>();
   let stoppedTick: number | null = null;
-  const watcher = watch(home, () => {
+  const observeHeartbeat = () => {
     if (!existsSync(heartbeat)) return;
     const value = JSON.parse(readFileSync(heartbeat, "utf8")) as { pid: number; tick: number };
     ready.resolve(value);
     if (stoppedTick !== null && value.tick > stoppedTick) continued.resolve(value);
-  });
+  };
+  // Atomic replacement can lose native directory-watch notifications on Windows.
+  // Observe the persisted heartbeat, which is the child-lifetime contract under test.
+  const watcher = watchFile(heartbeat, { interval: 50 }, observeHeartbeat);
   watcher.on("error", ready.reject);
   watcher.on("error", continued.reject);
   void ready.promise.catch(() => {});
@@ -64,7 +67,7 @@ test.each([0, 1500])("a detached extension command outlives its host after %ims 
     }
   });
   cleanups.push(async () => {
-    watcher.close();
+    unwatchFile(heartbeat, observeHeartbeat);
     ready.reject(new Error("Detached fixture ended"));
     continued.reject(new Error("Detached fixture ended"));
     if (host.exitCode === null) host.kill("SIGKILL");

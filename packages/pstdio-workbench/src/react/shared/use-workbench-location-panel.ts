@@ -4,7 +4,11 @@ import { useWorkbenchStore } from "./use-workbench-store";
 
 /** Tabless page content is Main's location even though it lives outside the tab layout. */
 export const useWorkbenchLocationPanel = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion | undefined) => {
-  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
-  const pageContent = useWorkbenchStore(workbench.pages.store, resolvePageContent);
-  return (panel === "main" ? pageContent : undefined) ?? getActiveWorkbenchLocationPanel(layout);
+  const locationPanel = useWorkbenchStore(workbench.layout.store, (state) =>
+    getActiveWorkbenchLocationPanel(state.layout),
+  );
+  const pageContent = useWorkbenchStore(workbench.pages.store, (state) =>
+    panel === "main" ? resolvePageContent(state) : undefined,
+  );
+  return pageContent ?? locationPanel;
 };

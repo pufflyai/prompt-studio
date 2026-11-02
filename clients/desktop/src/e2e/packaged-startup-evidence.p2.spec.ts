@@ -7,7 +7,8 @@ import { createPackagedHome, disposePackagedApp, launchPackagedApp, removePackag
 
 test("keeps complete redacted startup evidence before home removal", async ({ browserName: _browserName }, info) => {
   const home = createPackagedHome();
-  const app = await launchPackagedApp(home);
+  // Startup evidence does not depend on agent harnesses, so default extension downloads stay out of this test.
+  const app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
   const marker = "startup-evidence-history";
   const history = `${marker}\n${"history entry\n".repeat(4_000)}`;
   for (const filename of ["logs.jsonl", "desktop-runtime.log"]) {

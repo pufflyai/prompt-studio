@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-24
 
+Status: Accepted.
+
 ## Context
 
 [ADR 0100](0100-one-document-per-resource.md) gave each extension record its own Yjs document,

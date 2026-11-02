@@ -1,5 +1,5 @@
 import { defineCommand, defineResourceKind } from "@pstdio/sdk/extensions";
-import { canvases } from "./canvases/definitions";
+import { buildFiles, readBuild } from "./build-mount";
 
 const canvasIcon = "diamond";
 
@@ -7,9 +7,9 @@ export const resolveCanvasCommand = defineCommand({
   id: "resolve",
   title: "Resolve canvas",
   async run(ctx) {
-    const canvas = canvases.find(
-      (entry) => entry.id === ctx.resource?.id || entry.aliases?.includes(ctx.resource?.id ?? ""),
-    );
+    const build = await readBuild(buildFiles(ctx));
+    const canvas =
+      build.status === "ready" ? build.manifest.canvases.find((entry) => entry.id === ctx.resource?.id) : undefined;
     if (!canvas) return null;
     return {
       ...ctx.resource,

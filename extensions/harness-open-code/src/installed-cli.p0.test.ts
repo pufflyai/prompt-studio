@@ -48,5 +48,5 @@ describe.if(enabled)("installed OpenCode CLI", () => {
     const state = await harness.getCommandState!(context, { cwd: home });
     // The harness adds /compact itself; every other command comes from the OpenCode server.
     expect(state.commands.length).toBeGreaterThan(1);
-  }, 120_000);
+  }, 5_000);
 });

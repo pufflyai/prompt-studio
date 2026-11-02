@@ -1,5 +1,18 @@
 # remote-workspaces
 
+## 0.46.0
+
+_2026-10-31_
+
+### Minor Changes
+
+- 4eeef83: Declare and verify supported extension API baselines for independently published core extensions.
+- 2ff78f4: Add shared keyboard actions and contextual targets across core extensions and repository tools, with G R for Scribble navigation.
+
+### Patch Changes
+
+- 5e25e20: Accept extension API 0.3, which refuses storage records over 256 KiB and commits over 4 MiB.
+
 ## 0.45.0
 
 _2026-10-22_

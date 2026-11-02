@@ -62,7 +62,7 @@ const device = async () => {
       quarantine,
     }),
   };
-  const notified: StorageOwner[] = [];
+  const notified: (StorageOwner & { documentId?: string })[] = [];
   const stop = service.watch((changed) => notified.push(changed));
   cleanup.push(async () => stop());
   return {
@@ -92,7 +92,7 @@ test("remote edits imported by sync notify storage watchers, and a round with no
   expect(second.notified.slice(quiet)).toEqual([owner]);
   await second.syncs.text.synchronize();
   expect(await second.text.read()).toBe("remote text");
-  expect(second.notified.slice(quiet)).toEqual([owner, owner]);
+  expect(second.notified.slice(quiet)).toEqual([owner, { ...owner, documentId: textName }]);
 
   const imported = second.notified.length;
   await second.synchronize();

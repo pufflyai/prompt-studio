@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-06
 
+Status: Accepted.
+
 ## Context
 
 PS-538 lets extension commands send live JSON chunks to webviews, SDK callers, and the CLI. The host owns transport and cancellation. Extensions own the meaning of each chunk.

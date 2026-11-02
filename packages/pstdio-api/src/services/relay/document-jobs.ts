@@ -6,7 +6,6 @@ interface Entry {
   initialized: Promise<Sync>;
   dirty: boolean;
   running?: Promise<true>;
-  status?: Awaited<ReturnType<Sync["status"]>>;
 }
 
 /** Discovery and exact hints share one worker for each mutable replica. */
@@ -31,7 +30,19 @@ export const createRelayDocumentJobs = (input: {
     entries.set(name, entry);
     return entry;
   };
+  const statuses = (names = [...entries.keys()]) =>
+    Promise.all(
+      names.map(async (name) => {
+        const entry = entries.get(name);
+        if (!entry) return;
+        const sync = await entry.initialized;
+        const status = await sync.status();
+        return { ...status, pending: status.pending || entry.dirty || !!entry.running };
+      }),
+    );
   return {
+    statuses,
+    names: () => [...entries.keys()],
     nameFor: (documentId: string) => names.get(documentId),
     has: (name: string) => entries.has(name),
     synchronize(name: string) {
@@ -45,7 +56,6 @@ export const createRelayDocumentJobs = (input: {
           while (entry.dirty && !input.signal.aborted) {
             entry.dirty = false;
             await sync.synchronize();
-            entry.status = await sync.status();
           }
           input.signal.throwIfAborted();
           return true as const;
@@ -60,12 +70,14 @@ export const createRelayDocumentJobs = (input: {
       entry.running = work;
       return work;
     },
-    // Status uses results owned by the workers, without opening unrelated replicas.
-    status: () => ({
-      downloaded: entries.size > 0 && [...entries.values()].every((entry) => entry.status?.downloaded),
-      pending: [...entries.values()].some((entry) => entry.dirty || entry.running || entry.status?.pending),
-      needsAttention: [...entries.values()].some((entry) => entry.status?.needsAttention),
-    }),
+    async status() {
+      const current = await statuses();
+      return {
+        downloaded: current.length > 0 && current.every((status) => status?.downloaded),
+        pending: current.some((status) => status?.pending),
+        needsAttention: current.some((status) => status?.needsAttention),
+      };
+    },
     async close() {
       closed = true;
       names.clear();

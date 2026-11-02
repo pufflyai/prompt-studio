@@ -1,5 +1,5 @@
 import type { WebviewKeyboardShortcut } from "@pstdio/sdk/extensions";
-import { getKeybindingSteps, type KeybindingSequence, type WorkbenchCore } from "../../core";
+import { getKeybindingSteps, type KeybindingSequence, type RegisteredKeybinding, type WorkbenchCore } from "../../core";
 import type { KeyboardPresentation } from "../../core/controllers/keyboard/keyboard-presentations";
 import { isShortcutBindingAvailable } from "../../core/controllers/keyboard/shortcut-catalog";
 import { keyboardEntryKind } from "../../core/registries/keybindings/keyboard-entry-commands";
@@ -21,6 +21,7 @@ export interface CreateWorkbenchHotkeyRegistrationsInput {
   workbench: WorkbenchCore;
   disabled?: boolean;
   commandIds?: readonly string[];
+  filterKeybinding?: (binding: RegisteredKeybinding) => boolean;
 }
 
 const keyAliases: Record<string, string> = {
@@ -53,7 +54,7 @@ export const normalizeWorkbenchKeybinding = (keybinding: KeybindingSequence): Ke
 };
 
 export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyRegistrationsInput) => {
-  const { workbench, disabled = false, commandIds } = input;
+  const { workbench, disabled = false, commandIds, filterKeybinding } = input;
   if (!workbench.activation.isActive()) return [];
   const allowedCommandIds = commandIds ? new Set(commandIds) : undefined;
   let targets: KeyboardPresentation[] | undefined;
@@ -67,6 +68,7 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
   };
 
   return workbench.keybindings.listActiveKeybindings().flatMap((keybinding, index) => {
+    if (filterKeybinding && !filterKeybinding(keybinding)) return [];
     const action = keybinding.action;
     if (action.kind === "command") {
       if (allowedCommandIds && !allowedCommandIds.has(action.commandId)) return [];

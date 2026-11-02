@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { numberedTargetShortcut } from "../keybindings/numbered-target-shortcut";
 import { WorkbenchIcon } from "../shared/icon";
-import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
+import { useWorkbenchCompositionRegionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { openPanelWidget } from "./panel-widget-open";
@@ -17,7 +17,7 @@ interface EmptyPanelProps {
 export const EmptyPanel = (props: EmptyPanelProps) => {
   const { workbench, region } = props;
   const resource = useWorkbenchLocationResource(workbench);
-  const panels = useWorkbenchCompositionPanels(workbench)[region].addable;
+  const panels = useWorkbenchCompositionRegionPanels(workbench, region).addable;
   const bounds = useRef<HTMLDivElement>(null);
   const keyboard = useWorkbenchStore(workbench.keyboard.store, (state) => state);
   const panelIds = panels.map((panel) => panel.panelId).join("\0");
@@ -34,7 +34,7 @@ export const EmptyPanel = (props: EmptyPanelProps) => {
   useLayoutEffect(() => {
     workbench.keyboard.refresh();
   }, [workbench, panelIds]);
-  const targets = workbench.keyboard.listNumberedTargets();
+  const targets = keyboard.active || keyboard.preview ? workbench.keyboard.listNumberedTargets() : [];
   const { activeModeId, modes } = useWorkbenchStore(workbench.modes.store, (state) => state);
   // A declared mode must resolve before its page and available tabs can render.
   if (!activeModeId && Object.keys(modes).length > 0) return null;

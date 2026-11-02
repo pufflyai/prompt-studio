@@ -1,4 +1,5 @@
 import type { ProjectSyncStatus } from "pstdio-api-contracts";
+import { sumDocumentProgress } from "./document-progress";
 
 interface OwnerSyncStatus {
   /** The owner finished one full download since its relay connection started. Reconnects keep it. */
@@ -9,6 +10,8 @@ interface OwnerSyncStatus {
   needsAttention: boolean;
   connected: boolean;
   busy: boolean;
+  pendingItems?: number;
+  download?: { completed: number; total: number | null };
 }
 
 export const projectSyncStatus = (owners: OwnerSyncStatus[]) => {
@@ -18,5 +21,9 @@ export const projectSyncStatus = (owners: OwnerSyncStatus[]) => {
   else if (owners.some((owner) => !owner.firstDownloaded)) state = "first-download-incomplete";
   else if (owners.some((owner) => !owner.connected)) state = "offline";
   else if (owners.some((owner) => owner.pending || owner.busy || !owner.downloaded)) state = "waiting-to-sync";
-  return { state, offlineReady };
+  return {
+    state,
+    offlineReady,
+    ...sumDocumentProgress(owners),
+  };
 };

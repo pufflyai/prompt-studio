@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-17
 
+Status: Accepted.
+
 ## Intended ownership
 
 One SQLite transaction owns the right to open a PGlite home. The operating system releases that lease after process death, including across container PID namespaces. No second PID-based owner should decide whether a database is safe to open.

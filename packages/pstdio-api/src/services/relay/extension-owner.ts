@@ -32,6 +32,7 @@ export const startRelayExtension = async (input: {
     deps,
     access,
     discoveryNeeded: () => connection?.wake(),
+    statusChanged: input.statusChanged,
   });
   const snapshot = input.snapshot;
   const repoRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "read").catch(() => null);

@@ -1,5 +1,7 @@
 import { Box } from "@chakra-ui/react";
-import { type ReactNode, useEffect } from "react";
+import { CopyButton } from "@pstdio/ui";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDocStyles } from "../../hooks/use-landing-styles";
 import { PageScroll } from "./page-scroll";
 
@@ -42,9 +44,38 @@ interface DocHtmlProps {
 }
 
 export const DocHtml = (props: DocHtmlProps) => {
+  return <CompiledDocHtml key={props.html} html={props.html} />;
+};
+
+const CompiledDocHtml = (props: DocHtmlProps) => {
   const { html } = props;
   const styles = useDocStyles();
+  const root = useRef<HTMLDivElement>(null);
+  const [blocks, setBlocks] = useState<HTMLPreElement[]>([]);
+  // React must retain the compiled DOM while the copy controls render into it.
+  const [markup] = useState(() => ({ __html: html }));
 
-  // biome-ignore lint/security/noDangerouslySetInnerHtml: the HTML is compiled at build time from markdown in this repo, never from user input.
-  return <Box css={styles.html} dangerouslySetInnerHTML={{ __html: html }} />;
+  // Compiled markdown stays intact; React owns only each block's copy control.
+  useEffect(() => {
+    setBlocks(Array.from(root.current?.querySelectorAll<HTMLPreElement>("pre:has(> code)") ?? []));
+  }, []);
+
+  return (
+    <>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Astro compiles repository markdown at build time. */}
+      <Box ref={root} css={styles.html} dangerouslySetInnerHTML={markup} />
+      {blocks.map((block, index) =>
+        createPortal(
+          <CopyButton
+            label="Copy code"
+            size="2xs"
+            css={styles.codeCopy}
+            text={() => block.querySelector("code")?.textContent ?? ""}
+          />,
+          block,
+          String(index),
+        ),
+      )}
+    </>
+  );
 };

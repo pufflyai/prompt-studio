@@ -7,7 +7,7 @@ export const codexThreadConfig = async (rpc: ReturnType<typeof createAppServerTr
   const policy = result.config?.shell_environment_policy;
   const values = { ...policy?.set };
   values.PSTDIO_SESSION_ID = input.env?.PSTDIO_SESSION_ID ?? "";
-  // Native config tables merge; blank values clear stale attribution from lower layers (ADR 0073).
+  // Native config tables merge; blank values clear stale attribution from lower layers (ADR 0122).
   values.PSTDIO_PROJECT_ID = input.env?.PSTDIO_PROJECT_ID ?? "";
   return {
     ...(input.params?.model_reasoning_effort ? { model_reasoning_effort: input.params.model_reasoning_effort } : {}),

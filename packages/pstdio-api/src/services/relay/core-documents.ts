@@ -7,6 +7,7 @@ import {
 } from "pstdio-sync/relay";
 import { apiLogger } from "../../lib/logger";
 import type { RelayDeps } from "./deps";
+import { documentProgress } from "./document-progress";
 import { createNativeDocumentLive } from "./native-document-live";
 import { reconcileProjectInfo } from "./project-info-owner";
 import { createSyncQuarantine } from "./quarantine";
@@ -48,7 +49,6 @@ export const startCoreDocumentSync = (input: {
   // Each reconnect replaces the document syncs. The first download stays done.
   let firstDownloaded = false;
   const documentIds = new Set<string>();
-  let summary = { downloaded: false, pending: false, needsAttention: false };
   const close = () => {
     for (const sync of syncs) sync.close();
     syncs = [];
@@ -102,7 +102,10 @@ export const startCoreDocumentSync = (input: {
         attempt = attemptSignal;
         generation = space.generation;
       }
-      for (const sync of syncs) await sync.synchronize();
+      for (const sync of syncs) {
+        await sync.synchronize();
+        input.statusChanged?.();
+      }
       numbers ??= await createResourceNumberSync({
         owner,
         space,
@@ -112,12 +115,7 @@ export const startCoreDocumentSync = (input: {
       });
       await numbers!.synchronize();
       const statuses = await Promise.all([...syncs, numbers!].map((sync) => sync.status()));
-      summary = {
-        downloaded: statuses.every((status) => status.downloaded),
-        pending: statuses.some((status) => status.pending),
-        needsAttention: statuses.some((status) => status.needsAttention),
-      };
-      if (!summary.downloaded) return;
+      if (!statuses.every((status) => status.downloaded)) return;
       firstDownloaded = true;
       await reconcileProjectInfo(deps, config.workbenchId, checkedFolders);
     },
@@ -138,7 +136,6 @@ export const startCoreDocumentSync = (input: {
   });
   const changed = (changed: { workbenchId: string }) => {
     if (changed.workbenchId !== owner.workbenchId) return;
-    summary = { ...summary, pending: true };
     connection.wake();
     input.statusChanged?.();
   };
@@ -154,7 +151,14 @@ export const startCoreDocumentSync = (input: {
       close();
       await live.close();
     }),
-    status: async () => ({ firstDownloaded, ...summary, ...connection.status() }),
+    status: async () => {
+      const statuses = await Promise.all([syncs[0]?.status(), numbers?.status()]);
+      return {
+        firstDownloaded,
+        ...documentProgress(statuses, true),
+        ...connection.status(),
+      };
+    },
     close: () => controller.abort(),
   };
 };

@@ -24,6 +24,8 @@ export type StorageScope =
   | { type: string; id: string };
 
 export interface ExtensionStorageMigration {
+  /** Import a zero-based rank deterministically. A stable unique item key separates equal ranks on offline devices. */
+  position(rank: number, key: string): string;
   /** Derive the same ID from a stable source key. A prefix selects lossless, case-sensitive Base62 output. */
   id(key: string, prefix?: string): string;
 }

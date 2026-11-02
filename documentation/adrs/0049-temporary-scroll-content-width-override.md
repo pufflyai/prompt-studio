@@ -2,6 +2,8 @@
 
 Proposed: 2026-09-30
 
+Status: Accepted.
+
 ## Intended design
 
 Panel tab content uses the viewport width. Tabs share that space and shrink before the viewport scrolls. The theme owns tab widths and minimum sizes.

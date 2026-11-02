@@ -2,9 +2,7 @@
 
 Proposed: 2026-09-27
 
-## Status
-
-Accepted as a temporary workaround. The user approved the original values on 2026-09-27 and later explicitly requested a 15 s default for Windows tests after another database migration test exceeded 5 s.
+Status: Accepted as a temporary workaround. The user approved the original values on 2026-09-27 and later explicitly requested a 15 s default for Windows tests after another database migration test exceeded 5 s.
 
 On 2026-10-20, the user approved a 30 s allowance for only the Windows environment-identity restart test.
 

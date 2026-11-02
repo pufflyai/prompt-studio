@@ -2,28 +2,33 @@
 
 Proposed: 2026-10-19
 
+Status: Accepted. Temporary workaround replacing persisted timeline claims (ADR 0062) and launch claims (ADR 0070).
+
 ## Intended design
 
-Planner edits should use atomic, revision-checked storage operations. Launching an attempt should reserve capacity and publish its workspace, session, and attempt as one operation.
+Planner edits should use atomic, revision-checked storage. Attempt launches should reserve capacity and publish the workspace, session, and attempt atomically.
 
 ## External limitation
 
-The installed extension SDK does not offer a transaction spanning those host operations. Planner cannot access the host database. A durable lock record without a live owner does not solve this limitation: a crash can leave it blocking every later write.
+The installed extension SDK cannot transact across these host operations, and Planner cannot access the host database. Persisting a claim does not create a transaction: a crash can strand the claim and block later writes.
 
 ## Temporary decision
 
-Replace the persisted write claims from [ADR 0062](0062-temporary-timeline-write-claims.md) and [ADR 0070](0070-temporary-planner-launch-claims.md) with runtime-owned guards. The host executes extension commands, schedules, and hooks in the database owner's process. A guard is scoped by project, extension, and operation key. Acquire it synchronously before the first awaited operation and release it synchronously in `finally`.
-
-Keep the guard registry on a namespaced global symbol so a reloaded extension shares guards with handlers from its previous source snapshot. Slow live writes retain ownership until they settle. A process crash destroys the registry; restarting cannot inherit a blocking lock. Existing stored write claims no longer participate in ownership, and the obsolete inspection and manual release commands are removed.
+1. Use runtime-owned guards scoped by project, extension, and operation key. Acquire synchronously before the first await and release synchronously in `finally`.
+2. Keep the registry on a namespaced global symbol so reloaded extension handlers share ownership with earlier handlers. A crash destroys it; stored claims and manual recovery commands no longer participate.
+3. Serialize timeline writes separately from attempt launches. Manual launches and Auto build share the launch guard and check capacity before creating a workspace. Auto build rechecks candidates before launching.
+4. Preserve partial results: retry failed placement on the existing ticket; retain partial launch evidence and earlier successful launches.
 
 ## Limitations
 
-This guard serializes work only within one runtime. The host already owns exclusive access to its local database. Separate environments editing shared content still need revision-checked saves; a persisted Planner lock is not a distributed transaction. Partial workspace and session creation still needs the existing attempt recovery behavior. A handler that never settles keeps its guard until the runtime stops; an arbitrary expiry must not allow an overlapping live write.
+- Guards serialize one runtime, whose host exclusively owns the local database. Cross-environment edits still need revision checks; this is not a distributed transaction.
+- A slow or stuck handler retains its guard until it settles or the runtime stops. Timed expiry could overlap a live write and exceed capacity.
+- Workspace and session creation remain separate operations requiring existing recovery behavior.
 
 ## Isolation
 
-The guard stays in Planner's data layer. No host or SDK changes, storage migrations, timers, or stored ownership records are needed.
+The guard stays in Planner's data layer. It adds no host or SDK API, database migration, timer, or stored ownership state.
 
 ## Removal
 
-Replace the guard when public storage and launch APIs can enforce the relevant atomic operations. Preserve the concurrency and interrupted-write regression coverage when moving that responsibility to the host.
+Replace guards when public storage and launch APIs enforce these atomic operations. Preserve concurrency, interrupted-write, capacity, and partial-result coverage.

@@ -12,7 +12,7 @@ import { createRecordAssets } from "../../features/extensions/command-environmen
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { PublicationUpdateRequiredError } from "../../features/extensions/publication/types";
 import { artifactTreeReader } from "./artifact-tree-reader";
-import { createFileProjectionIO } from "./file-io";
+import { createFileProjectionIO, sameFile } from "./file-io";
 import { createFileReconciler } from "./file-reconciliation";
 import { fileProjection, serializeFiles } from "./file-state";
 import { createFileTree, type FileNode, fileRecordId, within } from "./file-tree";
@@ -86,6 +86,24 @@ export const createSharedArtifactMount = (
     tree.active(
       await Promise.all([...tree.ancestors(target), target].map((path) => storage.records.read(fileRecordId(path)))),
     );
+  // A point read can reuse its projection when both the journal and local bytes still match.
+  // Recheck ancestors and the real-path boundary each time; remote edits and deletes fall back
+  // to reconciliation, as do external filesystem edits and cold reads.
+  const unchanged = async (path: string) => {
+    await assertBoundary(posix.relative(prefix, path));
+    const target = path;
+    const storage = await open();
+    const state = await projection.read();
+    for (const current of [...tree.ancestors(target), target]) {
+      const previous = state[current];
+      if (!previous?.node) return;
+      const record = await storage.records.read(fileRecordId(current));
+      if (!record.exists || record.deleted || record.revision !== previous.revision) return;
+      const disk = await io.source(current);
+      if (!disk || !sameFile(disk, { kind: previous.node.kind, hash: previous.hash })) return;
+    }
+    return storage;
+  };
   const run = <T>(action: (storage: Awaited<ReturnType<typeof open>>) => Promise<T>, target?: string) =>
     serializeFiles(key, async () => {
       try {
@@ -94,7 +112,8 @@ export const createSharedArtifactMount = (
         if (!(error instanceof PublicationUpdateRequiredError)) throw error;
         return action(await open());
       }
-      return action(await withoutStorageObservation(() => reconcile(target)));
+      const storage = target === undefined ? undefined : await unchanged(target);
+      return action(storage ?? (await withoutStorageObservation(() => reconcile(target))));
     });
   const write = (path: string, value: Blob, update: boolean) =>
     run(async (storage) => {

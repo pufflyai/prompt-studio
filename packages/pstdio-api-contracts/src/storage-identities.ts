@@ -1,5 +1,6 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
+import { createStorageMigrationPosition } from "./storage-migration-positions";
 
 const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
@@ -34,6 +35,7 @@ export const createStorageId = (prefix?: string) => {
 };
 
 export const createStorageMigration = (namespace: readonly (string | number)[]) => ({
+  position: createStorageMigrationPosition,
   id(key: string, prefix?: string) {
     const bytes = sha256(new TextEncoder().encode(JSON.stringify([...namespace, key]))).slice(0, 16);
     // Name-derived SHA-256 UUIDs use the custom UUIDv8 layout, not UUIDv5's SHA-1 layout.

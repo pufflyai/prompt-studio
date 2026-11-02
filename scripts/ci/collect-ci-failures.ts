@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { type CiJob, deduplicateJobs, isFailedJob, isSummaryJob, parseFailedTests } from "./ci-failures";
+import { type CiJob, countedJobs, deduplicateJobs, isFailedJob, parseFailedTests } from "./ci-failures";
 
 interface WorkflowRun {
   id: number;
@@ -22,15 +22,38 @@ interface WorkflowJob {
   steps: Array<{ name: string; conclusion: string | null; started_at?: string; completed_at?: string }>;
 }
 
-const githubText = async (endpoint: string) => {
-  const child = Bun.spawn(["gh", "api", "--allow-escape-sequences", endpoint], { stdout: "pipe", stderr: "pipe" });
+const gh = async (args: string[]) => {
+  const child = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "pipe" });
   const [stdout, stderr, code] = await Promise.all([
     new Response(child.stdout).text(),
     new Response(child.stderr).text(),
     child.exited,
   ]);
-  if (code !== 0) throw new Error(`GitHub ${endpoint} failed (${code}): ${stderr.trim()}`);
-  return stdout;
+  return { stdout, stderr, code };
+};
+
+// Every workflow in the repository shares the workflow token's 1,000 requests per hour, and a
+// week of runs needs more. Leave a reserve for the others and wait for the reset instead.
+const reserve = 300;
+let resumeAt = 0;
+
+export const githubText = async (endpoint: string) => {
+  for (let attempt = 1; ; attempt += 1) {
+    await Bun.sleep(Math.max(0, resumeAt - Date.now()));
+    const { stdout, stderr, code } = await gh(["api", "--include", "--allow-escape-sequences", endpoint]);
+    const end = stdout.search(/\r?\n\r?\n/);
+    const headers = end < 0 ? stdout : stdout.slice(0, end);
+    const remaining = Number(headers.match(/^x-ratelimit-remaining:\s*(\d+)/im)?.[1] ?? reserve);
+    const reset = Number(headers.match(/^x-ratelimit-reset:\s*(\d+)/im)?.[1] ?? 0);
+    if (remaining < reserve) resumeAt = Math.max(resumeAt, reset * 1000 + 1000);
+    if (code === 0) return end < 0 ? "" : stdout.slice(end).replace(/^\r?\n\r?\n/, "");
+    // Retry server errors; a rate limit waits for its reset above, or a minute for secondary limits.
+    const limited = /rate limit/i.test(stderr);
+    if (attempt >= 5 || !(limited || /HTTP 5\d\d/.test(stderr)))
+      throw new Error(`GitHub ${endpoint} failed (${code}): ${stderr.trim()}`);
+    if (limited) resumeAt = Math.max(resumeAt, Date.now() + 60_000);
+    await Bun.sleep(2 ** attempt * 1000);
+  }
 };
 
 const paginatedJobs = async (endpoint: string) => {
@@ -100,7 +123,8 @@ export const collectCiFailures = async (repository: string, since: Date, until: 
     }),
   );
   const unique = deduplicateJobs(jobs);
-  const failures = unique.filter((job) => isFailedJob(job) && !isSummaryJob(job));
+  // PR failures are mostly the change under review, and their logs would exceed the request budget.
+  const failures = countedJobs(unique).filter((job) => isFailedJob(job) && job.event !== "pull_request");
   next = 0;
   await Promise.all(
     Array.from({ length: 4 }, async () => {

@@ -2,15 +2,19 @@
 
 <!--
 Use bullet points. Keep it brief.
-Describe the problem, who it affects, and what causes it. Link the ticket (PS-XXX)
-and any bug reports. Give a concrete example of the current behavior.
+Start with the impact on users or the system: who or what is affected, and what
+they cannot do or what fails. Give a concrete example of the current behavior,
+such as "Users cannot log in with valid credentials."
+Then explain the technical cause. Link the ticket (PS-XXX) and any bug reports.
 -->
 
 ## Fix
 
 <!--
 Use bullet points. Keep it brief.
-Explain what changes and how it fixes the cause.
+Start with the final state after this PR is merged: what users can do or how the
+system will behave, such as "Users can log in with valid credentials."
+Then explain what changes and how it fixes the cause.
 Verified: name the tests and checks run, their results, and whether regression tests fail before the fix.
 Self-reviewed: summarize concerns addressed and any rejected suggestions, with reasons.
 -->

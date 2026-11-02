@@ -80,6 +80,6 @@ export const executeExtensionCommandHandler = (
     }
   };
 
-  // ADR 0079 isolates Hono's recursive JSON response type limit at this boundary.
+  // ADR 0126 isolates Hono's recursive JSON response type limit at this boundary.
   return handler as unknown as AppRouteHandler<typeof executeExtensionCommandRoute>;
 };

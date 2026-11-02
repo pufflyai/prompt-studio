@@ -3,6 +3,7 @@ import type { LiveServerMessage } from "pstdio-sync-contracts";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createRelayDocumentJobs, RelayDocumentRetiredError } from "./document-jobs";
+import { documentProgress } from "./document-progress";
 import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
 
@@ -12,6 +13,7 @@ export const createExtensionDocumentSync = (input: {
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
   discoveryNeeded?: () => void;
+  statusChanged?: () => void;
 }) => {
   const initialize = async (signal: AbortSignal, space: Awaited<ReturnType<typeof fetchSyncSpaces>>["project"]) => {
     const { config, owner, deps } = input;
@@ -56,23 +58,29 @@ export const createExtensionDocumentSync = (input: {
       assets: createRecordAssets(deps.assetTransferService, owner, workSignal),
       quarantine: quarantine(recordStreamId),
     });
-    let recordStatus: Awaited<ReturnType<typeof records.status>> | undefined;
+    let directory: string[] | undefined;
     let running: Promise<void> | undefined;
     const synchronize = () => {
       if (running) return running;
       const work = Promise.resolve().then(async () => {
         try {
+          directory = undefined;
           workSignal.throwIfAborted();
           await deps.extensionStorageService.documents.list(owner);
           workSignal.throwIfAborted();
           await jobs.synchronize("records");
+          input.statusChanged?.();
           workSignal.throwIfAborted();
           await records.synchronize();
           workSignal.throwIfAborted();
-          recordStatus = await records.status();
-          for (const name of await deps.extensionStorageService.documents.list(owner)) {
+          directory = await deps.extensionStorageService.documents.list(owner);
+          input.statusChanged?.();
+          for (const name of directory) {
             workSignal.throwIfAborted();
-            if (name !== "records") await jobs.synchronize(name);
+            if (name !== "records") {
+              await jobs.synchronize(name);
+              input.statusChanged?.();
+            }
           }
         } catch (error) {
           if (error !== workSignal.reason || !(error instanceof RelayDocumentRetiredError)) throw error;
@@ -89,13 +97,13 @@ export const createExtensionDocumentSync = (input: {
       jobs,
       ownerId,
       recordStreamId,
-      status: () => {
-        const status = jobs.status();
-        return {
-          downloaded: status.downloaded && !!recordStatus?.downloaded,
-          pending: status.pending || !!recordStatus?.pending,
-          needsAttention: status.needsAttention || !!recordStatus?.needsAttention,
-        };
+      invalidate(name: string) {
+        if (!directory?.includes(name)) directory = undefined;
+      },
+      status: async () => {
+        const names = [...new Set(["records", ...jobs.names(), ...(directory ?? [])])];
+        const statuses = [...(await jobs.statuses(names)), await records.status()];
+        return documentProgress(statuses, directory !== undefined);
       },
       synchronize,
       async close() {
@@ -106,6 +114,11 @@ export const createExtensionDocumentSync = (input: {
     };
   };
   let current: Awaited<ReturnType<typeof initialize>> | undefined;
+  const stop = input.deps.extensionStorageService.watch((owner) => {
+    if (owner.workbenchId !== input.owner.workbenchId || owner.extensionId !== input.owner.extensionId) return;
+    if (owner.documentId) current?.invalidate(owner.documentId);
+    input.statusChanged?.();
+  });
   let firstDownloaded = false;
   let preparing: { signal: AbortSignal; work: Promise<Awaited<ReturnType<typeof initialize>>> } | undefined;
   const starting = new Map<string, { signal: AbortSignal; work: Promise<boolean>; dirty: boolean }>();
@@ -161,10 +174,13 @@ export const createExtensionDocumentSync = (input: {
     return work;
   };
   return {
-    close,
+    async close() {
+      stop();
+      await close();
+    },
     status: async () => ({
       firstDownloaded,
-      ...(current?.status() ?? { downloaded: false, pending: false, needsAttention: false }),
+      ...((await current?.status()) ?? documentProgress([undefined, undefined], false)),
     }),
     synchronizeDocument,
     prepare,
@@ -193,7 +209,7 @@ export const createExtensionDocumentSync = (input: {
     async synchronize(signal: AbortSignal) {
       const active = await prepare(signal);
       await active.synchronize();
-      if (current === active && active.status().downloaded) firstDownloaded = true;
+      if (current === active && (await active.status()).downloaded) firstDownloaded = true;
     },
   };
 };

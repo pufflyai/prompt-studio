@@ -16,7 +16,7 @@ The current PR improves the iframe by sharing plan reads, combining overlapping 
 
 Provide a reusable dependency timeline in `@pstdio/ui/timeline`, then let extensions contribute data and actions to a host-rendered timeline through the public SDK. Planner remains an extension.
 
-The shared renderer must support other tools that show dependencies, grouped work, milestones, or execution order. Core owns the view contract and rendering infrastructure. Planner owns tickets, Auto Build, review requests, scheduling rules, risk, ETA, and persistence. This follows the [mission](../../../MISSION.md) and [package boundaries](../../references/architecture/0013-package-boundaries.md).
+The shared renderer must support other tools that show dependencies, grouped work, milestones, or execution order. Core owns the view contract and rendering infrastructure. Planner owns tickets, Auto Build, review requests, scheduling rules, risk, ETA, and persistence. This follows the [mission](../../guidance/0001-mission.md) and [package boundaries](../../references/architecture/0013-package-boundaries.md).
 
 ## Ownership
 
@@ -45,7 +45,7 @@ Add an additive public timeline view contribution after the reusable renderer is
 
 The host renders the collection bar, graph, and error chrome in its own document. This lets Timeline use the same theme, fonts, filters, viewport sizing, connection indicator, and action reporting as Kanban and DataTable. Planner can continue opening its existing ticket pages and sessions through public navigation targets.
 
-Saved views must resolve collection fields without rerunning the row query. Replace the hidden Kanban schema adapter described in [ADR 0076](../../adrs/0076-temporary-timeline-saved-view-schema.md) with a public collection schema contract. Reading saved views must not load ticket rows, session histories, or another dependency plan.
+Saved views must resolve collection fields without rerunning the row query. Replace the hidden Kanban schema adapter described in [ADR 0125](../../adrs/0125-temporary-timeline-saved-view-schema.md) with a public collection schema contract. Reading saved views must not load ticket rows, session histories, or another dependency plan.
 
 A component extraction consumed by the old iframe is an intermediate release. It is not evidence that runtime duplication or the iframe sizing difference has been removed.
 
@@ -66,7 +66,7 @@ A component extraction consumed by the old iframe is an intermediate release. It
 2. Publish the UI package and any necessary additive SDK contract. Validate package consumers and extension compatibility. Follow [API versioning](../../references/extensions/0014-api-versioning.md).
 3. Implement Workbench's generic native timeline renderer and lifecycle using the published contract. Keep Planner-specific actions and computations out of the host.
 4. In a separate extension PR, update Planner's exact published UI dependency and supported SDK version, adapt its query and actions, and switch its contribution to the native renderer.
-5. Remove the old iframe entry, copied composition code, unnecessary browser dependencies, and the temporary filter module once a published UI export replaces it, as required by [ADR 0071](../../adrs/0071-temporary-package-planner-filter-control.md).
+5. Remove the old iframe entry, copied composition code, and unnecessary browser dependencies. Planner already imports `CollectionFilter` from the published `@pstdio/ui/collection-view` entry; the temporary filter module is retired.
 
 Publish dependencies before consuming them. Do not make portable extension installs depend on workspace links or unpublished exports. Preserve the currently supported iframe until the replacement is available; remove it when migration completes.
 

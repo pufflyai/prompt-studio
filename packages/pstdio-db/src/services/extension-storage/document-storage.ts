@@ -71,6 +71,21 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
     .limit(1);
   return !!record;
 };
+type StorageChange = StorageOwner & { documentId?: string };
+
+const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
+  const [row] = await db
+    .select({ revision: storage_documents.revision })
+    .from(storage_documents)
+    .where(
+      and(
+        eq(storage_documents.workbench_id, owner.workbenchId),
+        eq(storage_documents.extension_id, owner.extensionId),
+        eq(storage_documents.document_id, documentId),
+      ),
+    );
+  return row?.revision ?? 0;
+};
 
 export const createDocumentStorageDBService = (
   db: DbClient,
@@ -78,7 +93,7 @@ export const createDocumentStorageDBService = (
   diagnostics?: StorageDiagnostics,
 ) => {
   const cache = createDocumentCache();
-  const listeners = new Set<(owner: StorageOwner, documentId?: string) => void>();
+  const listeners = new Set<(owner: StorageChange) => void>();
   const documentListeners = new Map<string, Set<() => void>>();
   const numberListeners = new Set<(event: NumberChange) => void>();
   const numbersChanged = (events: NumberChange[]) => notifyNumbers(numberListeners, events);
@@ -106,7 +121,7 @@ export const createDocumentStorageDBService = (
         });
         cache.publish(key, result);
         if (result.changed) {
-          for (const listener of listeners) listener(owner, documentId);
+          for (const listener of listeners) listener({ ...owner, documentId });
           for (const listener of documentListeners.get(key) ?? []) listener();
         }
         return result.value;
@@ -120,6 +135,7 @@ export const createDocumentStorageDBService = (
   const transaction = transactionFor("records");
   const nativeStore = (documentId: string) => ({
     transaction: transactionFor(documentId),
+    revision: documentRevision(db, documentId),
     initialHistory: {
       validate: readTextDocumentSeed,
       prepare: (owner: StorageOwner, remote: Y.Doc) =>
@@ -166,7 +182,7 @@ export const createDocumentStorageDBService = (
       open: (documentId: string) =>
         documentId.startsWith('["native-markdown",')
           ? nativeStore(documentId)
-          : { transaction: transactionFor(documentId) },
+          : { transaction: transactionFor(documentId), revision: documentRevision(db, documentId) },
       recordStream: (owner: StorageOwner) =>
         createRecordStreamStore(db, owner, {
           statistics,
@@ -213,7 +229,7 @@ export const createDocumentStorageDBService = (
       }
       return false;
     },
-    watch(listener: (owner: StorageOwner, documentId?: string) => void) {
+    watch(listener: (owner: StorageChange) => void) {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
@@ -234,7 +250,8 @@ export const createDocumentStorageDBService = (
           nativeChanged: (keys) => {
             notifyNativeRecords(documentListeners, input.owner, keys);
             for (const key of keys)
-              for (const listener of listeners) listener(input.owner, JSON.stringify(["native-markdown", key]));
+              for (const listener of listeners)
+                listener({ ...input.owner, documentId: JSON.stringify(["native-markdown", key]) });
           },
           changed: () => {
             for (const listener of listeners) listener(input.owner);

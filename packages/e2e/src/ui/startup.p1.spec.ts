@@ -72,6 +72,15 @@ test("dashboard keeps project selection open when no project is selected", async
 
   await page.reload();
   await expect(projectPicker).toBeVisible();
+});
+
+test("creating the first folder project opens Home", async ({ page, request }) => {
+  test.setTimeout(20_000);
+  await deleteAllProjects(request);
+  await page.goto("/");
+
+  const projectPicker = page.getByRole("dialog").filter({ hasText: "No projects yet" });
+  await expect(projectPicker).toBeVisible();
 
   const folder = folderProjectInput({}).initial_workspace.params.path;
   await projectPicker.getByRole("button", { name: "Create project", exact: true }).click();

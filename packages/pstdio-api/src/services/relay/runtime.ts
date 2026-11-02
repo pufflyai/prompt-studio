@@ -126,7 +126,8 @@ export const startRelayRuntime = async (input: {
       })();
     return running;
   };
-  const stopStorage = deps.extensionStorageService.watch((owner, documentId) => {
+  const stopStorage = deps.extensionStorageService.watch((owner) => {
+    const documentId = owner.documentId;
     if (!workbenches.has(owner.workbenchId)) return;
     if (owner.extensionId === publishedExtensionsId) {
       publications.get(owner.workbenchId)?.wake();
@@ -167,6 +168,7 @@ export const startRelayRuntime = async (input: {
         coreDocuments.get(workbenchId),
         publications.get(workbenchId),
         automations.get(workbenchId),
+        personal.get(workbenchId),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),

@@ -1,45 +1,25 @@
-# Gate merges on builds and publish releases all or nothing
+# Publish releases from one verified commit
 
 Proposed: 2026-10-12
 
-Status: Partially superseded. [ADR 0087](0087-run-relevant-pr-checks-before-merging.md) first replaced the PR/queue stages. [ADR 0106](0106-prioritize-merge-checks-and-certify-release-candidates.md) now owns stage guarantees and release-validation placement. The original single-commit publication, tag ownership, and all-or-nothing publication rules remain accepted. [ADR 0107](0107-independent-sdk-ui-previews.md) adds a packages-only SDK/UI preview channel. The decision and consequences below preserve the original design as history.
+Status: Accepted for publication and tag rules. [Current CI stages](0129-prioritize-merge-checks-and-certify-release-candidates.md) own execution placement; [SDK/UI previews](0107-independent-sdk-ui-previews.md) add a packages-only channel.
 
 ## Context
 
-CI has three jobs: give pull requests fast feedback, keep `main` buildable, and ship releases. In October 2026 it did none of them well (PS-658).
-
-- The median pull request run took 12.5 minutes, because nearly every pull request ran Windows and e2e jobs.
-- The merge queue had been removed on 2026-10-02 because it ran the full test suite and flaky tests rejected good pull requests. After that, nothing tested the merged result before it reached `main`. Merge skew broke `main` 5 times in a row, and checks that ran only at release time went stale until release day.
-- The release published npm packages and pushed the tag before it built the desktop apps. A desktop failure left a version on npm with no desktop release. The next run saw the version on npm and skipped the release, so recovery needed manual dispatches. 0.41.0 has no tag or GitHub release for this reason.
-- A separate release rehearsal ran only when the version PR's CI triggered it. That trigger did not fire for the approved re-run of a bot-pushed PR, so 0.43.0 merged without a rehearsal.
+Publishing npm packages before desktop builds left partially shipped versions that normal retries skipped. Version 0.41.0 received no tag or GitHub release. A separately triggered rehearsal also failed to protect an approved bot-pushed release PR.
 
 ## Decision
 
-Each CI stage has one job.
-
-1. **Pull requests** run fast, scoped checks on Linux. A `ci:full` label runs everything on demand.
-2. **The merge queue** runs only deterministic work: whole-repository static checks and an unsigned build of every client on every platform. It never runs tests, so a flaky test cannot reject a pull request.
-3. **Pushes to `main`** run the full test suite. A failure blocks nothing and marks the commit that caused it.
-4. **Releases** build and verify every artifact from one commit before they publish anything. The publish job publishes npm packages first and the GitHub release last, so a published GitHub release is the only done marker. Every publish step skips work that is already done. A failed release resumes with a re-run or with the next push to `main`.
-5. **Nightlies** run the same release jobs, so every night rehearses the stable path. The separate rehearsal and its pull request gate are removed.
-
-Release tags follow two rules:
-
-- The tag of an unpublished release moves to the newest commit on `main`, because nothing has consumed it yet. A re-run of an older run never moves it back.
-- Once npm has part of a version, including a CLI platform package, the tag stays, and the release finishes from the commit that started publishing. npm and the desktop apps never come from different commits. Each attempt dry-runs `npm publish` before the first package is published, so a packing error cannot start a release that can never finish.
+1. Build and verify the release artifacts from one commit before publishing. Apply each channel's validation requirements from the current CI-stage decision.
+2. Publish npm packages first and the GitHub release last. The published GitHub release is the completion marker. Steps skip already completed work so failed publication can resume.
+3. Before any package exists on npm, an unpublished tag may move forward to the newest main commit. An older rerun must never move it back.
+4. Once any package of that version is published, including a CLI platform package, freeze the tag and finish from that commit. Never combine npm and desktop artifacts from different commits.
+5. Dry-run package publication before publishing the first package so packing errors cannot strand a version.
+6. Exercise the release path through nightlies instead of a separately triggered rehearsal.
 
 ## Consequences
 
-- Pull request feedback is fast, and every commit on `main` builds every client.
-- A test regression can merge. It appears on the `main` commit that caused it.
-- Merging waits for the queue's builds, for up to five pull requests at a time.
-- npm receives a new version about 30 to 40 minutes later than before, because publishing waits for the desktop builds and the Windows update check.
-- A run that resumes from an older commit uses the newest workflow files with that commit's scripts. The old `validation_ref` input that mixed check revisions is gone, so a workflow change that the older scripts cannot run needs the next version instead.
-- A nondeterministic build or static check now blocks merging and must be fixed at once.
-- The release pipeline can run end to end only from `main`, because npm trusted publishing and Windows signing trust `main` and release tags. Nightlies are its regular test.
-
-## Alternatives
-
-- **Require pull requests to be up to date with `main`.** Catches merge skew, but forces a rebase and full run for every merge.
-- **Run tests in the merge queue.** Gates regressions, but flaky tests reject good pull requests, which is why the queue was removed.
-- **Keep the rehearsal and fix its trigger.** The release itself could still stop halfway, and the rehearsal duplicates the release pipeline.
+- Resuming an older commit uses the current workflow with that commit's scripts. If incompatible, release a new version instead of mixing revisions.
+- The pipeline runs from main because trusted npm publication and Windows signing trust main and release tags.
+- Nightly and stable validation depth differs, but both retain artifact integrity and all-or-nothing publication.
+- ADR 0087's intermediate PR/queue policy and this record's original stage layout were retired; the current CI decision records their failure history.

@@ -71,7 +71,7 @@ test("discovery and repeated exact hints share one replica and retain edits admi
     });
     const repeats = Array.from({ length: 100 }, () => jobs.synchronize("text"));
     expect(new Set([first, ...repeats]).size).toBe(1);
-    expect(jobs.status().pending).toBe(true);
+    expect((await jobs.status()).pending).toBe(true);
     release.resolve();
     await Promise.all([first, ...repeats]);
     await remote.synchronize();
@@ -80,7 +80,7 @@ test("discovery and repeated exact hints share one replica and retain edits admi
     );
     expect(creations).toBe(1);
     expect(maximum).toBe(1);
-    expect(jobs.status()).toEqual({ downloaded: true, pending: false, needsAttention: false });
+    expect(await jobs.status()).toEqual({ downloaded: true, pending: false, needsAttention: false });
   } finally {
     release.resolve();
     controller.abort();

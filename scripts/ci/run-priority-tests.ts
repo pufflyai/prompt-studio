@@ -27,6 +27,7 @@ const packages = readWorkspacePackages(root).map((pkg) => ({
 const plan = createPriorityPlan(requestedTestFiles(args, discoverTestFiles(root)), packages, priority, {
   scope: option("--scope"),
   runner: option("--runner"),
+  allowQuarantineOnly: args.includes("--allow-quarantine-only"),
 });
 if (!plan.length) throw new Error(`No ${priority} tests selected`);
 if (args.includes("--list")) {

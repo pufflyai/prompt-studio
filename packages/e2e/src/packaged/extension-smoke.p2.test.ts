@@ -186,7 +186,7 @@ test("interruption stops the browser and host while retaining requested evidence
           throw new Error(`Smoke process exited before reaching the held webview: ${output}`);
         }),
       ]);
-      logTestPhase("interrupt held extension webview");
+      logTestPhase(`interrupt held extension webview via terminal Ctrl+C (${process.platform}/${process.arch})`);
       const retained = join(root, readdirSync(root).find((name) => name.startsWith("pstdio-extension-test-"))!);
       const descriptor = JSON.parse(readFileSync(join(retained, "home/runtime.json"), "utf8"));
       // Drive a real Ctrl+C through the host terminal on every platform. On Windows,

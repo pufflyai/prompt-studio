@@ -44,6 +44,21 @@ export const TermsOfService: Story = {
   id: "landing-doccolumn--terms-of-service",
   args: { pageKey: "/terms/", children: <DocHtml html={TERMS_HTML} /> },
 };
+export const CopyablePrompt: Story = {
+  id: "landing-doccolumn--copyable-prompt",
+  args: {
+    pageKey: "/copyable-prompt/",
+    children: (
+      <DocHtml
+        html={`<h1>A prompt to use with an agent</h1>
+<p>Copy the complete prompt with the button in the code block.</p>
+<pre data-language="markdown"><code>Help me improve this interface using the project's real components and styles. Keep the existing examples and their IDs.
+
+Show a normal state and an important edge case. Let me try the controls before changing the implementation.</code></pre>`}
+      />
+    ),
+  },
+};
 export const HeadingLinks: Story = {
   id: "landing-doccolumn--heading-links",
   args: {

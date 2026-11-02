@@ -36,7 +36,9 @@ test("committed text changes announce their exact standalone document identity",
   const f = await fixture();
   await f.text.seed("before");
   const events: { owner: StorageOwner; name: string | undefined; content: Promise<string> }[] = [];
-  const stop = f.service.watch((owner, name) => events.push({ owner, name, content: f.text.read() }));
+  const stop = f.service.watch(({ documentId: name, ...owner }) =>
+    events.push({ owner, name, content: f.text.read() }),
+  );
   try {
     await f.text.save("after");
     expect(events).toHaveLength(1);

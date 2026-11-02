@@ -5,11 +5,11 @@ created: "2026-03-10T20:12:05Z"
 
 # PRD: Versioning and releases
 
-Prompt Studio ships one version across pstdio, SDK, UI, workbench, desktop and every core extension. Changesets owns their versions through one fixed group in `.changeset/config.json`. See [ADR 0031](../../adrs/0031-release-all-core-packages-under-one-version.md).
+Prompt Studio's host, SDK, UI, workbench, and desktop share one Changesets fixed version group in `.changeset/config.json`. Core extensions have independent versions and published SDK/UI ranges. Stable hosts switch from host-tag installs to PSX only after deployment qualification. See the [extension release decision](../../adrs/0106-independent-core-extension-delivery.md).
 
 ## Contributor flow
 
-1. Run `bun changeset`. Select the packages changed, choose a bump and write a one-line summary. Follow the package selection rules in `AGENTS.md`.
+1. Run `bun changeset`. Select the packages changed, choose a bump and write a one-line summary. Follow the [changeset package rules](../../guidance/0007-contributing.md#5-changesets).
 2. Commit the changeset with the change. The selected package decides where the summary appears in release notes.
 3. Merge into `main`. CI opens or updates the Version Packages PR. The highest pending bump sets the next version for every member of the group.
 4. Review and merge that PR. All group members should have the same version. Extension SDK and UI dependency ranges must remain unchanged unless an extension PR explicitly updates them.
@@ -161,7 +161,7 @@ The desktop side of the nightly channel is described in [Desktop distribution](0
 
 ## Validation
 
-The [nonfunctional requirements](../../../NONFUNCTIONAL_REQUIREMENTS.md) describe advisory resource targets, nightly performance coverage, and when local benchmarks are useful. The existing 200 MB compiled-binary check runs during local builds, cross-platform builds, and prebuilt verification. Aggregate download size and the M5 startup and average-memory targets do not have dedicated automated checks yet.
+The [nonfunctional requirements](../../guidance/0003-nonfunctional-requirements.md) set mandatory resource targets and describe nightly performance coverage and when local benchmarks are useful. The existing 200 MB compiled-binary check runs during local builds, cross-platform builds, and prebuilt verification. Aggregate download size and the M5 startup and average-memory targets do not have dedicated automated checks yet.
 
 Run `bun run validate` and `bun run --cwd scripts verify:packages`. For changes to release logic, use a disposable Prompt Studio workspace to run `bun changeset status --verbose` and `bun run --cwd scripts release:version`. Check that all group versions agree, extension dependency ranges remain unchanged and `release:notes <version>` contains only actual entries. Do not publish from the disposable workspace.
 

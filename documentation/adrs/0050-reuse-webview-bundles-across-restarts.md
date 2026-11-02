@@ -2,6 +2,8 @@
 
 Proposed: 2026-09-30
 
+Status: Accepted.
+
 ## Context
 
 Extensions declare webviews as source files (`.ts`, `.tsx`, `.js`, …). The host bundles each one with `Bun.build` into `$PSTDIO_HOME/cache/extension-webviews`. This lets any extension folder work without its own build step and lets edits appear live in open webviews.

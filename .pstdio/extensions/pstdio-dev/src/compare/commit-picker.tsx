@@ -1,7 +1,8 @@
-import { Box, HStack, Input, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Input, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea, SimpleCard } from "@pstdio/ui";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { CopySha } from "../webview/copy-sha";
 import { shortSha } from "../webview/format";
 
 export interface CommitOptionView {
@@ -17,14 +18,16 @@ interface CommitPickerProps {
   value?: CommitOptionView;
   options: CommitOptionView[];
   onChange: (sha: string) => void;
+  // Offers "No base", so the head's own results show without a comparison.
+  onClear?: () => void;
 }
 
 const matches = (option: CommitOptionView, query: string) =>
   `${option.sha} ${option.ref} ${option.message}`.toLowerCase().includes(query.trim().toLowerCase());
 
-// The whole card opens the picker, so choosing a commit happens where the commit is shown.
+// Change opens the picker under the card; the hash copies, so the card itself is not one big button.
 export const CommitPicker = (props: CommitPickerProps) => {
-  const { label, color, value, options, onChange } = props;
+  const { label, color, value, options, onChange, onClear } = props;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const visible = options.filter((option) => matches(option, query));
@@ -39,29 +42,34 @@ export const CommitPicker = (props: CommitPickerProps) => {
       unmountOnExit
       positioning={{ placement: "bottom-start", sameWidth: true }}
     >
-      <Popover.Trigger asChild>
+      <Popover.Anchor asChild>
         <SimpleCard
-          as="button"
           flex="1 1 20rem"
           minW="0"
           p="md"
-          textAlign="start"
           display="flex"
           flexDirection="column"
           gap="2xs"
-          cursor="pointer"
           borderColor={open ? "border.accent" : "border.subtle"}
-          _hover={{ bg: "bg.subtle" }}
-          aria-label={`${label} commit: ${value ? shortSha(value.sha) : "none"}. Change`}
         >
           <HStack w="full" gap="xs" textStyle="label/S/regular" color="fg.muted">
             <Box boxSize="2.5" borderRadius="full" bg={color} />
             <Text flex="1">{label}</Text>
-            <Text>Change</Text>
-            <ChevronDown size={14} />
+            <Popover.Trigger asChild>
+              <Button size="2xs" variant="ghost" aria-label={`Change ${label.toLowerCase()} commit`}>
+                Change
+                <ChevronDown />
+              </Button>
+            </Popover.Trigger>
           </HStack>
-          <HStack gap="xs" align="baseline">
-            <Text textStyle="mono/S">{value ? shortSha(value.sha) : "Choose a commit"}</Text>
+          <HStack gap="xs" align="center" minH="6">
+            {value ? (
+              <CopySha sha={value.sha} />
+            ) : (
+              <Text textStyle="label/S/regular" color="fg.muted">
+                No commit chosen
+              </Text>
+            )}
             <Text textStyle="label/S/regular" color="fg.muted">
               {value?.ref}
             </Text>
@@ -69,13 +77,8 @@ export const CommitPicker = (props: CommitPickerProps) => {
           <Text textStyle="label/S/regular" color="fg.muted" truncate w="full">
             {value?.message}
           </Text>
-          {value ? (
-            <Text textStyle="label/XS" color={value.measured ? "fg.muted" : "fg.warning"}>
-              {value.measured ? "Has CI results" : "Not measured yet"}
-            </Text>
-          ) : null}
         </SimpleCard>
-      </Popover.Trigger>
+      </Popover.Anchor>
       <Portal>
         <Popover.Positioner>
           <Popover.Content>
@@ -90,6 +93,30 @@ export const CommitPicker = (props: CommitPickerProps) => {
               />
               <ScrollArea maxH="80">
                 <Stack gap="0" role="listbox" aria-label={`${label} commit`}>
+                  {onClear && !query ? (
+                    <HStack
+                      as="button"
+                      role="option"
+                      aria-selected={!value}
+                      px="sm"
+                      py="xs"
+                      borderRadius="xs"
+                      textAlign="start"
+                      bg={value ? undefined : "bg.subtle"}
+                      _hover={{ bg: "bg.subtle" }}
+                      onClick={() => {
+                        onClear();
+                        setOpen(false);
+                      }}
+                    >
+                      <Stack gap="0">
+                        <Text textStyle="label/S/medium">No {label.toLowerCase()}</Text>
+                        <Text textStyle="label/XS" color="fg.muted">
+                          Show the other commit's own results
+                        </Text>
+                      </Stack>
+                    </HStack>
+                  ) : null}
                   {visible.map((option) => (
                     <HStack
                       key={option.sha}
@@ -117,9 +144,11 @@ export const CommitPicker = (props: CommitPickerProps) => {
                           {option.message}
                         </Text>
                       </Stack>
-                      <Text textStyle="label/XS" color={option.measured ? "fg.muted" : "fg.warning"} flexShrink={0}>
-                        {option.measured ? "Measured" : "Not measured"}
-                      </Text>
+                      {option.measured ? null : (
+                        <Text textStyle="label/XS" color="fg.muted" flexShrink={0}>
+                          Not measured
+                        </Text>
+                      )}
                     </HStack>
                   ))}
                   {visible.length ? null : (

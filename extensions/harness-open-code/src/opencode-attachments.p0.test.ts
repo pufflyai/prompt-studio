@@ -78,6 +78,7 @@ const harness = (messages: Record<string, unknown[]>) =>
     {
       detect: async () => ({ available: true }),
       getModelsOutput: async () => "",
+      pollIntervalMs: 1,
     },
     serviceOverrides(messages),
   );

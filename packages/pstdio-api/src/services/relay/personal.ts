@@ -11,6 +11,7 @@ import { capturePersonalHistory } from "../personal-history/capture";
 import { createHistoryReferences, historyReferenceName } from "../personal-history/references";
 import { createPersonalHistoryStore } from "../personal-history/store";
 import { createPersonalDocumentSync } from "../personal-history/synchronize";
+import { documentProgress, sumDocumentProgress } from "./document-progress";
 import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
 
@@ -19,6 +20,7 @@ export const startRelayPersonalHistory = (input: {
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
   access: () => Promise<{ token: string; expiresAt: string }>;
+  statusChanged?: () => void;
 }) => {
   const { config, deps } = input;
   const controller = new AbortController();
@@ -39,6 +41,7 @@ export const startRelayPersonalHistory = (input: {
   let generation: number | undefined;
   let projectGeneration: number | undefined;
   const projectDocuments = new Set<string>();
+  let firstDownloaded = false;
   const published = new Map<string, string>();
   const publish = async () => {
     const state = await deps.personalHistoryService.fullState(config.workbenchId);
@@ -102,6 +105,7 @@ export const startRelayPersonalHistory = (input: {
             }),
           quarantine: (documentId, failure) =>
             createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId })(failure),
+          statusChanged: input.statusChanged,
         });
         const documentId = await project.documentId(historyReferenceName);
         projectDocuments.add(documentId);
@@ -124,6 +128,7 @@ export const startRelayPersonalHistory = (input: {
       attemptSignal.throwIfAborted();
       await shared!.synchronize();
       attemptSignal.throwIfAborted();
+      if ((await documents!.status()).downloaded && (await shared!.status()).downloaded) firstDownloaded = true;
       await publish();
     },
     onError: () =>
@@ -131,12 +136,33 @@ export const startRelayPersonalHistory = (input: {
         { event: "relay.personal.reconnecting", workbenchId: config.workbenchId },
         "Personal history sync will retry",
       ),
+    onStatusChange: input.statusChanged,
   });
+  const changed = () => {
+    documents?.invalidate();
+    connection.wake();
+    input.statusChanged?.();
+  };
   const stopEvents = deps.eventBus.subscribe((event) => {
-    if (["sessions", "workspaces", "workspace_sessions"].includes(event.table)) connection.wake();
+    if (["sessions", "workspaces", "workspace_sessions"].includes(event.table)) changed();
   });
-  const stopConversations = deps.sessionService.store.watch(() => connection.wake());
+  const stopConversations = deps.sessionService.store.watch(changed);
+  const stopStorage = deps.extensionStorageService.watch((owner) => {
+    if (owner.workbenchId === history.owner.workbenchId && owner.extensionId === history.owner.extensionId) changed();
+  });
   return {
+    async status() {
+      const personal = (await documents?.status()) ?? documentProgress([undefined], false);
+      const reference = documentProgress([await shared?.status()], true);
+      return {
+        firstDownloaded,
+        downloaded: personal.downloaded && reference.downloaded,
+        pending: personal.pending || reference.pending,
+        needsAttention: personal.needsAttention || reference.needsAttention,
+        ...sumDocumentProgress([personal, reference]),
+        ...connection.status(),
+      };
+    },
     done: connection.done.finally(() => {
       documents?.close();
       shared?.close();
@@ -144,6 +170,7 @@ export const startRelayPersonalHistory = (input: {
     close() {
       stopEvents();
       stopConversations();
+      stopStorage();
       controller.abort();
       for (const key of published.keys()) {
         const [table, id] = JSON.parse(key);

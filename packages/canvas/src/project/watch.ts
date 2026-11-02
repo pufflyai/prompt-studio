@@ -41,6 +41,7 @@ export const watchCanvases = (options: CanvasWatchOptions) => {
   let failedState: string | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let child: ReturnType<typeof Bun.spawn> | undefined;
+  let checking: Promise<void>;
   const build = async () => {
     child = Bun.spawn([process.execPath, CLI, "build", "--root", root, "--out", out], {
       stdout: "inherit",
@@ -53,19 +54,27 @@ export const watchCanvases = (options: CanvasWatchOptions) => {
   };
   const check = async () => {
     const manifest = await readManifest(out);
-    if (!stopped && !(manifest && (await isCurrent(root, manifest)))) {
+    if (stopped) return;
+    const current = manifest && (await isCurrent(root, manifest));
+    if (stopped) return;
+    if (!current) {
       const state = await inputState(root, manifest);
-      if (state !== failedState) failedState = (await build()) === 0 ? undefined : state;
+      if (!stopped && state !== failedState) failedState = (await build()) === 0 ? undefined : state;
     }
-    if (!stopped) timer = setTimeout(check, options.intervalMs ?? 500);
+    if (!stopped)
+      timer = setTimeout(() => {
+        checking = check();
+      }, options.intervalMs ?? 500);
   };
   const started = check();
+  checking = started;
   return {
     started,
-    close: () => {
+    close: async () => {
       stopped = true;
       clearTimeout(timer);
       child?.kill();
+      await checking;
     },
   };
 };

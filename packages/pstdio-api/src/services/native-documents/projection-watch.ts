@@ -7,7 +7,7 @@ export const watchNativeProjections = (
   request: ReturnType<typeof createNativeProjectionQueue>["request"],
   admit: (action: () => Promise<void>) => Promise<void>,
 ) =>
-  storage.watch((owner, name) => {
+  storage.watch(({ documentId: name, ...owner }) => {
     if (!name?.startsWith('["native-markdown",')) return;
     const documentKey = (JSON.parse(name) as string[])[1];
     void admit(async () => {

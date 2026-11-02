@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { workbenchBudgets } from "pstdio-benchmarks";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
@@ -91,6 +92,9 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
   const reopen = await measure(page, nav.getByRole("button", { name: "Show Side Panel" }), () =>
     expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible(),
   );
+  const samplePath = test.info().outputPath("side-panel-samples.json");
+  writeFileSync(samplePath, JSON.stringify({ close, reopen }, null, 2));
+  await test.info().attach("side-panel-samples", { contentType: "application/json", path: samplePath });
 
   expect(await sideRegionNode!.evaluate((element) => element.isConnected)).toBe(true);
   for (const result of [close, reopen]) {

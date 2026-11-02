@@ -142,8 +142,9 @@ const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
 };
 
 const useRegionPageContent = (workbench: WorkbenchCore, region: WorkbenchRegionId) => {
-  const content = useWorkbenchStore(workbench.pages.store, resolvePageContent);
-  return region === "main" ? content : undefined;
+  return useWorkbenchStore(workbench.pages.store, (state) =>
+    region === "main" ? resolvePageContent(state) : undefined,
+  );
 };
 
 const RegionPageContent = (props: { workbench: WorkbenchCore; content?: WorkbenchWidgetPlacement }) => {
@@ -172,18 +173,19 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const chrome = useModeChrome(workbench, region);
   const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
-  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const pageContent = useRegionPageContent(workbench, region);
-  const currentRegionState = layout.regions[region];
+  const currentRegionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
   const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
-  const activeSubPanel = panelMenuRegionIds.has(region)
-    ? getActiveWorkbenchSubPanel(
-        layout,
-        getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion),
-        locationResource,
-        { ignoreOwnerResourceKey: sidePanelRegionIds.has(region) },
-      )
-    : undefined;
+  const activeSubPanel = useWorkbenchStore(workbench.layout.store, (state) =>
+    panelMenuRegionIds.has(region)
+      ? getActiveWorkbenchSubPanel(
+          state.layout,
+          getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion),
+          locationResource,
+          { ignoreOwnerResourceKey: sidePanelRegionIds.has(region) },
+        )
+      : undefined,
+  );
   const activeLocationPanel = useWorkbenchLocationPanel(
     workbench,
     panelMenuRegionIds.has(region) ? getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion) : panelRegion,
@@ -216,7 +218,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     if (!workbenchPanelRegions.includes(region as WorkbenchPanelRegion) && !panelMenuRegionIds.has(region)) return;
     const registration = workbench.keyboard.registerVisibleRegion(region, () => {
       const element = regionRef.current;
-      if (!element?.getClientRects().length || getComputedStyle(element).visibility === "hidden") return [];
+      if (!element?.checkVisibility({ visibilityProperty: true })) return [];
       return currentPresentation.current ? [currentPresentation.current] : [];
     });
     return () => registration.dispose();

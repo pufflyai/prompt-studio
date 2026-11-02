@@ -40,6 +40,8 @@ export const sampleSuite = (
   sampleIndex = benchmarkSampleIndex(),
 ) =>
   runSteps(context, suite.sample(context, suite.files), {
+    CI_PRIORITY: "P3",
+    TEST_PRIORITIES: "P3",
     [RESULTS_FILE_ENV]: resultsFile,
     BENCHMARK_SAMPLES: "1",
     BENCHMARK_SAMPLE_INDEX: String(sampleIndex),

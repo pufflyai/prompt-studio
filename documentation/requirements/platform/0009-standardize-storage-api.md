@@ -91,7 +91,7 @@ and the [PR separation rule](../../guides/development/0004-pull-request-labels.m
 3. Merge the host and SDK removal PR last. It removes the deprecated APIs, sets
    `EXTENSION_API_VERSION` to 0.3.0, generates and checks the API report with `verify:extension-api-report`
    and adds the `minor` changeset. `verify:extension-api-version` passes only when every tracked
-   manifest already accepts 0.3.0. Reviewers add `breaking-change` and `needs-migration`.
+   manifest already accepts 0.3.0. The PR description lists the breaking changes and the migration.
 4. List each removal and its replacement in the 0.45 release notes.
 
 The relay has no deployed users during alpha. Patch all extensions before enabling it. Do not add

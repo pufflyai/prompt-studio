@@ -2,13 +2,11 @@
 
 Proposed: 2026-10-06
 
-## Status
-
-Accepted by the user on 2026-10-09 for PS-521. The platform deprecation is implemented in the first PR. Planner migration awaits the supporting published release.
+Status: Accepted by the user on 2026-10-09 for PS-521. The platform deprecation is implemented in the first PR. Planner migration awaits the supporting published release.
 
 ## Context
 
-The [mission](../../MISSION.md) puts shared workbench contracts in core and domain
+The [mission](../guidance/0001-mission.md) puts shared workbench contracts in core and domain
 workflows in extensions. The October audit grouped saved views, collection
 renderers, and workflow statuses together. They have different owners.
 

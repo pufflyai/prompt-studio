@@ -56,12 +56,21 @@ test("production adds P2 as its own rows without changing the critical selection
   expect(plan.appMatrix.some((row) => row.priority === "P2")).toBe(true);
 });
 
-test("every affected integration owner gets a priority row without a filename list", () => {
+test("integration and Bun contract owners share at most two jobs per priority without filename lists", () => {
+  const owners = ["one", "two", "three"].map((name) => ({ name, dir: `services/${name}`, dependencies: [] }));
+  const contracts = owners.flatMap((owner) => [
+    `${owner.dir}/src/storage.p1.integration.ts`,
+    `${owner.dir}/src/state.p1.test.ts`,
+  ]);
   const plan = createTestMatrices(
-    [...files, "packages/pstdio-api/src/automations.p1.integration.ts"],
-    packages,
-    ["pstdio-api"],
+    contracts,
+    owners,
+    owners.map((owner) => owner.name),
     ["P0", "P1"],
   );
-  expect(plan).toHaveProperty("integrationMatrix", [{ package: "pstdio-api", priority: "P1" }]);
+  for (const matrix of [plan.integrationMatrix, plan.bunContractMatrix]) {
+    expect(matrix.map((row) => row.shard)).toEqual(["1/2", "2/2"]);
+    expect(matrix.flatMap((row) => row.packages).sort()).toEqual(["one", "three", "two"]);
+    expect(matrix.every((row) => row.priority === "P1")).toBe(true);
+  }
 });

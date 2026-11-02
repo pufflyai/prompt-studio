@@ -1,56 +1,24 @@
-# PGlite WAL Corruption
+# Protect database ownership and clean shutdown
 
-## What
+## 1. When to use
 
-PGlite databases can become unrecoverable when WAL recovery is interrupted or written inconsistently. Common startup errors are:
+- Changing database startup, shutdown, development reloads, or inspection tools.
 
-```
-PANIC: invalid max offset number
-PANIC: could not locate a valid checkpoint record
-RuntimeError: Aborted(). Build with -sASSERTIONS for more info.
-```
+## 2. Failure
 
-Confirmed trigger: running Drizzle Studio against the same Prompt Studio database path while `pst` is running can corrupt WAL. By default that path is `$PSTDIO_HOME/pstdio.db`, where `PSTDIO_HOME` defaults to `~/.pstdio`. `PSTDIO_DB_PATH` can still override the database path for targeted debugging or tests.
+- Opening the same PGlite directory from Drizzle Studio and the runtime corrupted its write-ahead log.
+- A Bun watch reload also skipped database cleanup while keeping the same PID. A PID check could not make that reopen safe.
 
-## Why
+## 3. Prevention
 
-PGlite uses PostgreSQL's storage engine compiled to WASM and does not safely support concurrent writers to the same data directory.
+- Use the shared database lock. It holds SQLite's OS lock for the database lifetime and releases it on close or process death.
+- Keep the lock file in place; deleting it can let another process lock a different file at the same path.
+- Other tools do not participate in this lock. Use public APIs for inspection; copy a database only after stopping its runtime.
+- Close PGlite before reopening it. Locking does not replace clean shutdown.
+- Use `bun run dev:isolated` or `bun run dev:playwright`; do not reload the backend with `bun --watch`.
 
-Drizzle Studio + `pst` against the same DB path creates exactly that unsupported state:
+## 4. Evidence
 
-1. `pst` opens and writes to the database in one process.
-2. Drizzle Studio opens the same database from a second process.
-3. Both processes can write/checkpoint WAL concurrently, which can produce invalid WAL offsets and unrecoverable startup failures.
-
-## Risk
-
-All data in the PGlite database can become inaccessible until the WAL is repaired or the database is recreated. Running Drizzle Studio concurrently with `pst` materially increases this risk.
-
-## Prevention
-
-Prompt Studio creates an owned lock beside the PGlite data directory before opening it. A second Prompt Studio process now refuses to start while the owning process is still running, and stale locks left by stopped processes are reclaimed automatically.
-
-Several processes may try to remove the same stale claim. Removal succeeds if the claim is already gone, including when Windows reports a concurrent deletion as a permission error. Errors remain visible when the claim still exists. Failed acquisition also attempts to remove its own choosing and waiting claims so it does not block other contenders.
-
-The guard only covers Prompt Studio database connections. Do not run Drizzle Studio or other PGlite tools against the live database while `pst` is running. Stop `pst` first, or inspect a copied DB snapshot.
-
-## Recovery
-
-If corruption occurs, use native PostgreSQL's `pg_resetwal` to reset the WAL:
-
-```bash
-# Remove stale runtime files if present.
-# Replace the path if PSTDIO_HOME or PSTDIO_DB_PATH points elsewhere.
-rm ~/.pstdio/pstdio.db/postmaster.pid
-
-# Reset the WAL (requires matching PG version — PGlite uses PG 17)
-pg_resetwal -f ~/.pstdio/pstdio.db
-```
-
-This discards unflushed WAL. Most committed data is usually recoverable, but tables written near the interrupted shutdown can still need row-by-row salvage from backups or `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/` files.
-
-If `pst` reports that the API did not become healthy, inspect the captured startup output in the CLI error and the structured `db.open.failed` entry in `logs.jsonl`. When the output includes `could not locate a valid checkpoint record` and `Aborted()`, stop all `pst` processes before copying the database directory and running recovery commands against the copy first.
-
-## See also
-
-- [`bun --watch` Corrupts the Dev Database](0011-bun-watch-corrupts-dev-db.md) — the same `Aborted()` corruption reached via unclean teardown on reload, rather than concurrent writers.
+- [Database lock](../../packages/pstdio-db/src/db/pglite-lock.ts)
+- [Backend reload decision](../adrs/0005-no-watch-backend-dev-server.md)
+- Consolidates lesson 0011's reload failure.

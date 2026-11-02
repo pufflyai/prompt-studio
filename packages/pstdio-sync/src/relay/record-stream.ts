@@ -92,6 +92,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
    * updates. Null when the state cannot be read, so the cursor stays and the next pass retries it.
    */
   const load = async (cursor: RecordStreamCursor, state: StateInfo) => {
+    downloaded = false;
     const frames = await reader.openLatest(state);
     if (!frames) return null;
     // The state covers every sequence this device skipped, or it founds a new stream.
@@ -107,6 +108,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
 
   const applyPage = async (cursor: RecordStreamCursor, result: Extract<ReadResult, { status: "updates" }>) => {
     const updates = checkPage(result, cursor.after);
+    if (updates.length) downloaded = false;
     const next = await withState(reader, cursor, result.state);
     if (!updates.length && next === cursor) return cursor;
     const { frames, byteLengths } = await reader.openFrames(updates);

@@ -23,7 +23,7 @@ export const ToolTimeline = (props: SceneProps & { expand: number; finish: numbe
           <Timeline.Title fontWeight="normal">
             <Text textStyle="label/XS/regular">Read</Text>
             <Text textStyle="label/XS/regular" color="fg.muted">
-              design/DESIGN.md
+              documentation/guidance/0002-design.md
             </Text>
           </Timeline.Title>
         </Timeline.Content>
