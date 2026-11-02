@@ -3,6 +3,7 @@ import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/work
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { setDashboardExtensionsReadyProject } from "@/shared/extensions/extension-readiness";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { resolveDashboardPersistenceScope } from "@/shared/workbench/dashboard-persistence-scope";
 import { createBootstrapModule } from "./bootstrap";
 import { createExtensionsModule } from "./extensions/module";
 import { emptyAppearance, flushMicrotasks, metadata } from "./extensions/module-test-fixtures";
@@ -130,6 +131,7 @@ for (const withStart of [false, true])
     });
     const bootstrap = workbench.registerModule(createBootstrapModule());
     expect(workbench.pages.store.getState().activePageId).toBeUndefined();
+    expect(workbench.layout.getPlaceholder("main")).toBeDefined();
     const home = { kind: "page" as const, extensionId: "acme.home", id: "home" };
     workbench.pages.registerPage({
       id: "acme.home.page.home",
@@ -143,5 +145,33 @@ for (const withStart of [false, true])
     setDashboardExtensionsReadyProject(workbench, "project-1");
     await flushMicrotasks();
     expect(workbench.pages.store.getState().location?.page).toEqual(home);
+    expect(workbench.layout.getPlaceholder("main")).toBeUndefined();
     bootstrap.dispose();
   });
+
+test("delayed boot preserves the active project recovery overlay", () => {
+  const workbench = createWorkbench({ resolvePagePersistenceScope: resolveDashboardPersistenceScope });
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  workbench.pages.registerPage({
+    id: "tools",
+    ref: { kind: "page", extensionId: "pstdio", id: "tools" },
+    path: "tools",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [],
+  });
+  workbench.views.registerView({
+    id: "opening",
+    title: "Opening project",
+    body: { kind: "react", render: () => null },
+  });
+  workbench.overlays.registerOverlay({ id: "opening", viewId: "opening", closable: false });
+  const bootstrap = workbench.registerModule(createBootstrapModule());
+  const opening = workbench.overlays.openOverlay("opening");
+  setDashboardExtensionsReadyProject(workbench, "project-1");
+  expect(workbench.layout.getLayout().regions.overlay.widgets.some((placement) => placement.widgetId === opening)).toBe(
+    true,
+  );
+  bootstrap.dispose();
+});
