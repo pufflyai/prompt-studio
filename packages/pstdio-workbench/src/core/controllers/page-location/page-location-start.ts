@@ -1,9 +1,15 @@
 import { type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
+import type { WorkbenchPageResourceCodec } from "../../registries/pages/page-registry-types";
+import { normalizeWorkbenchPageTarget } from "./page-location-normalization";
 
 // Public Start navigation names the application's explicit default if no legacy Start page exists.
 // Registered pages retain their usual ownership, paths and activation lifecycle.
-export const createStartPageCompatibility = (listPages: () => WorkbenchPageContribution[], startPage: PageRef) => {
+export const createStartPageCompatibility = (
+  listPages: () => WorkbenchPageContribution[],
+  startPage: PageRef,
+  resources: WorkbenchPageResourceCodec,
+) => {
   const hasStartPage = () =>
     listPages().some(
       (page) => page.ref.extensionId === workbenchPages.start.extensionId && page.ref.id === workbenchPages.start.id,
@@ -39,5 +45,9 @@ export const createStartPageCompatibility = (listPages: () => WorkbenchPageContr
     return parent!;
   };
 
-  return { pages, target: withStartPage };
+  return {
+    pages,
+    target: withStartPage,
+    start: () => normalizeWorkbenchPageTarget({ target: { kind: "page", page: startPage }, pages: pages(), resources }),
+  };
 };

@@ -174,18 +174,27 @@ export const createPageLocationControllerActions = <Value>(
       if (!current.projectId) {
         return actions.fail("navigation", new Error("Cannot navigate before a project is active"));
       }
+      let resolved: ResolvedPageLocation;
       try {
-        const resolved = actions.rootLevelTarget();
-        const history = actions.locationsEqual(current.location, resolved.location) ? "none" : "push";
-        return navigated(actions.commit(current.projectId, resolved, history, "navigateToRootLevelPageLocation"));
+        resolved = actions.rootLevelTarget();
       } catch (error) {
         const startAvailable = input.registry
           .listPages()
           .some((page) => page.ref.extensionId === input.startPage.extensionId && page.ref.id === input.startPage.id);
         if (startAvailable) return actions.fail("navigation", error);
-        actions.clearRootLocation();
-        input.activateLocation?.();
-        return undefined;
+        try {
+          actions.clearRootLocation();
+          input.activateLocation?.();
+          return undefined;
+        } catch (emptyError) {
+          return actions.fail("navigation", emptyError);
+        }
+      }
+      try {
+        const history = actions.locationsEqual(current.location, resolved.location) ? "none" : "push";
+        return navigated(actions.commit(current.projectId, resolved, history, "navigateToRootLevelPageLocation"));
+      } catch (error) {
+        return actions.fail("navigation", error);
       }
     },
     closePlacement: actions.closePlacement,
