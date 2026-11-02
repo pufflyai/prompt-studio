@@ -64,6 +64,16 @@ const body = z.discriminatedUnion("kind", [
     .passthrough(),
   z
     .object({
+      kind: z.literal("resourceList"),
+      ...native,
+      query: callbackSchema,
+      onAttributeChange: callbackSchema.optional(),
+      onColumnAction: callbackSchema.optional(),
+      onRowActivate: callbackSchema.optional(),
+    })
+    .passthrough(),
+  z
+    .object({
       kind: z.literal("webview"),
       entry: packageAssetDescriptorSchema,
       title: localizableStringSchema.optional(),

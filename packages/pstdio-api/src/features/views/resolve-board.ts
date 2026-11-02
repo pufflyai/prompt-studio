@@ -32,7 +32,7 @@ export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
   const metadata = createWorkbenchExtensionMetadata({ runtime: snapshot.runtime });
   const extensions = metadata.views.flatMap((view) => {
     const body = view.body;
-    if (body.kind !== "kanban" && body.kind !== "dataTable") return [];
+    if (body.kind !== "kanban" && body.kind !== "dataTable" && body.kind !== "resourceList") return [];
     const record = snapshot.runtime.views.find((record) => record.id === view.id)!;
     const source = resolveEnabledSourceForRecord(record.sourcePath, snapshot.enabledSources);
     if (!source) return [];
@@ -55,7 +55,7 @@ export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
       })),
     });
     const board =
-      body.kind === "kanban"
+      body.kind !== "dataTable"
         ? { kind: body.kind, body, ...localized(kanbanBuiltInViews(body)) }
         : { kind: body.kind, body, ...localized(dataTableBuiltInViews(body)) };
     return [{ ...common, ...board }];
@@ -99,7 +99,10 @@ const titleField: BoardField = {
   sortable: true,
   displayable: false,
 };
-const resolveKanbanFields = async (deps: BoardViewsDeps, board: Extract<ResolvedBoard, { kind: "kanban" }>) => {
+const resolveKanbanFields = async (
+  deps: BoardViewsDeps,
+  board: Extract<ResolvedBoard, { kind: "kanban" | "resourceList" }>,
+) => {
   const result = await runQuery(deps, board, board.body.queryHandlerId, {
     renderer: rendererOf(board),
     settings: board.settings,
@@ -180,5 +183,5 @@ const resolveDataTableFields = async (
 };
 export const resolveBoardFields = async (deps: BoardViewsDeps, board: ResolvedBoard) => {
   if (board.extensionId === null) return nativeWorkspaceFields();
-  return board.kind === "kanban" ? resolveKanbanFields(deps, board) : resolveDataTableFields(deps, board);
+  return board.kind !== "dataTable" ? resolveKanbanFields(deps, board) : resolveDataTableFields(deps, board);
 };

@@ -43,7 +43,11 @@ const localizeAttributes = (
       return {
         ...type,
         options: Array.isArray(type.options)
-          ? type.options.map((option) => ({ ...option, label: localize(option.label, option.value) }))
+          ? type.options.map((option) => ({
+              ...option,
+              label: localize(option.label, option.value),
+              note: option.note ? localize(option.note) : undefined,
+            }))
           : type.options,
       };
     };

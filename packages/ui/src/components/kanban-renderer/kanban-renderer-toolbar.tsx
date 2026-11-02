@@ -19,6 +19,7 @@ import { kanbanRendererInitialState, useKanbanRendererStore } from "./use-kanban
 import { useResolvedAttributes } from "./use-resolved-attributes";
 
 export interface KanbanRendererToolbarProps<TRow extends KanbanRendererRow = KanbanRendererRow> {
+  resourceList?: boolean;
   rows: TRow[];
   storageKey: string;
   itemLabel?: string;
@@ -74,6 +75,8 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
       displayControl={
         <DisplayMenu
           settings={settings}
+          resourceList={props.resourceList}
+          onShowChildrenChange={(showChildren) => setSettings({ showChildren })}
           sortControl={
             <DisplaySortControl fields={withTitleField(attributes)} sorts={sorts} onSortsChange={setSorts} />
           }

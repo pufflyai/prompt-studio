@@ -3,6 +3,7 @@ import type { ResourceContextAction } from "@pstdio/ui";
 import {
   applyKanbanMove,
   KanbanRenderer,
+  type KanbanRendererProps,
   KanbanRendererSkeleton,
   useKanbanRendererStore,
 } from "@pstdio/ui/kanban-renderer";
@@ -34,6 +35,10 @@ interface WorkbenchKanbanViewProps {
   workbench: WorkbenchCore;
   renderParamField?: CommandParamFieldRenderer;
   contribution: RegisteredKanbanRendererContribution;
+  Renderer?: import("react").ComponentType<KanbanRendererProps>;
+  resolveSettings?: (
+    settings: import("../../../core").KanbanRendererSettings,
+  ) => import("../../../core").KanbanRendererSettings;
   placement: WorkbenchPanelInstance;
 }
 
@@ -82,8 +87,16 @@ export const mergeKanbanViewRowActions = (
   ];
 };
 
+const resolveViewSettings = (
+  props: WorkbenchKanbanViewProps,
+  settings: import("../../../core").KanbanRendererSettings,
+) => (props.resolveSettings ? props.resolveSettings(settings) : settings);
+
+const hasKanbanRowTarget = (row: KanbanRendererRow) =>
+  Boolean(row.target || row.children?.some((child) => child.target));
+
 export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
-  const { workbench, placement } = props;
+  const { workbench, placement, Renderer = KanbanRenderer } = props;
   const pageParams = usePageParams(workbench, placement);
   const contribution = bindReactKanbanPresentation(props.contribution);
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
@@ -101,7 +114,8 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     sorts: contribution.defaultSorts,
   };
 
-  const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
+  const storedSettings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
+  const settings = resolveViewSettings(props, storedSettings);
   const filter = useKanbanRendererStore(storageKey, (state) => state.filter, initialState);
   const sorts = useKanbanRendererStore(storageKey, (state) => state.sorts, initialState);
   const pages = useRendererPages<KanbanRendererRow>({
@@ -184,7 +198,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   return (
     <WorkbenchKanbanViewFrame>
       {read.value ? readNotice : null}
-      <KanbanRenderer
+      <Renderer
         page={pages.controls(read.value?.page, read.loading, paged, read.value?.position)}
         itemLabel={
           contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
@@ -203,7 +217,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         emptyDescription={contribution.emptyDescription}
         getBoardColumnConfig={contribution.getBoardColumnConfig}
         hideToolbar={contribution.hideToolbar}
-        onRowClick={contribution.onRowActivate || rows.some((row) => row.target) ? handleOpenRow : undefined}
+        onRowClick={contribution.onRowActivate || rows.some(hasKanbanRowTarget) ? handleOpenRow : undefined}
         onActionError={(error, action) => reportUserActionError(workbench, action, error)}
         onAttributeChange={
           contribution.onAttributeChange
