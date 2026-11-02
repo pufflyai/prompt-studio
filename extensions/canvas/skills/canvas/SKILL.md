@@ -79,3 +79,13 @@ A proposal shows UI a ticket will add or change before production code changes. 
 ## Critical checks only
 
 Require browser or visual checks only when a change risks blocking a primary task, hiding essential content or controls, breaking keyboard/focus behavior, violating preview isolation, or reintroducing a critical regression. Keep examples for exploration without a test for every example. Report the canvas file, exact export, checks run and any untested device behavior.
+
+
+Animated frames show a shared timeline in a bottom tray when selected. The tray follows
+selection and disappears for a static frame or empty selection. Scrub its playhead,
+seek named markers, or use Play/Pause/Restart. Each frame retains its own playback
+position and settings. Parameters, saved versions, speed and loop settings stay in
+the right Frame editor. Existing source-code animations advertise duration and
+markers; the timeline displays an animation lane without inventing property keys.
+The reusable UI timeline also supports editable property tracks for tools that own
+keyframe data.
