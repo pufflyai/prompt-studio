@@ -97,7 +97,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     : undefined;
   const commandComposer = useCommandComposer(
     sessionId,
-    selectedAgent,
+    // Another device's harness commands exist only on that device; asking here only fails.
+    view.device ? "" : selectedAgent,
     chatDraft,
     reconnect,
     view.status,
