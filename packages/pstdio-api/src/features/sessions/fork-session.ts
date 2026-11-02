@@ -1,3 +1,4 @@
+import type { SessionMessage } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
 import { getSessionHistory } from "./session-history";
@@ -13,6 +14,18 @@ export class SessionForkError extends Error {
     super(message);
   }
 }
+
+const selectForkMessages = (history: SessionMessage[], messageId?: string) => {
+  const boundary =
+    messageId === undefined ? history.length - 1 : history.findIndex((message) => message.id === messageId);
+  if (messageId !== undefined && (boundary < 0 || history[boundary].role !== "assistant"))
+    throw new SessionForkError("Choose an agent reply to fork from.", 400);
+  return structuredClone(history.slice(0, boundary + 1));
+};
+
+const assertIndependentFork = (sourceId: string, forkId: string) => {
+  if (!forkId || forkId === sourceId) throw new Error("The harness did not create an independent conversation.");
+};
 
 const assertSessionIdle = async (deps: SessionsRouteDeps, id: string, status: string) => {
   const owner = deps.sessionService.store.get(id);
@@ -47,7 +60,7 @@ const resolveForkWorkspace = async (deps: SessionsRouteDeps, id: string, cwdRequ
   return { workspace, context };
 };
 
-export const forkSession = async (deps: SessionsRouteDeps, id: string) => {
+export const forkSession = async (deps: SessionsRouteDeps, id: string, messageId?: string) => {
   let createdId: string | undefined;
   try {
     return await withSchedulingLock(async () => {
@@ -60,11 +73,12 @@ export const forkSession = async (deps: SessionsRouteDeps, id: string) => {
         throw new SessionForkError("This harness does not support forking conversations.", 400);
       if (!source.agent_session_id) throw new SessionForkError("Send a message before forking this conversation.", 409);
       const { workspace, context } = await resolveForkWorkspace(deps, id, harness.cwdRequirement);
-      const messages = structuredClone(await getSessionHistory(id, deps));
+      const messages = selectForkMessages(await getSessionHistory(id, deps), messageId);
       const native = await harness.fork(
         {
           sessionId: id,
           agentSessionId: source.agent_session_id,
+          messageId,
           cwd: source.cwd ?? undefined,
           workspace: context,
           model: source.last_selected_model,
@@ -72,9 +86,22 @@ export const forkSession = async (deps: SessionsRouteDeps, id: string) => {
         },
         { projectId: source.project_id ?? undefined },
       );
-      if (!native.agentSessionId || native.agentSessionId === source.agent_session_id) {
-        throw new Error("The harness did not create an independent conversation.");
-      }
+      assertIndependentFork(source.agent_session_id, native.agentSessionId);
+      const nativeMessages = await harness.getMessages(
+        {
+          agentSessionId: native.agentSessionId,
+          cwd: source.cwd ?? undefined,
+          workspace: context,
+        },
+        { projectId: source.project_id },
+      );
+      // Providers may assign new message IDs while copying their transcript.
+      const recovered = await harness.recoverMessages(
+        { knownMessages: messages, nativeMessages, cwd: source.cwd ?? undefined, workspace: context },
+        { projectId: source.project_id },
+      );
+      if (recovered.kind === "conflict")
+        throw new SessionForkError("The copied conversation history could not be reconciled.", 409);
       // A workspace can be removed while the provider copies its history.
       await resolveForkWorkspace(deps, id, harness.cwdRequirement);
       const fork = await deps.sessionService.create(
@@ -92,7 +119,7 @@ export const forkSession = async (deps: SessionsRouteDeps, id: string) => {
       );
       createdId = fork.id;
       await deps.sessionService.update(fork.id, { agent_session_id: native.agentSessionId });
-      await persistSessionMessages(fork.id, messages, deps);
+      await persistSessionMessages(fork.id, recovered.messages, deps);
       await deps.workspaceSessionService.link(workspace.id, fork.id);
       const session = (await deps.sessionService.get(fork.id))!;
       await resolveForkWorkspace(deps, id, harness.cwdRequirement);

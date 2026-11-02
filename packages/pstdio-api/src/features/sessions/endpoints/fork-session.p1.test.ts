@@ -16,7 +16,12 @@ const history: SessionMessage[] = [
 ];
 
 test("fork preserves history and settings while follow-ups use a separate native conversation", async () => {
-  const native = new Map([["original", structuredClone(history)]]);
+  const fullHistory: SessionMessage[] = [
+    ...history,
+    { id: "later-question", role: "user", parts: [{ type: "text", text: "Remember red too" }] },
+    { id: "later-answer", role: "assistant", parts: [{ type: "text", text: "Red too" }] },
+  ];
+  const native = new Map([["original", structuredClone(fullHistory)]]);
   const resumed: string[] = [];
   let starts = 0;
   const harness = createTestHarnessRecord("fork", {
@@ -26,8 +31,16 @@ test("fork preserves history and settings while follow-ups use a separate native
         throw new Error("Forking must not run the model");
       },
       fork: (_ctx, input) => {
-        native.set("forked", structuredClone(native.get(input.agentSessionId!)!));
-        return { agentSessionId: "forked" };
+        expect(input.messageId).toBe(input.agentSessionId === "original" ? "answer" : "fork-answer");
+        const source = native.get(input.agentSessionId!)!;
+        const nativeId = input.agentSessionId === "original" ? "forked" : "forked-again";
+        native.set(
+          nativeId,
+          structuredClone(source.slice(0, source.findIndex((message) => message.id === input.messageId) + 1)).map(
+            (message) => ({ ...message, id: `fork-${message.id}` }),
+          ),
+        );
+        return { agentSessionId: nativeId };
       },
       getMessages: (_ctx, input) => native.get(input.agentSessionId)!,
       resume: (_ctx, input) => {
@@ -63,8 +76,10 @@ test("fork preserves history and settings while follow-ups use a separate native
       last_selected_model: "chosen-model",
       params_json: { effort: "high" },
     });
-    await persistSessionMessages(source.id, history, handle.deps);
-    const forkResponse = await handle.app.request(`/v1/sessions/${source.id}/fork`, { method: "POST" });
+    await persistSessionMessages(source.id, fullHistory, handle.deps);
+    const forkResponse = await handle.app.request(`/v1/sessions/${source.id}/fork?messageId=answer`, {
+      method: "POST",
+    });
     expect(forkResponse.status).toBe(201);
     const fork = (await forkResponse.json()) as { id: string; sessionFileId: string };
     expect(fork).toMatchObject({
@@ -83,7 +98,12 @@ test("fork preserves history and settings while follow-ups use a separate native
       (await handle.deps.sessionService.get(source.id))?.session_file_id,
     );
     const conversation = await handle.app.request(`/v1/sessions/${fork.id}/conversation`);
-    expect(((await conversation.json()) as { messages: SessionMessage[] }).messages).toEqual(history);
+    expect(((await conversation.json()) as { messages: SessionMessage[] }).messages).toEqual(
+      history.map((message) => ({ ...message, id: `fork-${message.id}` })),
+    );
+    const again = await handle.app.request(`/v1/sessions/${fork.id}/fork?messageId=fork-answer`, { method: "POST" });
+    expect(again.status).toBe(201);
+    expect(native.get("forked-again")).toHaveLength(2);
     // Use the public follow-up path; shared native IDs would silently mutate both branches.
     await handle.deps.sessionService.update(fork.id, { params_json: {} });
     const followUp = await handle.app.request(`/v1/sessions/${fork.id}/follow-up`, {
@@ -95,7 +115,7 @@ test("fork preserves history and settings while follow-ups use a separate native
     for (let i = 0; i < 100 && (await handle.deps.sessionService.get(fork.id))?.status !== "completed"; i++)
       await Bun.sleep(10);
     expect(resumed).toEqual(["forked"]);
-    expect(native.get("original")).toEqual(history);
+    expect(native.get("original")).toEqual(fullHistory);
     expect(native.get("forked")).toHaveLength(3);
   } finally {
     await handle.close();

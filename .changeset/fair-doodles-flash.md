@@ -1,6 +1,7 @@
 ---
 "pstdio": minor
 "@pstdio/sdk": minor
+"@pstdio/ui": minor
 ---
 
-Add a session action, SDK method, and CLI command for forking conversations through native harness support.
+Add message actions, SDK support, and a CLI command to fork conversations through a selected agent reply.

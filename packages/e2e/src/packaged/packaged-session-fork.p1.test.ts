@@ -54,7 +54,9 @@ test(
         start: (_ctx, input) => run(input), resume: (_ctx, input) => run(input, input.agentSessionId),
         fork(_ctx, input) {
           const id = crypto.randomUUID();
-          histories.set(id, structuredClone(histories.get(input.agentSessionId)));
+          const source = histories.get(input.agentSessionId);
+          const end = input.messageId ? source.findIndex(message => message.id === input.messageId) + 1 : source.length;
+          histories.set(id, structuredClone(source.slice(0, end)));
           return { agentSessionId: id };
         },
         getMessages: (_ctx, input) => histories.get(input.agentSessionId) ?? [],
@@ -96,17 +98,24 @@ test(
       const history = await request(`/sessions/${original.id}/conversation`);
       const native = async (id: string) => (await request(`/sessions/${id}/conversation/sources`)).native;
       expect(await native(original.id)).toEqual(history.messages);
+      await request(`/sessions/${original.id}/follow-up`, "POST", { prompt: "Later source turn" });
+      await settle(original.id);
+      const fullHistory = await request(`/sessions/${original.id}/conversation`);
       const beforeFork = readFileSync(invocations, "utf8");
-      const result = spawnSync(PACKAGED_BINARY_PATH, ["sessions", "fork", "--id", original.id], {
-        encoding: "utf8",
-        cwd: folder,
-        env: {
-          ...process.env,
-          PSTDIO_HOME: root,
-          PSTDIO_API_URL: started.baseUrl,
-          PSTDIO_API_TOKEN: started.descriptor.token,
+      const result = spawnSync(
+        PACKAGED_BINARY_PATH,
+        ["sessions", "fork", "--id", original.id, "--message-id", history.messages.at(-1).id],
+        {
+          encoding: "utf8",
+          cwd: folder,
+          env: {
+            ...process.env,
+            PSTDIO_HOME: root,
+            PSTDIO_API_URL: started.baseUrl,
+            PSTDIO_API_TOKEN: started.descriptor.token,
+          },
         },
-      });
+      );
       expect(result.status, result.stderr).toBe(0);
       const fork = JSON.parse(result.stdout);
       expect(fork.id).not.toBe(original.id);
@@ -121,14 +130,14 @@ test(
       expect(readFileSync(invocations, "utf8")).toBe(beforeFork);
       await request(`/sessions/${fork.id}/follow-up`, "POST", { prompt: "Try green" });
       await settle(fork.id);
-      expect((await request(`/sessions/${original.id}/conversation`)).messages).toEqual(history.messages);
-      expect(await native(original.id)).toEqual(history.messages);
+      expect((await request(`/sessions/${original.id}/conversation`)).messages).toEqual(fullHistory.messages);
+      expect(await native(original.id)).toEqual(fullHistory.messages);
       const copiedHistory = await native(fork.id);
       expect(copiedHistory).toHaveLength(history.messages.length + 2);
       expect(copiedHistory).toContainEqual(
         expect.objectContaining({ role: "assistant", parts: [{ type: "text", text: "Reply: Try green" }] }),
       );
-      expect(readFileSync(invocations, "utf8").trim().split("\n")).toHaveLength(2);
+      expect(readFileSync(invocations, "utf8").trim().split("\n")).toHaveLength(3);
       expect((await request(`/sessions/${fork.id}/conversation`)).messages).toContainEqual(
         expect.objectContaining({ role: "assistant", parts: [{ type: "text", text: "Reply: Try green" }] }),
       );

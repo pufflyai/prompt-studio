@@ -1,6 +1,6 @@
 # Sessions
 
-Use `pst sessions fork --id <session-id>` to copy a settled conversation into an independent session in the same workspace. The copy preserves its history, agent, model, and parameters and waits for a new prompt. The command prints the new session. The harness must support native forking; finish or stop pending work first.
+Use `pst sessions fork --id <session-id>` to copy a settled conversation into an independent session in the same workspace. The copy preserves its history, agent, model, and parameters and waits for a new prompt. Add `--message-id <message-id>` to include history only through the selected agent reply. The command prints the new session. The harness must support native forking; finish or stop pending work first.
 
 A session is one agent conversation and the work it does. It runs in the project's default workspace or in another workspace.
 

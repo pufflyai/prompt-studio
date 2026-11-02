@@ -176,10 +176,10 @@ export interface HarnessProvider extends ContributionDefinition<"harness"> {
   listModels?(ctx: HarnessContext): MaybePromise<AgentModel[]>;
   start(ctx: HarnessContext, input: HarnessStartInput): MaybePromise<HarnessSession>;
   resume(ctx: HarnessContext, input: HarnessResumeInput): MaybePromise<HarnessSession>;
-  /** Copy native history into an independent session without starting a model turn. Never reuse the source ID. */
+  /** Copy native history without starting a turn. Include history through `messageId` when provided. Never reuse the source ID. */
   fork?(
     ctx: HarnessContext,
-    input: HarnessCommandContext & { agentSessionId: string },
+    input: HarnessCommandContext & { agentSessionId: string; messageId?: string },
   ): MaybePromise<{ agentSessionId: string }>;
   /** Re-bind after a host restart. Throw a `RetryableHarnessReattachError` only when another attempt may succeed. */
   reattach?(ctx: HarnessContext, input: HarnessReattachInput): MaybePromise<HarnessSession>;

@@ -8,12 +8,14 @@ import {
 import { getApiClient } from "@/lib/api";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { findDashboardSession } from "./data/dashboard-sessions";
 
 interface SessionActionArgs {
   sessionId?: string;
   title?: string;
+  messageId?: string;
 }
 const resolveSession = (
   ctx: WorkbenchModuleContext,
@@ -44,12 +46,16 @@ export const registerSessionResourceActions = (ctx: WorkbenchModuleContext) => {
     {
       prepareArgs: (args: SessionActionArgs | undefined, context) => ({
         sessionId: resolveSession(ctx, args, context).id,
+        messageId: args?.messageId,
       }),
       execute: async (args: SessionActionArgs | undefined, context) => {
         const source = resolveSession(ctx, args, context);
-        const fork = await getApiClient().sessions.fork(source.id);
+        const projectId = getDashboardSelectedProjectId(ctx);
+        const location = ctx.pages.store.getState().location;
+        const fork = await getApiClient().sessions.fork(source.id, { messageId: args?.messageId });
         getWriter("sessions")?.upsert(fork);
-        openSessionsPage(ctx, { type: "session", id: fork.id, label: fork.title });
+        if (getDashboardSelectedProjectId(ctx) === projectId && ctx.pages.store.getState().location === location)
+          openSessionsPage(ctx, { type: "session", id: fork.id, label: fork.title });
         return fork;
       },
     },
@@ -143,20 +149,6 @@ export const registerSessionResourceActions = (ctx: WorkbenchModuleContext) => {
       },
     );
   }
-  ctx.layout.registerMenuItem(resourceContextMenuPath("session"), {
-    commandId: dashboardCommandIds.forkSession,
-    group: "kernel",
-    order: 25,
-    when: idleWhen,
-  });
-  ctx.layout.registerMenuItem(resourceContextMenuPath("session"), {
-    commandId: dashboardCommandIds.forkSession,
-    group: "kernel",
-    order: 25,
-    when: busyWhen,
-    readOnly: true,
-    description: "Finish or stop pending work before forking.",
-  });
   ctx.layout.registerMenuItem(resourceContextMenuPath("session"), {
     commandId: dashboardCommandIds.renameSession,
     group: "kernel",

@@ -78,7 +78,7 @@ export type HarnessHandle = {
   start(input: HarnessStartInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   resume(input: HarnessResumeInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   fork(
-    input: HarnessCommandContext & { agentSessionId: string },
+    input: HarnessCommandContext & { agentSessionId: string; messageId?: string },
     options?: HarnessCallOptions,
   ): Promise<{ agentSessionId: string }>;
   reattach(input: HarnessReattachInput, options?: HarnessCallOptions): Promise<HarnessSession>;

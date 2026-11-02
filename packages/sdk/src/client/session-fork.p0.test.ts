@@ -16,3 +16,16 @@ test("fork returns the new session without submitting a prompt", async () => {
   expect(calls[0].init?.method).toBe("POST");
   expect(calls[0].init?.body).toBeUndefined();
 });
+
+test("fork identifies the selected reply without submitting a prompt", async () => {
+  let requestUrl = "";
+  const client = createClient({
+    baseUrl: "http://session-api.test",
+    fetch: (async (url) => {
+      requestUrl = String(url);
+      return Response.json({ id: "fork" }, { status: 201 });
+    }) as typeof fetch,
+  });
+  await client.sessions.fork("source", { messageId: "reply/1" });
+  expect(requestUrl).toBe("http://session-api.test/v1/sessions/source/fork?messageId=reply%2F1");
+});
