@@ -703,5 +703,19 @@
       "https://github.com/pufflyai/prompt-studio/pull/1697"
     ],
     "removeWhen": "Identify and fix the cold dependency-download stall on Apple Silicon, then use first-attempt normal native CI observations to show the complete fresh-cache fixture finishes within its unchanged120000ms allowance. Keep every core extension, asset/storage assertion and cleanup; do not retry, prewarm or run reliability loops."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/features/extensions/command-environment/resource-prefix-scenarios.p1.test.ts",
+    "name": "a project whose derived shorthand collides with a reserved prefix can still allocate",
+    "platforms": ["linux"],
+    "owner": "PS-1013 / resource-prefix fixture",
+    "reason": "The first case intermittently spins before completing on Linux, exhausting the existing 300-second API file watchdog with one CPU busy and about 3.8 GB RSS. This recurred after the promise-assertion fix in #1662 and reproduced on unchanged main d205fee75 locally; the same source passed the preceding main queue run. The blocked phase remains unidentified. Preserve the real app, extension install, allocation and cleanup assertions; the other two cases stay blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41523837968/job/125547749573",
+      "https://github.com/pufflyai/prompt-studio/pull/1678",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41525228031/job/125553052379"
+    ],
+    "removeWhen": "Identify and fix the Linux CPU spin, then restore this case to the stable lane after a complete first-attempt normal Linux execution with its unchanged 30000 ms case allowance and 300-second file watchdog. Preserve every setup, allocation and cleanup assertion; do not retry or run reliability loops."
   }
 ]
