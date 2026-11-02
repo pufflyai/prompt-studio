@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { splitQueuedFollowUps } from "./queued-follow-ups";
+import { createPendingFollowUpState, mergeMessagesWithPendingFollowUp } from "./session-chat-state";
 
 const userMessage = (id: string, text: string): SessionMessage => ({
   id,
@@ -120,4 +121,42 @@ test("live handoffs appear as sent messages and return to the queue after reject
   const partial = splitQueuedFollowUps([initial, userMessage("delivery", request.prompt), queued], "session-1", queue);
   expect(partial.messages).toEqual([initial, optimistic]);
   expect(partial.queuedFollowUps).toEqual([]);
+});
+
+test("queued delivery keeps one visible identity through native confirmation", () => {
+  const queued = { ...userMessage("queued-prompt-session-1-2", "Run next"), animationKey: "pending-user" };
+  const delivered = userMessage("delivery", "Run next");
+  const queue = {
+    requests: [
+      {
+        queuePosition: 2,
+        revision: "saved",
+        prompt: "Run next",
+        model: null,
+        params: {},
+        attachments: [],
+        steeringDelivery: { id: "delivery", runStartedAt: "run" },
+      },
+    ],
+    activeRunStartedAt: "run",
+    steeringAvailable: true,
+    steeringUnavailableReason: null,
+  };
+  const pending = createPendingFollowUpState({
+    prompt: "Run next",
+    messageCount: 0,
+    pendingId: "pending",
+    destination: "queue",
+  });
+  const animationKeys = new Map<string, string>();
+  const identities = [
+    splitQueuedFollowUps(mergeMessagesWithPendingFollowUp([queued], pending, animationKeys), "session-1", queue),
+    splitQueuedFollowUps(
+      mergeMessagesWithPendingFollowUp([delivered, queued], pending, animationKeys),
+      "session-1",
+      queue,
+    ),
+    splitQueuedFollowUps(mergeMessagesWithPendingFollowUp([delivered], null, animationKeys), "session-1"),
+  ].map(({ messages }) => messages.map((message) => message.animationKey ?? message.id));
+  expect(identities).toEqual([["delivery"], ["delivery"], ["delivery"]]);
 });

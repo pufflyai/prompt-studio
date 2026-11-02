@@ -25,7 +25,8 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.harness-claude-code"
+      "extensionId": "pstdio.harness-claude-code",
+      "icon": "./assets/icon.svg"
     },
     {
       "installName": "harness-codex",
@@ -38,7 +39,8 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.harness-codex"
+      "extensionId": "pstdio.harness-codex",
+      "icon": "./assets/icon.svg"
     },
     {
       "installName": "harness-open-code",
@@ -51,7 +53,8 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.harness-open-code"
+      "extensionId": "pstdio.harness-open-code",
+      "icon": "./assets/icon.svg"
     },
     {
       "installName": "harness-pi",
@@ -64,11 +67,13 @@
         "ref": "{hostRelease}"
       },
       "publisher": "pstdio",
-      "default": false
+      "default": false,
+      "extensionId": "pstdio.harness-pi",
+      "icon": "./assets/icon.svg"
     },
     {
       "installName": "pstdio-base-themes",
-      "displayName": "Prompt Studio Base Themes",
+      "displayName": "Themes",
       "description": "Color themes and the Seti file icon theme.",
       "origin": {
         "kind": "git",
@@ -77,7 +82,8 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.pstdio-base-themes"
+      "extensionId": "pstdio.pstdio-base-themes",
+      "icon": "Palette"
     },
     {
       "installName": "pstdio-artifacts",
@@ -90,7 +96,8 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-artifacts"
+      "extensionId": "pstdio.pstdio-artifacts",
+      "icon": "AppWindow"
     },
     {
       "installName": "pstdio-notes",
@@ -103,7 +110,8 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-notes"
+      "extensionId": "pstdio.pstdio-notes",
+      "icon": "NotebookPen"
     },
     {
       "installName": "pstdio-planner",
@@ -116,11 +124,12 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-planner"
+      "extensionId": "pstdio.pstdio-planner",
+      "icon": "Kanban"
     },
     {
       "installName": "pstdio-reports",
-      "displayName": "Prompt Studio Reports",
+      "displayName": "Agent Reports",
       "description": "Workspace reports for agent handoffs.",
       "origin": {
         "kind": "git",
@@ -129,7 +138,8 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-reports"
+      "extensionId": "pstdio.pstdio-reports",
+      "icon": "FileChartColumn"
     },
     {
       "installName": "pstdio-skills",
@@ -142,7 +152,8 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.pstdio-skills"
+      "extensionId": "pstdio.pstdio-skills",
+      "icon": "BookOpen"
     },
     {
       "installName": "pstdio-performance",
@@ -155,7 +166,8 @@
         "path": "extensions/pstdio-performance",
         "ref": "{hostRelease}"
       },
-      "default": true
+      "default": true,
+      "icon": "Gauge"
     },
     {
       "installName": "extension-lab",
@@ -168,20 +180,8 @@
         "path": "extensions/extension-lab",
         "ref": "{hostRelease}"
       },
-      "default": false
-    },
-    {
-      "installName": "remote-workspaces",
-      "extensionId": "pstdio.remote-workspaces",
-      "displayName": "Remote Workspaces",
-      "description": "Run agent sessions in PocketCoder workspaces on another machine.",
-      "origin": {
-        "kind": "git",
-        "url": "https://github.com/pufflyai/prompt-studio",
-        "path": "extensions/remote-workspaces",
-        "ref": "{hostRelease}"
-      },
-      "default": false
+      "default": false,
+      "icon": "FlaskConical"
     },
     {
       "installName": "canvas",
@@ -195,7 +195,23 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "bundleSource": false
+      "bundleSource": false,
+      "icon": "gallery-thumbnails"
+    },
+    {
+      "installName": "remote-workspaces",
+      "extensionId": "pstdio.remote-workspaces",
+      "displayName": "Remote Workspaces",
+      "description": "Run agent sessions in PocketCoder workspaces on another machine.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/remote-workspaces",
+        "ref": "{hostRelease}"
+      },
+      "default": false,
+      "icon": "Cloud",
+      "listed": false
     }
   ]
 }

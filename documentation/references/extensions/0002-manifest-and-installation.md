@@ -12,6 +12,7 @@ Every extension package must include a `package.json` next to its entry file.
   "version": "0.1.0",
   "displayName": "Planner",
   "description": "Planner workflow extension.",
+  "icon": "Kanban",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
@@ -35,6 +36,9 @@ Optional fields:
 
 - `displayName`: dashboard display name. Falls back to `name`.
 - `description`: dashboard/catalog description.
+- `icon`: a shared Lucide name (for example `Kanban`) or an extension-owned SVG path beginning with `./` (for example `./assets/icon.svg`). Include the SVG in the package's `files` list when one is declared. Paths and symlinks must stay inside the package. SVG assets must be at most 256 KiB; the host checks their size before reading their bytes. An unavailable, invalid, or oversized optional icon produces a warning and the extension loads with the fallback icon; publishing an archive with an invalid declared asset is rejected. The host exposes image bytes rather than local file paths; SVGs render as images, never inline HTML. Existing icon names retain their normal resolution and fallback. Missing or unknown icons use Tool Case.
+- SVG images retain their own colors. For a monochrome `currentColor` SVG, define its color inside the asset. A `prefers-color-scheme` media rule follows the embedding app's light/dark `color-scheme`; it does not inherit the surrounding text color.
+- Catalogs may provide a Lucide name or a public SVG data URL. Repository catalog entries can use the same `./assets/icon.svg` declaration as the manifest: the host build embeds its bytes for discovery independently of source-archive inclusion. Embedded icons are keyed by the exact catalog package origin, full ID, install name, and declared asset path; an operator catalog cannot borrow a stock icon merely by reusing its install name. External catalogs must supply their own display metadata.
 - `pstdio.scope`: install/load scope, either `user` or `repo`. Defaults to `user`.
 
 Derived fields:
@@ -115,6 +119,14 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
 - Catalog entries marked `default` are installed for new projects. Catalog membership alone does not
   make an extension a default. The packaged catalog defaults to the harnesses, base themes, and
   Prompt Studio skills.
+- Catalog entries with `listed: false` stay out of the downloadable Extensions list. They remain
+  available to existing-install upgrades, recovery, explicit named installs and source bundling.
+  Disabled installed extensions keep the same recovery actions. Uninstall can retain a disabled
+  instance and user data after removing its source; that retained data is not an installed row.
+  Reinstalling to the same source path restores the instance and data. A missing source can also
+  be restored with an explicit named install; catalog visibility does not block that operation.
+  Omit `listed` to keep an entry discoverable. This host catalog policy is separate from `default`
+  and `bundleSource`; older hosts ignore it, so visibility changes require the supporting host.
 - An adopted extension whose `engines.pstdio` does not match the host is shown as an error in the
   extension list and detail view. The error names both API versions. When the host can replace the
   source with a release, it tells the owner to upgrade; otherwise it tells the owner to fix the source.

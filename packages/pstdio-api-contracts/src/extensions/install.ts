@@ -32,6 +32,7 @@ export const projectExtensionInstanceSchema = z.object({
   displayName: z.string(),
   version: z.string().nullable().optional(),
   description: z.string().optional(),
+  icon: z.string().optional(),
   sourcePath: z.string(),
   scope: z.enum(["repo", "global"]),
   status: z.enum(["pending", "loaded", "error", "missing", "disabled"]),
@@ -47,6 +48,8 @@ export const projectExtensionInstanceSchema = z.object({
 
 export const marketplaceExtensionSchema = z.object({
   installName: z.string(),
+  extensionId: z.string().optional(),
+  icon: z.string().optional(),
   displayName: z.string(),
   description: z.string(),
   installed: z.boolean(),
