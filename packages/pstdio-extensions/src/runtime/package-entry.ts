@@ -1,6 +1,6 @@
 import { existsSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
-import type { ExtensionDiagnostic } from "../types";
+import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
 
 export const resolveEntry = (
