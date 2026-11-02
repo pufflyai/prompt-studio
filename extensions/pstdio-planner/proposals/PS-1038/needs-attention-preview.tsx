@@ -1,7 +1,7 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import type { ReviewRequestView } from "../../src/data/review-request-types";
-import { RequestsPanel } from "../../src/timeline/view/requests-panel";
+import { RequestsPanel } from "./requests-panel";
 
 interface NeedsAttentionPreviewProps {
   requests: ReviewRequestView[];
