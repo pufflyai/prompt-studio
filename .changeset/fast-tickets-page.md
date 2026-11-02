@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Open Tickets and other kanban pages faster: returning to an unchanged board no longer re-renders every card.
+Open Tickets, Sessions and other pages faster: returning to an unchanged kanban board no longer re-renders every card, and tree pages paint before their rows mount.

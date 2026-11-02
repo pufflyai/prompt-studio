@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { type ResourceContextAction, ScrollArea, TreeList, TreeListDragProvider } from "@pstdio/ui";
-import { useEffect, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import type {
   NavigationTarget,
   ResourceRef,
@@ -45,6 +45,7 @@ interface WorkbenchTreeViewProps {
 }
 
 const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
+const NO_SECTIONS: ReturnType<typeof toTreeListSection>[] = [];
 
 const treeCustomizationOptions = (body: TreeViewSection[], isSidenav: boolean) => ({
   suppressNodeContextMenus: isSidenav,
@@ -59,7 +60,11 @@ const useSidenavContextActions = (
   onChange: SidenavContextActionsChange | undefined,
 ) => {
   const actionsRef = useRef(actions);
-  actionsRef.current = actions;
+  // Updated after render, before the effect below reads it: React Compiler skips hooks that write
+  // refs while rendering.
+  useEffect(() => {
+    actionsRef.current = actions;
+  }, [actions]);
 
   useEffect(() => {
     void revision;
@@ -194,6 +199,10 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     customizationRevision,
     onSidenavContextActionsChange,
   );
+  // Rows render in a background update: a newly opened page paints before its list mounts, and a
+  // later change to many rows does not hold up the frame that reacts to the click.
+  const shownSections = useDeferredValue(visibleSections, NO_SECTIONS);
+  const rowsPending = shownSections.length === 0 && visibleSections.length > 0;
   const activeNodeSelection = useTreeSelection(workbench, treeViewId, {
     sections: [...header, ...body, ...footer],
     childrenByNodeId,
@@ -290,8 +299,8 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               leadingContent={isSidenav ? <TreeModeReturn workbench={workbench} /> : undefined}
               error={error}
               loading={loading}
-              moduleLoading={treeState.loading}
-              sections={visibleSections}
+              moduleLoading={treeState.loading || rowsPending}
+              sections={shownSections}
               backgroundContextActions={isSidenav ? undefined : backgroundContextActions}
               draggable={isSidenav}
               customizationAvailable={isSidenav}

@@ -6,7 +6,7 @@ import {
   KanbanRendererSkeleton,
   useKanbanRendererStore,
 } from "@pstdio/ui/kanban-renderer";
-import { type ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
+import { type ReactNode, useRef, useSyncExternalStore } from "react";
 import type {
   KanbanRendererRow,
   RegisteredKanbanRendererContribution,
@@ -112,9 +112,9 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     append: true,
   });
   const paged = Boolean(contribution.executePage);
-  // The board on screen, for the next load to compare against. Kept in a ref updated after
-  // render, because reading `read` inside its own load stops React Compiler caching the callbacks.
-  const shownValue = useRef<unknown>(undefined);
+  // The last board a load produced, for the next load to compare against. Written by the load itself,
+  // so overlapping reads see it before React renders it.
+  const lastLoaded = useRef<unknown>(undefined);
 
   const read = useRendererRead({
     workbench,
@@ -128,9 +128,11 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
       const loaded = contribution.executePage
         ? pages.accept(await contribution.executePage({ ...state, page: pages.request }, signal), signal)
         : { rows: await contribution.executeQuery(state, signal), page: undefined, position: undefined };
-      // Rows equal to the board on screen keep their objects, so a reload that changed nothing,
+      // Rows equal to the last loaded board keep their objects, so a reload that changed nothing,
       // such as returning to the page, renders no cards again.
-      return shareEqualValue(shownValue.current, loaded);
+      const shared = shareEqualValue(lastLoaded.current, loaded);
+      lastLoaded.current = shared;
+      return shared;
     },
     subscribe: (refresh) => {
       const invalidate = () => {
@@ -147,9 +149,6 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
       };
     },
   });
-  useEffect(() => {
-    shownValue.current = read.value;
-  }, [read.value]);
   const rows = read.value?.rows ?? [];
   // Use the read's and pages' own functions, not the `read` and `pages` objects, which change on
   // every load step. Row callbacks that change rebuild every card on the board.
