@@ -23,4 +23,14 @@ test("measures while the Performance Monitoring extension is loaded and shows it
   const details = page.frameLocator('iframe[title="Performance details"]').getByTestId("performance-popover");
   await expect(details.getByText("CPU is measured in the desktop app", { exact: true })).toBeVisible();
   await expect(details.getByRole("checkbox")).toHaveCount(0);
+
+  // Critical: reopening must reuse the webview document instead of repeating its startup.
+  const detailFrame = page.locator('iframe[title="Performance details"]');
+  const loadedFrame = await detailFrame.elementHandle();
+  await meter(page).click();
+  await expect(detailFrame).toBeHidden();
+  expect(await loadedFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
+  await meter(page).click();
+  await expect(details).toBeVisible();
+  expect(await detailFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
 });

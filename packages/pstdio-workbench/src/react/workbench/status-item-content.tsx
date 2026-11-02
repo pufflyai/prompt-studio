@@ -30,7 +30,6 @@ export const StatusItemContent = (props: {
       onOpenChange={(event) => setOpen(event.open)}
       variant="widget"
       lazyMount
-      unmountOnExit
       positioning={{ placement: item.slot === "trailing" ? "top-end" : "top-start", offset: { mainAxis: 4 } }}
     >
       <Popover.Trigger asChild>

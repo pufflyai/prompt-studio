@@ -29,9 +29,12 @@ Both references must name registered views.
 
 The host opens the detail view above the item, aligned with its leading or trailing
 slot. Its content can extend beyond the status bar iframe. Webviews use their
-intrinsic height, and long details scroll inside the shared popover. Closing it
-unmounts the detail view and releases its subscriptions. The status view remains
-mounted. Existing items without `popover` keep their current behavior.
+intrinsic height, and long details scroll inside the shared popover. The first
+opening mounts the detail view. Closing hides it and keeps its state, webview,
+and subscriptions, so reopening reuses the loaded view. Removing the status item
+or unmounting the workbench releases the detail view. The status view remains
+mounted while the details are closed. Existing items without `popover` keep their
+current behavior.
 
 ## Examples
 

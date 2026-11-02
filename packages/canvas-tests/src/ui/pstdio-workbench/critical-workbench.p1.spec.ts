@@ -1,6 +1,25 @@
 import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
+// Critical: reopening status details must preserve the loaded view and return focus on close.
+test("status details retain their state across closing and reopening", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/workbench/workbench-status-bar.canvas.tsx#DetailPopover",
+  );
+  const trigger = preview.getByRole("button", { name: "Activity", exact: true });
+  await expect(preview.getByRole("button", { name: "Activity checked 0 times", includeHidden: true })).toHaveCount(0);
+  await trigger.click();
+  await preview.getByRole("button", { name: "Activity checked 0 times" }).click();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  const retained = preview.getByRole("button", { name: "Activity checked 1 times", includeHidden: true });
+  await expect(retained).toBeHidden();
+  await expect(retained).toHaveCount(1);
+  await trigger.press("Enter");
+  await expect(preview.getByRole("button", { name: "Activity checked 1 times" })).toBeVisible();
+});
+
 // Critical: switching projects must not leak the preceding project's mutable view state.
 test("switching projects starts project views fresh", async ({ page }) => {
   const preview = await openCanvasPreview(
