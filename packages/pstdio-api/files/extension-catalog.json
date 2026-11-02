@@ -13,7 +13,7 @@
       },
       "default": true,
       "extensionId": "pstdio.harness-claude-code",
-      "icon": "Bot"
+      "icon": "./assets/icon.svg"
     },
     {
       "installName": "harness-codex",
@@ -27,7 +27,7 @@
       },
       "default": true,
       "extensionId": "pstdio.harness-codex",
-      "icon": "CodeXml"
+      "icon": "./assets/icon.svg"
     },
     {
       "installName": "harness-open-code",
@@ -41,7 +41,7 @@
       },
       "default": true,
       "extensionId": "pstdio.harness-open-code",
-      "icon": "SquareTerminal"
+      "icon": "./assets/icon.svg"
     },
     {
       "installName": "harness-pi",
@@ -56,7 +56,7 @@
       "publisher": "pstdio",
       "default": false,
       "extensionId": "pstdio.harness-pi",
-      "icon": "Terminal"
+      "icon": "./assets/icon.svg"
     },
     {
       "installName": "pstdio-base-themes",

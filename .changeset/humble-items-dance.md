@@ -16,4 +16,4 @@
 "extension-lab": patch
 ---
 
-Declare extension icons and full catalog IDs with Gallery Thumbnails for UI Canvas, offer Agent Reports as optional, rename Themes, and hide Remote Workspaces from downloads.
+Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
