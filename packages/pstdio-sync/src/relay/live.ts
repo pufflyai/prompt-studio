@@ -13,7 +13,10 @@ import { serviceAddress, serviceUrl } from "./http";
 import { createLiveControls } from "./live-controls";
 
 export type LiveTopic = { spaceOwner: string | null; topic: string };
-export type LiveEvent = LiveServerMessage | { type: "disconnected" } | ({ type: "subscribed" } & LiveTopic);
+export type LiveEvent =
+  | LiveServerMessage
+  | { type: "disconnected"; reason: "renewal" | "offline" }
+  | ({ type: "subscribed" } & LiveTopic);
 const keyOf = (topic: LiveTopic) => JSON.stringify([topic.spaceOwner, topic.topic]);
 
 // WebSocket errors hide HTTP bodies. Probe only failed handshakes to expose the R29 update message.
@@ -42,17 +45,32 @@ const unsupportedHandshake = async (
 };
 
 /** One shared project socket. Desired subscriptions survive reconnect; payloads never do. */
-export const createLiveConnection = (input: {
+const updatePresence = (
+  presence: Map<string, Set<(active: boolean) => void>>,
+  readerState: Map<string, boolean>,
+  event: Extract<LiveServerMessage, { type: "subscribers" }>,
+) => {
+  const key = keyOf(event);
+  const callbacks = presence.get(key);
+  if (!callbacks) return;
+  readerState.set(key, event.active);
+  for (const callback of callbacks) callback(event.active);
+};
+
+interface LiveConnectionInput {
   origin: string;
   projectId: string;
   access: () => Promise<{ token: string; expiresAt: string }>;
   signal: AbortSignal;
   onError?: () => void;
   onStatusChange?: () => void;
-}) => {
+}
+
+export const createLiveConnection = (input: LiveConnectionInput) => {
   const controller = new AbortController();
   let protocolUnsupported = false;
   let controlRefused = false;
+  let renewing = false;
   const unsupported = () => {
     protocolUnsupported = true;
     controller.abort();
@@ -93,7 +111,8 @@ export const createLiveConnection = (input: {
     ) => Promise<string>
   >();
   const invocations = new Map<string, AbortController>();
-  const disconnected = () => {
+  const disconnected = (reason: "renewal" | "offline") => {
+    renewing = reason === "renewal";
     controls.reset();
     readerState.clear();
     for (const callbacks of presence.values()) for (const callback of callbacks) callback(false);
@@ -104,7 +123,7 @@ export const createLiveConnection = (input: {
     calls.clear();
     for (const invocation of invocations.values()) invocation.abort();
     invocations.clear();
-    for (const listener of listeners) listener({ type: "disconnected" });
+    for (const listener of listeners) listener({ type: "disconnected", reason });
   };
   const result = (event: Extract<LiveServerMessage, { type: "result" | "call-error" }>) => {
     const call = calls.get(event.id);
@@ -139,19 +158,13 @@ export const createLiveConnection = (input: {
         .finally(() => invocations.delete(event.id));
     }
   };
-  const updatePresence = (event: Extract<LiveServerMessage, { type: "subscribers" }>) => {
-    const key = keyOf(event);
-    const callbacks = presence.get(key);
-    if (!callbacks) return;
-    readerState.set(key, event.active);
-    for (const callback of callbacks) callback(event.active);
-  };
   const receive = (event: LiveServerMessage) => {
     if (event.type === "ready") {
+      renewing = false;
       controls.ready();
     }
     if (event.type === "control-result") return controls.result(event);
-    if (event.type === "subscribers") updatePresence(event);
+    if (event.type === "subscribers") updatePresence(presence, readerState, event);
     if (event.type === "result" || event.type === "call-error") result(event);
     if (event.type === "cancelled") {
       invocations.get(event.id)?.abort();
@@ -188,7 +201,7 @@ export const createLiveConnection = (input: {
   const retain = controls.retain;
   return {
     done: transport.done,
-    status: () => ({ ...transport.status(), protocolUnsupported, controlRefused }),
+    status: () => ({ ...transport.status(), protocolUnsupported, controlRefused, renewing }),
     retry: transport.retry,
     reconnect: transport.reconnect,
     close: () => controller.abort(),
