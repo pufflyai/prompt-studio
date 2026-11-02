@@ -38,3 +38,13 @@ test("refuses missing SVG files and paths or symlinks outside the owning package
     expect(() => readExtensionIcon(root, path)).toThrow();
   }
 });
+
+// A package cannot make a project listing synchronously read an unbounded icon.
+test("bounds SVG reads at 256 KiB", () => {
+  const root = fixture();
+  const path = join(root, "assets/logo.svg");
+  writeFileSync(path, " ".repeat(256 * 1024));
+  expect(readExtensionIcon(root, "./assets/logo.svg")).toStartWith("data:image/svg+xml;base64,");
+  writeFileSync(path, " ".repeat(256 * 1024 + 1));
+  expect(() => readExtensionIcon(root, "./assets/logo.svg")).toThrow("256 KiB");
+});

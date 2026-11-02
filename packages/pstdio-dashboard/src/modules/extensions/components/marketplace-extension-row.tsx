@@ -3,6 +3,7 @@ import type { MarketplaceExtension } from "@pstdio/sdk/api";
 import { ChevronRight, Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ExtensionIcon } from "./extension-icon";
+import { ExtensionIdentity } from "./extension-identity";
 
 interface MarketplaceExtensionRowProps {
   extension: MarketplaceExtension;
@@ -51,9 +52,7 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
           <Text textStyle="label/S/medium" truncate>
             {extension.displayName}
           </Text>
-          <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" flexShrink="0">
-            {extension.extensionId ?? extension.installName}
-          </Text>
+          <ExtensionIdentity value={extension.extensionId ?? extension.installName} />
         </HStack>
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description}

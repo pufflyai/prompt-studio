@@ -105,3 +105,8 @@ export const Installing: Story = {
   id: "projectsettings-availableextensiondetail--installing",
   args: { installing: true },
 };
+
+export const LongIdentity: Story = {
+  id: "projectsettings-availableextensiondetail--long-identity",
+  args: { extension: { ...meta.args!.extension!, extensionId: `acme.${"extension-".repeat(40)}tools` } },
+};

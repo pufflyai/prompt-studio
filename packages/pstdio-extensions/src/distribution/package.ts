@@ -5,6 +5,7 @@ import { gunzipSync } from "node:zlib";
 import { parseExtensionApiDeclaration } from "pstdio-api-contracts/extension-kernel";
 import { extensionStorageDirectory } from "../artifacts/extension-storage-path";
 import { createExtensionIgnoreMatcher } from "../authoring/extension-ignore";
+import { MAX_EXTENSION_ICON_BYTES } from "../runtime/extension-icon";
 import { createPackageArchive } from "./package-archive";
 
 export const packageSha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
@@ -61,6 +62,7 @@ export const readExtensionPackage = async (bytes: Uint8Array) => {
     if (!safePath(path) || !path.endsWith(".svg") || !files.has(path)) {
       throw new Error("Package is missing its declared SVG icon");
     }
+    if (files.get(path)!.size > MAX_EXTENSION_ICON_BYTES) throw new Error("Extension SVG icon exceeds 256 KiB");
   }
   return { manifest, files };
 };

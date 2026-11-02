@@ -146,3 +146,12 @@ test("uses a portable package filename for an accepted Windows device publisher"
   expect(packed.manifest.id).toBe("con.notes");
   expect(packed.filename).toBe("_con.notes-0.45.1.tgz");
 });
+
+test("rejects an oversized declared SVG before publishing an archive", async () => {
+  const root = await fixture();
+  const path = join(root, "package.json");
+  const manifest = JSON.parse(await readFile(path, "utf8"));
+  await writeFile(path, JSON.stringify({ ...manifest, icon: "./assets/icon.svg" }));
+  await writeFile(join(root, "assets/icon.svg"), " ".repeat(256 * 1024 + 1));
+  await expect(packExtension(root)).rejects.toThrow("256 KiB");
+});

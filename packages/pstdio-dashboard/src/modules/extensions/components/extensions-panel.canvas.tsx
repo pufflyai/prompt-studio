@@ -321,3 +321,19 @@ export const AddingLocalFolder: Story = {
     addingFolderName: "my-extension",
   },
 };
+
+export const LongIdentities: Story = {
+  id: "projectsettings-extensionspanel--long-identities",
+  args: {
+    extensions: installedExtensions.map((extension) => ({
+      ...extension,
+      extensionId: `acme.${"extension-".repeat(40)}tools`,
+    })),
+    marketplace: marketplace.map((extension) => ({
+      ...extension,
+      extensionId: `acme.${"extension-".repeat(40)}tools`,
+    })),
+    diagnostics: [],
+    automations: [],
+  },
+};

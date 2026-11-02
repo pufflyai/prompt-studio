@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
+import { ExtensionIdentity } from "./extension-identity";
 
 export interface ExtensionListRowProps {
   extension: ProjectExtensionInstance;
@@ -57,6 +58,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
       _hover={{ bg: "bg.subtle" }}
       onClick={onOpen}
       onKeyDown={(event) => {
+        if (event.currentTarget !== event.target) return;
         if (event.key === "Enter" || event.key === " ") onOpen();
       }}
     >
@@ -79,10 +81,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           <Text textStyle="label/S/medium" color={extension.enabled ? "fg" : "fg.muted"} truncate>
             {extension.displayName}
           </Text>
-          <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" flexShrink="0">
-            {extension.extensionId}
-            {extension.version ? ` · v${extension.version}` : ""}
-          </Text>
+          <ExtensionIdentity value={`${extension.extensionId}${extension.version ? ` · v${extension.version}` : ""}`} />
         </HStack>
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}

@@ -242,17 +242,19 @@ export const readPackageManifestMetadata = (packageDir: string): ReadPackageMani
 
   if (!ok) return { manifest: null, entryPath: null, diagnostics };
 
+  let icon = optionalString(raw.icon);
   try {
-    readExtensionIcon(packageDir, optionalString(raw.icon));
+    readExtensionIcon(packageDir, icon);
   } catch (error) {
     diagnostics.push(
       createDiagnostic({
         code: "extension_manifest_invalid_value",
+        severity: "warning",
         message: `icon is unavailable: ${error instanceof Error ? error.message : String(error)}`,
         sourcePath: packagePath,
       }),
     );
-    return { manifest: null, entryPath: null, diagnostics };
+    icon = undefined;
   }
 
   const entryPath = resolveEntry(diagnostics, packagePath, packageDir, main as string);
@@ -263,7 +265,7 @@ export const readPackageManifestMetadata = (packageDir: string): ReadPackageMani
     version: version as string,
     displayName: optionalString(raw.displayName),
     description: optionalString(raw.description),
-    icon: optionalString(raw.icon),
+    icon,
     publisher: publisher as string,
     main: main as string,
     enginesPstdio: enginesPstdio as string,
