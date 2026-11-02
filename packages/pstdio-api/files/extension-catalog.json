@@ -183,7 +183,7 @@
       },
       "default": false,
       "bundleSource": false,
-      "icon": "PanelsTopLeft"
+      "icon": "gallery-thumbnails"
     },
     {
       "installName": "remote-workspaces",
