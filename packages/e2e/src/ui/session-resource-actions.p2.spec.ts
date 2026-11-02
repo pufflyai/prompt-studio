@@ -38,7 +38,6 @@ test("drafts omit management actions and workspace session rows explain guarded 
   await expect(
     page.locator("[role=menu][data-state=open]").getByRole("menuitem", { name: /^Delete session/ }),
   ).toHaveAttribute("data-disabled");
-  await page.keyboard.press("Tab");
   await expect(page.getByLabel("Finish or stop pending work before forking.", { exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("Stop active or queued work before deleting.", { exact: true })).toBeFocused();
