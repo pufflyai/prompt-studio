@@ -1,5 +1,5 @@
 import { Box, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, Tooltip } from "@pstdio/ui";
+import { AlertMessage, PopoverHeader, Tooltip } from "@pstdio/ui";
 import { Check, Copy, Gauge } from "lucide-react";
 import { extensionName } from "../cpu-sources";
 import { performanceHistory } from "../performance-history";
@@ -89,15 +89,20 @@ export const PerformancePopoverContent = (props: PerformancePopoverContentProps)
   return (
     <Stack gap="0" data-testid="performance-popover">
       {/* The details webview scrolls itself; its header stays in place above the measurements. */}
-      <HStack gap="xs" position="sticky" top="0" zIndex="1" bg="bg" paddingX="md" paddingY="sm">
-        <Gauge size={14} />
-        <Text textStyle="label/M/medium">{t("popover.title", "Performance")}</Text>
-        <Tooltip content={copyLabel}>
-          <IconButton size="2xs" variant="ghost" marginLeft="auto" aria-label={copyLabel} onClick={onCopy}>
-            {copied ? <Check /> : <Copy />}
-          </IconButton>
-        </Tooltip>
-      </HStack>
+      <PopoverHeader
+        icon={<Gauge />}
+        title={t("popover.title", "Performance")}
+        position="sticky"
+        top="0"
+        zIndex="1"
+        actions={
+          <Tooltip content={copyLabel}>
+            <IconButton size="2xs" variant="ghost" aria-label={copyLabel} onClick={onCopy}>
+              {copied ? <Check /> : <Copy />}
+            </IconButton>
+          </Tooltip>
+        }
+      />
       <Stack gap="sm" paddingX="md" paddingBottom="sm">
         {actionError ? <AlertMessage status="error" title={actionError} onClose={onDismissActionError} /> : null}
         <FrameRateSection buckets={buckets} />

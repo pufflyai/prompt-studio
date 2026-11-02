@@ -1,7 +1,15 @@
 import { HStack, Input, Stack, Text } from "@chakra-ui/react";
 import { AlertMessage, DeleteConfirmationModal, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Button } from "../components/themed-primitives";
+import { CloudIcon, type CloudIconName } from "./cloud-icon";
+
+const SectionTitle = (props: { icon: CloudIconName; children: ReactNode }) => (
+  <HStack gap="xs">
+    <CloudIcon name={props.icon} />
+    <Text textStyle="label/M/medium">{props.children}</Text>
+  </HStack>
+);
 
 interface DeviceRowProps {
   name: string;
@@ -16,6 +24,7 @@ const DeviceRow = (props: DeviceRowProps) => {
   const [draft, setDraft] = useState(name);
   return (
     <HStack gap="sm" justify="space-between">
+      <CloudIcon name={current ? "laptop" : "monitor"} />
       <Stack gap="2xs" flex="1" minW="0">
         {renaming ? (
           <Input size="sm" aria-label="Device name" value={draft} onChange={(event) => setDraft(event.target.value)} />
@@ -34,9 +43,11 @@ const DeviceRow = (props: DeviceRowProps) => {
           setRenaming(!renaming);
         }}
       >
+        <CloudIcon name={renaming ? "check" : "pencil"} />
         {renaming ? "Save" : "Rename"}
       </Button>
       <Button size="sm" variant="destructive-ghost" onClick={onRemove}>
+        <CloudIcon name="trash-2" />
         Remove
       </Button>
     </HStack>
@@ -61,11 +72,14 @@ const CloudSettings = (props: CloudSettingsProps) => {
   return (
     <ScrollArea h="full">
       <Stack gap="md" p="lg">
-        <Text textStyle="heading/S">Cloud</Text>
+        <HStack gap="sm">
+          <CloudIcon name="cloud" />
+          <Text textStyle="heading/S">Cloud</Text>
+        </HStack>
         <SimpleCard>
           <SimpleCardBody>
             <Stack gap="sm">
-              <Text textStyle="label/M/medium">Account</Text>
+              <SectionTitle icon="user-round">Account</SectionTitle>
               <HStack justify="space-between">
                 <Stack gap="2xs">
                   <Text>{signedIn ? "Alex Morgan" : "Not signed in"}</Text>
@@ -76,6 +90,7 @@ const CloudSettings = (props: CloudSettingsProps) => {
                   )}
                 </Stack>
                 <Button size="sm" variant="outline" onClick={() => setSignedIn(!signedIn)}>
+                  <CloudIcon name={signedIn ? "log-out" : "log-in"} />
                   {signedIn ? "Sign out" : "Sign in"}
                 </Button>
               </HStack>
@@ -85,8 +100,11 @@ const CloudSettings = (props: CloudSettingsProps) => {
         <SimpleCard>
           <SimpleCardBody>
             <Stack gap="sm">
-              <Text textStyle="label/M/medium">Cloud access</Text>
-              <Text color="fg.muted">{earlyAccess ? "Early access enabled" : "Coming soon"}</Text>
+              <SectionTitle icon="shield-check">Cloud access</SectionTitle>
+              <HStack gap="xs" color="fg.muted">
+                <CloudIcon name={earlyAccess ? "circle-check" : "cloud"} />
+                <Text>{earlyAccess ? "Early access enabled" : "Coming soon"}</Text>
+              </HStack>
             </Stack>
           </SimpleCardBody>
         </SimpleCard>
@@ -95,7 +113,7 @@ const CloudSettings = (props: CloudSettingsProps) => {
             <SimpleCard>
               <SimpleCardBody>
                 <Stack gap="md">
-                  <Text textStyle="label/M/medium">Your devices</Text>
+                  <SectionTitle icon="monitor">Your devices</SectionTitle>
                   {devices.map((device) => (
                     <DeviceRow
                       key={device.id}
@@ -115,14 +133,20 @@ const CloudSettings = (props: CloudSettingsProps) => {
             <SimpleCard>
               <SimpleCardBody>
                 <Stack gap="sm">
-                  <Text textStyle="label/M/medium">This project</Text>
-                  <Text>{local ? "Local" : "Synced"}</Text>
+                  <HStack justify="space-between">
+                    <SectionTitle icon="folder">This project</SectionTitle>
+                    <HStack gap="xs" color={local ? "fg.muted" : "fg.success"}>
+                      <CloudIcon name={local ? "cloud-off" : "circle-check"} />
+                      <Text>{local ? "Local" : "Synced"}</Text>
+                    </HStack>
+                  </HStack>
                   {local && (
                     <>
                       <Text textStyle="paragraph/S/regular" color="fg.muted">
                         Syncing again merges the copies. Where both copies changed the same thing, one change is kept.
                       </Text>
                       <Button size="sm" variant="primary" alignSelf="flex-start" onClick={() => setLocal(false)}>
+                        <CloudIcon name="cloud-upload" />
                         Sync with Cloud
                       </Button>
                     </>
@@ -136,6 +160,7 @@ const CloudSettings = (props: CloudSettingsProps) => {
                 title="Make this project local"
                 endElement={
                   <Button size="2xs" variant="ghost" onClick={() => setConfirming(true)}>
+                    <CloudIcon name="cloud-off" />
                     Make local
                   </Button>
                 }

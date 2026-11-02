@@ -1,9 +1,24 @@
-import { Flex, HStack, Popover, Portal, Spinner, Stack, Text } from "@chakra-ui/react";
-import { SimpleCard } from "@pstdio/ui";
+import { Flex, HStack, Popover, Portal, Spinner, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { PopoverHeader, psTheme, SimpleCard } from "@pstdio/ui";
 import { Button } from "../components/themed-primitives";
+import { CloudIcon, type CloudIconName } from "./cloud-icon";
 
 const warningStates = new Set(["Offline", "Downloading 42%", "Downloading", "Needs attention", "Sign in again"]);
 const states = ["Sign in", "Signing in…", "Signed in", "Synced", "Syncing 3", "Syncing", "Local", ...warningStates];
+
+const statusColor = (state: string) => {
+  if (state === "Synced") return "fg.success";
+  return warningStates.has(state) ? "fg.warning" : "fg.muted";
+};
+
+const statusIcon = (state: string): CloudIconName => {
+  if (state === "Offline") return "wifi-off";
+  if (state === "Local") return "cloud-off";
+  if (state === "Sign in" || state === "Sign in again") return "log-in";
+  if (state === "Needs attention") return "triangle-alert";
+  if (state === "Synced") return "circle-check";
+  return "cloud";
+};
 
 interface CloudStatusProps {
   state: string;
@@ -17,23 +32,27 @@ const CloudDetails = (props: CloudStatusProps) => {
   const signedIn = !["Sign in", "Signing in…", "Sign in again"].includes(state);
   return (
     <Stack gap="md">
-      <Stack gap="xs">
-        <Popover.Title textStyle="label/M/medium">Prompt Studio Cloud</Popover.Title>
-        <Text textStyle="paragraph/S/regular" color={warningStates.has(state) ? "fg.warning" : "fg.muted"}>
-          {earlyAccess ? state : "Cloud sync · Coming soon"}
-        </Text>
-      </Stack>
+      <HStack gap="xs" color={statusColor(state)}>
+        <CloudIcon name={statusIcon(state)} />
+        <Text textStyle="paragraph/S/regular">{earlyAccess ? state : "Cloud sync · Coming soon"}</Text>
+      </HStack>
       {earlyAccess && connected && (
         <Stack gap="xs">
           <Text textStyle="label/S/medium" color="fg.muted">
             Devices
           </Text>
           <HStack justify="space-between">
-            <Text>This Mac</Text>
+            <HStack gap="xs">
+              <CloudIcon name="laptop" />
+              <Text>This Mac</Text>
+            </HStack>
             <Text color="fg.muted">This device</Text>
           </HStack>
           <HStack justify="space-between">
-            <Text>Office Linux</Text>
+            <HStack gap="xs">
+              <CloudIcon name="monitor" />
+              <Text>Office Linux</Text>
+            </HStack>
             <Text color="fg.muted">Online</Text>
           </HStack>
         </Stack>
@@ -42,10 +61,16 @@ const CloudDetails = (props: CloudStatusProps) => {
         <Text textStyle="label/S/medium" color="fg.muted">
           Account
         </Text>
-        <Text textStyle="paragraph/S/regular">{signedIn ? "Alex Morgan" : "Not signed in"}</Text>
+        <HStack gap="xs">
+          <CloudIcon name="user-round" />
+          <Text textStyle="paragraph/S/regular">{signedIn ? "Alex Morgan" : "Not signed in"}</Text>
+        </HStack>
       </Stack>
-      <Button size="sm" variant="display-link" asChild>
-        <a href="#canvas-item=CloudSettingsConnected">Cloud settings</a>
+      <Button size="sm" variant="outline" alignSelf="flex-start" asChild>
+        <a href="#canvas-item=CloudSettingsConnected">
+          <CloudIcon name="settings" />
+          Cloud settings
+        </a>
       </Button>
     </Stack>
   );
@@ -54,18 +79,23 @@ const CloudDetails = (props: CloudStatusProps) => {
 const CloudStatus = (props: CloudStatusProps) => {
   const { state, earlyAccess = true, open = false } = props;
   const active = ["Signing in…", "Syncing 3", "Syncing", "Downloading 42%", "Downloading"].includes(state);
+  const styles = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "widget" });
   return (
     <Popover.Root positioning={{ placement: "top-end" }} defaultOpen={open}>
       <Popover.Trigger asChild>
-        <Button size="xs" variant="ghost-static" color={warningStates.has(state) ? "fg.warning" : "fg.muted"}>
-          {active && <Spinner size="xs" />}
+        <Button size="xs" variant="ghost-static" color={statusColor(state)}>
+          {active ? <Spinner size="xs" /> : <CloudIcon name={statusIcon(state)} />}
           {state}
         </Button>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content>
-            <Popover.Body>
+          <Popover.Content css={styles.content}>
+            <PopoverHeader
+              icon={<CloudIcon name="cloud" />}
+              title={<Popover.Title>Prompt Studio Cloud</Popover.Title>}
+            />
+            <Popover.Body px="md" pb="sm">
               <CloudDetails state={state} earlyAccess={earlyAccess} />
             </Popover.Body>
           </Popover.Content>
