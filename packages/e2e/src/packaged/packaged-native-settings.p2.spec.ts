@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { browserLaunchOptions } from "../scripts/browser-launch-options";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, chromium, expect, firefox, test, webkit } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
@@ -43,7 +44,7 @@ for (const [type, launchOptions] of [
         });
         expect(response.status).toBe(201);
         const project = (await response.json()) as { id: string };
-        browser = await type.launch({ headless: true, ...launchOptions });
+        browser = await type.launch(browserLaunchOptions(type, root, { headless: true, ...launchOptions }));
         const page = await browser.newPage();
         await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
         await signInBrowser(page, started.descriptor);
