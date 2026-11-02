@@ -22,8 +22,8 @@ const Boundary = (props: LoopRangeProps & { boundary: "start" | "end" }) => {
       tabIndex={onChange ? 0 : -1}
       aria-label={start ? "Loop start" : "Loop end"}
       aria-disabled={!onChange}
-      aria-valuemin={start ? 0 : range.start + 1 / fps}
-      aria-valuemax={start ? range.end - 1 / fps : duration}
+      aria-valuemin={start ? 0 : moveLoopBoundary(range, "end", 0, duration, fps).end}
+      aria-valuemax={start ? moveLoopBoundary(range, "start", duration, duration, fps).start : duration}
       aria-valuenow={time}
       aria-valuetext={timeLabel(time, fps)}
       left={`${(100 * time) / duration}%`}

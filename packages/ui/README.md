@@ -101,6 +101,8 @@ Pass `loopRange` and `onLoopRangeChange` for draggable and keyboard-editable loo
 boundaries. Handles snap to frames and preserve a positive range. Supply `settings`
 for caller-owned playback options in the timeline settings menu. Panel sizing and
 dismissal belong to the containing layout; the timeline has no header or close action.
+After a panel resize, pass its available `maxHeight` so the timeline scrolls within
+that height. Omit it for natural content height.
 Zoom and group expansion are temporary.
 
 Arrow keys on the ruler seek by one frame; Shift seeks ten; Home/End seek the bounds.

@@ -49,4 +49,6 @@ export interface KeyframeTimelineProps {
   onLoopRangeChange?: (range: KeyframeLoopRange) => void;
   /** Caller-owned playback options shown in the timeline settings menu. */
   settings?: ReactNode;
+  /** Available height after a containing panel has been resized. Omit for intrinsic sizing. */
+  maxHeight?: number;
 }

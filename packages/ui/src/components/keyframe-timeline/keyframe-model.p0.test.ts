@@ -54,6 +54,12 @@ test("loop boundaries snap to frames while preserving a positive range", () => {
   expect(moveLoopBoundary(range, "start", 0.123, 2, 25)).toEqual({ start: 0.12, end: 1.5 });
   expect(moveLoopBoundary(range, "start", -1, 2, 25)).toEqual({ start: 0, end: 1.5 });
   expect(moveLoopBoundary(range, "end", 3, 2, 25)).toEqual({ start: 0.5, end: 2 });
-  expect(moveLoopBoundary(range, "start", 2, 2, 25).start).toBeCloseTo(1.46);
-  expect(moveLoopBoundary(range, "end", 0, 2, 25).end).toBeCloseTo(0.54);
+  expect(moveLoopBoundary(range, "start", 2, 2, 25).start).toBeCloseTo(1.44);
+  expect(moveLoopBoundary(range, "end", 0, 2, 25).end).toBeCloseTo(0.56);
+});
+
+test("a positive animation shorter than one frame retains valid loop endpoints", () => {
+  const range = { start: 0, end: 0.01 };
+  expect(moveLoopBoundary(range, "start", 1, 0.01, 25)).toEqual(range);
+  expect(moveLoopBoundary(range, "end", -1, 0.01, 25)).toEqual(range);
 });

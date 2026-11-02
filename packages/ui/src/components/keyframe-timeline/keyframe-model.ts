@@ -71,7 +71,9 @@ export const moveLoopBoundary = (
   fps: number,
 ) => {
   const snapped = snapTime(time, duration, fps);
-  const frame = 1 / fps;
-  if (boundary === "start") return { ...range, start: Math.max(0, Math.min(snapped, range.end - frame)) };
-  return { ...range, end: Math.min(duration, Math.max(snapped, range.start + frame)) };
+  // Clamp on the frame grid too: an authored neighbour may itself be between frames.
+  const latestStart = Math.max(0, (Math.floor(range.end * fps + 1e-9) - 1) / fps);
+  const earliestEnd = Math.min(duration, (Math.ceil(range.start * fps - 1e-9) + 1) / fps);
+  if (boundary === "start") return { ...range, start: Math.min(snapped, latestStart) };
+  return { ...range, end: Math.max(snapped, earliestEnd) };
 };

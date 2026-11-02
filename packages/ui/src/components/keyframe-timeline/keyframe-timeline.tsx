@@ -62,7 +62,11 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
   const ticks = Array.from({ length: Math.floor(duration / step) + 1 }, (_, index) => index * step);
   const playhead = `${(100 * Math.max(0, Math.min(duration, currentTime))) / duration}%`;
   return (
-    <TimelineRoot role="region" aria-label={props.label ?? "Animation timeline"}>
+    <TimelineRoot
+      role="region"
+      aria-label={props.label ?? "Animation timeline"}
+      maxH={props.maxHeight === undefined ? undefined : `${props.maxHeight}px`}
+    >
       <TimelineToolbar role="toolbar" aria-label="Animation controls">
         {props.onPlayingChange && (
           <Tooltip content={props.playing ? "Pause" : "Play"}>
