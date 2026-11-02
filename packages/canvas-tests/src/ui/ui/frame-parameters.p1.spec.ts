@@ -45,7 +45,10 @@ test("frame parameters and playback stay independent across themes and movement"
   const tray = surface.locator("[data-animation-tray]");
   const trayBounds = (await tray.boundingBox())!;
   const toolbarBounds = (await timeline.getByRole("toolbar", { name: "Animation controls" }).boundingBox())!;
-  const laneBounds = await timeline.getByRole("group", { name: "Animation tracks", exact: true }).boundingBox();
+  const laneBounds = await timeline
+    .getByRole("slider", { name: "Timeline playhead", exact: true })
+    .locator("../..")
+    .boundingBox();
   expect(trayBounds.height).toBeLessThanOrEqual(toolbarBounds.height + laneBounds!.height + 3);
   await dialog.getByRole("button", { name: "Calm", exact: true }).click();
   await dialog.getByRole("button", { name: "Close frame editor", exact: true }).click();
