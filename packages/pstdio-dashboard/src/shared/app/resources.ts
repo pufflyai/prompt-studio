@@ -26,10 +26,11 @@ export const createDashboardSessionResource = (
   projectId,
 });
 export const dashboardViews = {
-  start: { id: "start", label: "Start", icon: "House" },
   workspaces: { id: "workspaces", label: "Workspaces", icon: standardResourceIcons.workspace },
   sessions: { id: "sessions", label: "Sessions", icon: "messages-circle" },
 } as const;
 
 export const dashboardExtensionsPage = { kind: "page", extensionId: "pstdio", id: "extensions" } as const;
 export const dashboardExtensionDetailPage = { ...dashboardExtensionsPage, id: "extension-detail" } as const;
+
+export const dashboardHomePage = { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" } as const;

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import { workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchPanelRegion } from "@pstdio/workbench";
+import { createHomeModule } from "@/home-page.fixture";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardSessionResource } from "@/shared/app/resources";
+import { createDashboardSessionResource, dashboardHomePage } from "@/shared/app/resources";
 import { navigateDashboardPage, openSessionsPage } from "@/shared/workbench/page-navigation";
-import { createStartModule } from "../../start/start-page.fixture";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionsModule } from "../module";
 import { openCreatedSessionFromDraft } from "./session-chat-actions";
@@ -12,9 +12,9 @@ import type { SessionViewContext } from "./session-view-context";
 
 const draft = { type: "session-draft", id: "draft", extensionId: "pstdio", projectId: "project-1" };
 const fixture = () => {
-  const w = createWorkbench();
+  const w = createWorkbench({ startPage: dashboardHomePage });
   w.registerModule(createWorkspacesModule());
-  w.registerModule(createStartModule());
+  w.registerModule(createHomeModule());
   w.registerModule(createSessionsModule());
   selectDashboardProject(w, { id: "project-1", name: "Project" });
   openSessionsPage(w);
@@ -48,9 +48,9 @@ for (const resource of [undefined, draft])
 test("a completed creation keeps the page the user opened while it was pending", () => {
   const w = fixture();
   const input = context(w);
-  navigateDashboardPage(w, { page: workbenchPages.start });
+  navigateDashboardPage(w, { page: dashboardHomePage });
   complete(input);
-  expect(w.pages.store.getState().location?.page).toEqual(workbenchPages.start);
+  expect(w.pages.store.getState().location?.page).toEqual(dashboardHomePage);
 });
 
 test("a panel draft completes in its actual region after moving", async () => {

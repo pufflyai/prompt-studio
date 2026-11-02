@@ -1,34 +1,32 @@
-import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
-import { dashboardViews } from "@/shared/app/resources";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { dashboardHomePage } from "@/shared/app/resources";
 import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,
 } from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
 
-const registerStartWidget = (ctx: WorkbenchModuleContext) => {
+const registerHomeWidget = (ctx: WorkbenchModuleContext) => {
   ctx.views.registerView(
     {
-      id: dashboardWidgetIds.start,
-      title: "Start",
+      id: "test.home",
+      title: "Home",
       body: { kind: "react", render: () => null },
     },
     { priority: 90 },
   );
 };
-export const createStartModule = () =>
+export const createHomeModule = () =>
   ({
-    id: "dashboard.start",
+    id: "test.home",
     activate(ctx) {
-      registerStartWidget(ctx);
+      registerHomeWidget(ctx);
       ctx.pages.registerPage({
-        id: dashboardViews.start.id,
-        ref: workbenchPages.start,
-        title: dashboardViews.start.label,
-        icon: dashboardViews.start.icon,
-        path: "",
+        id: "pstdio.pstdio-home.page.home",
+        ref: dashboardHomePage,
+        title: "Home",
+        icon: "house",
+        path: "home",
         modeId: "project",
         main: {
           kind: "view",
@@ -36,13 +34,13 @@ export const createStartModule = () =>
           presentation: "page",
           view: {
             kind: "view",
-            id: dashboardWidgetIds.start,
+            id: "test.home",
           },
         },
         slots: [],
       });
       ctx.keybindings.registerKeybinding({
-        action: { kind: "page", page: workbenchPages.start },
+        action: { kind: "page", page: dashboardHomePage },
         keybinding: "H",
         layer: "go",
         label: "Go to home",
@@ -55,10 +53,10 @@ export const createStartModule = () =>
             ...dashboardNavigationSections.root,
             nodes: [
               {
-                id: dashboardViews.start.id,
+                id: "pstdio.pstdio-home.page.home",
                 label: "Home",
-                icon: dashboardViews.start.icon,
-                target: { kind: "page", page: workbenchPages.start },
+                icon: "house",
+                target: { kind: "page", page: dashboardHomePage },
               },
             ],
           },
@@ -67,7 +65,7 @@ export const createStartModule = () =>
       const unsubscribe = ctx.pages.store.subscribeSelector(
         (state) => state.activePageId,
         (pageId) => {
-          if (pageId === dashboardViews.start.id) setDashboardSidenavSelection(ctx, undefined);
+          if (pageId === "pstdio.pstdio-home.page.home") setDashboardSidenavSelection(ctx, undefined);
         },
       );
       return [{ dispose: unsubscribe }];

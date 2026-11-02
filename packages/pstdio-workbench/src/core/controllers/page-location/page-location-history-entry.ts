@@ -16,14 +16,17 @@ export const createPageHistoryEntry =
     removalVersion?(): number;
     removalEpoch?(): string;
   }) =>
-  (projectId: string, location: PageLocation, index: number) => ({
-    url: serializeWorkbenchPageUrl({ projectId, location, pages: input.pages(), resources: input.resources }),
+  (projectId: string, location: PageLocation | undefined, index: number) => ({
+    url: location
+      ? serializeWorkbenchPageUrl({ projectId, location, pages: input.pages(), resources: input.resources })
+      : `/projects/${encodeURIComponent(projectId)}`,
     state: {
       kind: "pstdio.page-location",
       index,
       projectId,
-      routeKey: workbenchPageLocationRouteKey(location, input.resources, input.pages()),
-      location,
+      ...(location
+        ? { routeKey: workbenchPageLocationRouteKey(location, input.resources, input.pages()), location }
+        : {}),
       removalVersion: input.removalVersion?.() ?? 0,
       removalEpoch: input.removalEpoch?.(),
     } satisfies WorkbenchPageHistoryState,

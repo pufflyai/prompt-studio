@@ -80,29 +80,3 @@ test("unloading Home leaves the existing empty panel and re-enabling allows ordi
   expect(workbench.pages.store.getState().location?.page).toEqual(home);
   await workbench.dispose();
 });
-
-test("public Start navigation and saved parent context use the configured Home page", async () => {
-  const workbench = createProject();
-  registerHome(workbench);
-  setDashboardExtensionsReadyProject(workbench, "project-1");
-  expect(workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.start }).ok).toBe(true);
-  expect(workbench.pages.store.getState().location?.page).toEqual(home);
-  expect(
-    workbench.pageLocations.replay({ page: workbenchPages.workspaces, parent: { page: workbenchPages.start } }).ok,
-  ).toBe(true);
-  expect(workbench.pages.store.getState().location?.parent?.page).toEqual(home);
-  workbench.pages.registerPage({
-    id: "acme.details",
-    ref: { kind: "page", extensionId: "acme", id: "details" },
-    path: "details",
-    modeId: "project",
-    parentId: "start",
-    main: { kind: "panels" },
-    slots: [],
-  });
-  expect(
-    workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", extensionId: "acme", id: "details" } }).ok,
-  ).toBe(true);
-  expect(workbench.pages.store.getState().location?.parent?.page).toEqual(home);
-  await workbench.dispose();
-});

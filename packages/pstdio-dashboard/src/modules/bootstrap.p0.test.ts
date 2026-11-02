@@ -1,13 +1,14 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
+import { createHomeModule } from "@/home-page.fixture";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { dashboardHomePage } from "@/shared/app/resources";
 import { setDashboardExtensionsReadyProject } from "@/shared/extensions/extension-readiness";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { resolveDashboardPersistenceScope } from "@/shared/workbench/dashboard-persistence-scope";
 import { createBootstrapModule } from "./bootstrap";
 import { createExtensionsModule } from "./extensions/module";
 import { emptyAppearance, flushMicrotasks, metadata } from "./extensions/module-test-fixtures";
-import { createStartModule } from "./start/start-page.fixture";
 
 const activeViewId = (workbench: ReturnType<typeof createWorkbench>) => {
   const region = workbench.layout.getLayout().regions.main;
@@ -32,10 +33,10 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 
 describe("createBootstrapModule", () => {
   test("waits for project contributions before opening the configured default page", async () => {
-    const workbench = createWorkbench();
+    const workbench = createWorkbench({ startPage: dashboardHomePage });
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const start = workbench.registerModule(createStartModule());
+    const start = workbench.registerModule(createHomeModule());
     const bootstrap = workbench.registerModule(createBootstrapModule());
 
     try {
@@ -44,7 +45,7 @@ describe("createBootstrapModule", () => {
 
       setDashboardExtensionsReadyProject(workbench, "project-1");
       await flushMicrotasks();
-      expect(workbench.pages.store.getState().activePageId).toBe("start");
+      expect(workbench.pages.store.getState().activePageId).toBe("pstdio.pstdio-home.page.home");
     } finally {
       bootstrap.dispose();
       start.dispose();
@@ -52,7 +53,7 @@ describe("createBootstrapModule", () => {
   });
 
   test("does not open project selection while a persisted project is still loading", () => {
-    const workbench = createWorkbench();
+    const workbench = createWorkbench({ startPage: dashboardHomePage });
     workbench.modes.registerMode({ id: "project-selection", label: "Projects", activate: () => undefined });
 
     const bootstrap = workbench.registerModule(
@@ -77,11 +78,12 @@ describe("createBootstrapModule", () => {
       const loading = Promise.withResolvers<typeof metadata>();
       const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
       const workbench = createWorkbench({
+        startPage: dashboardHomePage,
         pageLocationBrowser: browser,
       });
       workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
       selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-      const start = workbench.registerModule(createStartModule());
+      const start = workbench.registerModule(createHomeModule());
       const extensions = workbench.registerModule(
         createExtensionsModule({
           loadAppearance: mock(async () => emptyAppearance),
@@ -98,12 +100,12 @@ describe("createBootstrapModule", () => {
         if (navigateAway)
           workbench.pageLocations.navigate({
             kind: "page",
-            page: { extensionId: "pstdio", kind: "page", id: "start" },
+            page: dashboardHomePage,
           });
         loading.resolve(metadata);
         await flushMicrotasks();
         await flushMicrotasks();
-        if (navigateAway) expect(workbench.pages.store.getState().activePageId).toBe("start");
+        if (navigateAway) expect(workbench.pages.store.getState().activePageId).toBe("pstdio.pstdio-home.page.home");
         else expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
       } finally {
         bootstrap.dispose();

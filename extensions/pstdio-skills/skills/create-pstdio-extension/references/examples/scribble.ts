@@ -7,7 +7,6 @@ import {
   defineResourceKind,
   defineView,
   workbenchModes,
-  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
 const note = defineResourceKind({ id: "scribble-note", label: "Note" });
@@ -38,7 +37,6 @@ export const scribblePage = definePage({
   title: "Scribble",
   path: "scribble",
   mode: workbenchModes.project,
-  parent: workbenchPages.start,
   resource: { kinds: [note.ref] },
   main: { kind: "view", view: editor.ref, cardinality: "many" },
   slots: [],

@@ -4,7 +4,6 @@ import {
   defineResourceKind,
   defineView,
   workbenchModes,
-  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
 // An explicit callback type breaks the inference cycle when a table targets its own page.
@@ -31,7 +30,6 @@ const collection = definePage({
   path: "notes-collection",
   mode: workbenchModes.project,
   resource: { kinds: [note.ref] },
-  parent: workbenchPages.start,
   main: { kind: "view", view: table.ref, cardinality: "one" },
   slots: [],
 });

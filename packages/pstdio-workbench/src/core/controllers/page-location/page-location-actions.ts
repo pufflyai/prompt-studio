@@ -19,7 +19,7 @@ interface PageLocationControllerActionsInput<Value> {
   clearProject(projectId: string | undefined): void;
   resetHistory(): void;
   rootLevelTarget(): ResolvedPageLocation;
-  clearRootLocation(): void;
+  clearMissingPage(): boolean;
   restore(
     projectId: string,
     source: "boot" | "project-switch",
@@ -88,10 +88,7 @@ export const createPageLocationControllerActions = <Value>(
         }
         const saved = input.persistence.load(projectId);
         if (saved) return actions.normalizeStored(saved.location).location;
-        return actions.normalizeTarget({
-          kind: "page",
-          page: input.startPage,
-        }).location;
+        return actions.normalizeTarget({ kind: "page", page: input.startPage }).location;
       } catch {
         return undefined;
       }
@@ -184,17 +181,12 @@ export const createPageLocationControllerActions = <Value>(
       try {
         resolved = actions.rootLevelTarget();
       } catch (error) {
-        const startAvailable = input.registry
-          .listPages()
-          .some((page) => page.ref.extensionId === input.startPage.extensionId && page.ref.id === input.startPage.id);
-        if (startAvailable) return actions.fail("navigation", error);
         try {
-          actions.clearRootLocation();
-          input.activateLocation?.();
-          return undefined;
-        } catch (emptyError) {
-          return actions.fail("navigation", emptyError);
+          if (actions.clearMissingPage()) input.activateLocation?.();
+        } catch (commitError) {
+          return actions.fail("navigation", commitError);
         }
+        return actions.fail("navigation", error);
       }
       try {
         const history = actions.locationsEqual(current.location, resolved.location) ? "none" : "push";

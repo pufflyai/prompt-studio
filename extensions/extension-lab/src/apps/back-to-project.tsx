@@ -1,5 +1,4 @@
 import { IconButton } from "@chakra-ui/react";
-import { workbenchPages } from "@pstdio/sdk/extensions";
 import { ExampleIcon } from "../icon";
 import { useExampleView } from "../view-context";
 export const BackToProject = () => {
@@ -9,7 +8,9 @@ export const BackToProject = () => {
       aria-label="Back to project"
       size="xs"
       variant="ghost"
-      onClick={() => host.navigate({ kind: "page", page: workbenchPages.start })}
+      onClick={() =>
+        host.navigate({ kind: "page", page: { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" } })
+      }
     >
       <ExampleIcon name="ArrowLeft" />
     </IconButton>

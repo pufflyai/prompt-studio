@@ -26,10 +26,10 @@ import { createResourceLinksModule } from "./modules/resource-links/module";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
 import { createSidenavModule } from "./modules/sidenav/module";
-
 import { createTerminalModule } from "./modules/terminal/module";
 import { createUpdatesModule } from "./modules/updates/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
+import { dashboardHomePage } from "./shared/app/resources";
 import { resolveDashboardPersistenceScope } from "./shared/workbench/dashboard-persistence-scope";
 import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-sidenav";
 
@@ -103,7 +103,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const urlProjectId = pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
   const workbench = createWorkbench({
-    startPage: { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" },
+    startPage: dashboardHomePage,
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
     regionSettings: {
