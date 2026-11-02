@@ -73,7 +73,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
           const focused = document.activeElement;
           // A newer menu or input keeps the focus it received while this menu was closing.
           if (focused === document.body || content?.contains(focused)) {
-            const triggerId = menu.api.getTriggerProps().id;
+            const triggerId = menu.api.getContextTriggerProps().id;
             if (triggerId)
               (root?.current ?? document)
                 .querySelector<HTMLElement>(`#${CSS.escape(triggerId)}`)

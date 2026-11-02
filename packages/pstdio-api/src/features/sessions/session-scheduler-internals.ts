@@ -49,14 +49,12 @@ export const withSchedulingLock = async <T>(operation: () => Promise<T>) => {
   }
 };
 
-export const hasCreateCapacity = async (deps: SessionsRouteDeps) => {
+export const hasCreateCapacity = async (deps: SessionsRouteDeps, workspaceId?: string) => {
   const settings = await deps.settingsService.get();
   const limit = settings.max_concurrent_sessions;
 
-  if (limit == null) return true;
-
-  const activeCount = await deps.sessionService.countActive();
-  return activeCount < limit;
+  if (limit != null && (await deps.sessionService.countActive()) >= limit) return false;
+  return deps.workspaceCapacityService.hasCapacity(workspaceId);
 };
 
 export const updateExistingDispatchSelection = async (
@@ -112,6 +110,22 @@ export const insertFollowUpEntry = async (
   const entry = await deps.sessionService.insertEntryForActive(payload);
   if (!entry && input.expectedRun) throw new Error("Session execution changed before continuation.");
   return entry?.queue_position ?? null;
+};
+
+export const insertAbortAwareFollowUp = async (
+  deps: SessionsRouteDeps,
+  context: DispatchContext,
+  transitionToQueued: boolean,
+) => {
+  context.signal?.throwIfAborted();
+  const queuePosition = await insertFollowUpEntry(deps, { ...context, transitionToQueued });
+  if (context.signal?.aborted) {
+    if (queuePosition !== null) await deps.sessionQueueEntriesService.remove(queuePosition);
+    context.signal.throwIfAborted();
+  }
+  return queuePosition !== null
+    ? { status: "queued" as const, queue_position: queuePosition }
+    : { status: "dispatched" as const };
 };
 
 export const createSubmittedDispatchEntry = async (

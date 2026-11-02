@@ -92,6 +92,11 @@ const unexpectedJobState = (plan: PlannedJob[], jobs: ObservedJob[]) => {
   };
 };
 
+// PR and queue runs stop P1 work at the first failure to save runners. Nightly and stable
+// validation (profile production) run everything, so one run reports every failure.
+export const stopsAtFirstFailure = (priority: string | undefined, profile = process.env.CI_PROFILE) =>
+  priority === "P1" && profile !== "production";
+
 export const evaluateCiGate = (plan: PlannedJob[], jobs: ObservedJob[], failP1Early: boolean, settled = false) => {
   const states = [unexpectedJobState(plan, jobs), ...plan.map((expected) => expectedJobState(expected, jobs, settled))];
   const failures = states.flatMap((state) => state.failures);

@@ -2,7 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createP1Observer } from "./p1-fail-fast";
-import type { TestPriority } from "./test-policy";
+import { stopsAtFirstFailure, type TestPriority } from "./test-policy";
 
 interface Check {
   id: string;
@@ -104,7 +104,7 @@ export const runCiChecks = async (checks: Check[], options: Options) => {
       else if (exitCode === 0) outcome = "success";
       results[index] = { id: check.id, outcome, exitCode };
       console.log(`::endgroup::\n${check.id}: ${outcome}`);
-      if (outcome === "failure" && options.priority === "P1") stop();
+      if (outcome === "failure" && stopsAtFirstFailure(options.priority)) stop();
     }
   };
   process.once("SIGINT", stop);
@@ -112,7 +112,7 @@ export const runCiChecks = async (checks: Check[], options: Options) => {
   let polling = false;
   const readPeerFailure = createP1Observer(process.env);
   const observePeers = async () => {
-    if (polling || stopped || options.priority !== "P1" || !options.observePeers) return;
+    if (polling || stopped || !stopsAtFirstFailure(options.priority) || !options.observePeers) return;
     polling = true;
     try {
       const failed = await readPeerFailure();
@@ -127,12 +127,11 @@ export const runCiChecks = async (checks: Check[], options: Options) => {
     }
   };
   await observePeers();
-  const interval =
-    options.priority === "P1"
-      ? setInterval(() => {
-          void observePeers();
-        }, 30000)
-      : undefined;
+  const interval = stopsAtFirstFailure(options.priority)
+    ? setInterval(() => {
+        void observePeers();
+      }, 30000)
+    : undefined;
   try {
     await Promise.all(Array.from({ length: Math.min(checks.length, options.concurrency ?? 1) }, worker));
   } finally {

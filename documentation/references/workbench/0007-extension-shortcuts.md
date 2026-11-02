@@ -28,7 +28,7 @@ Creation runs the same UI flow as the rest of the application. Notes open immedi
 The host derives setup actions from public metadata:
 
 - C S lists new session drafts with the exact harness provider. Select its numbered choice directly; no arrow navigation is required. Creating a draft does not start an agent.
-- S E opens extension settings; Mod+, opens agent defaults; S S opens skill setup; S I opens appearance and icon settings.
+- G E opens Extensions; Mod+, opens agent defaults; S S opens skill setup; S I opens appearance and icon settings.
 - Alt+Shift+T is the single color-theme action, regardless of the number of theme providers.
 
 These actions do not depend on provider names. Disabled extensions contribute no active shortcuts. Destination navigation uses its G sequence, and creation uses its C sequence, each without duplicate direct chords. Direct Option+Shift chords control panels and tabs and also work inside shortcut mode. Installed external extensions, including Pencil, keep their public actions available for search and personal assignment; their source is outside this repository, so this change does not add provider-specific defaults to them.

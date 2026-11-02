@@ -15,5 +15,6 @@ export type SessionsRouteDeps = Pick<
   | "sessionService"
   | "settingsService"
   | "workspaceService"
+  | "workspaceCapacityService"
   | "workspaceSessionService"
 >;

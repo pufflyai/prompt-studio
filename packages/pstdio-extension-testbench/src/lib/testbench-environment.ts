@@ -185,6 +185,10 @@ export const createBenchEnvironment = (
       steerQueuedFollowUp: queuedRequestsRequireHost,
     },
     workspaces: {
+      getCapacity: async () => ({ deviceId: "bench", deviceName: "Preview", activeCount: 0, limit: null }),
+      updateCapacity: async () => {
+        throw new Error("Changing device workspace capacity requires the host runtime.");
+      },
       addAnchors: async () => {},
       removeAnchors: async () => {},
       listProviders: async () => [],

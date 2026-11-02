@@ -87,6 +87,8 @@ export interface NavigationTreeRegistry {
   getChildren(node: TreeNode, context?: NavigationTreeContext): Promise<TreeNode[]>;
   moveNode(source: TreeNode, target: TreeNode | undefined, context?: NavigationTreeMoveContext): Promise<void>;
   getDefaultExpandedSectionIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
+  /** Counts contributions registered and removed, unlike `onDidChange`, which also fires on refreshes. */
+  getRegistrationRevision(): number;
   onDidChange(listener: () => void): Disposable;
 }
 
@@ -134,6 +136,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
   const registryToken = {};
   const snapshots = createNavigationTreeSnapshots();
   const listeners = new Set<() => void>();
+  let registrationRevision = 0;
   const emit = () => {
     for (const listener of listeners) listener();
   };
@@ -207,6 +210,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
         throw new Error(`Navigation tree contribution must declare a viewId or getSections: ${contribution.id}`);
       }
       contributions.set(contribution.id, contribution);
+      registrationRevision += 1;
       const refreshSubscription = contribution.viewId
         ? input.subscribeViewRefresh?.(contribution.viewId, emit)
         : undefined;
@@ -216,6 +220,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
         refreshSubscription?.dispose();
         contributions.delete(contribution.id);
         snapshots.delete(contribution.id);
+        registrationRevision += 1;
         emit();
       });
     },
@@ -310,6 +315,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       );
     },
 
+    getRegistrationRevision: () => registrationRevision,
     onDidChange(listener) {
       listeners.add(listener);
       return createDisposable(() => listeners.delete(listener));

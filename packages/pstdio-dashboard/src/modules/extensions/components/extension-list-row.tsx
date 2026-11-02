@@ -142,17 +142,15 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         )}
       </Box>
 
-      <Tooltip content={t("projectSettings.extensionsPanel.enabledInProject")}>
-        <Box flexShrink="0" onClick={stopRowClick}>
-          <Switch
-            size="sm"
-            checked={extension.enabled}
-            onCheckedChange={handleCheckedChange}
-            disabled={toggling}
-            aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
-          />
-        </Box>
-      </Tooltip>
+      <Box flexShrink="0" onClick={stopRowClick}>
+        <Switch
+          size="sm"
+          checked={extension.enabled}
+          onCheckedChange={handleCheckedChange}
+          disabled={toggling}
+          aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
+        />
+      </Box>
 
       <Icon boxSize="4" color="fg.subtle" flexShrink="0">
         <ChevronRight />

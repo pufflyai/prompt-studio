@@ -1,0 +1,57 @@
+import type { ReactNode } from "react";
+
+export type KeyframeEasing = "linear" | "hold" | "ease-in" | "ease-out" | "ease-in-out";
+export interface AnimationKeyframe {
+  id: string;
+  /** Seconds on the shared timeline. */
+  time: number;
+  value: number;
+  /** Interpolation from this key to the next one. */
+  easing?: KeyframeEasing;
+}
+export interface KeyframeTrack {
+  id: string;
+  label: string;
+  group?: string;
+  keyframes: AnimationKeyframe[];
+}
+export interface KeyframeSelection {
+  trackId: string;
+  keyframeId: string;
+}
+export interface TimelineMarker {
+  id: string;
+  time: number;
+  label: string;
+}
+export interface KeyframeLoopRange {
+  start: number;
+  end: number;
+}
+export interface KeyframeTimelineProps {
+  tracks: KeyframeTrack[];
+  /** Positive duration in seconds. */
+  duration: number;
+  currentTime: number;
+  framesPerSecond?: number;
+  onTimeChange: (time: number) => void;
+  /** Omit to review tracks without editing authored data. */
+  onTracksChange?: (tracks: KeyframeTrack[]) => void;
+  selection?: KeyframeSelection | null;
+  onSelectionChange?: (selection: KeyframeSelection | null) => void;
+  markers?: TimelineMarker[];
+  playing?: boolean;
+  onPlayingChange?: (playing: boolean) => void;
+  /** Caller-owned loop playback. Provide onLoopChange to show its transport toggle. */
+  loop?: boolean;
+  onLoopChange?: (loop: boolean) => void;
+  /** Override the default seek to zero, for example to restart a loop range. */
+  onRestart?: () => void;
+  label?: string;
+  loopRange?: KeyframeLoopRange;
+  onLoopRangeChange?: (range: KeyframeLoopRange) => void;
+  /** Caller-owned playback options shown in the timeline settings menu. */
+  settings?: ReactNode;
+  /** Available height after a containing panel has been resized. Omit for intrinsic sizing. */
+  maxHeight?: number;
+}

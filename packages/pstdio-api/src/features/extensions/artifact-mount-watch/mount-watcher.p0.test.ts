@@ -163,6 +163,29 @@ describe("watchArtifactMount", () => {
     await waitFor(() => changes.flat().includes("drafts"));
   });
 
+  test("reloads when folder change events reach the watch limit", async () => {
+    let emit: ((eventType: string, filename: string) => void) | undefined;
+    let limits = 0;
+    const { changes, root } = await startWatch({
+      maxFolders: 2,
+      onFolderLimit: () => limits++,
+      watch: (_path, listener) => {
+        emit ??= listener;
+        return { close: () => {} };
+      },
+    });
+
+    // Folder change events can discover new watches without reporting a changed file.
+    for (const name of ["a", "b", "c"]) {
+      mkdirSync(join(root, name));
+      emit?.("change", name);
+    }
+
+    await waitFor(() => changes.length > 0);
+    expect(limits).toBe(1);
+    expect(changes).toEqual([[]]);
+  });
+
   test("asks listeners to reload everything once the folder limit is reached", async () => {
     let limits = 0;
     const { changes, root } = await startWatch({
