@@ -57,22 +57,22 @@ const decision: ReviewRequestView = {
     ],
   },
 };
-// The shape the create-proposal skill asks for: decisions, assumptions, and risks as readable options.
+// A concise decision uses the existing Needs attention form and Chat UI question controls.
 const proposalReview: ReviewRequestView = {
   ...task,
   id: "proposal-review",
-  title: "Review the note tags proposal",
+  title: "PS-32 · Choose how tag filtering works",
   instructions: [
-    "- **D1.** The sidebar can filter by one tag or by several tags at once.",
-    "- **C1.** A note can have several tags, and tag names ignore case and surrounding spaces.",
-    "- **R1.** Tag edits change a note's modified time, which can reorder recent notes.",
-  ].join("\n"),
+    "**Problem:** People need to narrow down a long list of notes by tag.",
+    "**Solutions:** Filter by one tag (recommended), or combine several tags.",
+    "**Downsides:** One tag cannot narrow the list as much. Combining tags adds controls to learn.",
+  ].join("\n\n"),
   request: {
     kind: "decision",
     questions: [
       {
         id: "d1-filter",
-        label: "D1. How many tags can the sidebar filter by?",
+        label: "How many tags can the sidebar filter by?",
         required: true,
         input: {
           kind: "single-choice",
@@ -82,25 +82,6 @@ const proposalReview: ReviewRequestView = {
           ],
         },
       },
-      {
-        id: "confirm",
-        label: "Tick each assumption you accept",
-        required: false,
-        input: {
-          kind: "multiple-choice",
-          options: [{ id: "c1", label: "C1. A note can have several tags, and names ignore case and spaces" }],
-        },
-      },
-      {
-        id: "risks",
-        label: "Tick each risk you accept",
-        required: false,
-        input: {
-          kind: "multiple-choice",
-          options: [{ id: "r1", label: "R1. Tag edits can reorder recent notes" }],
-        },
-      },
-      { id: "notes", label: "Corrections or other answers", required: false, input: { kind: "text" } },
     ],
   },
 };
