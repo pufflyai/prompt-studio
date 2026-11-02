@@ -30,6 +30,9 @@ const CloudDetails = (props: CloudStatusProps) => {
   const { state, earlyAccess = true } = props;
   const connected = ["Synced", "Syncing 3", "Syncing", "Downloading 42%", "Downloading"].includes(state);
   const signedIn = !["Sign in", "Signing in…", "Sign in again"].includes(state);
+  let settingsPreview = "CloudSettingsConnected";
+  if (!earlyAccess) settingsPreview = "CloudSettingsComingSoon";
+  else if (state === "Local") settingsPreview = "CloudSettingsLocal";
   return (
     <Stack gap="md">
       <HStack gap="xs" color={statusColor(state)}>
@@ -67,7 +70,7 @@ const CloudDetails = (props: CloudStatusProps) => {
         </HStack>
       </Stack>
       <Button size="sm" variant="outline" alignSelf="flex-start" asChild>
-        <a href="#canvas-item=CloudSettingsConnected">
+        <a href={`#canvas-item=${settingsPreview}`}>
           <CloudIcon name="settings" />
           Cloud settings
         </a>
