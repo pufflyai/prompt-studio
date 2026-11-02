@@ -3,8 +3,8 @@ import { LexicalTypeaheadMenuPlugin, MenuOption } from "@lexical/react/LexicalTy
 import { $createTextNode, $getSelection, $setSelection } from "lexical";
 import { type RefObject, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { ListRow } from "@/components/list-row/list-row";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { Tooltip, tooltipOpenDelay } from "@/components/primitives/tooltip";
 import { useTypeaheadScope } from "../../shared/use-typeahead-scope";
 import { matchCommandQuery } from "./command-query";
 
@@ -37,7 +37,12 @@ const CommandMenu = (props: CommandMenuProps) => {
   const active = useTypeaheadScope(props.anchor);
   const menuId = useId();
   const { options, selectedIndex, onSelect, onHighlight } = props;
-  const styles = useSlotRecipe({ key: "menu" })();
+  const [descriptionIndex, setDescriptionIndex] = useState<number | null>(null);
+  const styles = useSlotRecipe({ key: "menu" })({ variant: "commands" });
+  useEffect(() => {
+    const timer = setTimeout(() => setDescriptionIndex(selectedIndex), tooltipOpenDelay);
+    return () => clearTimeout(timer);
+  }, [selectedIndex]);
   useEffect(() => {
     options[selectedIndex ?? -1]?.ref?.current?.scrollIntoView({ block: "nearest" });
   }, [options, selectedIndex]);
@@ -45,23 +50,42 @@ const CommandMenu = (props: CommandMenuProps) => {
     <Box css={styles.content} position="absolute" bottom="100%" mb="2xs" zIndex="popover">
       <ScrollArea maxH="xs" showHorizontalScrollbar={false}>
         {options.map((option, index) => (
-          <ListRow
+          <Tooltip
             key={option.key}
-            id={active ? `typeahead-item-${index}` : `${menuId}-typeahead-item-${index}`}
-            ref={option.setRefElement}
-            role="option"
-            aria-label={option.command.name}
-            aria-disabled={Boolean(option.command.disabledReason)}
-            tabIndex={-1}
-            variant="full-width"
-            label={option.command.name}
-            description={option.command.disabledReason ?? option.command.description}
-            disabled={Boolean(option.command.disabledReason)}
-            isSelected={selectedIndex === index}
-            onMouseDown={(event) => event.preventDefault()}
-            onPointerMove={() => onHighlight(index)}
-            onActivate={() => onSelect(option, index)}
-          />
+            content={option.command.disabledReason ?? option.command.description}
+            open={descriptionIndex === index && selectedIndex === index}
+          >
+            <chakra.button
+              id={active ? `typeahead-item-${index}` : `${menuId}-typeahead-item-${index}`}
+              ref={option.setRefElement}
+              role="option"
+              type="button"
+              aria-label={option.command.name}
+              aria-describedby={`${menuId}-description-${index}`}
+              aria-disabled={Boolean(option.command.disabledReason)}
+              tabIndex={-1}
+              css={styles.item}
+              disabled={Boolean(option.command.disabledReason)}
+              aria-selected={selectedIndex === index}
+              data-highlighted={selectedIndex === index ? "" : undefined}
+              onMouseDown={(event) => event.preventDefault()}
+              onPointerMove={() => onHighlight(index)}
+              onClick={() => onSelect(option, index)}
+            >
+              <Text as="span" css={styles.itemText} truncate>
+                {option.command.name}
+              </Text>
+              <Text
+                as="span"
+                id={`${menuId}-description-${index}`}
+                css={styles.itemCommand}
+                data-command-description
+                truncate
+              >
+                {option.command.disabledReason ?? option.command.description}
+              </Text>
+            </chakra.button>
+          </Tooltip>
         ))}
       </ScrollArea>
     </Box>
@@ -122,4 +146,4 @@ export const CommandMenuPlugin = (props: { commands: PromptCommand[] }) => {
   );
 };
 
-import { Box, useSlotRecipe } from "@chakra-ui/react";
+import { Box, chakra, Text, useSlotRecipe } from "@chakra-ui/react";
