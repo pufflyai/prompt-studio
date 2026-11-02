@@ -1,11 +1,10 @@
-import { Box, Button, IconButton, Text } from "@chakra-ui/react";
-import { Minus, Pause, Play, Plus, RotateCcw } from "lucide-react";
+import { Box, IconButton, Text } from "@chakra-ui/react";
+import { DiamondMinus, DiamondPlus, Pause, Play, RotateCcw } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import { keyframeTimelineMetrics as metrics } from "../../theme/primitives/keyframe-timeline";
 import { ScrollArea } from "../primitives/scroll-area";
 import { Tooltip } from "../primitives/tooltip";
 import { KeyframeButton } from "./keyframe-button";
-import { KeyframeInspector } from "./keyframe-inspector";
 import { editKeyframe, sampleTrack, selectedKeyframe, snapTime, timeLabel } from "./keyframe-model";
 import type {
   AnimationKeyframe,
@@ -21,6 +20,7 @@ import {
   TimelineLabel,
   TimelineLane,
   TimelinePlayhead,
+  TimelinePlayheadHandle,
   TimelineRoot,
   TimelineRow,
   TimelineRuler,
@@ -28,11 +28,12 @@ import {
   TimelineToolbar,
 } from "./timeline-parts";
 import { TimelineSettings } from "./timeline-settings";
+import { useTimelineScrub } from "./use-timeline-scrub";
 
 export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
   const { tracks, duration, currentTime, framesPerSecond: fps = 60 } = props;
   const labels = useRef(new Map<string, HTMLButtonElement>());
-  const [zoom, setZoom] = useState(1);
+  const ruler = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const [localSelection, setLocalSelection] = useState<KeyframeSelection | null>(null);
   const [trackId, setTrackId] = useState(tracks[0]?.id);
@@ -42,7 +43,7 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
     tracks.find((entry) => entry.id === trackId) ??
     tracks[0];
   const selected = selectedKeyframe(tracks, selection)?.keyframe;
-  const width = Math.max(metrics.minimumWidth, duration * metrics.pixelsPerSecond * zoom);
+  const width = Math.max(metrics.minimumWidth, duration * metrics.pixelsPerSecond);
   const select = (next: KeyframeSelection | null) => {
     setLocalSelection(next);
     props.onSelectionChange?.(next);
@@ -57,6 +58,7 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
     labels.current.get(owner.id)?.focus({ preventScroll: true });
   };
   const seek = (time: number) => props.onTimeChange(snapTime(time, duration, fps));
+  const scrub = useTimelineScrub({ ruler, duration, onSeek: seek });
   const groups = [...new Set(tracks.map((entry) => entry.group ?? ""))];
   const step = 10 ** Math.floor(Math.log10(Math.max(duration / (width / metrics.pixelsPerSecond), 1 / fps)));
   const ticks = Array.from({ length: Math.floor(duration / step) + 1 }, (_, index) => index * step);
@@ -98,78 +100,61 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
           {timeLabel(currentTime, fps)} / {timeLabel(duration, fps)}
         </Text>
         <Box flex="1" />
-        <IconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Zoom out timeline"
-          disabled={zoom <= 0.25}
-          onClick={() => setZoom(zoom / 2)}
-        >
-          <Minus />
-        </IconButton>
-        <Text textStyle="mono/XS">{Math.round(zoom * 100)}%</Text>
-        <IconButton
-          size="xs"
-          variant="ghost"
-          aria-label="Zoom in timeline"
-          disabled={zoom >= 8}
-          onClick={() => setZoom(zoom * 2)}
-        >
-          <Plus />
-        </IconButton>
         {props.onTracksChange && (
           <>
-            <Button
-              size="xs"
-              disabled={
-                !track || track.keyframes.some((key) => Math.round(key.time * fps) === Math.round(currentTime * fps))
-              }
-              onClick={() => {
-                if (!track) return;
-                const key = {
-                  id: crypto.randomUUID(),
-                  time: snapTime(currentTime, duration, fps),
-                  value: sampleTrack(track, currentTime),
-                };
-                update({ ...track, keyframes: [...track.keyframes, key].sort((a, b) => a.time - b.time) });
-                select({ trackId: track.id, keyframeId: key.id });
-              }}
-            >
-              Add keyframe
-            </Button>
-            <Button
-              size="xs"
-              disabled={!selected}
-              onClick={() => {
-                if (track && selected) remove(track, selected.id);
-              }}
-            >
-              Delete keyframe
-            </Button>
+            <Tooltip content="Add keyframe">
+              <IconButton
+                size="xs"
+                variant="ghost"
+                aria-label="Add keyframe"
+                disabled={
+                  !track || track.keyframes.some((key) => Math.round(key.time * fps) === Math.round(currentTime * fps))
+                }
+                onClick={() => {
+                  if (!track) return;
+                  const key = {
+                    id: crypto.randomUUID(),
+                    time: snapTime(currentTime, duration, fps),
+                    value: sampleTrack(track, currentTime),
+                  };
+                  update({ ...track, keyframes: [...track.keyframes, key].sort((a, b) => a.time - b.time) });
+                  select({ trackId: track.id, keyframeId: key.id });
+                }}
+              >
+                <DiamondPlus />
+              </IconButton>
+            </Tooltip>
+            <Tooltip content="Delete keyframe">
+              <IconButton
+                size="xs"
+                variant="ghost"
+                aria-label="Delete keyframe"
+                disabled={!selected}
+                onClick={() => {
+                  if (track && selected) remove(track, selected.id);
+                }}
+              >
+                <DiamondMinus />
+              </IconButton>
+            </Tooltip>
           </>
         )}
         {props.settings && <TimelineSettings>{props.settings}</TimelineSettings>}
       </TimelineToolbar>
-      {selected && track && props.onTracksChange && (
-        <KeyframeInspector
-          key={`${track.id}:${selected.id}`}
-          track={track}
-          keyframe={selected}
-          duration={duration}
-          fps={fps}
-          onChange={update}
-        />
-      )}
       <ScrollArea flex="0 1 auto" minH="0" showHorizontalScrollbar role="group" aria-label="Animation tracks">
-        <Box position="relative" minW="full" w={`${width + metrics.labelWidth}px`}>
-          <TimelinePlayhead
+        <Box position="relative" minW="full" w={`${width + metrics.labelWidth}px`} {...scrub}>
+          <TimelinePlayheadHandle
+            aria-hidden="true"
             left={`calc(${Math.max(0, Math.min(1, currentTime / duration)) * 100}% + ${(1 - currentTime / duration) * metrics.labelWidth + (1 - (2 * currentTime) / duration) * metrics.inset}px)`}
-          />
+          >
+            <TimelinePlayhead left="50%" />
+          </TimelinePlayheadHandle>
           <TimelineRow position="sticky" top="0" zIndex="4">
             <TimelineLabel type="button" tabIndex={-1}>
               Time
             </TimelineLabel>
             <TimelineRuler
+              ref={ruler}
               role="slider"
               tabIndex={0}
               aria-label="Timeline playhead"
@@ -177,22 +162,6 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
               aria-valuemax={duration}
               aria-valuenow={currentTime}
               aria-valuetext={timeLabel(currentTime, fps)}
-              onPointerDown={(event) => {
-                if (event.button !== 0) return;
-                event.currentTarget.setPointerCapture(event.pointerId);
-                event.currentTarget.focus({ preventScroll: true });
-                const bounds = event.currentTarget.getBoundingClientRect();
-                seek(((event.clientX - bounds.left) / bounds.width) * duration);
-              }}
-              onPointerMove={(event) => {
-                if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-                const bounds = event.currentTarget.getBoundingClientRect();
-                seek(((event.clientX - bounds.left) / bounds.width) * duration);
-              }}
-              onPointerUp={(event) => {
-                if (event.currentTarget.hasPointerCapture(event.pointerId))
-                  event.currentTarget.releasePointerCapture(event.pointerId);
-              }}
               onKeyDown={(event) => {
                 const change = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
                 if (change) {
@@ -280,7 +249,6 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
                 Markers
               </TimelineLabel>
               <TimelineLane>
-                <TimelinePlayhead left={playhead} />
                 {props.markers.map((marker) => (
                   <Tooltip key={marker.id} content={marker.label}>
                     <TimelineKey

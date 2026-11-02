@@ -61,7 +61,7 @@ const meta: CanvasMeta = {
   title: "Components/Media/Keyframe Timeline",
   component: Example,
   description:
-    "Content-sized grouped numeric property tracks with diamond keys and markers, icon transport, frame snapping, a shared playhead, zoom, marker navigation, and keyboard or pointer editing. Callers own data, playback, and persistence. Omit onTracksChange for read-only tracks. Arrow keys move a focused key by one frame; Shift moves ten. Delete removes it. Use the toolbar to add keys or edit the selected value and interpolation.",
+    "One compact toolbar with icon transport and add/delete keyframe actions. Drag the playhead along its full height or scrub empty track space. Grouped tracks retain diamond keys, markers, frame snapping, loop handles and keyboard or pointer timing edits. Selection adds no detail row; values and interpolation belong to the caller. Omit onTracksChange for read-only tracks. Arrow keys move a focused key by one frame; Shift moves ten. Delete removes it.",
 };
 export default meta;
 export const Animation: CanvasFrame = { id: "components-media-keyframe-timeline--animation" };

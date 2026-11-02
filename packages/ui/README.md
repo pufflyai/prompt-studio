@@ -88,24 +88,27 @@ Pass numeric property tracks, a positive duration in seconds, `currentTime`, and
 (`linear`, `hold`, `ease-in`, `ease-out`, or `ease-in-out`). Group related tracks
 with `group`. Frame snapping defaults to 60 fps and accepts a custom frame rate.
 
-Supply `onTracksChange` to enable add, move, value/interpolation editing, and delete.
+Supply `onTracksChange` to enable add, move, and delete.
 Omit it for read-only review. A move onto an occupied frame preserves both keys.
 The caller owns animation data, playback, persistence and undo. Optional controlled
 `selection` and `onSelectionChange` connect an external inspector; otherwise the
 component owns transient selection. Use `playing` and `onPlayingChange` to connect
 transport controls to the caller’s clock. Supply `onRestart` to restart a caller-owned
 loop range; the default restart seeks to zero. Markers navigate named moments without
-pretending to be editable property keys. Keys and markers use diamonds; transport uses
-icon buttons. The timeline hugs its content and scrolls inside a bounded parent.
+pretending to be editable property keys. Keys and markers use diamonds; transport and
+add/delete actions use icon buttons in one toolbar. Selecting a key adds no detail row;
+the caller owns value and interpolation editing. The timeline hugs its content and
+scrolls inside a bounded parent.
 Pass `loopRange` and `onLoopRangeChange` for draggable and keyboard-editable loop
 boundaries. Handles snap to frames and preserve a positive range. Supply `settings`
 for caller-owned playback options in the timeline settings menu. Panel sizing and
 dismissal belong to the containing layout; the timeline has no header or close action.
 After a panel resize, pass its available `maxHeight` so the timeline scrolls within
 that height. Omit it for natural content height.
-Zoom and group expansion are temporary.
+Group expansion is temporary.
 
 Arrow keys on the ruler seek by one frame; Shift seeks ten; Home/End seek the bounds.
+Drag the playhead at any point along its height, or drag empty track space to scrub.
 Arrow keys on a focused key move it, and Delete removes it then focuses its track.
 Pointer dragging uses the same snapping/collision rules. The timecode uses the
 rounded nominal frame rate (non-drop-frame); timeline positions use seconds.

@@ -12,13 +12,6 @@ test("scrub, move, add and delete animation keys through the shared timeline", a
   await ruler.press("Home");
   await ruler.press("ArrowRight");
   await expect(ruler).toHaveAttribute("aria-valuenow", "0.04");
-  await preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true }).click();
-  const timeField = preview.getByRole("spinbutton", { name: "Keyframe time", exact: true });
-  await timeField.fill("0");
-  await timeField.press("Tab");
-  await expect(timeField).toHaveValue("1");
-  await expect(preview.getByRole("alert")).toContainText("already occupies");
-  await expect(preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true })).toBeVisible();
   await preview.getByRole("button", { name: "Restart", exact: true }).click();
   await expect(ruler).toHaveAttribute("aria-valuenow", "0");
   const first = preview.getByRole("button", { name: "Opacity keyframe 0:00:00", exact: true });
@@ -27,12 +20,22 @@ test("scrub, move, add and delete animation keys through the shared timeline", a
   const moved = preview.getByRole("button", { name: "Opacity keyframe 0:00:01", exact: true });
   await expect(moved).toBeFocused();
   await expect(preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true })).toBeVisible();
-  const bounds = await moved.boundingBox();
+  await moved.press("Shift+ArrowRight");
+  await preview.getByRole("button", { name: "Opacity keyframe 0:00:11", exact: true }).press("Shift+ArrowRight");
+  for (let frame = 21; frame < 25; frame++) {
+    await preview
+      .getByRole("button", { name: `Opacity keyframe 0:00:${frame.toString().padStart(2, "0")}`, exact: true })
+      .press("ArrowRight");
+  }
+  const collision = preview.getByRole("button", { name: "Opacity keyframe 0:00:24", exact: true });
+  await expect(collision).toBeFocused();
+  await expect(preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true })).toBeVisible();
+  const bounds = await collision.boundingBox();
   await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
   await page.mouse.down();
   await page.mouse.move(bounds!.x + bounds!.width / 2 + 40, bounds!.y + bounds!.height / 2);
   await page.mouse.up();
-  await expect(preview.getByRole("button", { name: "Opacity keyframe 0:00:01", exact: true })).toHaveCount(0);
+  await expect(collision).toHaveCount(0);
   // Select through the live tree rather than assuming a drag distance maps to one CSS pixel per frame.
   const active = preview
     .locator('button[aria-pressed="true"]')
@@ -47,16 +50,15 @@ test("scrub, move, add and delete animation keys through the shared timeline", a
   await expect(preview.getByRole("button", { name: "Opacity keyframe 0:00:01", exact: true })).toBeVisible();
   const top = preview.getByRole("button", { name: "Top keyframe 0:00:06", exact: true });
   await top.click();
-  await timeField.focus();
-  await timeField.press("Tab");
-  await expect(timeField).toHaveValue("0.25");
-  const valueField = preview.getByRole("spinbutton", { name: "Keyframe value", exact: true });
-  await valueField.fill("12");
-  await valueField.press("Tab");
-  await preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true }).click();
-  await top.click();
-  await expect(timeField).toHaveValue("0.25");
-  await expect(valueField).toHaveValue("12");
+  await expect(preview.getByRole("toolbar", { name: "Animation controls" })).toHaveCount(1);
+  await expect(preview.getByRole("spinbutton")).toHaveCount(0);
+  await expect(preview.getByText("Interpolation", { exact: true })).toHaveCount(0);
+  await expect(preview.getByRole("button", { name: /Zoom (in|out) timeline/ })).toHaveCount(0);
+  for (const name of ["Add keyframe", "Delete keyframe"]) {
+    const action = preview.getByRole("button", { name, exact: true });
+    await expect(action.locator("svg")).toBeVisible();
+    await expect(action).toHaveText("");
+  }
   await preview.getByRole("button", { name: /Bullet 2/ }).click();
   await expect(preview.getByRole("button", { name: "Opacity", exact: true })).toHaveCount(0);
   const loopStart = preview.getByRole("slider", { name: "Loop start", exact: true });
@@ -73,4 +75,37 @@ test("scrub, move, add and delete animation keys through the shared timeline", a
   expect(Number(await loopStart.getAttribute("aria-valuenow"))).toBeLessThan(
     Number(await loopEnd.getAttribute("aria-valuenow")),
   );
+});
+
+// Critical: the shared playhead must be reachable across the track area without taking over key/loop gestures.
+test("drag the playhead from track space and along its full height", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Animation",
+  );
+  const playhead = preview.getByRole("slider", { name: "Timeline playhead", exact: true });
+  const row = await preview.getByRole("button", { name: "Opacity", exact: true }).boundingBox();
+  const ruler = (await playhead.boundingBox())!;
+  const x = (time: number) => ruler.x + (time / 2) * ruler.width;
+  const drag = async (fromX: number, toX: number, y: number) => {
+    await page.mouse.move(fromX, y);
+    await page.mouse.down();
+    await page.mouse.move(toX, y);
+    await page.mouse.up();
+  };
+  const y = row!.y + row!.height / 2;
+  await drag(x(0.4), x(0.8), y);
+  await expect(playhead).toHaveAttribute("aria-valuenow", "0.8");
+  await expect(playhead).toBeFocused();
+  await drag(x(1.2), x(1.6), y);
+  await expect(playhead).toHaveAttribute("aria-valuenow", "1.6");
+  const marker = await preview.getByRole("button", { name: "Settled", exact: true }).boundingBox();
+  await drag(x(1.6), x(1.2), marker!.y + marker!.height / 2);
+  await expect(playhead).toHaveAttribute("aria-valuenow", "1.2");
+  const group = await preview.getByRole("button", { name: /Bullet 2/ }).boundingBox();
+  await drag(x(1.2), x(0.8), group!.y + group!.height / 2);
+  await expect(playhead).toHaveAttribute("aria-valuenow", "0.8");
+  await expect(preview.getByRole("button", { name: /Bullet 2/ })).toHaveAttribute("aria-expanded", "true");
+  await expect(preview.getByRole("button", { name: "Opacity keyframe 0:00:00", exact: true })).toBeVisible();
+  await expect(preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true })).toBeVisible();
 });
