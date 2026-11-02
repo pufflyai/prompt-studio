@@ -78,6 +78,8 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
   const groups = [...new Set(tracks.map((entry) => entry.group ?? ""))];
   const step = 10 ** Math.floor(Math.log10(Math.max(duration / (width / metrics.pixelsPerSecond), 1 / fps)));
   const ticks = Array.from({ length: Math.floor(duration / step) + 1 }, (_, index) => index * step);
+  const captionEvery =
+    [1, 2, 5, 10].find((multiple) => (width * step * multiple) / duration >= metrics.pixelsPerSecond) ?? 10;
   const playhead = `${(100 * Math.max(0, Math.min(duration, currentTime))) / duration}%`;
   return (
     <TimelineRoot
@@ -179,7 +181,12 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
                     data-end={index > 0 && index === ticks.length - 1}
                     left={`${(100 * time) / duration}%`}
                   >
-                    <span>{time.toFixed(2)}</span>
+                    {(index === 0 ||
+                      index === ticks.length - 1 ||
+                      (index % captionEvery === 0 &&
+                        ((ticks.length - 1 - index) * width * step) / duration >= metrics.pixelsPerSecond)) && (
+                      <span>{time.toFixed(2)}</span>
+                    )}
                   </TimelineTick>
                 ))}
               </TimelineTicks>

@@ -395,6 +395,11 @@ test("Ctrl wheel zooms the timeline ruler around its pointer", async ({ page }) 
   expect(movedBounds.width).toBeGreaterThan(bounds.width);
   await expect.poll(() => viewport.evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(0);
+  const captions = ruler.locator("span");
+  const count = await captions.count();
+  const previousCaption = (await captions.nth(count - 2).boundingBox())!;
+  const finalCaption = (await captions.nth(count - 1).boundingBox())!;
+  expect(finalCaption.x - (previousCaption.x + previousCaption.width)).toBeGreaterThanOrEqual(0);
   await expect(
     preview
       .getByRole("group", { name: "Animation tracks", exact: true })
@@ -421,6 +426,11 @@ test("Ctrl wheel zooms the timeline ruler around its pointer", async ({ page }) 
       .getByRole("group", { name: "Animation tracks", exact: true })
       .locator('[data-part="scrollbar"][data-orientation="horizontal"]'),
   ).toBeHidden();
+  const longCaptions = longRuler.locator("span");
+  const longCount = await longCaptions.count();
+  const beforeEnd = (await longCaptions.nth(longCount - 2).boundingBox())!;
+  const endLabel = (await longCaptions.nth(longCount - 1).boundingBox())!;
+  expect(endLabel.x - (beforeEnd.x + beforeEnd.width)).toBeGreaterThanOrEqual(0);
 });
 
 // Critical: a no-op zoom at the limit must not undo a later horizontal pan on an unrelated render.
