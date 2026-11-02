@@ -1,7 +1,8 @@
-import { createRelayAccess } from "pstdio-sync/relay";
+import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
+import { AccountRequestError } from "../account/native-account";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
 import type { RelayDeps } from "./deps";
@@ -21,6 +22,17 @@ export type RelayWorkbench = {
   renewalGrant: string;
 };
 
+const assertLiveAvailable = (channel?: LiveConnection) => {
+  if (channel?.status().protocolUnsupported)
+    throw new AccountRequestError(
+      "Update Prompt Studio or the relay to continue Cloud sync: the live channel version is unsupported.",
+    );
+  if (channel?.status().controlRefused)
+    throw new AccountRequestError(
+      "The relay's rate limits prevent Cloud subscriptions. Ask its operator to enable live requests, then reconnect Cloud.",
+    );
+};
+
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
 export const startRelayRuntime = async (input: {
@@ -33,8 +45,10 @@ export const startRelayRuntime = async (input: {
   const controller = new AbortController();
   const { deps } = input;
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
+  const live = new Map<string, LiveConnection>();
   const core = (config: RelayWorkbench) => ({
     config,
+    live: live.get(config.workbenchId)!,
     deps,
     access: access.get(config.workbenchId)!,
     signal: controller.signal,
@@ -83,6 +97,7 @@ export const startRelayRuntime = async (input: {
       if (connections.has(key)) continue;
       const connection = await startRelayExtension({
         config,
+        live: live.get(workbenchId)!,
         source,
         snapshot,
         contextKey,
@@ -163,6 +178,7 @@ export const startRelayRuntime = async (input: {
     // Every owner of project data reports: core resource numbers and each enabled extension.
     // An owner that has not started yet counts as not downloaded.
     async status(workbenchId: string) {
+      assertLiveAvailable(live.get(workbenchId));
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
         coreDocuments.get(workbenchId),
@@ -194,6 +210,8 @@ export const startRelayRuntime = async (input: {
       );
       for (const id of changed) {
         for (const owners of coreOwners) await owners.remove(id);
+        live.get(id)?.close();
+        live.delete(id);
         workbenches.delete(id);
         access.delete(id);
       }
@@ -202,6 +220,15 @@ export const startRelayRuntime = async (input: {
         if (!workbenches.has(id)) {
           workbenches.set(id, connection);
           access.set(id, createRelayAccess({ ...connection, signal: controller.signal, denied: input.denied }));
+          const channel = createLiveConnection({
+            origin: connection.relayOrigin,
+            projectId: id,
+            access: access.get(id)!,
+            signal: controller.signal,
+            onStatusChange: () => statusChanged(id),
+          });
+          channel.discover(connection.accountId);
+          live.set(id, channel);
         }
       const obsolete = [...connections].filter(([, active]) => changed.has(active.owner.workbenchId));
       await Promise.all(obsolete.map(([key, active]) => stopConnection(key, active)));
@@ -216,6 +243,7 @@ export const startRelayRuntime = async (input: {
       clearTimeout(retry);
       storageChanges.close();
       controller.abort();
+      await Promise.all([...live.values()].map((channel) => channel.done));
       for (const owners of coreOwners) owners.close();
       for (const connection of connections.values()) connection.close();
       await running;

@@ -1,5 +1,54 @@
 import { expect, test } from "bun:test";
-import { createRelayConnection } from "./connection";
+import { createHash } from "node:crypto";
+import { type AddressInfo, createServer } from "node:net";
+import { createRelayConnection, createRelaySocket } from "./connection";
+
+test("an established socket failure reconnects without an HTTP handshake probe", async () => {
+  const controller = new AbortController();
+  const opened = Promise.withResolvers<void>();
+  const disconnected = Promise.withResolvers<void>();
+  let probes = 0;
+  let peer: import("node:net").Socket | undefined;
+  const server = createServer((socket) => {
+    peer = socket;
+    socket.once("data", (request) => {
+      const key = request.toString().match(/Sec-WebSocket-Key: (.+)\r\n/i)![1];
+      const accept = createHash("sha1").update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`).digest("base64");
+      socket.write(
+        `HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`,
+      );
+      const ready = Buffer.from(JSON.stringify({ type: "ready" }));
+      socket.write(Buffer.concat([Buffer.from([0x81, ready.length]), ready]));
+    });
+    socket.on("error", () => {});
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address() as AddressInfo;
+  const connection = createRelaySocket({
+    origin: `http://127.0.0.1:${address.port}`,
+    path: "/live",
+    access: async () => ({ token: "access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+    signal: controller.signal,
+    message: () => "ready",
+    synchronize: async () => opened.resolve(),
+    onDisconnected: () => disconnected.resolve(),
+    onHandshakeError: async () => {
+      probes++;
+    },
+  });
+  try {
+    await opened.promise;
+    // Reserved opcode 3 is a real protocol error after the successful upgrade.
+    peer!.write(Buffer.from([0x83, 0]));
+    await disconnected.promise;
+    expect(probes).toBe(0);
+  } finally {
+    controller.abort();
+    peer?.destroy();
+    await connection.done;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
 
 test("credential rotation opens a fresh socket while durable synchronization is still running", async () => {
   const controller = new AbortController();
@@ -258,7 +307,7 @@ test("separate wakes on one connection reuse the attempt signal", async () => {
     },
     websocket: {
       open(socket) {
-        socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
+        socket.send(JSON.stringify({ type: "ready", protocolVersion: 2 }));
       },
       message() {},
     },

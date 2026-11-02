@@ -3,14 +3,38 @@ import { openLive, type SyncSpace, sealLive } from "pstdio-sync/encryption";
 import type { LiveClientMessage, LiveServerMessage } from "pstdio-sync-contracts";
 import type { createNativeSessionPresence } from "../native-documents/session-presence";
 
+export const nativePresenceTopic = (space: SyncSpace) =>
+  space.documentId(JSON.stringify(["pstdio.native-document-presence", "v2"]));
+
 /** One project live connection carries ephemeral editor state, separately from durable synchronization. */
 export const createNativeDocumentLive = (input: {
   projectId: string;
   deviceId: string;
   live: ReturnType<typeof createNativeSessionPresence>["live"];
   send: (message: LiveClientMessage) => boolean;
+  subscribe: (topic: string, admitted: () => void) => () => void;
 }) => {
-  let active: { space: SyncSpace; controller: AbortController } | undefined;
+  let active:
+    | { space: SyncSpace; controller: AbortController; topic: Promise<string>; release?: () => void }
+    | undefined;
+  const activate = (space: SyncSpace) => {
+    active?.controller.abort();
+    active?.release?.();
+    const current: NonNullable<typeof active> = {
+      space,
+      controller: new AbortController(),
+      topic: nativePresenceTopic(space),
+    };
+    current.topic = current.topic.then((topic) => {
+      if (!closed && !current.controller.signal.aborted)
+        current.release = input.subscribe(topic, () => {
+          if (active === current && !closed) input.live.republish(input.projectId);
+        });
+      return topic;
+    });
+    void current.topic.catch(() => {});
+    active = current;
+  };
   let closed = false;
   let receiving = Promise.resolve();
   let sending = Promise.resolve();
@@ -19,14 +43,20 @@ export const createNativeDocumentLive = (input: {
     if (!current || closed) return;
     const work = sending.then(async () => {
       if (current.controller.signal.aborted) return;
-      const message = await sealLive(current.space, input.deviceId, new TextEncoder().encode(JSON.stringify(frame)));
+      const message = await sealLive(
+        current.space,
+        input.deviceId,
+        await current.topic,
+        new TextEncoder().encode(JSON.stringify(frame)),
+      );
       if (!current.controller.signal.aborted) input.send(message);
     });
     sending = work.catch(() => {});
     return work;
   });
-  const receive = async (message: Extract<LiveServerMessage, { type: "live" }>, current: typeof active) => {
-    if (!current || closed || message.spaceOwner !== null) return false;
+  const receive = async (message: Extract<LiveServerMessage, { type: "event" }>, current: typeof active) => {
+    if (!current || closed || message.spaceOwner !== null || message.topic !== (await current.topic)) return false;
+    if (current.controller.signal.aborted) return false;
     // Bound the base64 ciphertext before decrypting. A 4KiB frame plus its envelope fits under 8KiB.
     if (message.payload.length > nativePresenceLimits.bytes * 2) return false;
     let bytes: Uint8Array;
@@ -44,16 +74,17 @@ export const createNativeDocumentLive = (input: {
     }
     const parsed = nativePresenceLiveSchema.safeParse(value);
     if (!parsed.success) return false;
+    if (closed || current.controller.signal.aborted) return false;
     input.live.receive(input.projectId, message.deviceId, parsed.data);
     return true;
   };
   const renewAccess = () => {
     const space = active?.space;
-    active?.controller.abort();
-    active = space ? { space, controller: new AbortController() } : undefined;
+    if (space) activate(space);
   };
   const clearSpace = () => {
     active?.controller.abort();
+    active?.release?.();
     active = undefined;
     input.live.disconnected(input.projectId);
   };
@@ -66,8 +97,7 @@ export const createNativeDocumentLive = (input: {
         active.space = next;
         return;
       }
-      active?.controller.abort();
-      active = { space: next, controller: new AbortController() };
+      activate(next);
       input.live.republish(input.projectId);
     },
     renewAccess,
@@ -75,7 +105,7 @@ export const createNativeDocumentLive = (input: {
       if (active && !closed) input.live.republish(input.projectId);
     },
     clearSpace,
-    receive(message: Extract<LiveServerMessage, { type: "live" }>) {
+    receive(message: Extract<LiveServerMessage, { type: "event" }>) {
       // Preserve socket order across asynchronous decryption, including leave after an update.
       const current = active;
       const result = receiving.then(() => receive(message, current));

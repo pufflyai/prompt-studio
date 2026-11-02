@@ -1,8 +1,8 @@
 import { expect, spyOn, test } from "bun:test";
 import { createSyncSpace, openLive, sealLive } from "pstdio-sync/encryption";
-import type { LiveClientMessage, SpaceKey } from "pstdio-sync-contracts";
+import type { SpaceKey } from "pstdio-sync-contracts";
 import { createNativeSessionPresence } from "../native-documents/session-presence";
-import { createNativeDocumentLive } from "./native-document-live";
+import { createNativeDocumentLive, nativePresenceTopic } from "./native-document-live";
 
 const projectId = "project";
 const key = (generation: number): SpaceKey => ({
@@ -41,13 +41,20 @@ test("credential renewal retains remote presence until a real disconnect", async
     identity: async () => ({ label: "Receiver", deviceName: "Desktop" }),
   });
   const space = await createSyncSpace({ projectId, spaceOwner: null, keys: [key(1)] });
-  const bridge = createNativeDocumentLive({ projectId, deviceId: "receiver", live: manager.live, send: () => true });
+  const bridge = createNativeDocumentLive({
+    projectId,
+    deviceId: "receiver",
+    live: manager.live,
+    subscribe: () => () => {},
+    send: () => true,
+  });
   const local = await join(manager);
   try {
     bridge.setSpace(space);
     const encrypted = await sealLive(
       space,
       "peer",
+      await nativePresenceTopic(space),
       new TextEncoder().encode(
         JSON.stringify({
           kind: "native-document-presence",
@@ -63,12 +70,12 @@ test("credential renewal retains remote presence until a real disconnect", async
         }),
       ),
     );
-    await bridge.receive({ ...encrypted, deviceId: "peer" });
+    await bridge.receive({ ...encrypted, type: "event", deviceId: "peer" });
     expect(local.snapshot()).toHaveLength(2);
     bridge.renewAccess();
     expect(local.snapshot()).toHaveLength(2);
     // Credential rotation does not wait for the durable synchronizer to fetch the space again.
-    expect(await bridge.receive({ ...encrypted, deviceId: "peer" })).toBe(true);
+    expect(await bridge.receive({ ...encrypted, type: "event", deviceId: "peer" })).toBe(true);
     bridge.setSpace(space);
     expect(local.snapshot()).toHaveLength(2);
     bridge.clearSpace();
@@ -82,14 +89,15 @@ test("credential renewal retains remote presence until a real disconnect", async
 
 test("live encryption preserves publish order so a delayed update cannot arrive after its leave", async () => {
   const s = source();
-  const sent: LiveClientMessage[] = [];
+  const sent: Awaited<ReturnType<typeof sealLive>>[] = [];
   const space = await createSyncSpace({ projectId, spaceOwner: null, keys: [key(1)] });
   const bridge = createNativeDocumentLive({
     projectId,
     deviceId: "sender",
     live: s.live,
+    subscribe: () => () => {},
     send: (frame) => {
-      sent.push(frame);
+      if (frame.type === "publish") sent.push(frame);
       return true;
     },
   });
@@ -135,7 +143,7 @@ test("live encryption preserves publish order so a delayed update cannot arrive 
 
 test("live presence stays encrypted, binds the sender, and uses new keys after rotation", async () => {
   const s = source();
-  const sent: LiveClientMessage[] = [];
+  const sent: Awaited<ReturnType<typeof sealLive>>[] = [];
   const firstKey = key(1);
   const old = await createSyncSpace({ projectId, spaceOwner: null, keys: [firstKey] });
   const next = await createSyncSpace({ projectId, spaceOwner: null, keys: [firstKey, key(2)] });
@@ -143,8 +151,9 @@ test("live presence stays encrypted, binds the sender, and uses new keys after r
     projectId,
     deviceId: "sender",
     live: s.live,
+    subscribe: () => () => {},
     send: (frame) => {
-      sent.push(frame);
+      if (frame.type === "publish") sent.push(frame);
       return true;
     },
   });
@@ -159,7 +168,7 @@ test("live presence stays encrypted, binds the sender, and uses new keys after r
     expect(JSON.parse(new TextDecoder().decode(await openLive(old, { ...sent[0]!, deviceId: "sender" }))).label).toBe(
       "Alice private",
     );
-    expect(await bridge.receive({ ...sent[0]!, deviceId: "another-device" })).toBe(false);
+    expect(await bridge.receive({ ...sent[0]!, type: "event", deviceId: "another-device" })).toBe(false);
     bridge.clearSpace();
     bridge.setSpace(next);
     await Promise.all(s.publishing);
@@ -181,12 +190,19 @@ test("reconnecting drops live frames admitted by the previous connection before 
     identity: async () => ({ label: "Receiver", deviceName: "Desktop" }),
   });
   const space = await createSyncSpace({ projectId, spaceOwner: null, keys: [key(1)] });
-  const bridge = createNativeDocumentLive({ projectId, deviceId: "receiver", live: manager.live, send: () => true });
+  const bridge = createNativeDocumentLive({
+    projectId,
+    deviceId: "receiver",
+    live: manager.live,
+    subscribe: () => () => {},
+    send: () => true,
+  });
   await join(manager);
   bridge.setSpace(space);
   const encrypted = await sealLive(
     space,
     "peer-device",
+    await nativePresenceTopic(space),
     new TextEncoder().encode(
       JSON.stringify({
         kind: "native-document-presence",
@@ -202,7 +218,7 @@ test("reconnecting drops live frames admitted by the previous connection before 
       }),
     ),
   );
-  const frame = { ...encrypted, deviceId: "peer-device" };
+  const frame = { ...encrypted, type: "event" as const, deviceId: "peer-device" };
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const decrypt = crypto.subtle.decrypt.bind(crypto.subtle);

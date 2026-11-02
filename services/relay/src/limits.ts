@@ -10,6 +10,8 @@ export interface RelayLimits {
   maxSummaryBytes: number;
   maxBlobBytes: number;
   maxLiveMessageBytes: number;
+  maxLiveSubscriptions: number;
+  maxLiveCalls: number;
   /** Encrypted bytes one account may store across updates, latest states and blobs. */
   accountQuotaBytes: number;
   /** Update bytes returned by one read. Clients read again while `more` is true. */
@@ -26,6 +28,8 @@ export const defaultRelayLimits: RelayLimits = {
   maxSummaryBytes: 64 * 1024,
   maxBlobBytes: 5 * GiB,
   maxLiveMessageBytes: 64 * 1024,
+  maxLiveSubscriptions: 4096,
+  maxLiveCalls: 128,
   accountQuotaBytes: 50 * GiB,
   maxReadBytes: 8 * MiB,
   requestsPerSecond: 50,
@@ -39,6 +43,8 @@ const variables: Record<keyof RelayLimits, string> = {
   maxSummaryBytes: "RELAY_MAX_SUMMARY_BYTES",
   maxBlobBytes: "RELAY_MAX_BLOB_BYTES",
   maxLiveMessageBytes: "RELAY_MAX_LIVE_MESSAGE_BYTES",
+  maxLiveSubscriptions: "RELAY_MAX_LIVE_SUBSCRIPTIONS",
+  maxLiveCalls: "RELAY_MAX_LIVE_CALLS",
   accountQuotaBytes: "RELAY_ACCOUNT_QUOTA_BYTES",
   maxReadBytes: "RELAY_MAX_READ_BYTES",
   requestsPerSecond: "RELAY_REQUESTS_PER_SECOND",

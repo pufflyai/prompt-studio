@@ -1,14 +1,16 @@
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
+import type { LiveConnection } from "pstdio-sync/relay";
 import {
   createDocumentRelay,
   createDocumentRelayConnection,
   createDocumentSync,
+  createLiveConnection,
   fetchSyncSpaces,
 } from "pstdio-sync/relay";
 import { apiLogger } from "../../lib/logger";
 import type { RelayDeps } from "./deps";
 import { documentProgress } from "./document-progress";
-import { createNativeDocumentLive } from "./native-document-live";
+import { createNativeDocumentChannel } from "./native-document-channel";
 import { reconcileProjectInfo } from "./project-info-owner";
 import { createSyncQuarantine } from "./quarantine";
 import { createResourceNumberSync } from "./resource-number-sync";
@@ -19,6 +21,7 @@ import type { RelayWorkbench } from "./runtime";
  * a new device reads before the project exists there.
  */
 export const startCoreDocumentSync = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   deps: RelayDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
@@ -55,19 +58,22 @@ export const startCoreDocumentSync = (input: {
     numbers = undefined;
     documentIds.clear();
   };
-  const live = createNativeDocumentLive({
+  const channel =
+    input.live ?? createLiveConnection({ origin: config.relayOrigin, projectId: config.workbenchId, access, signal });
+  const live = createNativeDocumentChannel({
     projectId: config.workbenchId,
     deviceId: config.environmentId,
     live: deps.nativeDocuments.live,
-    send: (message) => connection.send(message),
+    channel,
   });
   const connection = createDocumentRelayConnection({
+    live: channel,
     origin: config.relayOrigin,
     projectId: config.workbenchId,
     access,
     signal,
     acceptsChange: (change) => change.spaceOwner === null && documentIds.has(change.documentId),
-    synchronize: async (attemptSignal) => {
+    synchronize: async (attemptSignal, subscribe) => {
       const { project: space } = await fetchSyncSpaces({
         ...config,
         credential: config.renewalGrant,
@@ -77,6 +83,7 @@ export const startCoreDocumentSync = (input: {
       const relay = (documentId: string) => {
         documentIds.add(documentId);
         return createDocumentRelay({
+          subscribe,
           origin: config.relayOrigin,
           space,
           documentId,
@@ -124,14 +131,6 @@ export const startCoreDocumentSync = (input: {
         { event: "relay.core-documents.reconnecting", workbenchId: config.workbenchId },
         "Core document sync will retry",
       ),
-    onLive: (message) => {
-      void live.receive(message).catch(() => {});
-    },
-    onReady: () => live.republish(),
-    onDisconnect: (reason) => {
-      if (reason === "renewal") live.renewAccess();
-      else live.clearSpace();
-    },
     onStatusChange: input.statusChanged,
   });
   const changed = (changed: { workbenchId: string }) => {
@@ -150,6 +149,10 @@ export const startCoreDocumentSync = (input: {
       for (const stop of stops) stop();
       close();
       await live.close();
+      if (!input.live) {
+        channel.close();
+        await channel.done;
+      }
     }),
     status: async () => {
       const statuses = await Promise.all([syncs[0]?.status(), numbers?.status()]);
