@@ -11,6 +11,7 @@ export default { title: "Patterns/Resource List/Design", fullscreen: true };
 export const GroupedAndNested = () => (
   <Stack height="full" minH="0" gap="0">
     <KanbanRendererToolbar
+      resourceList
       rows={[]}
       storageKey="resource-list-design"
       attributes={[]}

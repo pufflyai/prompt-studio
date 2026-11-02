@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { flattenKanbanRendererListItems } from "./kanban-renderer-list";
-import { buildResourceListItems, resourceListSettings } from "./resource-list-view-model";
+import { buildResourceListItems, countResourceListRows, resourceListSettings } from "./resource-list-view-model";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
 const attributes: AttributeDescriptor[] = [
@@ -122,4 +122,18 @@ test("filters retain source groups while groups with no source resources stay ab
       search: "",
     }),
   ).toEqual([]);
+});
+
+test("group headers do not count as search results", () => {
+  const items = buildResourceListItems({
+    rows,
+    attributes,
+    settings: resourceListSettings({ columnGrouping: "device" }),
+    filter: { conjunction: "and", rules: [] },
+    sorts: [],
+    search: "missing resource",
+  });
+  expect(items).toHaveLength(2);
+  expect(countResourceListRows(items)).toBe(0);
+  expect(countResourceListRows(build())).toBe(2);
 });

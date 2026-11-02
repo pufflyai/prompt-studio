@@ -108,6 +108,16 @@ const resolveKanbanFields = async (
     settings: board.settings,
     filter: EMPTY_VIEW_FILTER,
     sorts: [],
+    ...(board.body.queryMode === "paged"
+      ? {
+          page: {
+            limit: 1,
+            offset: 0,
+            fields: ["title", ...(board.body.attributes ?? []).map((attribute) => attribute.id)],
+            search: "",
+          },
+        }
+      : {}),
   } satisfies KanbanRendererQueryParams);
   const rawAttributes = result && typeof result === "object" && "attributes" in result ? result.attributes : undefined;
   const attributes =
