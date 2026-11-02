@@ -33,9 +33,9 @@ const exampleTracks: KeyframeTrack[] = [
     ],
   },
 ];
-const Example = (props: { readOnly?: boolean; empty?: boolean; duration?: number }) => {
+const Example = (props: { readOnly?: boolean; empty?: boolean; duration?: number; startTime?: number }) => {
   const [tracks, setTracks] = useState(props.empty ? [] : exampleTracks);
-  const [time, setTime] = useState(0.4);
+  const [time, setTime] = useState(props.startTime ?? 0.4);
   const [playing, setPlaying] = useState(false);
   const [loopRange, setLoopRange] = useState({ start: 0.2, end: 1.8 });
   return (
@@ -68,3 +68,5 @@ export const Animation: CanvasFrame = { id: "components-media-keyframe-timeline-
 export const ReadOnly: CanvasFrame = { id: "components-media-keyframe-timeline--read-only", args: { readOnly: true } };
 export const Empty: CanvasFrame = { id: "components-media-keyframe-timeline--empty", args: { empty: true } };
 export const Long: CanvasFrame = { id: "components-media-keyframe-timeline--long", args: { duration: 20 } };
+
+export const Overrun: CanvasFrame = { id: "components-media-keyframe-timeline--overrun", args: { startTime: 2.5 } };

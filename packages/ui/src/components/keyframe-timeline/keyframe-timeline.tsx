@@ -32,7 +32,8 @@ import { TimelineTrack } from "./timeline-track";
 import { useTimelineScrub } from "./use-timeline-scrub";
 
 export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
-  const { tracks, duration, currentTime, framesPerSecond: fps = 60 } = props;
+  const { tracks, duration, framesPerSecond: fps = 60 } = props;
+  const currentTime = Math.max(0, Math.min(duration, props.currentTime));
   const chevron = useRecipe({ key: "treeChevron" });
   const labels = useRef(new Map<string, HTMLButtonElement>());
   const ruler = useRef<HTMLDivElement>(null);

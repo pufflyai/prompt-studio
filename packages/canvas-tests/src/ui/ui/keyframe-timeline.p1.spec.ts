@@ -262,3 +262,33 @@ test("keyframe context menus target the clicked track and position", async ({ pa
   await expect(keyboardKey).toHaveCount(0);
   await expect(label).toBeFocused();
 });
+
+// Critical: caller clocks beyond the duration must not misalign the playhead or insert a duplicate end key.
+test("clock overrun keeps playheads and context insertion bounded", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Overrun",
+  );
+  const ruler = preview.getByRole("slider", { name: "Timeline playhead", exact: true });
+  const rulerLine = (await ruler.locator(":scope > div").last().boundingBox())!;
+  const body = (await preview
+    .getByRole("group", { name: "Animation tracks", exact: true })
+    .locator('[aria-hidden="true"] > div')
+    .boundingBox())!;
+  expect(Math.abs(body.x - rulerLine.x)).toBeLessThanOrEqual(1);
+  await expect(ruler).toHaveAttribute("aria-valuenow", "2");
+  const left = preview.getByRole("button", { name: "Left", exact: true });
+  await left.focus();
+  await left.press("Shift+F10");
+  await expect(preview.getByRole("menuitem", { name: "Add keyframe at 0:02:00", exact: true })).toHaveAttribute(
+    "data-disabled",
+    "",
+  );
+  await page.keyboard.press("Escape");
+  const top = preview.getByRole("button", { name: "Top", exact: true });
+  await top.focus();
+  await top.press("Shift+F10");
+  await preview.getByRole("menuitem", { name: "Add keyframe at 0:02:00", exact: true }).click();
+  await expect(preview.getByRole("button", { name: "Top keyframe 0:02:00", exact: true })).toBeFocused();
+  await expect(preview.getByRole("button", { name: "Left keyframe 0:02:00", exact: true })).toHaveCount(1);
+});
