@@ -1,6 +1,5 @@
 import { Box, type BoxProps, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
-import { popoverHeaderRecipe } from "../../theme/recipes/popover-header";
 
 export interface PopoverHeaderProps extends Omit<BoxProps, "title" | "children"> {
   icon: ReactNode;
@@ -11,7 +10,7 @@ export interface PopoverHeaderProps extends Omit<BoxProps, "title" | "children">
 
 export const PopoverHeader = (props: PopoverHeaderProps) => {
   const { icon, title, actions, ...rest } = props;
-  const recipe = useSlotRecipe({ recipe: popoverHeaderRecipe });
+  const recipe = useSlotRecipe({ key: "popoverHeader" });
   const styles = recipe();
   return (
     <Box css={styles.root} {...rest}>

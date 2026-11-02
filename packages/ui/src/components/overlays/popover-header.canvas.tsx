@@ -1,5 +1,6 @@
-import { IconButton, Stack } from "@chakra-ui/react";
-import { Cloud, Copy, Gauge, Play } from "lucide-react";
+import { Stack } from "@chakra-ui/react";
+import { Cloud, Gauge, Play } from "lucide-react";
+import { CopyButton } from "../primitives/copy-button";
 import { PopoverHeader } from "./popover-header";
 
 export default { title: "Components/Overlays/Popover header" };
@@ -10,11 +11,7 @@ export const TitledPopovers = () => (
     <PopoverHeader
       icon={<Gauge />}
       title="Performance"
-      actions={
-        <IconButton size="2xs" variant="ghost" aria-label="Copy performance snapshot">
-          <Copy />
-        </IconButton>
-      }
+      actions={<CopyButton label="Copy performance snapshot" text='{"frameRate":60}' />}
     />
     <PopoverHeader icon={<Play />} title="Auto Build" />
   </Stack>
