@@ -65,8 +65,8 @@ export function GraphCard(props: GraphCardProps) {
         )
     : [];
   const activate = () => {
+    actions.onSelect(row.id);
     if (interaction) void interaction.host.call("navigation.open", { target: timelineTicketPreviewTarget(row.target) });
-    else actions.onSelect(row.id);
   };
   const waiting = row.flags.includes("waiting");
   let opacity = 1;

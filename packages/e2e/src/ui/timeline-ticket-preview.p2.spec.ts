@@ -16,6 +16,10 @@ test("timeline ticket selection keeps the planner visible and replaces the unpin
   try {
     const first = await createPlannerTicket(request, uiOrigin, id, { content: "# First timeline ticket" });
     const second = await createPlannerTicket(request, uiOrigin, id, { content: "# Second timeline ticket" });
+    await executePlannerCommand(request, uiOrigin, id, "update-ticket", {
+      id: second.id,
+      dependsOn: [first.id],
+    });
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });
@@ -28,6 +32,11 @@ test("timeline ticket selection keeps the planner visible and replaces the unpin
     await expect(page).toHaveURL(timelinePath);
     await expect(side.getByRole("tab", { name: /First timeline ticket/ })).toBeVisible();
     await expect(side.getByText("First timeline ticket", { exact: true }).last()).toBeVisible();
+    await side.getByText("First timeline ticket", { exact: true }).last().click();
+    const firstCard = timeline.locator(`[data-ticket="${first.id}"] [data-testid="renderer-card"]`);
+    await expect(firstCard).toHaveAttribute("data-selected", "true");
+    await expect(timeline.locator('[data-edge-layer="hierarchy"] g')).toHaveCount(1);
+    await expect(timeline.getByRole("button", { name: "Close details", exact: true })).toHaveCount(0);
     await side.getByRole("tab", { name: /First timeline ticket/ }).click({ button: "right" });
     await expect(page.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
@@ -36,8 +45,16 @@ test("timeline ticket selection keeps the planner visible and replaces the unpin
     await next.press("Enter");
     await expect(side.getByRole("tab", { name: /Second timeline ticket/ })).toBeVisible();
     await expect(side.getByRole("tab", { name: /First timeline ticket/ })).toHaveCount(0);
+    await expect(firstCard).not.toHaveAttribute("data-selected", "true");
+    await expect(next.getByTestId("renderer-card")).toHaveAttribute("data-selected", "true");
     await expect(page).toHaveURL(timelinePath);
     await expect(timeline.getByRole("button", { name: "Auto Build", exact: true })).toBeVisible();
+    await side.getByRole("tab", { name: /Second timeline ticket/ }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+    await timeline.locator(`[data-ticket="${first.id}"]`).click();
+    await expect(side.getByRole("tab", { name: /First timeline ticket/ })).toBeVisible();
+    await expect(side.getByRole("tab", { name: /Second timeline ticket/ })).toBeVisible();
+    await expect(firstCard).toHaveAttribute("data-selected", "true");
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${id}`);
   }
@@ -69,6 +86,10 @@ test("timeline tickets with pending input keep the planner visible while opening
     await timeline.locator(`[data-ticket="${ticket.id}"]`).click();
     const requests = page.locator('[data-workbench-panel="side"]').frameLocator('iframe[title="Needs attention"]');
     await expect(requests.getByText("Confirm the timeline change", { exact: true })).toBeVisible();
+    await expect(timeline.locator(`[data-ticket="${ticket.id}"] [data-testid="renderer-card"]`)).toHaveAttribute(
+      "data-selected",
+      "true",
+    );
     await expect(page).toHaveURL(timelinePath);
     await expect(timeline.getByRole("button", { name: "Auto Build", exact: true })).toBeVisible();
   } finally {
