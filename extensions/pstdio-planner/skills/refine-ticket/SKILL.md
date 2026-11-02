@@ -31,7 +31,7 @@ Refine a Planner ticket by adding researched detail and applying a template when
 
 ## Status
 
-Refinement does not change ticket status. Run `pst tickets update --status` only when the user asks for a status change.
+For an independent non-decision blocker, use the configured Blocked status and a specific blocked reason as described below. Clear the reason and resume the appropriate status when resolved. Otherwise refinement changes ticket status only when the user requests it.
 
 ## Critical UI verification
 

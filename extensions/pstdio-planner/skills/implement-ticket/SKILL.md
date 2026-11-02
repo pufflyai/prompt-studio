@@ -74,7 +74,7 @@ Read saved answers with `pst pstdio-planner review-requests read --request-id <r
 
 For a decision in a managed workspace, pass `--workspace-id <workspace-id>` and `--session-id <implementation-session-id>`. Optional guards must use the latest recorded state.
 
-Keep the returned request ID. Stop work that depends on the answer. After the person answers, read `pst pstdio-planner review-requests read --request-id <request-id>`, verify the requested action or decision against the actual files and Git history, then resume. "Completion confirmed" records an answer; it does not integrate code. If the same blocker remains, inspect and repair the dependency base before requesting the same action again. Describe unchanged evidence clearly instead of treating repeated resumes as progress. Never answer your own request for the person. `run-review` is for reviewing code, not requesting human help.
+Keep the returned request ID. Stop work that depends on the answer. After the person answers, read `pst pstdio-planner review-requests read --request-id <request-id>`, verify the saved decision against the actual files and Git history, then resume. "Completion confirmed" records an answer; it does not integrate code. If the same blocker remains, inspect and repair the dependency base before asking for the same decision again. Describe unchanged evidence clearly instead of treating repeated resumes as progress. Never answer your own request for the person. `run-review` is for reviewing code, not requesting human help.
 
 ## Adversarial review
 
