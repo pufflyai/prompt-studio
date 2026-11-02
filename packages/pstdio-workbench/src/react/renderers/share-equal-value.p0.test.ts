@@ -73,3 +73,35 @@ test("moving a row keeps every row object, matched by id", () => {
   expect(shared.rows[0]).toBe(rows[1]);
   expect(shared.rows[1]).toBe(rows[0]);
 });
+
+test("cyclic resources survive reloads with their graph intact", () => {
+  const resource: Record<string, unknown> = { title: "First" };
+  resource.self = resource;
+  const previous = { rows: [{ id: "a", resource }] };
+  const next = structuredClone(previous);
+  next.rows[0]!.resource.title = "Renamed";
+  const shared = shareEqualValue(previous, next);
+  expect(shared.rows[0]!.resource.self).toBe(shared.rows[0]!.resource);
+  expect(shared.rows[0]!.resource.title).toBe("Renamed");
+});
+
+test("cycles through arrays survive reloads", () => {
+  const resource: unknown[] = [];
+  resource.push(resource);
+  const previous = { rows: [{ id: "a", resource }] };
+  const next = structuredClone(previous);
+  const shared = shareEqualValue(previous, next);
+  expect(shared.rows[0]!.resource[0]).toBe(shared.rows[0]!.resource);
+});
+
+test("symbol and non-enumerable metadata updates and removals survive reloads", () => {
+  const symbol = Symbol("metadata");
+  for (const key of [symbol, "metadata"]) {
+    const previous = Object.defineProperty({ id: "a" }, key, { value: "old" });
+    const next = Object.defineProperty({ id: "a" }, key, { value: "new" });
+    const shared = shareEqualValue([previous], [next]);
+    expect(Object.getOwnPropertyDescriptor(shared[0], key)?.value).toBe("new");
+    const removed = shareEqualValue([previous], [{ id: "a" }]);
+    expect(Object.hasOwn(removed[0]!, key)).toBe(false);
+  }
+});

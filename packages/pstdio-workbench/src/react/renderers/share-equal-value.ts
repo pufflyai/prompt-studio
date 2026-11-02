@@ -1,7 +1,12 @@
 const isPlainData = (value: unknown): value is Record<string, unknown> => {
   if (!value || typeof value !== "object") return false;
   const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+  if (prototype !== Object.prototype && prototype !== null) return false;
+  // Provider metadata and accessors are opaque; sharing them could discard an update.
+  return Reflect.ownKeys(value).every((key) => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+    return typeof key === "string" && descriptor.enumerable && "value" in descriptor;
+  });
 };
 
 const hasId = (value: unknown): value is { id: string } => isPlainData(value) && typeof value.id === "string";
@@ -20,12 +25,36 @@ const replaceInPlace = (target: object, key: string | number, value: unknown) =>
  * the changed row stays the object that was loaded. Only arrays and plain objects are compared.
  */
 export const shareEqualValue = <T>(previous: unknown, next: T): T => {
-  if (Object.is(previous, next)) return next;
+  const active = new WeakSet<object>();
+  const cycle = Symbol("cyclic value");
+  try {
+    return shareValue(previous, next, active, cycle);
+  } catch (error) {
+    // Keep the loaded graph and its backreferences intact when it contains a cycle.
+    if (error === cycle) return next;
+    throw error;
+  }
+};
+
+const shareValue = <T>(previous: unknown, next: T, active: WeakSet<object>, cycle: symbol): T => {
+  if (Object.is(previous, next) || !next || typeof next !== "object") return next;
+  if (active.has(next)) throw cycle;
+  active.add(next);
+  try {
+    return shareParts(previous, next, active, cycle);
+  } finally {
+    active.delete(next);
+  }
+};
+
+const shareParts = <T>(previous: unknown, next: T, active: WeakSet<object>, cycle: symbol): T => {
   if (Array.isArray(previous) && Array.isArray(next)) {
     // Rows with ids are matched by id, so a moved row keeps its object; other items by position.
     const byId =
       previous.every(hasId) && next.every(hasId) ? new Map(previous.map((item) => [item.id, item])) : undefined;
-    const shared = next.map((item, index) => shareEqualValue(byId ? byId.get(item.id) : previous[index], item));
+    const shared = next.map((item, index) =>
+      shareValue(byId ? byId.get(item.id) : previous[index], item, active, cycle),
+    );
     if (shared.length === previous.length && shared.every((item, index) => item === previous[index])) {
       return previous as T;
     }
@@ -35,8 +64,9 @@ export const shareEqualValue = <T>(previous: unknown, next: T): T => {
     return next;
   }
   if (isPlainData(previous) && isPlainData(next)) {
+    if (Object.getPrototypeOf(previous) !== Object.getPrototypeOf(next)) return next;
     const keys = Object.keys(next);
-    const shared = keys.map((key) => [key, shareEqualValue(previous[key], next[key])] as const);
+    const shared = keys.map((key) => [key, shareValue(previous[key], next[key], active, cycle)] as const);
     const same =
       keys.length === Object.keys(previous).length &&
       shared.every(([key, value]) => Object.hasOwn(previous, key) && value === previous[key]);
