@@ -20,6 +20,7 @@ import { inputRecipe } from "./recipes/input";
 import { kanbanBoardColumnSlotRecipe } from "./recipes/kanban-board-column";
 import { kbdRecipe } from "./recipes/kbd";
 import { keyboardBubbleSlotRecipe } from "./recipes/keyboard-bubble";
+import { keyframeTimelineRecipe } from "./recipes/keyframe-timeline";
 import { linkRecipe } from "./recipes/link";
 import { listRowAccessoryRecipe } from "./recipes/list-row-accessory";
 import { menuSlotRecipe } from "./recipes/menu";
@@ -128,6 +129,7 @@ const config = defineConfig({
       switch: switchSlotRecipe,
       tabs: tabsSlotRecipe,
       timeline: timelineSlotRecipe,
+      keyframeTimeline: keyframeTimelineRecipe,
     },
   },
 });

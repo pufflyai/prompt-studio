@@ -304,7 +304,7 @@
         "src/theme/index.ts",
         // The Canvas build loads these themes by absolute path.
         "src/theme/custom/vscode-theme.canvas-fixture.ts",
-        "src/components/{canvas,dependency-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
+        "src/components/{canvas,dependency-timeline,keyframe-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.canvas.tsx",
         "*.test.ts",

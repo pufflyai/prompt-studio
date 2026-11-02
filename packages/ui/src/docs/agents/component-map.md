@@ -27,6 +27,8 @@ Use this map to choose the first component to inspect in the live Canvas catalog
 - Start from `Components/Layout/Canvas` canvas for both native scrolling with sticky headers and transformed live previews. Ordinary lists and documents still use `ScrollArea`.
 - Use `DependencyTimeline` from `@pstdio/ui/dependency-timeline` for dependency cards arranged in milestone sections and collapsible tracks. It uses `Canvas` and owns card measurement, dependency arrows, sticky headers, and windowed rendering. Supply `TimelineSection`, `TimelineTrack`, and `TimelineItem` data with your own card content, headers, editors, and action callbacks. Keep domain data and saved presentation in the caller. See `Components/Layout/Dependency Timeline`.
 
+- Use `KeyframeTimeline` from `@pstdio/ui/keyframe-timeline` for animation/video property tracks, keyframe editing, frame snapping, time rulers and playhead scrubbing. Callers own data, playback and persistence. Omit `onTracksChange` for review-only tracks; use `markers` for named moments. See `Components/Media/Keyframe Timeline`.
+
 ## Data display
 
 - `DataTable` handles tabular data.
