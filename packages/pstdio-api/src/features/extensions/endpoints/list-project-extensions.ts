@@ -38,15 +38,14 @@ export const listProjectExtensionsHandler = (
     const { projectId } = c.req.valid("param");
     try {
       const records = await deps.extensionService.listProjectExtensionInstances(projectId);
-      const installedRecords = records;
+      // Uninstall retains data-bearing rows for same-path restore. A retained row alone
+      // does not mean the package is still installed.
+      const installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
       const extensions = await Promise.all(
         installedRecords.map(async ({ instance, installedSource }) =>
-          toProjectExtensionInstance(
-            instance,
-            installedSource,
-            existsSync(installedSource.source_path) ? hashExtensionSource(installedSource.source_path) : undefined,
-            { canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource) },
-          ),
+          toProjectExtensionInstance(instance, installedSource, hashExtensionSource(installedSource.source_path), {
+            canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
+          }),
         ),
       );
       const installedNames = new Set(installedRecords.map(({ installedSource }) => installedSource.install_name));

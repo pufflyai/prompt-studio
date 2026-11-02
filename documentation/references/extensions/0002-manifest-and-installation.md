@@ -121,6 +121,10 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   Prompt Studio skills.
 - Catalog entries with `listed: false` stay out of the downloadable Extensions list. They remain
   available to existing-install upgrades, recovery, explicit named installs and source bundling.
+  Disabled installed extensions keep the same recovery actions. Uninstall can retain a disabled
+  instance and user data after removing its source; that retained data is not an installed row.
+  Reinstalling to the same source path restores the instance and data. A missing source can also
+  be restored with an explicit named install; catalog visibility does not block that operation.
   Omit `listed` to keep an entry discoverable. This host catalog policy is separate from `default`
   and `bundleSource`; older hosts ignore it, so visibility changes require the supporting host.
 - An adopted extension whose `engines.pstdio` does not match the host is shown as an error in the

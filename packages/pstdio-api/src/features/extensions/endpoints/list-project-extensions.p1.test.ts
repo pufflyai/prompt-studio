@@ -152,27 +152,17 @@ describe("GET /v1/projects/:projectId/extensions", () => {
       extensionId: "test.servicing-only",
       displayName: "Servicing only",
       installName: "servicing-only",
+      enabled: false,
       enginesPstdio: "^0.0.9",
       sourceKind: "local_path",
     });
     const response = await app.request(`/v1/projects/${project.id}/extensions`);
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.extensions).toContainEqual(expect.objectContaining({ id: seeded.instanceId, canUpgrade: true }));
-    expect(body.marketplace).not.toContainEqual(expect.objectContaining({ installName: "servicing-only" }));
-    const installed = await handle.deps.extensionService.getProjectExtensionInstance(project.id, seeded.instanceId);
-    rmSync(installed!.installedSource.source_path, { recursive: true, force: true });
-    const missingResponse = await app.request(`/v1/projects/${project.id}/extensions`);
-    expect(missingResponse.status).toBe(200);
-    const missing = await missingResponse.json();
-    expect(missing.extensions).toContainEqual(
-      expect.objectContaining({
-        id: seeded.instanceId,
-        canUpgrade: true,
-        updateAvailable: false,
-      }),
+    expect(body.extensions).toContainEqual(
+      expect.objectContaining({ id: seeded.instanceId, enabled: false, canUpgrade: true }),
     );
-    expect(missing.marketplace).not.toContainEqual(expect.objectContaining({ installName: "servicing-only" }));
+    expect(body.marketplace).not.toContainEqual(expect.objectContaining({ installName: "servicing-only" }));
   });
 
   test("returns stable IDs and icons for downloadable extensions", async () => {
