@@ -3,6 +3,7 @@ import {
   definePage,
   defineResourceKind,
   defineView,
+  l10n,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 
@@ -16,7 +17,7 @@ const activate: DataTableRendererRowActivationHandler = (ctx, { row }) =>
   });
 const table = defineView({
   id: "notes-table",
-  title: "Notes",
+  title: l10n("notes.title", "Notes"),
   body: {
     kind: "dataTable",
     columns: [{ id: "title", label: "Title" }],
@@ -26,7 +27,7 @@ const table = defineView({
 });
 const rootPage = definePage({
   id: "root",
-  title: "Notes",
+  title: l10n("notes.title", "Notes"),
   path: "root",
   mode: workbenchModes.project,
   main: { kind: "panels" },
@@ -35,7 +36,7 @@ const rootPage = definePage({
 const collection = definePage({
   parent: rootPage.ref,
   id: "notes-collection",
-  title: "Notes",
+  title: l10n("notes.title", "Notes"),
   path: "notes-collection",
   mode: workbenchModes.project,
   resource: { kinds: [note.ref] },

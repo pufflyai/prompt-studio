@@ -27,7 +27,7 @@ const preview = defineView({
 });
 const rootPage = definePage({
   id: "root",
-  title: "Resource reviewer",
+  title: l10n("review.title", "Resource reviewer"),
   path: "root",
   mode: workbenchModes.project,
   main: { kind: "panels" },

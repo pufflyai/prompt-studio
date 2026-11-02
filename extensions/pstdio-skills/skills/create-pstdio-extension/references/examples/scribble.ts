@@ -6,6 +6,7 @@ import {
   definePage,
   defineResourceKind,
   defineView,
+  l10n,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 
@@ -34,7 +35,7 @@ const editor = defineView({
 });
 const rootPage = definePage({
   id: "root",
-  title: "Scribble",
+  title: l10n("scribble.title", "Scribble"),
   path: "root",
   mode: workbenchModes.project,
   main: { kind: "panels" },
@@ -43,7 +44,7 @@ const rootPage = definePage({
 export const scribblePage = definePage({
   parent: rootPage.ref,
   id: "scribble",
-  title: "Scribble",
+  title: l10n("scribble.title", "Scribble"),
   path: "scribble",
   mode: workbenchModes.project,
   resource: { kinds: [note.ref] },
