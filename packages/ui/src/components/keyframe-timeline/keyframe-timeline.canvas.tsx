@@ -1,4 +1,4 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { KeyframeTimeline } from "./keyframe-timeline";
@@ -37,13 +37,13 @@ const Example = (props: { readOnly?: boolean; empty?: boolean }) => {
   const [tracks, setTracks] = useState(props.empty ? [] : exampleTracks);
   const [time, setTime] = useState(0.4);
   const [playing, setPlaying] = useState(false);
-  const [open, setOpen] = useState(true);
-  if (!open) return <Button onClick={() => setOpen(true)}>Show timeline</Button>;
+  const [loopRange, setLoopRange] = useState({ start: 0.2, end: 1.8 });
   return (
     <Box maxH="sm">
       <KeyframeTimeline
         label="Menu entrance"
-        onClose={() => setOpen(false)}
+        loopRange={loopRange}
+        onLoopRangeChange={setLoopRange}
         playing={playing}
         onPlayingChange={setPlaying}
         duration={2}

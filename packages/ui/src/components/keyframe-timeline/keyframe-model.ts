@@ -1,4 +1,10 @@
-import type { AnimationKeyframe, KeyframeEasing, KeyframeSelection, KeyframeTrack } from "./keyframe-timeline.types";
+import type {
+  AnimationKeyframe,
+  KeyframeEasing,
+  KeyframeLoopRange,
+  KeyframeSelection,
+  KeyframeTrack,
+} from "./keyframe-timeline.types";
 
 export const snapTime = (time: number, duration: number, fps: number) =>
   Math.max(0, Math.min(duration, Math.round(time * fps) / fps));
@@ -55,4 +61,17 @@ export const selectedKeyframe = (tracks: KeyframeTrack[], selection: KeyframeSel
   const track = tracks.find((entry) => entry.id === selection?.trackId);
   const keyframe = track?.keyframes.find((key) => key.id === selection?.keyframeId);
   return track && keyframe ? { track, keyframe } : undefined;
+};
+
+export const moveLoopBoundary = (
+  range: KeyframeLoopRange,
+  boundary: "start" | "end",
+  time: number,
+  duration: number,
+  fps: number,
+) => {
+  const snapped = snapTime(time, duration, fps);
+  const frame = 1 / fps;
+  if (boundary === "start") return { ...range, start: Math.max(0, Math.min(snapped, range.end - frame)) };
+  return { ...range, end: Math.min(duration, Math.max(snapped, range.start + frame)) };
 };

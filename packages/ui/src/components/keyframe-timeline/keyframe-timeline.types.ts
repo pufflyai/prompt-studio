@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type KeyframeEasing = "linear" | "hold" | "ease-in" | "ease-out" | "ease-in-out";
 export interface AnimationKeyframe {
   id: string;
@@ -22,6 +24,10 @@ export interface TimelineMarker {
   time: number;
   label: string;
 }
+export interface KeyframeLoopRange {
+  start: number;
+  end: number;
+}
 export interface KeyframeTimelineProps {
   tracks: KeyframeTrack[];
   /** Positive duration in seconds. */
@@ -39,6 +45,8 @@ export interface KeyframeTimelineProps {
   /** Override the default seek to zero, for example to restart a loop range. */
   onRestart?: () => void;
   label?: string;
-  /** Let the containing editor dismiss its timeline panel. */
-  onClose?: () => void;
+  loopRange?: KeyframeLoopRange;
+  onLoopRangeChange?: (range: KeyframeLoopRange) => void;
+  /** Caller-owned playback options shown in the timeline settings menu. */
+  settings?: ReactNode;
 }

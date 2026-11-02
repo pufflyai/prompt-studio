@@ -1,7 +1,21 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 import { keyframeTimelineTokens } from "../primitives/keyframe-timeline";
 export const keyframeTimelineRecipe = defineSlotRecipe({
-  slots: ["root", "toolbar", "row", "label", "lane", "ruler", "tick", "keyframe", "diamond", "playhead", "group"],
+  slots: [
+    "root",
+    "toolbar",
+    "row",
+    "label",
+    "lane",
+    "ruler",
+    "tick",
+    "keyframe",
+    "diamond",
+    "playhead",
+    "group",
+    "loopBand",
+    "loopHandle",
+  ],
   base: {
     root: {
       ...keyframeTimelineTokens,
@@ -94,6 +108,22 @@ export const keyframeTimelineRecipe = defineSlotRecipe({
       borderColor: "bg.accent-primary.default",
       pointerEvents: "none",
       zIndex: "1",
+    },
+    loopBand: { position: "absolute", top: "xs", bottom: "xs", bg: "bg.active", pointerEvents: "none" },
+    loopHandle: {
+      position: "absolute",
+      top: "0",
+      bottom: "0",
+      w: "6",
+      transform: "translateX(-50%)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "ew-resize",
+      touchAction: "none",
+      color: "fg",
+      "& svg": { boxSize: "icon-sm" },
+      _focusVisible: { outline: "2px solid", outlineColor: "border.accent-light" },
     },
     group: {
       display: "flex",

@@ -97,7 +97,10 @@ transport controls to the caller’s clock. Supply `onRestart` to restart a call
 loop range; the default restart seeks to zero. Markers navigate named moments without
 pretending to be editable property keys. Keys and markers use diamonds; transport uses
 icon buttons. The timeline hugs its content and scrolls inside a bounded parent.
-Supply `onClose` to show a close action owned by the containing editor.
+Pass `loopRange` and `onLoopRangeChange` for draggable and keyboard-editable loop
+boundaries. Handles snap to frames and preserve a positive range. Supply `settings`
+for caller-owned playback options in the timeline settings menu. Panel sizing and
+dismissal belong to the containing layout; the timeline has no header or close action.
 Zoom and group expansion are temporary.
 
 Arrow keys on the ruler seek by one frame; Shift seeks ten; Home/End seek the bounds.

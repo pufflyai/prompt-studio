@@ -1,5 +1,5 @@
 import { Box, Button, IconButton, Text } from "@chakra-ui/react";
-import { Minus, Pause, Play, Plus, RotateCcw, X } from "lucide-react";
+import { Minus, Pause, Play, Plus, RotateCcw } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import { keyframeTimelineMetrics as metrics } from "../../theme/primitives/keyframe-timeline";
 import { ScrollArea } from "../primitives/scroll-area";
@@ -13,6 +13,7 @@ import type {
   KeyframeTimelineProps,
   KeyframeTrack,
 } from "./keyframe-timeline.types";
+import { LoopRange } from "./loop-range";
 import {
   TimelineDiamond,
   TimelineGroup,
@@ -26,6 +27,7 @@ import {
   TimelineTick,
   TimelineToolbar,
 } from "./timeline-parts";
+import { TimelineSettings } from "./timeline-settings";
 
 export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
   const { tracks, duration, currentTime, framesPerSecond: fps = 60 } = props;
@@ -62,9 +64,6 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
   return (
     <TimelineRoot role="region" aria-label={props.label ?? "Animation timeline"}>
       <TimelineToolbar role="toolbar" aria-label="Animation controls">
-        <Text flex="1" textStyle="label/S/medium">
-          {props.label ?? "Animations"}
-        </Text>
         {props.onPlayingChange && (
           <Tooltip content={props.playing ? "Pause" : "Play"}>
             <IconButton
@@ -94,6 +93,7 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
         <Text textStyle="mono/XS" role="timer">
           {timeLabel(currentTime, fps)} / {timeLabel(duration, fps)}
         </Text>
+        <Box flex="1" />
         <IconButton
           size="xs"
           variant="ghost"
@@ -144,13 +144,7 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
             </Button>
           </>
         )}
-        {props.onClose && (
-          <Tooltip content="Close animation timeline">
-            <IconButton size="xs" variant="ghost" aria-label="Close animation timeline" onClick={props.onClose}>
-              <X />
-            </IconButton>
-          </Tooltip>
-        )}
+        {props.settings && <TimelineSettings>{props.settings}</TimelineSettings>}
       </TimelineToolbar>
       {selected && track && props.onTracksChange && (
         <KeyframeInspector
@@ -215,6 +209,9 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
               <TimelinePlayhead left={playhead} />
             </TimelineRuler>
           </TimelineRow>
+          {props.loopRange && (
+            <LoopRange range={props.loopRange} duration={duration} fps={fps} onChange={props.onLoopRangeChange} />
+          )}
           {groups.map((group) => (
             <Fragment key={group}>
               {group && (

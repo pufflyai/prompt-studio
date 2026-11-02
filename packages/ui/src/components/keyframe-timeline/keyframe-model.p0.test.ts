@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { editKeyframe, sampleTrack, selectedKeyframe, snapTime } from "./keyframe-model";
+import { editKeyframe, moveLoopBoundary, sampleTrack, selectedKeyframe, snapTime } from "./keyframe-model";
 
 const track = {
   id: "opacity",
@@ -47,4 +47,13 @@ test("editing values preserves authored neighbours that share a display frame", 
     ],
   };
   expect(editKeyframe(authored, "a", { value: 3 }, 2, 25).keyframes[0]).toEqual({ id: "a", time: 0.1, value: 3 });
+});
+
+test("loop boundaries snap to frames while preserving a positive range", () => {
+  const range = { start: 0.5, end: 1.5 };
+  expect(moveLoopBoundary(range, "start", 0.123, 2, 25)).toEqual({ start: 0.12, end: 1.5 });
+  expect(moveLoopBoundary(range, "start", -1, 2, 25)).toEqual({ start: 0, end: 1.5 });
+  expect(moveLoopBoundary(range, "end", 3, 2, 25)).toEqual({ start: 0.5, end: 2 });
+  expect(moveLoopBoundary(range, "start", 2, 2, 25).start).toBeCloseTo(1.46);
+  expect(moveLoopBoundary(range, "end", 0, 2, 25).end).toBeCloseTo(0.54);
 });

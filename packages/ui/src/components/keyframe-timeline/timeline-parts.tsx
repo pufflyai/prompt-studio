@@ -13,3 +13,6 @@ export const TimelineKey = withContext<HTMLButtonElement, HTMLChakraProps<"butto
 export const TimelineDiamond = withContext<HTMLSpanElement, HTMLChakraProps<"span">>("span", "diamond");
 export const TimelinePlayhead = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "playhead");
 export const TimelineGroup = withContext<HTMLButtonElement, HTMLChakraProps<"button">>("button", "group");
+
+export const TimelineLoopBand = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "loopBand");
+export const TimelineLoopHandle = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "loopHandle");

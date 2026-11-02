@@ -59,10 +59,18 @@ test("scrub, move, add and delete animation keys through the shared timeline", a
   await expect(valueField).toHaveValue("12");
   await preview.getByRole("button", { name: /Bullet 2/ }).click();
   await expect(preview.getByRole("button", { name: "Opacity", exact: true })).toHaveCount(0);
-  await preview.getByRole("button", { name: "Close animation timeline", exact: true }).click();
-  await expect(ruler).toHaveCount(0);
-  await preview.getByRole("button", { name: "Show timeline", exact: true }).click();
-  await expect(ruler).toBeVisible();
-  await top.click();
-  await expect(preview.getByRole("spinbutton", { name: "Keyframe value", exact: true })).toHaveValue("12");
+  const loopStart = preview.getByRole("slider", { name: "Loop start", exact: true });
+  const loopEnd = preview.getByRole("slider", { name: "Loop end", exact: true });
+  await loopStart.press("ArrowRight");
+  await expect(loopStart).toHaveAttribute("aria-valuenow", "0.24");
+  const edge = (await loopEnd.boundingBox())!;
+  await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(edge.x + edge.width / 2 - 40, edge.y + edge.height / 2);
+  await page.mouse.up();
+  expect(Number(await loopEnd.getAttribute("aria-valuenow"))).toBeLessThan(1.8);
+  await loopStart.press("End");
+  expect(Number(await loopStart.getAttribute("aria-valuenow"))).toBeLessThan(
+    Number(await loopEnd.getAttribute("aria-valuenow")),
+  );
 });
