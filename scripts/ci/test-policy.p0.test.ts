@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { evaluateCiGate, priorityForJob } from "./test-policy";
+import { evaluateCiGate, priorityForJob, stopsAtFirstFailure } from "./test-policy";
 
 test("P1 blocks immediately while independent P0 diagnostics are still running", () => {
   expect(
@@ -93,4 +93,11 @@ test("production can finish without waiting on its downstream renamed gate", () 
     { name: "functional / production_ci_passed", status: "queued", conclusion: null },
   ];
   expect(evaluateCiGate([{ id: "package_checks", count: 1 }], jobs, false).outcome).toBe("success");
+});
+
+test("P1 stops at the first failure except in nightly and stable validation", () => {
+  expect(stopsAtFirstFailure("P1", "pull_request")).toBe(true);
+  expect(stopsAtFirstFailure("P1", "merge_queue")).toBe(true);
+  expect(stopsAtFirstFailure("P1", "production")).toBe(false);
+  expect(stopsAtFirstFailure("P2", "pull_request")).toBe(false);
 });

@@ -43,7 +43,14 @@ export const getPlaywrightCommand = (args: string[], priority = process.env.CI_P
   }
   return {
     cmd: process.execPath,
-    args: ["x", "--no-install", "playwright", "test", ...selected, `--max-failures=${priority === "P1" ? 1 : 0}`],
+    args: [
+      "x",
+      "--no-install",
+      "playwright",
+      "test",
+      ...selected,
+      `--max-failures=${priority === "P1" && process.env.CI_PROFILE !== "production" ? 1 : 0}`,
+    ],
   };
 };
 

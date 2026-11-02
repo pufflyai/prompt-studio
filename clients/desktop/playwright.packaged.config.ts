@@ -3,7 +3,7 @@ import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
 
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 export default defineConfig({
-  maxFailures: process.env.CI_PRIORITY === "P1" ? 1 : 0,
+  maxFailures: process.env.CI_PRIORITY === "P1" && process.env.CI_PROFILE !== "production" ? 1 : 0,
   outputDir: quarantine ? "test-results/packaged-quarantine" : "test-results/packaged",
   testDir: "src/e2e",
   testMatch:

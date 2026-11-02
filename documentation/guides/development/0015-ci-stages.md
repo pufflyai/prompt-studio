@@ -180,7 +180,7 @@ None of these replace the real queue run or release certification.
 
 ## Failure handling
 
-- **P1 stops early.** When a P1 job fails, other P1 jobs stop their own work. They never cancel the whole workflow. [ADR 0108](../../adrs/0108-temporary-cooperative-p1-cancellation.md) explains this temporary design.
+- **P1 stops early in PR and queue runs.** When a P1 job fails, other P1 jobs stop their own work. They never cancel the whole workflow. Nightly and stable validation (profile `production`) run every P1 job and file to the end, so one run reports every failure. [ADR 0108](../../adrs/0108-temporary-cooperative-p1-cancellation.md) explains this temporary design.
 - **P0, P2 and P3 finish.** They run all their selected work and report every failure. Matrices with mixed priorities do not use GitHub's fail-fast.
 - **A failed setup step blocks the jobs that need it.** It can never let them pass.
 - **`validation_results`** starts after all execution jobs finish, then reads the job list from the GitHub API. This avoids occupying a runner and exhausting its allowance while other jobs wait for runners. Individual P1 failures and cooperative stopping remain immediate; the aggregate required result waits for the remaining diagnostics. Missing, duplicated, skipped, cancelled or failed selected jobs fail it. Unselected jobs may skip. If GitHub refuses a read because of a rate limit or a server error, it waits and reads again.

@@ -55,7 +55,9 @@ export const runApiTestFiles = async (
       result.error = `stalled for ${options.stallMs! / 1000} s`;
       console.error(`${file}: ${result.error}`);
     }
-    if (result.outcome === "failure" && priority === "P1") controller.abort("p1-failure");
+    // Nightly and stable validation (profile production) run every file to report every failure.
+    if (result.outcome === "failure" && priority === "P1" && process.env.CI_PROFILE !== "production")
+      controller.abort("p1-failure");
   };
   const shared = files.filter((file) => !runsAlone(file));
   let next = 0;

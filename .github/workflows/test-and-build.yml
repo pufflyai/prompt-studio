@@ -369,6 +369,7 @@ jobs:
       TEST_PRIORITIES: ${{ matrix.priority }}
       GH_TOKEN: ${{ github.token }}
       CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -417,6 +418,7 @@ jobs:
       TEST_PRIORITIES: ${{ matrix.priority }}
       GH_TOKEN: ${{ github.token }}
       CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
+      CI_PROFILE: ${{ needs.scope.outputs.production == 'true' && 'production' || needs.scope.outputs.stage }}
     steps:
       - uses: actions/checkout@v5
         with:
