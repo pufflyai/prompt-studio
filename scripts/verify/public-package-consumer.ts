@@ -165,6 +165,10 @@ for (const theme of contrastThemes) {
 }
 import { Canvas, zoomCanvas, type CanvasCamera } from "@pstdio/ui/canvas";
 import { DependencyTimeline } from "@pstdio/ui/dependency-timeline";
+import { KeyframeTimeline, sampleTrack, type KeyframeTrack } from "@pstdio/ui/keyframe-timeline";
+const animationTrack: KeyframeTrack = { id: "opacity", label: "Opacity", keyframes: [{ id: "start", time: 0, value: 0 }, { id: "end", time: 2, value: 1 }] };
+if (sampleTrack(animationTrack, 1) !== 0.5) throw new Error("Animation interpolation changed");
+const keyframeTimeline = createElement(KeyframeTimeline, { tracks: [animationTrack], duration: 2, currentTime: 1, onTimeChange: () => {} });
 let camera: CanvasCamera = { x: 0, y: 0, zoom: 1 };
 const canvas = createElement(Canvas, {
   "aria-label": "Design canvas", variant: "pan", zoom: camera.zoom, minZoom: 0.1, maxZoom: 4,
@@ -182,7 +186,7 @@ const outliner = createElement(TreeList, {
 });
 const groupRow = createElement(ListRow, { label: "Group", isContainer: true, showExpandToggle: true,
   expandOnClick: false, onToggleExpand: () => {}, startContent: createElement("span") });
-void [canvas, timeline, outliner, groupRow];
+void [canvas, timeline, keyframeTimeline, outliner, groupRow];
 import { CollectionViewBar, EMPTY_VIEW_FILTER, filterRowsByView, withTitleField } from "@pstdio/ui/collection-view";
 const panelOverlay = createElement(BubblePanel, { isOpen: true, overlay: createElement("div", { "data-drop-feedback": true }) });
 void panelOverlay;

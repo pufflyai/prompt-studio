@@ -1,64 +1,63 @@
-import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
-import { Slider } from "../primitives/slider";
+import { KeyframeTimeline } from "./keyframe-timeline";
+import type { KeyframeTrack } from "./keyframe-timeline.types";
 
-// Design first: grouped property lanes, one shared ruler, and an editable playhead.
-const TimelineDesign = () => {
+const exampleTracks: KeyframeTrack[] = [
+  {
+    id: "bullet2-opacity",
+    group: "Bullet 2",
+    label: "Opacity",
+    keyframes: [
+      { id: "a", time: 0, value: 0 },
+      { id: "b", time: 1, value: 1 },
+    ],
+  },
+  {
+    id: "bullet1-top",
+    group: "Bullet 1",
+    label: "Top",
+    keyframes: [
+      { id: "c", time: 0.25, value: 32 },
+      { id: "d", time: 1.5, value: 0, easing: "ease-out" },
+    ],
+  },
+  {
+    id: "menu-left",
+    group: "Menu",
+    label: "Left",
+    keyframes: [
+      { id: "e", time: 0, value: -24 },
+      { id: "f", time: 2, value: 0 },
+    ],
+  },
+];
+const Example = (props: { readOnly?: boolean; empty?: boolean }) => {
+  const [tracks, setTracks] = useState(props.empty ? [] : exampleTracks);
   const [time, setTime] = useState(0.4);
   return (
-    <Stack gap="0" borderWidth="1px" borderColor="border.subtle">
-      <Flex p="sm" gap="sm" align="center">
-        <Text flex="1">Animations · Menu entrance</Text>
-        <Button size="xs">Play</Button>
-        <Text textStyle="mono/XS">{time.toFixed(2)} / 2.00 s</Text>
-      </Flex>
-      <Flex gap="md" p="sm">
-        <Text w="xs">Tracks</Text>
-        <Box flex="1">
-          <Slider
-            aria-label={["Time"]}
-            min={0}
-            max={2}
-            step={1 / 60}
-            value={[time]}
-            onValueChange={({ value }) => setTime(value[0])}
-          />
-        </Box>
-      </Flex>
-      {[
-        ["Bullet 2", "Opacity"],
-        ["Bullet 1", "Top"],
-        ["Menu", "Left"],
-      ].map(([group, property]) => (
-        <Stack key={group} gap="0">
-          <Text bg="bg.subtle" p="2xs" textStyle="label/S/medium">
-            {group}
-          </Text>
-          <Flex px="sm" gap="md" align="center">
-            <Text w="xs">{property}</Text>
-            <Flex flex="1" justify="space-between">
-              <Button size="xs" variant="ghost" onClick={() => setTime(0)}>
-                ◆
-              </Button>
-              <Button size="xs" variant="ghost" onClick={() => setTime(1)}>
-                ◆
-              </Button>
-              <Button size="xs" variant="ghost" onClick={() => setTime(2)}>
-                ◆
-              </Button>
-            </Flex>
-          </Flex>
-        </Stack>
-      ))}
-    </Stack>
+    <Box h="sm">
+      <KeyframeTimeline
+        label="Menu entrance"
+        duration={2}
+        framesPerSecond={25}
+        tracks={tracks}
+        onTracksChange={props.readOnly ? undefined : setTracks}
+        currentTime={time}
+        onTimeChange={setTime}
+        markers={[{ id: "settled", label: "Settled", time: 1.5 }]}
+      />
+    </Box>
   );
 };
 const meta: CanvasMeta = {
   title: "Components/Media/Keyframe Timeline",
-  component: TimelineDesign,
+  component: Example,
   description:
-    "Animation property tracks with shared time, keyframes and grouped lanes. Callers own animation data and playback.",
+    "Grouped numeric property tracks with frame snapping, a shared playhead, zoom, marker navigation, and keyboard or pointer editing. Callers own data, playback, and persistence. Omit onTracksChange for read-only tracks. Arrow keys move a focused key by one frame; Shift moves ten. Delete removes it. Use the toolbar to add keys or edit the selected value and interpolation.",
 };
 export default meta;
 export const Animation: CanvasFrame = { id: "components-media-keyframe-timeline--animation" };
+export const ReadOnly: CanvasFrame = { id: "components-media-keyframe-timeline--read-only", args: { readOnly: true } };
+export const Empty: CanvasFrame = { id: "components-media-keyframe-timeline--empty", args: { empty: true } };

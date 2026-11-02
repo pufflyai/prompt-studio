@@ -78,3 +78,26 @@ bun run --cwd packages/canvas-tests test
 - Include states like default, loading, empty, error, long content, and disabled where relevant.
 - Keep examples for exploration; put critical behavioral assertions in separate tests.
 - Keep examples deterministic: avoid real network calls.
+
+
+## Keyframe timeline
+
+Import `KeyframeTimeline` and `KeyframeTrack` from `@pstdio/ui/keyframe-timeline`.
+Pass numeric property tracks, a positive duration in seconds, `currentTime`, and
+`onTimeChange`. Each key has a stable ID, time, numeric value and optional easing
+(`linear`, `hold`, `ease-in`, `ease-out`, or `ease-in-out`). Group related tracks
+with `group`. Frame snapping defaults to 60 fps and accepts a custom frame rate.
+
+Supply `onTracksChange` to enable add, move, value/interpolation editing, and delete.
+Omit it for read-only review. A move onto an occupied frame preserves both keys.
+The caller owns animation data, playback, persistence and undo. Optional controlled
+`selection` and `onSelectionChange` connect an external inspector; otherwise the
+component owns transient selection. Use `playing` and `onPlayingChange` to connect
+transport controls to the caller’s clock. Markers navigate named moments without
+pretending to be editable property keys. Zoom and group expansion are temporary.
+
+Arrow keys on the ruler seek by one frame; Shift seeks ten; Home/End seek the bounds.
+Arrow keys on a focused key move it, and Delete removes it then focuses its track.
+Pointer dragging uses the same snapping/collision rules. The timecode uses the
+rounded nominal frame rate (non-drop-frame); timeline positions use seconds.
+See **Components/Media/Keyframe Timeline** for Animation, ReadOnly, and Empty.

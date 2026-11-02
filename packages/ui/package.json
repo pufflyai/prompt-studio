@@ -84,6 +84,10 @@
     "./dependency-timeline": {
       "import": "./dist/dependency-timeline.js",
       "types": "./dist/dependency-timeline.d.ts"
+    },
+    "./keyframe-timeline": {
+      "import": "./dist/keyframe-timeline.js",
+      "types": "./dist/keyframe-timeline.d.ts"
     }
   },
   "scripts": {
