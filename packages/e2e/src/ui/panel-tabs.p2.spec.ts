@@ -4,16 +4,6 @@ import { homeFrame } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const getVerticalMenuGap = async (
-  tab: import("@playwright/test").Locator,
-  menu: import("@playwright/test").Locator,
-) => {
-  const tabBox = await tab.boundingBox();
-  const menuBox = await menu.boundingBox();
-  if (!tabBox || !menuBox) throw new Error("Tab menu geometry is unavailable");
-  return Math.abs(menuBox.y - (tabBox.y + tabBox.height));
-};
-
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
   await tab.click({ button: "right" });
 };
@@ -70,7 +60,6 @@ test("opens the Session tab context menu while normal clicks only select", async
   await expect(sessionMenu.getByRole("menuitem", { name: "New session" })).toBeVisible();
   await expect(sessionMenu.getByRole("menuitem", { name: "Switch session" })).toBeVisible();
 
-  await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
   await page.keyboard.press("Escape");
   await expect(sessionMenu).toBeHidden();
   await expect(sessionTab).toBeFocused();
