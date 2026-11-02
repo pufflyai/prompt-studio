@@ -111,6 +111,9 @@ test("fork uses the invoking session and is unavailable while work is pending", 
     workbench.context.set("workbench.resource.metadata.status", status);
     const visible = items.filter((item) => workbench.context.matches(item.when));
     expect(visible).toHaveLength(1);
+    expect(
+      workbench.context.matches(workbench.commands.getCommand(dashboardCommandIds.forkSession)!.command.when),
+    ).toBe(true);
     expect(visible[0]?.readOnly === true).toBe(status !== "completed");
   }
   workbench.dispose();

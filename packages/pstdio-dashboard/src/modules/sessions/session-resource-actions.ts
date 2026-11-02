@@ -39,7 +39,7 @@ export const registerSessionResourceActions = (ctx: WorkbenchModuleContext) => {
       label: "Fork conversation",
       category: "Session",
       icon: "GitFork",
-      when: idleWhen,
+      when: sessionWhen,
     },
     {
       prepareArgs: (args: SessionActionArgs | undefined, context) => ({
