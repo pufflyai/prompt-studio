@@ -63,6 +63,7 @@ export type HarnessHandle = {
   cwdRequirement: "required" | "optional";
   supportsReattach: boolean;
   supportsHistory: boolean;
+  supportsFork: boolean;
   /** The harness offers a model choice through `listModels`. */
   supportsModels: boolean;
   capabilities(options?: HarnessCallOptions): Promise<AgentCapability[]>;
@@ -76,6 +77,10 @@ export type HarnessHandle = {
   listModels(options?: HarnessCallOptions): Promise<AgentModel[]>;
   start(input: HarnessStartInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   resume(input: HarnessResumeInput, options?: HarnessCallOptions): Promise<HarnessSession>;
+  fork(
+    input: HarnessCommandContext & { agentSessionId: string },
+    options?: HarnessCallOptions,
+  ): Promise<{ agentSessionId: string }>;
   reattach(input: HarnessReattachInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   getMessages(input: HarnessMessagesInput, options?: HarnessCallOptions): Promise<SessionMessage[]>;
   recoverMessages(input: HarnessRecoveryInput, options?: HarnessCallOptions): Promise<HarnessRecoveryResult>;
@@ -170,6 +175,7 @@ const toHandle = (
     cwdRequirement: provider.cwdRequirement ?? "required",
     supportsReattach: typeof provider.reattach === "function",
     supportsHistory: typeof provider.getMessages === "function",
+    supportsFork: typeof provider.fork === "function",
     supportsModels: typeof provider.listModels === "function",
     capabilities: async (options) => provider.capabilities(await ctx(options)),
     detect: async (options) => detectHarness(provider, await ctx(options)),
@@ -221,6 +227,10 @@ const toHandle = (
         async () => adaptSession(await provider.reattach!(await ctx(options), input)),
         (run) => run.done,
       );
+    },
+    fork: async (input, options) => {
+      if (!provider.fork) throw new Error("This harness does not support forking conversations.");
+      return retained.invoke(input, options, async () => provider.fork!(await ctx(options), input));
     },
     getMessages: async (input, options) =>
       provider.getMessages ? provider.getMessages(await ctx(options), input) : [],

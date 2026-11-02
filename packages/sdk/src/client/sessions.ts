@@ -71,6 +71,7 @@ export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
   /** @deprecated Pass projectId first and use camelCase input. */
   create(input: CreateSessionInput): Promise<SessionCreateResponse>;
   archive(sessionId: string): Promise<void>;
+  fork(sessionId: string): Promise<SessionCreateResponse>;
   delete(sessionId: string): Promise<void>;
   followUp(sessionId: string, input: SessionFollowUpRequest | FollowUpInput): Promise<SessionFollowUpResponse>;
   steer(sessionId: string, input: SessionSteeringInput): Promise<QueuedSteeringResult>;
@@ -218,6 +219,7 @@ export const createSessionClient = (
         body: typeof projectOrInput === "string" ? { ...input, projectId: projectOrInput } : projectOrInput,
       }),
     archive: (sessionId) => request(`/v1/sessions/${sessionId}/archive`, { method: "POST" }),
+    fork: (sessionId) => request(`/v1/sessions/${sessionId}/fork`, { method: "POST" }),
     delete: (sessionId) => request(`/v1/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }),
     followUp: (sessionId, input) => request(`/v1/sessions/${sessionId}/follow-up`, { method: "POST", body: input }),
     steer: (sessionId, input) => request(`/v1/sessions/${sessionId}/steer`, { method: "POST", body: input }),

@@ -31,6 +31,7 @@ test("session management belongs to Sessions and resolves explicit and row targe
   expect(menu.map((item) => item.commandId)).toEqual(
     expect.arrayContaining([
       dashboardCommandIds.renameSession,
+      dashboardCommandIds.forkSession,
       dashboardCommandIds.archiveSession,
       dashboardCommandIds.deleteSession,
     ]),
@@ -91,6 +92,26 @@ test("each session state offers exactly one delete action with the lifecycle gua
     const matches = actions.filter((item) => workbench.context.matches(item.when));
     expect(matches).toHaveLength(1);
     expect(matches[0]?.readOnly === true).toBe(["in_progress", "awaiting_input", "queued"].includes(status));
+  }
+  workbench.dispose();
+});
+
+test("fork uses the invoking session and is unavailable while work is pending", async () => {
+  const workbench = setup();
+  expect(
+    await workbench.commands.prepareCommandArgs(dashboardCommandIds.forkSession, undefined, {
+      resource: { type: "session", id: "b" },
+    }),
+  ).toEqual({ sessionId: "b" });
+  const items = workbench.layout
+    .listMenuItems(resourceContextMenuPath("session"))
+    .filter((item) => item.commandId === dashboardCommandIds.forkSession);
+  for (const status of ["completed", "in_progress", "awaiting_input", "queued"]) {
+    workbench.context.set("workbench.resource.type", "session");
+    workbench.context.set("workbench.resource.metadata.status", status);
+    const visible = items.filter((item) => workbench.context.matches(item.when));
+    expect(visible).toHaveLength(1);
+    expect(visible[0]?.readOnly === true).toBe(status !== "completed");
   }
   workbench.dispose();
 });

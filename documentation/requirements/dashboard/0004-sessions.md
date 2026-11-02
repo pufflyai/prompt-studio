@@ -106,6 +106,7 @@ The [sessions module](../../../packages/pstdio-dashboard/src/modules/sessions/mo
 | Approve / deny | Resolves the current approval request. |
 | Download | Exports the current session as JSON. |
 | Archive | Archives the selected session and returns to the list state. |
+| Fork conversation | Opens an independent copy with the same history, agent, model, parameters, and workspace. Waits for a new prompt. Requires a harness with native fork support and no pending work. |
 
 ## Rules & Constraints
 

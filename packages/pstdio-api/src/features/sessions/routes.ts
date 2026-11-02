@@ -9,6 +9,7 @@ import { createSessionHandler, createSessionRoute } from "./endpoints/create-ses
 import { deleteSessionHandler, deleteSessionRoute } from "./endpoints/delete-session";
 import { draftHarnessCommandsHandler, draftHarnessCommandsRoute } from "./endpoints/draft-harness-commands";
 import { followUpSessionHandler, followUpSessionRoute } from "./endpoints/follow-up-session";
+import { forkSessionHandler, forkSessionRoute } from "./endpoints/fork-session";
 import { getConversationSourcesHandler, getConversationSourcesRoute } from "./endpoints/get-conversation-sources";
 import { getQueuedMessagesHandler, getQueuedMessagesRoute } from "./endpoints/get-queued-messages";
 import { getSessionHandler, getSessionRoute } from "./endpoints/get-session";
@@ -67,6 +68,7 @@ export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDep
   routes.openapi(getHarnessCommandsRoute, getHarnessCommandsHandler(deps));
   routes.openapi(invokeHarnessCommandRoute, invokeHarnessCommandHandler(deps));
   routes.openapi(createSessionRoute, createSessionHandler(deps));
+  routes.openapi(forkSessionRoute, forkSessionHandler(deps));
   routes.openapi(uploadSessionAttachmentRoute, uploadSessionAttachmentHandler(deps));
   routes.openapi(getSessionAttachmentContentRoute, getSessionAttachmentContentHandler(deps));
   routes.openapi(deleteSessionAttachmentRoute, deleteSessionAttachmentHandler(deps));

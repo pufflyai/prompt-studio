@@ -81,6 +81,9 @@ test(
 );
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
+  const fork = spawnSync(PACKAGED_BINARY_PATH, ["sessions", "fork", "--help"], { encoding: "utf8" });
+  expect(fork.status).toBe(0);
+  expect(fork.stdout).toContain("--id");
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {
     encoding: "utf8",
   });
