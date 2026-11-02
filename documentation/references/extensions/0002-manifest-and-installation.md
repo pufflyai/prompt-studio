@@ -117,6 +117,10 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
 - Catalog entries marked `default` are installed for new projects. Catalog membership alone does not
   make an extension a default. The packaged catalog defaults to the harnesses, base themes, and
   Prompt Studio skills.
+- Catalog entries with `listed: false` stay out of the downloadable Extensions list. They remain
+  available to existing-install upgrades, recovery, explicit named installs and source bundling.
+  Omit `listed` to keep an entry discoverable. This host catalog policy is separate from `default`
+  and `bundleSource`; older hosts ignore it, so visibility changes require the supporting host.
 - An adopted extension whose `engines.pstdio` does not match the host is shown as an error in the
   extension list and detail view. The error names both API versions. When the host can replace the
   source with a release, it tells the owner to upgrade; otherwise it tells the owner to fix the source.

@@ -34,9 +34,21 @@ beforeAll(async () => {
     catalogPath,
     JSON.stringify({
       ...catalogData,
-      extensions: catalogData.extensions.map((entry) =>
-        entry.installName === "harness-pi" ? { ...entry, extensionId: "pstdio.harness-pi", icon: "Terminal" } : entry,
-      ),
+      extensions: [
+        ...catalogData.extensions.map((entry) =>
+          entry.installName === "harness-pi" ? { ...entry, extensionId: "pstdio.harness-pi", icon: "Terminal" } : entry,
+        ),
+        {
+          installName: "servicing-only",
+          extensionId: "test.servicing-only",
+          displayName: "Servicing only",
+          description: "An existing installation remains supported without new downloads.",
+          icon: "Cloud",
+          origin: { kind: "git", url: "https://example.com/extensions", path: "servicing-only", ref: "{hostRelease}" },
+          default: false,
+          listed: false,
+        },
+      ],
     }),
   );
   process.env.PSTDIO_EXTENSION_CATALOG = catalogPath;
@@ -133,6 +145,23 @@ const seedInstance = async (
 };
 
 describe("GET /v1/projects/:projectId/extensions", () => {
+  test("keeps unlisted installed extensions visible and recoverable without offering new downloads", async () => {
+    const project = await createProject("Unlisted extension recovery");
+    const seeded = await seedInstance(project.id, {
+      name: "servicing-only",
+      extensionId: "test.servicing-only",
+      displayName: "Servicing only",
+      installName: "servicing-only",
+      enginesPstdio: "^0.0.9",
+      sourceKind: "local_path",
+    });
+    const response = await app.request(`/v1/projects/${project.id}/extensions`);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.extensions).toContainEqual(expect.objectContaining({ id: seeded.instanceId, canUpgrade: true }));
+    expect(body.marketplace).not.toContainEqual(expect.objectContaining({ installName: "servicing-only" }));
+  });
+
   test("returns stable IDs and icons for downloadable extensions", async () => {
     const project = await createProject("Extension identity");
     const res = await app.request(`/v1/projects/${project.id}/extensions`);

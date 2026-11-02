@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Support declared extension icons and full catalog IDs in Extensions while preserving icon aliases and generic fallbacks.
+Support extension icons and full IDs while preserving generic fallbacks and servicing sources for unlisted downloads.

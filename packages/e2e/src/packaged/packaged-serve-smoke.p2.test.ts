@@ -113,6 +113,15 @@ test(
               origin: { kind: "git", url: "https://example.com/probe.git", path: "extension", ref: "main" },
               default: false,
             },
+            {
+              installName: "servicing-only",
+              extensionId: "test.servicing-only",
+              displayName: "Servicing only",
+              description: "",
+              listed: false,
+              origin: { kind: "git", url: "https://example.com/probe.git", path: "extension", ref: "main" },
+              default: false,
+            },
           ],
         }),
       );
@@ -185,6 +194,7 @@ test(
       expect(body.marketplace).toContainEqual(
         expect.objectContaining({ extensionId: "test.metadata-probe", icon: "Blocks" }),
       );
+      expect(body.marketplace).not.toContainEqual(expect.objectContaining({ extensionId: "test.servicing-only" }));
       const extension = body.extensions.find((entry) => entry.installName === "dep-ext");
 
       expect(extension).toMatchObject({
