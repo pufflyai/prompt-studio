@@ -3,7 +3,6 @@ import { LexicalTypeaheadMenuPlugin, MenuOption } from "@lexical/react/LexicalTy
 import { $createTextNode, $getSelection, $setSelection } from "lexical";
 import { type RefObject, useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { ListRow } from "@/components/list-row/list-row";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { useTypeaheadScope } from "../../shared/use-typeahead-scope";
 import { matchCommandQuery } from "./command-query";
@@ -37,7 +36,7 @@ const CommandMenu = (props: CommandMenuProps) => {
   const active = useTypeaheadScope(props.anchor);
   const menuId = useId();
   const { options, selectedIndex, onSelect, onHighlight } = props;
-  const styles = useSlotRecipe({ key: "menu" })();
+  const styles = useSlotRecipe({ key: "menu" })({ variant: "commands" });
   useEffect(() => {
     options[selectedIndex ?? -1]?.ref?.current?.scrollIntoView({ block: "nearest" });
   }, [options, selectedIndex]);
@@ -45,23 +44,37 @@ const CommandMenu = (props: CommandMenuProps) => {
     <Box css={styles.content} position="absolute" bottom="100%" mb="2xs" zIndex="popover">
       <ScrollArea maxH="xs" showHorizontalScrollbar={false}>
         {options.map((option, index) => (
-          <ListRow
+          <chakra.button
             key={option.key}
             id={active ? `typeahead-item-${index}` : `${menuId}-typeahead-item-${index}`}
             ref={option.setRefElement}
             role="option"
+            type="button"
             aria-label={option.command.name}
+            aria-describedby={`${menuId}-description-${index}`}
             aria-disabled={Boolean(option.command.disabledReason)}
             tabIndex={-1}
-            variant="full-width"
-            label={option.command.name}
-            description={option.command.disabledReason ?? option.command.description}
+            css={styles.item}
             disabled={Boolean(option.command.disabledReason)}
-            isSelected={selectedIndex === index}
+            aria-selected={selectedIndex === index}
+            data-highlighted={selectedIndex === index && !option.command.disabledReason ? "" : undefined}
             onMouseDown={(event) => event.preventDefault()}
             onPointerMove={() => onHighlight(index)}
-            onActivate={() => onSelect(option, index)}
-          />
+            onClick={() => onSelect(option, index)}
+          >
+            <Text as="span" css={styles.itemText} truncate>
+              {option.command.name}
+            </Text>
+            <Text
+              as="span"
+              id={`${menuId}-description-${index}`}
+              css={styles.itemCommand}
+              data-command-description
+              truncate
+            >
+              {option.command.disabledReason ?? option.command.description}
+            </Text>
+          </chakra.button>
         ))}
       </ScrollArea>
     </Box>
@@ -122,4 +135,4 @@ export const CommandMenuPlugin = (props: { commands: PromptCommand[] }) => {
   );
 };
 
-import { Box, useSlotRecipe } from "@chakra-ui/react";
+import { Box, chakra, Text, useSlotRecipe } from "@chakra-ui/react";
