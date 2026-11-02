@@ -507,6 +507,8 @@ const resources = defineView({
 
 Enum options define group labels, dot colors and optional short `note` text. `canCreate: true` shows an Add action when the body also declares `createRow`. Its `columnParam` receives the group value, using the same creation form as kanban. Groups count parent resources and collapse independently; children nest one level. Row IDs must be unique across parents and children.
 
+Groups without source resources are absent, so their Add actions are also absent. Supply a creation toolbar action for a new empty collection or to create the first resource in an unused group.
+
 Rows reuse kanban shorthand (`attributes.id`), property chips, badges, dates and resource menus. Each row can declare an optional icon and navigation target. The Display menu offers grouping, Children (Nested or Hidden), ordering and visible properties. `defaultViews` uses `ResourceListRendererSettings`: `columnGrouping`, `displayProperties` and optional `showChildren`. The host persists these alongside the filter and sorts using the existing collection-view store. Its wire settings also contain the fixed `viewMode: "list"` and `rowGrouping: "none"` fields.
 
 See the [example extension](../../../packages/pstdio-workbench/src/examples/onboarding/extensions/resource-list-extension.ts) and the **ResourceList** onboarding Canvas preview. The shared list skeleton and empty state cover first load and empty queries. `queryMode: "paged"`, refresh events, toolbar actions, row actions and activation callbacks follow the kanban contracts.

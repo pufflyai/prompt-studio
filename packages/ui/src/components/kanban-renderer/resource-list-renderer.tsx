@@ -7,7 +7,7 @@ import type { KanbanRendererProps } from "./kanban-renderer";
 import { KanbanRendererContent } from "./kanban-renderer-content";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
 import { KanbanRendererToolbar } from "./kanban-renderer-toolbar";
-import { buildResourceListItems, resourceListSettings } from "./resource-list-view-model";
+import { buildResourceListItems, countResourceListRows, resourceListSettings } from "./resource-list-view-model";
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 import { useResolvedAttributes } from "./use-resolved-attributes";
 
@@ -54,8 +54,8 @@ export const ResourceListRenderer = (props: ResourceListRendererProps) => {
       <KanbanRendererContent
         contentPlaceholder={props.contentPlaceholder}
         sourceCount={props.page?.result?.total ?? rows.length}
-        filteredCount={props.page?.result?.filteredTotal ?? items.length}
-        visibleCount={items.length}
+        filteredCount={props.page?.result?.filteredTotal ?? countResourceListRows(items)}
+        visibleCount={countResourceListRows(items)}
         search={search}
         ruleCount={countFilterRules(state.filter)}
         onClearSearch={() => setSearch("")}

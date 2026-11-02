@@ -42,6 +42,10 @@ interface ResourceListItemsInput {
   onCreate?: (groupKey: string) => void;
 }
 
+/** Group headers and nested children are not parent-resource results. */
+export const countResourceListRows = (items: KanbanRendererListItem[]) =>
+  items.reduce((total, item) => total + (item.isGroup ? (item.children?.length ?? 0) : 1), 0);
+
 export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRendererListItem[] => {
   const { rows, attributes, filter, sorts, search, onRowClick, getRowContextMenuActions, onCreate } = input;
   const settings = resourceListSettings(input.settings);

@@ -35,4 +35,10 @@ test("open parent and child resources, collapse groups and hide children", async
   await preview.getByRole("button", { name: /Children.*Nested/ }).click();
   await preview.getByRole("menuitem", { name: "Hidden", exact: true }).click();
   await expect(child).toBeHidden();
+  await page.keyboard.press("Escape");
+  await preview.getByRole("button", { name: "Search this view", exact: true }).click();
+  await preview.getByRole("textbox", { name: "Search this view", exact: true }).fill("missing resource");
+  await expect(preview.getByText("No results for “missing resource”", { exact: true })).toBeVisible();
+  await preview.getByRole("button", { name: "Clear search", exact: true }).click();
+  await expect(parent).toBeVisible();
 });
