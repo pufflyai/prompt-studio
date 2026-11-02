@@ -21,6 +21,21 @@ afterEach(() => {
 });
 
 describe("readPackageManifest", () => {
+  test("keeps an extension's icon beside its stable identity", () => {
+    const dir = createPackage({
+      name: "reports",
+      version: "1.0.0",
+      publisher: "acme",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+      icon: "FileChartColumn",
+    });
+    expect(readPackageManifest(dir).manifest).toMatchObject({
+      id: "acme.reports",
+      icon: "FileChartColumn",
+    });
+  });
+
   test("reads pstdio scope when declared", () => {
     const dir = createPackage({
       name: "repo-extension",

@@ -11,7 +11,8 @@ const installedExtensions: ProjectExtensionInstance[] = [
   {
     id: "planner-instance",
     projectId: "project-1",
-    extensionId: "pstdio.planner",
+    extensionId: "pstdio.pstdio-planner",
+    icon: "Kanban",
     installedExtensionId: "installed-planner",
     installName: "pstdio-planner",
     name: "pstdio-planner",
@@ -31,6 +32,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     id: "issue-tracker-instance",
     projectId: "project-1",
     extensionId: "acme.issue-tracker",
+    icon: "CircleDot",
     installedExtensionId: "installed-issue-tracker",
     installName: "issue-tracker",
     name: "issue-tracker",
@@ -53,7 +55,8 @@ const installedExtensions: ProjectExtensionInstance[] = [
   {
     id: "lab-instance",
     projectId: "project-1",
-    extensionId: "extension.lab",
+    extensionId: "pstdio.extension-lab",
+    icon: "FlaskConical",
     installedExtensionId: "installed-lab",
     installName: "extension-lab",
     name: "extension-lab",
@@ -73,7 +76,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.refine-tickets",
     localId: "refine-tickets",
-    extensionId: "pstdio.planner",
+    extensionId: "pstdio.pstdio-planner",
     extensionInstanceId: "planner-instance",
     title: "Refine open tickets",
     cron: "0 6 * * *",
@@ -83,7 +86,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.stuck-work-sweep",
     localId: "stuck-work-sweep",
-    extensionId: "pstdio.planner",
+    extensionId: "pstdio.pstdio-planner",
     extensionInstanceId: "planner-instance",
     title: "Sweep stuck work",
     cron: "*/30 * * * *",
@@ -96,14 +99,16 @@ const diagnostics: ExtensionDiagnostic[] = [
     code: "stale-template",
     severity: "warning",
     message: "Bundled template is older than the installed copy.",
-    extensionId: "pstdio.planner",
+    extensionId: "pstdio.pstdio-planner",
     sourcePath: "templates/ticket.md",
   },
 ];
 const marketplace = [
   {
     installName: "pstdio-reports",
-    displayName: "Prompt Studio Reports",
+    extensionId: "pstdio.pstdio-reports",
+    icon: "FileChartColumn",
+    displayName: "Agent Reports",
     description: "Workspace reports for agent handoffs.",
     installed: false,
     origin: {
@@ -116,6 +121,8 @@ const marketplace = [
   },
   {
     installName: "pstdio-planner",
+    extensionId: "pstdio.pstdio-planner",
+    icon: "Kanban",
     displayName: "Project Planner",
     description: "Tickets, managed attempts, reviews, and templates.",
     installed: false,

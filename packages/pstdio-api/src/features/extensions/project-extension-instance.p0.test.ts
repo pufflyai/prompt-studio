@@ -29,6 +29,14 @@ const installedSource = {
 };
 
 describe("toProjectExtensionInstance", () => {
+  test("includes the installed manifest icon in the Extensions response", () => {
+    const result = toProjectExtensionInstance(instance, {
+      ...installedSource,
+      manifest_json: { ...installedSource.manifest_json, icon: "FlaskConical" },
+    });
+    expect(result).toMatchObject({ extensionId: "pstdio.extension-lab", icon: "FlaskConical" });
+  });
+
   test("uses the upgrade eligibility supplied by the upgrade service", () => {
     const result = toProjectExtensionInstance(instance, installedSource, "hash-1", {
       canUpgrade: true,
