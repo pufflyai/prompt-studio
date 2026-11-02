@@ -71,7 +71,8 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
           variant="ghost"
           onClick={() => {
             props.onPlayingChange?.(false);
-            seek(0);
+            if (props.onRestart) props.onRestart();
+            else seek(0);
           }}
         >
           Restart

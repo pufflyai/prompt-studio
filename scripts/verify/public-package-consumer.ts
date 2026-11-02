@@ -168,7 +168,7 @@ import { DependencyTimeline } from "@pstdio/ui/dependency-timeline";
 import { KeyframeTimeline, sampleTrack, type KeyframeTrack } from "@pstdio/ui/keyframe-timeline";
 const animationTrack: KeyframeTrack = { id: "opacity", label: "Opacity", keyframes: [{ id: "start", time: 0, value: 0 }, { id: "end", time: 2, value: 1 }] };
 if (sampleTrack(animationTrack, 1) !== 0.5) throw new Error("Animation interpolation changed");
-const keyframeTimeline = createElement(KeyframeTimeline, { tracks: [animationTrack], duration: 2, currentTime: 1, onTimeChange: () => {} });
+const keyframeTimeline = createElement(KeyframeTimeline, { tracks: [animationTrack], duration: 2, currentTime: 1, onTimeChange: () => {}, onRestart: () => {} });
 let camera: CanvasCamera = { x: 0, y: 0, zoom: 1 };
 const canvas = createElement(Canvas, {
   "aria-label": "Design canvas", variant: "pan", zoom: camera.zoom, minZoom: 0.1, maxZoom: 4,

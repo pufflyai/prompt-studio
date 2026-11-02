@@ -93,7 +93,8 @@ Omit it for read-only review. A move onto an occupied frame preserves both keys.
 The caller owns animation data, playback, persistence and undo. Optional controlled
 `selection` and `onSelectionChange` connect an external inspector; otherwise the
 component owns transient selection. Use `playing` and `onPlayingChange` to connect
-transport controls to the caller’s clock. Markers navigate named moments without
+transport controls to the caller’s clock. Supply `onRestart` to restart a caller-owned
+loop range; the default restart seeks to zero. Markers navigate named moments without
 pretending to be editable property keys. Zoom and group expansion are temporary.
 
 Arrow keys on the ruler seek by one frame; Shift seeks ten; Home/End seek the bounds.
