@@ -35,3 +35,12 @@ test("values that are not plain data keep the new instance", () => {
   expect(shared.at).toBe(next.at);
   expect(shared.render).toBe(next.render);
 });
+
+test("moving a row keeps every row object, matched by id", () => {
+  const previous = { rows };
+  const moved = { rows: [structuredClone(rows[1]!), structuredClone(rows[0]!)] };
+  const shared = shareEqualValue(previous, moved);
+  expect(shared).toEqual(moved);
+  expect(shared.rows[0]).toBe(rows[1]);
+  expect(shared.rows[1]).toBe(rows[0]);
+});

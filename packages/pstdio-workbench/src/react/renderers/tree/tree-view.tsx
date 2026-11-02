@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { type ResourceContextAction, ScrollArea, TreeList, TreeListDragProvider } from "@pstdio/ui";
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   NavigationTarget,
   ResourceRef,
@@ -45,7 +45,6 @@ interface WorkbenchTreeViewProps {
 }
 
 const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
-const NO_SECTIONS: ReturnType<typeof toTreeListSection>[] = [];
 
 const treeCustomizationOptions = (body: TreeViewSection[], isSidenav: boolean) => ({
   suppressNodeContextMenus: isSidenav,
@@ -148,7 +147,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[treeViewId]) ??
     EMPTY_TREE_STATE;
   const { projectId, activeLocation, activeResource } = useTreeNavigationState(workbench);
-  const { body, childrenByNodeId, moveNode, error, footer, header, loadChildren, loading, retry } = useTreeData(
+  const { body, childrenByNodeId, moveNode, error, footer, header, loadChildren, loading, retry, scope } = useTreeData(
     workbench,
     treeViewId,
     resource,
@@ -199,10 +198,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     customizationRevision,
     onSidenavContextActionsChange,
   );
-  // Rows render in a background update: a newly opened page paints before its list mounts, and a
-  // later change to many rows does not hold up the frame that reacts to the click.
-  const shownSections = useDeferredValue(visibleSections, NO_SECTIONS);
-  const rowsPending = shownSections.length === 0 && visibleSections.length > 0;
   const activeNodeSelection = useTreeSelection(workbench, treeViewId, {
     sections: [...header, ...body, ...footer],
     childrenByNodeId,
@@ -296,11 +291,13 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         >
           <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
             <TreeViewBody
+              // A new level, owner or project starts from the skeleton instead of showing the previous rows.
+              key={scope}
               leadingContent={isSidenav ? <TreeModeReturn workbench={workbench} /> : undefined}
               error={error}
               loading={loading}
-              moduleLoading={treeState.loading || rowsPending}
-              sections={shownSections}
+              moduleLoading={treeState.loading}
+              sections={visibleSections}
               backgroundContextActions={isSidenav ? undefined : backgroundContextActions}
               draggable={isSidenav}
               customizationAvailable={isSidenav}

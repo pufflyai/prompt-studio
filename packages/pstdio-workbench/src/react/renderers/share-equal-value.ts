@@ -4,6 +4,8 @@ const isPlainData = (value: unknown): value is Record<string, unknown> => {
   return prototype === Object.prototype || prototype === null;
 };
 
+const hasId = (value: unknown): value is { id: string } => isPlainData(value) && typeof value.id === "string";
+
 /**
  * Returns `next`, reusing every part that equals the same part of `previous`. A reload that returns
  * equal data gives back `previous` itself, so views showing it do not render again; when one row
@@ -12,7 +14,10 @@ const isPlainData = (value: unknown): value is Record<string, unknown> => {
 export const shareEqualValue = <T>(previous: unknown, next: T): T => {
   if (Object.is(previous, next)) return next;
   if (Array.isArray(previous) && Array.isArray(next)) {
-    const shared = next.map((item, index) => shareEqualValue(previous[index], item));
+    // Rows with ids are matched by id, so a moved row keeps its object; other items by position.
+    const byId =
+      previous.every(hasId) && next.every(hasId) ? new Map(previous.map((item) => [item.id, item])) : undefined;
+    const shared = next.map((item, index) => shareEqualValue(byId ? byId.get(item.id) : previous[index], item));
     const same = shared.length === previous.length && shared.every((item, index) => item === previous[index]);
     return (same ? previous : shared) as T;
   }

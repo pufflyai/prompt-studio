@@ -153,5 +153,7 @@ export const useTreeData = (
     error: read.error ?? null,
     loading: read.loading,
     retry: read.retry,
+    // The level, owner and project the rows belong to. Search and page parameters stay in one scope.
+    scope: JSON.stringify([project, resourceKey(resource), mode, pageOwner]),
   };
 };

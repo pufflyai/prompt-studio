@@ -6,9 +6,10 @@ import {
   type TreeListMovePolicy,
   type TreeListSection,
 } from "@pstdio/ui";
-import type { ReactNode, RefObject } from "react";
+import { type ReactNode, type RefObject, useDeferredValue } from "react";
 
 const TREE_SKELETON_WIDTHS = ["70%", "50%", "82%", "60%", "44%", "76%"];
+const NO_SECTIONS: TreeListSection[] = [];
 
 const TreeViewSkeleton = () => (
   <Stack gap="sm" px="sm" py="xs" aria-hidden>
@@ -63,29 +64,36 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     onNavigate,
   } = props;
 
-  if ((error || loading) && sections.length === 0) return <TreeList sections={[]} leadingContent={leadingContent} />;
-  if (moduleLoading)
-    return (
-      <TreeList
-        sections={[]}
-        leadingContent={
-          <>
-            {leadingContent}
-            <TreeViewSkeleton />
-          </>
-        }
-      />
-    );
+  // Rows render in a background update: a newly opened page paints before its list mounts, and a
+  // later change to many rows does not hold up the frame that reacts to the click.
+  const shownSections = useDeferredValue(sections, NO_SECTIONS);
+  const rowsPending = shownSections.length === 0 && sections.length > 0;
+
+  const skeleton = (
+    <TreeList
+      sections={[]}
+      leadingContent={
+        <>
+          {leadingContent}
+          <TreeViewSkeleton />
+        </>
+      }
+    />
+  );
+  if (rowsPending) return skeleton;
+  if ((error || loading) && shownSections.length === 0)
+    return <TreeList sections={[]} leadingContent={leadingContent} />;
+  if (moduleLoading) return skeleton;
 
   // Keep an empty-but-customizable tree right-clickable so a fully-hidden tree
   // can still be restored from the back-of-tree menu.
-  if (sections.length === 0 && (backgroundContextActions?.length ?? 0) === 0 && !customizationAvailable) {
+  if (shownSections.length === 0 && (backgroundContextActions?.length ?? 0) === 0 && !customizationAvailable) {
     return <EmptyState minH="12rem" title="No tree items" />;
   }
 
   return (
     <TreeList
-      sections={sections}
+      sections={shownSections}
       leadingContent={leadingContent}
       backgroundContextActions={backgroundContextActions}
       draggable={draggable}
