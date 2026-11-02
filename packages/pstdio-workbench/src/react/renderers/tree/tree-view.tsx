@@ -333,7 +333,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           request={paramsRequest}
           renderParamField={renderParamField}
           workbench={workbench}
-          onClose={() => setParamsRequest(null)}
+          onClose={() => setParamsRequest((current) => (current === paramsRequest ? null : current))}
         />
       </Flex>
     </TreeListDragProvider>

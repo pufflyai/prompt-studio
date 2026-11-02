@@ -1,5 +1,5 @@
 import type { SessionMessage } from "pstdio-api-contracts";
-import type { SyncSpace } from "pstdio-sync";
+import type { SyncSpace } from "pstdio-sync/encryption";
 import type { DocumentRelay } from "pstdio-sync/relay";
 import { createLineReader } from "./log-entries";
 import type { SessionLogFiles } from "./log-files";

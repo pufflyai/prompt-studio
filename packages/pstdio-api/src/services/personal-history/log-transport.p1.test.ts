@@ -2,7 +2,7 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSyncSpace, openLive, openUpdate } from "pstdio-sync";
+import { createSyncSpace, openLive, openUpdate } from "pstdio-sync/encryption";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { discardLegacyHistory } from "../relay/personal-context";

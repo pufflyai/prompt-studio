@@ -48,7 +48,7 @@ and verify every complete immutable asset before publishing. Persist the sealed
 checkpoint in recovery before the first send and retry its exact bytes after a
 lost reply. Completing revision N never clears recovery revisions after N.
 
-[`captureCheckpoint`](../../../packages/pstdio-sync/src/checkpoint-capture.ts)
+[`captureCheckpoint`](../../../packages/pstdio-sync/src/records/checkpoint-capture.ts)
 coalesces captured storage writes with their first observed preconditions and final
 values. The host supplies the same storage observer used by ordinary saves. Database
 storage keeps each record in its own document

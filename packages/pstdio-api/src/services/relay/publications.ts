@@ -35,7 +35,14 @@ export const startPublishedExtensions = (input: {
       signal.removeEventListener("abort", abort);
     }
   };
-  const documents = createExtensionDocumentSync({ config, owner, deps, access, statusChanged: input.statusChanged });
+  const documents = createExtensionDocumentSync({
+    config,
+    owner,
+    deps,
+    access,
+    subscribe: (space, id) => connection.subscribe(space, id),
+    statusChanged: input.statusChanged,
+  });
   // A set that failed to activate is tried again after a growing delay, or at once when it changes.
   // Retrying on every reconnect would repeat package checks, installs and webview builds each time.
   let failed: { key: string; delay: number; waiting: boolean } | undefined;
@@ -46,8 +53,10 @@ export const startPublishedExtensions = (input: {
     projectId: config.workbenchId,
     access,
     signal,
-    synchronize: async (attemptSignal, subscribe) => {
-      await documents.synchronize(attemptSignal, subscribe);
+    acceptsChange: documents.acceptsChange,
+    synchronizeChanged: documents.synchronizeChanged,
+    synchronize: async (attemptSignal) => {
+      await documents.synchronize(attemptSignal);
       const catalog = await openPublishedCatalog(deps, config.workbenchId, attemptSignal);
       const selected = await catalog.list();
       const key = canonicalJson(selected.map(({ recordId, value, asset }) => ({ recordId, value, asset })));
@@ -95,7 +104,7 @@ export const startPublishedExtensions = (input: {
     wake: connection.wake,
     done: connection.done.finally(() => {
       clearTimeout(retry);
-      documents.close();
+      return documents.close();
     }),
     status: async () => {
       const status = await documents.status();

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { SessionMessage } from "pstdio-api-contracts";
-import type { SyncSpace } from "pstdio-sync";
+import type { SyncSpace } from "pstdio-sync/encryption";
 import type { DocumentRelay } from "pstdio-sync/relay";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";

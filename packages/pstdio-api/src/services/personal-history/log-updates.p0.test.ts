@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createSyncSpace } from "pstdio-sync";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { logRelayFixture } from "./log-transport.fixture";
 import { publishLogUpdate, readLogUpdate } from "./log-updates";
 

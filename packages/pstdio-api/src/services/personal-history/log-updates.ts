@@ -1,4 +1,4 @@
-import { openBlob, openUpdate, type SyncSpace, sealBlob, sealUpdate } from "pstdio-sync";
+import { openBlob, openUpdate, type SyncSpace, sealBlob, sealUpdate } from "pstdio-sync/encryption";
 import type { DocumentRelay } from "pstdio-sync/relay";
 import type { StoredUpdate } from "pstdio-sync-contracts";
 import { z } from "zod";

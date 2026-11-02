@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM"],
+    "types": ["bun"],
+    "typeRoots": ["./node_modules/@types"]
+  },
+  "include": ["*.ts", "*.tsx"]
+}

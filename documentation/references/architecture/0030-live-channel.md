@@ -60,6 +60,16 @@ delay; it never reconnects healthy owners. `createDocumentRelay` subscribes thro
 wake owners to read their encrypted directory. PS-1014 owns finer session sync cost and reader
 integration; this protocol supplies the events it needs.
 
+Owners with exact document workers can route change notices and subscription admission catch-up
+to those workers while a directory scan is still running. Their ownership predicate filters foreign
+discovery notices. Owner retry registers foreground documents again before resuming its directory
+drain. Closing an owner waits for both kinds of work and releases its subscriptions.
+
+Planned access renewal restores the socket's routing state while preserving active durable work.
+The local disconnect event distinguishes renewal from lost connectivity, which cancels the owner
+attempt. Owners refresh their encryption keys on readiness independently of their retained attempt
+signal; a new key generation replaces generation-specific state.
+
 ## Calls
 
 A callee sends `register` or `unregister` with `spaceOwner` and opaque `procedure`.
@@ -113,3 +123,10 @@ No per-topic polling or timers run on an idle channel.
 
 Routing runs inside one relay process. Several processes will require a forwarding layer while
 preserving these project, space and device boundaries.
+
+
+## Native editor presence
+
+Native editors use one encrypted project presence topic derived from `space.documentId(["pstdio.native-document-presence", "v2"])` (with the array JSON-encoded before derivation). Its frames and sender/topic identity are authenticated by the live encryption envelope. Topic admission republishes current local participants. Presence delivery runs independently of held durable document work.
+
+Each shared socket resets retained server controls on every reconnect. Its local disconnect event distinguishes planned credential renewal from loss of connectivity. Renewal cancels old presence encryption/decryption but retains remote participant leases and active durable document jobs; a real disconnect clears remote presence and retires the owner attempt. Exact document hints and their admission catch-up use the same per-document workers, including after an owner retries.

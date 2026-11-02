@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createSyncSpace, openLive } from "pstdio-sync";
+import { createSyncSpace, openLive } from "pstdio-sync/encryption";
 import { createSessionStore } from "../../features/sessions/session-store";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";
 import { createLivePublisher, createLiveReceiver } from "./live-messages";

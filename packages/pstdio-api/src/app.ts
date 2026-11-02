@@ -1,3 +1,4 @@
+import { hostname } from "node:os";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { createStoragePositions } from "pstdio-api-contracts";
@@ -8,6 +9,7 @@ import { createAppSettingsService, createCoreDomainServices } from "./app-domain
 import { productionAppDependencies, wireAppExtensionServices } from "./app-extension-services";
 import { registerApi } from "./app-routing";
 import {
+  closeAppDatabase,
   createAppTerminalSupervisor,
   createRuntimeRouteDeps,
   startAppArtifactMountWatch,
@@ -21,7 +23,6 @@ import { createArtifactMountWriteLedger } from "./features/extensions/artifact-m
 import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
-import type { SessionHookDeps } from "./features/hooks/session-hooks";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
@@ -29,12 +30,19 @@ import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
+import { createNativeDocumentService } from "./services/native-documents/documents";
+import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
+import { resolveNativeTextAccess } from "./services/native-documents/source-access";
+import { initializeNativeSource } from "./services/native-documents/source-binding";
+import { upgradeNativeSources } from "./services/native-documents/source-upgrade";
 import { createSessionLogFiles } from "./services/personal-history/log-files";
 import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
+import { upgradeArtifactFileProjections } from "./services/shared-files/artifact-projection-upgrade";
 import { createSkillService } from "./services/skill-service";
+import { createTextEditingService } from "./services/text-editing/service";
 import type { AppBindings } from "./types";
 
 const AUTOMATION_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -84,6 +92,30 @@ const registerAppRuntime = (
   });
 };
 
+const nativePresenceIdentity = async (account: ReturnType<typeof createAppAccount>["accountService"]) => {
+  const { login } = await account.status();
+  return { label: (login?.email ?? "Local editor").slice(0, 64), deviceName: hostname().slice(0, 64) };
+};
+
+const createAppNativeDocuments = (
+  deviceId: string,
+  account: ReturnType<typeof createAppAccount>["accountService"],
+  getDeps: () => RouteDeps,
+  storage: RouteDeps["extensionStorageService"],
+  catalog: RouteDeps["extensionRuntimeCatalog"],
+) => {
+  return createNativeDocumentService({
+    deviceId: deviceId,
+    presenceIdentity: () => nativePresenceIdentity(account),
+    catalog,
+    storage,
+    load: (input) => loadNativeMarkdownFile(getDeps(), input),
+    access: (input) => resolveNativeTextAccess(getDeps(), input),
+    initialize: (loaded) => initializeNativeSource(getDeps(), loaded),
+    save: (input) => saveNativeMarkdownFile(getDeps(), input),
+  });
+};
+
 const buildApp = async (
   input: CreateAppInput,
   dependencies: AppDependencies,
@@ -115,6 +147,11 @@ const buildApp = async (
     settingsDBService,
     skillsDBService,
   } = dbs;
+  await upgradeNativeSources(extensionStorageDBService);
+  await upgradeArtifactFileProjections({
+    projections: extensionStorageDBService.fileProjections,
+    contexts: await extensionStorageDBService.fileProjections.legacyContexts(),
+  });
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
@@ -183,8 +220,7 @@ const buildApp = async (
   });
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
-  const sessionHookDeps = (): SessionHookDeps => deps;
-  const sessionHooks = createSessionLifecycleCallbacks(sessionHookDeps);
+  const sessionHooks = createSessionLifecycleCallbacks(() => deps);
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
@@ -203,6 +239,14 @@ const buildApp = async (
 
   const terminalSupervisor = createAppTerminalSupervisor();
   const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
+
+  const nativeDocuments = createAppNativeDocuments(
+    environmentId,
+    account.accountService,
+    () => deps,
+    extensionStorageDBService,
+    extensionRuntimeCatalog,
+  );
 
   deps = {
     personalHistoryService: createPersonalHistoryService({
@@ -236,6 +280,12 @@ const buildApp = async (
     fileService,
     boardViewsService: boardViewsDBService,
     notificationService,
+    nativeDocuments,
+    textEditing: createTextEditingService({
+      documents: nativeDocuments,
+      access: (input) => resolveNativeTextAccess(deps, input),
+      catalog: extensionRuntimeCatalog,
+    }),
     installedExtensionSourcesService: installedExtensionSourcesDBService,
     extensionAutomationPreferencesService,
     extensionConnectionService,
@@ -253,6 +303,7 @@ const buildApp = async (
     terminal: terminalSupervisor.api,
   };
 
+  await deps.nativeDocuments.recover();
   await automationService.recoverInterruptedRuns();
 
   const extensionScheduler = startAppExtensionScheduler(deps, projectService, storageRoot);
@@ -279,13 +330,7 @@ const buildApp = async (
     artifactMountWatch,
     automationService,
     terminalSupervisor,
-    closeDb: async () => {
-      try {
-        await deps.extensionResourceSequencesService.flush();
-      } finally {
-        await closeDb();
-      }
-    },
+    closeDb: () => closeAppDatabase(deps, closeDb),
   });
   return account.connectAccountRelay({ app, close, deps, eventBus });
 };

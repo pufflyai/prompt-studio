@@ -1,11 +1,11 @@
 import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
-import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { AccountRequestError } from "../account/native-account";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
+import type { RelayDeps } from "./deps";
 import { startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
@@ -36,7 +36,7 @@ const assertLiveAvailable = (channel?: LiveConnection) => {
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
 export const startRelayRuntime = async (input: {
-  deps: ExtensionsRouteDeps;
+  deps: RelayDeps;
   denied?: () => void;
   statusChanged?: (workbenchId: string) => void;
 }) => {
@@ -143,6 +143,7 @@ export const startRelayRuntime = async (input: {
     return running;
   };
   const stopStorage = deps.extensionStorageService.watch((owner) => {
+    const documentId = owner.documentId;
     if (!workbenches.has(owner.workbenchId)) return;
     if (owner.extensionId === publishedExtensionsId) {
       publications.get(owner.workbenchId)?.wake();
@@ -152,10 +153,15 @@ export const startRelayRuntime = async (input: {
     storageChanges.changed(owner.workbenchId);
     statusChanged(owner.workbenchId);
     const connection = connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]));
-    if (connection) connection.wake();
-    else void refresh();
+    if (connection) {
+      if (documentId && documentId !== "records") connection.wakeDocument(documentId);
+      else connection.wake();
+    } else void refresh();
   });
   const stopCatalog = deps.extensionRuntimeCatalog.subscribeInvalidation(() => void refresh());
+  const stopNativeSources = deps.nativeDocuments.sources.watch((owner, name) => {
+    connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]))?.wakeDocument(name);
+  });
   const stopEvents = deps.eventBus.subscribe((event) => {
     if (["extension_instances", "installed_extension_sources", "projects", "workspaces"].includes(event.table))
       void refresh();
@@ -238,6 +244,7 @@ export const startRelayRuntime = async (input: {
     async close() {
       stopStorage();
       stopCatalog();
+      stopNativeSources();
       stopEvents();
       clearTimeout(retry);
       storageChanges.close();
@@ -253,7 +260,7 @@ export const startRelayRuntime = async (input: {
     },
   };
 };
-export const connectAppRelay = async <T extends { deps: ExtensionsRouteDeps; close: () => Promise<void> }>(
+export const connectAppRelay = async <T extends { deps: RelayDeps; close: () => Promise<void> }>(
   app: T,
   account: {
     denied: () => void;

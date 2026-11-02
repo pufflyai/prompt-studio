@@ -1,5 +1,5 @@
 import { type SessionMessage, sessionMessageSchema } from "pstdio-api-contracts";
-import { type SyncSpace, sealLive } from "pstdio-sync";
+import { type SyncSpace, sealLive } from "pstdio-sync/encryption";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 

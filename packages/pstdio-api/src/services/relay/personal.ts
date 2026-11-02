@@ -1,4 +1,4 @@
-import type { SyncSpace } from "pstdio-sync";
+import type { SyncSpace } from "pstdio-sync/encryption";
 import { createDocumentRelayConnection, createLiveConnection, type LiveConnection } from "pstdio-sync/relay";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
@@ -102,7 +102,6 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   const changedSessions = new Set<string>();
 
   const announcements = createPersonalAnnouncements(deps, config.workbenchId, signal);
-  const relayFor = documents.relayFor;
   const prepare = async (attemptSignal: AbortSignal) => {
     if (!legacyDiscarded) {
       await discardLegacyHistory(config, deps);
@@ -111,7 +110,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     const prepared = await documents.prepare(attemptSignal);
     await channel.prepare(prepared.personal);
     publisher.prepare(prepared.personal, channel.send);
-    if (prepared.renewed) {
+    if (prepared.renewed || prepared.recreated) {
       liveReceiver.reset();
       readAll = true;
       remoteIndexChanged = true;
@@ -141,7 +140,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     progress.receive(ownSessions, remote, reading);
     input.statusChanged?.();
     for (const id of reading) {
-      await receiver.read([id], personal, relayFor(personal));
+      await receiver.read([id], personal, documents.relayFor(personal));
       progress.received(id);
       input.statusChanged?.();
     }
@@ -159,6 +158,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     projectId: config.workbenchId,
     access: input.access,
     signal,
+    onReady: documents.invalidateKeys,
     onStatusChange: () => {
       if (!connection.status().connected) {
         readAll = true;
@@ -186,7 +186,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
         attemptSignal.throwIfAborted();
         const sessions = publishing.all ? [...ownSessions] : own.filter((id) => ownSessions.has(id));
         for (const id of sessions) publishingSessions.add(id);
-        await publisher.publish(sessions, personal, relayFor(personal), { skipUnchanged: publishing.all });
+        await publisher.publish(sessions, personal, documents.relayFor(personal), { skipUnchanged: publishing.all });
         attemptSignal.throwIfAborted();
         const indexSynced = await synchronizeIndex(full, captured);
         attemptSignal.throwIfAborted();

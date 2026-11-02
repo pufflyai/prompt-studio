@@ -1,5 +1,5 @@
 import { hostname } from "node:os";
-import { openLive, type SyncSpace } from "pstdio-sync";
+import { openLive, type SyncSpace } from "pstdio-sync/encryption";
 import type { LiveServerMessage } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { capturePersonalHistory } from "../personal-history/capture";

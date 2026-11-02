@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { scopeRecordStorage } from "pstdio-sync";
+import { scopeRecordStorage } from "pstdio-sync/records";
 import type { createExtensionStorageDBService } from "./extension-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 

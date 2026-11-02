@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createAssetTransfersDBService, createDb, createProjectsDBService } from "pstdio-db";
 import { createAssetBytesStorage } from "pstdio-storage";
-import { UnreadableSyncData } from "pstdio-sync";
+import { UnreadableSyncData } from "pstdio-sync/encryption";
 import { createAssetTransferService } from "../../../services/asset-transfer-service";
 import { createRecordAssets } from "./record-assets";
 

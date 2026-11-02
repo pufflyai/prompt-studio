@@ -60,7 +60,7 @@
   },
   "scripts": {
     "build": "rm -rf ./dist && bun run build:js && bun run build:types && bun ../../scripts/release/stage-sdk-package.ts .",
-    "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/extensions/index.ts ./src/extensions/react/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts ./src/testing/index.ts ./src/data/index.ts --outdir ./dist --root ./src --target browser --format esm --external mustache --external react --external @tanstack/react-query",
+    "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/extensions/index.ts ./src/extensions/react/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts ./src/testing/index.ts ./src/data/index.ts --outdir ./dist --root ./src --target browser --format esm --external mustache --external react --external @tanstack/react-query --splitting --no-module-preload --external yjs",
     "build:api-report": "rm -rf ./.api-report && rolldown -c rolldown.api-report.config.ts",
     "build:types": "rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist",
     "prepack": "bun run build",
@@ -73,7 +73,8 @@
   "dependencies": {
     "@noble/hashes": "^2.4.0",
     "mustache": "^4.2.0",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "yjs": "^13.6.29"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
@@ -98,7 +99,6 @@
     "react": "^19.0.0",
     "rolldown": "^1.2.11",
     "rolldown-plugin-dts": "^0.28.6",
-    "typescript": "6.0.2",
-    "yjs": "^13.6.29"
+    "typescript": "6.0.2"
   }
 }

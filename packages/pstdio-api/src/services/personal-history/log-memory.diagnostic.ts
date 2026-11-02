@@ -6,7 +6,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSyncSpace } from "pstdio-sync";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentRelayConnection, createLiveConnection, type DocumentRelay } from "pstdio-sync/relay";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";
 import { createTestApp } from "../../test-utils/create-test-app";

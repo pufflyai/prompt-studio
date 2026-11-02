@@ -1,4 +1,5 @@
-import type { DocumentStore, StorageOwner, SyncSpace } from "pstdio-sync";
+import type { DocumentStore, StorageOwner } from "pstdio-sync";
+import type { SyncSpace } from "pstdio-sync/encryption";
 import { createDocumentRelay, createDocumentSync, fetchSyncSpaces, type SubscribeDocument } from "pstdio-sync/relay";
 import { historyReferenceName } from "../personal-history/references";
 import { documentProgress } from "./document-progress";
@@ -17,6 +18,8 @@ export const createPersonalDocuments = (input: {
   const { config, context } = input;
   let requestSignal = input.signal;
   let keysFor: AbortSignal | undefined;
+  let keyRevision = 0;
+  let preparedRevision = -1;
   let spaces: Awaited<ReturnType<typeof fetchSyncSpaces>> | undefined;
   let records: ReturnType<typeof createDocumentSync> | undefined;
   let shared: ReturnType<typeof createDocumentSync> | undefined;
@@ -49,6 +52,9 @@ export const createPersonalDocuments = (input: {
   return {
     relayFor,
     close,
+    invalidateKeys() {
+      keyRevision++;
+    },
     get space() {
       return spaces?.personal;
     },
@@ -56,9 +62,12 @@ export const createPersonalDocuments = (input: {
     async prepare(signal: AbortSignal) {
       requestSignal = signal;
       const renewed = keysFor !== signal;
-      if (!renewed) return { personal: spaces!.personal, renewed: false, recreated: false };
+      const revision = keyRevision;
+      if (!renewed && preparedRevision === revision)
+        return { personal: spaces!.personal, renewed: false, recreated: false };
       const keys = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal });
       keysFor = signal;
+      preparedRevision = revision;
       const recreated =
         spaces?.personal.generation !== keys.personal.generation ||
         spaces?.project.generation !== keys.project.generation;

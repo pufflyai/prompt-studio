@@ -297,6 +297,8 @@ export interface ExtensionDefinition
     BehaviourContributions,
     AssetContributions,
     ProviderContributions {
+  // biome-ignore lint/suspicious/noExplicitAny: each source retains its own inferred parameter schema
+  textSources?: readonly import("./text-source").TextSourceDefinition<any>[];
   settings?: ExtensionSettingsContribution;
   /** Local query indexes. The host installs these before publishing this extension's runtime. */
   storageIndexes?: StorageRecordIndex[];

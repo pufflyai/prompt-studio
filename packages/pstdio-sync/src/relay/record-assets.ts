@@ -1,6 +1,6 @@
 import type { Asset, AssetReference } from "pstdio-sync-contracts";
 import { openBlob, type SyncSpace, sealBlob, UnreadableSyncData } from "../encryption";
-import type { AssetStore } from "../types";
+import type { AssetStore } from "../shared";
 import type { DocumentRelay } from "./document-sync-types";
 
 /** Local memory of which relay blob holds each asset's ciphertext, so retries reuse the same bytes. */

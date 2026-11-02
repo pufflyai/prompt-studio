@@ -1,5 +1,11 @@
 import { and, arrayOverlaps, eq, inArray, isNull, or } from "drizzle-orm";
-import { applyRecordChange, blankRecord, type ResolutionState, recordConflict, validateResolution } from "pstdio-sync";
+import {
+  applyRecordChange,
+  blankRecord,
+  type ResolutionState,
+  recordConflict,
+  validateResolution,
+} from "pstdio-sync/records";
 import type { Mutation } from "pstdio-sync-contracts";
 import { conflictFromRow } from "./codec";
 import type { RelayTransaction } from "./database";

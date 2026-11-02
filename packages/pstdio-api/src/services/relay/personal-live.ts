@@ -1,4 +1,4 @@
-import type { SyncSpace } from "pstdio-sync";
+import type { SyncSpace } from "pstdio-sync/encryption";
 import type { LiveConnection } from "pstdio-sync/relay";
 import type { LiveServerMessage } from "pstdio-sync-contracts";
 import { personalLiveTopic } from "../personal-history/live-messages";
