@@ -11,6 +11,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { createCommandPaletteModule } from "../command-palette/module";
+import { registerExtensionsPage } from "../extensions/extensions-page";
 import { createHeadersModule } from "../headers/module";
 import { createHelpModule } from "../help/module";
 import { createNotificationsModule } from "../notifications/module";
@@ -197,6 +198,13 @@ const bootstrapWorkbench = (desktop = false) => {
   for (const module of [
     createSidenavModule(),
     createCommandPaletteModule(),
+    {
+      id: "story.extensions",
+      activate(ctx: WorkbenchModuleContext) {
+        registerExtensionsPage(ctx);
+        return [];
+      },
+    },
     createWorkspacesModule(),
     createProjectsModule(),
     createHeadersModule(desktop ? new DesktopProjectTabsController([], async () => {}) : undefined),

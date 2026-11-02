@@ -23,6 +23,12 @@ import { removeWorkspaceWorktreeHandler, removeWorkspaceWorktreeRoute } from "./
 import { renameWorkspaceHandler, renameWorkspaceRoute } from "./endpoints/rename-workspace";
 import { setStartupLogHandler, setStartupLogRoute } from "./endpoints/set-startup-log";
 import {
+  getWorkspaceCapacityHandler,
+  getWorkspaceCapacityRoute,
+  updateWorkspaceCapacityHandler,
+  updateWorkspaceCapacityRoute,
+} from "./endpoints/workspace-capacity";
+import {
   createWorkspaceDirectoryHandler,
   createWorkspaceDirectoryRoute,
   createWorkspaceFileHandler,
@@ -42,6 +48,8 @@ import {
 export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
+  routes.openapi(getWorkspaceCapacityRoute, getWorkspaceCapacityHandler(deps));
+  routes.openapi(updateWorkspaceCapacityRoute, updateWorkspaceCapacityHandler(deps));
   routes.openapi(queryWorkspaceProvidersRoute, queryWorkspaceProvidersHandler(deps));
   routes.openapi(listWorkspaceProvidersRoute, listWorkspaceProvidersHandler(deps));
   routes.openapi(createWorkspaceRoute, createWorkspaceHandler(deps));

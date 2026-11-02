@@ -84,7 +84,20 @@ export interface ExtensionWorkspaceProvider {
   params: ParamObjectSchema;
 }
 
+/** Live capacity of the device serving the request. This setting is never synced. */
+export interface WorkspaceCapacity {
+  deviceId: string;
+  deviceName: string;
+  activeCount: number;
+  /** null means unlimited. */
+  limit: number | null;
+}
+
 export interface ExtensionWorkspacesApi {
+  /** Counts distinct workspaces running sessions, across all projects on this device. */
+  getCapacity(): Promise<WorkspaceCapacity>;
+  /** Sets this device's limit and starts waiting sessions when capacity opens. */
+  updateCapacity(input: { limit: number | null }): Promise<WorkspaceCapacity>;
   listProviders(): Promise<ExtensionWorkspaceProvider[]>;
   getDefault(): Promise<ExtensionWorkspace | null>;
   list(): Promise<ExtensionWorkspace[]>;

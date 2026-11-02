@@ -3,7 +3,7 @@ import { ScopedDialog as Dialog } from "@pstdio/ui";
 import { KanbanRendererCreateDialog } from "@pstdio/ui/kanban-renderer";
 import { useEffect, useState } from "react";
 import type { RegisteredKanbanRendererContribution } from "../../core";
-import { bindReactKanbanPresentation } from "../renderers/kanban/kanban-presentation";
+import type { ReactRegisteredKanbanRendererContribution } from "../renderers/kanban/kanban-presentation";
 import { useKanbanAttributes } from "../renderers/kanban/use-kanban-attributes";
 import { RendererReadNotice } from "../renderers/renderer-read-notice";
 
@@ -14,7 +14,7 @@ interface RendererCreateDialogProps {
 
 export const RendererCreateDialog = (props: RendererCreateDialogProps) => {
   const { onClose } = props;
-  const contribution = bindReactKanbanPresentation(props.contribution);
+  const contribution = props.contribution as ReactRegisteredKanbanRendererContribution;
   const attributes = useKanbanAttributes(contribution.attributes);
   const [read, setRead] = useState<{ ready: boolean; error?: string }>({ ready: false });
   const [revision, setRevision] = useState(0);
