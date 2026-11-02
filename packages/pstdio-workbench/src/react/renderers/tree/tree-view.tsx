@@ -147,7 +147,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[treeViewId]) ??
     EMPTY_TREE_STATE;
   const { projectId, activeLocation, activeResource } = useTreeNavigationState(workbench);
-  const { body, childrenByNodeId, moveNode, error, footer, header, loadChildren, loading, retry, scope } = useTreeData(
+  const { body, childrenByNodeId, moveNode, error, footer, header, loadChildren, loading, retry } = useTreeData(
     workbench,
     treeViewId,
     resource,
@@ -291,8 +291,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         >
           <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
             <TreeViewBody
-              // A new level, owner or project starts from the skeleton instead of showing the previous rows.
-              key={scope}
               leadingContent={isSidenav ? <TreeModeReturn workbench={workbench} /> : undefined}
               error={error}
               loading={loading}
