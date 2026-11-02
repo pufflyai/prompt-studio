@@ -50,8 +50,19 @@ export const openCloudProjectInPicker = async (input: {
   }
 };
 
-export const reopenPreparedProjectOffline = async (input: { baseUrl: string; token: string; projectId: string }) => {
-  const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
+export const reopenPreparedProjectOffline = async (
+  restart: () => Promise<{ baseUrl: string; token: string; projectId: string }>,
+) => {
+  const [device, launched] = await Promise.allSettled([restart(), chromium.launch(PACKAGED_DASHBOARD_BROWSER)]);
+  if (device.status === "rejected" || launched.status === "rejected") {
+    const cleanup = await Promise.allSettled([launched.status === "fulfilled" ? launched.value.close() : undefined]);
+    throw new AggregateError(
+      [device, launched, ...cleanup].flatMap((result) => (result.status === "rejected" ? [result.reason] : [])),
+      "Could not restart the offline device and browser",
+    );
+  }
+  const input = device.value;
+  const browser = launched.value;
   try {
     const page = await browser.newPage();
     await page.addInitScript((projectId) => {

@@ -77,25 +77,44 @@ const startDevice = async (root: string, env: Record<string, string>) => {
   return { host, client, command, state, reach };
 };
 
-const startPickerDevices = async (root: string, env: Record<string, string>) => {
-  // All three cold starts remain inside the test's allowance and need no shared setup state.
-  const [first, second, browser] = await Promise.allSettled([
-    startDevice(join(root, "first"), env),
+const startPickerDevices = async <T>(
+  root: string,
+  env: Record<string, string>,
+  repository: Promise<{ remote: string; checkout: string }>,
+  prepare: (
+    first: Awaited<ReturnType<typeof startDevice>>,
+    repository: { remote: string; checkout: string },
+  ) => Promise<T>,
+) => {
+  // The source device can prepare its project while the other cold starts finish.
+  const startingFirst = startDevice(join(root, "first"), env);
+  const [first, second, browser, prepared, checkout] = await Promise.allSettled([
+    startingFirst,
     startDevice(join(root, "second"), env),
     chromium.launch(PACKAGED_DASHBOARD_BROWSER),
+    Promise.all([startingFirst, repository]).then(([device, checkout]) => prepare(device, checkout)),
+    repository,
   ]);
-  if (first.status === "rejected" || second.status === "rejected" || browser.status === "rejected") {
+  if (
+    first.status === "rejected" ||
+    second.status === "rejected" ||
+    browser.status === "rejected" ||
+    prepared.status === "rejected" ||
+    checkout.status === "rejected"
+  ) {
     const cleanup = await Promise.allSettled([
       first.status === "fulfilled" ? stopProcess(first.value.host.child) : undefined,
       second.status === "fulfilled" ? stopProcess(second.value.host.child) : undefined,
       browser.status === "fulfilled" ? browser.value.close() : undefined,
     ]);
     throw new AggregateError(
-      [first, second, browser, ...cleanup].flatMap((result) => (result.status === "rejected" ? [result.reason] : [])),
+      [first, second, browser, prepared, checkout, ...cleanup].flatMap((result) =>
+        result.status === "rejected" ? [result.reason] : [],
+      ),
       "Could not start the Cloud picker devices and browser",
     );
   }
-  return { first: first.value, second: second.value, browser: browser.value };
+  return { first: first.value, second: second.value, browser: browser.value, prepared: prepared.value };
 };
 
 const signIn = async (device: Awaited<ReturnType<typeof startDevice>>, origin: string) => {
@@ -107,16 +126,26 @@ const signIn = async (device: Awaited<ReturnType<typeof startDevice>>, origin: s
   expect((await fetch(callback)).status).toBe(200);
 };
 
-const git = (cwd: string, ...args: string[]) =>
-  expect(Bun.spawnSync(["git", ...args], { cwd, stdout: "ignore", stderr: "ignore" }).exitCode).toBe(0);
+const git = async (cwd: string, ...args: string[]) => {
+  const child = Bun.spawn(["git", ...args], { cwd, stdout: "ignore", stderr: "ignore" });
+  expect(await child.exited).toBe(0);
+};
 
 // A repository with one commit, served from a local path like any git remote.
 const writeRepository = async (path: string) => {
   await mkdir(path);
-  git(path, "init", "-q");
+  await git(path, "init", "-q");
   await Bun.write(join(path, "README.md"), "Shared notes");
-  git(path, "add", ".");
-  git(path, "-c", "user.name=Test", "-c", "user.email=test@example.test", "commit", "-qm", "first");
+  await git(path, "add", ".");
+  await git(path, "-c", "user.name=Test", "-c", "user.email=test@example.test", "commit", "-qm", "first");
+};
+
+const prepareRepository = async (root: string) => {
+  const remote = join(root, "origin");
+  const checkout = join(root, "first-checkout");
+  await writeRepository(remote);
+  await git(root, "clone", "-q", remote, checkout);
+  return { remote, checkout };
 };
 
 const write = (device: Awaited<ReturnType<typeof startDevice>>, projectId: string, field: string, value: string) =>
@@ -144,23 +173,26 @@ test(
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]),
         NODE_EXTRA_CA_CERTS: tls.cert,
       };
-      devices = await startPickerDevices(root, env);
-      const { first, browser } = devices;
-      let { second } = devices;
-      phase("devices and browser ready");
-      const remote = join(root, "origin");
-      await writeRepository(remote);
-      const checkout = join(root, "first-checkout");
-      git(root, "clone", "-q", remote, checkout);
-      const project = await first.client.projects.create(folderProjectInput({ name: "Shared notes" }, checkout));
-      await write(first, project.id, "note", "written on the first device");
-      await first.command(project.id, "write-file", { path: "note.md", content: "# Shared note" });
-      await first.command(project.id, "write-file", { path: "artifact.html", content: "<h1>Shared artifact</h1>" });
-      phase("source files saved");
-      await signIn(first, peer.origin);
-      await first.client.account.syncProject(project.id);
-      await first.reach(project.id, "synced");
-      phase("source project synced");
+      const started = await startPickerDevices(root, env, prepareRepository(root), async (first, repository) => {
+        phase("first device and checkout ready");
+        const project = await first.client.projects.create(
+          folderProjectInput({ name: "Shared notes" }, repository.checkout),
+        );
+        await write(first, project.id, "note", "written on the first device");
+        await first.command(project.id, "write-file", { path: "note.md", content: "# Shared note" });
+        await first.command(project.id, "write-file", { path: "artifact.html", content: "<h1>Shared artifact</h1>" });
+        phase("source files saved");
+        await signIn(first, peer.origin);
+        await first.client.account.syncProject(project.id);
+        await first.reach(project.id, "synced");
+        phase("source project synced");
+        return { project, remote: repository.remote };
+      });
+      devices = started;
+      const { first, browser, prepared } = started;
+      const { project, remote } = prepared;
+      let { second } = started;
+      phase("devices, browser and source project ready");
 
       // A new device reads the project's info before anything else. Let it read that one document and none
       // of the project's data yet. The first device may still be reading, so name the document by its relay ID,
@@ -276,17 +308,16 @@ test(
       const madeLocal = history.events.indexOf("local", firstSynced);
       expect(history.events.slice(firstSynced, madeLocal)).toContain("offline");
       expect(history.events.slice(firstSynced, madeLocal)).not.toContain("first-download-incomplete");
-      await picker.close();
+      const stopped = await Promise.allSettled([picker.close(), peer.stop(), stopProcess(second.host.child)]);
       picker = undefined;
-      await peer.stop();
-      await stopProcess(second.host.child);
-      second = await startDevice(join(root, "second"), env);
-      devices.second = second;
-      expect((await second.client.account.projectSyncStatus(project.id)).offlineReady).toBe(false);
-      await reopenPreparedProjectOffline({
-        baseUrl: second.host.baseUrl,
-        token: second.host.descriptor.token,
-        projectId: project.id,
+      const stoppingFailures = stopped.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (stoppingFailures.length) throw new AggregateError(stoppingFailures, "Could not stop the online devices");
+      phase("online browser and second host stopped");
+      await reopenPreparedProjectOffline(async () => {
+        second = await startDevice(join(root, "second"), env);
+        started.second = second;
+        expect((await second.client.account.projectSyncStatus(project.id)).offlineReady).toBe(false);
+        return { baseUrl: second.host.baseUrl, token: second.host.descriptor.token, projectId: project.id };
       });
       expect((await second.client.projects.folder(project.id)).path).toBe(folderAfterSelection.path);
       expect(await second.command<string>(project.id, "read-file", { path: "new-note.md" })).toBe(
