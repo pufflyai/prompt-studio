@@ -166,6 +166,7 @@ export const createSessionsApi = (
               input.signal?.throwIfAborted();
               return createSessionScheduler(deps).createSession({
                 projectId: input.projectId,
+                workspaceId: workspace.id,
                 title: sessionInput.title,
                 agentId,
                 prompt,

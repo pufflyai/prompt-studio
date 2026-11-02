@@ -1,3 +1,4 @@
+// packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
@@ -9,6 +10,7 @@ import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } f
 import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
+// packaged-native-settings.p2.spec.ts checks the Extensions nav page, direct routes, reload, native settings and scrolling.
 // packaged-extension-settings-smoke.p2.test.ts checks device settings across projects and restarts.
 // packaged-independent-extensions-smoke.p2.test.ts checks stable and nightly extension package versions.
 // Native actions retain failed outcomes for the UI entry point to report.
@@ -108,6 +110,21 @@ test(
         OPENAI_API_KEY: "provider-secret",
       });
       child = started.child;
+
+      const capacityUrl = `${started.baseUrl}/v1/workspaces/capacity`;
+      const capacityHeaders = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
+      const initialCapacity = await fetch(capacityUrl, { headers: capacityHeaders });
+      expect(initialCapacity.status).toBe(200);
+      expect(await initialCapacity.json()).toMatchObject({ activeCount: 0, limit: null });
+      for (const limit of [1, null]) {
+        const updated = await fetch(capacityUrl, {
+          method: "PATCH",
+          headers: capacityHeaders,
+          body: JSON.stringify({ limit }),
+        });
+        expect(updated.status).toBe(200);
+        expect(await updated.json()).toMatchObject({ activeCount: 0, limit });
+      }
 
       const projectFolder = join(tempRoot, "project");
       const peerFolder = join(tempRoot, "peer-project");

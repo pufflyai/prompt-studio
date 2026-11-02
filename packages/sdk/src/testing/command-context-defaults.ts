@@ -85,6 +85,8 @@ export const createCommandContextDefaults = (input: {
       removeAnchors: async (id, refs) => {
         await resources.removeAnchors(coreResource("workspace", id), refs);
       },
+      getCapacity: async () => ({ deviceId: "test-device", deviceName: "Test device", activeCount: 0, limit: null }),
+      updateCapacity: unavailable,
       listProviders: async () => [],
       getDefault: async () => null,
       list: async () => [],

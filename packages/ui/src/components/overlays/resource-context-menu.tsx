@@ -1,5 +1,14 @@
 import { chakra, useMenuContext } from "@chakra-ui/react";
-import { type ComponentProps, type ReactElement, type ReactNode, useRef } from "react";
+import {
+  type ComponentProps,
+  type ReactElement,
+  type ReactNode,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ScopedMenu as Menu, useScopedMenu as useMenu } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
@@ -114,6 +123,82 @@ export const ResourceActionMenu = (props: ResourceActionMenuProps) => {
   );
 };
 
+type ContextTriggerProps = ReturnType<ReturnType<typeof useMenu>["api"]["getContextTriggerProps"]>;
+type ContextMenuOpening = { type: "CONTEXT_MENU" | "CONTEXT_MENU_START"; point: { x: number; y: number } };
+
+interface ResourceContextMenuMachineProps {
+  triggerId: string;
+  /** The gesture that mounted the machine, until the machine has replayed it. */
+  opening: ContextMenuOpening | null;
+  actions: ResourceContextAction[];
+  contentMinWidth: string;
+  contentBackground: string;
+  positioning: MenuRootProps["positioning"];
+  closeOnSelect: MenuRootProps["closeOnSelect"];
+  getAnchorRect: () => { x: number; y: number; width: number; height: number };
+  onEscapeKeyDown: () => void;
+  onTriggerPropsChange: (triggerProps: ContextTriggerProps | null) => void;
+  onOpeningSent: () => void;
+}
+
+/** The menu machine for one trigger, mounted when that trigger first asks for its menu. */
+const ResourceContextMenuMachine = (props: ResourceContextMenuMachineProps) => {
+  const {
+    triggerId,
+    opening,
+    onOpeningSent,
+    actions,
+    contentMinWidth,
+    contentBackground,
+    positioning,
+    closeOnSelect,
+    getAnchorRect,
+    onEscapeKeyDown,
+    onTriggerPropsChange,
+  } = props;
+  const { onSelect, onExitComplete } = useResourceMenuActions(closeOnSelect);
+  const menu = useMenu({
+    ids: { contextTrigger: triggerId },
+    positioning: { ...positioning, strategy: "fixed", getAnchorRect },
+    closeOnSelect,
+    onEscapeKeyDown,
+  });
+  const triggerProps = menu.api.getContextTriggerProps();
+
+  useLayoutEffect(() => {
+    onTriggerPropsChange(triggerProps);
+  });
+
+  // The gesture that mounted this machine reached the trigger before the machine existed. It is sent once and then
+  // cleared: effects run again when a hidden view is shown, and must not reopen the menu.
+  // The service is a new object on every render, so it is read when the effect runs.
+  const sendOpening = useEffectEvent((nextOpening: ContextMenuOpening) => {
+    menu.service.send(nextOpening);
+    onOpeningSent();
+  });
+  useLayoutEffect(() => {
+    if (opening) sendOpening(opening);
+  }, [opening]);
+
+  useLayoutEffect(() => () => onTriggerPropsChange(null), [onTriggerPropsChange]);
+
+  return (
+    // Descendant resource menus are independent menus, not submenus.
+    <Menu.RootProvider value={menu} lazyMount unmountOnExit onExitComplete={onExitComplete}>
+      {actions.length > 0 ? (
+        <ResourceMenuContent
+          actions={actions}
+          contentMinWidth={contentMinWidth}
+          contentBackground={contentBackground}
+          onSelect={onSelect}
+        />
+      ) : null}
+    </Menu.RootProvider>
+  );
+};
+
+const contextTriggerStyle = { WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" } as const;
+
 export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
   const {
     actions,
@@ -124,46 +209,40 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
     closeOnSelect,
     keepMountedWhenEmpty = false,
   } = props;
-  const { onSelect, onExitComplete } = useResourceMenuActions(closeOnSelect);
+  const triggerId = useId();
   const keyboardTrigger = useRef<HTMLElement | null>(null);
   const contextAnchor = useRef({ x: 0, y: 0, width: 0, height: 0 });
-  const menu = useMenu({
-    positioning: { ...positioning, strategy: "fixed", getAnchorRect: () => contextAnchor.current },
-    closeOnSelect,
-    onEscapeKeyDown: () => {
-      // Positioned context menus do not restore trigger focus themselves.
-      const trigger = keyboardTrigger.current;
-      keyboardTrigger.current = null;
-      const previousFocus = document.activeElement;
-      if (trigger) {
-        requestAnimationFrame(() => {
-          // A later focus choice belongs to its caller, even before the menu finishes closing.
-          if (document.activeElement === previousFocus || document.activeElement === document.body) {
-            trigger.focus({ preventScroll: true });
-          }
-        });
-      }
-    },
-  });
-  const triggerProps = menu.api.getContextTriggerProps();
+  // Lists draw many triggers, so each one starts its menu machine on its first use instead of on mount.
+  const [machine, setMachine] = useState<{ opening: ContextMenuOpening | null } | null>(null);
+  const triggerHandlers = useRef<ContextTriggerProps | null>(null);
 
   if (actions.length === 0 && !keepMountedWhenEmpty) {
     return <>{children}</>;
   }
 
+  const startMachine = (nextOpening: ContextMenuOpening) => {
+    if (!machine) setMachine({ opening: nextOpening });
+  };
+
   return (
     <>
       <chakra.div
         asChild
-        {...triggerProps}
+        id={triggerId}
+        style={contextTriggerStyle}
         onPointerDown={(event) => {
           if (actions.length === 0 || event.pointerType === "mouse") return;
           keyboardTrigger.current = null;
           // Only the nearest populated menu starts the shared touch-hold gesture.
           event.stopPropagation();
-          contextAnchor.current = { x: event.clientX, y: event.clientY, width: 0, height: 0 };
-          triggerProps.onPointerDown?.(event);
+          const point = { x: event.clientX, y: event.clientY };
+          contextAnchor.current = { ...point, width: 0, height: 0 };
+          if (triggerHandlers.current) triggerHandlers.current.onPointerDown?.(event);
+          else startMachine({ type: "CONTEXT_MENU_START", point });
         }}
+        onPointerMove={(event) => triggerHandlers.current?.onPointerMove?.(event)}
+        onPointerUp={(event) => triggerHandlers.current?.onPointerUp?.(event)}
+        onPointerCancel={(event) => triggerHandlers.current?.onPointerCancel?.(event)}
         onKeyDown={(event) => {
           if (event.defaultPrevented || actions.length === 0) return;
           if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
@@ -184,25 +263,50 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
         onContextMenu={(event) => {
           keyboardTrigger.current = null;
           if (actions.length > 0 && !event.defaultPrevented) {
-            contextAnchor.current = { x: event.clientX, y: event.clientY, width: 0, height: 0 };
+            const point = { x: event.clientX, y: event.clientY };
+            contextAnchor.current = { ...point, width: 0, height: 0 };
             event.stopPropagation();
-            triggerProps.onContextMenu?.(event);
+            if (triggerHandlers.current) {
+              triggerHandlers.current.onContextMenu?.(event);
+              return;
+            }
+            event.preventDefault();
+            startMachine({ type: "CONTEXT_MENU", point });
           }
         }}
       >
         {children}
       </chakra.div>
-      {/* Descendant resource menus are independent menus, not submenus. */}
-      <Menu.RootProvider value={menu} lazyMount unmountOnExit onExitComplete={onExitComplete}>
-        {actions.length > 0 ? (
-          <ResourceMenuContent
-            actions={actions}
-            contentMinWidth={contentMinWidth}
-            contentBackground={contentBackground}
-            onSelect={onSelect}
-          />
-        ) : null}
-      </Menu.RootProvider>
+      {machine ? (
+        <ResourceContextMenuMachine
+          triggerId={triggerId}
+          opening={machine.opening}
+          onOpeningSent={() => setMachine({ opening: null })}
+          actions={actions}
+          contentMinWidth={contentMinWidth}
+          contentBackground={contentBackground}
+          positioning={positioning}
+          closeOnSelect={closeOnSelect}
+          getAnchorRect={() => contextAnchor.current}
+          onEscapeKeyDown={() => {
+            // Positioned context menus do not restore trigger focus themselves.
+            const trigger = keyboardTrigger.current;
+            keyboardTrigger.current = null;
+            const previousFocus = document.activeElement;
+            if (trigger) {
+              requestAnimationFrame(() => {
+                // A later focus choice belongs to its caller, even before the menu finishes closing.
+                if (document.activeElement === previousFocus || document.activeElement === document.body) {
+                  trigger.focus({ preventScroll: true });
+                }
+              });
+            }
+          }}
+          onTriggerPropsChange={(triggerProps) => {
+            triggerHandlers.current = triggerProps;
+          }}
+        />
+      ) : null}
     </>
   );
 };
