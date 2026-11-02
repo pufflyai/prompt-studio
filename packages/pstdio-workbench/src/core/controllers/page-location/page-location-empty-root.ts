@@ -29,7 +29,7 @@ const emptyRootState = (entry: WorkbenchPageBrowserEntry): EmptyRootHistoryState
 // Empty mode navigation uses the same browser commit boundary as page navigation.
 // It has a history entry, but contributes no page, placeholder, or provider policy.
 export const createEmptyRootLocation = <Value>(
-  input: Pick<CreateWorkbenchPageLocationControllerInput<Value>, "registry" | "browser" | "startPage">,
+  input: Pick<CreateWorkbenchPageLocationControllerInput<Value>, "registry" | "browser" | "startPage" | "modes">,
   history: ReturnType<typeof createPageLocationHistory>,
 ) => {
   const publish = (replay?: EmptyRootHistoryState) =>
@@ -40,7 +40,7 @@ export const createEmptyRootLocation = <Value>(
       const state = internals.prepare.compose(current, {
         pageStates: current.pageStates,
         projectId: current.projectId,
-        activeModeId: replay?.modeId ?? current.activeModeId,
+        activeModeId: replay?.modeId ?? current.activeModeId ?? input.modes.getActiveModeId?.(),
         action,
       });
       const index = replay?.index ?? history.getIndex() + 1;
@@ -74,6 +74,25 @@ export const createEmptyRootLocation = <Value>(
     return true;
   };
   return {
+    restore(selectedModeId?: string) {
+      if (
+        input.registry
+          .listPages()
+          .some((page) => page.ref.extensionId === input.startPage.extensionId && page.ref.id === input.startPage.id)
+      )
+        return;
+      const current = input.registry.store.getState();
+      const modeId = current.activeModeId ?? input.modes.getActiveModeId?.() ?? selectedModeId;
+      if (!current.projectId || !modeId) return;
+      // An unavailable default still has a real mode whose shared panels can
+      // be restored. Reuse the normal composition/runtime without adding a page.
+      publish({
+        kind: "pstdio.empty-page-location",
+        projectId: current.projectId,
+        modeId,
+        index: history.getIndex(),
+      });
+    },
     adopt(entry: WorkbenchPageBrowserEntry, projectId: string) {
       const state = isPageHistoryState(entry.state) ? entry.state : emptyRootState(entry);
       if (state?.projectId === projectId) history.adopt(state.index);

@@ -22,7 +22,7 @@ import {
   createPageLocationPublisher,
   createPageLocationReplayer,
 } from "./page-location-publish";
-import { restoreRememberedLocation } from "./page-location-restoration";
+import { createStartLocationRestorer, restoreRememberedLocation } from "./page-location-restoration";
 import { createRootLevelLocationTracker } from "./page-location-root-level";
 import { createStartPageCompatibility } from "./page-location-start";
 import type {
@@ -127,18 +127,13 @@ export const createWorkbenchPageLocationController = <Value>(
 
   const resolveUrl = createPageUrlResolver({ pages, resources, normalize: normalizeStored, root: start });
 
-  const restoreStart = (projectId: string, source: "boot" | "project-switch") => {
-    try {
-      return commit(projectId, start(), "replace", `${source}StartFallback`);
-    } catch (error) {
-      return fail(source, error);
-    }
-  };
+  const restoreStart = createStartLocationRestorer({ start, commit, restoreEmpty: emptyRoot.restore, fail });
 
   const restore = (
     projectId: string,
     source: "boot" | "project-switch",
     useCurrentUrl: boolean,
+    selectedModeId?: string,
   ): WorkbenchPageNavigationResult => {
     try {
       const browserEntry = input.browser.current();
@@ -159,15 +154,20 @@ export const createWorkbenchPageLocationController = <Value>(
         resources,
         pages(),
       );
-      const prepare = matchesSavedLocation ? prepareState.restore : prepareState.open;
-      const result = publish(projectId, prepare(projectId, resolved, action), "replace", action, () =>
-        memory.consume(resolved.consumeRemembered),
-      );
+      const state = (matchesSavedLocation ? prepareState.restore : prepareState.open)(projectId, resolved, action);
+      const commitRestoration = () => {
+        try {
+          return publish(projectId, state, "replace", action, () => memory.consume(resolved.consumeRemembered));
+        } catch (error) {
+          return fail(source, error);
+        }
+      };
+      const result = commitRestoration();
       if (result.ok && fromUrl && !matchesSavedLocation) navigation.notify(result.location);
       return result;
     } catch (error) {
       fail(source, error);
-      return restoreStart(projectId, source);
+      return restoreStart(projectId, source, selectedModeId);
     }
   };
 

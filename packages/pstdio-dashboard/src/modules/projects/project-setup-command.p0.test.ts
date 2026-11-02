@@ -49,3 +49,35 @@ test("setup retry uses the selected project's public API and propagates action e
     server.stop(true);
   }
 });
+
+test("setup retry reports unavailable providers even when remote setupError was cleared", async () => {
+  const responses = [
+    {
+      providerState: "provider_missing",
+      setupError: null,
+      provider_error_json: { message: "Remote provider is unavailable" },
+    },
+    { providerState: "failed", setupError: null, provider_error_json: null },
+    { providerState: "provisioning", setupError: null, provider_error_json: null },
+  ];
+  const server = Bun.serve({ port: 0, fetch: () => Response.json(responses.shift()) });
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl: string } };
+  const previous = runtime.__PSTDIO_CONFIG__;
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
+  try {
+    const core = createWorkbench();
+    selectDashboardProject(core, { id: "project-2", name: "Second" });
+    registerProjectSetupCommand(core);
+    await expect(core.commands.executeCommand(workbenchCommands.retryProjectSetup.id)).rejects.toThrow(
+      "Remote provider is unavailable",
+    );
+    await expect(core.commands.executeCommand(workbenchCommands.retryProjectSetup.id)).rejects.toThrow(
+      "Workspace provider setup failed",
+    );
+    await core.commands.executeCommand(workbenchCommands.retryProjectSetup.id);
+  } finally {
+    if (previous) runtime.__PSTDIO_CONFIG__ = previous;
+    else delete runtime.__PSTDIO_CONFIG__;
+    server.stop(true);
+  }
+});

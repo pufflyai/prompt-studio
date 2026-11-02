@@ -13,6 +13,9 @@ export const registerProjectSetupCommand = (ctx: WorkbenchModuleContext) =>
         if (context?.projectId && context.projectId !== projectId) throw new Error("The selected project changed");
         const workspace = await getApiClient().projects.retrySetup(projectId);
         if (workspace.setupError) throw new Error(workspace.setupError);
+        if (workspace.providerState === "failed" || workspace.providerState === "provider_missing") {
+          throw new Error(workspace.provider_error_json?.message ?? "Workspace provider setup failed");
+        }
       },
     },
   );
