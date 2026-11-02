@@ -54,3 +54,13 @@ test("removing the configured default keeps the mode empty and other pages acces
   expect(core.pages.getContent()).toBeUndefined();
   expect(core.pageLocations.navigate({ kind: "page", page: { ...home, id: "other" } }).ok).toBe(true);
 });
+
+test("an ordinary registered parent with id start keeps its own context", () => {
+  const { core, register } = fixture();
+  register("home", home);
+  register("start", { ...home, id: "ordinary-start" });
+  register("detail", undefined, "start");
+  core.pageLocations.setProject("p1");
+  expect(core.pageLocations.navigate({ kind: "page", page: { ...home, id: "detail" } }).ok).toBe(true);
+  expect(core.pages.store.getState().location?.parent?.page).toEqual({ ...home, id: "ordinary-start" });
+});

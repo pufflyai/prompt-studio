@@ -10,7 +10,7 @@ export const createStartPageCompatibility = (listPages: () => WorkbenchPageContr
     );
   const pages = () => {
     const registered = listPages();
-    if (hasStartPage()) return registered;
+    if (hasStartPage() || registered.some((page) => page.id === workbenchPages.start.id)) return registered;
     const start = registered.find(
       (page) => page.ref.extensionId === startPage.extensionId && page.ref.id === startPage.id,
     );
