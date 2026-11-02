@@ -32,7 +32,16 @@ const editor = defineView({
     },
   },
 });
+const rootPage = definePage({
+  id: "root",
+  title: "Scribble",
+  path: "root",
+  mode: workbenchModes.project,
+  main: { kind: "panels" },
+  slots: [],
+});
 export const scribblePage = definePage({
+  parent: rootPage.ref,
   id: "scribble",
   title: "Scribble",
   path: "scribble",
@@ -71,7 +80,7 @@ export default defineExtension({
   artifactMounts: [noteFiles],
   resourceKinds: [note],
   views: [editor, files],
-  pages: [scribblePage],
+  pages: [rootPage, scribblePage],
   navigationItems: [
     defineNavigationItem({
       id: "scribble",

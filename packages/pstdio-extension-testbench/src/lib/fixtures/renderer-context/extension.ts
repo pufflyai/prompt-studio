@@ -25,7 +25,16 @@ const items = defineView({
     }),
   },
 });
+const rootPage = definePage({
+  id: "root",
+  title: "Renderer context",
+  path: "root",
+  mode: workbenchModes.project,
+  main: { kind: "panels" },
+  slots: [],
+});
 const itemPage = definePage({
+  parent: rootPage.ref,
   id: "items",
   title: "Items",
   path: "items",
@@ -43,5 +52,5 @@ const itemPage = definePage({
 export default defineExtension({
   resourceKinds: [fixtureItem],
   views: [items],
-  pages: [itemPage],
+  pages: [rootPage, itemPage],
 });

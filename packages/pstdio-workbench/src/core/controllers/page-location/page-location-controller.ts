@@ -69,7 +69,7 @@ const clearMissingPage = <Value>(
       return false;
     const location = isPageHistoryState(current.state) ? current.state.location : undefined;
     const removedDefault =
-      location?.page.extensionId === input.startPage.extensionId && location.page.id === input.startPage.id;
+      location && location.page.extensionId === input.startPage.extensionId && location.page.id === input.startPage.id;
     if (
       !removedDefault &&
       new URL(current.url, "http://workbench.local").pathname.replace(/\/$/, "") !==

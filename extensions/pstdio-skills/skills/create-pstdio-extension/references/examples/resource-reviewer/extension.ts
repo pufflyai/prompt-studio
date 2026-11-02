@@ -25,7 +25,16 @@ const preview = defineView({
     capabilities: ["commands.execute"],
   },
 });
+const rootPage = definePage({
+  id: "root",
+  title: "Resource reviewer",
+  path: "root",
+  mode: workbenchModes.project,
+  main: { kind: "panels" },
+  slots: [],
+});
 const page = definePage({
+  parent: rootPage.ref,
   id: "review",
   title: l10n("review.title", "Resource reviewer"),
   path: "review",
@@ -81,7 +90,7 @@ const palette = defineCommandPaletteResource({
 export default defineExtension({
   commands: Object.values(commands),
   resourceKinds: [itemKind],
-  pages: [page],
+  pages: [rootPage, page],
   views: [preview, tree, inspector],
   viewMenus: [
     defineViewMenu({ id: "items", owner: preview.ref, view: tree.ref, side: "left" }),

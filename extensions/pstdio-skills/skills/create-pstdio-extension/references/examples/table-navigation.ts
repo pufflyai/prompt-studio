@@ -24,7 +24,16 @@ const table = defineView({
     onRowActivate: activate,
   },
 });
+const rootPage = definePage({
+  id: "root",
+  title: "Notes",
+  path: "root",
+  mode: workbenchModes.project,
+  main: { kind: "panels" },
+  slots: [],
+});
 const collection = definePage({
+  parent: rootPage.ref,
   id: "notes-collection",
   title: "Notes",
   path: "notes-collection",
@@ -34,4 +43,4 @@ const collection = definePage({
   slots: [],
 });
 
-export { collection, table };
+export { collection, rootPage, table };
