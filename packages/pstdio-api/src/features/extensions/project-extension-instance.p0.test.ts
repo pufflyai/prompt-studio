@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { toProjectExtensionInstance } from "./project-extension-instance";
 
@@ -29,6 +32,23 @@ const installedSource = {
 };
 
 describe("toProjectExtensionInstance", () => {
+  test("publishes installed SVG icon bytes and falls back when an asset disappears", () => {
+    const root = mkdtempSync(join(tmpdir(), "instance-icon-"));
+    try {
+      mkdirSync(join(root, "assets"));
+      writeFileSync(join(root, "assets/logo.svg"), "<svg/>");
+      const source = {
+        ...installedSource,
+        source_path: root,
+        manifest_json: { ...installedSource.manifest_json, icon: "./assets/logo.svg" },
+      };
+      expect(toProjectExtensionInstance(instance, source).icon).toBe("data:image/svg+xml;base64,PHN2Zy8+");
+      rmSync(join(root, "assets/logo.svg"));
+      expect(toProjectExtensionInstance(instance, source).icon).toBeUndefined();
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
   test("includes the installed manifest icon in the Extensions response", () => {
     const result = toProjectExtensionInstance(instance, {
       ...installedSource,

@@ -36,7 +36,9 @@ Optional fields:
 
 - `displayName`: dashboard display name. Falls back to `name`.
 - `description`: dashboard/catalog description.
-- `icon`: shared icon name, such as `Kanban` or `FileChartColumn`. Extensions lists and details use it. Older extensions without an icon use the generic Tool Case icon.
+- `icon`: a shared Lucide name (for example `Kanban`) or an extension-owned SVG path beginning with `./` (for example `./assets/icon.svg`). Include the SVG in the package's `files` list when one is declared. Paths and symlinks must stay inside the package. The host exposes image bytes rather than local file paths; SVGs render as images, never inline HTML. Existing icon names retain their normal resolution and fallback. Missing or unknown icons use Tool Case.
+- SVG images retain their own colors. For a monochrome `currentColor` SVG, define its color inside the asset. A `prefers-color-scheme` media rule follows the embedding app's light/dark `color-scheme`; it does not inherit the surrounding text color.
+- Catalogs may provide a Lucide name or a public SVG data URL. Repository catalog entries can use the same `./assets/icon.svg` declaration as the manifest: the host build embeds its bytes for discovery independently of source-archive inclusion. Embedded icons are keyed by the exact catalog package origin, full ID, install name, and declared asset path; an operator catalog cannot borrow a stock icon merely by reusing its install name. External catalogs must supply their own display metadata.
 - `pstdio.scope`: install/load scope, either `user` or `repo`. Defaults to `user`.
 
 Derived fields:

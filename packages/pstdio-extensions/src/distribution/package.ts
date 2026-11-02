@@ -56,6 +56,12 @@ export const readExtensionPackage = async (bytes: Uint8Array) => {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Package is missing package.json");
   const manifest = packageMetadata(raw);
   if (!files.has(manifest.main.replace(/^\.\//, ""))) throw new Error("Package is missing its entry point");
+  if (typeof raw.icon === "string" && raw.icon.startsWith("./")) {
+    const path = raw.icon.slice(2);
+    if (!safePath(path) || !path.endsWith(".svg") || !files.has(path)) {
+      throw new Error("Package is missing its declared SVG icon");
+    }
+  }
   return { manifest, files };
 };
 

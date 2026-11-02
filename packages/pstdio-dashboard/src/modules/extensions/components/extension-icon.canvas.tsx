@@ -18,3 +18,11 @@ export const UICanvas: Frame = {
   id: "extensions-icon--ui-canvas",
   args: { name: "gallery-thumbnails" },
 };
+
+export const CustomSvg: Frame = {
+  id: "extensions-icon--custom-svg",
+  description: "Extension assets render as images, separate from Lucide icon names.",
+  args: {
+    name: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTIgMmg4djhoLTh6TTE0IDE0aDh2OGgtOHoiIGZpbGw9ImN1cnJlbnRDb2xvciIvPjwvc3ZnPg==",
+  },
+};

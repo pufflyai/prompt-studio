@@ -83,6 +83,18 @@ test("packs the declared runtime files under the full identity and round trips t
   expect((await packExtension(root)).sha256).toBe(packed.sha256);
 });
 
+test("requires declared SVG icons in the published files and preserves their bytes", async () => {
+  const root = await fixture();
+  const path = join(root, "package.json");
+  const manifest = JSON.parse(await readFile(path, "utf8"));
+  await writeFile(path, JSON.stringify({ ...manifest, icon: "./assets/icon.svg", files: ["extension.ts"] }));
+  await expect(packExtension(root)).rejects.toThrow("icon");
+  await writeFile(path, JSON.stringify({ ...manifest, icon: "./assets/icon.svg" }));
+  const packed = await packExtension(root);
+  const contents = await readExtensionPackage(packed.bytes);
+  expect(await contents.files.get("assets/icon.svg")?.text()).toBe("<svg/>");
+});
+
 test("refuses modified packages and mismatched identities before writing files", async () => {
   const packed = await packExtension(await fixture());
   const target = await mkdtemp(join(tmpdir(), "refused-extension-"));

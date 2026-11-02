@@ -1,6 +1,6 @@
 import { basename, dirname, join, resolve } from "node:path";
 import type { ProjectExtensionInstance } from "pstdio-api-contracts";
-import { getExtensionApiVersionError } from "pstdio-extensions";
+import { getExtensionApiVersionError, readExtensionIcon } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 
 type InstanceLike = {
@@ -27,6 +27,14 @@ type InstalledSourceLike = {
 };
 
 const optionalString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
+const instanceIcon = (source: InstalledSourceLike, icon: unknown) => {
+  try {
+    return readExtensionIcon(source.source_path, optionalString(icon));
+  } catch {
+    // A missing source still appears in the installed list and uses the default icon.
+    return undefined;
+  }
+};
 
 export const compatibilityError = (
   installedSource: { install_name: string; manifest_json?: unknown },
@@ -86,7 +94,7 @@ export const toProjectExtensionInstance = (
     displayName: instance.display_name_override ?? installedSource.display_name,
     version: installedSource.version,
     description: optionalString(manifest.description),
-    icon: optionalString(manifest.icon),
+    icon: instanceIcon(installedSource, manifest.icon),
     sourcePath: installedSource.source_path,
     scope: sourceScope(installedSource.source_path),
     status: incompatible ? "error" : installedSource.status,

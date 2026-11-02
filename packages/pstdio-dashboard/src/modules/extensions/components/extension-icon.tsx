@@ -9,6 +9,13 @@ interface ExtensionIconProps {
 
 export const ExtensionIcon = (props: ExtensionIconProps) => {
   const { name, size = "sm" } = props;
+  if (name?.startsWith("data:image/svg+xml;base64,")) {
+    return (
+      <Icon boxSize={size === "md" ? "6" : "5"} colorScheme="light" _dark={{ colorScheme: "dark" }} asChild>
+        <img src={name} alt="" />
+      </Icon>
+    );
+  }
   const Glyph = (name && resolveIconComponent(name)) || ToolCase;
   return (
     <Icon boxSize={size === "md" ? "6" : "5"}>
