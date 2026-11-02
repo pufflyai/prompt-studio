@@ -2,7 +2,7 @@
 // packaged-collection-view-order-smoke.p2.test.ts keeps Save view clickable beneath explanatory tooltips.
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -24,6 +24,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
 // packaged-canvas-install.p2.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
+// Catalog IDs and extension icons remain available through the compiled host.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/workbench-package-consumer.ts checks packaged activation, scoped status persistence and overlay exports.
@@ -97,7 +98,26 @@ test(
       const navigationProbe = writeNavigationExtension(tempRoot);
       const nativeActions = writeNativeActionsExtension(tempRoot);
       const otherNativeActions = writeNativeActionsExtension(join(tempRoot, "other-source"), "other");
+      const catalogPath = join(tempRoot, "catalog.json");
+      writeFileSync(
+        catalogPath,
+        JSON.stringify({
+          version: 1,
+          extensions: [
+            {
+              installName: "metadata-probe",
+              extensionId: "test.metadata-probe",
+              displayName: "Metadata probe",
+              icon: "Blocks",
+              description: "",
+              origin: { kind: "git", url: "https://example.com/probe.git", path: "extension", ref: "main" },
+              default: false,
+            },
+          ],
+        }),
+      );
       const started = await startPackagedServe(tempRoot, {
+        PSTDIO_EXTENSION_CATALOG: catalogPath,
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
@@ -160,7 +180,11 @@ test(
 
       const body = (await extensionsRes.json()) as {
         extensions: Array<{ enabled: boolean; installName: string; name: string }>;
+        marketplace: Array<{ extensionId?: string; icon?: string }>;
       };
+      expect(body.marketplace).toContainEqual(
+        expect.objectContaining({ extensionId: "test.metadata-probe", icon: "Blocks" }),
+      );
       const extension = body.extensions.find((entry) => entry.installName === "dep-ext");
 
       expect(extension).toMatchObject({

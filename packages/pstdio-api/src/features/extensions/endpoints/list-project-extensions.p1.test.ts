@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import catalogData from "../../../../files/extension-catalog.json";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
@@ -16,16 +17,29 @@ let app: OpenAPIHono<AppBindings>;
 let handle: AppHandle;
 let originalDefaultExtensions: string | undefined;
 let originalPstdioHome: string | undefined;
+let originalCatalog: string | undefined;
 let pstdioHome: string;
 let tempRoot: string;
 
 beforeAll(async () => {
   originalDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   originalPstdioHome = process.env.PSTDIO_HOME;
+  originalCatalog = process.env.PSTDIO_EXTENSION_CATALOG;
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-list-project-extensions-test-"));
   pstdioHome = join(tempRoot, "pstdio-home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   process.env.PSTDIO_HOME = pstdioHome;
+  const catalogPath = join(tempRoot, "catalog.json");
+  writeFileSync(
+    catalogPath,
+    JSON.stringify({
+      ...catalogData,
+      extensions: catalogData.extensions.map((entry) =>
+        entry.installName === "harness-pi" ? { ...entry, extensionId: "pstdio.harness-pi", icon: "Terminal" } : entry,
+      ),
+    }),
+  );
+  process.env.PSTDIO_EXTENSION_CATALOG = catalogPath;
   handle = await createTestApp({
     databasePath: ":memory:",
     storageRoot: join(tempRoot, "storage"),
@@ -37,6 +51,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await handle.close();
+  if (originalCatalog === undefined) {
+    delete process.env.PSTDIO_EXTENSION_CATALOG;
+  } else {
+    process.env.PSTDIO_EXTENSION_CATALOG = originalCatalog;
+  }
   if (originalDefaultExtensions === undefined) {
     delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
   } else {
@@ -114,6 +133,20 @@ const seedInstance = async (
 };
 
 describe("GET /v1/projects/:projectId/extensions", () => {
+  test("returns stable IDs and icons for downloadable extensions", async () => {
+    const project = await createProject("Extension identity");
+    const res = await app.request(`/v1/projects/${project.id}/extensions`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.marketplace).toContainEqual(
+      expect.objectContaining({
+        installName: "harness-pi",
+        extensionId: "pstdio.harness-pi",
+        icon: "Terminal",
+      }),
+    );
+  });
+
   test("lists both enabled and disabled instances with source metadata", async () => {
     const project = await createProject("Extensions List Project");
 
