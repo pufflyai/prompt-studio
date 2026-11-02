@@ -261,7 +261,7 @@
       "entry": [
         "package.json",
         "rolldown.*.config.ts",
-        "src/{api,client,extensions,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
+        "src/{api,client,extensions,extensions/keyboard,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
         "src/**/*.test.ts",
         "src/**/*.typecheck.ts"
       ],
@@ -304,7 +304,7 @@
         "src/theme/index.ts",
         // The Canvas build loads these themes by absolute path.
         "src/theme/custom/vscode-theme.canvas-fixture.ts",
-        "src/components/{canvas,dependency-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
+        "src/components/{canvas,dependency-timeline,keyframe-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.canvas.tsx",
         "*.test.ts",

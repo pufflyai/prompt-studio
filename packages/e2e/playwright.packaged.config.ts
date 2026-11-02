@@ -11,7 +11,7 @@ export default defineConfig({
   ...playwrightQuarantineSelection("playwright", "packages/e2e/src/packaged", quarantine),
   timeout: 120_000,
   workers: 1,
-  maxFailures: !quarantine && process.env.CI_PRIORITY === "P1" ? 1 : 0,
+  maxFailures: !quarantine && process.env.CI_PRIORITY === "P1" && process.env.CI_PROFILE !== "production" ? 1 : 0,
   retries: 0,
   forbidOnly: !!process.env.CI,
   use: { trace: "retain-on-failure" },

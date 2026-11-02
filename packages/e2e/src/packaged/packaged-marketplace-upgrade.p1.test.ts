@@ -202,61 +202,62 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     }, project.id);
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}`, { waitUntil: "domcontentloaded" });
-    await page.getByText("Settings", { exact: true }).last().click();
-    const settings = page.getByRole("dialog").last();
-    await settings.getByText("Extensions", { exact: true }).first().click();
+    await page.getByRole("option", { name: "Extensions", exact: true }).click();
 
-    const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Project Planner" });
+    const detail = page.getByTestId("extension-detail").filter({ visible: true });
+    const list = page.getByTestId("extensions-panel").filter({ visible: true });
+    const installedRow = list.getByTestId("extension-entry").filter({ hasText: "Project Planner" });
     await installedRow.waitFor();
     await installedRow.click();
-    await page.getByTestId("extension-upgrade").waitFor();
-    await expectPage(page.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
-    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.10.0");
+    await detail.getByTestId("extension-upgrade").waitFor();
+    await expectPage(detail.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
+    await expectPage(detail).toContainText("v0.10.0");
 
     const updateResponse = page.waitForResponse(
       (response) => response.url().endsWith("/upgrade") && response.request().method() === "POST",
     );
-    await page.getByTestId("extension-upgrade").click();
+    await detail.getByTestId("extension-upgrade").click();
     expect((await updateResponse).status()).toBe(200);
-    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.11.0");
-    await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
-    await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);
+    await expectPage(detail).toContainText("v0.11.0");
+    await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);
+    await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
 
-    await page.getByTestId("extension-detail-back").click();
-    const adoptedRow = page.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Skills" });
+    await detail.getByTestId("extension-detail-back").click();
+    const adoptedRow = list.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Skills" });
     await adoptedRow.waitFor();
     await adoptedRow.click();
-    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.3.0");
-    await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(1);
-    await expectPage(page.getByTestId("extension-health-upgrade")).toHaveCount(1);
+    await expectPage(detail).toContainText("v0.3.0");
+    await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(1);
+    await expectPage(detail.getByTestId("extension-health-upgrade")).toHaveCount(1);
 
     const adoptedUpgradeResponse = page.waitForResponse(
       (response) => response.url().endsWith("/upgrade") && response.request().method() === "POST",
     );
-    await page.getByTestId("extension-upgrade").click();
+    await detail.getByTestId("extension-upgrade").click();
     expect((await adoptedUpgradeResponse).status()).toBe(200);
-    await expectPage(page.getByTestId("extension-detail")).toContainText("v0.4.0");
-    await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
-    await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);
+    await expectPage(detail).toContainText("v0.4.0");
+    await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);
+    await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
 
-    await page.getByTestId("extension-detail-back").click();
-    const localRow = page.getByTestId("extension-entry").filter({ hasText: "Local Example" });
+    await detail.getByTestId("extension-detail-back").click();
+    const localRow = list.getByTestId("extension-entry").filter({ hasText: "Local Example" });
     await localRow.waitFor();
     await localRow.click();
-    await expectPage(page.getByTestId("extension-detail")).toContainText(`v${localExampleVersion.version}`);
-    await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
-    await expectPage(page.getByTestId("extension-reload")).toHaveCount(0);
-    await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);
-    await expectPage(page.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
+    await expectPage(detail).toContainText(`v${localExampleVersion.version}`);
+    await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);
+    await expectPage(detail.getByTestId("extension-reload")).toHaveCount(0);
+    await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
+    await expectPage(detail.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
 
-    await page.getByTestId("extension-detail-back").click();
+    await detail.getByTestId("extension-detail-back").click();
     await installedRow.click();
 
-    await page.getByTestId("extension-delete").click();
+    await detail.getByTestId("extension-delete").click();
     const dialog = page.getByRole("dialog").last();
     await dialog.getByRole("button", { name: "Delete", exact: true }).click();
     const marketplaceRow = page
       .getByTestId("marketplace-extension-entry")
+      .filter({ visible: true })
       .filter({ has: page.getByText("Project Planner", { exact: true }) });
     await marketplaceRow.waitFor();
 
@@ -265,7 +266,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     );
     await marketplaceRow.getByTestId("marketplace-extension-install").click();
     await reinstallResponse;
-    await page.getByTestId("extension-entry").filter({ hasText: "Project Planner" }).waitFor();
+    await list.getByTestId("extension-entry").filter({ hasText: "Project Planner" }).waitFor();
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);

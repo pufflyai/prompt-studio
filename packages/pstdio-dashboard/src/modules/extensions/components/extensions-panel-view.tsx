@@ -10,6 +10,7 @@ import { ArrowUpCircle, Search } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
@@ -100,49 +101,49 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const upgradable = extensions.filter((extension) => extension.canUpgrade);
 
   return (
-    <Stack gap="0" data-testid="extensions-panel">
-      <Stack
-        paddingX="lg"
-        paddingTop="lg"
-        paddingBottom="md"
-        gap="sm"
-        bg="bg"
-        borderBottomWidth="1px"
-        borderColor="border.subtle"
-        position="sticky"
-        top="0"
-        zIndex="1"
-      >
-        <HStack gap="md" alignItems="center">
-          <Text textStyle="heading/M" flex="1" minW="0">
-            {t("projectSettings.extensionsPanel.title")}
-          </Text>
-          {upgradable.length > 0 && (
-            <Button
-              variant="primary"
-              size="sm"
-              flexShrink="0"
-              loading={upgradingAll}
-              onClick={() => onUpgradeAll?.(upgradable)}
-              data-testid="extensions-upgrade-all"
-            >
-              <ArrowUpCircle size={14} />
-              {t("projectSettings.extensionsPanel.upgradeAll.action")}
-            </Button>
-          )}
-          <InputGroup startElement={<Search size={14} />} width="260px">
-            <Input
-              size="sm"
-              value={search}
-              placeholder={t("projectSettings.extensionsPanel.searchPlaceholder")}
-              aria-label={t("projectSettings.extensionsPanel.searchPlaceholder")}
-              onChange={(event) => setSearch(event.target.value)}
-              data-testid="extensions-search"
-            />
-          </InputGroup>
-        </HStack>
-      </Stack>
-
+    <PageContentLayout
+      testId="extensions-panel"
+      header={
+        <Stack
+          paddingX="lg"
+          paddingTop="lg"
+          paddingBottom="md"
+          gap="sm"
+          bg="bg"
+          borderBottomWidth="1px"
+          borderColor="border.subtle"
+        >
+          <HStack gap="md" alignItems="center">
+            <Text textStyle="heading/M" flex="1" minW="0">
+              {t("projectSettings.extensionsPanel.title")}
+            </Text>
+            {upgradable.length > 0 && (
+              <Button
+                variant="primary"
+                size="sm"
+                flexShrink="0"
+                loading={upgradingAll}
+                onClick={() => onUpgradeAll?.(upgradable)}
+                data-testid="extensions-upgrade-all"
+              >
+                <ArrowUpCircle size={14} />
+                {t("projectSettings.extensionsPanel.upgradeAll.action")}
+              </Button>
+            )}
+            <InputGroup startElement={<Search size={14} />} width="260px">
+              <Input
+                size="sm"
+                value={search}
+                placeholder={t("projectSettings.extensionsPanel.searchPlaceholder")}
+                aria-label={t("projectSettings.extensionsPanel.searchPlaceholder")}
+                onChange={(event) => setSearch(event.target.value)}
+                data-testid="extensions-search"
+              />
+            </InputGroup>
+          </HStack>
+        </Stack>
+      }
+    >
       <Text paddingX="lg" paddingTop="md" paddingBottom="2xs" textStyle="label/XS/medium" color="fg.subtle">
         {t("projectSettings.extensionsPanel.installedGroup", { count: extensions.length })}
       </Text>
@@ -205,6 +206,6 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
       <Stack padding="lg">
         <ExtensionFolderDropZone addingName={addingFolderName} onDropFolder={(folder) => onDropFolder?.(folder)} />
       </Stack>
-    </Stack>
+    </PageContentLayout>
   );
 };

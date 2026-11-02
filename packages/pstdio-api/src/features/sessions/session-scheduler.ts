@@ -2,13 +2,9 @@ import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pst
 import type { ResourceRef } from "pstdio-db";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
-import {
-  ANSWER_WITH_FILES_ERROR,
-  hasPendingProviderQuestion,
-  QuestionReplyRejectedError,
-  validateRecoveredQuestionReply,
-} from "./live-question-reply";
+import { ANSWER_WITH_FILES_ERROR, hasPendingProviderQuestion, QuestionReplyRejectedError } from "./live-question-reply";
 import { prepareHostQuestionDelivery } from "./session-question-delivery";
+import { reserveQuestionDispatch } from "./session-question-dispatch";
 import { createSessionQueueDrain } from "./session-queue-drain";
 import { prepareQueuedSessionRecovery } from "./session-queue-recovery";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
@@ -17,7 +13,7 @@ import {
   type DispatchContext,
   type ExistingSession,
   hasCreateCapacity,
-  insertFollowUpEntry,
+  insertAbortAwareFollowUp,
   prepareExistingDispatch,
   type StartExistingInput,
   updateExistingDispatchSelection,
@@ -28,6 +24,7 @@ import { spawnAgentSession } from "./spawn-agent";
 
 type CreateSessionInput = {
   projectId: string;
+  workspaceId?: string;
   title: string;
   agentId: string;
   prompt: string;
@@ -43,23 +40,6 @@ type CreateSessionInput = {
 };
 
 export type StartOrQueueResult = { status: "dispatched" } | { status: "queued"; queue_position: number };
-
-const queuedResult = (queuePosition: number | null): StartOrQueueResult =>
-  queuePosition != null ? { status: "queued", queue_position: queuePosition } : { status: "dispatched" };
-
-const insertAbortAwareFollowUp = async (
-  deps: SessionsRouteDeps,
-  context: DispatchContext,
-  transitionToQueued: boolean,
-) => {
-  context.signal?.throwIfAborted();
-  const queuePosition = await insertFollowUpEntry(deps, { ...context, transitionToQueued });
-  if (context.signal?.aborted) {
-    if (queuePosition !== null) await deps.sessionQueueEntriesService.remove(queuePosition);
-    context.signal.throwIfAborted();
-  }
-  return queuedResult(queuePosition);
-};
 
 const runOnCreated = async (
   deps: SessionsRouteDeps,
@@ -178,7 +158,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
       scheduled = await withSchedulingLock(async () => {
         input.signal?.throwIfAborted();
         const hasFirstMessage = Boolean(input.prompt.trim() || input.attachments?.length);
-        const hasCapacity = !hasFirstMessage || (await hasCreateCapacity(deps));
+        const hasCapacity = !hasFirstMessage || (await hasCreateCapacity(deps, input.workspaceId));
 
         if (!hasCapacity) {
           const queued = await deps.sessionService.createQueuedWithEntry(
@@ -279,18 +259,15 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
       return confirm;
     }
 
-    if (input.questionResponse) {
-      input.signal?.throwIfAborted();
-      await validateRecoveredQuestionReply(deps, input.session.id, status, live, input.questionResponse);
-      return prepareExistingDispatch(deps, context);
-    }
+    if (input.questionResponse) return reserveQuestionDispatch(deps, context, live);
 
     if (status === "in_progress" || status === "awaiting_input") {
       return insertAbortAwareFollowUp(deps, context, false);
     }
 
     if (status === "queued") return insertAbortAwareFollowUp(deps, context, false);
-    if (input.respectCapacity && !(await hasCreateCapacity(deps))) {
+    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(fresh.id);
+    if (input.respectCapacity && !(await hasCreateCapacity(deps, workspace?.id))) {
       return insertAbortAwareFollowUp(deps, context, true);
     }
 
