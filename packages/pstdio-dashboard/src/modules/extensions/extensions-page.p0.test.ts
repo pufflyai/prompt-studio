@@ -44,3 +44,28 @@ test("offers a direct keyboard shortcut that opens Extensions", async () => {
     workbench.dispose();
   }
 });
+
+test("opens extension details as a nested page and returns to its parent", () => {
+  const workbench = setup();
+  try {
+    const detail = { ...dashboardExtensionsPage, id: "extension-detail" };
+    const resource = { type: "extension", extensionId: "pstdio", id: "installed:instance-one", label: "Claude Code" };
+    const result = workbench.pageLocations.navigate({ kind: "page", page: detail, resource });
+    expect(result.ok).toBe(true);
+    expect(workbench.pages.getPage("extension-detail")?.parentId).toBe("extensions");
+    expect(workbench.pages.store.getState().location?.resource).toMatchObject(resource);
+    const location = workbench.pages.store.getState().location!;
+    const restored = setup();
+    try {
+      expect(restored.pageLocations.replay(location).ok).toBe(true);
+      expect(restored.pages.store.getState().location?.resource?.id).toBe(resource.id);
+      expect(restored.pageLocations.navigateToParent().ok).toBe(true);
+      expect(restored.pages.store.getState().location?.page).toEqual(dashboardExtensionsPage);
+      expect(restored.pages.store.getState().location?.resource).toBeUndefined();
+    } finally {
+      restored.dispose();
+    }
+  } finally {
+    workbench.dispose();
+  }
+});

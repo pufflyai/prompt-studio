@@ -6,8 +6,13 @@ test("host Extensions and extension-owned pages keep distinct round-trip URLs", 
   const pages: PageUrlDefinition[] = [
     { id: "extensions", ref: { kind: "page", extensionId: "pstdio", id: "extensions" }, path: "extensions" },
     { id: "tools", ref: { kind: "page", extensionId: "acme.tools", id: "tools" }, path: "tools" },
+    {
+      id: "extension-detail",
+      ref: { kind: "page", extensionId: "pstdio", id: "extension-detail" },
+      path: "extensions/detail",
+    },
   ];
-  for (const [index, path] of ["extensions", "extensions/acme.tools/tools"].entries()) {
+  for (const [index, path] of ["extensions", "extensions/acme.tools/tools", "extensions/detail"].entries()) {
     const page = pages[index]!;
     const url = serializeWorkbenchPageUrl({
       projectId: "project-1",

@@ -32,3 +32,4 @@ export const dashboardViews = {
 } as const;
 
 export const dashboardExtensionsPage = { kind: "page", extensionId: "pstdio", id: "extensions" } as const;
+export const dashboardExtensionDetailPage = { ...dashboardExtensionsPage, id: "extension-detail" } as const;

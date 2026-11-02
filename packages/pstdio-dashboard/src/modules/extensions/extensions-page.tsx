@@ -1,8 +1,11 @@
+import type { ListProjectExtensionsResponse } from "@pstdio/sdk/api";
 import type { WorkbenchModuleContext, WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
-import { dashboardExtensionsPage } from "@/shared/app/resources";
+import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { projectExtensionsQueryKey } from "@/shared/extensions/project-extension-cache";
 import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,
@@ -19,6 +22,24 @@ const ExtensionsPage = (props: { input: WorkbenchPanelRenderInput }) => {
 };
 
 export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
+  ctx.resources.registerKind({
+    kind: "extension",
+    extensionId: "pstdio",
+    label: "Extension",
+    icon: "tool-case",
+    resolve: (resource) => {
+      const projectId = ctx.context.get(dashboardSelectedProjectIdContextKey);
+      if (typeof projectId !== "string") return resource;
+      const data = getDashboardQueryClient().getQueryData<ListProjectExtensionsResponse>(
+        projectExtensionsQueryKey(projectId),
+      );
+      const installed = data?.extensions.find((entry) => resource.id === `installed:${entry.id}`);
+      const available = data?.marketplace.find((entry) => resource.id === `marketplace:${entry.installName}`);
+      const extension = installed ?? available;
+      return extension ? { ...resource, label: extension.displayName } : resource;
+    },
+    subscribe: (listener) => getDashboardQueryClient().getQueryCache().subscribe(listener),
+  });
   ctx.views.registerView({
     id: dashboardWidgetIds.extensions,
     title: "Extensions",
@@ -34,6 +55,22 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
     icon: "tool-case",
     path: "extensions",
     modeId: "project",
+    main: {
+      kind: "view",
+      cardinality: "one",
+      presentation: "page",
+      view: { kind: "view", id: dashboardWidgetIds.extensions },
+    },
+    slots: [],
+  });
+  ctx.pages.registerPage({
+    id: "extension-detail",
+    ref: dashboardExtensionDetailPage,
+    title: "Extension",
+    path: "extensions/detail",
+    parentId: "extensions",
+    modeId: "project",
+    resource: { kinds: [{ kind: "resource-kind", extensionId: "pstdio", id: "extension" }] },
     main: {
       kind: "view",
       cardinality: "one",

@@ -1,3 +1,4 @@
+// packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";

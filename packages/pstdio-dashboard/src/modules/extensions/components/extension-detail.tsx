@@ -12,6 +12,7 @@ import { ArrowLeft, ArrowUpCircle, Blocks, Puzzle, RotateCw, SlidersHorizontal, 
 import type { AgentInfo } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { PageContentLayout } from "@/shared/components/page-content-layout";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
@@ -84,126 +85,127 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
   };
 
   return (
-    <Stack gap="md" paddingBottom="lg" data-testid="extension-detail">
-      <Stack gap="md" paddingX="lg" paddingTop="lg">
-        <HStack justifyContent="space-between">
-          <Button variant="ghost" size="2xs" onClick={onBack} data-testid="extension-detail-back">
-            <ArrowLeft size={12} />
-            {t("projectSettings.extensionsPanel.detail.back")}
-          </Button>
-          {unavailableHarnesses.length > 0 && (
-            <ExtensionHealthPopover
-              extension={extension}
-              diagnostics={diagnostics}
-              unavailableHarnesses={unavailableHarnesses}
-              upgrading={upgrading}
-              onUpgrade={onUpgrade}
-            />
-          )}
-        </HStack>
+    <PageContentLayout
+      testId="extension-detail"
+      header={
+        <Stack gap="md" paddingX="lg" paddingTop="lg">
+          <HStack justifyContent="space-between">
+            <Button variant="ghost" size="2xs" onClick={onBack} data-testid="extension-detail-back">
+              <ArrowLeft size={12} />
+              {t("projectSettings.extensionsPanel.detail.back")}
+            </Button>
+            {unavailableHarnesses.length > 0 && (
+              <ExtensionHealthPopover
+                extension={extension}
+                diagnostics={diagnostics}
+                unavailableHarnesses={unavailableHarnesses}
+                upgrading={upgrading}
+                onUpgrade={onUpgrade}
+              />
+            )}
+          </HStack>
 
-        <HStack gap="md" alignItems="center">
-          <Flex
-            alignItems="center"
-            justifyContent="center"
-            boxSize="11"
-            flexShrink="0"
-            borderWidth="1px"
-            borderColor="border.subtle"
-            borderRadius="sm"
-            bg="bg.subtle"
-          >
-            <Puzzle size={22} />
-          </Flex>
-          <Stack gap="0" flex="1" minW="0">
-            <Text textStyle="heading/M">{extension.displayName}</Text>
-            <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle">
-              {extension.extensionId}
-              {extension.version ? ` · v${extension.version}` : ""} ·{" "}
-              {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
+          <HStack gap="md" alignItems="center">
+            <Flex
+              alignItems="center"
+              justifyContent="center"
+              boxSize="11"
+              flexShrink="0"
+              borderWidth="1px"
+              borderColor="border.subtle"
+              borderRadius="sm"
+              bg="bg.subtle"
+            >
+              <Puzzle size={22} />
+            </Flex>
+            <Stack gap="0" flex="1" minW="0">
+              <Text textStyle="heading/M">{extension.displayName}</Text>
+              <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle">
+                {extension.extensionId}
+                {extension.version ? ` · v${extension.version}` : ""} ·{" "}
+                {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
+              </Text>
+            </Stack>
+            {extension.canUpgrade && (
+              <Button
+                variant="primary"
+                size="2xs"
+                onClick={onUpgrade}
+                loading={upgrading}
+                data-testid="extension-upgrade"
+                flexShrink="0"
+              >
+                <ArrowUpCircle size={12} />
+                {t("projectSettings.extensionsPanel.upgrade.action")}
+              </Button>
+            )}
+            {showReload && (
+              <Button
+                variant="primary"
+                size="2xs"
+                onClick={onReload}
+                loading={reloading}
+                data-testid="extension-reload"
+                flexShrink="0"
+              >
+                <RotateCw size={12} />
+                {t("projectSettings.extensionsPanel.reload.action")}
+              </Button>
+            )}
+            <Switch
+              size="sm"
+              checked={extension.enabled}
+              onCheckedChange={handleCheckedChange}
+              disabled={toggling || uninstalling}
+              aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
+            />
+          </HStack>
+
+          {extension.description && (
+            <Text textStyle="paragraph/S/regular" color="fg.muted">
+              {extension.description}
+            </Text>
+          )}
+
+          {showReload && (
+            <Text textStyle="label/XS" color="fg.muted" data-testid="extension-reload-hint">
+              {t("projectSettings.extensionsPanel.reload.hint")}
+            </Text>
+          )}
+
+          <Stack gap="3xs">
+            <Text textStyle="label/XS" color="fg.subtle">
+              {t("projectSettings.extensionsPanel.detail.sourcePath")}
+            </Text>
+            <Text
+              textStyle="label/XS"
+              fontFamily="mono"
+              color="fg.muted"
+              wordBreak="break-all"
+              data-testid="extension-detail-source-path"
+            >
+              {extension.sourcePath}
             </Text>
           </Stack>
-          {extension.canUpgrade && (
-            <Button
-              variant="primary"
-              size="2xs"
-              onClick={onUpgrade}
-              loading={upgrading}
-              data-testid="extension-upgrade"
-              flexShrink="0"
+
+          {failed && <ExtensionDetailHealth extension={extension} upgrading={upgrading} onUpgrade={onUpgrade} />}
+
+          {!failed && diagnostics.length > 0 && (
+            <AlertMessage
+              status={hasErrorDiagnostics ? "error" : "warning"}
+              title={t("projectSettings.extensionsPanel.health.issues", { count: diagnostics.length })}
+              data-testid="extension-detail-issues"
             >
-              <ArrowUpCircle size={12} />
-              {t("projectSettings.extensionsPanel.upgrade.action")}
-            </Button>
+              {diagnostics.slice(0, 4).map((diagnostic, index) => (
+                <Text key={`${diagnostic.code}-${index}`} textStyle="label/XS">
+                  {diagnostic.code}: {diagnostic.message}
+                </Text>
+              ))}
+            </AlertMessage>
           )}
-          {showReload && (
-            <Button
-              variant="primary"
-              size="2xs"
-              onClick={onReload}
-              loading={reloading}
-              data-testid="extension-reload"
-              flexShrink="0"
-            >
-              <RotateCw size={12} />
-              {t("projectSettings.extensionsPanel.reload.action")}
-            </Button>
-          )}
-          <Switch
-            size="sm"
-            checked={extension.enabled}
-            onCheckedChange={handleCheckedChange}
-            disabled={toggling || uninstalling}
-            aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
-          >
-            {t("projectSettings.extensionsPanel.enabledInProject")}
-          </Switch>
-        </HStack>
-
-        {extension.description && (
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {extension.description}
-          </Text>
-        )}
-
-        {showReload && (
-          <Text textStyle="label/XS" color="fg.muted" data-testid="extension-reload-hint">
-            {t("projectSettings.extensionsPanel.reload.hint")}
-          </Text>
-        )}
-
-        <Stack gap="3xs">
-          <Text textStyle="label/XS" color="fg.subtle">
-            {t("projectSettings.extensionsPanel.detail.sourcePath")}
-          </Text>
-          <Text
-            textStyle="label/XS"
-            fontFamily="mono"
-            color="fg.muted"
-            wordBreak="break-all"
-            data-testid="extension-detail-source-path"
-          >
-            {extension.sourcePath}
-          </Text>
         </Stack>
-
-        {failed && <ExtensionDetailHealth extension={extension} upgrading={upgrading} onUpgrade={onUpgrade} />}
-
-        {!failed && diagnostics.length > 0 && (
-          <AlertMessage
-            status={hasErrorDiagnostics ? "error" : "warning"}
-            title={t("projectSettings.extensionsPanel.health.issues", { count: diagnostics.length })}
-            data-testid="extension-detail-issues"
-          >
-            {diagnostics.slice(0, 4).map((diagnostic, index) => (
-              <Text key={`${diagnostic.code}-${index}`} textStyle="label/XS">
-                {diagnostic.code}: {diagnostic.message}
-              </Text>
-            ))}
-          </AlertMessage>
-        )}
-      </Stack>
-
+      }
+    >
       <Tabs.Root defaultValue="settings" size="sm" tray>
         <Tabs.List>
           <Tabs.Trigger value="settings">
@@ -321,6 +323,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           </Stack>
         </Tabs.Content>
       </Tabs.Root>
-    </Stack>
+    </PageContentLayout>
   );
 };
