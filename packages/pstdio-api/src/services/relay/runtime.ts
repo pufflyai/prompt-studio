@@ -74,6 +74,7 @@ export const startRelayRuntime = async (input: {
   };
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+    if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     for (const owners of coreOwners) owners.ensure(config);
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
@@ -208,12 +209,15 @@ export const startRelayRuntime = async (input: {
           .filter(([id, current]) => canonicalJson(desired.get(id) ?? null) !== canonicalJson(current))
           .map(([id]) => id),
       );
+      // Refreshes triggered by shutdown must not recreate owners on the retiring socket.
+      for (const id of changed) {
+        workbenches.delete(id);
+        access.delete(id);
+      }
       for (const id of changed) {
         for (const owners of coreOwners) await owners.remove(id);
         live.get(id)?.close();
         live.delete(id);
-        workbenches.delete(id);
-        access.delete(id);
       }
       // Publish new owners before awaiting shutdown so an older in-flight start cannot take ownership.
       for (const [id, connection] of desired)
