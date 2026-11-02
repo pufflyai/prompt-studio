@@ -97,7 +97,11 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
               </Text>
             )}
             {!loadingContributions && !contributionsError && (
-              <ExtensionContributions metadata={metadata} extensionId={extensionId} automations={[]} />
+              <ExtensionContributions
+                metadata={metadata}
+                extensionId={metadata?.extensions[0]?.id ?? extensionId}
+                automations={[]}
+              />
             )}
           </Stack>
         </Tabs.Content>
