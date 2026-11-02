@@ -18,6 +18,7 @@ import { createViewsWorkbench } from "./core/views";
 import { createExtensionPreview } from "./extension-preview";
 import navigationLevelsExtension, { pantryPage } from "./extensions/navigation-levels-extension";
 import pageExtension, { guidePage } from "./extensions/page-extension";
+import resourceListExtension from "./extensions/resource-list-extension";
 import { OnboardingFrame } from "./onboarding-frame";
 
 const meta = {
@@ -135,4 +136,11 @@ export const SidenavLevels: Story = {
   render: () => (
     <OnboardingFrame createWorkbench={() => createExtensionPreview(navigationLevelsExtension, pantryPage.id)} />
   ),
+};
+
+export const ResourceList: Story = {
+  id: "pstdio-workbench-guides-onboarding--resource-list",
+  name: "18. Resource list",
+  description: "An extension supplies grouped resources with one level of children through the public SDK.",
+  render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(resourceListExtension, "resources")} />,
 };

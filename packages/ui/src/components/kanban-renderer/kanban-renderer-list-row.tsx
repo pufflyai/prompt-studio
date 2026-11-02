@@ -1,4 +1,5 @@
-import { Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
+import { Box, HStack, Icon, IconButton, Text, Wrap } from "@chakra-ui/react";
+import { Plus } from "lucide-react";
 import type { DragEvent } from "react";
 import { HighlightedText } from "../collection-view/highlighted-text";
 import { ListRow } from "../list-row/list-row";
@@ -38,6 +39,11 @@ const KanbanRendererListLabel = (props: KanbanRendererListItemContentProps) => {
         <Text textStyle="label/XS" color="fg.muted" flexShrink={0}>
           {item.countBadge}
         </Text>
+        {item.note ? (
+          <Text textStyle="label/XS" color="fg.muted" truncate>
+            {item.note}
+          </Text>
+        ) : null}
       </HStack>
     );
   }
@@ -61,6 +67,19 @@ const KanbanRendererListBadges = (props: KanbanRendererListItemContentProps) => 
 
   return (
     <HStack gap="xs" flexShrink={0}>
+      {item.onCreate ? (
+        <IconButton
+          aria-label={`Add to ${item.title}`}
+          variant="ghost"
+          size="2xs"
+          onClick={(event) => {
+            event.stopPropagation();
+            item.onCreate?.();
+          }}
+        >
+          <Plus />
+        </IconButton>
+      ) : null}
       <Wrap gap="2xs" flexShrink={0}>
         {item.badges?.map((badge) => (
           <KanbanRendererAttributeBadge key={badge.attributeId} badge={badge} onChange={item.onBadgeChange} />
@@ -73,7 +92,7 @@ const KanbanRendererListBadges = (props: KanbanRendererListItemContentProps) => 
 
 // ListRow only reserves end space when endContent is set, so rows without badges pass null.
 const hasEndContent = (item: KanbanRendererListItem) =>
-  (item.badges?.length ?? 0) > 0 || (item.customSlots?.length ?? 0) > 0;
+  Boolean(item.onCreate) || (item.badges?.length ?? 0) > 0 || (item.customSlots?.length ?? 0) > 0;
 
 const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): ListRowItem => ({
   id: item.id,
@@ -132,7 +151,7 @@ export const KanbanRendererListRow = (props: KanbanRendererListRowProps) => {
   const toggleExpanded = () => onExpandedChange(row.id, !isExpanded);
 
   const handleActivate = () => {
-    if (canExpand) {
+    if (canExpand && item.expandOnClick !== false) {
       toggleExpanded();
       return;
     }
@@ -204,6 +223,7 @@ export const KanbanRendererListRow = (props: KanbanRendererListRowProps) => {
         isExpanded={isExpanded}
         showExpandToggle={canExpand}
         showContextMenuTrigger={false}
+        expandOnClick={item.expandOnClick}
         onActivate={handleActivate}
         onToggleExpand={toggleExpanded}
       />

@@ -10,6 +10,8 @@ import type { KanbanRendererSettings } from "./types";
 
 interface DisplayMenuProps {
   settings: KanbanRendererSettings;
+  resourceList?: boolean;
+  onShowChildrenChange?: (show: boolean) => void;
   sortControl?: ReactNode;
   groupingOptions: MenuOption[];
   displayPropertyOptions: MenuOption[];
@@ -119,28 +121,30 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
         <Popover.Positioner>
           <Popover.Content ref={contentRef} width="18.75rem" padding="xs" gap="1px">
             <SectionLabel>DISPLAY</SectionLabel>
-            <HStack borderRadius="sm" bg="bg.subtle" padding="2xs" gap="2xs">
-              <Button
-                flex="1"
-                size="2xs"
-                variant="ghost"
-                aria-pressed={settings.viewMode === "list"}
-                onClick={() => onViewModeChange("list")}
-              >
-                <List />
-                List
-              </Button>
-              <Button
-                flex="1"
-                size="2xs"
-                variant="ghost"
-                aria-pressed={settings.viewMode === "board"}
-                onClick={() => onViewModeChange("board")}
-              >
-                <SquareKanban />
-                Board
-              </Button>
-            </HStack>
+            {props.resourceList ? null : (
+              <HStack borderRadius="sm" bg="bg.subtle" padding="2xs" gap="2xs">
+                <Button
+                  flex="1"
+                  size="2xs"
+                  variant="ghost"
+                  aria-pressed={settings.viewMode === "list"}
+                  onClick={() => onViewModeChange("list")}
+                >
+                  <List />
+                  List
+                </Button>
+                <Button
+                  flex="1"
+                  size="2xs"
+                  variant="ghost"
+                  aria-pressed={settings.viewMode === "board"}
+                  onClick={() => onViewModeChange("board")}
+                >
+                  <SquareKanban />
+                  Board
+                </Button>
+              </HStack>
+            )}
 
             <DisplayMenuSelect
               label="Grouping"
@@ -151,12 +155,24 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                 if (value === "none" || value === settings.rowGrouping) onRowGroupingChange("none");
               }}
             />
-            <DisplayMenuSelect
-              label="Sub-grouping"
-              value={settings.rowGrouping}
-              options={resolveSubGroupingOptions(groupingOptions, settings.columnGrouping)}
-              onSelect={onRowGroupingChange}
-            />
+            {props.resourceList ? (
+              <DisplayMenuSelect
+                label="Children"
+                value={settings.showChildren === false ? "hidden" : "nested"}
+                options={[
+                  { value: "nested", label: "Nested" },
+                  { value: "hidden", label: "Hidden" },
+                ]}
+                onSelect={(value) => props.onShowChildrenChange?.(value === "nested")}
+              />
+            ) : (
+              <DisplayMenuSelect
+                label="Sub-grouping"
+                value={settings.rowGrouping}
+                options={resolveSubGroupingOptions(groupingOptions, settings.columnGrouping)}
+                onSelect={onRowGroupingChange}
+              />
+            )}
 
             {props.sortControl}
             <SectionLabel>PROPERTIES</SectionLabel>

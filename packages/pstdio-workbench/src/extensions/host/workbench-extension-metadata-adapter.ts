@@ -65,7 +65,7 @@ const commandActions = <
 const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensionMetadata["kanbanRenderers"] =>
   metadata.views.flatMap((view) => {
     const body = view.body;
-    if (body.kind !== "kanban") return [];
+    if (body.kind !== "kanban" && body.kind !== "resourceList") return [];
     return [
       {
         ...body,
