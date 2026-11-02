@@ -9,7 +9,7 @@ const declarations: Record<NavigationTreeSlot, readonly string[]> = {
     "dashboard.workspaces.project-nav",
     "dashboard.sessions.list",
   ],
-  footer: ["dashboard.help.footer", "dashboard.settings.footer"],
+  footer: ["dashboard.extensions.footer", "dashboard.help.footer", "dashboard.settings.footer"],
 };
 
 const dashboardModes = ["project"] as const;

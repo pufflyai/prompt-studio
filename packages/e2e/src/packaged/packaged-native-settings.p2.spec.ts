@@ -47,8 +47,7 @@ for (const [type, launchOptions] of [
         const page = await browser.newPage();
         await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
         await signInBrowser(page, started.descriptor);
-        await page.goto(`${started.baseUrl}/projects/${project.id}/sessions`);
-        await page.getByText("Settings", { exact: true }).last().click();
+        await page.goto(`${started.baseUrl}/projects/${project.id}`);
         await verifyPackagedNativeSettings(page, { baseUrl: started.baseUrl, projectId: project.id, root, headers });
       } finally {
         await browser?.close();

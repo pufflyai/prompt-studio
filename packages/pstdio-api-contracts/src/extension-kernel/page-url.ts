@@ -195,7 +195,7 @@ const pageForUrl = (url: URL, projectId: string, pages: readonly PageUrlDefiniti
   const segments = decodedSegments(url.pathname);
   if (!segments || segments[0] !== "projects" || segments[1] !== projectId) return undefined;
   const route = segments.slice(2);
-  const extensionRoute = route[0] === "extensions";
+  const extensionRoute = route[0] === "extensions" && route.length > 1;
   const extensionId = extensionRoute ? route[1] : hostExtensionId;
   const path = (extensionRoute ? route.slice(2) : route).join("/");
   if (!extensionId || (extensionRoute && !path)) return undefined;
