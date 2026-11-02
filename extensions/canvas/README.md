@@ -64,7 +64,7 @@ pst canvas layout read --canvas src/button.canvas.tsx
 
 ## Parameters, motion, and shader versions
 
-Project frames can advertise number, toggle, and choice controls. Select a frame to see its parameters and saved versions in the **Frame editor** menu on the right. Clearing selection empties the menu; selecting another frame preserves each frame’s temporary edits and playback state. Edits stay local across themes, moves, and camera gestures. Reset parameters restores its saved values. A `motion` declaration adds Play/Pause, Restart, precise time, speed, markers, and a loop range. Each frame starts paused and owns its clock.
+Project frames can advertise number, toggle, and choice controls. Select a frame to see its parameters and saved versions in the **Frame editor** menu on the right. Clearing selection hides both panels; selecting another frame preserves each frame’s temporary edits and playback state. Edits stay local across themes, moves, and camera gestures. Reset parameters restores its saved values. A `motion` declaration adds Play/Pause, Restart, precise time, speed, markers, and a loop range. Each frame starts paused and owns its clock.
 
 A literal `save: { file: "default.json", key: "values" }` declaration enables selection, explicit saving, and named JSON versions beside the canvas. The menu can rename or delete versions, while protecting the source's imported version. Errors preserve edits for retry. Agents use `pst canvas parameters <action> --help` for the same actions.
 
@@ -92,13 +92,18 @@ Require browser or visual checks only for critical risks: a blocked primary task
 
 
 Animated frames show a shared timeline in a bottom tray when selected.
-The tray hugs its content. Close either panel with its close button; use the panel
-icons at the top right of Canvas to reopen it. Closing preserves selection, edits
-and playback time. Markers are diamonds, and transport uses icon buttons. The tray follows
+The tray starts at its content height. Drag a panel divider towards its edge to
+close it, or focus the divider and press Home. A closed panel has a reopen icon
+only while a suitable frame is selected; open panels have no menu button, header
+or close button. Empty selection hides both panels and their reopen controls.
+Closing preserves selection, edits and playback time. Markers are diamonds, and
+transport uses icon buttons. The timeline settings menu owns Loop, Speed, Loop
+start and Loop end. Drag its range handles or use their arrow keys to edit the
+loop directly; values snap to frames and the boundaries cannot cross. The tray follows
 selection and disappears for a static frame or empty selection. Scrub its playhead,
 seek named markers, or use Play/Pause/Restart. Each frame retains its own playback
-position and settings. Parameters, saved versions, speed and loop settings stay in
-the right Frame editor. Existing source-code animations advertise duration and
+position and settings. Parameters and saved versions stay in the right Frame editor. Speed and loop
+settings belong to the timeline menu. Existing source-code animations advertise duration and
 markers; the timeline displays an animation lane without inventing property keys.
 The reusable UI timeline also supports editable property tracks for tools that own
 keyframe data.

@@ -1,15 +1,16 @@
 import { Box, Stack } from "@chakra-ui/react";
-import { KeyframeTimeline } from "@pstdio/ui/keyframe-timeline";
+import { type KeyframeLoopRange, KeyframeTimeline, moveLoopBoundary } from "@pstdio/ui/keyframe-timeline";
 import { ParamEditor } from "@pstdio/ui/param-editor";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FrameAnimationOutlet, FrameEditorVisible } from "./editor-outlet";
+import { FrameAnimationOutlet } from "./editor-outlet";
 import { type FrameParameters, nextPlaybackTime, type Values } from "./model";
 import type { PlaybackSettings } from "./review";
 
 interface PlaybackProps {
   active: boolean;
   name: string;
+  frameId: string;
   motion: NonNullable<FrameParameters["motion"]>;
   onChange: (values: Values) => void;
   restored?: PlaybackSettings;
@@ -18,7 +19,27 @@ interface PlaybackProps {
 export const Playback = (props: PlaybackProps) => {
   const { motion, onChange } = props;
   const outlet = useContext(FrameAnimationOutlet);
-  const editorVisible = useContext(FrameEditorVisible);
+  const tray = useRef<HTMLDivElement>(null);
+  const register = outlet?.setActiveFrame;
+  const reportHeight = outlet?.reportHeight;
+  const open = outlet?.open;
+  useEffect(() => {
+    if (!props.active || !register) return;
+    register(props.frameId);
+    return () => register((current) => (current === props.frameId ? undefined : current));
+  }, [props.active, props.frameId, register]);
+  useLayoutEffect(() => {
+    const node = tray.current;
+    if (!node || !props.active || !open || !reportHeight) return;
+    const measure = () => {
+      const height = node.getBoundingClientRect().height;
+      if (height > 0) reportHeight(height);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    measure();
+    return () => observer.disconnect();
+  }, [props.active, open, reportHeight]);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(true);
@@ -72,89 +93,85 @@ export const Playback = (props: PlaybackProps) => {
     setTime(value);
     onChange({ time: value });
   };
-  if (!props.active) return null;
-  return (
-    <>
-      {outlet?.element &&
-        outlet.open &&
-        createPortal(
-          <Box maxH="40vh" minH="0" data-frame-playback={props.name}>
-            <KeyframeTimeline
-              label={`Animations · ${props.name}`}
-              onClose={outlet.close}
-              tracks={[{ id: "animation", label: "Animation", keyframes: [] }]}
-              duration={motion.duration}
-              framesPerSecond={motion.fps ?? 60}
-              currentTime={time}
-              onTimeChange={seek}
-              onRestart={() => seek(start)}
-              playing={playing}
-              onPlayingChange={(next: boolean) => {
-                interact();
-                if (next && clock.current >= end) {
-                  clock.current = start;
-                  setTime(start);
+  const changeRange = (range: KeyframeLoopRange) => {
+    setStart(range.start);
+    setEnd(range.end);
+    seek(Math.max(range.start, Math.min(clock.current, range.end)));
+  };
+  if (!props.active || !outlet?.element || !outlet.open) return null;
+  return createPortal(
+    <Box ref={tray} maxH="40vh" minH="0" data-frame-playback={props.name}>
+      <KeyframeTimeline
+        label={`Animations · ${props.name}`}
+        maxHeight={outlet.heightLimit}
+        tracks={[{ id: "animation", label: "Animation", keyframes: [] }]}
+        duration={motion.duration}
+        framesPerSecond={motion.fps ?? 60}
+        currentTime={time}
+        onTimeChange={seek}
+        onRestart={() => seek(start)}
+        playing={playing}
+        onPlayingChange={(next: boolean) => {
+          interact();
+          if (next && (clock.current >= end || clock.current < start)) {
+            clock.current = start;
+            setTime(start);
+          }
+          setPlaying(next);
+        }}
+        loopRange={{ start, end }}
+        onLoopRangeChange={changeRange}
+        markers={motion.markers?.map((marker) => ({
+          id: `${marker.at}:${marker.label}`,
+          time: marker.at,
+          label: marker.label,
+        }))}
+        settings={
+          <Stack gap="sm" p="sm" data-frame-animation-settings>
+            <ParamEditor
+              params={[
+                { id: "loop", type: "boolean", name: "Loop", defaultValue: loop },
+                {
+                  id: "rate",
+                  type: "selection",
+                  name: "Speed",
+                  defaultValue: String(rate),
+                  options: [0.25, 0.5, 1, 1.5, 2].map((value) => ({ id: String(value), name: `${value}×` })),
+                },
+                {
+                  id: "start",
+                  type: "number",
+                  name: "Loop start",
+                  min: 0,
+                  max: moveLoopBoundary({ start, end }, "start", motion.duration, motion.duration, motion.fps ?? 60)
+                    .start,
+                  step: 1 / (motion.fps ?? 60),
+                  defaultValue: start,
+                },
+                {
+                  id: "end",
+                  type: "number",
+                  name: "Loop end",
+                  min: moveLoopBoundary({ start, end }, "end", 0, motion.duration, motion.fps ?? 60).end,
+                  max: motion.duration,
+                  step: 1 / (motion.fps ?? 60),
+                  defaultValue: end,
+                },
+              ]}
+              onChange={(id, value) => {
+                if (id === "start" || id === "end") {
+                  changeRange(moveLoopBoundary({ start, end }, id, Number(value), motion.duration, motion.fps ?? 60));
+                  return;
                 }
-                setPlaying(next);
+                interact();
+                if (id === "loop") setLoop(Boolean(value));
+                if (id === "rate") setRate(Number(value));
               }}
-              markers={motion.markers?.map((marker) => ({
-                id: `${marker.at}:${marker.label}`,
-                time: marker.at,
-                label: marker.label,
-              }))}
             />
-          </Box>,
-          outlet.element,
-        )}
-      {editorVisible && (
-        <Stack gap="sm" p="sm" data-frame-animation-settings>
-          <ParamEditor
-            params={[
-              { id: "loop", type: "boolean", name: "Loop", defaultValue: loop },
-              {
-                id: "rate",
-                type: "selection",
-                name: "Speed",
-                defaultValue: String(rate),
-                options: [0.25, 0.5, 1, 1.5, 2].map((value) => ({ id: String(value), name: `${value}×` })),
-              },
-              {
-                id: "start",
-                type: "number",
-                name: "Loop start",
-                min: 0,
-                max: end - 1 / (motion.fps ?? 60),
-                step: 0.1,
-                defaultValue: start,
-              },
-              {
-                id: "end",
-                type: "number",
-                name: "Loop end",
-                min: start + 1 / (motion.fps ?? 60),
-                max: motion.duration,
-                step: 0.1,
-                defaultValue: end,
-              },
-            ]}
-            onChange={(id, value) => {
-              interact();
-              if (id === "loop") setLoop(Boolean(value));
-              if (id === "rate") setRate(Number(value));
-              if (id === "start") {
-                const next = Math.max(0, Math.min(Number(value), end - 1 / (motion.fps ?? 60)));
-                setStart(next);
-                seek(next);
-              }
-              if (id === "end") {
-                const next = Math.min(motion.duration, Math.max(Number(value), start + 1 / (motion.fps ?? 60)));
-                setEnd(next);
-                seek(Math.min(time, next));
-              }
-            }}
-          />
-        </Stack>
-      )}
-    </>
+          </Stack>
+        }
+      />
+    </Box>,
+    outlet.element,
   );
 };

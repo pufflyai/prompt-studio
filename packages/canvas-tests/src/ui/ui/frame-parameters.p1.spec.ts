@@ -17,7 +17,9 @@ test("frame parameters and playback stay independent across themes and movement"
   const output = document.locator("[data-parameters-preview]");
   await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(3);
   const menu = surface.getByRole("complementary", { name: "Frame editor" });
-  await expect(menu.getByText("Select a frame", { exact: true })).toBeVisible();
+  await expect(menu).toBeHidden();
+  await expect(surface.getByRole("button", { name: "Open frame parameters", exact: true })).toHaveCount(0);
+  await expect(surface.getByRole("button", { name: "Open animation timeline", exact: true })).toHaveCount(0);
   await expect(surface.getByRole("region", { name: /^Animations/ })).toHaveCount(0);
   // Fit both comparison frames beside the editor before interacting with them.
   await surface.locator("[data-canvas-viewport]").press("f");
@@ -38,33 +40,61 @@ test("frame parameters and playback stay independent across themes and movement"
   await first.locator("[data-canvas-select]").click();
   await expect(dialog.getByRole("spinbutton").first()).toHaveValue("7");
   await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
-  // Closing either panel must preserve selection, edits, preview input and the other panel.
+  // Dragging panels closed must keep selection, edits, iframe input and the other panel.
   const viewport = surface.locator("[data-canvas-viewport]");
-  await expect(dialog.getByRole("button", { name: "Close frame editor", exact: true })).toBeVisible();
+  await expect(surface.getByRole("button", { name: "Open frame parameters", exact: true })).toHaveCount(0);
+  await expect(surface.getByRole("button", { name: "Open animation timeline", exact: true })).toHaveCount(0);
   const viewportBefore = (await viewport.boundingBox())!;
   const tray = surface.locator("[data-animation-tray]");
   const trayBounds = (await tray.boundingBox())!;
   const toolbarBounds = (await timeline.getByRole("toolbar", { name: "Animation controls" }).boundingBox())!;
-  const laneBounds = await timeline
+  const laneBounds = (await timeline
     .getByRole("slider", { name: "Timeline playhead", exact: true })
     .locator("../..")
-    .boundingBox();
-  expect(trayBounds.height).toBeLessThanOrEqual(toolbarBounds.height + laneBounds!.height + 3);
-  await dialog.getByRole("button", { name: "Calm", exact: true }).click();
-  await dialog.getByRole("button", { name: "Close frame editor", exact: true }).click();
+    .boundingBox())!;
+  expect(trayBounds.height).toBeLessThanOrEqual(toolbarBounds.height + laneBounds.height + 3);
+  const editorWidth = (await dialog.boundingBox())!.width;
+  const sideDivider = (await surface
+    .getByRole("separator", { name: "Resize frame editor", exact: true })
+    .boundingBox())!;
+  await page.mouse.move(sideDivider.x + sideDivider.width / 2, sideDivider.y + sideDivider.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(sideDivider.x + editorWidth - 20, sideDivider.y + sideDivider.height / 2);
+  await page.mouse.up();
   await expect(dialog).toBeHidden();
-  await expect(surface.getByRole("menuitemradio", { name: "Bright", exact: true })).not.toBeVisible();
   await expect(timeline).toBeVisible();
   expect((await viewport.boundingBox())!.width).toBeGreaterThan(viewportBefore.width);
-  await surface.getByRole("button", { name: "Toggle frame editor", exact: true }).click();
+  await surface.getByRole("button", { name: "Open frame parameters", exact: true }).click();
   await expect(dialog.getByRole("spinbutton").first()).toHaveValue("7");
-  await timeline.getByRole("button", { name: "Close animation timeline", exact: true }).click();
+  await expect(surface.getByRole("button", { name: "Open frame parameters", exact: true })).toHaveCount(0);
+  const bottomDivider = (await surface
+    .getByRole("separator", { name: "Resize animation timeline", exact: true })
+    .boundingBox())!;
+  await page.mouse.move(bottomDivider.x + bottomDivider.width / 2, bottomDivider.y);
+  await page.mouse.down();
+  await page.mouse.move(bottomDivider.x + bottomDivider.width / 2, bottomDivider.y + trayBounds.height - 16);
+  await page.mouse.up();
   await expect(timeline).toBeHidden();
   await expect(dialog).toBeVisible();
-  expect((await tray.boundingBox())?.height ?? 0).toBe(0);
-  await surface.getByRole("button", { name: "Toggle animation timeline", exact: true }).click();
+  await surface.getByRole("button", { name: "Open animation timeline", exact: true }).click();
   await expect(timeline).toBeVisible();
+  await expect(surface.getByRole("button", { name: "Open animation timeline", exact: true })).toHaveCount(0);
   await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
+  // A smaller open tray must scroll its rows instead of clipping them at the split boundary.
+  const timelineDivider = surface.getByRole("separator", { name: "Resize animation timeline", exact: true });
+  for (let step = 0; step < 3; step++) await timelineDivider.press("ArrowDown");
+  await expect(timelineDivider).toHaveAttribute("aria-valuenow", "128");
+  await expect.poll(async () => (await timeline.boundingBox())!.height).toBeLessThanOrEqual(128);
+  const marker = timeline.getByRole("button", { name: "Midpoint", exact: true });
+  await marker.scrollIntoViewIfNeeded();
+  const scrollBounds = (await timeline
+    .getByRole("group", { name: "Animation tracks", exact: true })
+    .locator('[data-part="viewport"]')
+    .boundingBox())!;
+  const markerBounds = (await marker.boundingBox())!;
+  expect(markerBounds.y + markerBounds.height).toBeLessThanOrEqual(scrollBounds.y + scrollBounds.height + 1);
+  await marker.click();
+  await expect(output).toContainText('"time":1');
   await dialog.getByRole("checkbox", { name: "Enabled" }).press("Space");
   await dialog.getByRole("button", { name: "Calm", exact: true }).click();
   await surface.getByRole("menuitemradio", { name: "Bright", exact: true }).click();
@@ -101,24 +131,48 @@ test("frame parameters and playback stay independent across themes and movement"
   await timeline.getByRole("button", { name: "Pause", exact: true }).click();
   await timeline.getByRole("button", { name: "Restart", exact: true }).click();
   await expect(output).toContainText('"time":0');
-  const loopStart = dialog.getByText("Loop start", { exact: true }).locator("../..").getByRole("spinbutton");
+  await expect(dialog.getByRole("checkbox", { name: "Loop", exact: true })).toHaveCount(0);
+  await timeline.getByRole("button", { name: "Animation settings", exact: true }).click();
+  const settings = surface.getByRole("dialog", { name: "Animation settings", exact: true });
+  const loopStart = settings.getByText("Loop start", { exact: true }).locator("../..").getByRole("spinbutton");
   await loopStart.fill("0.5");
   await loopStart.press("Tab");
+  await expect(timeline.getByRole("slider", { name: "Loop start", exact: true })).toHaveAttribute(
+    "aria-valuenow",
+    "0.5",
+  );
+  await page.keyboard.press("Escape");
   await timeline.getByRole("button", { name: "Midpoint", exact: true }).click();
   await timeline.getByRole("button", { name: "Restart", exact: true }).click();
   await expect(output).toContainText('"time":0.5');
-  await loopStart.fill("0");
-  await loopStart.press("Tab");
+  const startHandle = timeline.getByRole("slider", { name: "Loop start", exact: true });
+  const endHandle = timeline.getByRole("slider", { name: "Loop end", exact: true });
+  await startHandle.press("ArrowRight");
+  expect(Number(await startHandle.getAttribute("aria-valuenow"))).toBeGreaterThan(0.5);
+  await endHandle.press("ArrowLeft");
+  expect(Number(await endHandle.getAttribute("aria-valuenow"))).toBeLessThan(2);
+  await timeline.getByRole("button", { name: "Animation settings", exact: true }).click();
+  const loopEnd = settings.getByText("Loop end", { exact: true }).locator("../..").getByRole("spinbutton");
+  await loopEnd.fill("1.5");
+  await loopEnd.press("Tab");
+  await expect(endHandle).toHaveAttribute("aria-valuenow", "1.5");
+  await page.keyboard.press("Escape");
+  await startHandle.press("Home");
+  await endHandle.press("End");
+  await expect(startHandle).toHaveAttribute("aria-valuenow", "0");
+  await expect(endHandle).toHaveAttribute("aria-valuenow", "2");
   await surface.locator('[data-canvas-item="Still"]').locator("[data-canvas-select]").click();
   await expect(dialog).toBeVisible();
   await expect(timeline).toHaveCount(0);
+  await expect(surface.getByRole("button", { name: "Open animation timeline", exact: true })).toHaveCount(0);
   await first.locator("[data-canvas-select]").click();
   await expect(timeline).toHaveAttribute("aria-label", "Animations · First");
   await first.getByRole("button", { name: "Move First", exact: true }).press("ArrowRight");
   await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");
   await surface.locator("[data-canvas-viewport]").focus();
   await page.keyboard.press("Escape");
-  await expect(menu.getByText("Select a frame", { exact: true })).toBeVisible();
+  await expect(menu).toBeHidden();
+  await expect(surface.getByRole("button", { name: /^Open (frame parameters|animation timeline)$/ })).toHaveCount(0);
   await expect(menu.getByRole("spinbutton")).toHaveCount(0);
   await expect(timeline).toHaveCount(0);
   await expect(surface.locator("[data-ui-canvas-error]")).toHaveCount(0);

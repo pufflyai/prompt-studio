@@ -1,58 +1,25 @@
-import { Box, Flex, Icon, Stack, Text } from "@chakra-ui/react";
-import { resolveIconComponent, ScrollArea } from "@pstdio/ui";
-import { createContext, type RefCallback, useSyncExternalStore } from "react";
-import type { CanvasDefinition } from "../canvas-model";
-import { Button } from "../components/themed-primitives";
-import type { CanvasRuntime } from "../controller/runtime";
+import { Box } from "@chakra-ui/react";
+import { ScrollArea } from "@pstdio/ui";
+import { createContext, type Dispatch, type RefCallback, type SetStateAction } from "react";
 
-// The portal keeps each editor with its frame's React state while displaying it outside the stage.
+// Keep controllers mounted with their frame while their presentation uses screen-space outlets.
 export const FrameEditorOutlet = createContext<HTMLElement | null>(null);
 export const FrameEditorVisible = createContext(true);
 export const FrameAnimationOutlet = createContext<{
   element: HTMLElement | null;
   open: boolean;
-  close: () => void;
+  setActiveFrame: Dispatch<SetStateAction<string | undefined>>;
+  reportHeight: (height: number) => void;
+  heightLimit?: number;
 } | null>(null);
-const Close = resolveIconComponent("x")!;
 interface FrameEditorMenuProps {
-  canvas: CanvasDefinition;
-  runtime: CanvasRuntime;
   outlet: RefCallback<HTMLDivElement>;
   open: boolean;
-  onClose: () => void;
 }
-export const FrameEditorMenu = (props: FrameEditorMenuProps) => {
-  const { canvas, runtime, outlet } = props;
-  const selected = useSyncExternalStore(runtime.selection.subscribe, runtime.selection.get);
-  const item = canvas.items.find((item) => item.id === selected);
-  return (
-    <Stack
-      as="aside"
-      display={props.open ? "flex" : "none"}
-      aria-label="Frame editor"
-      w="xs"
-      maxW="50%"
-      flexShrink="0"
-      minH="0"
-      gap="0"
-      bg="bg"
-      borderStartWidth="1px"
-      borderColor="border.subtle"
-    >
-      <Flex p="sm" align="center" justify="space-between" borderBottomWidth="1px" borderColor="border.subtle">
-        <Text textStyle="label/M/medium">Frame editor</Text>
-        <Button size="xs" variant="ghost" aria-label="Close frame editor" onClick={props.onClose}>
-          <Icon as={Close} boxSize="icon-sm" />
-        </Button>
-      </Flex>
-      <ScrollArea flex="1" minH="0">
-        {!item && (
-          <Text p="sm" color="fg.muted">
-            Select a frame
-          </Text>
-        )}
-        <Box ref={outlet} />
-      </ScrollArea>
-    </Stack>
-  );
-};
+export const FrameEditorMenu = (props: FrameEditorMenuProps) => (
+  <Box as="aside" aria-label="Frame editor" display={props.open ? "flex" : "none"} h="full" w="full" minH="0" bg="bg">
+    <ScrollArea flex="1" minH="0">
+      <Box ref={props.outlet} />
+    </ScrollArea>
+  </Box>
+);

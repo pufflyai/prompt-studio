@@ -46,7 +46,7 @@ export const Small = { name: "Small size", args: { children: "Save", size: "sm" 
 
 ## Parameters, playback, and saved versions
 
-Declare `controls` on a frame or default export: `number` with min/max/step, `boolean`, or `select` with value/label options. Args supply initial values. Select a frame to show its parameters and versions in the Frame editor menu on the right. With no selection the menu asks for a frame. Switching selection retains each frame’s temporary values and playback state. Parameters update only that frame and keep React state. Reset restores the selected version. Temporary experiments do not edit source.
+Declare `controls` on a frame or default export: `number` with min/max/step, `boolean`, or `select` with value/label options. Args supply initial values. Select a frame to show its parameters and versions in the Frame editor menu on the right. With no selection, both panels and their reopen controls are hidden. Switching selection retains each frame’s temporary values and playback state. Parameters update only that frame and keep React state. Reset restores the selected version. Temporary experiments do not edit source.
 
 Declare `motion: { duration, fps?, markers? }` to drive a `time` arg in seconds from independent play/pause, scrub, speed, and loop-range controls. Derive animation from time so scrubbing works.
 
@@ -82,13 +82,18 @@ Require browser or visual checks only when a change risks blocking a primary tas
 
 
 Animated frames show a shared timeline in a bottom tray when selected.
-The tray hugs its content. Close either panel with its close button; use the panel
-icons at the top right of Canvas to reopen it. Closing preserves selection, edits
-and playback time. Markers are diamonds, and transport uses icon buttons. The tray follows
+The tray starts at its content height. Drag a panel divider towards its edge to
+close it, or focus the divider and press Home. A closed panel has a reopen icon
+only while a suitable frame is selected; open panels have no menu button, header
+or close button. Empty selection hides both panels and their reopen controls.
+Closing preserves selection, edits and playback time. Markers are diamonds, and
+transport uses icon buttons. The timeline settings menu owns Loop, Speed, Loop
+start and Loop end. Drag its range handles or use their arrow keys to edit the
+loop directly; values snap to frames and the boundaries cannot cross. The tray follows
 selection and disappears for a static frame or empty selection. Scrub its playhead,
 seek named markers, or use Play/Pause/Restart. Each frame retains its own playback
-position and settings. Parameters, saved versions, speed and loop settings stay in
-the right Frame editor. Existing source-code animations advertise duration and
+position and settings. Parameters and saved versions stay in the right Frame editor. Speed and loop
+settings belong to the timeline menu. Existing source-code animations advertise duration and
 markers; the timeline displays an animation lane without inventing property keys.
 The reusable UI timeline also supports editable property tracks for tools that own
 keyframe data.
