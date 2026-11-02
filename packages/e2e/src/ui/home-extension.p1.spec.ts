@@ -9,6 +9,11 @@ const emptyMain = (page: Page) => {
     .or(main.getByText("No tabs available", { exact: true }));
 };
 
+// Finish public-HTTP response injections before Playwright closes their context.
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: "wait" });
+});
+
 test("Home opens recent conversations and public actions without prematurely creating a session", async ({
   page,
   request,
