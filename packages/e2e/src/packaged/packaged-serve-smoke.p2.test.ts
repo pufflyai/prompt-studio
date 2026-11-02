@@ -258,7 +258,7 @@ test("packaged CLI includes automation and machine authentication", () => {
 });
 
 test(
-  "installs bundled defaults without Git and does not offer Git workspaces",
+  "installs bundled defaults and recovers existing extensions without Git",
   expectPackagedGitFreeExtensions,
   PACKAGED_TEST_TIMEOUT,
 );
