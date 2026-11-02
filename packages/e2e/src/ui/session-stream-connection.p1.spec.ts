@@ -1,5 +1,6 @@
 import { expect, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const sessionPrompt = (title: string) => `${title} __fake_hold__`;
@@ -58,7 +59,7 @@ test("streams every opened session over one shared connection", async ({ page, r
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
     await page.goto(`/projects/${project.id}/`);
-    await page.getByRole("button", { name: "Session A", exact: true }).click();
+    await homePage(page).getByRole("button", { name: "Session A", exact: true }).click();
     await expect.poll(() => subscribed).toEqual([sessions[0]!.id]);
     await expect.poll(() => retained).toEqual([sessions[0]!.id]);
     const sidenav = page.getByRole("region", { name: "Sidenav" }).first();
