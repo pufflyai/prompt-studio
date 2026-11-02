@@ -4,6 +4,7 @@ import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-r
 import { createWorkbenchEvent } from "../../shared/workbench-event";
 import { createPageHistoryReplay } from "./page-history-replay";
 import { createPageLocationControllerActions } from "./page-location-actions";
+import { createEmptyRootLocation } from "./page-location-empty-root";
 import {
   createPageHistoryEntry,
   createPageLocationFailureHandler,
@@ -215,6 +216,7 @@ export const createWorkbenchPageLocationController = <Value>(
     },
     resetHistory: history.reset,
     rootLevelTarget: rootLevel.target,
+    clearRootLocation: createEmptyRootLocation(input, history.reset),
     restore,
     resolveUrl,
     normalizeTarget,

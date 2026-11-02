@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../workbench-core";
 
-const home: PageRef = { kind: "page", extensionId: "example", id: "home" };
+const home = { kind: "page", extensionId: "example", id: "home" } satisfies PageRef;
 const fixture = () => {
   const core = createWorkbench({ startPage: home });
   core.modes.registerMode({ id: "project", activate() {} });
@@ -63,4 +63,23 @@ test("an ordinary registered parent with id start keeps its own context", () => 
   core.pageLocations.setProject("p1");
   expect(core.pageLocations.navigate({ kind: "page", page: { ...home, id: "detail" } }).ok).toBe(true);
   expect(core.pages.store.getState().location?.parent?.page).toEqual({ ...home, id: "ordinary-start" });
+});
+
+test("the mode breadcrumb returns to the existing empty panel when its default is unavailable", () => {
+  const { core, register } = fixture();
+  register("tool");
+  core.navigationTrees.registerContribution({
+    id: "tool-navigation",
+    owner: { ...home, id: "tool" },
+    sourceExtensionId: "example",
+    declarationIndex: 0,
+    getSections: () => [],
+  });
+  core.pageLocations.setProject("p1");
+  expect(core.pageLocations.navigate({ kind: "page", page: { ...home, id: "tool" } }).ok).toBe(true);
+  core.pageLocations.navigateToRootLevel();
+  expect(core.pages.store.getState().projectId).toBe("p1");
+  expect(core.pages.store.getState().location).toBeUndefined();
+  expect(core.modes.getActiveModeId()).toBe("project");
+  expect(core.pages.getContent()).toBeUndefined();
 });

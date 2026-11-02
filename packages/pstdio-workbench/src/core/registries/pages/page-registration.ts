@@ -72,10 +72,14 @@ export const registerWorkbenchPage = <Value>(input: {
       // Removing a page does not remove its mode. Retain the shell and mode-owned
       // panels so their ordinary empty-panel UI and unsent work stay available.
       const placements = composeOwnedPlacements({
-        shell: input.registryInput.resolveShellPlacements({
-          modeId: snapshot.activeModeId,
-          projectId: snapshot.projectId,
-        }),
+        shell: input.registryInput.resolveShellPlacements(
+          snapshot.activeModeId
+            ? {
+                modeId: snapshot.activeModeId,
+                projectId: snapshot.projectId,
+              }
+            : undefined,
+        ),
         mode: snapshot.activeModeId
           ? input.registryInput.resolveModePlacements(snapshot.activeModeId, undefined, snapshot.projectId)
           : [],
