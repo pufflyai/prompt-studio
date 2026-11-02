@@ -231,12 +231,30 @@ test("Kiln docks the inspector and persists object changes", async ({ page }) =>
   await expect(inspector.getByRole("button", { name: "Hide Cube", exact: true })).toBeVisible();
 });
 
-test("mode defaults restore the global theme on leaving", async ({ page }) => {
-  await openExample(page, "pigeon");
-  await page.evaluate(() => localStorage.setItem("theme-preference:pstdio.extension-lab.mode.pigeon", "pstdio-light"));
-  await page.reload();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-light");
-  await view(page, "Pigeon").getByRole("button", { name: "Back to project", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-dark");
-  expect(await page.evaluate(() => localStorage.getItem("theme-preference"))).toBe("pstdio-dark");
+test("leaving a tool restores project mode and its theme even when Home is disabled", async ({ page, request }) => {
+  const id = projectId(page);
+  const listed = await request.get(`${apiBase}/v1/projects/${id}/extensions`);
+  expect(listed.ok()).toBe(true);
+  const { extensions } = (await listed.json()) as { extensions: { id: string; installName: string }[] };
+  const home = extensions.find((extension) => extension.installName === "pstdio-home")!;
+  expect(home).toBeTruthy();
+  expect(
+    (await request.patch(`${apiBase}/v1/projects/${id}/extensions/${home.id}`, { data: { enabled: false } })).ok(),
+  ).toBe(true);
+  try {
+    await openExample(page, "pigeon");
+    await page.evaluate(() =>
+      localStorage.setItem("theme-preference:pstdio.extension-lab.mode.pigeon", "pstdio-light"),
+    );
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-light");
+    await view(page, "Pigeon").getByRole("button", { name: "Back to project", exact: true }).click();
+    await expect(page).toHaveURL(`/projects/${id}/workspaces`);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-dark");
+    expect(await page.evaluate(() => localStorage.getItem("theme-preference"))).toBe("pstdio-dark");
+  } finally {
+    expect(
+      (await request.patch(`${apiBase}/v1/projects/${id}/extensions/${home.id}`, { data: { enabled: true } })).ok(),
+    ).toBe(true);
+  }
 });
