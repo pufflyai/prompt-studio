@@ -31,7 +31,7 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
     id: "extensions",
     ref: dashboardExtensionsPage,
     title: "Extensions",
-    icon: "Puzzle",
+    icon: "tool-case",
     path: "extensions",
     modeId: "project",
     main: {
@@ -60,7 +60,7 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
         {
           id: "extensions",
           label: "Extensions",
-          icon: "Puzzle",
+          icon: "tool-case",
           canHide: true,
           target: { kind: "page" as const, page: dashboardExtensionsPage },
         },
