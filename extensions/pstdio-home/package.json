@@ -2,6 +2,7 @@
   "name": "pstdio-home",
   "version": "0.1.0",
   "displayName": "Home",
+  "icon": "house",
   "description": "Project home, recent conversations, and setup recovery.",
   "publisher": "pstdio",
   "main": "./extension.ts",
