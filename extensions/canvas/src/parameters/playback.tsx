@@ -111,6 +111,11 @@ export const Playback = (props: PlaybackProps) => {
         onTimeChange={seek}
         onRestart={() => seek(start)}
         playing={playing}
+        loop={loop}
+        onLoopChange={(next: boolean) => {
+          interact();
+          setLoop(next);
+        }}
         onPlayingChange={(next: boolean) => {
           interact();
           if (next && (clock.current >= end || clock.current < start)) {
@@ -130,7 +135,6 @@ export const Playback = (props: PlaybackProps) => {
           <Stack gap="sm" p="sm" data-frame-animation-settings>
             <ParamEditor
               params={[
-                { id: "loop", type: "boolean", name: "Loop", defaultValue: loop },
                 {
                   id: "rate",
                   type: "selection",
@@ -164,7 +168,6 @@ export const Playback = (props: PlaybackProps) => {
                   return;
                 }
                 interact();
-                if (id === "loop") setLoop(Boolean(value));
                 if (id === "rate") setRate(Number(value));
               }}
             />

@@ -1,4 +1,38 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Frame, type Locator, type Page, test } from "@playwright/test";
+
+const checkTimelineTransport = async (props: {
+  page: Page;
+  surface: Frame;
+  first: Locator;
+  second: Locator;
+  timeline: Locator;
+  output: Locator;
+}) => {
+  const { page, surface, first, second, timeline, output } = props;
+  const loop = timeline.getByRole("button", { name: "Loop playback", exact: true });
+  await expect(loop).toBeVisible();
+  await expect(loop).toHaveAttribute("aria-pressed", "true");
+  await loop.click();
+  await expect(loop).toHaveAttribute("aria-pressed", "false");
+  await second.locator("[data-canvas-select]").click();
+  await expect(loop).toHaveAttribute("aria-pressed", "true");
+  await first.locator("[data-canvas-select]").click();
+  await expect(loop).toHaveAttribute("aria-pressed", "false");
+  await loop.press("Space");
+  await expect(loop).toHaveAttribute("aria-pressed", "true");
+  const timeRuler = timeline.getByRole("slider", { name: "Timeline playhead", exact: true });
+  const camera = surface.getByRole("button", { name: /Reset zoom to 100%/ });
+  const cameraBefore = await camera.getAttribute("aria-label");
+  const rulerWidth = await timeRuler.evaluate((element) => element.clientWidth);
+  const timeBounds = (await timeRuler.boundingBox())!;
+  await page.mouse.move(timeBounds.x + timeBounds.width * 0.4, timeBounds.y + timeBounds.height / 2);
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -160);
+  await page.keyboard.up("Control");
+  await expect.poll(() => timeRuler.evaluate((element) => element.clientWidth)).toBeGreaterThan(rulerWidth * 1.2);
+  await expect(camera).toHaveAttribute("aria-label", cameraBefore!);
+  await expect(output).toContainText('"time":0');
+};
 
 // Critical: host parameters must retain local input, isolate siblings and control motion precisely.
 test("frame parameters and playback stay independent across themes and movement", async ({ page }) => {
@@ -27,6 +61,7 @@ test("frame parameters and playback stay independent across themes and movement"
   await document.getByRole("textbox", { name: "Frame draft" }).fill("Keep this input");
   const timeline = surface.getByRole("region", { name: /^Animations/ });
   await expect(timeline).toBeVisible();
+  await checkTimelineTransport({ page, surface, first, second, timeline, output });
   const dialog = surface.getByRole("complementary", { name: "Frame editor" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("spinbutton").first().fill("7");

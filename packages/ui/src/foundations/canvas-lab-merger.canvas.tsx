@@ -9,7 +9,7 @@ import { Slider } from "@/components/primitives";
 export default {
   title: "Canvas/Lab merger proposal",
   description:
-    "Selection-scoped panels resize to close. Animation ranges and playback settings belong to the timeline.",
+    "Selection-scoped panels resize to close. The timeline exposes a repeat toggle beside transport; pinch or Ctrl-scroll over its ruler to zoom. Animation ranges and speed settings belong to the timeline.",
 };
 const defaults = { density: 6, opacity: 60 };
 const StudyFrame = (props: { motion?: boolean }) => {
@@ -67,6 +67,8 @@ const StudyFrame = (props: { motion?: boolean }) => {
                 setPlaying(false);
                 setTime(next);
               }}
+              loop={loop}
+              onLoopChange={setLoop}
               playing={playing}
               onPlayingChange={setPlaying}
               onRestart={() => setTime(range.start)}
@@ -75,7 +77,6 @@ const StudyFrame = (props: { motion?: boolean }) => {
               settings={
                 <ParamEditor
                   params={[
-                    { id: "loop", type: "boolean", name: "Loop", defaultValue: loop },
                     {
                       id: "rate",
                       type: "selection",
@@ -103,7 +104,6 @@ const StudyFrame = (props: { motion?: boolean }) => {
                     },
                   ]}
                   onChange={(id, value) => {
-                    if (id === "loop") setLoop(Boolean(value));
                     if (id === "rate") setRate(Number(value));
                     if (id === "start") setRange({ ...range, start: Number(value) });
                     if (id === "end") setRange({ ...range, end: Number(value) });
