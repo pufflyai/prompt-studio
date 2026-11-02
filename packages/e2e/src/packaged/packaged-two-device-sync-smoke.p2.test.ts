@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { chromium } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -9,6 +10,7 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
+import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { openCloudProjectInPicker, reopenPreparedProjectOffline } from "./packaged-cloud-project-picker";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
@@ -75,6 +77,27 @@ const startDevice = async (root: string, env: Record<string, string>) => {
   return { host, client, command, state, reach };
 };
 
+const startPickerDevices = async (root: string, env: Record<string, string>) => {
+  // All three cold starts remain inside the test's allowance and need no shared setup state.
+  const [first, second, browser] = await Promise.allSettled([
+    startDevice(join(root, "first"), env),
+    startDevice(join(root, "second"), env),
+    chromium.launch(PACKAGED_DASHBOARD_BROWSER),
+  ]);
+  if (first.status === "rejected" || second.status === "rejected" || browser.status === "rejected") {
+    const cleanup = await Promise.allSettled([
+      first.status === "fulfilled" ? stopProcess(first.value.host.child) : undefined,
+      second.status === "fulfilled" ? stopProcess(second.value.host.child) : undefined,
+      browser.status === "fulfilled" ? browser.value.close() : undefined,
+    ]);
+    throw new AggregateError(
+      [first, second, browser, ...cleanup].flatMap((result) => (result.status === "rejected" ? [result.reason] : [])),
+      "Could not start the Cloud picker devices and browser",
+    );
+  }
+  return { first: first.value, second: second.value, browser: browser.value };
+};
+
 const signIn = async (device: Awaited<ReturnType<typeof startDevice>>, origin: string) => {
   const login = await device.client.account.login(origin);
   const url = new URL(login.url);
@@ -112,16 +135,19 @@ test(
     const root = await mkdtemp(join(tmpdir(), "packaged-two-device-sync-"));
     const tls = writeCertificate(root);
     const peer = createPackagedSyncPeer({ key: Bun.file(tls.key), cert: Bun.file(tls.cert) });
-    const source = await writeExtension(root);
-    const env = {
-      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]),
-      NODE_EXTRA_CA_CERTS: tls.cert,
-    };
-    const first = await startDevice(join(root, "first"), env);
-    let second = await startDevice(join(root, "second"), env);
-    phase("devices ready");
+    let devices: Awaited<ReturnType<typeof startPickerDevices>> | undefined;
     let picker: Awaited<ReturnType<typeof openCloudProjectInPicker>> | undefined;
+    const failures: unknown[] = [];
     try {
+      const source = await writeExtension(root);
+      const env = {
+        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]),
+        NODE_EXTRA_CA_CERTS: tls.cert,
+      };
+      devices = await startPickerDevices(root, env);
+      const { first, browser } = devices;
+      let { second } = devices;
+      phase("devices and browser ready");
       const remote = join(root, "origin");
       await writeRepository(remote);
       const checkout = join(root, "first-checkout");
@@ -162,6 +188,7 @@ test(
       await second.client.projects.create(folderProjectInput({ name: "Local scratchpad" }, local));
       phase("local picker choice created");
       picker = await openCloudProjectInPicker({
+        browser,
         baseUrl: second.host.baseUrl,
         token: second.host.descriptor.token,
         projectId: project.id,
@@ -254,6 +281,7 @@ test(
       await peer.stop();
       await stopProcess(second.host.child);
       second = await startDevice(join(root, "second"), env);
+      devices.second = second;
       expect((await second.client.account.projectSyncStatus(project.id)).offlineReady).toBe(false);
       await reopenPreparedProjectOffline({
         baseUrl: second.host.baseUrl,
@@ -265,13 +293,19 @@ test(
         "Written on the new machine",
       );
       phase("prepared project reopened offline after restart");
+    } catch (error) {
+      failures.push(error);
     } finally {
-      await picker?.close();
-      await stopProcess(first.host.child);
-      await stopProcess(second.host.child);
-      await peer.stop();
-      await rm(root, { recursive: true, force: true });
+      const cleanup = await Promise.allSettled([
+        devices?.browser.close(),
+        devices ? stopProcess(devices.first.host.child) : undefined,
+        devices ? stopProcess(devices.second.host.child) : undefined,
+        peer.stop(),
+      ]);
+      cleanup.push(...(await Promise.allSettled([rm(root, { recursive: true, force: true })])));
+      failures.push(...cleanup.flatMap((result) => (result.status === "rejected" ? [result.reason] : [])));
     }
+    if (failures.length) throw new AggregateError(failures, "Cloud picker scenario or cleanup failed");
   },
   PACKAGED_TEST_TIMEOUT,
 );
