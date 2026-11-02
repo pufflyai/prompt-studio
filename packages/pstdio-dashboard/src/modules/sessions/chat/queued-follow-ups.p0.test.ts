@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { splitQueuedFollowUps } from "./queued-follow-ups";
+import { createPendingFollowUpState, mergeMessagesWithPendingFollowUp } from "./session-chat-state";
 
 const userMessage = (id: string, text: string): SessionMessage => ({
   id,
@@ -141,10 +142,21 @@ test("queued delivery keeps one visible identity through native confirmation", (
     steeringAvailable: true,
     steeringUnavailableReason: null,
   };
+  const pending = createPendingFollowUpState({
+    prompt: "Run next",
+    messageCount: 0,
+    pendingId: "pending",
+    destination: "queue",
+  });
+  const animationKeys = new Map<string, string>();
   const identities = [
-    splitQueuedFollowUps([queued], "session-1", queue),
-    splitQueuedFollowUps([delivered, queued], "session-1", queue),
-    splitQueuedFollowUps([delivered], "session-1"),
+    splitQueuedFollowUps(mergeMessagesWithPendingFollowUp([queued], pending, animationKeys), "session-1", queue),
+    splitQueuedFollowUps(
+      mergeMessagesWithPendingFollowUp([delivered, queued], pending, animationKeys),
+      "session-1",
+      queue,
+    ),
+    splitQueuedFollowUps(mergeMessagesWithPendingFollowUp([delivered], null, animationKeys), "session-1"),
   ].map(({ messages }) => messages.map((message) => message.animationKey ?? message.id));
   expect(identities).toEqual([["delivery"], ["delivery"], ["delivery"]]);
 });

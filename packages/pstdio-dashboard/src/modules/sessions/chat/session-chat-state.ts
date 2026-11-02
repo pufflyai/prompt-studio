@@ -104,7 +104,7 @@ export const mergeMessagesWithPendingFollowUp = (
   animationKeys?: Map<string, string>,
 ): SessionMessage[] => {
   const accepted = pending && !pending.failure ? findAcceptedPendingFollowUp(messages, pending) : undefined;
-  if (pending && accepted) animationKeys?.set(accepted.id, pending.userMessageId);
+  if (pending && accepted && pending.destination !== "queue") animationKeys?.set(accepted.id, pending.userMessageId);
   const displayed = messages.map((message) => {
     const animationKey = animationKeys?.get(message.id) ?? animationKeys?.get(message.animationKey ?? "");
     if (animationKey) animationKeys?.set(message.id, animationKey);
