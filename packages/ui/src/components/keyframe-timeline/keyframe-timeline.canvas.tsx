@@ -33,20 +33,20 @@ const exampleTracks: KeyframeTrack[] = [
     ],
   },
 ];
-const Example = (props: { readOnly?: boolean; empty?: boolean }) => {
+const Example = (props: { readOnly?: boolean; empty?: boolean; duration?: number }) => {
   const [tracks, setTracks] = useState(props.empty ? [] : exampleTracks);
   const [time, setTime] = useState(0.4);
   const [playing, setPlaying] = useState(false);
   const [loopRange, setLoopRange] = useState({ start: 0.2, end: 1.8 });
   return (
-    <Box maxH="sm">
+    <Box maxH="sm" w={props.duration === undefined ? undefined : "2xl"}>
       <KeyframeTimeline
         label="Menu entrance"
         loopRange={loopRange}
         onLoopRangeChange={setLoopRange}
         playing={playing}
         onPlayingChange={setPlaying}
-        duration={2}
+        duration={props.duration ?? 2}
         framesPerSecond={25}
         tracks={tracks}
         onTracksChange={props.readOnly ? undefined : setTracks}
@@ -61,9 +61,10 @@ const meta: CanvasMeta = {
   title: "Components/Media/Keyframe Timeline",
   component: Example,
   description:
-    "One compact toolbar with icon transport and add/delete keyframe actions. Drag the playhead along its full height or scrub empty track space. Selecting a key or marker aligns the playhead with its exact authored time. Grouped tracks retain diamond keys, markers, frame snapping, loop handles and keyboard or pointer timing edits. Selection adds no detail row; values and interpolation belong to the caller. Omit onTracksChange for read-only tracks. Arrow keys move a focused key by one frame; Shift moves ten. Delete removes it.",
+    "One compact toolbar with icon transport and add/delete keyframe actions. Groups use the app's rotating chevrons and shared reveal motion, including reduced motion; collapsed rows stay mounted and leave keyboard navigation. Drag the playhead along its full height or scrub empty track space. Selecting a key or marker aligns the playhead with its exact authored time. Tracks retain diamond keys, markers, frame snapping, loop handles and keyboard or pointer timing edits. Selection adds no detail row; values and interpolation belong to the caller. Omit onTracksChange for read-only tracks. Arrow keys move a focused key by one frame; Shift moves ten. Delete removes it.",
 };
 export default meta;
 export const Animation: CanvasFrame = { id: "components-media-keyframe-timeline--animation" };
 export const ReadOnly: CanvasFrame = { id: "components-media-keyframe-timeline--read-only", args: { readOnly: true } };
 export const Empty: CanvasFrame = { id: "components-media-keyframe-timeline--empty", args: { empty: true } };
+export const Long: CanvasFrame = { id: "components-media-keyframe-timeline--long", args: { duration: 20 } };

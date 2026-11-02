@@ -147,6 +147,7 @@ export const keyframeTimelineRecipe = defineSlotRecipe({
       bg: "bg.subtle",
       textStyle: "label/S/medium",
       textAlign: "left",
+      "& > svg": { boxSize: "icon-xs", flexShrink: "0", color: "fg.muted" },
       _focusVisible: { outline: "2px solid", outlineColor: "border.accent-light", outlineOffset: "-2px" },
     },
   },

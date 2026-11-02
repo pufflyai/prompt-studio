@@ -105,7 +105,8 @@ for caller-owned playback options in the timeline settings menu. Panel sizing an
 dismissal belong to the containing layout; the timeline has no header or close action.
 After a panel resize, pass its available `maxHeight` so the timeline scrolls within
 that height. Omit it for natural content height.
-Group expansion is temporary.
+Group expansion is temporary. Groups use the app's shared rotating chevron and tree
+reveal motion, including reduced motion. Collapsed tracks stay mounted and inert.
 
 Arrow keys on the ruler seek by one frame; Shift seeks ten; Home/End seek the bounds.
 Drag the playhead at any point along its height, or drag empty track space to scrub.
@@ -115,4 +116,4 @@ still snap to the frame grid.
 Arrow keys on a focused key move it, and Delete removes it then focuses its track.
 Pointer dragging uses the same snapping/collision rules. The timecode uses the
 rounded nominal frame rate (non-drop-frame); timeline positions use seconds.
-See **Components/Media/Keyframe Timeline** for Animation, ReadOnly, and Empty.
+See **Components/Media/Keyframe Timeline** for Animation, ReadOnly, Empty, and Long.

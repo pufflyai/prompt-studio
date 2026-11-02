@@ -146,3 +146,76 @@ test("ruler and marker positions align with the full-height playhead", async ({ 
   const end = await geometry();
   expect(Math.abs(end.body.x - end.line.x)).toBeLessThanOrEqual(1);
 });
+
+// Critical: animated collapse must retain rows without leaving exiting keys in keyboard navigation.
+test("groups reveal retained tracks with the shared chevron and motion", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Animation",
+  );
+  const group = preview.getByRole("button", { name: /Bullet 2/ });
+  const key = preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true });
+  const original = (await key.elementHandle())!;
+  await key.click();
+  await group.click();
+  await expect(group).toHaveAttribute("aria-expanded", "false");
+  await group.press("Tab");
+  await expect(preview.getByRole("button", { name: /Bullet 1/ })).toBeFocused();
+  expect(await original.evaluate((element) => element.isConnected)).toBe(true);
+  await group.click();
+  await expect(key).toBeVisible();
+  await expect(key).toHaveAttribute("aria-pressed", "true");
+  await expect(group.locator("svg")).toBeVisible();
+  await expect(group).toHaveText("Bullet 2");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await group.click();
+  await expect(key).toBeHidden();
+  await group.click();
+  await expect(key).toBeVisible();
+  expect(await original.evaluate((element) => element.isConnected)).toBe(true);
+});
+
+// Critical: revealing grouped tracks must not detach sticky labels from the horizontal scroll viewport.
+test("group labels stay fixed while long tracks scroll horizontally", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Long",
+  );
+  const label = preview.getByRole("button", { name: "Opacity", exact: true });
+  const time = preview.getByRole("button", { name: "Time", exact: true });
+  const before = (await label.boundingBox())!;
+  const header = (await time.boundingBox())!;
+  const viewport = preview
+    .getByRole("group", { name: "Animation tracks", exact: true })
+    .locator('[data-part="viewport"]');
+  await viewport.evaluate((element) => {
+    element.scrollLeft = 400;
+  });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(100);
+  const after = (await label.boundingBox())!;
+  expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await time.boundingBox())!.x - header.x)).toBeLessThanOrEqual(1);
+});
+
+// Critical: the shared clipping change must preserve nested application-tree disclosure and retained state.
+test("shared reveal keeps nested app tree rows usable", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/tree-list/tree-list-motion.canvas.tsx#NestedGroups",
+  );
+  const research = preview.locator('[data-tree-list-node-id="research"]');
+  const notes = preview.locator('[data-tree-list-node-id="notes"]');
+  await research.click();
+  await expect(notes).toBeVisible();
+  const original = (await notes.elementHandle())!;
+  await research.click();
+  await expect(notes).toBeHidden();
+  expect(await original.evaluate((element) => element.isConnected)).toBe(true);
+  await research.click();
+  await expect(notes).toBeVisible();
+  await preview.getByText("Workspaces", { exact: true }).click();
+  await expect(research).toBeHidden();
+  await preview.getByText("Workspaces", { exact: true }).click();
+  await expect(notes).toBeVisible();
+  expect(await original.evaluate((element) => element.isConnected)).toBe(true);
+});

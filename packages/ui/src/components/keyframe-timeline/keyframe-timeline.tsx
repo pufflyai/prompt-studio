@@ -1,9 +1,10 @@
-import { Box, IconButton, Text } from "@chakra-ui/react";
-import { DiamondMinus, DiamondPlus, Pause, Play, RotateCcw } from "lucide-react";
+import { Box, IconButton, Text, useRecipe } from "@chakra-ui/react";
+import { ChevronRight, DiamondMinus, DiamondPlus, Pause, Play, RotateCcw } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import { keyframeTimelineMetrics as metrics } from "../../theme/primitives/keyframe-timeline";
 import { ScrollArea } from "../primitives/scroll-area";
 import { Tooltip } from "../primitives/tooltip";
+import { TreeListReveal } from "../tree-list/tree-list-reveal";
 import { KeyframeButton } from "./keyframe-button";
 import { editKeyframe, sampleTrack, selectedKeyframe, snapTime, timeLabel } from "./keyframe-model";
 import type {
@@ -32,6 +33,7 @@ import { useTimelineScrub } from "./use-timeline-scrub";
 
 export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
   const { tracks, duration, currentTime, framesPerSecond: fps = 60 } = props;
+  const chevron = useRecipe({ key: "treeChevron" });
   const labels = useRef(new Map<string, HTMLButtonElement>());
   const ruler = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState<string[]>([]);
@@ -199,11 +201,14 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
                     )
                   }
                 >
-                  {collapsed.includes(group) ? "▸" : "▾"} {group}
+                  <Box asChild css={chevron()} data-open={!collapsed.includes(group)}>
+                    <ChevronRight aria-hidden="true" />
+                  </Box>
+                  {group}
                 </TimelineGroup>
               )}
-              {!collapsed.includes(group) &&
-                tracks
+              <TreeListReveal open={!collapsed.includes(group)}>
+                {tracks
                   .filter((entry) => (entry.group ?? "") === group)
                   .map((entry) => (
                     <TimelineRow key={entry.id}>
@@ -243,6 +248,7 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
                       </TimelineLane>
                     </TimelineRow>
                   ))}
+              </TreeListReveal>
             </Fragment>
           ))}
           {!!props.markers?.length && (
