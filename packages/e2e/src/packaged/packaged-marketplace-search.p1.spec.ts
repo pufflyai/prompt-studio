@@ -57,7 +57,9 @@ test("packaged marketplace search finds an extension by its visible full ID", as
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions`);
-    const row = page.getByTestId("marketplace-extension-entry").filter({ hasText: "acme.roadmap" });
+    const row = page.getByTestId("marketplace-extension-entry").filter({
+      has: page.getByText("acme.roadmap", { exact: true }),
+    });
     await expect(row).toBeVisible();
     const search = page.getByTestId("extensions-search");
     await search.fill(" ACME.ROADMAP ");
