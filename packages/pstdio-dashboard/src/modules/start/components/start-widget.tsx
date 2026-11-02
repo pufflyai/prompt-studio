@@ -1,9 +1,5 @@
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
-import {
-  useWorkbenchStore,
-  WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
-  type WorkbenchPanelRenderInput,
-} from "@pstdio/workbench/react";
+import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import {
@@ -12,15 +8,13 @@ import {
 } from "@/shared/app/project-context";
 import { type RecentProjectResource, readRecentProjectResources } from "@/shared/recents/recent-project-resources";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { openExtensionsPage, openSessionsPage } from "@/shared/workbench/page-navigation";
 import { readProjectSetupError } from "@/shared/workspaces/dashboard-workspaces";
 import { StartAboutPanel } from "./start-about-panel";
 import { type StartAction, StartActionList } from "./start-action-list";
 import { StartHarnessAvailability } from "./start-harness-availability";
 import { StartRecentList } from "./start-recent-list";
 import { StartSetupStatus } from "./start-setup-status";
-
-const dashboardExtensionsSettingsPanelId = "extensions";
 
 const useContextString = (input: WorkbenchPanelRenderInput, key: string) =>
   useWorkbenchStore(input.workbench.context.store, (state) => {
@@ -40,10 +34,7 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const recentResources = readRecentProjectResources(projectId, dashboardDataVersion);
   const setupError = readProjectSetupError(projectId, dashboardDataVersion);
 
-  const reviewExtensions = () =>
-    void input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, {
-      panelId: dashboardExtensionsSettingsPanelId,
-    });
+  const reviewExtensions = () => openExtensionsPage(input.workbench);
 
   const actions: StartAction[] = [
     {

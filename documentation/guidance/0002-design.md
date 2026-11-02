@@ -18,6 +18,7 @@
 3. Add missing styles to the shared theme instead of overriding them locally.
 4. Do not use custom CSS, styled wrappers, inline design styles, or hardcoded visual values.
 5. Use `ScrollArea` for scrollable surfaces.
+6. Keep page headings, search, filters, tabs, and primary header controls above the vertical scroll area. Expanding lists and page content own vertical scrolling; scrolling content must not move those controls.
 
 ## 4. Navigation and tabs
 
