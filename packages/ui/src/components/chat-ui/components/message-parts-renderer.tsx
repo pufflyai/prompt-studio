@@ -119,7 +119,7 @@ function MessagePartsContent(props: MessagePartsProps) {
 
   for (let partIndex = 0; partIndex < parts.length; partIndex += 1) {
     const part = parts[partIndex];
-    const key = `${message.id}-${partIndex}`;
+    const key = `${message.animationKey ?? message.id}-${partIndex}`;
 
     switch (part.type) {
       case "text":

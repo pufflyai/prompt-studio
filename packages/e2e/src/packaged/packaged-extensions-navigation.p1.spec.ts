@@ -15,43 +15,49 @@ test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
+const createRepository = (root: string) => {
+  const repo = join(root, "repository");
+  mkdirSync(join(repo, "tool"), { recursive: true });
+  writeFileSync(
+    join(repo, "tool/package.json"),
+    JSON.stringify({
+      name: "tool",
+      publisher: "acme",
+      displayName: "Example tool 0",
+      version: "1.0.0",
+      main: "extension.ts",
+      engines: { pstdio: "^0.3.0" },
+    }),
+  );
+  const commands = Array.from({ length: 50 }, (_, index) => ({
+    id: `command-${index}`,
+    ref: { kind: "command", id: `command-${index}` },
+    title: `Example command ${index}`,
+    run: "() => null",
+  }));
+  writeFileSync(
+    join(repo, "tool/extension.ts"),
+    `export default ${JSON.stringify({ commands }).replaceAll('"() => null"', "() => null")};`,
+  );
+  for (const args of [
+    ["init", "-q"],
+    ["add", "."],
+    ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "Fixture"],
+  ]) {
+    const result = spawnSync("git", args, { cwd: repo });
+    expect(result.status, result.stderr.toString()).toBe(0);
+  }
+  return repo;
+};
+
 // Route identity and fixed controls must survive browsing long extension lists and contribution details.
 test("extension pages keep headers reachable and restore nested navigation", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "packaged-extension-pages-")));
   let child: ChildProcess | undefined;
   let browser: Browser | undefined;
   try {
-    const repo = join(root, "repository");
-    mkdirSync(join(repo, "tool"), { recursive: true });
-    writeFileSync(
-      join(repo, "tool/package.json"),
-      JSON.stringify({
-        name: "tool",
-        publisher: "acme",
-        displayName: "Example tool 0",
-        version: "1.0.0",
-        main: "extension.ts",
-        engines: { pstdio: "^0.3.0" },
-      }),
-    );
-    const commands = Array.from({ length: 50 }, (_, index) => ({
-      id: `command-${index}`,
-      ref: { kind: "command", id: `command-${index}` },
-      title: `Example command ${index}`,
-      run: "() => null",
-    }));
-    writeFileSync(
-      join(repo, "tool/extension.ts"),
-      `export default ${JSON.stringify({ commands }).replaceAll('"() => null"', "() => null")};`,
-    );
-    for (const args of [
-      ["init", "-q"],
-      ["add", "."],
-      ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "Fixture"],
-    ]) {
-      const result = spawnSync("git", args, { cwd: repo });
-      expect(result.status, result.stderr.toString()).toBe(0);
-    }
+    const repo = createRepository(root);
+    const longId = `acme.${"extension-".repeat(40)}tools`;
     const catalog = join(root, "catalog.json");
     writeFileSync(
       catalog,
@@ -59,7 +65,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
         version: 1,
         extensions: Array.from({ length: 40 }, (_, index) => ({
           installName: `tool-${index}`,
-          extensionId: index === 0 ? "acme.tool" : `acme.tool-${index}`,
+          extensionId: ["acme.tool", longId][index] ?? `acme.tool-${index}`,
           displayName: `Example tool ${index}`,
           description: "Example extension",
           default: false,
@@ -86,6 +92,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await signInBrowser(page, runtime.descriptor);
     const listUrl = `${runtime.baseUrl}/projects/${project.id}/extensions`;
     await page.goto(listUrl);
+    const availableDetail = page.getByTestId("available-extension-detail").filter({ visible: true });
     const search = page.getByTestId("extensions-search");
     await expect(search).toBeVisible();
     const headerTop = (await search.boundingBox())!.y;
@@ -103,6 +110,31 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await listScroll.evaluate((node) => {
       node.scrollTop = 0;
     });
+    const longRow = page
+      .getByTestId("marketplace-extension-entry")
+      .filter({ has: page.getByText(longId, { exact: true }) });
+    await expect(longRow).toBeVisible();
+    // A visible row must not clip its primary action when an ID exceeds the available width.
+    const rowAction = longRow.getByTestId("marketplace-extension-install");
+    expect(
+      await rowAction.evaluate((node) => {
+        const action = node.getBoundingClientRect();
+        const row = node.closest('[data-testid="marketplace-extension-entry"]')!.getBoundingClientRect();
+        return action.right <= row.right && action.left >= row.left;
+      }),
+    ).toBe(true);
+    const rowIdentity = (await longRow.getByText(longId, { exact: true }).boundingBox())!;
+    expect(rowIdentity.x + rowIdentity.width).toBeLessThanOrEqual((await rowAction.boundingBox())!.x);
+    await longRow.click();
+    const longDetail = availableDetail;
+    await expect(longDetail.getByText(longId, { exact: true })).toBeVisible();
+    const detailIdentity = (await longDetail.getByText(longId, { exact: true }).boundingBox())!;
+    expect(detailIdentity.x + detailIdentity.width).toBeLessThanOrEqual(
+      (await longDetail.getByTestId("available-extension-install").boundingBox())!.x,
+    );
+    expect(await longDetail.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+    await longDetail.getByTestId("extension-detail-back").click();
+    await expect(page).toHaveURL(listUrl);
     const row = page
       .getByTestId("marketplace-extension-entry")
       .filter({ has: page.getByText("Example tool 0", { exact: true }) });
@@ -110,16 +142,13 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await row.click();
     await expect(page).toHaveURL(/extensions\/detail\?resource=/);
     const detailUrl = page.url();
-    await expect(page.getByTestId("available-extension-detail")).toBeVisible();
-    await expect(page.getByText("Example command 49", { exact: true })).toBeVisible();
-    const title = page.getByTestId("available-extension-detail").getByText("Example tool 0", { exact: true });
+    await expect(availableDetail).toBeVisible();
+    await expect(availableDetail.getByText("Example command 49", { exact: true })).toBeVisible();
+    const title = availableDetail.getByText("Example tool 0", { exact: true });
     const detailTop = (await title.boundingBox())!.y;
-    const availableTabs = page.getByTestId("available-extension-detail").getByRole("tablist");
+    const availableTabs = availableDetail.getByRole("tablist");
     const availableTabsTop = (await availableTabs.boundingBox())!.y;
-    const detailScroll = page
-      .getByTestId("available-extension-detail")
-      .getByTestId("page-body-scroll")
-      .locator("[data-part=viewport]");
+    const detailScroll = availableDetail.getByTestId("page-body-scroll").locator("[data-part=viewport]");
     await expect(detailScroll).toBeVisible();
     expect(await detailScroll.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);
     await detailScroll.evaluate((node) => {
@@ -132,7 +161,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await expect(page).toHaveURL(detailUrl);
     await expect(title).toBeVisible();
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Example tool 0");
-    await page.getByTestId("extension-detail-back").click();
+    await availableDetail.getByTestId("extension-detail-back").click();
     await expect(page).toHaveURL(listUrl);
     await page.goBack();
     await expect(page).toHaveURL(detailUrl);
@@ -144,7 +173,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await parent.click();
     await expect(page).toHaveURL(listUrl);
     await row.click();
-    await page.getByTestId("available-extension-install").click();
+    await availableDetail.getByTestId("available-extension-install").click();
     const installed = page
       .getByTestId("extension-entry")
       .filter({ visible: true })
@@ -177,6 +206,15 @@ test("extension pages keep headers reachable and restore nested navigation", asy
       .getByRole("button", { name: "Extensions", exact: true })
       .click();
     await expect(page).toHaveURL(listUrl);
+    const toggle = installed.getByRole("checkbox");
+    await expect(toggle).toBeChecked();
+    await toggle.focus();
+    await page.keyboard.press("Space");
+    await expect(page).toHaveURL(listUrl);
+    await expect(toggle).not.toBeChecked();
+    await installed.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(installedUrl);
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);

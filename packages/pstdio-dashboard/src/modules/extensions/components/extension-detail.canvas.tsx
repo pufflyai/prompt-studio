@@ -7,7 +7,8 @@ import { ExtensionDetail } from "./extension-detail";
 const extension: ProjectExtensionInstance = {
   id: "planner-instance",
   projectId: "project-1",
-  extensionId: "pstdio.planner",
+  extensionId: "pstdio.pstdio-planner",
+  icon: "Kanban",
   installedExtensionId: "installed-planner",
   installName: "pstdio-planner",
   name: "pstdio-planner",
@@ -27,7 +28,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.refine-tickets",
     localId: "refine-tickets",
-    extensionId: "pstdio.planner",
+    extensionId: "pstdio.pstdio-planner",
     extensionInstanceId: "planner-instance",
     title: "Refine open tickets",
     cron: "0 6 * * *",
@@ -37,7 +38,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.implement-tickets",
     localId: "implement-tickets",
-    extensionId: "pstdio.planner",
+    extensionId: "pstdio.pstdio-planner",
     extensionInstanceId: "planner-instance",
     title: "Implement Todo tickets",
     cron: "0 7 * * *",
@@ -51,16 +52,16 @@ const metadata = {
   commands: [
     {
       id: "planner.createTicket",
-      extensionId: "pstdio.planner",
+      extensionId: "pstdio.pstdio-planner",
       title: "Create ticket",
       cliPath: "tickets create",
     },
-    { id: "planner.refineTicket", extensionId: "pstdio.planner", title: "Refine ticket" },
+    { id: "planner.refineTicket", extensionId: "pstdio.pstdio-planner", title: "Refine ticket" },
   ],
   menuContributions: [
     {
       id: "planner.menu.create",
-      extensionId: "pstdio.planner",
+      extensionId: "pstdio.pstdio-planner",
       commandId: "planner.createTicket",
       slotId: "workbench.top.actions",
       label: "Create ticket",
@@ -70,7 +71,7 @@ const metadata = {
   keybindings: [
     {
       id: "planner.kb.create",
-      extensionId: "pstdio.planner",
+      extensionId: "pstdio.pstdio-planner",
       commandId: "planner.createTicket",
       key: "mod+shift+t",
       hotkey: "mod+shift+t",
@@ -91,7 +92,7 @@ const metadata = {
 const settings = [
   {
     key: "automation.enabled",
-    extensionId: "pstdio.planner",
+    extensionId: "pstdio.pstdio-planner",
     type: "boolean",
     scope: "project",
     default: false,
@@ -102,7 +103,7 @@ const settings = [
   },
   {
     key: "board.defaultView",
-    extensionId: "pstdio.planner",
+    extensionId: "pstdio.pstdio-planner",
     type: "string",
     scope: "project",
     enum: ["board", "list"],

@@ -93,6 +93,7 @@ const submitNewSessionMessage = (input: {
     pendingId: `pending-${nextPendingId++}`,
     attachments: input.attachments,
   });
+  pending.sourceConversationKey = input.conversationKey;
   updatePendingFollowUp(input.conversationKey, pending);
   input.onSubmitted?.();
 
@@ -108,11 +109,11 @@ const submitNewSessionMessage = (input: {
     })
     .then(
       ({ sessionId, status }) => {
-        clearPendingFollowUp(input.conversationKey, pending);
         // The created session owns its first message until its conversation includes it. A queued
         // session shows the prompt in its queued list instead.
         if (status !== "queued") updatePendingFollowUp(sessionId, pending);
         input.onSessionCreated?.(sessionId);
+        clearPendingFollowUp(input.conversationKey, pending);
       },
       // The conversation keeps ownership of the failed message.
       (error: Error | undefined) => {
