@@ -39,4 +39,6 @@ export interface KeyframeTimelineProps {
   /** Override the default seek to zero, for example to restart a loop range. */
   onRestart?: () => void;
   label?: string;
+  /** Let the containing editor dismiss its timeline panel. */
+  onClose?: () => void;
 }

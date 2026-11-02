@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { KeyframeTimeline } from "./keyframe-timeline";
@@ -36,10 +36,16 @@ const exampleTracks: KeyframeTrack[] = [
 const Example = (props: { readOnly?: boolean; empty?: boolean }) => {
   const [tracks, setTracks] = useState(props.empty ? [] : exampleTracks);
   const [time, setTime] = useState(0.4);
+  const [playing, setPlaying] = useState(false);
+  const [open, setOpen] = useState(true);
+  if (!open) return <Button onClick={() => setOpen(true)}>Show timeline</Button>;
   return (
-    <Box h="sm">
+    <Box maxH="sm">
       <KeyframeTimeline
         label="Menu entrance"
+        onClose={() => setOpen(false)}
+        playing={playing}
+        onPlayingChange={setPlaying}
         duration={2}
         framesPerSecond={25}
         tracks={tracks}
@@ -55,7 +61,7 @@ const meta: CanvasMeta = {
   title: "Components/Media/Keyframe Timeline",
   component: Example,
   description:
-    "Grouped numeric property tracks with frame snapping, a shared playhead, zoom, marker navigation, and keyboard or pointer editing. Callers own data, playback, and persistence. Omit onTracksChange for read-only tracks. Arrow keys move a focused key by one frame; Shift moves ten. Delete removes it. Use the toolbar to add keys or edit the selected value and interpolation.",
+    "Content-sized grouped numeric property tracks with diamond keys and markers, icon transport, frame snapping, a shared playhead, zoom, marker navigation, and keyboard or pointer editing. Callers own data, playback, and persistence. Omit onTracksChange for read-only tracks. Arrow keys move a focused key by one frame; Shift moves ten. Delete removes it. Use the toolbar to add keys or edit the selected value and interpolation.",
 };
 export default meta;
 export const Animation: CanvasFrame = { id: "components-media-keyframe-timeline--animation" };

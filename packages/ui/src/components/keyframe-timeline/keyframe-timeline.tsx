@@ -1,7 +1,9 @@
-import { Box, Button, Text } from "@chakra-ui/react";
+import { Box, Button, IconButton, Text } from "@chakra-ui/react";
+import { Minus, Pause, Play, Plus, RotateCcw, X } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import { keyframeTimelineMetrics as metrics } from "../../theme/primitives/keyframe-timeline";
 import { ScrollArea } from "../primitives/scroll-area";
+import { Tooltip } from "../primitives/tooltip";
 import { KeyframeButton } from "./keyframe-button";
 import { KeyframeInspector } from "./keyframe-inspector";
 import { editKeyframe, sampleTrack, selectedKeyframe, snapTime, timeLabel } from "./keyframe-model";
@@ -12,7 +14,9 @@ import type {
   KeyframeTrack,
 } from "./keyframe-timeline.types";
 import {
+  TimelineDiamond,
   TimelineGroup,
+  TimelineKey,
   TimelineLabel,
   TimelineLane,
   TimelinePlayhead,
@@ -57,36 +61,58 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
   const playhead = `${(100 * Math.max(0, Math.min(duration, currentTime))) / duration}%`;
   return (
     <TimelineRoot role="region" aria-label={props.label ?? "Animation timeline"}>
-      <TimelineToolbar>
+      <TimelineToolbar role="toolbar" aria-label="Animation controls">
         <Text flex="1" textStyle="label/S/medium">
           {props.label ?? "Animations"}
         </Text>
         {props.onPlayingChange && (
-          <Button size="xs" onClick={() => props.onPlayingChange?.(!props.playing)}>
-            {props.playing ? "Pause" : "Play"}
-          </Button>
+          <Tooltip content={props.playing ? "Pause" : "Play"}>
+            <IconButton
+              size="xs"
+              variant="ghost"
+              aria-label={props.playing ? "Pause" : "Play"}
+              onClick={() => props.onPlayingChange?.(!props.playing)}
+            >
+              {props.playing ? <Pause /> : <Play />}
+            </IconButton>
+          </Tooltip>
         )}
-        <Button
-          size="xs"
-          variant="ghost"
-          onClick={() => {
-            props.onPlayingChange?.(false);
-            if (props.onRestart) props.onRestart();
-            else seek(0);
-          }}
-        >
-          Restart
-        </Button>
+        <Tooltip content="Restart">
+          <IconButton
+            size="xs"
+            variant="ghost"
+            aria-label="Restart"
+            onClick={() => {
+              props.onPlayingChange?.(false);
+              if (props.onRestart) props.onRestart();
+              else seek(0);
+            }}
+          >
+            <RotateCcw />
+          </IconButton>
+        </Tooltip>
         <Text textStyle="mono/XS" role="timer">
           {timeLabel(currentTime, fps)} / {timeLabel(duration, fps)}
         </Text>
-        <Button size="xs" aria-label="Zoom out timeline" disabled={zoom <= 0.25} onClick={() => setZoom(zoom / 2)}>
-          −
-        </Button>
+        <IconButton
+          size="xs"
+          variant="ghost"
+          aria-label="Zoom out timeline"
+          disabled={zoom <= 0.25}
+          onClick={() => setZoom(zoom / 2)}
+        >
+          <Minus />
+        </IconButton>
         <Text textStyle="mono/XS">{Math.round(zoom * 100)}%</Text>
-        <Button size="xs" aria-label="Zoom in timeline" disabled={zoom >= 8} onClick={() => setZoom(zoom * 2)}>
-          +
-        </Button>
+        <IconButton
+          size="xs"
+          variant="ghost"
+          aria-label="Zoom in timeline"
+          disabled={zoom >= 8}
+          onClick={() => setZoom(zoom * 2)}
+        >
+          <Plus />
+        </IconButton>
         {props.onTracksChange && (
           <>
             <Button
@@ -118,6 +144,13 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
             </Button>
           </>
         )}
+        {props.onClose && (
+          <Tooltip content="Close animation timeline">
+            <IconButton size="xs" variant="ghost" aria-label="Close animation timeline" onClick={props.onClose}>
+              <X />
+            </IconButton>
+          </Tooltip>
+        )}
       </TimelineToolbar>
       {selected && track && props.onTracksChange && (
         <KeyframeInspector
@@ -129,7 +162,7 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
           onChange={update}
         />
       )}
-      <ScrollArea flex="1" minH="0" showHorizontalScrollbar>
+      <ScrollArea flex="0 1 auto" minH="0" showHorizontalScrollbar role="group" aria-label="Animation tracks">
         <Box position="relative" minW="full" w={`${width + metrics.labelWidth}px`}>
           <TimelinePlayhead
             left={`calc(${Math.max(0, Math.min(1, currentTime / duration)) * 100}% + ${(1 - currentTime / duration) * metrics.labelWidth + (1 - (2 * currentTime) / duration) * metrics.inset}px)`}
@@ -248,16 +281,16 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
               <TimelineLane>
                 <TimelinePlayhead left={playhead} />
                 {props.markers.map((marker) => (
-                  <Button
-                    key={marker.id}
-                    size="xs"
-                    variant="ghost"
-                    position="absolute"
-                    left={`${(100 * marker.time) / duration}%`}
-                    onClick={() => seek(marker.time)}
-                  >
-                    {marker.label}
-                  </Button>
+                  <Tooltip key={marker.id} content={marker.label}>
+                    <TimelineKey
+                      type="button"
+                      aria-label={marker.label}
+                      left={`${(100 * marker.time) / duration}%`}
+                      onClick={() => seek(marker.time)}
+                    >
+                      <TimelineDiamond />
+                    </TimelineKey>
+                  </Tooltip>
                 ))}
               </TimelineLane>
             </TimelineRow>

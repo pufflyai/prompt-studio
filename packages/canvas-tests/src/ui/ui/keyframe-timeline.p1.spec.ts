@@ -59,4 +59,10 @@ test("scrub, move, add and delete animation keys through the shared timeline", a
   await expect(valueField).toHaveValue("12");
   await preview.getByRole("button", { name: /Bullet 2/ }).click();
   await expect(preview.getByRole("button", { name: "Opacity", exact: true })).toHaveCount(0);
+  await preview.getByRole("button", { name: "Close animation timeline", exact: true }).click();
+  await expect(ruler).toHaveCount(0);
+  await preview.getByRole("button", { name: "Show timeline", exact: true }).click();
+  await expect(ruler).toBeVisible();
+  await top.click();
+  await expect(preview.getByRole("spinbutton", { name: "Keyframe value", exact: true })).toHaveValue("12");
 });

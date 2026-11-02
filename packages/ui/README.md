@@ -95,7 +95,10 @@ The caller owns animation data, playback, persistence and undo. Optional control
 component owns transient selection. Use `playing` and `onPlayingChange` to connect
 transport controls to the caller’s clock. Supply `onRestart` to restart a caller-owned
 loop range; the default restart seeks to zero. Markers navigate named moments without
-pretending to be editable property keys. Zoom and group expansion are temporary.
+pretending to be editable property keys. Keys and markers use diamonds; transport uses
+icon buttons. The timeline hugs its content and scrolls inside a bounded parent.
+Supply `onClose` to show a close action owned by the containing editor.
+Zoom and group expansion are temporary.
 
 Arrow keys on the ruler seek by one frame; Shift seeks ten; Home/End seek the bounds.
 Arrow keys on a focused key move it, and Delete removes it then focuses its track.
