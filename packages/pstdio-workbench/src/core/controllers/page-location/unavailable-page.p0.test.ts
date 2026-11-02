@@ -271,3 +271,17 @@ test("a native history entry from another project cannot clear the current tool 
   expect(core.pages.store.getState()).toBe(state);
   expect(core.pageLocations.historyStore.getState()).toEqual(history);
 });
+
+test("malformed saved page data cannot crash replay of an unavailable default", () => {
+  const { core, browser } = emptyBootFixture();
+  core.pageLocations.boot("selected");
+  const current = browser.current();
+  browser.push({
+    url: "/projects/selected",
+    state: { kind: "pstdio.page-location", projectId: "selected", index: 1, routeKey: "invalid", location: {} },
+  });
+  browser.push(current);
+  expect(() => browser.back()).not.toThrow();
+  expect(core.pages.store.getState().location).toBeUndefined();
+  expect(core.modes.getActiveModeId()).toBe("project");
+});
