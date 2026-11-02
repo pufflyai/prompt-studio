@@ -89,7 +89,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                 >
                   <StickyUserMessage
                     message={row.message}
-                    expanded={expandedStickyMessageIds.has(row.key)}
+                    expanded={expandedStickyMessageIds.has(row.message.animationKey ?? row.key)}
                     animatedKeys={animatedKeys}
                     onToggle={onToggleStickyMessage}
                   />

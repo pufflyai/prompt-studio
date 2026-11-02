@@ -106,7 +106,8 @@ export const mergeMessagesWithPendingFollowUp = (
   const accepted = pending && !pending.failure ? findAcceptedPendingFollowUp(messages, pending) : undefined;
   if (pending && accepted) animationKeys?.set(accepted.id, pending.userMessageId);
   const displayed = messages.map((message) => {
-    const animationKey = animationKeys?.get(message.id);
+    const animationKey = animationKeys?.get(message.id) ?? animationKeys?.get(message.animationKey ?? "");
+    if (animationKey) animationKeys?.set(message.id, animationKey);
     return animationKey ? { ...message, animationKey } : message;
   });
   if (!pending || accepted || (!pending.failure && pending.destination === "queue")) return displayed;

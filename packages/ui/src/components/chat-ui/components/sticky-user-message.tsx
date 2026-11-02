@@ -68,7 +68,7 @@ export function StickyUserMessage(props: StickyUserMessageProps) {
           <StickyMessageToggle
             expanded={isExpanded}
             label={isExpanded ? "Show less" : "Show more"}
-            onClick={() => onToggle(message.id)}
+            onClick={() => onToggle(message.animationKey ?? message.id)}
             actionPanel={actions}
           />
         ) : null}
