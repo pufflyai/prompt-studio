@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { TreeNode, TreeViewSection } from "../../../core";
 import { previewTreeMove, type TreeMoveIntent } from "./tree-move-preview";
 
@@ -23,7 +23,7 @@ export const useTreeMovement = (input: {
   const { scope, body, revision, childrenByNodeId, persist, canMove, refresh } = input;
   const [pending, setPending] = useState<{ scope: string; moves: PendingMove[] }>({ scope, moves: [] });
   const latestRevision = useRef(revision);
-  useEffect(() => {
+  useLayoutEffect(() => {
     latestRevision.current = revision;
   }, [revision]);
   const queue = useRef(Promise.resolve());

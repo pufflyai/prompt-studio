@@ -150,7 +150,7 @@ export const useTreeData = (
   // The renderer's structure, cached reads, and each load step return new objects even when nothing changed.
   // Parts equal to the tree on screen keep their objects, so React Compiler skips the rows whose data did not
   // change instead of rebuilding every row on each step.
-  const tree = useSharedEqualValue(loaded);
+  const tree = useSharedEqualValue(loaded, queryKey);
   const renderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
   const movement = useTreeMovement({
     scope: childrenKey,

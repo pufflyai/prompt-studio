@@ -1,5 +1,5 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import { commandRefId, resourceKey } from "@pstdio/sdk/extensions";
+import { commandRefId } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
@@ -54,6 +54,7 @@ const toActionParams = (params: unknown, fallback: Record<string, unknown> | und
 };
 const toRecordParams = (params: object | undefined) =>
   params && !Array.isArray(params) ? (params as Record<string, unknown>) : undefined;
+const maxReusedTreeNodes = 5000;
 const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
   const runnerCommandId = `workbench.extensionTreeRenderer.${record.id}.command`;
@@ -137,10 +138,16 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
   // Each load maps fresh extension data, with new action functions. A node whose data equals its previous
   // load keeps its previous mapping, so the tree shares it and does not render that row again. Mapped actions
   // read only the node data, the bound resource, and the tree's own refresh.
-  let previousMappings = { resource: "", nodes: new Map<string, { node: ExtensionTreeNode; mapped: TreeNode }>() };
+  // A new bound resource, including a new label or metadata, starts over. The map holds one entry per node id.
+  let previousMappings = {
+    resource: undefined as ResourceRef | undefined,
+    nodes: new Map<string, { node: ExtensionTreeNode; mapped: TreeNode }>(),
+  };
   const mapNode = (node: ExtensionTreeNode, ctx: TreeContext): TreeNode => {
-    const resource = ctx.resource ? resourceKey(ctx.resource) : "";
-    if (previousMappings.resource !== resource) previousMappings = { resource, nodes: new Map() };
+    const resource = shareEqualValue(previousMappings.resource, ctx.resource);
+    if (resource !== previousMappings.resource || previousMappings.nodes.size > maxReusedTreeNodes) {
+      previousMappings = { resource, nodes: new Map() };
+    }
     const previous = previousMappings.nodes.get(node.id);
     if (previous && shareEqualValue(previous.node, node) === previous.node) return previous.mapped;
     const mapped: TreeNode = {
