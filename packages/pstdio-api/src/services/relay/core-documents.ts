@@ -1,4 +1,5 @@
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync";
+import type { LiveConnection } from "pstdio-sync/relay";
 import {
   createDocumentRelay,
   createDocumentRelayConnection,
@@ -18,6 +19,7 @@ import type { RelayWorkbench } from "./runtime";
  * a new device reads before the project exists there.
  */
 export const startCoreDocumentSync = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
@@ -53,11 +55,12 @@ export const startCoreDocumentSync = (input: {
     numbers = undefined;
   };
   const connection = createDocumentRelayConnection({
+    live: input.live,
     origin: config.relayOrigin,
     projectId: config.workbenchId,
     access,
     signal,
-    synchronize: async (attemptSignal) => {
+    synchronize: async (attemptSignal, subscribe) => {
       const { project: space } = await fetchSyncSpaces({
         ...config,
         credential: config.renewalGrant,
@@ -65,6 +68,7 @@ export const startCoreDocumentSync = (input: {
       });
       const relay = (documentId: string) =>
         createDocumentRelay({
+          subscribe,
           origin: config.relayOrigin,
           space,
           documentId,
