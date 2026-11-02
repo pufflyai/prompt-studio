@@ -1,4 +1,4 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, Stack, Tabs, Text } from "@chakra-ui/react";
 import { PageContentLayout } from "./page-content-layout";
 export default {
   title: "Dashboard/Page content layout",
@@ -25,16 +25,29 @@ export const FixedHeader = () => (
 );
 export const NestedExtension = () => (
   <Box h="96">
-    <PageContentLayout
-      header={
-        <Stack padding="lg">
-          <Text textStyle="label/S">Extensions / Example extension</Text>
-          <Text textStyle="heading/M">Example extension</Text>
-          <Text textStyle="label/XS">acme.example</Text>
-        </Stack>
-      }
-    >
-      <Content />
-    </PageContentLayout>
+    <Tabs.Root defaultValue="contributions" size="sm" tray h="full" minH="0">
+      <PageContentLayout
+        header={
+          <Stack gap="md">
+            <Stack padding="lg">
+              <Text textStyle="label/S">Extensions / Example extension</Text>
+              <Text textStyle="heading/M">Example extension</Text>
+              <Text textStyle="label/XS">acme.example</Text>
+            </Stack>
+            <Tabs.List>
+              <Tabs.Trigger value="settings">Settings</Tabs.Trigger>
+              <Tabs.Trigger value="contributions">Contributions</Tabs.Trigger>
+            </Tabs.List>
+          </Stack>
+        }
+      >
+        <Tabs.Content value="settings">
+          <Text padding="lg">Extension settings</Text>
+        </Tabs.Content>
+        <Tabs.Content value="contributions">
+          <Content />
+        </Tabs.Content>
+      </PageContentLayout>
+    </Tabs.Root>
   </Box>
 );

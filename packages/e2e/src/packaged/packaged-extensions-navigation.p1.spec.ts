@@ -114,6 +114,8 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await expect(page.getByText("Example command 49", { exact: true })).toBeVisible();
     const title = page.getByTestId("available-extension-detail").getByText("Example tool 0", { exact: true });
     const detailTop = (await title.boundingBox())!.y;
+    const availableTabs = page.getByTestId("available-extension-detail").getByRole("tablist");
+    const availableTabsTop = (await availableTabs.boundingBox())!.y;
     const detailScroll = page
       .getByTestId("available-extension-detail")
       .getByTestId("page-body-scroll")
@@ -125,6 +127,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     });
     await expect.poll(() => detailScroll.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
     await expect.poll(async () => (await title.boundingBox())!.y).toBe(detailTop);
+    await expect.poll(async () => (await availableTabs.boundingBox())!.y).toBe(availableTabsTop);
     await page.reload();
     await expect(page).toHaveURL(detailUrl);
     await expect(title).toBeVisible();
@@ -155,6 +158,8 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await page.getByRole("tab", { name: "Contributions", exact: true }).click();
     const installedTitle = installedDetail.getByText("Example tool 0", { exact: true });
     const installedTop = (await installedTitle.boundingBox())!.y;
+    const installedTabs = installedDetail.getByRole("tablist");
+    const installedTabsTop = (await installedTabs.boundingBox())!.y;
     const installedScroll = installedDetail.getByTestId("page-body-scroll").locator("[data-part=viewport]");
     expect(await installedScroll.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);
     await installedScroll.evaluate((node) => {
@@ -162,6 +167,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     });
     await expect.poll(() => installedScroll.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
     await expect.poll(async () => (await installedTitle.boundingBox())!.y).toBe(installedTop);
+    await expect.poll(async () => (await installedTabs.boundingBox())!.y).toBe(installedTabsTop);
     await page.reload();
     await expect(page).toHaveURL(installedUrl);
     await expect(installedTitle).toBeVisible();
