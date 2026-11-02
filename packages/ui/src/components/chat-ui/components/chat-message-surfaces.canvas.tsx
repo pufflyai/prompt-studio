@@ -1,6 +1,7 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
+import { ChatWorkspaceHub } from "./workspace-hub";
 
 const meta = {
   title: "Patterns/Chat/Message Surfaces",
@@ -68,5 +69,22 @@ export const LongUserMessage: Story = {
         ],
       },
     ],
+  },
+};
+
+export const WithWorkspace: Story = {
+  description: "User message bubbles and the workspace container share the xs radius token.",
+  args: {
+    workspaceHub: (
+      <ChatWorkspaceHub
+        workspaceControl={
+          <Button size="xs" variant="ghost">
+            Workspace
+          </Button>
+        }
+        additions={0}
+        deletions={0}
+      />
+    ),
   },
 };

@@ -53,3 +53,7 @@ export const NoWorkspace: Story = {
     onOpenWorkspace: undefined,
   },
 };
+
+export const NewSessionDraft: Story = {
+  args: { onOpenWorkspace: undefined },
+};

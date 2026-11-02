@@ -34,8 +34,7 @@ const recipe = defineSlotRecipe({
           px: "xs",
           py: "xs",
           width: "full",
-          borderRadius: "pill",
-          overflow: "visible",
+          borderRadius: "xs",
         },
       },
       assistant: {

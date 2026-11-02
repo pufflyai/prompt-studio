@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Show session skeletons during mount, narrow chat content, match user message bubbles to tag rounding, and improve workspace controls and command menu styling.
+Focus new-session chat inputs, show session skeletons during mount, narrow chat content, match user messages to workspace rounding, and improve workspace and command-menu controls.

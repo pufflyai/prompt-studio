@@ -55,7 +55,6 @@ const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(param
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
   const { input, view, emptyStateTitle, emptyStateDescription, drafts, history } = props;
-  const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
   const sessionId = view.sessionId ?? null;
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
     const value = state.values[dashboardSelectedProjectIdContextKey];
@@ -223,12 +222,13 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           hideComposer={noHarnessAvailable}
           loaderComponent={<ChatSkeleton />}
           chatInputPlaceholder="Reply to the agent..."
+          chatInputAutoFocus={!view.sessionId}
           chatInputDefaultValue={chatDraft.text}
           onChatInputChange={chatDraft.change}
           chatInputCommands={commands(commandComposer.suggestions)}
           composerDecision={decision}
           composerFallback={view.device ? <SessionPersonalDevice name={view.device.name} /> : undefined}
-          attachedResources={attachedResources}
+          attachedResources={[view.workspaceTitle, view.workspaceShorthand].filter(Boolean)}
           projectId={projectId}
           sessionId={sessionId}
           draftKey={view.draftKey}
