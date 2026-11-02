@@ -50,3 +50,23 @@ export const VsCodeSolarizedLight: Story = {
   id: "patterns-chat-message-surfaces--vs-code-solarized-light",
   defaultTheme: "vscode-solarized-light",
 };
+
+export const LongUserMessage: Story = {
+  args: {
+    messages: [
+      {
+        id: "long-user",
+        role: "user",
+        parts: [
+          {
+            type: "text",
+            text: Array.from(
+              { length: 20 },
+              (_, index) => `Release check ${index + 1}: review the result and document any remaining work.`,
+            ).join("\n\n"),
+          },
+        ],
+      },
+    ],
+  },
+};

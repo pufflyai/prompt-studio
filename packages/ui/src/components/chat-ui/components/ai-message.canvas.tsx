@@ -1,4 +1,4 @@
-import { Box, Stack } from "@chakra-ui/react";
+import { Box, Stack, Tag } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { ChatMessage } from "./ai-message";
@@ -47,4 +47,18 @@ const MessagePreview = () => {
 export const UserAndAssistant: Story = {
   id: "patterns-chat-ai-message--user-and-assistant",
   render: () => <MessagePreview />,
+};
+
+export const UserAndTag: Story = {
+  description: "User message bubbles use the same pill radius token as tags.",
+  render: () => (
+    <Stack maxW="chat-content" gap="sm" p="md">
+      <Tag.Root>
+        <Tag.Label>User message</Tag.Label>
+      </Tag.Root>
+      <ChatMessage.Root from="user">
+        <ChatMessage.Content from="user">Summarize the release risks.</ChatMessage.Content>
+      </ChatMessage.Root>
+    </Stack>
+  ),
 };
