@@ -7,14 +7,20 @@ import { streamPersonalSession } from "../../features/sessions/endpoints/stream-
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createNativeStore } from "../account/native-store";
 import { capturePersonalHistory } from "./capture";
-import { maxSharedQueuePrompt, maxSharedQueueRequests } from "./queue-snapshot";
+import { maxSharedQueuePrompt } from "./queue-snapshot";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore } from "./store";
 
 const root = await mkdtemp(join(tmpdir(), "personal-queue-"));
 afterAll(() => rm(root, { recursive: true, force: true }));
 
-test("another device's queued messages are readable in order, bounded, and updated while the session is followed", async () => {
+interface QueuedMessages {
+  messages: { id: string; parts: { text: string }[] }[];
+  queue: { requests: { queuePosition: number }[]; steeringAvailable: boolean };
+}
+const prompts = (body: QueuedMessages) => body.messages.map((message) => message.parts[0]!.text);
+
+test("another device's queued messages are readable in order, kept out of session records, and pushed to followers", async () => {
   const managerOrigin = "https://127.0.0.1:1";
   const accountId = "alice";
   const source = await createTestApp();
@@ -38,13 +44,18 @@ test("another device's queued messages are readable in order, bounded, and updat
     });
     const queue = source.deps.sessionQueueEntriesService;
     await queue.create({ session_id: running.id, prompt: "Then update the changelog.", request_kind: "follow_up" });
+    // A request being steered into the running turn is part of the conversation, not the queue.
+    await queue.createSteeringDelivery(
+      { session_id: running.id, prompt: "Steered now.", request_kind: "follow_up" },
+      { id: "delivery", runStartedAt: new Date().toISOString() },
+    );
+    // Previews cut at a character boundary, never inside an emoji.
     await queue.create({
       session_id: running.id,
-      prompt: "x".repeat(maxSharedQueuePrompt + 10),
+      prompt: `${"x".repeat(maxSharedQueuePrompt - 1)}🙂🙂`,
       request_kind: "follow_up",
     });
-    for (let index = 0; index < maxSharedQueueRequests; index++)
-      await queue.create({ session_id: running.id, prompt: `Later ${index}`, request_kind: "follow_up" });
+    await queue.create({ session_id: running.id, prompt: "Open a draft pull request.", request_kind: "follow_up" });
 
     const history = createPersonalHistoryStore({
       projectId: project.id,
@@ -69,9 +80,9 @@ test("another device's queued messages are readable in order, bounded, and updat
     };
     await capture();
 
-    // A session without a queue keeps its record unchanged.
-    const records = await history.readRecords("sessions");
-    expect(records.find((row) => row.id === idle.id)).not.toHaveProperty("queue");
+    // Saving messages rewrites session records; the queue lives in its own record, only while it has requests.
+    for (const record of await history.readRecords("sessions")) expect(record).not.toHaveProperty("queue");
+    expect((await history.readRecords("queues")).map((record) => record.id)).toEqual([running.id]);
 
     await copyRecords();
     const { environmentId } = await destination.deps.environmentService.get();
@@ -87,30 +98,32 @@ test("another device's queued messages are readable in order, bounded, and updat
 
     const response = await destination.app.request(`/v1/sessions/${running.id}/queued-messages`);
     expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.queue.requests).toHaveLength(maxSharedQueueRequests);
-    expect(body.queue).toMatchObject({ steeringAvailable: false, steeringUnavailableReason: expect.any(String) });
-    expect(body.messages[0]).toEqual({
-      id: `queued-prompt-${running.id}-${body.queue.requests[0].queuePosition}`,
-      role: "user",
-      parts: [{ type: "text", text: "Then update the changelog." }],
-    });
-    expect(body.messages[1].parts[0].text).toHaveLength(maxSharedQueuePrompt + 1);
-    expect(body.queue.requests.map((request: { queuePosition: number }) => request.queuePosition)).toEqual(
-      [...body.queue.requests.map((request: { queuePosition: number }) => request.queuePosition)].sort((a, b) => a - b),
-    );
+    const body = (await response.json()) as QueuedMessages;
+    expect(prompts(body)).toEqual([
+      "Then update the changelog.",
+      `${"x".repeat(maxSharedQueuePrompt - 1)}🙂…`,
+      "Open a draft pull request.",
+    ]);
+    expect(body.messages[0]!.id).toBe(`queued-prompt-${running.id}-${body.queue.requests[0]!.queuePosition}`);
+    expect(body.queue.steeringAvailable).toBe(false);
 
     const followUps = await destination.app.request(`/v1/sessions/${running.id}/queued-follow-ups`);
     expect(followUps.status).toBe(200);
-    expect((await followUps.json()).requests).toHaveLength(maxSharedQueueRequests);
+    expect((await followUps.json()).requests).toHaveLength(3);
     const idleQueue = await destination.app.request(`/v1/sessions/${idle.id}/queued-messages`);
     expect(await idleQueue.json()).toMatchObject({ messages: [], queue: { requests: [] } });
+    // Only the device that runs the session changes its queue.
+    const removal = await destination.app.request(
+      `/v1/sessions/${running.id}/queued-follow-ups/${body.queue.requests[0]!.queuePosition}`,
+      { method: "DELETE" },
+    );
+    expect(removal.status).toBe(404);
 
-    // The queue never leaks into the synced session rows.
     const state = await destination.deps.syncService.getFullState();
-    expect(state.sessions.find((row) => row.id === running.id)).not.toHaveProperty("queue");
+    expect((state.sessions as { id: string }[]).find((row) => row.id === running.id)).not.toHaveProperty("queue");
 
-    // A follower sees the queue at once, then each change the source device makes.
+    // A follower gets the queue at once. A session row event wakes it for the next change; the
+    // two-second timer never fires here.
     const frames: { event: string; data: unknown }[] = [];
     let sleeps = 0;
     const sink = {
@@ -118,26 +131,27 @@ test("another device's queued messages are readable in order, bounded, and updat
       onAbort() {},
       sleep: async () => {
         sleeps += 1;
-        if (sleeps === 1) {
-          const [first] = await source.deps.sessionQueueEntriesService.listUndispatchedBySession(running.id);
-          await source.deps.sessionQueueEntriesService.removePending(first!.queue_position);
-          await capture();
-          await copyRecords();
+        if (sleeps > 1) {
+          sink.aborted = true;
           return;
         }
-        sink.aborted = true;
+        const [first] = await source.deps.sessionQueueEntriesService.listPendingBySession(running.id);
+        await source.deps.sessionQueueEntriesService.removePending(first!.queue_position);
+        await capture();
+        await copyRecords();
+        destination.deps.eventBus.emit("sessions", "set", { id: running.id });
+        await new Promise(() => {});
       },
       write: async (event: string, data: unknown) => {
         frames.push({ event, data });
       },
     };
     await streamPersonalSession(running.id, destination.deps, sink);
-    const queued = frames.filter((frame) => frame.event === "queued_messages");
-    expect(queued).toHaveLength(2);
-    const prompts = (frame: (typeof queued)[number]) =>
-      (frame.data as { messages: { parts: { text: string }[] }[] }).messages.map((message) => message.parts[0]!.text);
-    expect(prompts(queued[0]!)[0]).toBe("Then update the changelog.");
-    expect(prompts(queued[1]!)[0]).not.toBe("Then update the changelog.");
+    const queued = frames.filter((frame) => frame.event === "queued_messages").map((frame) => frame.data);
+    expect(queued.map((data) => prompts(data as QueuedMessages)[0])).toEqual([
+      "Then update the changelog.",
+      `${"x".repeat(maxSharedQueuePrompt - 1)}🙂…`,
+    ]);
   } finally {
     await source.close();
     await destination.close();

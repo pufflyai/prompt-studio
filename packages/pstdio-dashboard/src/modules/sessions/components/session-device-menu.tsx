@@ -5,6 +5,8 @@ import { ChevronDown, Monitor } from "lucide-react";
 export interface SessionDeviceOption {
   id: string;
   name: string;
+  /** The device showing this view. */
+  current?: boolean;
 }
 
 interface SessionDeviceMenuProps {
@@ -27,12 +29,13 @@ const DeviceLabel = (props: { label: string }) => (
 /** The device a session runs on, shown before the workspace it runs in. */
 export const SessionDeviceMenu = (props: SessionDeviceMenuProps) => {
   const { devices, selectedDeviceId, onSelectDevice, isDisabled = false } = props;
-  const label = devices.find((device) => device.id === selectedDeviceId)?.name ?? "This device";
+  const selected = devices.find((device) => device.id === selectedDeviceId);
+  const label = !selected || selected.current ? "This device" : selected.name;
 
   if (isDisabled) {
     return (
-      <Tooltip content={label === "This device" ? "Runs on this device" : `Runs on ${label}`}>
-        <HStack gap="2xs" px="2xs" minW="0" data-testid="session-device">
+      <Tooltip content={!selected || selected.current ? "Runs on this device" : `Runs on ${selected.name}`}>
+        <HStack gap="2xs" px="2xs" minW="0" tabIndex={0} data-testid="session-device">
           <DeviceLabel label={label} />
         </HStack>
       </Tooltip>

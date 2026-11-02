@@ -2,7 +2,7 @@ import { type SessionMessage, sessionSchema, workspaceSchema } from "pstdio-api-
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { historyNamespace, type SessionLogFiles } from "./log-files";
-import { sharedQueueResponse, sharedQueueSchema } from "./queue-snapshot";
+import { sharedQueueRecordSchema, sharedQueueResponse } from "./queue-snapshot";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore, type HistoryDocuments } from "./store";
 
@@ -10,7 +10,6 @@ const deviceSchema = z.object({ ownerId: z.string(), id: z.string(), name: z.str
 const personalSessionSchema = sessionSchema.extend({
   device: deviceSchema,
   workspace_id: z.string().nullable(),
-  queue: sharedQueueSchema.optional(),
 });
 const personalWorkspaceSchema = workspaceSchema.extend({ device: deviceSchema });
 
@@ -70,7 +69,7 @@ export const createPersonalHistoryService = (input: {
       );
   };
   const sessions = async (projectId: string) =>
-    (await sessionRecords(projectId)).map(({ queue: _queue, ...row }) => {
+    (await sessionRecords(projectId)).map((row) => {
       remember("sessions", row.id, projectId);
       return { ...row, usage_json: row.usage_json ?? null };
     });
@@ -166,8 +165,18 @@ export const createPersonalHistoryService = (input: {
     getSession: (id: string, projectId?: string) => find(sessions, id, projectId),
     /** The queued messages of another device's session, read-only. Null when it is not one. */
     async queuedMessages(id: string, projectId?: string) {
-      const record = await find(sessionRecords, id, projectId);
-      return record ? sharedQueueResponse(id, record.queue ?? []) : null;
+      const session = await find(sessionRecords, id, projectId);
+      if (!session?.project_id) return null;
+      const current = await context(session.project_id);
+      if (!current) return null;
+      const records = await current.history.readRecords("queues");
+      await refreshIdentity();
+      if (current.identity !== identity) return null;
+      const record = records.find(
+        (row) => row.id === id && JSON.stringify(row.device) === JSON.stringify(session.device),
+      );
+      const parsed = sharedQueueRecordSchema.safeParse(record);
+      return sharedQueueResponse(id, parsed.success ? parsed.data.requests : []);
     },
     getWorkspace: (id: string, projectId?: string) => find(workspaces, id, projectId),
     async getWorkspaceByShorthand(projectId: string, shorthand: string) {

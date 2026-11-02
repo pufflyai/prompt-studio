@@ -148,7 +148,12 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
           .finally(() => setPending(false));
       }}
     >
-      <Box css={styles.root} data-send-now-visible={showSendNow} aria-busy={pending}>
+      <Box
+        css={styles.root}
+        data-send-now-visible={showSendNow}
+        data-read-only={readOnly || undefined}
+        aria-busy={pending}
+      >
         <QueueSendNow visible={showSendNow} targeted={destination?.kind === "steer"} reason={steerReason} />
         <ScrollArea maxH="queue-viewport" minH="0" viewportProps={{ maxH: "queue-viewport" }}>
           {items.map((item, index) => (

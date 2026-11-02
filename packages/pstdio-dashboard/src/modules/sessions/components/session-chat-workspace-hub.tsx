@@ -9,7 +9,7 @@ interface SessionChatWorkspaceHubProps
     Pick<ComponentProps<typeof ChatWorkspaceHub>, "additions" | "deletions"> {}
 
 // New sessions run on this device. Choosing another device arrives with remote commands (PS-827).
-const thisDevice = { id: "this-device", name: "This device" };
+const thisDevice = { id: "this-device", name: "This device", current: true };
 
 export const SessionChatWorkspaceHub = (props: SessionChatWorkspaceHubProps) => {
   const { additions, deletions, ...workspace } = props;

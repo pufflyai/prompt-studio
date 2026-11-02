@@ -19,6 +19,29 @@ interface QueuedFollowUpRowProps {
   onEdit?: (item: QueuedFollowUp) => void;
   onRemove?: (id: string) => void;
 }
+const QueuedFollowUpText = (props: {
+  item: QueuedFollowUp;
+  destination?: string;
+  unavailableReason?: string | null;
+}) => {
+  const { item, destination, unavailableReason } = props;
+  const details = [
+    item.sending ? "Sending…" : null,
+    item.model,
+    ...Object.values(item.params ?? {}).map(String),
+    ...(item.attachments?.map((attachment) => attachment.name) ?? []),
+  ].filter(Boolean);
+  return (
+    <>
+      <Text lineClamp={2}>{item.prompt}</Text>
+      <Text color="fg.muted" textStyle="label/XS" lineClamp={1}>
+        {destination === "combine"
+          ? (unavailableReason ?? "Release to combine")
+          : details.join(" · ") || "Saved request"}
+      </Text>
+    </>
+  );
+};
 export const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
   const { item, index, editor, source, destination, unavailableReason, editing, readOnly, onEdit, onRemove } = props;
   const disabled = Boolean(readOnly || item.sending || item.steeringDelivery);
@@ -48,6 +71,7 @@ export const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
       data-drag-source={source}
       data-combine-target={destination === "combine" && !unavailableReason}
       data-queued-follow-up-id={item.id}
+      data-read-only={readOnly || undefined}
       aria-busy={item.sending || undefined}
       onPointerEnter={reveal}
       onPointerLeave={() => {
@@ -80,30 +104,23 @@ export const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
         </IconButton>
       )}
       <Stack flex="1" minW="0" gap="2xs">
-        {editor ?? (
-          <Box asChild css={styles.content}>
-            <button
-              type="button"
-              disabled={item.sending || readOnly}
-              aria-label={readOnly ? `Queued message: ${item.prompt}` : `Edit queued message: ${item.prompt}`}
-              onClick={() => onEdit?.(item)}
-            >
-              <Text lineClamp={2}>{item.prompt}</Text>
-              <Text color="fg.muted" textStyle="label/XS" lineClamp={1}>
-                {destination === "combine"
-                  ? (unavailableReason ?? "Release to combine")
-                  : [
-                      item.sending ? "Sending…" : null,
-                      item.model,
-                      ...Object.values(item.params ?? {}).map(String),
-                      ...(item.attachments?.map((attachment) => attachment.name) ?? []),
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "Saved request"}
-              </Text>
-            </button>
-          </Box>
-        )}
+        {editor ??
+          (readOnly ? (
+            <Box css={styles.content} data-read-only>
+              <QueuedFollowUpText item={item} destination={destination} unavailableReason={unavailableReason} />
+            </Box>
+          ) : (
+            <Box asChild css={styles.content}>
+              <button
+                type="button"
+                disabled={item.sending}
+                aria-label={`Edit queued message: ${item.prompt}`}
+                onClick={() => onEdit?.(item)}
+              >
+                <QueuedFollowUpText item={item} destination={destination} unavailableReason={unavailableReason} />
+              </button>
+            </Box>
+          ))}
       </Stack>
       {onRemove && !editor && !disabled ? (
         <HStack css={styles.actions} data-visible={hovered || focused || editing}>

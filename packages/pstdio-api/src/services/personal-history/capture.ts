@@ -27,17 +27,20 @@ export const capturePersonalHistory = async (input: {
   const workspaces = localWorkspaces.filter((row) => workspaceIds.has(row.id));
   const sessions = localSessions.filter((row) => sessionIds.has(row.id));
   await history.writeRecords("workspaces", device, workspaces);
+  await history.writeRecords("sessions", device, sessions);
   const queued = new Map<string, Awaited<ReturnType<typeof deps.sessionQueueEntriesService.listUndispatched>>>();
-  for (const entry of await deps.sessionQueueEntriesService.listUndispatched())
-    queued.set(entry.session_id, [...(queued.get(entry.session_id) ?? []), entry]);
+  for (const entry of await deps.sessionQueueEntriesService.listUndispatched()) {
+    if (!sessionIds.has(entry.session_id)) continue;
+    const entries = queued.get(entry.session_id) ?? [];
+    entries.push(entry);
+    queued.set(entry.session_id, entries);
+  }
+  // Only sessions with queued messages have a record; a drained queue's record is removed.
+  const queues = [...queued].map(([id, entries]) => ({ id, requests: sharedQueue(entries) }));
   await history.writeRecords(
-    "sessions",
+    "queues",
     device,
-    sessions.map((row) => {
-      const queue = sharedQueue(queued.get(row.id) ?? []);
-      // Most sessions have no queue; leaving the field out keeps their records unchanged.
-      return queue.length ? { ...row, queue } : row;
-    }),
+    queues.filter((queue) => queue.requests.length),
   );
   const links = (await deps.workspaceSessionService.listLinks(projectId)).filter(
     (link) => workspaceIds.has(link.workspace_id) && sessionIds.has(link.session_id),

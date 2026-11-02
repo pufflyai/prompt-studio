@@ -56,6 +56,8 @@ export interface ChatPanelProps extends ChatLinkProps {
   composerHeader?: ReactNode;
   /** Replaces message entry and queue controls, retaining the workspace header, drafts, and pending responses. */
   composerFallback?: ReactNode;
+  /** Show queued messages read-only above `composerFallback`, for a conversation another device runs. */
+  readOnlyQueue?: boolean;
   /** Hide the entire composer while keeping conversation history and empty-state guidance visible. */
   hideComposer?: boolean;
   attachedResources?: string[];
@@ -121,6 +123,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     attachmentActions,
     composerHeader,
     composerFallback,
+    readOnlyQueue,
     hideComposer = false,
     attachedResources,
     onClearAttachments,
@@ -243,6 +246,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
                   attachmentActions={attachmentActions}
                   composerHeader={composerHeader}
                   composerFallback={composerFallback}
+                  readOnlyQueue={readOnlyQueue}
                   attachedResources={attachedResources}
                   attachmentList={attachmentList}
                   chatInputAutoFocus={chatInputAutoFocus}

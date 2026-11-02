@@ -22,7 +22,7 @@ export const createSessionReaders = (deps: ExtensionsRouteDeps, input: SessionAp
         const messages = await read(() => getSessionHistory(id, deps));
         const queued = (await getProjectSession(id))
           ? await read(() => getQueuedSessionMessages(deps, input.projectId, id))
-          : [];
+          : ((await read(() => deps.personalHistoryService.queuedMessages(id, input.projectId)))?.messages ?? []);
         return {
           session: toExtensionSessionDetails(session, workspace?.project_id === input.projectId ? workspace.id : null),
           messages: [...messages, ...queued],

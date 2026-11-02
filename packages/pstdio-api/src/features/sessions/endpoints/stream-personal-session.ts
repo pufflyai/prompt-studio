@@ -19,12 +19,18 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
     arrived.push(update);
     wake?.();
   });
-  // The session row changes whenever its device changes the queue, so a row event wakes the reader.
+  // The session row changes whenever its device changes the queue, so a row event marks the queue
+  // for another read. The flag also covers events that arrive while the reader is busy.
+  let queueChanged = true;
   const unsubscribe = deps.eventBus.subscribe((event) => {
-    if (event.table === "sessions" && (event.data as { id?: string }).id === id) wake?.();
+    if (event.table !== "sessions" || (event.data as { id?: string }).id !== id) return;
+    queueChanged = true;
+    wake?.();
   });
   let sentQueue: string | undefined;
   const sendQueue = async () => {
+    if (!queueChanged) return;
+    queueChanged = false;
     const shared = await deps.personalHistoryService.queuedMessages(id, projectId);
     if (!shared || sink.aborted) return;
     const value = JSON.stringify(shared);
@@ -69,7 +75,14 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
       await flush();
       await sendQueue();
       if (sink.aborted || finished.includes(session?.status ?? "")) break;
-      if (!arrived.length) await Promise.race([sink.sleep(2000), new Promise<void>((resolve) => (wake = resolve))]);
+      if (!arrived.length && !queueChanged) {
+        // The queue record can sync in a later round than its session row, so a quiet reader checks it again.
+        const timedOut = await Promise.race([
+          sink.sleep(2000).then(() => true),
+          new Promise<boolean>((resolve) => (wake = () => resolve(false))),
+        ]);
+        if (timedOut) queueChanged = true;
+      }
       wake = undefined;
       session = await deps.personalHistoryService.getSession(id);
     }

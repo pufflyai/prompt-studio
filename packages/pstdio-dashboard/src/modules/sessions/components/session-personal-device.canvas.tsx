@@ -48,6 +48,7 @@ export const QueuedOnDevice: Story = {
           { id: "queued-2", prompt: "Open a draft pull request.", position: 2 },
         ]}
         composerFallback={<SessionPersonalDevice {...args} />}
+        readOnlyQueue
       />
     </Box>
   ),

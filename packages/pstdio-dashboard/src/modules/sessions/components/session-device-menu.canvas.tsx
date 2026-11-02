@@ -2,7 +2,7 @@ import { Box, HStack, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import type { DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
-import { SessionDeviceMenu } from "./session-device-menu";
+import { SessionDeviceMenu, type SessionDeviceOption } from "./session-device-menu";
 import { SessionWorkspaceMenu } from "./session-workspace-menu";
 
 const workspace: DashboardWorkspaceOption = {
@@ -20,10 +20,10 @@ const workspace: DashboardWorkspaceOption = {
   workspacePath: "/workspace/project",
   updatedAt: "2026-01-01T00:00:00Z",
 };
-const thisDevice = { id: "this-device", name: "This device" };
+const thisDevice = { id: "this-device", name: "This device", current: true };
 const laptop = { id: "laptop", name: "Laptop" };
 
-const Header = (props: { device: typeof thisDevice; locked: boolean }) => (
+const Header = (props: { device: SessionDeviceOption; locked: boolean }) => (
   <ChatWorkspaceHub
     additions={12}
     deletions={3}

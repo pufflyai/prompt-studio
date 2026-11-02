@@ -21,6 +21,8 @@ Store log heads in the index in batches, at most once per ten seconds during con
 
 Use a new index identity and relay name. Each upgraded device publishes its own sessions once. Drop old local transcript documents and journals without reading their content. Devices that never upgrade do not contribute to the new index. Existing first-account ownership claims still prevent publication to another account.
 
+Queued follow-up messages that have not started are shared as a separate index record per session, only while the queue has requests. Saving messages rewrites the session record but not its queue. The record carries each request's position, revision, model and a 500-character preview, at most 50 requests. Other devices show the queue read-only; changing it is a remote command (PS-827).
+
 ## Consequences
 
 Every device still stores every completed conversation of its user's Cloud projects. Sync memory follows new messages and small cursors, rather than all downloaded history. Disk use follows completed history. Logs deliberately retain old message revisions.

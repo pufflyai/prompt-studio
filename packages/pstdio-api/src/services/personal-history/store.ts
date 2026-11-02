@@ -23,7 +23,7 @@ export const createPersonalHistoryStore = (input: {
 }) => {
   const owner = personalHistoryOwner(input);
   const records = input.documents.open("records");
-  const readRecords = (kind: "sessions" | "workspaces" | "workspace_sessions") =>
+  const readRecords = (kind: "sessions" | "workspaces" | "workspace_sessions" | "queues") =>
     records.transaction(owner, async ({ document }) =>
       [...document.getMap<string>(kind).values()].map((value) => JSON.parse(value) as Record<string, unknown>),
     );
@@ -51,7 +51,7 @@ export const createPersonalHistoryStore = (input: {
         });
       }),
     async writeRecords<T extends { id: string }>(
-      kind: "sessions" | "workspaces" | "workspace_sessions",
+      kind: "sessions" | "workspaces" | "workspace_sessions" | "queues",
       device: PersonalDevice,
       rows: T[],
     ) {

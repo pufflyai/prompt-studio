@@ -1,19 +1,24 @@
 import type { SessionMessage, SessionQueuedMessagesResponse } from "pstdio-api-contracts";
 import { z } from "zod";
 
-// The index is synced whole, so a session record carries a bounded copy of its queue.
-export const maxSharedQueueRequests = 20;
-export const maxSharedQueuePrompt = 4000;
+// Each session's queue is its own index record, so saving messages never re-sends it. The index is
+// synced whole: other devices get a preview of each queued message, enough for its two-line row.
+export const maxSharedQueueRequests = 50;
+export const maxSharedQueuePrompt = 500;
 
-export const sharedQueueSchema = z.array(
-  z.object({
-    queuePosition: z.number().int().positive(),
-    revision: z.string(),
-    prompt: z.string(),
-    model: z.string().nullable(),
-  }),
-);
-export type SharedQueue = z.infer<typeof sharedQueueSchema>;
+const sharedRequestSchema = z.object({
+  queuePosition: z.number().int().positive(),
+  revision: z.string(),
+  prompt: z.string(),
+  model: z.string().nullable().catch(null),
+});
+export type SharedQueue = z.infer<typeof sharedRequestSchema>[];
+
+/** A record another device wrote. A shape this version cannot read shows an empty queue. */
+export const sharedQueueRecordSchema = z.object({
+  id: z.string(),
+  requests: z.array(sharedRequestSchema).catch([]),
+});
 
 interface QueueEntry {
   queue_position: number;
@@ -21,18 +26,27 @@ interface QueueEntry {
   prompt: string;
   model: string | null;
   request_kind: string;
+  steering_delivery_json: unknown;
 }
+
+const preview = (prompt: string) => {
+  const characters = [...prompt];
+  return characters.length > maxSharedQueuePrompt ? `${characters.slice(0, maxSharedQueuePrompt).join("")}…` : prompt;
+};
 
 /** The queued messages other devices show for a session, in queue order. */
 export const sharedQueue = (entries: QueueEntry[]): SharedQueue =>
   entries
-    .filter((entry) => entry.request_kind === "start" || entry.request_kind === "follow_up")
+    // A request being steered into the running turn already belongs to the conversation.
+    .filter(
+      (entry) =>
+        (entry.request_kind === "start" || entry.request_kind === "follow_up") && !entry.steering_delivery_json,
+    )
     .slice(0, maxSharedQueueRequests)
     .map((entry) => ({
       queuePosition: entry.queue_position,
       revision: entry.revision,
-      prompt:
-        entry.prompt.length > maxSharedQueuePrompt ? `${entry.prompt.slice(0, maxSharedQueuePrompt)}…` : entry.prompt,
+      prompt: preview(entry.prompt),
       model: entry.model,
     }));
 
