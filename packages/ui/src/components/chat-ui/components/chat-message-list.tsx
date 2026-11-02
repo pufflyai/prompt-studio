@@ -35,7 +35,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   } = props;
   const { scrollRef } = useStickToBottomContext();
   const rows = buildChatMessageRows(leadingResponses, groups);
-  const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.key));
+  const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.message.animationKey ?? row.key));
   const initialHeight = scrollRef.current?.clientHeight || 1;
   const gapCount = Math.max(leadingResponses.length + groups.length - 1, 0);
   const { virtualizer, virtualItems, totalSize, measurements } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
@@ -90,7 +90,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                   <StickyUserMessage
                     message={row.message}
                     expanded={expandedStickyMessageIds.has(row.key)}
-                    animate={animatedKeys.has(row.key)}
+                    animatedKeys={animatedKeys}
                     onToggle={onToggleStickyMessage}
                   />
                 </Box>
@@ -114,7 +114,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                 message={row.message}
                 streaming={streaming && row.isActiveTurn && row.showAssistantActions}
                 hideQuestionForms={!row.isActiveTurn || hideActiveQuestionForms}
-                animate={animatedKeys.has(row.key)}
+                animatedKeys={animatedKeys}
                 showAssistantActions={row.showAssistantActions}
               />
             </Box>

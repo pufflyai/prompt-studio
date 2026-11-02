@@ -99,15 +99,20 @@ export const createOptimisticFollowUpMessages = (pending: PendingFollowUpState):
 export const mergeMessagesWithPendingFollowUp = (
   messages: SessionMessage[],
   pending: PendingFollowUpState | null,
+  animationKeys?: Map<string, string>,
 ): SessionMessage[] => {
-  if (!pending) return messages;
-  if (!pending.failure && hasAcceptedPendingFollowUp(messages, pending)) return messages;
-  if (!pending.failure && pending.destination === "queue") return messages;
-  return [...messages, ...createOptimisticFollowUpMessages(pending)];
+  const accepted = pending && !pending.failure ? findAcceptedPendingFollowUp(messages, pending) : undefined;
+  if (pending && accepted) animationKeys?.set(accepted.id, pending.userMessageId);
+  const displayed = messages.map((message) => {
+    const animationKey = animationKeys?.get(message.id);
+    return animationKey ? { ...message, animationKey } : message;
+  });
+  if (!pending || accepted || (!pending.failure && pending.destination === "queue")) return displayed;
+  return [...displayed, ...createOptimisticFollowUpMessages(pending)];
 };
 
-export const hasAcceptedPendingFollowUp = (messages: SessionMessage[], pending: PendingFollowUpState) =>
-  messages.slice(pending.messageCount).some(
+const findAcceptedPendingFollowUp = (messages: SessionMessage[], pending: PendingFollowUpState) =>
+  messages.slice(pending.messageCount).find(
     (message) =>
       message.role === "user" &&
       message.parts
@@ -115,3 +120,6 @@ export const hasAcceptedPendingFollowUp = (messages: SessionMessage[], pending: 
         .map((part) => part.text)
         .join("\n") === pending.prompt,
   );
+
+export const hasAcceptedPendingFollowUp = (messages: SessionMessage[], pending: PendingFollowUpState) =>
+  Boolean(findAcceptedPendingFollowUp(messages, pending));
