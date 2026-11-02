@@ -159,3 +159,24 @@ test("a file that finishes as its stall limit passes is not reported as stalled"
   );
   expect(results.map((result) => [result.outcome, result.error])).toEqual([["success", undefined]]);
 });
+
+test("P1 in nightly and stable validation runs every file after a failure", async () => {
+  const profile = process.env.CI_PROFILE;
+  process.env.CI_PROFILE = "production";
+  try {
+    const started: string[] = [];
+    const results = await runApiTestFiles(
+      ["failure", "next"],
+      async (file) => {
+        started.push(file);
+        return file === "failure" ? 1 : 0;
+      },
+      { priority: "P1" },
+    );
+    expect(started.sort()).toEqual(["failure", "next"]);
+    expect(results.map((result) => result.outcome)).toEqual(["failure", "success"]);
+  } finally {
+    if (profile === undefined) delete process.env.CI_PROFILE;
+    else process.env.CI_PROFILE = profile;
+  }
+});

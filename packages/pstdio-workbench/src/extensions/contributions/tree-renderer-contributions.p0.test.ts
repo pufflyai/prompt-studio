@@ -42,6 +42,35 @@ describe("extension tree renderer contributions", () => {
     await sections[0]?.actions?.[0]?.run?.(params);
     expect(calls).toEqual([params]);
   });
+  test("keeps a node's mapping when a reload returns the same node data", async () => {
+    const workbench = createWorkbench();
+    let label = "Plan";
+    const node = () => ({
+      id: "plan",
+      label,
+      actions: [{ id: "rename", command: { kind: "command" as const, id: "rename" } }],
+    });
+    workbench.registerModule({
+      id: "test.tree-reload",
+      activate: (context) =>
+        registerWorkbenchExtensionTreeRenderers({
+          executeCommand: () => [{ id: "files", nodes: [node(), { id: "notes", label: "Notes" }] }],
+          metadata,
+          projectId: "project-1",
+          workbench: context,
+        }),
+    });
+    const first = await getWorkbenchRenderers(workbench).getBody(treeId);
+    const equal = await getWorkbenchRenderers(workbench).getBody(treeId);
+    label = "Roadmap";
+    const changed = await getWorkbenchRenderers(workbench).getBody(treeId);
+
+    expect(equal[0]?.nodes[0]).toBe(first[0]?.nodes[0]);
+    expect(equal[0]?.nodes[0]?.actions?.[0]?.run).toBe(first[0]?.nodes[0]?.actions?.[0]?.run);
+    expect(changed[0]?.nodes[0]).not.toBe(first[0]?.nodes[0]);
+    expect(changed[0]?.nodes[0]?.label).toBe("Roadmap");
+    expect(changed[0]?.nodes[1]).toBe(first[0]?.nodes[1]);
+  });
   test("passes an extension node's tooltip to its tree row", async () => {
     const workbench = createWorkbench();
     workbench.registerModule({

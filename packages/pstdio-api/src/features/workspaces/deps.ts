@@ -35,5 +35,6 @@ export type WorkspacesRouteDeps = Pick<
   | "skillService"
   | "settingsService"
   | "workspaceService"
+  | "workspaceCapacityService"
   | "workspaceSessionService"
 > & { workspaceProviderRuntime?: WorkspaceProviderRuntime };

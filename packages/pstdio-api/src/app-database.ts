@@ -33,6 +33,8 @@ import type { AppLifecycle } from "./app-contracts";
 import { apiLogger } from "./lib/logger";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
 import { logStartupPhase } from "./lib/startup-phase";
+import { upgradeNativeSources } from "./services/native-documents/source-upgrade";
+import { upgradeArtifactFileProjections } from "./services/shared-files/artifact-projection-upgrade";
 import { storageObserver } from "./services/shared-files/storage-observation";
 
 const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
@@ -94,3 +96,13 @@ export const createAppDatabaseServices = (db: DbClient, databasePath: string) =>
   extensionSettingsDBService: createExtensionSettingsDBService(db),
   webviewPreferencesDBService: createWebviewPreferencesDBService(db),
 });
+
+export const upgradeAppStorage = async (
+  storage: ReturnType<typeof createAppDatabaseServices>["extensionStorageDBService"],
+) => {
+  await upgradeNativeSources(storage);
+  await upgradeArtifactFileProjections({
+    projections: storage.fileProjections,
+    contexts: await storage.fileProjections.legacyContexts(),
+  });
+};

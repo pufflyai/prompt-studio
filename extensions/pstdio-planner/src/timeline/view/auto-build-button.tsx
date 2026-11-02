@@ -1,7 +1,7 @@
 import { Button, CloseButton, Dialog, HStack, Portal } from "@chakra-ui/react";
 import { installPrismGlobal } from "@pstdio/ui";
 import { Play } from "lucide-react";
-import { lazy, Suspense, useRef, useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import type { WaitingTicket } from "../../commands/next-ticket-types";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import { AutoBuildActivity } from "./auto-build-activity";
@@ -58,7 +58,6 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
     t,
   } = props;
   const [content, setContent] = useState<"configuration" | "sessions" | null>(null);
-  const anchor = useRef<HTMLButtonElement>(null);
   const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
   const inspectable = enabled || paused || failed;
   const status = resolveAutoBuildIndicatorStatus({
@@ -81,24 +80,31 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
 
   return (
     <>
-      <Button
-        ref={anchor}
-        aria-label={t("timeline.autoBuild.start", "Auto Build")}
-        aria-description={enabled || paused || failed ? `Auto Build ${activity}` : undefined}
-        size="xs"
-        variant="outline"
-        disabled={disabled}
-        onClick={() => setContent(inspectable ? "sessions" : "configuration")}
-      >
-        {status ? <AutoBuildIndicator status={status} label={`Auto Build ${activity}`} /> : <Play />}
-        {t("timeline.autoBuild.start", "Auto Build")}
-      </Button>
       <AutoBuildActivity
         {...props}
+        trigger={
+          <Button
+            aria-label={t("timeline.autoBuild.start", "Auto Build")}
+            aria-description={enabled || paused || failed ? `Auto Build ${activity}` : undefined}
+            size="xs"
+            variant="outline"
+            disabled={disabled}
+            onClick={(event) => {
+              if (inspectable) return;
+              event.preventDefault();
+              setContent("configuration");
+            }}
+          >
+            {status ? <AutoBuildIndicator status={status} label={`Auto Build ${activity}`} /> : <Play />}
+            {t("timeline.autoBuild.start", "Auto Build")}
+          </Button>
+        }
         open={content === "sessions"}
         failed={failed}
-        anchor={anchor}
-        onClose={close}
+        onOpenChange={(open) => {
+          if (open) setContent("sessions");
+          else close();
+        }}
         onStop={() => void stop()}
         onConfigure={() => setContent("configuration")}
       />

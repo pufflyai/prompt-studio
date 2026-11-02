@@ -65,4 +65,40 @@ describe("registerWorkbenchExtensionRendererRefreshEvents", () => {
 
     expect(refresh).toHaveBeenCalledWith("pstdio.lab.view.outline", undefined);
   });
+
+  test("an open palette lists a provider's results again when an event it declares arrives", () => {
+    const workbench = createWorkbench();
+    let listener: ((event: WorkbenchExtensionRefreshEvent) => void) | undefined;
+    const module: WorkbenchModuleContribution = {
+      id: "test.extension-palette-refresh",
+      activate(ctx) {
+        return registerWorkbenchExtensionRendererRefreshEvents({
+          metadata: {
+            ...metadata,
+            commandPaletteResources: [
+              {
+                id: "pstdio.lab.resource.notes",
+                extensionId: "pstdio.lab",
+                title: "Notes",
+                queryHandlerId: "pstdio.lab.resource.notes.query",
+                refreshEventIds: ["pstdio.lab.event.notes.changed"],
+              },
+            ],
+          },
+          subscribe: (next) => {
+            listener = next;
+            return { dispose: () => undefined };
+          },
+          workbench: ctx,
+        });
+      },
+    };
+
+    workbench.registerModule(module);
+    const before = workbench.commandPaletteResources.store.getState().refreshToken;
+    listener?.({ id: "pstdio.lab.event.unrelated" });
+    expect(workbench.commandPaletteResources.store.getState().refreshToken).toBe(before);
+    listener?.({ id: "pstdio.lab.event.notes.changed" });
+    expect(workbench.commandPaletteResources.store.getState().refreshToken).toBe(before + 1);
+  });
 });

@@ -1,10 +1,11 @@
 import { hostname } from "node:os";
+import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { createStoragePositions } from "pstdio-api-contracts";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
-import { createAppDatabaseServices, openAppDatabase } from "./app-database";
+import { createAppDatabaseServices, openAppDatabase, upgradeAppStorage } from "./app-database";
 import { createAppSettingsService, createCoreDomainServices } from "./app-domain-services";
 import { productionAppDependencies, wireAppExtensionServices } from "./app-extension-services";
 import { registerApi } from "./app-routing";
@@ -23,7 +24,6 @@ import { createArtifactMountWriteLedger } from "./features/extensions/artifact-m
 import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
-import type { SessionHookDeps } from "./features/hooks/session-hooks";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
@@ -35,14 +35,13 @@ import { createNativeDocumentService } from "./services/native-documents/documen
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
 import { resolveNativeTextAccess } from "./services/native-documents/source-access";
 import { initializeNativeSource } from "./services/native-documents/source-binding";
-import { upgradeNativeSources } from "./services/native-documents/source-upgrade";
 import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
-import { upgradeArtifactFileProjections } from "./services/shared-files/artifact-projection-upgrade";
 import { createSkillService } from "./services/skill-service";
 import { createTextEditingService } from "./services/text-editing/service";
+import { createWorkspaceCapacityService } from "./services/workspace-capacity-service";
 import type { AppBindings } from "./types";
 
 const AUTOMATION_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -104,7 +103,7 @@ const createAppNativeDocuments = (
   storage: RouteDeps["extensionStorageService"],
   catalog: RouteDeps["extensionRuntimeCatalog"],
 ) => {
-  return createNativeDocumentService({
+  const nativeDocuments = createNativeDocumentService({
     deviceId: deviceId,
     presenceIdentity: () => nativePresenceIdentity(account),
     catalog,
@@ -114,6 +113,14 @@ const createAppNativeDocuments = (
     initialize: (loaded) => initializeNativeSource(getDeps(), loaded),
     save: (input) => saveNativeMarkdownFile(getDeps(), input),
   });
+  return {
+    nativeDocuments,
+    textEditing: createTextEditingService({
+      documents: nativeDocuments,
+      access: (input) => resolveNativeTextAccess(getDeps(), input),
+      catalog,
+    }),
+  };
 };
 
 const buildApp = async (
@@ -147,11 +154,7 @@ const buildApp = async (
     settingsDBService,
     skillsDBService,
   } = dbs;
-  await upgradeNativeSources(extensionStorageDBService);
-  await upgradeArtifactFileProjections({
-    projections: extensionStorageDBService.fileProjections,
-    contexts: await extensionStorageDBService.fileProjections.legacyContexts(),
-  });
+  await upgradeAppStorage(extensionStorageDBService);
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
@@ -220,8 +223,7 @@ const buildApp = async (
   });
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
-  const sessionHookDeps = (): SessionHookDeps => deps;
-  const sessionHooks = createSessionLifecycleCallbacks(sessionHookDeps);
+  const sessionHooks = createSessionLifecycleCallbacks(() => deps);
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
@@ -238,10 +240,16 @@ const buildApp = async (
     onCapacityAvailable: () => drainSessionQueue(),
   });
 
+  const workspaceCapacityService = createWorkspaceCapacityService({
+    path: join(storageRoot, "device-workspace-capacity.json"),
+    deviceId: environmentId,
+    activeWorkspaceIds: workspaceSessionService.activeWorkspaceIds,
+    onCapacityAvailable: () => drainSessionQueue(),
+  });
   const terminalSupervisor = createAppTerminalSupervisor();
   const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
 
-  const nativeDocuments = createAppNativeDocuments(
+  const { nativeDocuments, textEditing } = createAppNativeDocuments(
     environmentId,
     account.accountService,
     () => deps,
@@ -274,6 +282,7 @@ const buildApp = async (
     sessionQueueLifecycle,
     sessionService,
     settingsService,
+    workspaceCapacityService,
     workspaceService,
     workspaceSessionService,
     skillService,
@@ -281,11 +290,7 @@ const buildApp = async (
     boardViewsService: boardViewsDBService,
     notificationService,
     nativeDocuments,
-    textEditing: createTextEditingService({
-      documents: nativeDocuments,
-      access: (input) => resolveNativeTextAccess(deps, input),
-      catalog: extensionRuntimeCatalog,
-    }),
+    textEditing,
     installedExtensionSourcesService: installedExtensionSourcesDBService,
     extensionAutomationPreferencesService,
     extensionConnectionService,

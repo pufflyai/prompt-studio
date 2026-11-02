@@ -104,6 +104,7 @@ const createDeps = () => {
         createDispatchStarted: async () => ({ queue_position: 1 }),
         remove: async () => {},
       },
+      workspaceCapacityService: { hasCapacity: async () => true },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },

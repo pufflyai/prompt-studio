@@ -36,17 +36,17 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
         const queued = await deps.sessionService.get(entry.session_id);
         if (!queued || queued.status !== "queued") continue;
         const hasCapacity = await withSchedulingLock(async () => {
-          if (!(await hasCreateCapacity(deps))) return false;
           const session = await deps.sessionService.get(entry.session_id);
           if (session?.status !== "queued") return true;
           const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
+          if (!(await hasCreateCapacity(deps, workspace?.id))) return false;
           // A workspace that will become ready keeps the entry pending; its `set` event drains again.
           if (workspaceSessionReadiness(workspace).kind === "wait") return true;
           const dispatch = await dispatchQueuedEntry(deps, session, entry);
           dispatches.push(dispatch?.settled);
           return true;
         });
-        if (!hasCapacity) return;
+        if (!hasCapacity) continue;
       }
     };
     await dispatchPending().finally(async () => {

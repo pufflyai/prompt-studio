@@ -11,6 +11,7 @@ import { ShieldCheck } from "lucide-react";
 import type { TicketWorkspaceBadgeItem } from "../../data/mappers";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES } from "../../data/ticket-board";
 import type { PlanRow } from "../contracts";
+import { timelineTicketPreviewTarget } from "../ticket-preview";
 import { card } from "./graph-geometry";
 import { graphLayers } from "./graph-layers";
 import type { Relation } from "./plan-view";
@@ -64,8 +65,8 @@ export function GraphCard(props: GraphCardProps) {
         )
     : [];
   const activate = () => {
-    if (interaction) void interaction.host.call("navigation.open", { target: row.target });
-    else actions.onSelect(row.id);
+    actions.onSelect(row.id);
+    if (interaction) void interaction.host.call("navigation.open", { target: timelineTicketPreviewTarget(row.target) });
   };
   const waiting = row.flags.includes("waiting");
   let opacity = 1;
