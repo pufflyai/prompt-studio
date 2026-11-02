@@ -1,4 +1,5 @@
 import { nativePresenceLimits } from "pstdio-api-contracts";
+import { NativePresenceError } from "../native-documents/presence";
 import { validateTextGrant } from "./admission";
 import { textError } from "./errors";
 import { emitTextEvent } from "./events";
@@ -46,17 +47,21 @@ export const observeTextMember = (deps: TextEditingDeps, connection: TextConnect
   };
   const emitPresence = () => {
     if (!current() || !presence) return;
+    const ownParticipantId = presence.participantId;
     emitTextEvent(connection, {
       type: "presence",
       memberId: member.id,
       handle: member.handle,
       version: ++member.version,
-      participants: presence.snapshot().map((person) => ({
-        id: person.participantId,
-        label: person.label,
-        deviceName: person.deviceName,
-        selection: person.selection,
-      })),
+      participants: presence
+        .snapshot()
+        .filter((person) => person.participantId !== ownParticipantId)
+        .map((person) => ({
+          id: person.participantId,
+          label: person.label,
+          deviceName: person.deviceName,
+          selection: person.seedId === seedId ? person.selection : null,
+        })),
     });
   };
   const updatePresence = async () => {
@@ -113,7 +118,12 @@ export const observeTextMember = (deps: TextEditingDeps, connection: TextConnect
     }
     await drain();
     if (!current()) return;
-    presence = await deps.documents.presence.join({ ...address, seedId });
+    presence = await deps.documents.presence.join({ ...address, seedId }).catch((error) => {
+      // Presence is optional; reaching its room allowance must not end durable observation.
+      if (error instanceof NativePresenceError && error.code === "room_limit") return undefined;
+      throw error;
+    });
+    if (!presence) return;
     if (!current()) {
       presence.close();
       return;
