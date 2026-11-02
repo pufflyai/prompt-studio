@@ -279,6 +279,7 @@ export const ParameterEditor = (props: ParameterEditorProps) => {
       )}
       {parameters.motion && (
         <Playback
+          name={item.name}
           active={props.active}
           motion={parameters.motion}
           restored={playback}

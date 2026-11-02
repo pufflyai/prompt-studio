@@ -6,6 +6,7 @@ import type { CanvasRuntime } from "../controller/runtime";
 
 // The portal keeps each editor with its frame's React state while displaying it outside the stage.
 export const FrameEditorOutlet = createContext<HTMLElement | null>(null);
+export const FrameAnimationOutlet = createContext<HTMLElement | null>(null);
 interface FrameEditorMenuProps {
   canvas: CanvasDefinition;
   runtime: CanvasRuntime;

@@ -28,7 +28,8 @@ export default {
       ],
     },
   },
-  motion: { duration: 2, fps: 30, markers: [{ at: 1, label: "Midpoint" }] },
 };
-export const First = {};
-export const Second = {};
+const motion = { duration: 2, fps: 30, markers: [{ at: 1, label: "Midpoint" }] };
+export const First = { motion };
+export const Second = { motion };
+export const Still = {};

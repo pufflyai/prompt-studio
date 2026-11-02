@@ -89,3 +89,13 @@ bun run --cwd packages/canvas-tests perf:startup
 ```
 
 Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots.
+
+
+Animated frames show a shared timeline in a bottom tray when selected. The tray follows
+selection and disappears for a static frame or empty selection. Scrub its playhead,
+seek named markers, or use Play/Pause/Restart. Each frame retains its own playback
+position and settings. Parameters, saved versions, speed and loop settings stay in
+the right Frame editor. Existing source-code animations advertise duration and
+markers; the timeline displays an animation lane without inventing property keys.
+The reusable UI timeline also supports editable property tracks for tools that own
+keyframe data.
