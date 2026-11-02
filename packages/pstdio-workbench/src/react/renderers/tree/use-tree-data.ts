@@ -4,6 +4,7 @@ import type { WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { resolveNavigationLevels } from "../../../core/controllers/page-location/navigation-level";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { useSharedEqualValue } from "../share-equal-value";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { previewTreeResources } from "./tree-resource-preview";
@@ -17,6 +18,9 @@ import {
 import { canMoveTreeNode, createMoveTreeNode } from "./tree-view-move";
 import { useTreeMovement } from "./use-tree-movement";
 
+// One empty map for every render: the adapter reads children from the nodes themselves.
+const NO_CHILDREN: Record<string, TreeNode[]> = {};
+
 export const useTreeData = (
   workbench: WorkbenchCore,
   treeViewId: string,
@@ -28,9 +32,10 @@ export const useTreeData = (
   placement?: WorkbenchPanelInstance,
 ) => {
   const pageParams = usePageParams(workbench, placement);
-  const trees = getWorkbenchRenderers(workbench);
+  // Look the renderers up where they are used: React Compiler treats a held call result as mutable until its
+  // last use, and cannot cache anything whose inputs stay mutable across the hooks below.
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
-  useWorkbenchStore(trees.treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
+  useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
   const mode = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const location = useWorkbenchStore(workbench.pages.store, (state) => state.location);
   const project = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
@@ -52,7 +57,9 @@ export const useTreeData = (
   );
   // A new owner or bound resource starts with its structure. Selecting a child page
   // refreshes the same owner's data without removing its mounted rows.
-  const scope = trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter, pageParams });
+  const scope = getWorkbenchRenderers(workbench)
+    .getTreeRenderer(treeViewId)
+    ?.getReadKey?.({ resource, viewId, filter, pageParams });
   const refreshKey = JSON.stringify(scope ?? [resourceKey(resource), resourceKey(location?.resource), mode, pageOwner]);
   const queryKey = JSON.stringify([
     treeViewId,
@@ -65,8 +72,17 @@ export const useTreeData = (
     pageOwner,
   ]);
   const childrenKey = JSON.stringify([queryKey, refreshKey]);
-  const renderer = trees.getTreeRenderer(treeViewId);
-  const structure = treeStructure(renderer, { resource, viewId, filter, pageParams });
+  // A renderer's structure can read workbench state beyond its context, such as the navigation level. The read
+  // keys capture that state, so the structure is read again whenever they change.
+  const readStructure = (_readKey: string) =>
+    treeStructure(getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId), {
+      resource,
+      viewId,
+      filter,
+      pageParams,
+    });
+  const structure = readStructure(childrenKey);
+
   // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
   useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
   const [expandedChildren, setExpandedChildren] = useState<{ queryKey: string; byNodeId: Record<string, TreeNode[]> }>({
@@ -80,6 +96,7 @@ export const useTreeData = (
     refreshKey,
     load: async (signal, publish) => {
       const ctx = { resource, viewId, filter, signal, pageParams };
+      const trees = getWorkbenchRenderers(workbench);
       const data = await loadTreeData(trees, treeViewId, ctx, (available) => publish({ ...available, children: {} }));
       signal.throwIfAborted();
       const children =
@@ -94,18 +111,20 @@ export const useTreeData = (
       };
     },
     subscribe: (refresh) =>
-      trees.onDidRefresh((event) => {
+      getWorkbenchRenderers(workbench).onDidRefresh((event) => {
         if (event.treeId === treeViewId) refresh();
       }),
   });
   // Expanding one folder loads only its children. The next full read already includes them.
   const loadChildren = (node: TreeNode) => {
-    void trees.getChildren(treeViewId, node, { resource, viewId, filter, pageParams }).then((children) => {
-      setExpandedChildren((current) => ({
-        queryKey: childrenKey,
-        byNodeId: { ...(current.queryKey === childrenKey ? current.byNodeId : {}), [node.id]: children },
-      }));
-    });
+    void getWorkbenchRenderers(workbench)
+      .getChildren(treeViewId, node, { resource, viewId, filter, pageParams })
+      .then((children) => {
+        setExpandedChildren((current) => ({
+          queryKey: childrenKey,
+          byNodeId: { ...(current.queryKey === childrenKey ? current.byNodeId : {}), [node.id]: children },
+        }));
+      });
   };
   useEffect(() => {
     const subscription = workbench.resources.preview.subscribeRefresh(async (resource) => {
@@ -119,25 +138,35 @@ export const useTreeData = (
     });
     return () => subscription.dispose();
   }, [workbench, read.retry, read.value]);
-  const savedBody = read.loading && !read.value?.body.length ? structure.body : (read.value?.body ?? []);
-  const savedChildren = {
-    ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
-    ...read.value?.children,
+  const loaded = {
+    body: read.loading && !read.value?.body.length ? structure.body : (read.value?.body ?? []),
+    header: read.value?.header ?? structure.header,
+    footer: read.value?.footer ?? structure.footer,
+    children: {
+      ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
+      ...read.value?.children,
+    },
   };
+  // The renderer's structure, cached reads, and each load step return new objects even when nothing changed.
+  // Parts equal to the tree on screen keep their objects, so React Compiler skips the rows whose data did not
+  // change instead of rebuilding every row on each step.
+  const tree = useSharedEqualValue(loaded);
+  const renderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
   const movement = useTreeMovement({
     scope: childrenKey,
-    body: savedBody,
-    childrenByNodeId: savedChildren,
+    body: tree.body,
+    revision: read.request,
+    childrenByNodeId: tree.children,
     canMove: (sourceId, targetId) =>
-      canMoveTreeNode({ sections: savedBody, childrenByNodeId: savedChildren }, sourceId, targetId),
+      canMoveTreeNode({ sections: tree.body, childrenByNodeId: tree.children }, sourceId, targetId),
     persist: renderer
       ? createMoveTreeNode({
           workbench,
           renderer,
           resource,
           viewId,
-          sections: savedBody,
-          childrenByNodeId: savedChildren,
+          sections: tree.body,
+          childrenByNodeId: tree.children,
           onError: onMoveError,
         })
       : undefined,
@@ -146,9 +175,9 @@ export const useTreeData = (
   return {
     ...movement,
     body: previewTreeResources(movement.body, movement.childrenByNodeId, changes),
-    childrenByNodeId: {},
-    header: read.value?.header ?? structure.header,
-    footer: read.value?.footer ?? structure.footer,
+    childrenByNodeId: NO_CHILDREN,
+    header: tree.header,
+    footer: tree.footer,
     loadChildren,
     error: read.error ?? null,
     loading: read.loading,

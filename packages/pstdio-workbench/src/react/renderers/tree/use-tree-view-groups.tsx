@@ -34,10 +34,16 @@ export const useTreeViewGroups = (
   );
   if (currentDraft?.isNew) groups.push(currentDraft.group);
 
-  const startGroup = (moveScope = sections[0]?.moveScope) => {
+  // No default parameter: React Compiler cannot compile an optional chain in one, and an
+  // uncompiled hook rebuilds every section, so every tree row renders again.
+  const startGroup = (moveScope?: string) => {
     setDraft({
       storageKey,
-      group: { id: `tree-list-group:${crypto.randomUUID()}`, label: "New group", moveScope },
+      group: {
+        id: `tree-list-group:${crypto.randomUUID()}`,
+        label: "New group",
+        moveScope: moveScope ?? sections[0]?.moveScope,
+      },
       isNew: true,
     });
   };

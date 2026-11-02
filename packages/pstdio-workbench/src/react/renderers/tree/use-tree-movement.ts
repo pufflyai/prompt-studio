@@ -5,38 +5,43 @@ import { previewTreeMove, type TreeMoveIntent } from "./tree-move-preview";
 interface PendingMove {
   token: symbol;
   intent: TreeMoveIntent;
-  savedAfter?: TreeViewSection[];
+  /** Set when the save finished, with the read on screen then. A later read replaces this preview. */
+  saved?: { after: symbol | undefined };
 }
 
 // Keep only unconfirmed intent. The renderer owns persistence and every completed read replaces the preview.
+// Reads are told apart by `revision`, not by `body`: a read that returns equal data keeps the same body.
 export const useTreeMovement = (input: {
   scope: string;
   body: TreeViewSection[];
+  revision?: symbol;
   childrenByNodeId: Record<string, TreeNode[]>;
   persist?: (sourceId: string, targetId?: string, position?: TreeMoveIntent["position"]) => Promise<boolean>;
   canMove(sourceId: string, targetId?: string): boolean;
   refresh(): void;
 }) => {
-  const { scope, body, childrenByNodeId, persist, canMove, refresh } = input;
+  const { scope, body, revision, childrenByNodeId, persist, canMove, refresh } = input;
   const [pending, setPending] = useState<{ scope: string; moves: PendingMove[] }>({ scope, moves: [] });
-  const latestBody = useRef(body);
-  latestBody.current = body;
+  const latestRevision = useRef(revision);
+  useEffect(() => {
+    latestRevision.current = revision;
+  }, [revision]);
   const queue = useRef(Promise.resolve());
   useEffect(() => {
     // Even a no-op update can interrupt a pending transition before its rows commit.
     if (
       !pending.moves.some(
-        (move) => pending.scope !== scope || (move.savedAfter !== undefined && move.savedAfter !== body),
+        (move) => pending.scope !== scope || (move.saved !== undefined && move.saved.after !== revision),
       )
     )
       return;
     setPending((current) => {
       if (current.moves.length === 0) return current;
       if (current.scope !== scope) return { scope, moves: [] };
-      const moves = current.moves.filter((move) => !move.savedAfter || move.savedAfter === body);
+      const moves = current.moves.filter((move) => !move.saved || move.saved.after === revision);
       return moves.length === current.moves.length ? current : { scope, moves };
     });
-  }, [scope, body, pending]);
+  }, [scope, revision, pending]);
   const moves = pending.scope === scope ? pending.moves : [];
   const preview = moves.reduce((sections, move) => previewTreeMove(sections, childrenByNodeId, move.intent), body);
   return {
@@ -69,7 +74,7 @@ export const useTreeMovement = (input: {
                     scope,
                     moves: saved
                       ? current.moves.map((move) =>
-                          move.token === token ? { ...move, savedAfter: latestBody.current } : move,
+                          move.token === token ? { ...move, saved: { after: latestRevision.current } } : move,
                         )
                       : current.moves.filter((move) => move.token !== token),
                   },

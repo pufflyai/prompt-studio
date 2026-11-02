@@ -1,5 +1,5 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import { commandRefId } from "@pstdio/sdk/extensions";
+import { commandRefId, resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
@@ -11,6 +11,7 @@ import type {
   TreeViewSection,
   WorkbenchModuleContext,
 } from "../../core";
+import { shareEqualValue } from "../../react/renderers/share-equal-value";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 
@@ -133,7 +134,15 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
         : undefined,
     };
   };
+  // Each load maps fresh extension data, with new action functions. A node whose data equals its previous
+  // load keeps its previous mapping, so the tree shares it and does not render that row again. Mapped actions
+  // read only the node data, the bound resource, and the tree's own refresh.
+  let previousMappings = { resource: "", nodes: new Map<string, { node: ExtensionTreeNode; mapped: TreeNode }>() };
   const mapNode = (node: ExtensionTreeNode, ctx: TreeContext): TreeNode => {
+    const resource = ctx.resource ? resourceKey(ctx.resource) : "";
+    if (previousMappings.resource !== resource) previousMappings = { resource, nodes: new Map() };
+    const previous = previousMappings.nodes.get(node.id);
+    if (previous && shareEqualValue(previous.node, node) === previous.node) return previous.mapped;
     const mapped: TreeNode = {
       id: node.id,
       selected: node.selected,
@@ -159,6 +168,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       canDrop: node.canDrop,
     };
     originalNodes.set(mapped, node);
+    previousMappings.nodes.set(node.id, { node, mapped });
     return mapped;
   };
   const mapSections = (sections: ExtensionTreeSection[], ctx: TreeContext): TreeViewSection[] =>

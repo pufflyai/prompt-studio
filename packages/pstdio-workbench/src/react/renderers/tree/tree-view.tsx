@@ -231,6 +231,10 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds);
 
   const navigationContext = { workbench, treeViewId, onOpenResourceError };
+  // One handler for every list: an inline one inside a list's JSX changes whenever that list's other props do,
+  // and every row of the list would render again.
+  const navigate = (event: { nodeId: string; intent?: { id?: string; payload?: unknown } }) =>
+    navigateTreeNode(navigationContext, event.nodeId, event.intent);
 
   return (
     <TreeListDragProvider
@@ -265,7 +269,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               onReorderSections={(nextSectionIds) => onReorderSections("header", nextSectionIds)}
               onReorderNodes={onReorderNodes}
               canMove={treeRenderer.canMove}
-              onNavigate={(event) => navigateTreeNode(navigationContext, event.nodeId, event.intent)}
+              onNavigate={navigate}
             />
           </Flex>
         ) : null}
@@ -309,7 +313,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               onReorderNodes={onReorderNodes}
               canMove={treeRenderer.canMove}
               onMoveNode={moveNode}
-              onNavigate={(event) => navigateTreeNode(navigationContext, event.nodeId, event.intent)}
+              onNavigate={navigate}
             />
           </Box>
         </ScrollArea>
@@ -329,7 +333,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               onReorderSections={(nextSectionIds) => onReorderSections("footer", nextSectionIds)}
               onReorderNodes={onReorderNodes}
               canMove={treeRenderer.canMove}
-              onNavigate={(event) => navigateTreeNode(navigationContext, event.nodeId, event.intent)}
+              onNavigate={navigate}
             />
           </Flex>
         ) : null}

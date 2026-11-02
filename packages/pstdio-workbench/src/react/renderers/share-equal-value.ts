@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 const isPlainData = (value: unknown): value is Record<string, unknown> => {
   if (!value || typeof value !== "object") return false;
   const prototype = Object.getPrototypeOf(value);
@@ -75,4 +77,16 @@ const shareParts = <T>(previous: unknown, next: T, active: WeakSet<object>, cycl
     return next;
   }
   return next;
+};
+
+/**
+ * Returns `value`, reusing every part that equals the value this hook returned last, so a component whose
+ * sources return new but equal objects passes the same objects on. React Compiler treats a hook result as
+ * unchanging, so it can cache what is built from it.
+ */
+export const useSharedEqualValue = <T>(value: T): T => {
+  const [shown, setShown] = useState(value);
+  const shared = shareEqualValue(shown, value);
+  if (shared !== shown) setShown(shared);
+  return shared;
 };
