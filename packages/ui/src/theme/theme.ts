@@ -34,6 +34,7 @@ import {
 import { numberInputSlotRecipe } from "./recipes/number-input";
 import { paletteSlotRecipe } from "./recipes/palette";
 import { popoverRecipe } from "./recipes/popover";
+import { popoverHeaderRecipe } from "./recipes/popover-header";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { queuedFollowUpRecipe } from "./recipes/queued-follow-up";
 import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout";
@@ -117,6 +118,7 @@ const config = defineConfig({
       drawer: drawerSlotRecipe,
       tooltip: tooltipRecipe,
       popover: popoverRecipe,
+      popoverHeader: popoverHeaderRecipe,
       menu: menuSlotRecipe,
       numberInput: numberInputSlotRecipe,
       palette: paletteSlotRecipe,
