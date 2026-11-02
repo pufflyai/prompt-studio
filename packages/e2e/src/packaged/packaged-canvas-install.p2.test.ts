@@ -185,7 +185,9 @@ test(
       expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
       phase("project preview ready");
       const editor = viewer.getByRole("complementary", { name: "Frame editor" });
-      await editor.getByText("Select a frame", { exact: true }).waitFor();
+      expect(await editor.isVisible()).toBe(false);
+      await viewer.getByRole("button", { name: "Select Primary", exact: true }).click();
+      phase("frame selected");
       await viewer
         .getByRole("button", { name: /^Theme for / })
         .first()
@@ -197,7 +199,6 @@ test(
       await preview.waitForSelector('[data-frame-theme="pstdio-dark"]');
       expect(await preview.getByRole("button", { name: "Save" }).count()).toBe(1);
       // The packaged editor follows the selected frame and lazy-loads its actual parameter controls.
-      await editor.getByText("Primary", { exact: true }).waitFor();
       await editor.getByRole("button", { name: "Save", exact: true }).click();
       await viewer.getByRole("menuitemradio", { name: "Archive", exact: true }).click();
       await preview.getByRole("button", { name: "Archive", exact: true }).waitFor();
