@@ -8,6 +8,8 @@ import type {
   PageQuery,
   RemoveWorktreeResponse,
   RenameWorkspaceInput,
+  UpdateWorkspaceCapacityInput,
+  WorkspaceCapacity,
   WorkspaceFileContent,
   WorkspaceFileEntry,
   WorkspaceFilesResponse,
@@ -21,6 +23,8 @@ import type { RequestFn } from "./request";
 import { createWorkspaceDiffClient } from "./workspace-diffs";
 
 export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
+  getCapacity(): Promise<WorkspaceCapacity>;
+  updateCapacity(input: UpdateWorkspaceCapacityInput): Promise<WorkspaceCapacity>;
   queryProviders(
     projectId: string,
     input?: PageQuery,
@@ -63,6 +67,8 @@ export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
   ...createWorkspaceDiffClient(request),
+  getCapacity: () => request("/v1/workspaces/capacity"),
+  updateCapacity: (input) => request("/v1/workspaces/capacity", { method: "PATCH", body: input }),
   queryProviders: (projectId, input, options) =>
     request(`/v1/projects/${encodeURIComponent(projectId)}/workspace-providers/query${pageQuery(input)}`, options),
   listProviders: (projectId, options) =>
