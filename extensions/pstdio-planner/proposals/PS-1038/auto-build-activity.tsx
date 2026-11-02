@@ -16,7 +16,8 @@ import { Pause, Play, Square } from "lucide-react";
 import { type ReactNode, type RefObject, useRef } from "react";
 import type { AutoBuildButtonProps } from "../../src/timeline/view/auto-build-button";
 import { AutoBuildHelp } from "../../src/timeline/view/auto-build-help";
-import { AutoBuildSessions } from "../../src/timeline/view/auto-build-sessions";
+import { AutoBuildSessionRow } from "../../src/timeline/view/auto-build-session-row";
+import { AutoBuildSessions } from "./auto-build-sessions";
 
 interface AutoBuildActivityProps
   extends Pick<
@@ -67,6 +68,8 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
     t,
     ...sessions
   } = props;
+  const { supervisor, completed, failed, starting, onOpenSession } = sessions;
+  const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   const content = useRef<HTMLDivElement>(null);
   const danger = useRecipe({ recipe: psTheme.getRecipe("button") })({ variant: "destructive" });
   const styles = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "panel" });
@@ -102,14 +105,33 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
             <Popover.Body display="flex" flexDirection="column" minH="0" flex="1">
               <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
                 <Stack gap="md">
+                  <Stack gap="2xs">
+                    <Text textStyle="label/2XS/medium" color="fg.muted">
+                      {t("timeline.autoBuild.supervisor", "Supervisor")}
+                    </Text>
+                    {supervisor ? (
+                      <AutoBuildSessionRow
+                        session={supervisor}
+                        sleeping={enabled && !completed && !supervisorActive && !failed}
+                        onOpen={onOpenSession}
+                      />
+                    ) : (
+                      <Text textStyle="paragraph/S/regular">
+                        {enabled && starting
+                          ? t("timeline.autoBuild.starting", "Waiting to start the supervisor")
+                          : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
+                      </Text>
+                    )}
+                  </Stack>
+                  <Separator />
                   {attention}
+                  <Separator />
                   <AutoBuildSessions {...sessions} enabled={enabled} t={t} />
                 </Stack>
               </ScrollArea>
             </Popover.Body>
             <Popover.Footer flexShrink="0">
               <Stack w="full" alignItems="end">
-                <Separator w="full" />
                 {actionError ? (
                   <Text role="alert" color="fg.error">
                     {actionError}
