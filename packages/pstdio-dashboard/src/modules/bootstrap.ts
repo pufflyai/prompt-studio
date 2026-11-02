@@ -1,4 +1,6 @@
-import type { WorkbenchModuleContribution } from "@pstdio/workbench";
+import { Spinner } from "@chakra-ui/react";
+import { batchWorkbenchChanges, type WorkbenchModuleContribution } from "@pstdio/workbench";
+import { createElement } from "react";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
@@ -19,16 +21,31 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
     activate(ctx) {
       const isInitialSyncComplete = input.isInitialSyncComplete ?? isInitialCollectionsSyncComplete;
       ctx.context.set("project.open", true);
+      const loadingViewId = "dashboard.bootstrap.loading";
+      ctx.views.registerView({
+        id: loadingViewId,
+        title: "Loading project",
+        body: { kind: "react", render: () => createElement(Spinner, { size: "sm", margin: "auto" }) },
+      });
 
       let generation = 0;
       let readyUnsubscribe: (() => void) | undefined;
       let selectionUnsubscribe: (() => void) | undefined;
+      let locationUnsubscribe: (() => void) | undefined;
+      let loadingPlaceholder: { dispose(): void } | undefined;
+      const clearLoading = () => {
+        loadingPlaceholder?.dispose();
+        loadingPlaceholder = undefined;
+      };
 
       const disposePending = () => {
         readyUnsubscribe?.();
         readyUnsubscribe = undefined;
         selectionUnsubscribe?.();
         selectionUnsubscribe = undefined;
+        locationUnsubscribe?.();
+        locationUnsubscribe = undefined;
+        clearLoading();
       };
 
       const enterProjectSelection = () => {
@@ -63,6 +80,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
           // A user can navigate through the core shell while an extension URL waits.
           // That committed location takes precedence over the delayed restore.
           if (ctx.pages.store.getState().location) {
+            clearLoading();
             readyUnsubscribe?.();
             readyUnsubscribe = undefined;
             return true;
@@ -72,12 +90,32 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
           if (getDashboardExtensionsReadyProjectId(ctx) !== projectId) return false;
           readyUnsubscribe?.();
           readyUnsubscribe = undefined;
-          const result = ctx.pageLocations.boot(projectId);
-          if (!result.ok) return true;
+          batchWorkbenchChanges(() => {
+            // Recovery and other shell dialogs can open while metadata loads.
+            // Restoring the destination's layout must preserve those live overlays.
+            const overlay = ctx.layout.getLayout().regions.overlay;
+            ctx.pageLocations.boot(projectId);
+            if (overlay.widgets.length) {
+              const layout = ctx.layout.getLayout();
+              ctx.layout.restoreLayout({ ...layout, regions: { ...layout.regions, overlay } });
+            }
+            clearLoading();
+          });
           return true;
         };
 
         if (!boot()) {
+          loadingPlaceholder = ctx.placeholders.registerPlaceholder({
+            id: loadingViewId,
+            viewId: loadingViewId,
+            region: "main",
+          });
+          locationUnsubscribe = ctx.pages.store.subscribeSelector(
+            (state) => state.location,
+            (location) => {
+              if (location) clearLoading();
+            },
+          );
           readyUnsubscribe = subscribeDashboardExtensionsReadyProject(ctx, boot);
         }
       };
