@@ -4,6 +4,49 @@ import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-cont
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
 
+test("a storage reset refreshes the current tab title without a named extension event", async () => {
+  let label = "Original note";
+  let reset: (() => void) | undefined;
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench: createWorkbench(),
+      projectId: "project",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: async () => ({ label }),
+      subscribeRefreshReset: (listener) => {
+        reset = listener;
+        return { dispose() {} };
+      },
+    },
+    { extensionId: "notes", placementId: "note", queryHandlerId: "note.title", refreshEventIds: ["notes.changed"] },
+  );
+  const instance: WorkbenchPanelInstance = {
+    instanceId: "one",
+    panelId: "note",
+    closable: true,
+    resource: { type: "note", id: "one", label: "Original note" },
+  };
+  const changes: Array<() => void> = [];
+  const subscription = tab.subscribe!(() => changes.shift()?.());
+  const loaded = Promise.withResolvers<void>();
+  changes.push(loaded.resolve);
+  tab.getSnapshot(instance);
+  await loaded.promise;
+  expect(tab.getSnapshot(instance).label).toBe("Original note");
+  label = "Renamed note";
+  const refreshed = Promise.withResolvers<void>();
+  changes.push(refreshed.resolve);
+  try {
+    expect(reset).toBeFunction();
+    reset!();
+    await refreshed.promise;
+    expect(tab.getSnapshot(instance).label).toBe("Renamed note");
+  } finally {
+    if (typeof subscription === "function") subscription();
+    else subscription.dispose();
+  }
+});
+
 test("a reused viewer queries its new resource and rejects an old resource's late tab presentation", async () => {
   const requests: Array<ReturnType<typeof Promise.withResolvers<unknown>>> = [];
   const tab = createWorkbenchExtensionTabPresentation(

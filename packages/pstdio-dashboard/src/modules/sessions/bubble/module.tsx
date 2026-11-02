@@ -1,5 +1,5 @@
-import { Spinner } from "@chakra-ui/react";
 import { type PlacementIdentity, workbenchPages } from "@pstdio/sdk/extensions";
+import { ChatSkeleton } from "@pstdio/ui/chat-ui";
 import type {
   ResourceRef,
   WorkbenchModuleContext,
@@ -78,7 +78,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
       body: {
         kind: "react",
         render: (input) => (
-          <Suspense fallback={<Spinner />}>
+          <Suspense fallback={<ChatSkeleton />}>
             <SessionWidget input={input} drafts={drafts} />
           </Suspense>
         ),

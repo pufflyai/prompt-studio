@@ -1,4 +1,6 @@
-import { bigint, boolean, foreignKey, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { bigint, boolean, foreignKey, index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import type { NativeRecordSources } from "pstdio-sync/records";
 import type { StorageRecord, StorageRecordIndex } from "pstdio-sync-contracts";
 import { projects } from "./projects";
 import { storage_documents } from "./storage-documents";
@@ -37,10 +39,17 @@ export const storage_current_records = pgTable(
     value: jsonb("value").$type<StorageRecord["value"]>(),
     asset: jsonb("asset").$type<StorageRecord["asset"]>(),
     shared: jsonb("shared").$type<StorageRecord["shared"]>(),
+    native_sources: jsonb("native_sources").$type<NativeRecordSources>().notNull().default({}),
+    native_versions: jsonb("native_versions").$type<Record<string, string>>().notNull().default({}),
+    record_lifetime: text("record_lifetime").notNull().default(""),
     revision: text("revision").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id, table.extension_id, table.record_id] }),
+    index("storage_current_records_native_sources_idx").using("gin", table.native_sources),
+    index("storage_current_records_lifetime_upgrade_idx")
+      .on(table.workbench_id, table.extension_id, table.record_id)
+      .where(sql`${table.record_lifetime} = '' AND NOT ${table.deleted}`),
     foreignKey({
       columns: [table.workbench_id, table.extension_id],
       foreignColumns: [storage_record_projections.workbench_id, storage_record_projections.extension_id],

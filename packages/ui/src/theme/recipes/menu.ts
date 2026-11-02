@@ -94,6 +94,17 @@ export const menuSlotRecipe = defineSlotRecipe({
       md: { item: { px: "sm" } },
     },
     variant: {
+      commands: {
+        item: {
+          _highlighted: {
+            ...highlightedItem,
+            "& [data-command-description]": { color: "inherit" },
+          },
+          _hover: { "& [data-command-description]": { color: "inherit" } },
+        },
+        itemText: { flex: "0 1 auto" },
+        itemCommand: { flex: "1", minWidth: "0", color: "fg.menu-item.secondary" },
+      },
       // Chakra's inherited variants otherwise replace the base highlight background.
       subtle: { item: { _highlighted: highlightedItem } },
       solid: { item: { _highlighted: highlightedItem } },

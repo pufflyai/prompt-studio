@@ -1,5 +1,5 @@
 import type { ExtensionStorageApi, JsonValue } from "pstdio-api-contracts/extension-kernel";
-import { findDocumentReplacements } from "pstdio-sync";
+import { findDocumentReplacements } from "pstdio-sync/records";
 import { createMemoryStorageDevice, type MemoryStorageOptions } from "./memory-storage";
 
 export interface MemoryStorageReplacement {

@@ -12,6 +12,7 @@ import { checkboxSlotRecipe } from "./recipes/checkbox";
 import { colorPickerSlotRecipe } from "./recipes/color-picker";
 import { dialogSlotRecipe } from "./recipes/dialog";
 import { dividerRecipe } from "./recipes/divider";
+import { documentPresenceSlotRecipe } from "./recipes/document-presence";
 import { drawerSlotRecipe } from "./recipes/drawer";
 import { editableSlotRecipe } from "./recipes/editable";
 import { folderPickerSlotRecipe } from "./recipes/folder-picker";
@@ -20,6 +21,7 @@ import { inputRecipe } from "./recipes/input";
 import { kanbanBoardColumnSlotRecipe } from "./recipes/kanban-board-column";
 import { kbdRecipe } from "./recipes/kbd";
 import { keyboardBubbleSlotRecipe } from "./recipes/keyboard-bubble";
+import { keyframeTimelineRecipe } from "./recipes/keyframe-timeline";
 import { linkRecipe } from "./recipes/link";
 import { listRowAccessoryRecipe } from "./recipes/list-row-accessory";
 import { menuSlotRecipe } from "./recipes/menu";
@@ -33,6 +35,7 @@ import {
 import { numberInputSlotRecipe } from "./recipes/number-input";
 import { paletteSlotRecipe } from "./recipes/palette";
 import { popoverRecipe } from "./recipes/popover";
+import { popoverHeaderRecipe } from "./recipes/popover-header";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { queuedFollowUpRecipe } from "./recipes/queued-follow-up";
 import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout";
@@ -102,6 +105,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      documentPresence: documentPresenceSlotRecipe,
       kanbanBoardColumn: kanbanBoardColumnSlotRecipe,
       stickyUserMessage: stickyUserMessageRecipe,
       scrollArea: scrollAreaSlotRecipe,
@@ -116,6 +120,7 @@ const config = defineConfig({
       drawer: drawerSlotRecipe,
       tooltip: tooltipRecipe,
       popover: popoverRecipe,
+      popoverHeader: popoverHeaderRecipe,
       menu: menuSlotRecipe,
       numberInput: numberInputSlotRecipe,
       palette: paletteSlotRecipe,
@@ -128,6 +133,7 @@ const config = defineConfig({
       switch: switchSlotRecipe,
       tabs: tabsSlotRecipe,
       timeline: timelineSlotRecipe,
+      keyframeTimeline: keyframeTimelineRecipe,
     },
   },
 });

@@ -271,6 +271,7 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
 
   await drag(option("Settings"), lowerHalfOf(option("Workspaces")));
   await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Workspaces")));
+  await drag(option("Extensions"), lowerHalfOf(option("Workspaces")));
   expect(await top(option("Settings"))).toBeLessThan(await top(option("Scribble")));
   await drag(option("Settings"), middleOf(zone));
   expect(await top(option("Settings"))).toBeGreaterThan(await top(option("Scribble")));

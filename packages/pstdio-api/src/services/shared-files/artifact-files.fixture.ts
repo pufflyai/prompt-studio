@@ -8,7 +8,7 @@ import {
   createProjectsDBService,
 } from "pstdio-db";
 import { createAssetBytesStorage } from "pstdio-storage";
-import { storageRecordId } from "pstdio-sync";
+import { storageRecordId } from "pstdio-sync/records";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import { createAssetTransferService } from "../asset-transfer-service";
 import { createSharedArtifactMount } from "./artifact-mount";
@@ -109,7 +109,11 @@ export const artifactFilesFixture = async () => {
     recordId,
     replace,
     close: async () => {
-      await connection.close();
+      try {
+        await deps.extensionStorageService.flushStatistics();
+      } finally {
+        await connection.close();
+      }
       if (previousHome === undefined) delete process.env.PSTDIO_HOME;
       else process.env.PSTDIO_HOME = previousHome;
       await rm(root, { recursive: true, force: true });

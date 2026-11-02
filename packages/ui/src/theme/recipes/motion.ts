@@ -12,7 +12,8 @@ export const treeRevealRecipe = defineRecipe({
       transition: "grid-template-rows {durations.tree-expand} {easings.enter}, visibility 0s",
       _motionReduce: { transition: "none" },
     },
-    "& > *": { minHeight: "0", overflow: "hidden" },
+    // Clip the reveal without becoming the scroll container for sticky descendants.
+    "& > *": { minHeight: "0", overflow: "clip" },
     _motionReduce: { transition: "none" },
   },
 });

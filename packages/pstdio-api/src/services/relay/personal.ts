@@ -1,4 +1,5 @@
 import { hostname } from "node:os";
+import type { LiveConnection } from "pstdio-sync/relay";
 import {
   createDocumentRelay,
   createDocumentRelayConnection,
@@ -16,6 +17,7 @@ import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
 
 export const startRelayPersonalHistory = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
@@ -40,6 +42,7 @@ export const startRelayPersonalHistory = (input: {
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
   let projectGeneration: number | undefined;
+  const projectDocuments = new Set<string>();
   let firstDownloaded = false;
   const published = new Map<string, string>();
   const publish = async () => {
@@ -72,10 +75,13 @@ export const startRelayPersonalHistory = (input: {
     await capturePersonalHistory({ projectId: config.workbenchId, device, history, references, deps });
   };
   const connection = createDocumentRelayConnection({
+    live: input.live,
     origin: config.relayOrigin,
     projectId: config.workbenchId,
     signal,
     access: input.access,
+    acceptsChange: (change) =>
+      change.spaceOwner === config.accountId || (change.spaceOwner === null && projectDocuments.has(change.documentId)),
     synchronize: async (attemptSignal) => {
       const { personal, project } = await fetchSyncSpaces({
         ...config,
@@ -85,6 +91,7 @@ export const startRelayPersonalHistory = (input: {
       if (attempt !== attemptSignal || generation !== personal.generation || projectGeneration !== project.generation) {
         documents?.close();
         shared?.close();
+        projectDocuments.clear();
         attempt = attemptSignal;
         generation = personal.generation;
         projectGeneration = project.generation;
@@ -93,6 +100,7 @@ export const startRelayPersonalHistory = (input: {
           space: personal,
           relay: (documentId) =>
             createDocumentRelay({
+              subscribe: (space, id) => connection.subscribe(space, id),
               origin: config.relayOrigin,
               space: personal,
               documentId,
@@ -104,12 +112,14 @@ export const startRelayPersonalHistory = (input: {
           statusChanged: input.statusChanged,
         });
         const documentId = await project.documentId(historyReferenceName);
+        projectDocuments.add(documentId);
         shared = createDocumentSync({
           owner: references.owner,
           store: references.store,
           space: project,
           documentId,
           relay: createDocumentRelay({
+            subscribe: (space, id) => connection.subscribe(space, id),
             origin: config.relayOrigin,
             space: project,
             documentId,

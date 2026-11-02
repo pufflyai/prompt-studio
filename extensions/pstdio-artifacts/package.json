@@ -32,5 +32,6 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2"
-  }
+  },
+  "icon": "AppWindow"
 }

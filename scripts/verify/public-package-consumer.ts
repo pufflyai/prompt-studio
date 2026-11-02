@@ -16,7 +16,17 @@ const run = (cwd: string, args: string[]) => {
 const readManifest = (path: string) => JSON.parse(readFileSync(join(path, "package.json"), "utf8"));
 
 const nativeEntries: Record<string, readonly string[]> = {
-  "@pstdio/sdk": ["./resources", "./api", "./client", "./extensions", "./prompts", "./hooks", "./testing", "./data"],
+  "@pstdio/sdk": [
+    "./resources",
+    "./api",
+    "./client",
+    "./extensions",
+    "./extensions/keyboard",
+    "./prompts",
+    "./hooks",
+    "./testing",
+    "./data",
+  ],
   "@pstdio/workbench": [".", "./storage", "./webview-runtime"],
 };
 
@@ -89,6 +99,9 @@ if (manifest.pstdio?.extensionApiVersion !== EXTENSION_API_VERSION)
       .map((entry, index) => `import * as entry${index} from ${JSON.stringify(entry)}; export { entry${index} };`)
       .join("\n") +
       `
+import { installWebviewKeyboardRelay as narrowKeyboardRelay, webviewKeyboardRelayDocument as narrowKeyboardDocument } from "@pstdio/sdk/extensions/keyboard";
+if (typeof narrowKeyboardRelay !== "function" || typeof narrowKeyboardDocument !== "string")
+  throw new Error("Packed SDK keyboard entry is unavailable");
 import { type CollectionBadgeItem, defineNavigationTree, defineView, workbenchModes } from "@pstdio/sdk/extensions";
 const attentionBadge: CollectionBadgeItem = {
   id: "attention", label: "1",
@@ -165,6 +178,10 @@ for (const theme of contrastThemes) {
 }
 import { Canvas, zoomCanvas, type CanvasCamera } from "@pstdio/ui/canvas";
 import { DependencyTimeline } from "@pstdio/ui/dependency-timeline";
+import { KeyframeTimeline, sampleTrack, type KeyframeTrack } from "@pstdio/ui/keyframe-timeline";
+const animationTrack: KeyframeTrack = { id: "opacity", label: "Opacity", keyframes: [{ id: "start", time: 0, value: 0 }, { id: "end", time: 2, value: 1 }] };
+if (sampleTrack(animationTrack, 1) !== 0.5) throw new Error("Animation interpolation changed");
+const keyframeTimeline = createElement(KeyframeTimeline, { tracks: [animationTrack], duration: 2, currentTime: 1, onTimeChange: () => {}, onRestart: () => {}, maxHeight: 200, loopRange: { start: 0, end: 2 }, onLoopRangeChange: () => {} });
 let camera: CanvasCamera = { x: 0, y: 0, zoom: 1 };
 const canvas = createElement(Canvas, {
   "aria-label": "Design canvas", variant: "pan", zoom: camera.zoom, minZoom: 0.1, maxZoom: 4,
@@ -182,7 +199,7 @@ const outliner = createElement(TreeList, {
 });
 const groupRow = createElement(ListRow, { label: "Group", isContainer: true, showExpandToggle: true,
   expandOnClick: false, onToggleExpand: () => {}, startContent: createElement("span") });
-void [canvas, timeline, outliner, groupRow];
+void [canvas, timeline, keyframeTimeline, outliner, groupRow];
 import { CollectionViewBar, EMPTY_VIEW_FILTER, filterRowsByView, withTitleField } from "@pstdio/ui/collection-view";
 const panelOverlay = createElement(BubblePanel, { isOpen: true, overlay: createElement("div", { "data-drop-feedback": true }) });
 void panelOverlay;

@@ -107,6 +107,11 @@ export const createWorkspacesApi = (
     workspace ? projectWorkspace(workspace) : null;
 
   return {
+    getCapacity: () => read(() => deps.workspaceCapacityService.get()),
+    updateCapacity: async (value) => {
+      input.signal?.throwIfAborted();
+      return deps.workspaceCapacityService.update(value);
+    },
     listProviders: () => read(() => listWorkspaceProviders(deps, input.projectId)),
     getDefault: async () =>
       read(async () => projectOptionalWorkspace(await read(() => deps.workspaceService.getDefault(input.projectId)))),

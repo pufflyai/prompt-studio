@@ -1,5 +1,5 @@
 import { type RelayOperation, receiptSchema, relayPath, type Scope, snapshotSchema } from "pstdio-sync-contracts";
-import type { RelayAdapter } from "../types";
+import type { RelayAdapter } from "../records";
 import { createRelayAssetAdapter } from "./assets";
 
 export interface RelayHttpInput {

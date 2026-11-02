@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { ResourceRenumberedEvent } from "pstdio-api-contracts/extension-kernel";
-import { coreOwnerId, editResourceDocument, type StorageOwner } from "pstdio-sync";
+import type { StorageOwner } from "pstdio-sync";
+import { coreOwnerId, editResourceDocument } from "pstdio-sync/records";
 import type { StorageRecord } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_resource_identities as identities } from "../../db/schemas.pg";

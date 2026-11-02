@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
+import { createNavigationTreeRegistry } from "./navigation-tree-registry";
 
 test("refreshing a contributed view invalidates composed navigation until the contribution is disposed", async () => {
   const workbench = createWorkbench();
@@ -31,4 +32,29 @@ test("refreshing a contributed view invalidates composed navigation until the co
   refreshes = 0;
   workbench.views.refreshView("files");
   expect(refreshes).toBe(0);
+});
+
+test("the registration revision changes when contributions register or leave, not when a view refreshes", () => {
+  let refreshView = () => {};
+  const registry = createNavigationTreeRegistry({
+    subscribeViewRefresh: (_viewId, listener) => {
+      refreshView = listener;
+      return { dispose: () => {} };
+    },
+  });
+  const initial = registry.getRegistrationRevision();
+  const registration = registry.registerContribution({
+    id: "notes",
+    owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+    sourceExtensionId: "notes",
+    declarationIndex: 0,
+    viewId: "notes.tree",
+  });
+  const registered = registry.getRegistrationRevision();
+  refreshView();
+  expect(registry.getRegistrationRevision()).toBe(registered);
+  registration.dispose();
+
+  expect(registered).not.toBe(initial);
+  expect(registry.getRegistrationRevision()).not.toBe(registered);
 });

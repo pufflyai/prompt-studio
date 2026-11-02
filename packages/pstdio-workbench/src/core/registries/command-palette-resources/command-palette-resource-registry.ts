@@ -64,8 +64,13 @@ export const createCommandPaletteResourceRegistry = (): CommandPaletteResourceRe
         throw new Error(`Command palette resource provider already registered: ${provider.id}`);
       }
 
+      // A changed provider set changes the results, so an open palette lists again.
       store.setState(
-        { ...snapshot, providers: { ...snapshot.providers, [provider.id]: provider } },
+        {
+          ...snapshot,
+          providers: { ...snapshot.providers, [provider.id]: provider },
+          refreshToken: snapshot.refreshToken + 1,
+        },
         false,
         "registerProvider",
       );
@@ -74,7 +79,11 @@ export const createCommandPaletteResourceRegistry = (): CommandPaletteResourceRe
         const current = store.getState();
         if (current.providers[provider.id] !== provider) return;
         const { [provider.id]: _removed, ...rest } = current.providers;
-        store.setState({ ...current, providers: rest }, false, "unregisterProvider");
+        store.setState(
+          { ...current, providers: rest, refreshToken: current.refreshToken + 1 },
+          false,
+          "unregisterProvider",
+        );
       });
     },
 

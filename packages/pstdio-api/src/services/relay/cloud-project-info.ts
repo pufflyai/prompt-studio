@@ -1,10 +1,5 @@
-import {
-  coreOwnerId,
-  createMemoryDocumentStore,
-  projectInfoDocumentId,
-  projectInfoState,
-  readProjectInfo,
-} from "pstdio-sync";
+import { createMemoryDocumentStore } from "pstdio-sync";
+import { coreOwnerId, projectInfoDocumentId, projectInfoState, readProjectInfo } from "pstdio-sync/records";
 import { createDocumentRelay, createDocumentSync, createRelayAccess, fetchSyncSpaces } from "pstdio-sync/relay";
 import type { RelayWorkbench } from "./runtime";
 

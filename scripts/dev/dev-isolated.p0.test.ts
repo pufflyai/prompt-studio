@@ -45,7 +45,6 @@ describe("isolated development paths", () => {
         ["pstdio-notes", "extensions/pstdio-notes"],
         ["pstdio-performance", "extensions/pstdio-performance"],
         ["pstdio-planner", "extensions/pstdio-planner"],
-        ["pstdio-reports", "extensions/pstdio-reports"],
         ["pstdio-skills", "extensions/pstdio-skills"],
         ["extension-lab", "extensions/extension-lab"],
         ["local-example", "infra/local/extensions/local-example"],

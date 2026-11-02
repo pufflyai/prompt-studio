@@ -1,3 +1,4 @@
+import type { LiveConnection } from "pstdio-sync/relay";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { deviceAutomationsOwnerId } from "../../features/extensions/device-automations";
@@ -6,6 +7,7 @@ import type { RelayWorkbench } from "./runtime";
 
 // Automations are ordinary encrypted project records, independent of extension enablement.
 export const startAutomationSync = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
@@ -15,12 +17,19 @@ export const startAutomationSync = (input: {
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
   const owner = { workbenchId: input.config.workbenchId, extensionId: deviceAutomationsOwnerId };
-  const documents = createExtensionDocumentSync({ ...input, owner });
+  const documents = createExtensionDocumentSync({
+    ...input,
+    owner,
+    subscribe: (space, id) => connection.subscribe(space, id),
+  });
   const connection = createDocumentRelayConnection({
+    live: input.live,
     origin: input.config.relayOrigin,
     projectId: owner.workbenchId,
     signal,
     access: input.access,
+    acceptsChange: documents.acceptsChange,
+    synchronizeChanged: documents.synchronizeChanged,
     synchronize: documents.synchronize,
     onStatusChange: input.statusChanged,
   });
@@ -35,7 +44,7 @@ export const startAutomationSync = (input: {
     retry: connection.retry,
     done: connection.done.finally(() => {
       stop();
-      documents.close();
+      return documents.close();
     }),
     status: async () => ({ ...(await documents.status()), ...connection.status() }),
     close: () => controller.abort(),

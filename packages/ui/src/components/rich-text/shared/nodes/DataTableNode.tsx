@@ -3,6 +3,7 @@ import {
   $applyNodeReplacement,
   $createParagraphNode,
   $getNodeByKey,
+  $getRoot,
   DecoratorNode,
   HISTORY_PUSH_TAG,
   type LexicalEditor,
@@ -16,12 +17,15 @@ import {
 import type React from "react";
 import { type FocusEvent, type KeyboardEvent, type MouseEvent, useContext, useRef, useState } from "react";
 import { EditModeDataTable } from "@/components/data-table/edit-mode-data-table";
-import type { DataTableEditModeColumn, RowData } from "@/components/data-table/types";
+import type { DataTableEditModeColumn, DataTableEditTarget, RowData } from "@/components/data-table/types";
 import { HostStorageProvider } from "@/utils/host-storage";
 import { LazyMarkdownEditor } from "../../lazy-markdown-editor";
+import { MarkdownDocumentContext } from "../markdown-document-context";
 import { MarkdownInline } from "../markdown-inline";
 import type { MarkdownTableValue } from "../markdown-table";
+import { createMarkdownTableDraft } from "../markdown-table-draft";
 import { MarkdownTableSettingsContext } from "../markdown-table-settings-context";
+import { markdownTableNodeKeys } from "../markdown-table-source-positions";
 
 interface MarkdownDataTableProps {
   editor: LexicalEditor;
@@ -36,6 +40,7 @@ const projectColumns = (table: MarkdownTableValue): DataTableEditModeColumn[] =>
 const MarkdownDataTable = (props: MarkdownDataTableProps) => {
   const { editor, nodeKey, table } = props;
   const defaultSettings = useContext(MarkdownTableSettingsContext);
+  const shared = useContext(MarkdownDocumentContext);
   // Document tables own their view state; generated column ids repeat across documents.
   const [storage] = useState(() => ({ getItem: () => null, setItem: () => undefined }));
   const [isSelected, setSelected] = useState(false);
@@ -43,6 +48,32 @@ const MarkdownDataTable = (props: MarkdownDataTableProps) => {
 
   const focusTable = () => {
     setTimeout(() => containerRef.current?.focus(), 0);
+  };
+
+  const createDraft = (target: DataTableEditTarget) => {
+    const binding = shared?.current;
+    if (!binding) throw new Error("The shared Markdown document is unavailable");
+    const draft = editor.getEditorState().read(() => {
+      const node = $getNodeByKey(nodeKey);
+      if (!$isDataTableNode(node)) throw new Error("The Markdown table is unavailable");
+      const table = node.getTable();
+      return createMarkdownTableDraft({
+        binding,
+        tableIndex: markdownTableNodeKeys($getRoot().getChildren()).indexOf(nodeKey),
+        rowIndex: target.kind === "header" ? 0 : table.rows.findIndex((row) => row.id === target.rowId) + 1,
+        columnIndex: table.columns.findIndex((column) => column.id === target.columnId),
+        value: target.value,
+      });
+    });
+    return {
+      dispose: draft.dispose,
+      update: draft.update,
+      cancel: draft.cancel,
+      commit(value: string) {
+        draft.commit(value);
+        focusTable();
+      },
+    };
   };
 
   const updateTable = (change: (current: MarkdownTableValue) => MarkdownTableValue) => {
@@ -147,6 +178,7 @@ const MarkdownDataTable = (props: MarkdownDataTableProps) => {
           data={projectRows(table)}
           defaultSettings={defaultSettings}
           editMode={{
+            createDraft: shared ? createDraft : undefined,
             columns: projectColumns(table),
             onColumnsChange: handleColumnsChange,
             onDataChange: handleDataChange,

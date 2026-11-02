@@ -1,5 +1,5 @@
-import { Spinner } from "@chakra-ui/react";
 import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
+import { ChatSkeleton } from "@pstdio/ui/chat-ui";
 import {
   type ResourceRef,
   type WorkbenchModuleContext,
@@ -41,7 +41,7 @@ const registerSessionView = (ctx: WorkbenchModuleContext, drafts?: DashboardSess
       body: {
         kind: "react",
         render: (input) => (
-          <Suspense fallback={<Spinner />}>
+          <Suspense fallback={<ChatSkeleton />}>
             <SessionWidget input={input} drafts={drafts} />
           </Suspense>
         ),

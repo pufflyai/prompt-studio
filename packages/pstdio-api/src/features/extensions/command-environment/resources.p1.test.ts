@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { extensionResourceRefSchema } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION, resourceEvents } from "pstdio-api-contracts/extension-kernel";
-import { editResourceDocument } from "pstdio-sync";
+import { editResourceDocument } from "pstdio-sync/records";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createResourcesApi } from "./resources";
 
