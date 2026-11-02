@@ -1,3 +1,4 @@
+import type { SubscribeDocument } from "pstdio-sync/relay";
 import { createDocumentRelay, createDocumentSync, createRecordStreamSync, fetchSyncSpaces } from "pstdio-sync/relay";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
@@ -11,8 +12,6 @@ export const createExtensionDocumentSync = (input: {
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
   statusChanged?: () => void;
-  /** Routes the relay's change notices for a document to this owner. */
-  claim: (documentId: string) => void;
 }) => {
   let attempt: AbortSignal | undefined;
   let generation: number | undefined;
@@ -30,8 +29,7 @@ export const createExtensionDocumentSync = (input: {
   };
   const stop = input.deps.extensionStorageService.watch((owner) => {
     if (owner.workbenchId === input.owner.workbenchId && owner.extensionId === input.owner.extensionId) {
-      // Record outbox writes and edits to known documents do not change the directory.
-      // New remote names arrive during synchronize(), which already resets discovery.
+      // Known document edits and record outbox writes do not change the directory.
       if (owner.documentId && !directory?.includes(owner.documentId)) directory = undefined;
       input.statusChanged?.();
     }
@@ -53,7 +51,7 @@ export const createExtensionDocumentSync = (input: {
         ...documentProgress(statuses, directory !== undefined),
       };
     },
-    async synchronize(signal: AbortSignal) {
+    async synchronize(signal: AbortSignal, subscribe?: SubscribeDocument) {
       directory = undefined;
       const { config, owner, deps } = input;
       const { project: space } = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal });
@@ -62,16 +60,15 @@ export const createExtensionDocumentSync = (input: {
         attempt = signal;
         generation = space.generation;
       }
-      const relay = (documentId: string) => {
-        input.claim(documentId);
-        return createDocumentRelay({
+      const relay = (documentId: string) =>
+        createDocumentRelay({
+          subscribe,
           origin: config.relayOrigin,
           space,
           documentId,
           signal,
           token: async () => (await input.access()).token,
         });
-      };
       const quarantine = (documentId: string) =>
         createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
       const synchronize = async (name: string) => {

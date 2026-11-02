@@ -7,7 +7,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync";
-import { createProjectRelayConnection, type DocumentRelay } from "pstdio-sync/relay";
+import { createDocumentRelayConnection, createLiveConnection, type DocumentRelay } from "pstdio-sync/relay";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createSessionLogFiles } from "./log-files";
@@ -85,13 +85,17 @@ if (!process.argv.includes("--worker")) {
     },
     websocket: {
       open(socket) {
-        socket.send(JSON.stringify({ type: "ready", protocolVersion: 1 }));
+        socket.send(JSON.stringify({ type: "ready", protocolVersion: 2 }));
       },
-      message() {},
+      message(socket, data) {
+        const message = JSON.parse(String(data));
+        if (message.requestId)
+          socket.send(JSON.stringify({ type: "control-result", requestId: message.requestId, retryAfterMs: 0 }));
+      },
     },
   });
   const connection = enabled
-    ? createProjectRelayConnection({
+    ? createLiveConnection({
         origin: server.url.origin,
         projectId: project.id,
         signal: controller.signal,
@@ -101,12 +105,20 @@ if (!process.argv.includes("--worker")) {
         },
       })
     : undefined;
-  const owner = connection?.attach({
-    signal: controller.signal,
-    synchronize: async () => {
-      await publisher.publish([session.id], space, () => relay);
-    },
-  });
+  const owner =
+    connection &&
+    createDocumentRelayConnection({
+      live: connection,
+      origin: server.url.origin,
+      projectId: project.id,
+      access: async () => {
+        throw new Error("shared access");
+      },
+      signal: controller.signal,
+      synchronize: async () => {
+        await publisher.publish([session.id], space, () => relay);
+      },
+    });
   const samples: number[] = [];
   let bytes = 0;
   try {
@@ -139,6 +151,7 @@ if (!process.argv.includes("--worker")) {
     );
   } finally {
     controller.abort();
+    await owner?.done;
     await connection?.done;
     publisher.close();
     await server.stop(true);

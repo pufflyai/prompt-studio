@@ -1,4 +1,5 @@
-import type { ProjectRelayConnection } from "pstdio-sync/relay";
+import type { LiveConnection } from "pstdio-sync/relay";
+import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { activatePublishedSet } from "../../features/extensions/publication/activate";
@@ -12,11 +13,11 @@ const maxRetryDelay = 60 * 60_000;
 
 /** The extension set syncs before any extension is installed on a new device. */
 export const startPublishedExtensions = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
   access: () => Promise<{ token: string; expiresAt: string }>;
-  relay: ProjectRelayConnection;
   statusChanged?: () => void;
 }) => {
   const { config, deps } = input;
@@ -34,22 +35,19 @@ export const startPublishedExtensions = (input: {
       signal.removeEventListener("abort", abort);
     }
   };
-  const documents = createExtensionDocumentSync({
-    config,
-    owner,
-    deps,
-    access,
-    statusChanged: input.statusChanged,
-    claim: (id) => connection.claim(id),
-  });
+  const documents = createExtensionDocumentSync({ config, owner, deps, access, statusChanged: input.statusChanged });
   // A set that failed to activate is tried again after a growing delay, or at once when it changes.
   // Retrying on every reconnect would repeat package checks, installs and webview builds each time.
   let failed: { key: string; delay: number; waiting: boolean } | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
-  const connection = input.relay.attach({
+  const connection = createDocumentRelayConnection({
+    live: input.live,
+    origin: config.relayOrigin,
+    projectId: config.workbenchId,
+    access,
     signal,
-    synchronize: async (attemptSignal) => {
-      await documents.synchronize(attemptSignal);
+    synchronize: async (attemptSignal, subscribe) => {
+      await documents.synchronize(attemptSignal, subscribe);
       const catalog = await openPublishedCatalog(deps, config.workbenchId, attemptSignal);
       const selected = await catalog.list();
       const key = canonicalJson(selected.map(({ recordId, value, asset }) => ({ recordId, value, asset })));

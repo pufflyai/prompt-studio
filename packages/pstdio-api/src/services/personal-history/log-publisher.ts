@@ -105,6 +105,7 @@ export const createLogPublisher = (input: {
     ) {
       for (const sessionId of sessionIds) await publishOne(sessionId, space, relay, options.skipUnchanged ?? false);
     },
+    prepare: live.prepare,
     live: live.live,
     close: live.close,
   };

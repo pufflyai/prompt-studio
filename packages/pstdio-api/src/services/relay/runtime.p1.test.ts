@@ -125,3 +125,58 @@ test("turning Cloud back on starts fresh owners after workspace events during sh
     await app.close();
   }
 });
+
+test.each(["version", "quota"])("a refused live channel reaches the account error display: %s", async (refusal) => {
+  const app = await createTestApp();
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request, server) {
+      if (new URL(request.url).pathname === "/v1/environment-access")
+        return Response.json({ token: "access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+      if (server.upgrade(request)) return;
+      return new Response(null, { status: 404 });
+    },
+    websocket: {
+      open(socket) {
+        socket.send(JSON.stringify({ type: "ready", protocolVersion: refusal === "version" ? 1 : 2 }));
+      },
+      message(socket, data) {
+        const message = JSON.parse(String(data));
+        if (message.requestId)
+          socket.send(JSON.stringify({ type: "control-result", requestId: message.requestId, retryAfterMs: null }));
+      },
+    },
+  });
+  const relay = await startRelayRuntime({ deps: app.deps });
+  try {
+    const project = await app.deps.projectService.create({ name: "Needs update" });
+    await relay.update([
+      {
+        accountId: "owner",
+        workbenchId: project.id,
+        environmentId: "device",
+        managerOrigin: server.url.origin,
+        relayOrigin: server.url.origin,
+        renewalGrant: "grant",
+      },
+    ]);
+    let error: unknown;
+    const end = Date.now() + 1000;
+    while (!error && Date.now() < end) {
+      error = await relay.status(project.id).then(
+        () => undefined,
+        (error) => error,
+      );
+      if (!error) await Bun.sleep(1);
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain(
+      refusal === "version" ? "Update Prompt Studio or the relay" : "rate limits prevent Cloud subscriptions",
+    );
+  } finally {
+    await relay.close();
+    await server.stop(true);
+    await app.close();
+  }
+});

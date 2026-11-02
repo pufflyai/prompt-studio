@@ -42,18 +42,19 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
       await sink.write("patch", { op, path: `/messages/${index}`, value: message });
     };
     const flush = async () => {
-      for (const update of arrived.splice(0)) await apply(update);
-      if (pendingLive?.index === messages.length) {
-        arrived.unshift(pendingLive);
-        pendingLive = undefined;
-        await flush();
+      while (arrived.length) {
+        for (const update of arrived.splice(0)) await apply(update);
+        if (pendingLive?.index === messages.length) {
+          arrived.unshift(pendingLive);
+          pendingLive = undefined;
+        }
       }
     };
     while (!sink.aborted) {
       if (!(await deps.personalHistoryService.getSession(id))) break;
       await flush();
       if (sink.aborted || finished.includes(session?.status ?? "")) break;
-      await Promise.race([sink.sleep(2000), new Promise<void>((resolve) => (wake = resolve))]);
+      if (!arrived.length) await Promise.race([sink.sleep(2000), new Promise<void>((resolve) => (wake = resolve))]);
       wake = undefined;
       session = await deps.personalHistoryService.getSession(id);
     }

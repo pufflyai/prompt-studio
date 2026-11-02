@@ -1,4 +1,4 @@
-import type { LiveClientMessage, StateEnvelope, UpdateEnvelope } from "pstdio-sync-contracts";
+import type { StateEnvelope, UpdateEnvelope } from "pstdio-sync-contracts";
 import { decodeBytes, encodeBytes } from "../encoding";
 import { open, seal } from "./sealing";
 import { createSyncId, type SyncSpace } from "./space";
@@ -59,15 +59,12 @@ export const sealBlob = async (space: SyncSpace, bytes: Uint8Array) => {
 export const openBlob = (space: SyncSpace, blobId: string, bytes: Uint8Array) => open(space, ["blob", blobId], bytes);
 
 /** Live messages name the sending device, so the relay cannot present one device's message as another's. */
-export const sealLive = async (
-  space: SyncSpace,
-  deviceId: string,
-  message: Uint8Array,
-): Promise<LiveClientMessage> => ({
-  type: "live",
+export const sealLive = async (space: SyncSpace, deviceId: string, topic: string, message: Uint8Array) => ({
+  type: "publish" as const,
+  topic,
   spaceOwner: space.spaceOwner,
-  payload: encodeBytes(await seal(space, ["live", deviceId], message)),
+  payload: encodeBytes(await seal(space, ["live", deviceId, topic], message)),
 });
 
-export const openLive = (space: SyncSpace, message: { deviceId: string; payload: string }) =>
-  open(space, ["live", message.deviceId], decodeBytes(message.payload));
+export const openLive = (space: SyncSpace, message: { deviceId: string; topic: string; payload: string }) =>
+  open(space, ["live", message.deviceId, message.topic], decodeBytes(message.payload));

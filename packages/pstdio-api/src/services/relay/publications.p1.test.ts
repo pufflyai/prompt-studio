@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createProjectRelayConnection } from "pstdio-sync/relay";
+import { createLiveConnection } from "pstdio-sync/relay";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { startPublishedExtensions } from "./publications";
 
@@ -25,7 +25,7 @@ test("extension set discovery closes while access renewal is pending", async () 
       renewalGrant: "grant",
     },
     access,
-    relay: createProjectRelayConnection({
+    live: createLiveConnection({
       origin: "http://127.0.0.1:9",
       projectId: "project",
       access,

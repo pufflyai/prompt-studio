@@ -1,6 +1,5 @@
 import { type SessionMessage, sessionMessageSchema } from "pstdio-api-contracts";
 import { type SyncSpace, sealLive } from "pstdio-sync";
-import type { LiveClientMessage } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 
@@ -14,12 +13,31 @@ const frameSchema = z.object({
 });
 const framesSchema = frameSchema.array();
 type Frame = z.infer<typeof frameSchema>;
+type LivePublication = Awaited<ReturnType<typeof sealLive>>;
+
+export const personalLiveTopic = (space: SyncSpace) =>
+  space.documentId(JSON.stringify(["pstdio.personal-history", "live-v2"]));
 
 /** Full live snapshots are fragmented within the relay's 64 KiB wire limit; no text is truncated or stored. */
 export const createLivePublisher = (input: {
   deviceId: string;
   sessions: ExtensionsRouteDeps["sessionService"]["store"];
 }) => {
+  let context: { space: SyncSpace; send: (message: LivePublication) => void } | undefined;
+  const prepare = (space: SyncSpace, send: (message: LivePublication) => void) => {
+    if (closed) return;
+    if (
+      context &&
+      context.send === send &&
+      context.space.projectId === space.projectId &&
+      context.space.spaceOwner === space.spaceOwner &&
+      context.space.generation === space.generation
+    ) {
+      context.space = space;
+      return;
+    }
+    context = { space, send };
+  };
   const dirty = new Set<string>();
   const snapshots = new Map<string, { index: number; version: string; text: string; offset: number }>();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -66,27 +84,44 @@ export const createLivePublisher = (input: {
     }
     return frames;
   };
-  const schedule = (space: SyncSpace, send: (message: LiveClientMessage) => void) => {
+  const sendFrames = async (frames: Frame[]) => {
+    const current = context;
+    if (!frames.length || !current) return;
+    const sealed = await sealLive(
+      current.space,
+      input.deviceId,
+      await personalLiveTopic(current.space),
+      new TextEncoder().encode(JSON.stringify(frames)),
+    );
+    if (closed) return;
+    if (context === current) current.send(sealed);
+    else
+      for (const frame of frames) {
+        // A rotation invalidates in-flight bytes; restart the full preview with the current key.
+        snapshots.delete(frame.sessionId);
+        dirty.add(frame.sessionId);
+      }
+  };
+  const schedule = () => {
     if (timer || closed) return;
     timer = setTimeout(async () => {
       try {
-        const frames = collect();
-        if (frames.length) {
-          const sealed = await sealLive(space, input.deviceId, new TextEncoder().encode(JSON.stringify(frames)));
-          if (!closed) send(sealed);
-        }
+        await sendFrames(collect());
       } catch {
         // Live output is best effort. Completed messages always arrive through the durable log.
       } finally {
         timer = undefined;
-        if (dirty.size || snapshots.size) schedule(space, send);
+        if (dirty.size || snapshots.size) schedule();
       }
     }, 250);
   };
   return {
-    live(sessionId: string, space: SyncSpace, send: (message: LiveClientMessage) => void) {
+    prepare,
+    live(sessionId: string, space: SyncSpace, send: (message: LivePublication) => void) {
+      if (closed) return;
+      prepare(space, send);
       dirty.add(sessionId);
-      schedule(space, send);
+      schedule();
     },
     finish(sessionId: string) {
       dirty.delete(sessionId);
@@ -97,19 +132,23 @@ export const createLivePublisher = (input: {
       clearTimeout(timer);
       dirty.clear();
       snapshots.clear();
+      context = undefined;
     },
   };
 };
 
 export const createLiveReceiver = (received: (id: string, index: number, message: SessionMessage) => void) => {
+  let closed = false;
   const pending = new Map<string, { version: string; index: number; text: string }>();
   const completed = new Map<string, number>();
   return {
     completed(id: string, index: number) {
+      if (closed) return;
       completed.set(id, Math.max(index, completed.get(id) ?? -1));
       if ((pending.get(id)?.index ?? Infinity) <= index) pending.delete(id);
     },
     receive(value: unknown) {
+      if (closed) return;
       for (const frame of framesSchema.parse(value)) {
         if (frame.index <= (completed.get(frame.sessionId) ?? -1)) continue;
         if (frame.offset === 0) pending.set(frame.sessionId, { version: frame.version, index: frame.index, text: "" });
@@ -125,6 +164,7 @@ export const createLiveReceiver = (received: (id: string, index: number, message
       pending.clear();
     },
     close() {
+      closed = true;
       pending.clear();
       completed.clear();
     },

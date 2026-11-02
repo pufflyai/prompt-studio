@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createProjectRelayConnection } from "pstdio-sync/relay";
+import { createLiveConnection } from "pstdio-sync/relay";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { startCoreDocumentSync } from "./core-documents";
 
@@ -24,7 +24,7 @@ test("removing core document sync closes while access renewal is still pending",
     },
     signal: controller.signal,
     access,
-    relay: createProjectRelayConnection({
+    live: createLiveConnection({
       origin: "http://127.0.0.1:9",
       projectId: "project",
       access,

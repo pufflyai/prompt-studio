@@ -3,7 +3,7 @@ import { openLive, type SyncSpace } from "pstdio-sync";
 import type { LiveServerMessage } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { capturePersonalHistory } from "../personal-history/capture";
-import { createLiveReceiver } from "../personal-history/live-messages";
+import { createLiveReceiver, personalLiveTopic } from "../personal-history/live-messages";
 import { historyNamespace, type SessionLogFiles } from "../personal-history/log-files";
 import { createLogReceiver } from "../personal-history/log-receiver";
 import { createHistoryReferences, historyReferenceName } from "../personal-history/references";
@@ -25,11 +25,21 @@ export const capturePersonalIndex = async (
   return await capturePersonalHistory({ projectId: config.workbenchId, device, history, references, deps });
 };
 
+export const remotePersonalSessions = async (history: PersonalHistoryStore, deviceId: string) =>
+  (await history.readRecords("sessions"))
+    .filter((row) => (row.device as { id?: string } | undefined)?.id !== deviceId)
+    .map((row) => String(row.id));
+
 export const personalLiveReceiver =
   (receiver: ReturnType<typeof createLiveReceiver>, space: () => SyncSpace | undefined) =>
-  async (message: Extract<LiveServerMessage, { type: "live" }>) => {
+  async (message: Extract<LiveServerMessage, { type: "event" }>) => {
     const personal = space();
-    if (!personal || message.spaceOwner !== personal.spaceOwner) return;
+    if (
+      !personal ||
+      message.spaceOwner !== personal.spaceOwner ||
+      message.topic !== (await personalLiveTopic(personal))
+    )
+      return;
     receiver.receive(JSON.parse(new TextDecoder().decode(await openLive(personal, message))));
   };
 

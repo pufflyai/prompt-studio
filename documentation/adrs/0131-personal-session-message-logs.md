@@ -9,7 +9,7 @@ Personal history has one writer per session. Keeping each transcript in a Yjs re
 
 ## Decision
 
-Keep session and workspace summaries in a small encrypted CRDT index. Publish completed messages to append-only logs using the relay's existing ordered document updates. A message's ID identifies later corrections; its position preserves conversation order. Logs never publish a latest state. Oversized messages use encrypted blobs referenced by small encrypted updates. The relay protocol and schema remain unchanged.
+Keep session and workspace summaries in a small encrypted CRDT index. Publish completed messages to append-only logs using the relay's existing ordered document updates. A message's ID identifies later corrections; its position preserves conversation order. Logs never publish a latest state. Oversized messages use encrypted blobs referenced by small encrypted updates. Durable HTTP sync and relay storage remain unchanged. Live snapshots use live protocol 2 from ADR 0130, on one opaque private-space topic; the retired broadcast transport is removed.
 
 Persist canonical message fingerprints and the last published log head locally. Compare unchanged live message objects through weak references so sync never retains a second transcript. On startup, unchanged saved sessions do not load their conversations. Access renewal preserves sync objects and cursors, while refreshing keys and checking the index for missed changes.
 
@@ -17,7 +17,7 @@ Copy other devices' new log entries page by page. Each local page filename recor
 
 Send streaming messages through the encrypted, unstored live channel. Coalesce updates every 250 ms across sessions and fragment full snapshots within the relay's 64 KiB wire limit. Never truncate text. A completed log message supersedes any delayed preview.
 
-Store log heads in the index in batches, at most once per ten seconds during continuous publication. Relay hints wake only the owners that claim the changed document. All document owners share one live connection per project; each owner runs and retries independently. Rate-limited HTTP requests honor Retry-After and cancel with their connection attempt.
+Store log heads in the index in batches, at most once per ten seconds during continuous publication. Only the small index and shared-reference documents retain relay subscriptions. Completed-session logs catch up from the durable index heads, so the number of historical sessions never consumes live subscription capacity. Nonterminal heads keep the existing ten-second batch; captured terminal metadata flushes its completed head immediately. All document owners share one live connection per project; each owner runs and retries independently. Rate-limited HTTP requests honor Retry-After and cancel with their connection attempt.
 
 Use a new index identity and relay name. Each upgraded device publishes its own sessions once. Drop old local transcript documents and journals without reading their content. Devices that never upgrade do not contribute to the new index. Existing first-account ownership claims still prevent publication to another account.
 
@@ -31,4 +31,4 @@ Personal history remains read-only on other devices. Remote commands, team shari
 
 ## Validation
 
-Publisher and receiver tests cover completed-only persistence, corrections, encrypted large messages, restart cursors, and offline reads. Live tests cover full Unicode snapshots, wire size, and delayed previews. Connection tests cover shared routing and access renewal. Packaged smoke coverage exercises compiled devices and offline restart.
+Publisher and receiver tests cover completed-only persistence, corrections, encrypted large messages, restart cursors, and offline reads. Live tests cover full Unicode snapshots, wire size, and delayed previews. Live-channel tests cover shared routing, subscription admission and access renewal. Packaged smoke coverage exercises compiled devices and offline restart.

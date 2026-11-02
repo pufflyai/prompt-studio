@@ -59,9 +59,11 @@ test("a live preview arriving before earlier completed messages is shown as soon
 });
 
 test.each([
-  true,
-  false,
-])("a newer message supersedes a pending preview during a slow earlier write (live: %s)", async (live) => {
+  [true, true],
+  [false, true],
+  [true, false],
+  [false, false],
+])("a message arriving during a slow write drains immediately (live: %s, pending preview: %s)", async (live, pendingPreview) => {
   type Update = { index: number; message: SessionMessage; live: boolean };
   let listener: ((update: Update) => void) | undefined;
   const snapshot = Promise.withResolvers<void>();
@@ -103,7 +105,7 @@ test.each([
   const running = streamPersonalSession("session", deps, sink);
   try {
     await snapshot.promise;
-    listener!({ index: 1, message: message("older-preview"), live: true });
+    if (pendingPreview) listener!({ index: 1, message: message("older-preview"), live: true });
     listener!({ index: 0, message: message("earlier-completed"), live: false });
     await blocked.promise;
     listener!({ index: 1, message: message("newer-message"), live });

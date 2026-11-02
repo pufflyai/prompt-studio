@@ -27,9 +27,14 @@ export function* batchLines(lines: Iterable<string>) {
 
 export const createLineReader = () => (line: string) => {
   if (!line) return;
-  const entry = JSON.parse(line) as LogEntry;
-  if (!Number.isSafeInteger(entry.i) || entry.i < 0) throw new Error("Invalid session message position");
-  return { index: entry.i, message: sessionMessageSchema.parse(JSON.parse(entry.m)) };
+  try {
+    const entry = JSON.parse(line) as LogEntry;
+    if (!Number.isSafeInteger(entry.i) || entry.i < 0) return;
+    return { index: entry.i, message: sessionMessageSchema.parse(JSON.parse(entry.m)) };
+  } catch {
+    // Retain the raw page for a future version; one unknown message must not hide compatible history.
+    return;
+  }
 };
 
 /** Replaying a page after an interrupted write does not duplicate messages. */

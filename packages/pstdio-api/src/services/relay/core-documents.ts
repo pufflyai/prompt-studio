@@ -1,9 +1,10 @@
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync";
+import type { LiveConnection } from "pstdio-sync/relay";
 import {
   createDocumentRelay,
+  createDocumentRelayConnection,
   createDocumentSync,
   fetchSyncSpaces,
-  type ProjectRelayConnection,
 } from "pstdio-sync/relay";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
@@ -18,10 +19,10 @@ import type { RelayWorkbench } from "./runtime";
  * a new device reads before the project exists there.
  */
 export const startCoreDocumentSync = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
-  relay: ProjectRelayConnection;
   signal: AbortSignal;
   statusChanged?: () => void;
 }) => {
@@ -53,24 +54,27 @@ export const startCoreDocumentSync = (input: {
     syncs = [];
     numbers = undefined;
   };
-  const connection = input.relay.attach({
+  const connection = createDocumentRelayConnection({
+    live: input.live,
+    origin: config.relayOrigin,
+    projectId: config.workbenchId,
+    access,
     signal,
-    synchronize: async (attemptSignal) => {
+    synchronize: async (attemptSignal, subscribe) => {
       const { project: space } = await fetchSyncSpaces({
         ...config,
         credential: config.renewalGrant,
         signal: attemptSignal,
       });
-      const relay = (documentId: string) => {
-        connection.claim(documentId);
-        return createDocumentRelay({
+      const relay = (documentId: string) =>
+        createDocumentRelay({
+          subscribe,
           origin: config.relayOrigin,
           space,
           documentId,
           signal: attemptSignal,
           token: async () => (await access()).token,
         });
-      };
       const quarantine = (documentId: string) =>
         createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
       if (!syncs.length || attempt !== attemptSignal || generation !== space.generation) {

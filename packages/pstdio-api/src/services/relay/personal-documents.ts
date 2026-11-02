@@ -1,5 +1,5 @@
 import type { DocumentStore, StorageOwner, SyncSpace } from "pstdio-sync";
-import { createDocumentRelay, createDocumentSync, fetchSyncSpaces } from "pstdio-sync/relay";
+import { createDocumentRelay, createDocumentSync, fetchSyncSpaces, type SubscribeDocument } from "pstdio-sync/relay";
 import { historyReferenceName } from "../personal-history/references";
 import { documentProgress } from "./document-progress";
 import type { createPersonalContext } from "./personal-context";
@@ -12,7 +12,7 @@ export const createPersonalDocuments = (input: {
   context: ReturnType<typeof createPersonalContext>;
   signal: AbortSignal;
   access: () => Promise<{ token: string; expiresAt: string }>;
-  claim: (id: string) => void;
+  subscribe: SubscribeDocument;
 }) => {
   const { config, context } = input;
   let requestSignal = input.signal;
@@ -21,9 +21,9 @@ export const createPersonalDocuments = (input: {
   let records: ReturnType<typeof createDocumentSync> | undefined;
   let shared: ReturnType<typeof createDocumentSync> | undefined;
   let ids: string[] = [];
-  const relayFor = (space: SyncSpace) => (documentId: string) => {
-    input.claim(documentId);
+  const relayFor = (space: SyncSpace, subscribe?: SubscribeDocument) => (documentId: string) => {
     return createDocumentRelay({
+      subscribe,
       origin: config.relayOrigin,
       space,
       documentId,
@@ -39,7 +39,7 @@ export const createPersonalDocuments = (input: {
       store,
       space,
       documentId,
-      relay: relayFor(space)(documentId),
+      relay: relayFor(space, input.subscribe)(documentId),
       quarantine: createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId }),
     });
   const close = () => {

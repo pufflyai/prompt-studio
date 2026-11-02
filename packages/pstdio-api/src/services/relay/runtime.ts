@@ -1,8 +1,9 @@
-import { createProjectRelayConnection, createRelayAccess } from "pstdio-sync/relay";
+import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
+import { AccountRequestError } from "../account/native-account";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
 import { startRelayExtension } from "./extension-owner";
@@ -21,6 +22,17 @@ export type RelayWorkbench = {
   renewalGrant: string;
 };
 
+const assertLiveAvailable = (channel?: LiveConnection) => {
+  if (channel?.status().protocolUnsupported)
+    throw new AccountRequestError(
+      "Update Prompt Studio or the relay to continue Cloud sync: the live channel version is unsupported.",
+    );
+  if (channel?.status().controlRefused)
+    throw new AccountRequestError(
+      "The relay's rate limits prevent Cloud subscriptions. Ask its operator to enable live requests, then reconnect Cloud.",
+    );
+};
+
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
 export const startRelayRuntime = async (input: {
@@ -32,25 +44,13 @@ export const startRelayRuntime = async (input: {
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
   const { deps } = input;
-  // Every owner of a project's documents shares the project's one live connection.
-  const projects = createWorkbenchConnections((config) => {
-    const project = new AbortController();
-    const relay = createProjectRelayConnection({
-      origin: config.relayOrigin,
-      projectId: config.workbenchId,
-      access: access.get(config.workbenchId)!,
-      signal: AbortSignal.any([controller.signal, project.signal]),
-      onError: () =>
-        apiLogger.warn({ event: "relay.reconnecting", workbenchId: config.workbenchId }, "Relay connection will retry"),
-    });
-    return { relay, done: relay.done, close: () => project.abort() };
-  });
+  const live = new Map<string, LiveConnection>();
   const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
   const core = (config: RelayWorkbench) => ({
     config,
     deps,
     access: access.get(config.workbenchId)!,
-    relay: projects.get(config.workbenchId)!.relay,
+    live: live.get(config.workbenchId)!,
     signal: controller.signal,
     statusChanged: () => statusChanged(config.workbenchId),
   });
@@ -102,7 +102,7 @@ export const startRelayRuntime = async (input: {
         snapshot,
         contextKey,
         access: access.get(workbenchId)!,
-        relay: projects.get(workbenchId)!.relay,
+        live: live.get(workbenchId)!,
         deps,
         signal: controller.signal,
         statusChanged: () => statusChanged(workbenchId),
@@ -174,6 +174,7 @@ export const startRelayRuntime = async (input: {
     // Every owner of project data reports: core resource numbers and each enabled extension.
     // An owner that has not started yet counts as not downloaded.
     async status(workbenchId: string) {
+      assertLiveAvailable(live.get(workbenchId));
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
         coreDocuments.get(workbenchId),
@@ -211,14 +212,23 @@ export const startRelayRuntime = async (input: {
       for (const id of changed) {
         for (const owners of coreOwners) await owners.remove(id);
         // Closing the project's connection also ends its extension owners' runs before they stop below.
-        await projects.remove(id);
+        live.get(id)?.close();
+        live.delete(id);
       }
       // Publish new owners before awaiting shutdown so an older in-flight start cannot take ownership.
       for (const [id, connection] of desired)
         if (!workbenches.has(id)) {
           workbenches.set(id, connection);
           access.set(id, createRelayAccess({ ...connection, signal: controller.signal, denied: input.denied }));
-          projects.ensure(connection);
+          const channel = createLiveConnection({
+            origin: connection.relayOrigin,
+            projectId: id,
+            access: access.get(id)!,
+            signal: controller.signal,
+            onStatusChange: () => statusChanged(id),
+          });
+          channel.discover(connection.accountId);
+          live.set(id, channel);
         }
       const obsolete = [...connections].filter(([, active]) => changed.has(active.owner.workbenchId));
       await Promise.all(obsolete.map(([key, active]) => stopConnection(key, active)));
@@ -237,7 +247,9 @@ export const startRelayRuntime = async (input: {
       await running;
       for (const owners of coreOwners) await owners.done();
       await Promise.all([...connections.values()].map((connection) => connection.done));
-      await projects.done();
+      for (const channel of live.values()) channel.close();
+      await Promise.all([...live.values()].map((channel) => channel.done));
+      live.clear();
     },
   };
 };

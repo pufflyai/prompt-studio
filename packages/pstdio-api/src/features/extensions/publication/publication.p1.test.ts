@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createProjectRelayConnection } from "pstdio-sync/relay";
+import { createLiveConnection } from "pstdio-sync/relay";
 import { createNativeAccount } from "../../../services/account/native-account";
 import { createNativeStore } from "../../../services/account/native-store";
 import { createExtensionDocumentSync } from "../../../services/relay/documents";
@@ -34,7 +34,7 @@ const config = {
 };
 const access = async () => ({ token: "wire-access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
 const projectRelay = (config: { relayOrigin: string; workbenchId: string }) =>
-  createProjectRelayConnection({
+  createLiveConnection({
     origin: config.relayOrigin,
     projectId: config.workbenchId,
     access,
@@ -71,7 +71,6 @@ beforeAll(async () => {
       deps: app.deps,
       owner: publishedOwner(projectId),
       access,
-      claim: () => {},
     });
   }
 });
@@ -138,7 +137,7 @@ test("three devices discover encrypted packages, preserve private overrides and 
       config,
       deps: apps[index]!.deps,
       access,
-      relay: projectRelay(config),
+      live: projectRelay(config),
       signal: controller.signal,
     });
     publications.push(connection);
@@ -171,7 +170,6 @@ test("three devices discover encrypted packages, preserve private overrides and 
       deps: app.deps,
       owner: { workbenchId: projectId, extensionId: "test.unrelated" },
       access,
-      claim: () => {},
     }),
   );
   try {
@@ -278,7 +276,7 @@ test("a synced set that fails to activate keeps the current set and waits until 
     config,
     deps: { ...c.deps, extensionService },
     access,
-    relay: projectRelay(config),
+    live: projectRelay(config),
     signal: controller.signal,
     statusChanged: () => passes++,
   });
@@ -354,7 +352,7 @@ test("retry keeps project files unavailable until the published extension activa
       config: projectConfig,
       deps: app.deps,
       access,
-      relay: projectRelay(projectConfig),
+      live: projectRelay(projectConfig),
       signal: controller.signal,
       statusChanged: () => {
         void connection

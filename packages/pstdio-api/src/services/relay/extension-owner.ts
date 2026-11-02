@@ -1,5 +1,6 @@
 import { createReadBoundary } from "pstdio-extensions";
-import type { ProjectRelayConnection, ProjectRelayOwnerConnection } from "pstdio-sync/relay";
+import type { LiveConnection } from "pstdio-sync/relay";
+import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { watchArtifactMount } from "../../features/extensions/artifact-mount-watch/mount-watcher";
 import { resolveWorkspaceFilesPath } from "../../features/extensions/command-environment/workspace-files";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
@@ -10,6 +11,7 @@ import { createExtensionDocumentSync } from "./documents";
 import type { RelayWorkbench } from "./runtime";
 
 export const startRelayExtension = async (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   source: Awaited<ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>>[number];
   deps: ExtensionsRouteDeps;
@@ -18,7 +20,6 @@ export const startRelayExtension = async (input: {
   contextKey: string;
   snapshot: Awaited<ReturnType<ExtensionsRouteDeps["extensionRuntimeCatalog"]["get"]>>;
   access: () => Promise<{ token: string; expiresAt: string }>;
-  relay: ProjectRelayConnection;
 }) => {
   const { config, deps } = input;
   const extensionId = input.source.installedSource.extension_id;
@@ -26,14 +27,7 @@ export const startRelayExtension = async (input: {
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
   const access = () => createReadBoundary(signal)(input.access);
-  const documents = createExtensionDocumentSync({
-    config,
-    owner,
-    deps,
-    access,
-    statusChanged: input.statusChanged,
-    claim: (id) => connection?.claim(id),
-  });
+  const documents = createExtensionDocumentSync({ config, owner, deps, access, statusChanged: input.statusChanged });
   const snapshot = input.snapshot;
   const repoRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "read").catch(() => null);
   const mounts = repoRoot
@@ -61,7 +55,7 @@ export const startRelayExtension = async (input: {
           }),
         )
     : [];
-  let connection: ProjectRelayOwnerConnection | undefined;
+  let connection: ReturnType<typeof createDocumentRelayConnection> | undefined;
   const watches: ReturnType<typeof watchArtifactMount>[] = [];
   const refreshFiles = async () => {
     const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
@@ -83,11 +77,15 @@ export const startRelayExtension = async (input: {
           onFolderLimit: () => connection?.wake(),
         }),
       );
-    connection = input.relay.attach({
+    connection = createDocumentRelayConnection({
+      live: input.live,
+      origin: config.relayOrigin,
+      projectId: config.workbenchId,
       signal,
-      synchronize: async (attemptSignal) => {
+      access,
+      synchronize: async (attemptSignal, subscribe) => {
         await refreshFiles();
-        await documents.synchronize(attemptSignal);
+        await documents.synchronize(attemptSignal, subscribe);
         await refreshFiles();
       },
       onError: () =>
