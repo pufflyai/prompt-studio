@@ -6,7 +6,7 @@ import { AvailableExtensionDetail } from "./available-extension-detail";
 
 test("available Git extensions show source contributions when catalog and manifest identities differ", () => {
   const metadata: DashboardExtensionMetadata = {
-    extensions: [{ id: "source.tool", name: "tool", sourcePath: "" }],
+    extensions: [{ id: "source.tool", name: "tool", displayName: "Source tool", sourcePath: "" }],
     commands: [{ id: "source.tool.command.run", extensionId: "source.tool", title: "Run source tool" }],
     menuContributions: [],
     modes: [],
