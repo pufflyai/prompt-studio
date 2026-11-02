@@ -5,4 +5,4 @@
 "harness-pi": minor
 ---
 
-Support independent conversation forks without starting a model turn.
+Support independent conversation forks through a selected agent reply without starting a model turn.

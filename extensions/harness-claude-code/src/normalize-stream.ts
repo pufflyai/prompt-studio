@@ -127,7 +127,7 @@ const handleAssistant = (parsed: Record<string, unknown>, ctx: StreamContext): S
   if (typeof parsed.error === "string") {
     return [
       {
-        id: `stream-assistant-${ctx.index}`,
+        id: typeof parsed.uuid === "string" ? parsed.uuid : `stream-assistant-${ctx.index}`,
         role: "assistant",
         parts: [apiErrorPart(parsed.error, content)],
         index: ctx.index,
@@ -138,7 +138,7 @@ const handleAssistant = (parsed: Record<string, unknown>, ctx: StreamContext): S
   if (typeof content === "string" && content.length > 0) {
     return [
       {
-        id: `stream-assistant-${ctx.index}`,
+        id: typeof parsed.uuid === "string" ? parsed.uuid : `stream-assistant-${ctx.index}`,
         role: "assistant",
         parts: [{ type: "text", text: content }],
         index: ctx.index,
@@ -149,9 +149,10 @@ const handleAssistant = (parsed: Record<string, unknown>, ctx: StreamContext): S
   if (!Array.isArray(content) || content.length === 0) return [];
 
   const messages: SessionMessage[] = [];
-  for (const block of content as ClaudeCodeContentBlock[]) {
+  for (const [blockIndex, block] of (content as ClaudeCodeContentBlock[]).entries()) {
     const msg = contentBlockToMessage(block, ctx);
     if (msg) {
+      if (typeof parsed.uuid === "string") msg.id = `${parsed.uuid}-${blockIndex}`;
       messages.push(msg);
       ctx.index += 1;
     }

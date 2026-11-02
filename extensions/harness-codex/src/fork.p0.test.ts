@@ -13,7 +13,7 @@ test("fork uses the native copy operation and releases it without starting a tur
     spawnProcess: (_args, options) => {
       const child = spawn(process.execPath, [fileURLToPath(new URL("./app-server-fixture.ts", import.meta.url))], {
         stdio: "pipe",
-        env: { ...process.env, ...options?.env, PSTDIO_TEST_RPC_LOG: log },
+        env: { ...process.env, ...options?.env, PSTDIO_TEST_RPC_LOG: log, PSTDIO_TEST_MODE: "fork-cutoff" },
       });
       return {
         stdin: child.stdin!,
@@ -27,7 +27,12 @@ test("fork uses the native copy operation and releases it without starting a tur
     },
   });
   try {
-    expect(await runtime.fork({ agentSessionId: "original", cwd: root })).toBe("forked-thread");
+    await expect(
+      runtime.fork({ agentSessionId: "original", cwd: root, messageId: "codex-old-turn-commentary" }),
+    ).rejects.toThrow("last reply");
+    expect(await runtime.fork({ agentSessionId: "original", cwd: root, messageId: "codex-old-turn-answer" })).toBe(
+      "forked-thread",
+    );
     const requests = readFileSync(log, "utf8")
       .trim()
       .split("\n")
@@ -36,6 +41,7 @@ test("fork uses the native copy operation and releases it without starting a tur
       threadId: "original",
       cwd: root,
       deferGoalContinuation: true,
+      lastTurnId: "old-turn",
     });
     expect(requests.find((request) => request.method === "thread/unsubscribe")?.params).toEqual({
       threadId: "forked-thread",

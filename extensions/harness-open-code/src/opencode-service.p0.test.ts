@@ -152,10 +152,17 @@ describe("request timeouts", () => {
 
 test("fork copies the native session without submitting a prompt", async () => {
   const requests: string[] = [];
+  let copiedBody: unknown;
   const server = Bun.serve({
     port: 0,
-    fetch(request) {
+    async fetch(request) {
       requests.push(`${request.method} ${new URL(request.url).pathname}`);
+      if (request.method === "GET")
+        return Response.json([
+          { info: { id: "answer", role: "assistant" }, parts: [{ type: "text", text: "First" }] },
+          { info: { id: "successor", role: "user" }, parts: [{ type: "text", text: "Later" }] },
+        ]);
+      copiedBody = await request.json();
       return Response.json({ id: "forked" });
     },
   });
@@ -164,8 +171,9 @@ test("fork copies the native session without submitting a prompt", async () => {
     serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
   });
   try {
-    expect(await service.forkSession("original", "/project")).toBe("forked");
-    expect(requests).toEqual(["POST /session/original/fork"]);
+    expect(await service.forkSession("original", "/project", undefined, "answer")).toBe("forked");
+    expect(requests).toEqual(["GET /session/original/message", "POST /session/original/fork"]);
+    expect(copiedBody).toEqual({ messageID: "successor" });
   } finally {
     await service.dispose();
     server.stop(true);

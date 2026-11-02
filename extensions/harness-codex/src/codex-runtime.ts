@@ -5,7 +5,7 @@ import { nativeThreadMessages } from "./native-history";
 import type { Turn } from "./protocol/v2/Turn";
 import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
 
-type ThreadInput = { agentSessionId: string; cwd?: string; env?: Record<string, string> };
+type ThreadInput = { agentSessionId: string; cwd?: string; env?: Record<string, string>; messageId?: string };
 
 export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpawnProcess }) => {
   let authenticationGeneration = 0;
@@ -116,7 +116,23 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
         return nativeThreadMessages(result.thread.turns);
       }),
     fork: (input: ThreadInput) =>
-      withReader(input, (transport, signal) => {
+      withReader(input, async (transport, signal) => {
+        signal.throwIfAborted();
+        let lastTurnId: string | undefined;
+        if (input.messageId) {
+          const result = (await transport.request(
+            "thread/read",
+            { threadId: input.agentSessionId, includeTurns: true },
+            undefined,
+            signal,
+          )) as { thread: { turns: Turn[] } };
+          const turn = result.thread.turns.find((turn) =>
+            nativeThreadMessages([turn]).some((message) => message.id === input.messageId),
+          );
+          if (!turn || turn.status === "inProgress" || nativeThreadMessages([turn]).at(-1)?.id !== input.messageId)
+            throw new Error("Codex can fork only from the last reply in a completed turn.");
+          lastTurnId = turn.id;
+        }
         signal.throwIfAborted();
         // A native copy can finish after scope cancellation. Keep its reply owned so
         // the loaded fork is released even when the caller has already gone away.
@@ -124,6 +140,7 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
           .request("thread/fork", {
             threadId: input.agentSessionId,
             deferGoalContinuation: true,
+            ...(lastTurnId ? { lastTurnId } : {}),
             ...(input.cwd ? { cwd: input.cwd } : {}),
           })
           .then(async (response) => {

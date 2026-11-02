@@ -59,20 +59,42 @@ test("fork remaps native session identities while keeping the original transcrip
   mkdirSync(directory, { recursive: true });
   const sourceId = crypto.randomUUID();
   const userId = crypto.randomUUID();
+  const answerId = crypto.randomUUID();
+  const continuationId = crypto.randomUUID();
   const transcript = buildTranscript([
     { type: "user", uuid: userId, parentUuid: null, sessionId: sourceId, message: { role: "user", content: "Hello" } },
     {
       type: "assistant",
-      uuid: crypto.randomUUID(),
+      uuid: answerId,
       parentUuid: userId,
       sessionId: sourceId,
       message: { role: "assistant", content: [{ type: "text", text: "An answer" }] },
+    },
+    {
+      type: "assistant",
+      uuid: continuationId,
+      parentUuid: answerId,
+      sessionId: sourceId,
+      message: { role: "assistant", content: [{ type: "text", text: " continued" }] },
+    },
+    {
+      type: "user",
+      uuid: crypto.randomUUID(),
+      parentUuid: continuationId,
+      sessionId: sourceId,
+      message: { role: "user", content: "Later question" },
     },
   ]);
   const path = join(directory, `${sourceId}.jsonl`);
   writeFileSync(path, transcript);
   try {
-    const fork = await createClaudeCodeHarness().fork!(ctx, { sessionId: "host", agentSessionId: sourceId, cwd: root });
+    const harness = createClaudeCodeHarness();
+    const fork = await harness.fork!(ctx, {
+      sessionId: "host",
+      agentSessionId: sourceId,
+      cwd: root,
+      messageId: `${answerId}-0`,
+    });
     expect(fork.agentSessionId).not.toBe(sourceId);
     expect(readFileSync(path, "utf8")).toBe(transcript);
     const copied = readFileSync(join(directory, `${fork.agentSessionId}.jsonl`), "utf8")
@@ -80,12 +102,21 @@ test("fork remaps native session identities while keeping the original transcrip
       .split("\n")
       .map((line) => JSON.parse(line));
     const messages = copied.filter((entry) => entry.type === "user" || entry.type === "assistant");
-    expect(messages.map((entry) => entry.sessionId)).toEqual([fork.agentSessionId, fork.agentSessionId]);
+    expect(messages.map((entry) => entry.sessionId)).toEqual([
+      fork.agentSessionId,
+      fork.agentSessionId,
+      fork.agentSessionId,
+    ]);
     expect(messages[0].uuid).not.toBe(userId);
     expect(messages[1].parentUuid).toBe(messages[0].uuid);
     expect(messages.map((entry) => entry.message)).toEqual(
-      JSON.parse(`[${transcript.replaceAll("\n", ",")}]`).map((entry: { message: unknown }) => entry.message),
+      JSON.parse(`[${transcript.replaceAll("\n", ",")}]`)
+        .slice(0, 3)
+        .map((entry: { message: unknown }) => entry.message),
     );
+    const history = await harness.getMessages!(ctx, { agentSessionId: fork.agentSessionId, cwd: root });
+    expect(history).toHaveLength(2);
+    expect(history[1].parts).toEqual([{ type: "text", text: "An answer continued" }]);
   } finally {
     if (originalConfig === undefined) delete process.env.CLAUDE_CONFIG_DIR;
     else process.env.CLAUDE_CONFIG_DIR = originalConfig;

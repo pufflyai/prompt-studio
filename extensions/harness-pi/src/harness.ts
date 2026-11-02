@@ -88,6 +88,12 @@ export const createPiHarness = (options: PiProcessOptions = {}) => {
     fork: (ctx, input) =>
       request(ctx, async (signal) => {
         const command = await requirePiCommand(ctx, { ...options, signal, cwd: input.cwd });
+        if (input.messageId) {
+          const state = await piRequest("get_state", ["--session", input.agentSessionId], command);
+          if (typeof state.sessionFile !== "string") throw new Error("Pi did not return its session history file.");
+          const { forkPiHistory } = await import("./fork-history");
+          return forkPiHistory(state.sessionFile, input.messageId, signal);
+        }
         const [cloned, state] = await piRequests(["clone", "get_state"], ["--session", input.agentSessionId], command);
         if (cloned.cancelled) throw new Error("Pi cancelled the conversation fork.");
         if (typeof state.sessionId !== "string") throw new Error("Pi did not return the forked session.");
