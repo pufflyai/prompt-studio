@@ -1,5 +1,6 @@
 import { Box, Button, Field, Flex, Grid, Input, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { KeyframeTimeline } from "@/components/keyframe-timeline";
 import { SegmentedControl, Slider, Switch } from "@/components/primitives";
 
 export default {
@@ -141,43 +142,33 @@ const StudyFrame = (props: { motion?: boolean }) => {
                 <Text role="status" textStyle="paragraph/S/regular" color="fg.muted">
                   {dirty ? "Temporary changes" : `Saved version: ${version}`}
                 </Text>
-              </Stack>{" "}
-              {motion && (
-                <Stack gap="sm">
-                  <Flex gap="sm" align="center">
-                    <Button
-                      size="xs"
-                      onClick={() => {
-                        if (time === 6) setTime(0);
-                        setPlaying(!playing);
-                      }}
-                    >
-                      {playing ? "Pause" : "Play"}
-                    </Button>
-                    <Button size="xs" variant="ghost" onClick={() => setTime(0)}>
-                      Restart
-                    </Button>
-                    <Text textStyle="mono/XS">{time.toFixed(1)} / 6.0 s</Text>
-                  </Flex>
-                  <Slider
-                    aria-label={["Time"]}
-                    min={0}
-                    max={6}
-                    step={0.1}
-                    value={[time]}
-                    onValueChange={({ value }) => {
-                      setPlaying(false);
-                      setTime(value[0]);
-                    }}
-                  />
-                </Stack>
-              )}
+              </Stack>
             </>
           ) : (
             <Text color="fg.muted">Select a frame</Text>
           )}
         </Stack>
       </Flex>
+      {motion && selected && (
+        <Box h="sm" maxH="40vh">
+          <KeyframeTimeline
+            label="Animations · Chat turn"
+            tracks={[{ id: "chat-turn", label: "Animation", keyframes: [] }]}
+            duration={6}
+            currentTime={time}
+            onTimeChange={(value) => {
+              setPlaying(false);
+              setTime(value);
+            }}
+            playing={playing}
+            onPlayingChange={setPlaying}
+            markers={[
+              { id: "start", time: 0, label: "Start" },
+              { id: "ready", time: 3, label: "Ready" },
+            ]}
+          />
+        </Box>
+      )}
     </Stack>
   );
 };
