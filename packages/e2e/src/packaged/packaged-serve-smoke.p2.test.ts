@@ -109,6 +109,21 @@ test(
       });
       child = started.child;
 
+      const capacityUrl = `${started.baseUrl}/v1/workspaces/capacity`;
+      const capacityHeaders = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
+      const initialCapacity = await fetch(capacityUrl, { headers: capacityHeaders });
+      expect(initialCapacity.status).toBe(200);
+      expect(await initialCapacity.json()).toMatchObject({ activeCount: 0, limit: null });
+      for (const limit of [1, null]) {
+        const updated = await fetch(capacityUrl, {
+          method: "PATCH",
+          headers: capacityHeaders,
+          body: JSON.stringify({ limit }),
+        });
+        expect(updated.status).toBe(200);
+        expect(await updated.json()).toMatchObject({ activeCount: 0, limit });
+      }
+
       const projectFolder = join(tempRoot, "project");
       const peerFolder = join(tempRoot, "peer-project");
       mkdirSync(projectFolder, { recursive: true });
