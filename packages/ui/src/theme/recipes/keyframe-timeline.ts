@@ -44,6 +44,7 @@ export const keyframeTimelineRecipe = defineSlotRecipe({
       display: "flex",
       minW: "full",
       h: "var(--keyframe-timeline-row)",
+      "&[data-active=true]": { bg: "bg.active" },
       borderBottomWidth: "1px",
       borderColor: "border.subtle",
     },
@@ -58,6 +59,7 @@ export const keyframeTimelineRecipe = defineSlotRecipe({
       flexShrink: "0",
       bg: "bg",
       textStyle: "label/S/medium",
+      "[data-active=true] > &": { bg: "bg.active" },
       textAlign: "left",
       truncate: true,
       _focusVisible: { outline: "2px solid", outlineColor: "border.accent-light", outlineOffset: "-2px" },
@@ -119,6 +121,7 @@ export const keyframeTimelineRecipe = defineSlotRecipe({
       cursor: "ew-resize",
       touchAction: "none",
       zIndex: "1",
+      pointerEvents: "none",
     },
     loopBand: { position: "absolute", top: "xs", bottom: "xs", bg: "bg.active", pointerEvents: "none" },
     loopHandle: {

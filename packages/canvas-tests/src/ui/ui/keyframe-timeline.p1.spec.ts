@@ -46,7 +46,10 @@ test("scrub, move, add and delete animation keys through the shared timeline", a
   await ruler.focus();
   await ruler.press("Home");
   await ruler.press("ArrowRight");
-  await preview.getByRole("button", { name: "Add keyframe", exact: true }).click();
+  const opacityLabel = preview.getByRole("button", { name: "Opacity", exact: true });
+  await opacityLabel.focus();
+  await opacityLabel.press("Shift+F10");
+  await preview.getByRole("menuitem", { name: "Add keyframe at 0:00:01", exact: true }).click();
   await expect(preview.getByRole("button", { name: "Opacity keyframe 0:00:01", exact: true })).toBeVisible();
   const top = preview.getByRole("button", { name: "Top keyframe 0:00:06", exact: true });
   await top.click();
@@ -54,12 +57,7 @@ test("scrub, move, add and delete animation keys through the shared timeline", a
   await expect(preview.getByRole("spinbutton")).toHaveCount(0);
   await expect(preview.getByText("Interpolation", { exact: true })).toHaveCount(0);
   await expect(preview.getByRole("button", { name: /Zoom (in|out) timeline/ })).toHaveCount(0);
-  for (const name of ["Add keyframe", "Delete keyframe"]) {
-    const action = preview.getByRole("button", { name, exact: true });
-    await expect(action.locator("svg")).toBeVisible();
-    await expect(action).toHaveText("");
-  }
-  await preview.getByRole("button", { name: /Bullet 2/ }).click();
+  await preview.getByRole("button", { name: "Bullet 2", exact: true }).click();
   await expect(preview.getByRole("button", { name: "Opacity", exact: true })).toHaveCount(0);
   const loopStart = preview.getByRole("slider", { name: "Loop start", exact: true });
   const loopEnd = preview.getByRole("slider", { name: "Loop end", exact: true });
@@ -102,10 +100,10 @@ test("drag the playhead from track space and along its full height", async ({ pa
   const marker = await preview.getByRole("button", { name: "Settled", exact: true }).boundingBox();
   await drag(x(1.6), x(1.2), marker!.y + marker!.height / 2);
   await expect(playhead).toHaveAttribute("aria-valuenow", "1.2");
-  const group = await preview.getByRole("button", { name: /Bullet 2/ }).boundingBox();
+  const group = await preview.getByRole("button", { name: "Bullet 2", exact: true }).boundingBox();
   await drag(x(1.2), x(0.8), group!.y + group!.height / 2);
   await expect(playhead).toHaveAttribute("aria-valuenow", "0.8");
-  await expect(preview.getByRole("button", { name: /Bullet 2/ })).toHaveAttribute("aria-expanded", "true");
+  await expect(preview.getByRole("button", { name: "Bullet 2", exact: true })).toHaveAttribute("aria-expanded", "true");
   await expect(preview.getByRole("button", { name: "Opacity keyframe 0:00:00", exact: true })).toBeVisible();
   await expect(preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true })).toBeVisible();
 });
@@ -153,14 +151,14 @@ test("groups reveal retained tracks with the shared chevron and motion", async (
     page,
     "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Animation",
   );
-  const group = preview.getByRole("button", { name: /Bullet 2/ });
+  const group = preview.getByRole("button", { name: "Bullet 2", exact: true });
   const key = preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true });
   const original = (await key.elementHandle())!;
   await key.click();
   await group.click();
   await expect(group).toHaveAttribute("aria-expanded", "false");
   await group.press("Tab");
-  await expect(preview.getByRole("button", { name: /Bullet 1/ })).toBeFocused();
+  await expect(preview.getByRole("button", { name: "Bullet 1", exact: true })).toBeFocused();
   expect(await original.evaluate((element) => element.isConnected)).toBe(true);
   await group.click();
   await expect(key).toBeVisible();
@@ -218,4 +216,49 @@ test("shared reveal keeps nested app tree rows usable", async ({ page }) => {
   await preview.getByText("Workspaces", { exact: true }).click();
   await expect(notes).toBeVisible();
   expect(await original.evaluate((element) => element.isConnected)).toBe(true);
+});
+
+// Critical: context actions must edit the track/time under the pointer and preserve keyboard editing focus.
+test("keyframe context menus target the clicked track and position", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Animation",
+  );
+  const top = preview.getByRole("group", { name: "Bullet 1 / Top track", exact: true });
+  const opacity = preview.getByRole("group", { name: "Bullet 2 / Opacity track", exact: true });
+  const ruler = preview.getByRole("slider", { name: "Timeline playhead", exact: true });
+  const bounds = (await ruler.boundingBox())!;
+  const row = (await top.boundingBox())!;
+  await page.mouse.click(bounds.x + bounds.width * 0.4, row.y + row.height / 2, { button: "right" });
+  const add = preview.getByRole("menuitem", { name: "Add keyframe at 0:00:20", exact: true });
+  await expect(add).toBeVisible();
+  await add.click();
+  const created = top.getByRole("button", { name: "Top keyframe 0:00:20", exact: true });
+  await expect(created).toHaveAttribute("aria-pressed", "true");
+  await expect(created).toBeFocused();
+  await expect(top).toHaveAttribute("data-active", "true");
+  await expect(ruler).toHaveAttribute("aria-valuenow", "0.8");
+  await expect(opacity.getByRole("button", { name: "Opacity keyframe 0:00:20", exact: true })).toHaveCount(0);
+  await created.press("Shift+F10");
+  await expect(preview.getByRole("menuitem", { name: "Delete keyframe", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(created).toBeFocused();
+  await opacity.getByRole("button", { name: "Opacity keyframe 0:00:00", exact: true }).click();
+  await created.click({ button: "right" });
+  await preview.getByRole("menuitem", { name: "Delete keyframe", exact: true }).click();
+  await expect(created).toHaveCount(0);
+  const label = top.getByRole("button", { name: "Top", exact: true });
+  await expect(label).toBeFocused();
+  await ruler.focus();
+  await ruler.press("Home");
+  await ruler.press("ArrowRight");
+  await label.focus();
+  await label.press("Shift+F10");
+  await preview.getByRole("menuitem", { name: "Add keyframe at 0:00:01", exact: true }).click();
+  const keyboardKey = top.getByRole("button", { name: "Top keyframe 0:00:01", exact: true });
+  await expect(keyboardKey).toBeFocused();
+  await keyboardKey.press("Shift+F10");
+  await preview.getByRole("menuitem", { name: "Delete keyframe", exact: true }).click();
+  await expect(keyboardKey).toHaveCount(0);
+  await expect(label).toBeFocused();
 });

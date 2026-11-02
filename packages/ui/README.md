@@ -95,8 +95,12 @@ The caller owns animation data, playback, persistence and undo. Optional control
 component owns transient selection. Use `playing` and `onPlayingChange` to connect
 transport controls to the caller’s clock. Supply `onRestart` to restart a caller-owned
 loop range; the default restart seeks to zero. Markers navigate named moments without
-pretending to be editable property keys. Keys and markers use diamonds; transport and
-add/delete actions use icon buttons in one toolbar. Selecting a key adds no detail row;
+pretending to be editable property keys. Keys and markers use diamonds; transport uses
+toolbar icon buttons. Keyframe actions use the app’s context menus. Right-click a track to add at that position;
+right-click a key to delete it. Menus name their track and time. Shift+F10 opens these
+menus from a focused track label or key; adding from a label uses the current playhead.
+The active row is highlighted, and adding focuses the new key for immediate keyboard editing.
+Selecting a key adds no detail row;
 the caller owns value and interpolation editing. The timeline hugs its content and
 scrolls inside a bounded parent.
 Pass `loopRange` and `onLoopRangeChange` for draggable and keyboard-editable loop
