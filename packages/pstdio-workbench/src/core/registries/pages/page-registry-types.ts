@@ -47,6 +47,7 @@ export interface WorkbenchPageContribution {
   title?: Localizable<string>;
   icon?: string;
   path: string;
+  projectLanding?: true;
   modeId: string;
   parentId?: string;
   resource?: ResourceConstraint;

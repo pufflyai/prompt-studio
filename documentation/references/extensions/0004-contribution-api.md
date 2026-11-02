@@ -675,3 +675,11 @@ obsolete request is cancelled and cannot replace a newer page. Refresh events
 remain scoped to the renderer; after an edit they reset its page sequence while
 keeping the previous rows visible until the replacement arrives. A stale revision
 keeps those rows and shows Retry, which reloads from the first page.
+
+## Project landing pages (API 0.3.1 on main)
+
+A page can declare `projectLanding: true` to open when a project has no saved destination, or when a project-root bookmark opens. It must be a root page in `workbenchModes.project` without a routed resource. Keep its ordinary nonempty extension path. The shell owns project-root URLs and navigation history.
+
+When several providers declare a landing page, the shell selects the first by qualified contribution ID. A valid saved destination takes precedence on project switches. Removing the active provider uses the normal page-owner fallback; if no landing provider is available, the legacy host Start page or first available resource-free project root is used. Settings and project selection do not depend on that provider. `workbenchPages.start` is deprecated; existing targets resolve to the current landing page.
+
+Dashboard webviews with `commands.execute` can use public `workbenchCommands` refs: `newConversation`, `openToolSearch`, `openSettings` (optional `panelId`), and `retryProjectSetup`. Pass the ref's `id` to the host capability. Commands run in the webview's selected project; stale project invocations are rejected. Setup retry uses the existing project setup service and returns only after it finishes. These are dashboard commands, not server-side extension commands or CLI actions. Publish the SDK and host before extensions adopt these additions.

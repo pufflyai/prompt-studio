@@ -1,3 +1,4 @@
+import { commandRef } from "./refs";
 import { dockedWorkbenchRegions, type ResourceKindDefinition } from "./types/composition";
 import type { ContributionKind } from "./types/contribution-identity";
 
@@ -44,6 +45,7 @@ export const workbenchResourceKinds = {
 };
 
 export const workbenchPages = {
+  /** @deprecated Contribute a page with projectLanding: true and use its public page ref. */
   start: hostRef("page", "start"),
   sessions: hostRef("page", "sessions"),
   session: hostRef("page", "session"),
@@ -121,4 +123,18 @@ export const workbenchSlots = {
   extensionSettings: hostRef("settings-panel", "extension.settings"),
   statusBarLeading: hostRef("status-bar-item", "status-bar.leading"),
   statusBarTrailing: hostRef("status-bar-item", "status-bar.trailing"),
+};
+
+/** Dashboard commands available through a webview's commands.execute capability. */
+export const workbenchCommands = {
+  newConversation: commandRef<Record<string, never>, void>({ extensionId: "pstdio", id: "dashboard.createSession" }),
+  openToolSearch: commandRef<Record<string, never>, void>({
+    extensionId: "pstdio",
+    id: "dashboard.openCommandPalette",
+  }),
+  openSettings: commandRef<{ panelId?: string }, void>({ extensionId: "pstdio", id: "workbench.settings.open" }),
+  retryProjectSetup: commandRef<Record<string, never>, void>({
+    extensionId: "pstdio",
+    id: "workbench.project.retrySetup",
+  }),
 };

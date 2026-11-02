@@ -75,6 +75,7 @@ export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMeta
     title: page.contribution.title,
     icon: page.contribution.icon,
     path: page.contribution.path,
+    projectLanding: page.contribution.projectLanding,
     document: page.contribution.document,
     params: page.contribution.params,
     regionSettings: page.contribution.regionSettings,

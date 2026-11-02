@@ -36,8 +36,11 @@ export const createPageUrlResolver =
     pages(): WorkbenchPageContribution[];
     resources: WorkbenchPageResourceCodec;
     normalize(location: PageLocation): ResolvedPageLocation;
+    root?(): ResolvedPageLocation;
   }) =>
   (projectId: string, entry: WorkbenchPageBrowserEntry) => {
+    const pathname = new URL(entry.url, "http://workbench.local").pathname.replace(/\/$/, "");
+    if (input.root && pathname === `/projects/${encodeURIComponent(projectId)}`) return input.root();
     const pages = input.pages();
     const parsed = parseWorkbenchPageUrl({ url: entry.url, projectId, pages, resources: input.resources });
     if (!parsed) return undefined;

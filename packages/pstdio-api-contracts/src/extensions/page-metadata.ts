@@ -57,6 +57,7 @@ export const workbenchExtensionPageRecordSchema = z.object({
   title: localizableStringSchema,
   icon: z.string().optional(),
   path: z.string(),
+  projectLanding: z.literal(true).optional(),
   params: pageParamDefinitionsSchema.optional(),
   regionSettings: z
     .object({

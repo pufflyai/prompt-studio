@@ -50,6 +50,7 @@ export const toInternalWorkbenchPages = (
     ref: { extensionId: page.extensionId, kind: "page", id: page.localId },
     title: page.title,
     path: page.path,
+    projectLanding: page.projectLanding,
     document: page.document,
     params: page.params,
     regionSettings: page.regionSettings,

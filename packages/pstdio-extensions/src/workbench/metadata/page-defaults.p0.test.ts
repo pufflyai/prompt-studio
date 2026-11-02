@@ -15,6 +15,7 @@ test("page header defaults and empty views survive normalization and metadata se
     id: "editor",
     title: "Editor",
     path: "editor",
+    projectLanding: true,
     mode: workbenchModes.project,
     regionSettings: { main: { showHeader: false }, side: { showHeader: true } },
     main: {
@@ -57,6 +58,7 @@ test("page header defaults and empty views survive normalization and metadata se
   const metadata = workbenchExtensionMetadataSchema.parse(
     JSON.parse(JSON.stringify(createWorkbenchExtensionMetadata({ runtime }))),
   );
+  expect(metadata.pages[0].projectLanding).toBe(true);
   expect(metadata.pages[0].regionSettings).toEqual(page.regionSettings);
   const main = metadata.pages[0].main;
   expect(main.kind === "view" && main.empty).toMatchObject({

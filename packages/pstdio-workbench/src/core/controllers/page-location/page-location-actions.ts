@@ -11,6 +11,7 @@ import type {
   WorkbenchPageLocationHistoryState,
   WorkbenchPageNavigationResult,
 } from "./page-location-types";
+import { resolveProjectLandingPage } from "./project-landing";
 
 interface PageLocationControllerActionsInput<Value> {
   input: CreateWorkbenchPageLocationControllerInput<Value>;
@@ -82,7 +83,10 @@ export const createPageLocationControllerActions = <Value>(
         }
         const saved = input.persistence.load(projectId);
         if (saved) return actions.normalizeStored(saved.location).location;
-        return actions.normalizeTarget({ kind: "page", page: input.startPage }).location;
+        return actions.normalizeTarget({
+          kind: "page",
+          page: resolveProjectLandingPage(input.registry.listPages(), input.startPage),
+        }).location;
       } catch {
         return undefined;
       }

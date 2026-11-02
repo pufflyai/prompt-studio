@@ -9,11 +9,7 @@ import {
   createPageLocationFailureHandler,
   createPageLocationHistory,
 } from "./page-location-history-entry";
-import {
-  normalizeWorkbenchPageLocation,
-  normalizeWorkbenchPageTarget,
-  workbenchPageLocationsEqual,
-} from "./page-location-normalization";
+import { normalizeWorkbenchPageTarget, workbenchPageLocationsEqual } from "./page-location-normalization";
 import { setPageLocationPreparation } from "./page-location-preparation";
 import {
   createMainViewSelector,
@@ -34,6 +30,11 @@ import { connectPageOwnerRemoval } from "./page-owner-removal";
 import { createPagePlacementCloser } from "./page-placement-closer";
 import { createPageResourceRemover } from "./page-resource-remover";
 import { createPageUrlResolver, isPageHistoryState } from "./page-url-resolver";
+import {
+  normalizeProjectPageLocation,
+  resolveProjectLandingPage,
+  resolveProjectLandingTarget,
+} from "./project-landing";
 
 export type {
   CreateWorkbenchPageLocationControllerInput,
@@ -54,13 +55,14 @@ export const createWorkbenchPageLocationController = <Value>(
   const navigation = createWorkbenchEvent<PageLocation>("page navigation subscriber");
   const internals = getWorkbenchPageRegistryInternals(input.registry);
   const pages = input.registry.listPages;
-  const memory = createPageNavigationMemory({ pages, resources: internals.resources });
+  const resources = internals.resources;
+  const memory = createPageNavigationMemory({ pages, resources });
   const history = createPageLocationHistory();
 
   const fail = createPageLocationFailureHandler(input.reportDiagnostic);
   const historyEntry = createPageHistoryEntry({
     pages,
-    resources: internals.resources,
+    resources,
     removalVersion: input.getResourceRemovalVersion,
     removalEpoch: input.getResourceRemovalEpoch,
   });
@@ -69,7 +71,7 @@ export const createWorkbenchPageLocationController = <Value>(
     levels: input,
     pages,
     normalize: (location) => normalizeStored(location),
-    resourceKey: (resource) => internals.resources.toUri(internals.resources.normalize(resource)),
+    resourceKey: (resource) => resources.toUri(resources.normalize(resource)),
     start: () => start(),
   });
 
@@ -92,8 +94,8 @@ export const createWorkbenchPageLocationController = <Value>(
       memory.consume(resolved.consumeRemembered),
     );
 
-  const normalizeStored = (location: PageLocation): ResolvedPageLocation =>
-    normalizeWorkbenchPageLocation({ location, pages: pages(), resources: internals.resources });
+  const normalizeStored = (location: PageLocation) =>
+    normalizeProjectPageLocation({ location, pages: pages(), resources });
   const restoreResolved = (resolved: ResolvedPageLocation, projectId: string, removalVersion?: number) =>
     restoreRememberedLocation(
       resolved,
@@ -103,9 +105,9 @@ export const createWorkbenchPageLocationController = <Value>(
     );
   const normalizeTarget = (target: NavigationTargetPage): ResolvedPageLocation => {
     const resolved = normalizeWorkbenchPageTarget({
-      target,
+      target: resolveProjectLandingTarget(pages(), target),
       pages: pages(),
-      resources: internals.resources,
+      resources,
       active: input.registry.store.getState().location,
     });
     if (target.intent !== "restore") return resolved;
@@ -119,12 +121,12 @@ export const createWorkbenchPageLocationController = <Value>(
 
   const start = (): ResolvedPageLocation =>
     normalizeWorkbenchPageTarget({
-      target: { kind: "page", page: input.startPage },
+      target: { kind: "page", page: resolveProjectLandingPage(pages(), input.startPage) },
       pages: pages(),
-      resources: internals.resources,
+      resources,
     });
 
-  const resolveUrl = createPageUrlResolver({ pages, resources: internals.resources, normalize: normalizeStored });
+  const resolveUrl = createPageUrlResolver({ pages, resources, normalize: normalizeStored, root: start });
 
   const restore = (
     projectId: string,
@@ -151,7 +153,7 @@ export const createWorkbenchPageLocationController = <Value>(
       const matchesSavedLocation = workbenchPageLocationsEqual(
         persisted?.location,
         resolved.location,
-        internals.resources,
+        resources,
         pages(),
       );
       const prepare = matchesSavedLocation ? prepareState.restore : prepareState.open;
@@ -176,7 +178,7 @@ export const createWorkbenchPageLocationController = <Value>(
     adopt: history.adopt,
     resolve: resolveUrl,
     restore: restoreResolved,
-    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources, pages()),
+    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, resources, pages()),
     commit,
     notify: navigation.notify,
     fail: (error) => fail("history", error),
@@ -185,7 +187,7 @@ export const createWorkbenchPageLocationController = <Value>(
   const pageRemovalSubscription = connectPageOwnerRemoval({
     registry: input.registry,
     pages,
-    resources: internals.resources,
+    resources,
     normalizeStored,
     start,
     commit,
@@ -217,7 +219,7 @@ export const createWorkbenchPageLocationController = <Value>(
     resolveUrl,
     normalizeTarget,
     normalizeStored,
-    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources, pages()),
+    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, resources, pages()),
     commit,
     replay: (projectId, resolved) =>
       createPageLocationReplayer({
@@ -231,7 +233,7 @@ export const createWorkbenchPageLocationController = <Value>(
     closePlacement: closeActivePlacement,
     removeResource: createPageResourceRemover({
       getState: input.registry.store.getState,
-      resources: internals.resources,
+      resources,
       forgetRootLevel: rootLevel.forget,
       forgetMemory: memory.forgetResource,
       persistence: input.persistence,
@@ -252,7 +254,7 @@ export const createWorkbenchPageLocationController = <Value>(
       const history = workbenchPageLocationsEqual(
         input.registry.store.getState().location,
         state.location,
-        internals.resources,
+        resources,
         pages(),
       )
         ? "none"

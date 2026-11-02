@@ -55,6 +55,7 @@ export {
   storageLimits,
   VIEW_FILTER_CONDITIONS,
   viewDataEvents,
+  workbenchCommands,
   workbenchModeDefinitions,
   workbenchModes,
   workbenchPageDefinitions,

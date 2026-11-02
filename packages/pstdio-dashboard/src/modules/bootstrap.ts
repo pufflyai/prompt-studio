@@ -1,4 +1,3 @@
-import type { PageLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
@@ -13,15 +12,6 @@ interface CreateBootstrapModuleInput {
   isInitialSyncComplete?: () => boolean;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
 }
-
-const isCorePageLocation = (location: PageLocation | undefined) => {
-  if (!location) return false;
-  while (location) {
-    if (location.page.extensionId !== "pstdio") return false;
-    location = location.parent;
-  }
-  return true;
-};
 
 export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
   ({
@@ -77,15 +67,9 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             readyUnsubscribe = undefined;
             return true;
           }
-          // Registered extension pages may still belong to the previous project.
-          // Restore only core page paths before this project's metadata arrives,
-          // preserving extension URLs and saved parents until their pages register.
-          if (
-            getDashboardExtensionsReadyProjectId(ctx) !== projectId &&
-            !isCorePageLocation(ctx.pageLocations.getBootLocation(projectId))
-          ) {
-            return false;
-          }
+          // Resolve automatic destinations only after this project's contributions arrive.
+          // A core fallback must not consume an extension landing page's first navigation.
+          if (getDashboardExtensionsReadyProjectId(ctx) !== projectId) return false;
           readyUnsubscribe?.();
           readyUnsubscribe = undefined;
           const result = ctx.pageLocations.boot(projectId);

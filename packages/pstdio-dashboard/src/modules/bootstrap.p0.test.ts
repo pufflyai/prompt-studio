@@ -30,7 +30,7 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 };
 
 describe("createBootstrapModule", () => {
-  test("opens Start before project extensions are ready", async () => {
+  test("waits for project landing contributions before opening the fallback Start page", async () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -39,7 +39,7 @@ describe("createBootstrapModule", () => {
 
     try {
       await flushMicrotasks();
-      expect(workbench.pages.store.getState().activePageId).toBe("start");
+      expect(workbench.pages.store.getState().activePageId).toBeUndefined();
 
       setDashboardExtensionsReadyProject(workbench, "project-1");
       await flushMicrotasks();
@@ -113,3 +113,35 @@ describe("createBootstrapModule", () => {
     });
   }
 });
+
+for (const withStart of [false, true])
+  test(`delayed landing wins over fallback pages (host Start: ${withStart})`, async () => {
+    const workbench = createWorkbench({ pageLocationBrowser: browserAt("/projects/project-1") });
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+    if (withStart) workbench.registerModule(createStartModule());
+    workbench.pages.registerPage({
+      id: "tools",
+      ref: { kind: "page", extensionId: "pstdio", id: "tools" },
+      path: "tools",
+      modeId: "project",
+      main: { kind: "panels" },
+      slots: [],
+    });
+    const bootstrap = workbench.registerModule(createBootstrapModule());
+    expect(workbench.pages.store.getState().activePageId).toBeUndefined();
+    const home = { kind: "page" as const, extensionId: "acme.home", id: "home" };
+    workbench.pages.registerPage({
+      id: "acme.home.page.home",
+      ref: home,
+      path: "home",
+      modeId: "project",
+      projectLanding: true,
+      main: { kind: "panels" },
+      slots: [],
+    });
+    setDashboardExtensionsReadyProject(workbench, "project-1");
+    await flushMicrotasks();
+    expect(workbench.pages.store.getState().location?.page).toEqual(home);
+    bootstrap.dispose();
+  });
