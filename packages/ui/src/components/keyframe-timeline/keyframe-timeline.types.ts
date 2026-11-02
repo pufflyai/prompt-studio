@@ -36,5 +36,7 @@ export interface KeyframeTimelineProps {
   markers?: TimelineMarker[];
   playing?: boolean;
   onPlayingChange?: (playing: boolean) => void;
+  /** Override the default seek to zero, for example to restart a loop range. */
+  onRestart?: () => void;
   label?: string;
 }

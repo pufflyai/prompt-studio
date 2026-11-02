@@ -19,6 +19,8 @@ test("scrub, move, add and delete animation keys through the shared timeline", a
   await expect(timeField).toHaveValue("1");
   await expect(preview.getByRole("alert")).toContainText("already occupies");
   await expect(preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true })).toBeVisible();
+  await preview.getByRole("button", { name: "Restart", exact: true }).click();
+  await expect(ruler).toHaveAttribute("aria-valuenow", "0");
   const first = preview.getByRole("button", { name: "Opacity keyframe 0:00:00", exact: true });
   await first.click();
   await first.press("ArrowRight");
