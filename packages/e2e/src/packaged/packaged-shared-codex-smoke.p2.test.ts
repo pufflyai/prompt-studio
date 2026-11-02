@@ -146,10 +146,13 @@ test.each([false, true])(
       expect(calls().filter((call) => call.method === "turn/interrupt")).toHaveLength(1);
       const source = await request(`/sessions/${sessions[0].id}`);
       const history = await request(`/sessions/${source.id}/conversation`);
+      const nativeHistory = (await request(`/sessions/${source.id}/conversation/sources`)).native;
+      expect(nativeHistory.length).toBeGreaterThan(0);
       const fork = await request(`/sessions/${source.id}/fork`, "POST");
       expect(fork.original_session_id).toBe(source.id);
       expect(fork.agent_session_id).not.toBe(source.agent_session_id);
       expect((await request(`/sessions/${fork.id}/conversation`)).messages).toEqual(history.messages);
+      expect((await request(`/sessions/${fork.id}/conversation/sources`)).native).toEqual(nativeHistory);
       expect(calls().filter((call) => call.method === "turn/start")).toHaveLength(2);
       expect(calls().filter((call) => call.method === "thread/fork")).toMatchObject([
         { params: { threadId: source.agent_session_id, deferGoalContinuation: true } },

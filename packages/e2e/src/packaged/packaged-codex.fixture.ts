@@ -77,12 +77,14 @@ for await (const line of createInterface({ input: process.stdin })) {
   if (message.method === "turn/start") {
     const turn = threads.get(params.threadId)!.turns.at(-1)!;
     if (startedTurn) emit({ method: "turn/started", params: { threadId: params.threadId, turn } });
+    const item = { id: "answer", type: "agentMessage", text: params.input[0].text };
+    turn.items.push(item);
     emit({
       method: "item/completed",
       params: {
         threadId: params.threadId,
         turnId: turn.id,
-        item: { id: "answer", type: "agentMessage", text: params.input[0].text },
+        item,
       },
     });
   }
