@@ -254,7 +254,6 @@ export const startRelayRuntime = async (input: {
       await running;
       for (const owners of coreOwners) await owners.done();
       await Promise.all([...connections.values()].map((connection) => connection.done));
-      for (const channel of live.values()) channel.close();
       await Promise.all([...live.values()].map((channel) => channel.done));
       live.clear();
     },
