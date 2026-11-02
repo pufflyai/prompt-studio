@@ -69,7 +69,7 @@ test("an extension page navigates through the public API and browser history", a
 
   await page.goBack();
 
-  await expect(page).toHaveURL(`/projects/${project.id}`);
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-home/home`);
   await expect(homePage(page)).toBeVisible();
   await expect(page.locator('iframe[title="Lab"]')).toBeHidden();
   await expect(sidenav.getByRole("option", { name: /Session 1 — first contact/ })).toHaveCount(0);
@@ -102,7 +102,7 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
   // The project button stays on a root-level page such as Tickets, so history leads back to Start.
   await page.goBack();
 
-  await expect(page).toHaveURL(`/projects/${project.id}`);
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-home/home`);
   await expect(homePage(page)).toBeVisible();
   await expect(page.getByRole("group", { name: "Ticket filter", exact: true })).toBeHidden();
 });

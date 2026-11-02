@@ -52,7 +52,7 @@ test("Go destinations use shortcut mode while history chords and Shift slash rem
   await expect(page).toHaveURL(/\/sessions\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Alt+Shift+ArrowRight");
   await expect(page).toHaveURL(/\/sessions\/compose$/);
@@ -318,7 +318,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
   await page.keyboard.press("h");
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("n");
