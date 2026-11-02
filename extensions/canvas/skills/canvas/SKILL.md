@@ -46,7 +46,7 @@ export const Small = { name: "Small size", args: { children: "Save", size: "sm" 
 
 ## Parameters, playback, and saved versions
 
-Declare `controls` on a frame or default export: `number` with min/max/step, `boolean`, or `select` with value/label options. Args supply initial values. Select a frame to show its parameters, versions, and playback in the Frame editor menu on the right. With no selection the menu asks for a frame. Switching selection retains each frame’s temporary values and playback state. Parameters update only that frame and keep React state. Reset restores the selected version. Temporary experiments do not edit source.
+Declare `controls` on a frame or default export: `number` with min/max/step, `boolean`, or `select` with value/label options. Args supply initial values. Select a frame to show its parameters and versions in the Frame editor menu on the right. With no selection the menu asks for a frame. Switching selection retains each frame’s temporary values and playback state. Parameters update only that frame and keep React state. Reset restores the selected version. Temporary experiments do not edit source.
 
 Declare `motion: { duration, fps?, markers? }` to drive a `time` arg in seconds from independent play/pause, scrub, speed, and loop-range controls. Derive animation from time so scrubbing works.
 
@@ -81,7 +81,10 @@ A proposal shows UI a ticket will add or change before production code changes. 
 Require browser or visual checks only when a change risks blocking a primary task, hiding essential content or controls, breaking keyboard/focus behavior, violating preview isolation, or reintroducing a critical regression. Keep examples for exploration without a test for every example. Report the canvas file, exact export, checks run and any untested device behavior.
 
 
-Animated frames show a shared timeline in a bottom tray when selected. The tray follows
+Animated frames show a shared timeline in a bottom tray when selected.
+The tray hugs its content. Close either panel with its close button; use the panel
+icons at the top right of Canvas to reopen it. Closing preserves selection, edits
+and playback time. Markers are diamonds, and transport uses icon buttons. The tray follows
 selection and disappears for a static frame or empty selection. Scrub its playhead,
 seek named markers, or use Play/Pause/Restart. Each frame retains its own playback
 position and settings. Parameters, saved versions, speed and loop settings stay in

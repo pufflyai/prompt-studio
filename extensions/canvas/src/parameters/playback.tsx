@@ -3,7 +3,7 @@ import { KeyframeTimeline } from "@pstdio/ui/keyframe-timeline";
 import { ParamEditor } from "@pstdio/ui/param-editor";
 import { useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FrameAnimationOutlet } from "./editor-outlet";
+import { FrameAnimationOutlet, FrameEditorVisible } from "./editor-outlet";
 import { type FrameParameters, nextPlaybackTime, type Values } from "./model";
 import type { PlaybackSettings } from "./review";
 
@@ -18,6 +18,7 @@ interface PlaybackProps {
 export const Playback = (props: PlaybackProps) => {
   const { motion, onChange } = props;
   const outlet = useContext(FrameAnimationOutlet);
+  const editorVisible = useContext(FrameEditorVisible);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(true);
@@ -74,11 +75,13 @@ export const Playback = (props: PlaybackProps) => {
   if (!props.active) return null;
   return (
     <>
-      {outlet &&
+      {outlet?.element &&
+        outlet.open &&
         createPortal(
-          <Box h="sm" maxH="40vh" minH="0" data-frame-playback={props.name}>
+          <Box maxH="40vh" minH="0" data-frame-playback={props.name}>
             <KeyframeTimeline
               label={`Animations · ${props.name}`}
+              onClose={outlet.close}
               tracks={[{ id: "animation", label: "Animation", keyframes: [] }]}
               duration={motion.duration}
               framesPerSecond={motion.fps ?? 60}
@@ -101,55 +104,57 @@ export const Playback = (props: PlaybackProps) => {
               }))}
             />
           </Box>,
-          outlet,
+          outlet.element,
         )}
-      <Stack gap="sm" p="sm" data-frame-animation-settings>
-        <ParamEditor
-          params={[
-            { id: "loop", type: "boolean", name: "Loop", defaultValue: loop },
-            {
-              id: "rate",
-              type: "selection",
-              name: "Speed",
-              defaultValue: String(rate),
-              options: [0.25, 0.5, 1, 1.5, 2].map((value) => ({ id: String(value), name: `${value}×` })),
-            },
-            {
-              id: "start",
-              type: "number",
-              name: "Loop start",
-              min: 0,
-              max: end - 1 / (motion.fps ?? 60),
-              step: 0.1,
-              defaultValue: start,
-            },
-            {
-              id: "end",
-              type: "number",
-              name: "Loop end",
-              min: start + 1 / (motion.fps ?? 60),
-              max: motion.duration,
-              step: 0.1,
-              defaultValue: end,
-            },
-          ]}
-          onChange={(id, value) => {
-            interact();
-            if (id === "loop") setLoop(Boolean(value));
-            if (id === "rate") setRate(Number(value));
-            if (id === "start") {
-              const next = Math.max(0, Math.min(Number(value), end - 1 / (motion.fps ?? 60)));
-              setStart(next);
-              seek(next);
-            }
-            if (id === "end") {
-              const next = Math.min(motion.duration, Math.max(Number(value), start + 1 / (motion.fps ?? 60)));
-              setEnd(next);
-              seek(Math.min(time, next));
-            }
-          }}
-        />
-      </Stack>
+      {editorVisible && (
+        <Stack gap="sm" p="sm" data-frame-animation-settings>
+          <ParamEditor
+            params={[
+              { id: "loop", type: "boolean", name: "Loop", defaultValue: loop },
+              {
+                id: "rate",
+                type: "selection",
+                name: "Speed",
+                defaultValue: String(rate),
+                options: [0.25, 0.5, 1, 1.5, 2].map((value) => ({ id: String(value), name: `${value}×` })),
+              },
+              {
+                id: "start",
+                type: "number",
+                name: "Loop start",
+                min: 0,
+                max: end - 1 / (motion.fps ?? 60),
+                step: 0.1,
+                defaultValue: start,
+              },
+              {
+                id: "end",
+                type: "number",
+                name: "Loop end",
+                min: start + 1 / (motion.fps ?? 60),
+                max: motion.duration,
+                step: 0.1,
+                defaultValue: end,
+              },
+            ]}
+            onChange={(id, value) => {
+              interact();
+              if (id === "loop") setLoop(Boolean(value));
+              if (id === "rate") setRate(Number(value));
+              if (id === "start") {
+                const next = Math.max(0, Math.min(Number(value), end - 1 / (motion.fps ?? 60)));
+                setStart(next);
+                seek(next);
+              }
+              if (id === "end") {
+                const next = Math.min(motion.duration, Math.max(Number(value), start + 1 / (motion.fps ?? 60)));
+                setEnd(next);
+                seek(Math.min(time, next));
+              }
+            }}
+          />
+        </Stack>
+      )}
     </>
   );
 };

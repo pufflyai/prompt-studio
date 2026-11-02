@@ -1,16 +1,25 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { Box, Flex, Icon, Stack, Text } from "@chakra-ui/react";
+import { resolveIconComponent, ScrollArea } from "@pstdio/ui";
 import { createContext, type RefCallback, useSyncExternalStore } from "react";
 import type { CanvasDefinition } from "../canvas-model";
+import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
 
 // The portal keeps each editor with its frame's React state while displaying it outside the stage.
 export const FrameEditorOutlet = createContext<HTMLElement | null>(null);
-export const FrameAnimationOutlet = createContext<HTMLElement | null>(null);
+export const FrameEditorVisible = createContext(true);
+export const FrameAnimationOutlet = createContext<{
+  element: HTMLElement | null;
+  open: boolean;
+  close: () => void;
+} | null>(null);
+const Close = resolveIconComponent("x")!;
 interface FrameEditorMenuProps {
   canvas: CanvasDefinition;
   runtime: CanvasRuntime;
   outlet: RefCallback<HTMLDivElement>;
+  open: boolean;
+  onClose: () => void;
 }
 export const FrameEditorMenu = (props: FrameEditorMenuProps) => {
   const { canvas, runtime, outlet } = props;
@@ -19,6 +28,7 @@ export const FrameEditorMenu = (props: FrameEditorMenuProps) => {
   return (
     <Stack
       as="aside"
+      display={props.open ? "flex" : "none"}
       aria-label="Frame editor"
       w="xs"
       maxW="50%"
@@ -29,10 +39,12 @@ export const FrameEditorMenu = (props: FrameEditorMenuProps) => {
       borderStartWidth="1px"
       borderColor="border.subtle"
     >
-      <Stack p="sm" gap="xs" borderBottomWidth="1px" borderColor="border.subtle">
+      <Flex p="sm" align="center" justify="space-between" borderBottomWidth="1px" borderColor="border.subtle">
         <Text textStyle="label/M/medium">Frame editor</Text>
-        {item && <Text textStyle="label/S/medium">{item.name}</Text>}
-      </Stack>
+        <Button size="xs" variant="ghost" aria-label="Close frame editor" onClick={props.onClose}>
+          <Icon as={Close} boxSize="icon-sm" />
+        </Button>
+      </Flex>
       <ScrollArea flex="1" minH="0">
         {!item && (
           <Text p="sm" color="fg.muted">

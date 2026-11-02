@@ -1,4 +1,5 @@
-import { Box, Button, Field, Flex, Grid, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Field, Flex, Grid, IconButton, Input, Stack, Text } from "@chakra-ui/react";
+import { PanelBottom, PanelRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { KeyframeTimeline } from "@/components/keyframe-timeline";
 import { SegmentedControl, Slider, Switch } from "@/components/primitives";
@@ -17,6 +18,8 @@ const StudyFrame = (props: { motion?: boolean }) => {
   const [name, setName] = useState("Soft dots");
   const [version, setVersion] = useState("Default");
   const [selected, setSelected] = useState(true);
+  const [editorOpen, setEditorOpen] = useState(true);
+  const [timelineOpen, setTimelineOpen] = useState(true);
   const [time, setTime] = useState(2);
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(true);
@@ -42,9 +45,29 @@ const StudyFrame = (props: { motion?: boolean }) => {
     <Stack p="md" gap="md" bg="bg" h="full">
       <Flex gap="sm" align="center" justify="space-between">
         <Text textStyle="label/M/medium">{motion ? "Chat turn" : `Dots · ${version}`}</Text>
-        <Button size="xs" variant="outline" onClick={() => setSelected(!selected)}>
-          {selected ? "Clear selection" : "Select frame"}
-        </Button>
+        <Flex gap="xs">
+          <IconButton
+            size="xs"
+            variant="ghost"
+            aria-label="Toggle animation timeline"
+            aria-pressed={timelineOpen}
+            onClick={() => setTimelineOpen(!timelineOpen)}
+          >
+            <PanelBottom />
+          </IconButton>
+          <IconButton
+            size="xs"
+            variant="ghost"
+            aria-label="Toggle frame editor"
+            aria-pressed={editorOpen}
+            onClick={() => setEditorOpen(!editorOpen)}
+          >
+            <PanelRight />
+          </IconButton>
+          <Button size="xs" variant="outline" onClick={() => setSelected(!selected)}>
+            {selected ? "Clear selection" : "Select frame"}
+          </Button>
+        </Flex>
       </Flex>
       <Flex flex="1" minH="0" gap="md">
         <Box flex="1" minW="0" onClick={() => setSelected(true)}>
@@ -68,6 +91,7 @@ const StudyFrame = (props: { motion?: boolean }) => {
         </Box>
         <Stack
           as="aside"
+          display={editorOpen ? "flex" : "none"}
           aria-label="Frame editor"
           w="xs"
           flexShrink="0"
@@ -75,84 +99,87 @@ const StudyFrame = (props: { motion?: boolean }) => {
           borderStartWidth="1px"
           borderColor="border.subtle"
         >
-          <Text textStyle="label/M/medium">Frame editor</Text>
+          <Flex align="center" justify="space-between">
+            <Text textStyle="label/M/medium">Frame editor</Text>
+            <IconButton size="xs" variant="ghost" aria-label="Close frame editor" onClick={() => setEditorOpen(false)}>
+              <X />
+            </IconButton>
+          </Flex>
           {selected ? (
-            <>
-              <Text textStyle="label/S/medium">{motion ? "Chat turn" : "Dots"}</Text>
-              <Stack gap="md">
-                <Text textStyle="label/S/medium">Opacity · {values.opacity}%</Text>
-                <Slider
-                  aria-label={["Opacity"]}
-                  min={0}
-                  max={100}
-                  value={[values.opacity]}
-                  onValueChange={({ value }) => setValues({ ...values, opacity: value[0] })}
-                />
-                {!motion && (
-                  <>
-                    <Text textStyle="label/S/medium">Density · {values.density}</Text>
-                    <Slider
-                      aria-label={["Density"]}
-                      min={2}
-                      max={12}
-                      step={1}
-                      value={[values.density]}
-                      onValueChange={({ value }) => setValues({ ...values, density: value[0] })}
-                    />
-                  </>
-                )}
-                {motion && (
-                  <>
-                    <Switch checked={loop} onCheckedChange={({ checked }) => setLoop(checked)}>
-                      Loop
-                    </Switch>
-                    <SegmentedControl
-                      aria-label="Playback speed"
-                      options={[
-                        { value: "0.5", label: "0.5×" },
-                        { value: "1", label: "1×" },
-                        { value: "2", label: "2×" },
-                      ]}
-                      value={rate}
-                      onValueChange={setRate}
-                    />
-                  </>
-                )}
-                <Button variant="ghost" onClick={() => setValues(saved)}>
-                  Reset parameters
-                </Button>
-                {!motion && (
-                  <>
-                    <Field.Root>
-                      <Field.Label>Version name</Field.Label>
-                      <Input size="sm" value={name} onChange={(event) => setName(event.target.value)} />
-                    </Field.Root>
-                    <Button
-                      variant="primary"
-                      disabled={!dirty || !name.trim()}
-                      onClick={() => {
-                        setSaved(values);
-                        setVersion(name.trim());
-                      }}
-                    >
-                      Save as new version
-                    </Button>
-                  </>
-                )}
-                <Text role="status" textStyle="paragraph/S/regular" color="fg.muted">
-                  {dirty ? "Temporary changes" : `Saved version: ${version}`}
-                </Text>
-              </Stack>
-            </>
+            <Stack gap="md">
+              <Text textStyle="label/S/medium">Opacity · {values.opacity}%</Text>
+              <Slider
+                aria-label={["Opacity"]}
+                min={0}
+                max={100}
+                value={[values.opacity]}
+                onValueChange={({ value }) => setValues({ ...values, opacity: value[0] })}
+              />
+              {!motion && (
+                <>
+                  <Text textStyle="label/S/medium">Density · {values.density}</Text>
+                  <Slider
+                    aria-label={["Density"]}
+                    min={2}
+                    max={12}
+                    step={1}
+                    value={[values.density]}
+                    onValueChange={({ value }) => setValues({ ...values, density: value[0] })}
+                  />
+                </>
+              )}
+              {motion && (
+                <>
+                  <Switch checked={loop} onCheckedChange={({ checked }) => setLoop(checked)}>
+                    Loop
+                  </Switch>
+                  <SegmentedControl
+                    aria-label="Playback speed"
+                    options={[
+                      { value: "0.5", label: "0.5×" },
+                      { value: "1", label: "1×" },
+                      { value: "2", label: "2×" },
+                    ]}
+                    value={rate}
+                    onValueChange={setRate}
+                  />
+                </>
+              )}
+              <Button variant="ghost" onClick={() => setValues(saved)}>
+                Reset parameters
+              </Button>
+              {!motion && (
+                <>
+                  <Field.Root>
+                    <Field.Label>Version name</Field.Label>
+                    <Input size="sm" value={name} onChange={(event) => setName(event.target.value)} />
+                  </Field.Root>
+                  <Button
+                    variant="primary"
+                    disabled={!dirty || !name.trim()}
+                    onClick={() => {
+                      setSaved(values);
+                      setVersion(name.trim());
+                    }}
+                  >
+                    Save as new version
+                  </Button>
+                </>
+              )}
+              <Text role="status" textStyle="paragraph/S/regular" color="fg.muted">
+                {dirty ? "Temporary changes" : `Saved version: ${version}`}
+              </Text>
+            </Stack>
           ) : (
             <Text color="fg.muted">Select a frame</Text>
           )}
         </Stack>
       </Flex>
-      {motion && selected && (
-        <Box h="sm" maxH="40vh">
+      {motion && selected && timelineOpen && (
+        <Box maxH="40vh">
           <KeyframeTimeline
             label="Animations · Chat turn"
+            onClose={() => setTimelineOpen(false)}
             tracks={[{ id: "chat-turn", label: "Animation", keyframes: [] }]}
             duration={6}
             currentTime={time}

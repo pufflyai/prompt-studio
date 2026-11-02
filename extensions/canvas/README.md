@@ -64,7 +64,7 @@ pst canvas layout read --canvas src/button.canvas.tsx
 
 ## Parameters, motion, and shader versions
 
-Project frames can advertise number, toggle, and choice controls. Select a frame to see its parameters, saved versions, and playback in the **Frame editor** menu on the right. Clearing selection empties the menu; selecting another frame preserves each frame’s temporary edits and playback state. Edits stay local across themes, moves, and camera gestures. Reset parameters restores its saved values. A `motion` declaration adds Play/Pause, Restart, precise time, speed, markers, and a loop range. Each frame starts paused and owns its clock.
+Project frames can advertise number, toggle, and choice controls. Select a frame to see its parameters and saved versions in the **Frame editor** menu on the right. Clearing selection empties the menu; selecting another frame preserves each frame’s temporary edits and playback state. Edits stay local across themes, moves, and camera gestures. Reset parameters restores its saved values. A `motion` declaration adds Play/Pause, Restart, precise time, speed, markers, and a loop range. Each frame starts paused and owns its clock.
 
 A literal `save: { file: "default.json", key: "values" }` declaration enables selection, explicit saving, and named JSON versions beside the canvas. The menu can rename or delete versions, while protecting the source's imported version. Errors preserve edits for retry. Agents use `pst canvas parameters <action> --help` for the same actions.
 
@@ -91,7 +91,10 @@ bun run --cwd packages/canvas-tests perf:startup
 Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots.
 
 
-Animated frames show a shared timeline in a bottom tray when selected. The tray follows
+Animated frames show a shared timeline in a bottom tray when selected.
+The tray hugs its content. Close either panel with its close button; use the panel
+icons at the top right of Canvas to reopen it. Closing preserves selection, edits
+and playback time. Markers are diamonds, and transport uses icon buttons. The tray follows
 selection and disappears for a static frame or empty selection. Scrub its playhead,
 seek named markers, or use Play/Pause/Restart. Each frame retains its own playback
 position and settings. Parameters, saved versions, speed and loop settings stay in

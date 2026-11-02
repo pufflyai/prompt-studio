@@ -8,6 +8,7 @@ import { Button } from "../components/themed-primitives";
 import { parametersChanged } from "../events";
 import { FrameHostContext } from "../frames/frame-loader";
 import { shadersChanged } from "../shaders/events";
+import { FrameEditorVisible } from "./editor-outlet";
 import type { FrameParameters, Values } from "./model";
 import { Playback } from "./playback";
 import { editableValues, useMotionReview } from "./review";
@@ -58,6 +59,7 @@ const savedVersions = async (host: Parameters<typeof createWebviewClient>[0], it
 export const ParameterEditor = (props: ParameterEditorProps) => {
   const { item, parameters, onChange } = props;
   const host = useContext(FrameHostContext);
+  const editorVisible = useContext(FrameEditorVisible);
   const [values, setValues] = useState(parameters.values);
   const [defaults, setDefaults] = useState(parameters.values);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -199,7 +201,7 @@ export const ParameterEditor = (props: ParameterEditorProps) => {
   // Keep values and clocks alive, but dispose inactive controls and their portaled menus.
   return (
     <Stack gap="md" p="sm">
-      {props.active && (
+      {props.active && editorVisible && (
         <Stack gap="md">
           {!!versions.length && (
             <ParamEditor
