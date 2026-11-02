@@ -1,18 +1,29 @@
 import { Box, Text } from "@chakra-ui/react";
 import { type FrameBootstrap, type FrameMessage, type FrameRequest, frameProtocol } from "@pstdio/canvas";
 import { useThemePreference } from "@pstdio/ui";
-import { type RefObject, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, type RefObject, Suspense, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import type { CanvasItem } from "../canvas-model";
 import { Button } from "../components/themed-primitives";
 import type { CanvasRuntime } from "../controller/runtime";
 import { frameThemeOption, resolveFrameTheme } from "../frame-themes";
+import { FrameEditorOutlet } from "../parameters/editor-outlet";
+import { readParameters, type Values } from "../parameters/model";
 import { frameDocument } from "./assets";
 import { FrameLoaderContext } from "./frame-loader";
 import { FrameLoading } from "./frame-loading";
 import { navigateFrame } from "./navigation";
 import { useFrameStartup } from "./use-frame-startup";
 
-const postFrame = (frame: HTMLIFrameElement | null, message: Omit<FrameRequest, "protocol">) =>
+const ParameterEditor = lazy(() =>
+  import("../parameters/menu").then(({ ParameterEditor }) => ({ default: ParameterEditor })),
+);
+
+type ParameterRequest = Omit<FrameRequest, "type" | "protocol"> & {
+  type: FrameRequest["type"] | "args";
+  args?: Values;
+};
+const postFrame = (frame: HTMLIFrameElement | null, message: ParameterRequest) =>
   frame?.contentWindow?.postMessage({ protocol: frameProtocol, ...message }, "*");
 const validFrameMessage = (event: MessageEvent<FrameMessage>, frame: HTMLIFrameElement | null) =>
   event.source === frame?.contentWindow && event.data?.protocol === frameProtocol;
@@ -25,6 +36,7 @@ interface FramePreviewProps {
 }
 export const FramePreview = (props: FramePreviewProps) => {
   const { item, runtime, container, selected: frameSelected } = props;
+  const editorOutlet = useContext(FrameEditorOutlet);
   const frameBootstrap = useContext(FrameLoaderContext);
   const frame = useRef<HTMLIFrameElement>(null);
   const nonce = useRef(crypto.randomUUID());
@@ -35,6 +47,7 @@ export const FramePreview = (props: FramePreviewProps) => {
   const [bootstrap, setBootstrap] = useState<FrameBootstrap>();
   const [height, setHeight] = useState(item.height);
   const [information, setInformation] = useState<FrameMessage["information"]>();
+  const [parameters, setParameters] = useState<ReturnType<typeof readParameters>>();
   const [ready, setReady] = useState(false);
   const [imported, setImported] = useState(false);
   const [error, setError] = useState("");
@@ -130,6 +143,7 @@ export const FramePreview = (props: FramePreviewProps) => {
           });
           setReady(true);
           setInformation(message.information);
+          setParameters(readParameters(message.information));
           break;
         case "error":
           setError(message.message ?? "Preview failed");
@@ -160,6 +174,29 @@ export const FramePreview = (props: FramePreviewProps) => {
   if (error) phase = "error";
   return (
     <Box data-ui-canvas-frame data-frame-startup={phase}>
+      {editorOutlet &&
+        createPortal(
+          <Box hidden={!frameSelected} data-frame-editor={item.id}>
+            {parameters && (Object.keys(parameters.controls).length > 0 || parameters.motion) ? (
+              <Suspense fallback={null}>
+                <ParameterEditor
+                  active={frameSelected}
+                  item={item}
+                  parameters={parameters}
+                  restoreTheme={(theme) => {
+                    if (!runtime.get().themes[item.id]) runtime.setTheme(item.id, theme);
+                  }}
+                  onChange={(args) => postFrame(frame.current, { nonce: nonce.current, type: "args", args })}
+                />
+              </Suspense>
+            ) : (
+              <Text p="sm" color="fg.muted">
+                {ready ? "No editable parameters" : "Loading frame…"}
+              </Text>
+            )}
+          </Box>,
+          editorOutlet,
+        )}
       {error && (
         <Text role="alert" data-ui-canvas-error>
           {error}
@@ -193,6 +230,7 @@ export const FramePreview = (props: FramePreviewProps) => {
           setReady(false);
           setImported(false);
           setInformation(undefined);
+          setParameters(undefined);
           setBootstrap(undefined);
           setTimings(undefined);
           setHeight(item.height);

@@ -1,8 +1,9 @@
 import { Component, type ReactNode, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { type CanvasFrame, type CanvasMeta, type CanvasPreview, CanvasThemeContext, composePreview } from "../compose";
+import { type ParameterValues, parameterValues } from "../parameters";
 import { createFrameAssetBridge } from "./assets";
-import { LiveFrame } from "./live-frame";
+import { type FrameArgsReady, LiveFrame } from "./live-frame";
 import { installFrameNavigation } from "./navigation";
 import { type FrameItem, type FrameMessage, type FrameRequest, type FrameTheme, frameProtocol } from "./protocol";
 
@@ -59,6 +60,10 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     }
   }
 
+  let applyArgs: Parameters<FrameArgsReady>[0];
+  const onArgsReady: FrameArgsReady = (update) => {
+    applyArgs = update;
+  };
   const Ready = (props: { loaded: LoadedFrame; minimumHeight: number }) => {
     const { loaded, minimumHeight } = props;
     useLayoutEffect(() => {
@@ -71,7 +76,15 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
           bootstrapMs: booted - (performance.getEntriesByName("canvas:bootstrap-received")[0]?.startTime ?? 0),
           committedMs: performance.now(),
         },
-        information: { args: inspect(loaded.args), description: loaded.description },
+        information: {
+          args: inspect(loaded.args),
+          description: loaded.description,
+          controls: loaded.controls,
+          motion: loaded.motion,
+          values: Object.fromEntries(
+            Object.entries(loaded.args).filter(([, value]) => ["string", "number", "boolean"].includes(typeof value)),
+          ),
+        },
       });
       const first = requestAnimationFrame(() => {
         second = requestAnimationFrame(() => send({ type: "painted", timings: { firstPaintMs: performance.now() } }));
@@ -92,7 +105,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
           minHeight: minimumHeight ? `${minimumHeight}px` : undefined,
         }}
       >
-        <LiveFrame Frame={loaded.Component} args={loaded.args} />
+        <LiveFrame Frame={loaded.Component} args={loaded.args} onArgsReady={onArgsReady} />
       </div>
     );
   };
@@ -133,6 +146,27 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
       </CanvasThemeContext.Provider>,
     );
   };
+  const updateArgs = (change: ParameterValues) => {
+    if (!loaded) return;
+    try {
+      const controls = {
+        ...loaded.controls,
+        ...(loaded.motion
+          ? {
+              time: {
+                type: "number" as const,
+                min: 0,
+                max: loaded.motion.duration,
+                step: 1 / (loaded.motion.fps ?? 60),
+              },
+            }
+          : {}),
+      };
+      applyArgs?.(parameterValues(controls, {}, change));
+    } catch (error) {
+      send({ type: "error", message: String(error) });
+    }
+  };
   const receive = (event: MessageEvent<FrameRequest>) => {
     const message = event.data;
     if (event.source !== window.parent || message?.protocol !== frameProtocol) return;
@@ -141,6 +175,7 @@ export const mountFrameRuntime = (sources: Record<string, FrameSource>) => {
     if (message.theme) theme = message.theme;
     if (message.type === "assets") assets.receive(message);
     if (message.type === "theme") render();
+    if (message.type === "args" && message.args) updateArgs(message.args);
     if (message.type !== "render" || !message.item || item) return;
     item = message.item;
     void load(message.item)

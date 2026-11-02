@@ -1,6 +1,6 @@
 import { Box, Flex, Stack } from "@chakra-ui/react";
-import type { SceneProps } from "motion-lab/kit";
-import { Composer, duration, Message, progress, reveal, SessionWindow, timings } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { Composer, duration, Message, progress, reveal, SessionWindow, timings } from "../../kit";
 import { ComposerEdge, TurnStatus } from "./turn-status";
 
 const answer =
@@ -27,7 +27,7 @@ const StreamedReply = (props: SceneProps) => {
   });
 };
 
-export const ChatTurn = (props: SceneProps) => {
+const ChatTurn = (props: SceneProps) => {
   const { time, variant } = props;
   // Only the rise style moves messages; the others fade in place.
   const rise = variant.values.turn === "rise" ? 4 : 0;

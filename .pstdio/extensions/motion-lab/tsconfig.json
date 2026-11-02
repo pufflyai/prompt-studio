@@ -3,20 +3,10 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["bun"],
-    "paths": {
-      "@chakra-ui/react": ["./node_modules/@chakra-ui/react"],
-      "@pstdio/ui": ["./node_modules/@pstdio/ui"],
-      "lucide-react": ["./node_modules/lucide-react"],
-      "react": ["./node_modules/@types/react"],
-      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
-      "motion-lab/kit": ["./src/kit"]
-    }
+    "types": ["bun"]
   },
-  "include": ["extension.ts", "src", "../../../design/motion/studies"]
+  "include": ["extension.ts", "src"]
 }

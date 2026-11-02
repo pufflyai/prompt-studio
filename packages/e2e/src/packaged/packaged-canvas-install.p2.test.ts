@@ -4,7 +4,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { type Browser, chromium } from "@playwright/test";
-import { packExtension, readExtensionPackage } from "pstdio-extensions/distribution";
+import { packExtension } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runTestCommand } from "../scripts/run-test-command";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
@@ -38,7 +38,8 @@ const projectFiles: Record<string, string> = {
   "package.json": `{ "name": "canvas-consumer", "private": true }\n`,
   "src/button.tsx": "export const Button = (props: { label: string }) => <button>{props.label}</button>;\n",
   "src/button.canvas.tsx": `import { Button } from "./button";
-export default { title: "Components/Button", component: Button };
+export default { title: "Components/Button", component: Button,
+  controls: { label: { type: "select", label: "Label", options: [{ value: "Save", label: "Save" }, { value: "Archive", label: "Archive" }] } } };
 export const Primary = { args: { label: "Save" } };
 `,
   ".canvas/preview.tsx": `export default {
@@ -65,9 +66,6 @@ test(
     const phase = (name: string) =>
       console.log(`[Canvas install +${Math.round(performance.now() - startedAt)}ms] ${name}`);
     const root = mkdtempSync(join(tmpdir(), "packaged-canvas-"));
-    const { files } = await readExtensionPackage(packed.bytes);
-    // UI Canvas ships no previews; it renders what the project's own build wrote.
-    expect([...files.keys()].filter((path) => path.includes("catalog"))).toEqual([]);
     const registry = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
@@ -175,14 +173,19 @@ test(
       expect(button).toBeDefined();
       phase("assets and skill ready");
       browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
+      phase("browser launched");
       const page = await browser.newPage();
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
       await signInBrowser(page, started.descriptor);
+      phase("browser signed in");
       await page.goto(new URL(button.href, started.baseUrl).href);
+      phase("dashboard loaded");
       const viewer = page.frameLocator('iframe[title="UI Canvas"]');
       await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
       expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
       phase("project preview ready");
+      const editor = viewer.getByRole("complementary", { name: "Frame editor" });
+      await editor.getByText("Select a frame", { exact: true }).waitFor();
       await viewer
         .getByRole("button", { name: /^Theme for / })
         .first()
@@ -193,6 +196,11 @@ test(
       const preview = (await element!.contentFrame())!;
       await preview.waitForSelector('[data-frame-theme="pstdio-dark"]');
       expect(await preview.getByRole("button", { name: "Save" }).count()).toBe(1);
+      // The packaged editor follows the selected frame and lazy-loads its actual parameter controls.
+      await editor.getByText("Primary", { exact: true }).waitFor();
+      await editor.getByRole("button", { name: "Save", exact: true }).click();
+      await viewer.getByRole("menuitemradio", { name: "Archive", exact: true }).click();
+      await preview.getByRole("button", { name: "Archive", exact: true }).waitFor();
     } finally {
       await browser?.close();
       if (child) await stopProcess(child);

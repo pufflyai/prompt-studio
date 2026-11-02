@@ -23,6 +23,13 @@
     "packages/pstdio-db/src/db/schemas.zod.ts": ["duplicates"]
   },
   "workspaces": {
+    "design": {
+      // The project Canvas builder discovers these source entries without importing a registry.
+      "entry": ["package.json", "**/*.canvas.tsx", "**/.canvas/**/*.{ts,tsx}", "**/*.test.ts"],
+      "project": ["**/*.{ts,tsx}"],
+      // Chakra and the Canvas frame runtime require these peer packages in the owning project.
+      "ignoreDependencies": ["@emotion/react", "react-dom"]
+    },
     ".": {
       "entry": ["package.json", "knip.jsonc"],
       "project": ["*.json", "*.jsonc"],

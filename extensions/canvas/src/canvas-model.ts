@@ -11,6 +11,7 @@ export interface FramePreview {
   defaultTheme?: string;
   /** Changes whenever this canvas's own modules change, so only its frames reload. */
   revision: string;
+  save?: { file: string; key?: string };
 }
 export interface CanvasItem {
   id: string;
@@ -80,6 +81,9 @@ export const toCanvas = (manifest: CanvasBuildManifest, entry: CanvasEntry): Can
             description: frame.description,
             defaultTheme: frame.defaultTheme,
             revision,
+            ...("save" in frame && frame.save && typeof frame.save === "object"
+              ? { save: frame.save as FramePreview["save"] }
+              : {}),
           },
         })),
   };

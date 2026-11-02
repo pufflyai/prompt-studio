@@ -27,6 +27,17 @@ export const checkGroupedFolders = async (page: Frame, browserPage: Page) => {
   await item.getByRole("button", { name: "Select Folders", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const viewport = page.locator("[data-canvas-viewport]");
+  // Native focus/scrollIntoView offsets must be impossible, not corrected after hit testing.
+  expect(
+    await viewport.evaluate((element) => {
+      element.scrollLeft = 25;
+      element.scrollTop = 25;
+      return { x: element.scrollLeft, y: element.scrollTop };
+    }),
+  ).toEqual({ x: 0, y: 0 });
+  // Selecting an offscreen sibling must use the camera, never native element scrolling.
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(0);
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBe(0);
   await viewport.press("0");
   const stage = page.locator("[data-canvas-stage]").first();
   await expect.poll(() => stage.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a)).toBe(1);

@@ -1,6 +1,6 @@
 import { Box, HStack, Spinner, Text } from "@chakra-ui/react";
-import type { SceneProps } from "motion-lab/kit";
-import { duration, progress, timings, track } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { duration, progress, timings, track } from "../../kit";
 
 const edgeCycleSeconds = 2.2;
 

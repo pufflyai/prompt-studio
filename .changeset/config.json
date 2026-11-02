@@ -45,7 +45,8 @@
     "pstdio-psx",
     "storage-scale-fixture",
     "canvas-tests",
-    "pstdio-theme"
+    "pstdio-theme",
+    "design-studies"
   ],
   "snapshot": {
     "useCalculatedVersion": true,

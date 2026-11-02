@@ -109,12 +109,18 @@ export const indexCanvasFile = (path: string, source: string) => {
   const meta = resolveValue(index, index.file.statements.find(ts.isExportAssignment)?.expression);
   const metaFullscreen = flag(property(index, meta, "fullscreen"));
   const metaTheme = text(property(index, meta, "defaultTheme"));
+  const save = (value?: ts.Expression) => {
+    const configured = property(index, value, "save") ?? property(index, meta, "save");
+    const file = text(property(index, configured, "file"));
+    return file ? { file, key: text(property(index, configured, "key")) } : undefined;
+  };
   const frames = frameExports(index).map(({ exportName, value }) => ({
     exportName,
     name: text(property(index, value, "name")) ?? sentenceCase(exportName),
     description: text(property(index, value, "description")),
     fullscreen: flag(property(index, value, "fullscreen")) ?? metaFullscreen,
     defaultTheme: text(property(index, value, "defaultTheme")) ?? metaTheme,
+    save: save(value),
   }));
   const fileName = path
     .split("/")

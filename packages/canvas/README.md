@@ -62,6 +62,29 @@ The default export is optional. `title` is `"Group/Name"`; the part before the l
 
 Each named export whose value is a component or an object is one frame, in export order. Its name is `name`, or the export name in sentence case (`WithAction` becomes "With action"). Other exported values are ignored.
 
+## Editable parameters and motion
+
+A default export or object frame can declare `controls` for primitive args. Each control is a number (`min`, `max`, optional `step`), boolean, or select (`options` with `value` and `label`). Optional `label` and `description` describe the field.
+
+```tsx
+export default {
+  component: Surface,
+  args: { opacity: 0.4, active: true, style: "quiet", time: 0 },
+  controls: {
+    opacity: { type: "number", min: 0, max: 1, step: 0.05 },
+    active: { type: "boolean" },
+    style: { type: "select", options: [{ value: "quiet", label: "Quiet" }] },
+  },
+  motion: { duration: 6, fps: 60, markers: [{ at: 2, label: "Arrival" }] },
+  save: { file: "default.json", key: "values" },
+};
+export const Preview = {};
+```
+
+UI Canvas renders Parameters beside that frame. Edits update args without remounting; React input state and sibling frames survive. Reset restores the selected saved version's values. `motion` adds independent playback and scrubbing through the numeric `time` arg in seconds. Components should derive animation from `time` rather than the wall clock.
+
+`save` is optional. Its `file` must be a kebab-case JSON filename beside the canvas, declared literally in the default export or frame. `key` optionally identifies the primitive value record inside the JSON object. Frames inherit it from the default export. The host resolves this declaration from the build manifest. Save updates that version; Save as new version copies its shape and metadata to a named sibling. A version must have the same keys and value types as the authored file. For a root value record without `key`, version labels are stored in Canvas review storage so labels never become parameters. Wrapped records keep their names in JSON. Temporary edits never write project source. Rebuilding edited source still reloads the affected canvas as usual.
+
 ## Project setup
 
 An optional `.canvas/preview.tsx` applies to every canvas file in its folder and below; the nearest one wins. Use it for global CSS and providers:

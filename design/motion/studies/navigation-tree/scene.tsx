@@ -1,10 +1,10 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import { Header, ListRow, TreeList } from "@pstdio/ui";
 import { Files, Folder, MessageCircle, MoreHorizontal, MousePointer2, Search, Ticket } from "lucide-react";
-import type { SceneProps } from "motion-lab/kit";
-import { duration, PanelSurface, timings, track } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { duration, PanelSurface, timings, track } from "../../kit";
 
-export const NavigationTree = (props: SceneProps) => {
+const NavigationTree = (props: SceneProps) => {
   const { time } = props;
   const expansion = track(time, [
     { at: 1, value: 1, duration: duration(props, timings.treeExpand, true) },
