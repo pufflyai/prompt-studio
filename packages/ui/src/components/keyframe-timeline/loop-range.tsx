@@ -73,9 +73,7 @@ const Boundary = (props: LoopRangeProps & { boundary: "start" | "end" }) => {
 };
 export const LoopRange = (props: LoopRangeProps) => (
   <TimelineRow>
-    <TimelineLabel type="button" tabIndex={-1}>
-      Loop
-    </TimelineLabel>
+    <TimelineLabel as="span">Loop range</TimelineLabel>
     <TimelineLane>
       <TimelineLoopBand
         left={`${(100 * props.range.start) / props.duration}%`}

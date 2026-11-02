@@ -42,6 +42,9 @@ export interface KeyframeTimelineProps {
   markers?: TimelineMarker[];
   playing?: boolean;
   onPlayingChange?: (playing: boolean) => void;
+  /** Caller-owned loop playback. Provide onLoopChange to show its transport toggle. */
+  loop?: boolean;
+  onLoopChange?: (loop: boolean) => void;
   /** Override the default seek to zero, for example to restart a loop range. */
   onRestart?: () => void;
   label?: string;

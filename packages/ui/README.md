@@ -93,7 +93,11 @@ Omit it for read-only review. A move onto an occupied frame preserves both keys.
 The caller owns animation data, playback, persistence and undo. Optional controlled
 `selection` and `onSelectionChange` connect an external inspector; otherwise the
 component owns transient selection. Use `playing` and `onPlayingChange` to connect
-transport controls to the caller’s clock. Supply `onRestart` to restart a caller-owned
+transport controls to the caller’s clock. Pass `loop` and `onLoopChange` for the repeat
+toggle in the transport toolbar.
+Pinch or Ctrl-scroll over the time ruler to zoom around the pointer; ordinary horizontal
+scrolling stays native. Timeline zoom is temporary and independent of the surrounding canvas.
+Supply `onRestart` to restart a caller-owned
 loop range; the default restart seeks to zero. Markers navigate named moments without
 pretending to be editable property keys. Keys and markers use diamonds; transport uses
 toolbar icon buttons. Keyframe actions use the app’s context menus. Right-click a track to add at that position;

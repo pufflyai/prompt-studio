@@ -1,5 +1,5 @@
 import { Box, IconButton, Text, useRecipe } from "@chakra-ui/react";
-import { ChevronRight, Pause, Play, RotateCcw } from "lucide-react";
+import { ChevronRight, Pause, Play, Repeat, RotateCcw } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import { keyframeTimelineMetrics as metrics } from "../../theme/primitives/keyframe-timeline";
 import { ScrollArea } from "../primitives/scroll-area";
@@ -30,6 +30,7 @@ import {
 import { TimelineSettings } from "./timeline-settings";
 import { TimelineTrack } from "./timeline-track";
 import { useTimelineScrub } from "./use-timeline-scrub";
+import { useTimelineZoom } from "./use-timeline-zoom";
 
 export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
   const { tracks, duration, framesPerSecond: fps = 60 } = props;
@@ -46,7 +47,7 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
     tracks.find((entry) => entry.id === selection?.trackId) ??
     tracks.find((entry) => entry.id === trackId) ??
     tracks[0];
-  const width = Math.max(metrics.minimumWidth, duration * metrics.pixelsPerSecond);
+  const { width, viewportRef } = useTimelineZoom(ruler, duration);
   const select = (next: KeyframeSelection | null) => {
     setLocalSelection(next);
     props.onSelectionChange?.(next);
@@ -110,13 +111,33 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
             <RotateCcw />
           </IconButton>
         </Tooltip>
+        {props.onLoopChange && (
+          <Tooltip content="Loop playback">
+            <IconButton
+              size="xs"
+              variant="ghost"
+              aria-label="Loop playback"
+              aria-pressed={!!props.loop}
+              onClick={() => props.onLoopChange?.(!props.loop)}
+            >
+              <Repeat />
+            </IconButton>
+          </Tooltip>
+        )}
         <Text textStyle="mono/XS" role="timer">
           {timeLabel(currentTime, fps)} / {timeLabel(duration, fps)}
         </Text>
         <Box flex="1" />
         {props.settings && <TimelineSettings>{props.settings}</TimelineSettings>}
       </TimelineToolbar>
-      <ScrollArea flex="0 1 auto" minH="0" showHorizontalScrollbar role="group" aria-label="Animation tracks">
+      <ScrollArea
+        viewportRef={viewportRef}
+        flex="0 1 auto"
+        minH="0"
+        showHorizontalScrollbar
+        role="group"
+        aria-label="Animation tracks"
+      >
         <Box position="relative" minW="full" w={`${width + metrics.labelWidth}px`} {...scrub}>
           <TimelinePlayheadHandle
             ref={playheadHandle}

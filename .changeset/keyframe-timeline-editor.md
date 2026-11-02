@@ -1,5 +1,6 @@
 ---
 "@pstdio/ui": minor
+"pstdio": patch
 ---
 
-Add a reusable keyframe timeline with grouped property tracks, full-height playhead scrubbing, frame snapping, icon keyframe controls, keyboard timing edits, loop ranges and read-only marker review.
+Add a reusable keyframe timeline with grouped property tracks, full-height playhead scrubbing, frame snapping, context-menu keyframe actions, keyboard timing edits, a loop playback toggle, loop ranges, ruler pinch zoom and read-only marker review.

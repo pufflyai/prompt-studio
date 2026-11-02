@@ -292,3 +292,147 @@ test("clock overrun keeps playheads and context insertion bounded", async ({ pag
   await expect(preview.getByRole("button", { name: "Top keyframe 0:02:00", exact: true })).toBeFocused();
   await expect(preview.getByRole("button", { name: "Left keyframe 0:02:00", exact: true })).toHaveCount(1);
 });
+
+// Critical: the playback loop toggle must be directly reachable and expose its controlled state.
+test("loop playback toggle stays in the main transport", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Animation",
+  );
+  const loop = preview.getByRole("button", { name: "Loop playback", exact: true });
+  await expect(loop).toBeVisible();
+  await expect(loop).toHaveAttribute("aria-pressed", "true");
+  await loop.click();
+  await expect(loop).toHaveAttribute("aria-pressed", "false");
+  await loop.press("Space");
+  await expect(loop).toHaveAttribute("aria-pressed", "true");
+  await expect(preview.getByRole("slider", { name: "Loop start", exact: true })).toHaveAttribute(
+    "aria-valuenow",
+    "0.2",
+  );
+  await expect(preview.getByRole("slider", { name: "Timeline playhead", exact: true })).toHaveAttribute(
+    "aria-valuenow",
+    "0.4",
+  );
+});
+
+// Critical: ruler zoom must preserve the pointer's time and editing geometry without zooming the Canvas host.
+test("Ctrl wheel zooms the timeline ruler around its pointer", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Animation",
+  );
+  const ruler = preview.getByRole("slider", { name: "Timeline playhead", exact: true });
+  const viewport = preview
+    .getByRole("group", { name: "Animation tracks", exact: true })
+    .locator('[data-part="viewport"]');
+  const shell = page.frameLocator("[data-verification-host]");
+  const camera = shell.getByRole("button", { name: /Reset zoom to 100%/ });
+  const width = () => ruler.evaluate((element) => element.clientWidth);
+  const before = await width();
+  const bounds = (await ruler.boundingBox())!;
+  await expect(camera).toHaveAttribute(
+    "aria-label",
+    `Reset zoom to 100%, current zoom ${Math.round((bounds.width / before) * 100)}%`,
+  );
+  const cameraBefore = await camera.getAttribute("aria-label");
+  const anchor = { x: bounds.x + bounds.width * 0.4, y: bounds.y + bounds.height / 2 };
+  const pointTime = async () => {
+    const box = (await ruler.boundingBox())!;
+    return ((anchor.x - box.x) / box.width) * 2;
+  };
+  const originalTime = await pointTime();
+  await page.mouse.move(anchor.x, anchor.y);
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -200);
+  await page.keyboard.up("Control");
+  await expect.poll(width).toBeGreaterThan(before * 1.2);
+  expect(Math.abs((await pointTime()) - originalTime)).toBeLessThan(0.01);
+  await expect(camera).toHaveAttribute("aria-label", cameraBefore!);
+  await expect(ruler).toHaveAttribute("aria-valuenow", "0.4");
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, 100);
+  await page.keyboard.up("Control");
+  await expect.poll(width).toBeLessThan(before * 1.7);
+  expect(Math.abs((await pointTime()) - originalTime)).toBeLessThan(0.01);
+  const burstBefore = await width();
+  await ruler.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    for (let index = 0; index < 2; index++)
+      element.dispatchEvent(
+        new WheelEvent("wheel", {
+          ctrlKey: true,
+          deltaY: -20,
+          clientX: bounds.left + bounds.width * 0.5,
+          clientY: bounds.top + bounds.height / 2,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+  });
+  await expect.poll(width).toBeGreaterThan(burstBefore * 1.1);
+  const expanded = await width();
+  const scrollBefore = await viewport.evaluate((element) => element.scrollLeft);
+  await page.mouse.wheel(80, 0);
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(scrollBefore);
+  expect(await width()).toBe(expanded);
+  const movedBounds = (await ruler.boundingBox())!;
+  const key = preview.getByRole("button", { name: "Opacity keyframe 0:01:00", exact: true });
+  await key.click();
+  const keyBox = (await key.boundingBox())!;
+  const body = (await preview
+    .getByRole("group", { name: "Animation tracks", exact: true })
+    .locator('[aria-hidden="true"] > div')
+    .boundingBox())!;
+  expect(Math.abs(body.x - (keyBox.x + keyBox.width / 2))).toBeLessThanOrEqual(1);
+  const current = (await ruler.boundingBox())!;
+  await page.mouse.move(current.x + current.width * 0.5, current.y + current.height / 2);
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, 180);
+  await page.keyboard.up("Control");
+  await expect.poll(width).toBeLessThan(expanded);
+  await expect(camera).toHaveAttribute("aria-label", cameraBefore!);
+  expect(movedBounds.width).toBeGreaterThan(bounds.width);
+});
+
+// Critical: a no-op zoom at the limit must not undo a later horizontal pan on an unrelated render.
+test("zoom limits preserve the user's subsequent horizontal pan", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Animation",
+  );
+  const ruler = preview.getByRole("slider", { name: "Timeline playhead", exact: true });
+  const viewport = preview
+    .getByRole("group", { name: "Animation tracks", exact: true })
+    .locator('[data-part="viewport"]');
+  const cap = async () =>
+    ruler.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const viewport = element.closest('[data-part="viewport"]')!.getBoundingClientRect();
+      element.dispatchEvent(
+        new WheelEvent("wheel", {
+          ctrlKey: true,
+          deltaY: -10000,
+          bubbles: true,
+          cancelable: true,
+          clientX: viewport.left + viewport.width / 2,
+          clientY: bounds.top + bounds.height / 2,
+        }),
+      );
+    });
+  const initial = await ruler.evaluate((element) => element.clientWidth);
+  await cap();
+  await expect.poll(() => ruler.evaluate((element) => element.clientWidth)).toBeGreaterThan(initial * 50);
+  await cap();
+  const before = await viewport.evaluate((element) => element.scrollLeft);
+  const visible = (await viewport.boundingBox())!;
+  const row = (await ruler.boundingBox())!;
+  await page.mouse.move(visible.x + visible.width / 2, row.y + row.height / 2);
+  await page.mouse.wheel(200, 0);
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
+  const panned = await viewport.evaluate((element) => element.scrollLeft);
+  const loop = preview.getByRole("button", { name: "Loop playback", exact: true });
+  await loop.click();
+  await expect(loop).toHaveAttribute("aria-pressed", "false");
+  expect(Math.abs((await viewport.evaluate((element) => element.scrollLeft)) - panned)).toBeLessThanOrEqual(1);
+});

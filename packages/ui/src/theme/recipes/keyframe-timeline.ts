@@ -23,6 +23,8 @@ export const keyframeTimelineRecipe = defineSlotRecipe({
       display: "flex",
       flexDirection: "column",
       minW: "0",
+      // Timeline content grows inside its scrollport, never its containing grid or panel.
+      contain: "inline-size",
       minH: "0",
       h: "auto",
       maxH: "inherit",
