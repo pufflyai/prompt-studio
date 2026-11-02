@@ -5,7 +5,7 @@ export const useTabContextMenu = (triggerId: string, disabled = false) => {
   const anchor = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const trigger = useRef<HTMLElement | null>(null);
   const menu = useMenu({
-    ids: { trigger: triggerId },
+    ids: { contextTrigger: triggerId },
     positioning: { placement: "bottom-start", getAnchorRect: () => anchor.current, offset: { mainAxis: 0 } },
     onEscapeKeyDown: () => {
       const element = trigger.current;

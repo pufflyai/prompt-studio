@@ -48,3 +48,57 @@ test("Planner display settings close when their trigger is clicked again", async
   await overlay.press("Escape");
   await expect(overlay).toBeHidden();
 });
+
+// Critical: inspecting Auto Build must not repeatedly reopen its activity panel.
+test("Auto Build activity closes when the Auto Build button is clicked again", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "extensions/pstdio-planner/src/timeline/view/auto-build-button.canvas.tsx#Waiting",
+  );
+  const trigger = preview.getByRole("button", { name: "Auto Build", exact: true });
+  const activity = preview.getByRole("dialog", { name: "Auto Build activity", exact: true });
+  await trigger.click();
+  await expect(activity).toBeVisible();
+  await trigger.click();
+  await expect(activity).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await trigger.click();
+  await expect(activity).toBeVisible();
+  await activity.press("Escape");
+  await expect(activity).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test("Auto Build opens configuration when it is off", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "extensions/pstdio-planner/src/timeline/view/auto-build-button.canvas.tsx#Off",
+  );
+  await preview.getByRole("button", { name: "Auto Build", exact: true }).click();
+  const configuration = preview.getByRole("dialog", { name: "Auto Build", exact: true });
+  await expect(configuration).toBeVisible();
+  await expect(preview.getByRole("dialog", { name: "Auto Build activity", exact: true })).toHaveCount(0);
+  await configuration.press("Escape");
+  await expect(configuration).toBeHidden();
+});
+
+// Critical: selecting a resource tab must dismiss its context menu without changing tabs.
+test("clicking a tab closes its right-click menu", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/examples/api/api.canvas.tsx#ResourceTabs",
+  );
+  await preview.getByRole("button", { name: "Preview Beta", exact: true }).click();
+  const tab = preview.getByRole("tab", { name: "Beta.md", exact: true });
+  const menu = preview.getByRole("menu", { name: "Beta.md context menu", exact: true });
+  await tab.click({ button: "right" });
+  await expect(menu).toBeVisible();
+  await tab.click();
+  await expect(menu).toBeHidden();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+  await tab.press("Shift+F10");
+  await expect(menu).toBeVisible();
+  await menu.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(tab).toBeFocused();
+});
