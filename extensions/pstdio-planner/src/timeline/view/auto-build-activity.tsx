@@ -13,7 +13,7 @@ import {
 import { ScrollArea } from "@pstdio/ui";
 import { psTheme } from "@pstdio/ui/theme";
 import { Pause, Play, Square } from "lucide-react";
-import { type RefObject, useRef } from "react";
+import { type ReactElement, useRef } from "react";
 import type { AutoBuildButtonProps } from "./auto-build-button";
 import { AutoBuildHelp } from "./auto-build-help";
 import { AutoBuildRequests } from "./auto-build-requests";
@@ -47,8 +47,8 @@ interface AutoBuildActivityProps
   > {
   open: boolean;
   failed: boolean;
-  anchor: RefObject<HTMLButtonElement | null>;
-  onClose: () => void;
+  trigger: ReactElement;
+  onOpenChange: (open: boolean) => void;
   onStop: () => void;
   onConfigure: () => void;
 }
@@ -56,11 +56,11 @@ interface AutoBuildActivityProps
 export function AutoBuildActivity(props: AutoBuildActivityProps) {
   const {
     open,
-    anchor,
+    trigger,
     disabled,
     enabled,
     paused,
-    onClose,
+    onOpenChange,
     onStop,
     onConfigure,
     onPause,
@@ -81,9 +81,10 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
       unmountOnExit
       open={open}
       initialFocusEl={() => content.current}
-      positioning={{ placement: "bottom-end", getAnchorElement: () => anchor.current }}
-      onOpenChange={({ open }) => !open && onClose()}
+      positioning={{ placement: "bottom-end" }}
+      onOpenChange={({ open }) => onOpenChange(open)}
     >
+      <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Portal>
         <Popover.Positioner>
           <Popover.Content
@@ -101,7 +102,7 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
                   {paused ? ` · ${t("timeline.autoBuild.paused", "Paused")}` : ""}
                 </Popover.Title>
                 <AutoBuildHelp t={t} />
-                <CloseButton size="sm" disabled={disabled} onClick={onClose} marginLeft="auto" />
+                <CloseButton size="sm" disabled={disabled} onClick={() => onOpenChange(false)} marginLeft="auto" />
               </HStack>
             </Popover.Header>
             <Popover.Body display="flex" flexDirection="column" minH="0" flex="1">

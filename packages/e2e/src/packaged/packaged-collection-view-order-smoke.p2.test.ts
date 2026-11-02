@@ -100,6 +100,20 @@ test("packaged Kanban and data table view tabs save pointer and keyboard order",
     await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
     phase("browser signed in");
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
+    // Critical: explanatory tooltips must not block the primary action in the compiled dashboard.
+    const display = page.getByRole("button", { name: "Display settings", exact: true });
+    await display.click();
+    await page.getByRole("button", { name: "Ordering", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Title", exact: true }).click();
+    await page.keyboard.press("Escape");
+    phase("view changed");
+    await display.hover();
+    await expect(page.getByRole("tooltip")).toBeVisible();
+    phase("tooltip visible; saving view");
+    const save = page.getByRole("button", { name: "Save view", exact: true });
+    await save.click();
+    await expect(save).toBeHidden();
+    phase("view saved beneath tooltip");
     await verifyOrder(page, id, "pstdio.pstdio-planner.view.tickets");
     await page.goto(`${runtime.baseUrl}/projects/${id}/workspaces`);
     await verifyOrder(page, id, WORKSPACES_COLLECTION_ID);

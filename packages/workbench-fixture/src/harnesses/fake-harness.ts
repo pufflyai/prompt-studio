@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type {
   HarnessAttachment,
@@ -25,6 +25,8 @@ const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
 const HOLD_PROMPT_TRIGGER = "__fake_hold__";
 // Tests end a held run by writing this file into the session folder.
 const HOLD_RELEASE_FILE = ".fake-hold-release";
+const USER_ECHO_PROMPT_TRIGGER = "__fake_user_echo__";
+const USER_ECHO_RELEASE_FILE = ".fake-user-echo-release";
 
 const createQuestionToolPart = () => {
   const part = {
@@ -173,6 +175,26 @@ const createSession = (
   return session;
 };
 
+const replayUserEcho = (
+  agentSessionId: string,
+  input: Pick<HarnessStartInput, "cwd" | "events">,
+  messages: SessionMessage[],
+  index: number,
+) => {
+  const confirmed = { ...messages[index], createdAt: messages[index].createdAt ?? Date.now() };
+  const optimistic = { ...confirmed, id: `optimistic-${confirmed.id}` };
+  messages[index] = optimistic;
+  pushMessages(input.events, index, [optimistic]);
+  return createSession(agentSessionId, async (signal) => {
+    await waitForRelease(input.cwd, signal, USER_ECHO_RELEASE_FILE);
+    if (signal.aborted) return;
+    rmSync(join(input.cwd!, USER_ECHO_RELEASE_FILE), { force: true });
+    messages[index] = confirmed;
+    input.events.push({ op: "replace", path: `/messages/${index}`, value: confirmed });
+    pushMessages(input.events, index + 1, messages.slice(index + 1));
+  });
+};
+
 export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STREAM) => {
   const sessions = new Map<string, SessionMessage[]>();
 
@@ -211,6 +233,7 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
       const messages = buildStartMessages(agentSessionId, input);
 
       sessions.set(agentSessionId, messages);
+      if (input.prompt.includes(USER_ECHO_PROMPT_TRIGGER)) return replayUserEcho(agentSessionId, input, messages, 0);
       pushMessages(input.events, 0, messages);
 
       if (input.prompt.includes("__fake_async_questions__"))
@@ -231,6 +254,8 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
       }
 
       sessions.set(input.agentSessionId, nextMessages);
+      if (input.prompt.includes(USER_ECHO_PROMPT_TRIGGER))
+        return replayUserEcho(input.agentSessionId, input, nextMessages, startIndex);
       pushMessages(input.events, startIndex, newMessages);
 
       if (input.prompt.includes("__fake_async_questions__"))

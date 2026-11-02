@@ -117,7 +117,8 @@ export interface RuntimePrivateHandlerRecord {
     | "resourceList"
     | "status"
     | "tab"
-    | "tree";
+    | "tree"
+    | "textSource";
   operation: string;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with renderer-specific input
   handler: RendererCallback<any, any>;

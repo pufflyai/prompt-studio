@@ -1,3 +1,4 @@
+export { openDeviceCall, sealDeviceCall } from "./device-call";
 export {
   openBlob,
   openLive,

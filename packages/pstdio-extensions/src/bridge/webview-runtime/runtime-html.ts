@@ -37,8 +37,9 @@ const renderRuntimeHostDocument = (scriptTag: string) => `<!doctype html>
 
 export const getExtensionRuntimeScriptUrl = () => new URL("./runtime.bundle.js", import.meta.url).href;
 
+// The opaque iframe bootstrap is a classic script. Library bundles must keep module-only preload scaffolding out.
 export const renderExtensionRuntimeHtml = (scriptUrl: string) =>
-  renderRuntimeHostDocument(`<script src="${escapeAttribute(scriptUrl)}"></script>`);
+  renderRuntimeHostDocument(`<script type="text/javascript" src="${escapeAttribute(scriptUrl)}"></script>`);
 
 export const renderInlineExtensionRuntimeHtml = (runtimeScript: string) =>
-  renderRuntimeHostDocument(`<script>${escapeScriptContent(runtimeScript)}</script>`);
+  renderRuntimeHostDocument(`<script type="text/javascript">${escapeScriptContent(runtimeScript)}</script>`);

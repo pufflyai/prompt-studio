@@ -15,14 +15,17 @@ import type { SyncSpace } from "../encryption";
 import { DocumentBlobMissing, type DocumentRelay, DocumentUpdateTooLarge } from "./document-sync-types";
 import { readExactResponse } from "./exact-response";
 import { serviceAddress, serviceUrl } from "./http";
+import type { SubscribeDocument } from "./live";
 
 export const createDocumentRelay = (input: {
+  subscribe?: SubscribeDocument;
   origin: string;
   space: Pick<SyncSpace, "projectId" | "spaceOwner">;
   documentId: string;
   token: () => Promise<string>;
   signal: AbortSignal;
 }) => {
+  input.subscribe?.(input.space.spaceOwner, input.documentId);
   const address = serviceAddress(input.origin);
   const space = { projectId: input.space.projectId, spaceOwner: input.space.spaceOwner };
   const request = async (route: SyncRoute, init: RequestInit = {}) => {

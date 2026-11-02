@@ -1,5 +1,5 @@
 import { type SQL, sql } from "drizzle-orm";
-import { queryField } from "pstdio-sync";
+import { queryField } from "pstdio-sync/records";
 import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { recordNumberTextSql } from "./record-number-text";
 import {

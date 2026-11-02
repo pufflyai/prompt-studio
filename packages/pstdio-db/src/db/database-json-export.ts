@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { readDocumentRecord } from "pstdio-sync";
+import { readDocumentRecord } from "pstdio-sync/records";
 import * as Y from "yjs";
 
 /** The query surface shared by the previous and the current PGlite engine. */

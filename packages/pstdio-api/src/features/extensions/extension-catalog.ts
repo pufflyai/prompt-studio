@@ -19,10 +19,13 @@ const extensionCatalogEntrySchema = z.object({
     .regex(/^[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*$/)
     .optional(),
   displayName: z.string().min(1),
+  icon: z.string().min(1).optional(),
   description: z.string(),
   origin: gitOriginSchema,
   publisher: z.string().min(1).optional(),
   default: z.boolean(),
+  /** Discovery policy: unlisted sources remain available for installed-extension servicing. */
+  listed: z.boolean().optional(),
   /** Build policy: leave large optional sources available for download instead of embedding them. */
   bundleSource: z.boolean().optional(),
   /** Host policy: keep this installed user extension enabled in every project. */

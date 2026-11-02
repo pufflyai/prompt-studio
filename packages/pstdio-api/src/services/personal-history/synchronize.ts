@@ -1,4 +1,4 @@
-import type { SyncSpace } from "pstdio-sync";
+import type { SyncSpace } from "pstdio-sync/encryption";
 import { createDocumentSync, type DocumentRelay, type SyncFailure } from "pstdio-sync/relay";
 import { documentProgress } from "../relay/document-progress";
 import type { PersonalHistoryStore } from "./store";

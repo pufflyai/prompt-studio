@@ -21,6 +21,39 @@ afterEach(() => {
 });
 
 describe("readPackageManifest", () => {
+  test.each(["./missing.svg", "./extension.png"])("warns and loads when optional icon %s is invalid", (icon) => {
+    const dir = createPackage({
+      name: "reports",
+      version: "1.0.0",
+      publisher: "acme",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+      icon,
+    });
+    const result = readPackageManifest(dir);
+    expect(result.manifest?.id).toBe("acme.reports");
+    expect(result.manifest?.icon).toBeUndefined();
+    expect(result.entryPath).toBe(join(dir, "extension.ts"));
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({ severity: "warning", message: expect.stringContaining("icon is unavailable") }),
+    ]);
+  });
+
+  test("keeps an extension's icon beside its stable identity", () => {
+    const dir = createPackage({
+      name: "reports",
+      version: "1.0.0",
+      publisher: "acme",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+      icon: "FileChartColumn",
+    });
+    expect(readPackageManifest(dir).manifest).toMatchObject({
+      id: "acme.reports",
+      icon: "FileChartColumn",
+    });
+  });
+
   test("reads pstdio scope when declared", () => {
     const dir = createPackage({
       name: "repo-extension",

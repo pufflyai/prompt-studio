@@ -8,10 +8,11 @@ type Storage = Awaited<ReturnType<ExtensionsRouteDeps["extensionStorageService"]
 export const artifactTreeReader = (storage: Storage, prefix: string, roots: string[]) => {
   const tree = createFileTree(roots);
   const entries = async () =>
-    [...tree.active(await storage.records.list()).live.values()].filter((entry) => within(entry.node.path, prefix));
+    [...tree.active(await storage.records.list('["artifact-file",')).live.values()].filter((entry) =>
+      within(entry.node.path, prefix),
+    );
   const relative = (path: string) => posix.relative(prefix, path);
   return {
-    exists: async (path: string) => path === prefix || (await entries()).some((entry) => entry.node.path === path),
     list: async (pattern = "**/*") => {
       const glob = new Bun.Glob(pattern);
       return (await entries())

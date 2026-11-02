@@ -75,3 +75,9 @@ export const OpenFromBubble: Story = {
   id: "modules-sessions-session-chat-draft--open-from-bubble",
   args: { initiallyClosed: true },
 };
+
+export const NewSessionFocus: Story = {
+  args: { initiallyClosed: true },
+  description:
+    "Open a new session from the Side Panel. Typing starts in its chat input without an extra click; drafts keep only the workspace selector.",
+};

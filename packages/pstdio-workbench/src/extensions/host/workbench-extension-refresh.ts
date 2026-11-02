@@ -49,9 +49,15 @@ export const registerWorkbenchExtensionRendererRefreshEvents = (
   input: RegisterWorkbenchExtensionRendererRefreshEventsInput,
 ) => {
   const targets = rendererRefreshTargets(input.metadata);
+  // Palette providers declare the events that change their results, so an open palette lists again
+  // when data changes elsewhere, such as an agent deleting a resource.
+  const paletteEventIds = new Set(
+    (input.metadata.commandPaletteResources ?? []).flatMap((provider) => provider.refreshEventIds ?? []),
+  );
   return input.subscribe((event) => {
     const { id, ...envelope } = event;
     for (const target of targets.get(id) ?? []) refreshWorkbenchExtensionRenderer(input.workbench, target, envelope);
+    if (paletteEventIds.has(id)) input.workbench.commandPaletteResources.refresh();
   });
 };
 

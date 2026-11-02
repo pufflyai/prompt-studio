@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import type { WorkbenchCore, WorkbenchTabSnapshot, WorkbenchWidgetPlacement } from "../../core";
+import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTabSnapshot, WorkbenchWidgetPlacement } from "../../core";
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useWorkbenchStore } from "./use-workbench-store";
 
-const readPlacementTab = (placement: WorkbenchWidgetPlacement | undefined) =>
-  placement?.tab?.getSnapshot(toPanelInstance(placement)) ?? {};
+type Placement = WorkbenchWidgetPlacement | WorkbenchPanelInstance;
+const readPlacementTab = (placement: Placement | undefined) =>
+  placement?.tab?.getSnapshot("instanceId" in placement ? placement : toPanelInstance(placement)) ?? {};
 
-export const usePlacementTab = (placement: WorkbenchWidgetPlacement | undefined, workbench: WorkbenchCore) => {
+export const usePlacementTab = (placement: Placement | undefined, workbench: WorkbenchCore) => {
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const [state, setState] = useState<{ placement: typeof placement; snapshot: WorkbenchTabSnapshot }>(() => ({
     placement,

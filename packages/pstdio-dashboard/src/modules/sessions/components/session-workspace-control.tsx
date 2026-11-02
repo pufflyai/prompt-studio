@@ -68,7 +68,7 @@ export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => 
       selectedWorkspaceLabel={selectedWorkspaceLabel}
       onSelectWorkspace={handleSelectWorkspace}
       isDisabled={isExistingSession || isProjectLoading}
-      onOpenWorkspace={selectedWorkspace ? () => onOpenWorkspace(selectedWorkspace) : undefined}
+      onOpenWorkspace={isExistingSession && selectedWorkspace ? () => onOpenWorkspace(selectedWorkspace) : undefined}
     />
   );
 };

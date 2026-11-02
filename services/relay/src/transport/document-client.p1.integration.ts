@@ -2,7 +2,9 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type AssetStore, createDocumentStorage, createMemoryDocumentStore, sealState, sealUpdate } from "pstdio-sync";
+import { type AssetStore, createMemoryDocumentStore } from "pstdio-sync";
+import { sealState, sealUpdate } from "pstdio-sync/encryption";
+import { createDocumentStorage } from "pstdio-sync/records";
 import {
   createDocumentRelay,
   createDocumentRelayConnection,

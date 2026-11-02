@@ -7,23 +7,29 @@ const NativeWebSocket = globalThis.WebSocket as {
 
 test("an unchanged relay announcement makes a connected peer read without adding edits", async () => {
   const peer = createPackagedSyncPeer(undefined);
-  peer.documents.set("~records", { state: null, updates: [] });
+  peer.documents.set("~records_0123456789", { state: null, updates: [] });
   const socket = new NativeWebSocket(`${peer.origin.replace("http:", "ws:")}/sync/project/live`, {
-    headers: { authorization: "Bearer relay-access", "pstdio-sync-protocol": "1" },
+    headers: { authorization: "Bearer relay-access", "pstdio-sync-protocol": "1", "pstdio-live-protocol": "2" },
   });
   try {
     await new Promise<void>((resolve, reject) => {
       socket.addEventListener("message", () => resolve(), { once: true });
       socket.addEventListener("error", reject, { once: true });
     });
+    socket.send(JSON.stringify({ type: "subscribe", spaceOwner: null, topic: "records_0123456789" }));
+    const subscribed = new Promise<void>((resolve) =>
+      socket.addEventListener("message", () => resolve(), { once: true }),
+    );
+    socket.send(JSON.stringify({ type: "follow", spaceOwner: null, topic: "records_0123456789" }));
+    await subscribed;
     const read = new Promise<unknown>((resolve, reject) => {
       socket.addEventListener(
         "message",
         async (event) => {
           try {
             const message = JSON.parse(String(event.data));
-            expect(message).toMatchObject({ type: "changed", documentId: "records", lastSequence: 0 });
-            const response = await fetch(`${peer.origin}/sync/projects/project/documents/~records/read`, {
+            expect(message).toMatchObject({ type: "changed", documentId: "records_0123456789", lastSequence: 0 });
+            const response = await fetch(`${peer.origin}/sync/projects/project/documents/~records_0123456789/read`, {
               method: "POST",
               headers: { authorization: "Bearer relay-access", "pstdio-sync-protocol": "1" },
               body: JSON.stringify({ after: 0 }),
@@ -41,7 +47,7 @@ test("an unchanged relay announcement makes a connected peer read without adding
     expect(await read).toMatchObject({ updates: [], lastSequence: 0 });
     expect(peer.reads()).toBe(before + 1);
     expect(peer.states()).toBe(0);
-    expect(peer.documents.get("~records")?.updates).toHaveLength(0);
+    expect(peer.documents.get("~records_0123456789")?.updates).toHaveLength(0);
   } finally {
     socket.close();
     await peer.stop();

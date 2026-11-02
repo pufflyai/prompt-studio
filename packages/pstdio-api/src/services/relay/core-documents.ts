@@ -1,13 +1,16 @@
-import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync";
+import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
+import type { LiveConnection } from "pstdio-sync/relay";
 import {
   createDocumentRelay,
   createDocumentRelayConnection,
   createDocumentSync,
+  createLiveConnection,
   fetchSyncSpaces,
 } from "pstdio-sync/relay";
-import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
+import type { RelayDeps } from "./deps";
 import { documentProgress } from "./document-progress";
+import { createNativeDocumentChannel } from "./native-document-channel";
 import { reconcileProjectInfo } from "./project-info-owner";
 import { createSyncQuarantine } from "./quarantine";
 import { createResourceNumberSync } from "./resource-number-sync";
@@ -18,8 +21,9 @@ import type { RelayWorkbench } from "./runtime";
  * a new device reads before the project exists there.
  */
 export const startCoreDocumentSync = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
-  deps: ExtensionsRouteDeps;
+  deps: RelayDeps;
   access: () => Promise<{ token: string; expiresAt: string }>;
   signal: AbortSignal;
   statusChanged?: () => void;
@@ -47,30 +51,46 @@ export const startCoreDocumentSync = (input: {
   let generation: number | undefined;
   // Each reconnect replaces the document syncs. The first download stays done.
   let firstDownloaded = false;
+  const documentIds = new Set<string>();
   const close = () => {
     for (const sync of syncs) sync.close();
     syncs = [];
     numbers = undefined;
+    documentIds.clear();
   };
+  const channel =
+    input.live ?? createLiveConnection({ origin: config.relayOrigin, projectId: config.workbenchId, access, signal });
+  const live = createNativeDocumentChannel({
+    projectId: config.workbenchId,
+    deviceId: config.environmentId,
+    live: deps.nativeDocuments.live,
+    channel,
+  });
   const connection = createDocumentRelayConnection({
+    live: channel,
     origin: config.relayOrigin,
     projectId: config.workbenchId,
     access,
     signal,
-    synchronize: async (attemptSignal) => {
+    acceptsChange: (change) => change.spaceOwner === null && documentIds.has(change.documentId),
+    synchronize: async (attemptSignal, subscribe) => {
       const { project: space } = await fetchSyncSpaces({
         ...config,
         credential: config.renewalGrant,
         signal: attemptSignal,
       });
-      const relay = (documentId: string) =>
-        createDocumentRelay({
+      live.setSpace(space);
+      const relay = (documentId: string) => {
+        documentIds.add(documentId);
+        return createDocumentRelay({
+          subscribe,
           origin: config.relayOrigin,
           space,
           documentId,
           signal: attemptSignal,
           token: async () => (await access()).token,
         });
+      };
       const quarantine = (documentId: string) =>
         createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
       if (!syncs.length || attempt !== attemptSignal || generation !== space.generation) {
@@ -101,8 +121,8 @@ export const startCoreDocumentSync = (input: {
         quarantine,
       });
       await numbers!.synchronize();
-      if (!(await Promise.all([...syncs, numbers!].map((sync) => sync.status()))).every((status) => status.downloaded))
-        return;
+      const statuses = await Promise.all([...syncs, numbers!].map((sync) => sync.status()));
+      if (!statuses.every((status) => status.downloaded)) return;
       firstDownloaded = true;
       await reconcileProjectInfo(deps, config.workbenchId, checkedFolders);
     },
@@ -125,9 +145,14 @@ export const startCoreDocumentSync = (input: {
   return {
     wake: connection.wake,
     retry: connection.retry,
-    done: connection.done.finally(() => {
+    done: connection.done.finally(async () => {
       for (const stop of stops) stop();
       close();
+      await live.close();
+      if (!input.live) {
+        channel.close();
+        await channel.done;
+      }
     }),
     status: async () => {
       const statuses = await Promise.all([syncs[0]?.status(), numbers?.status()]);

@@ -3,6 +3,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { listProjectExtensionsResponseSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
+import { resolveCatalogIcon } from "../catalog-icon";
 import type { ExtensionsRouteDeps } from "../deps";
 import { getExtensionCatalog } from "../extension-catalog";
 import { hashExtensionSource } from "../extension-runtime";
@@ -37,6 +38,8 @@ export const listProjectExtensionsHandler = (
     const { projectId } = c.req.valid("param");
     try {
       const records = await deps.extensionService.listProjectExtensionInstances(projectId);
+      // Uninstall retains data-bearing rows for same-path restore. A retained row alone
+      // does not mean the package is still installed.
       const installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
       const extensions = await Promise.all(
         installedRecords.map(async ({ instance, installedSource }) =>
@@ -49,26 +52,33 @@ export const listProjectExtensionsHandler = (
       const installedIds = new Set(installedRecords.map(({ installedSource }) => installedSource.extension_id));
       const catalog = await getExtensionCatalog();
       const releaseRef = deps.extensionUpgradeService?.registry ? undefined : deps.extensionUpgradeService?.releaseRef;
-      const marketplace = catalog.extensions.map((extension) => ({
-        installName: extension.installName,
-        displayName: extension.displayName,
-        description: extension.description,
-        origin: {
-          kind: extension.origin.kind,
-          path: extension.origin.path,
-          // Catalog entries that follow the host release show the release they install.
-          ref: extension.origin.ref === "{hostRelease}" ? (releaseRef ?? extension.origin.ref) : extension.origin.ref,
-          url: extension.origin.url,
-        },
-        publisher: extension.extensionId?.split(".")[0] ?? extension.publisher,
-        registry:
-          deps.extensionUpgradeService?.registry && extension.extensionId
-            ? { url: deps.extensionUpgradeService.registry, extensionId: extension.extensionId }
-            : undefined,
-        installed:
-          installedNames.has(extension.installName) ||
-          Boolean(extension.extensionId && installedIds.has(extension.extensionId)),
-      }));
+      const marketplace = await Promise.all(
+        catalog.extensions
+          .filter((extension) => extension.listed !== false)
+          .map(async (extension) => ({
+            installName: extension.installName,
+            extensionId: extension.extensionId,
+            icon: await resolveCatalogIcon(extension),
+            displayName: extension.displayName,
+            description: extension.description,
+            origin: {
+              kind: extension.origin.kind,
+              path: extension.origin.path,
+              // Catalog entries that follow the host release show the release they install.
+              ref:
+                extension.origin.ref === "{hostRelease}" ? (releaseRef ?? extension.origin.ref) : extension.origin.ref,
+              url: extension.origin.url,
+            },
+            publisher: extension.extensionId?.split(".")[0] ?? extension.publisher,
+            registry:
+              deps.extensionUpgradeService?.registry && extension.extensionId
+                ? { url: deps.extensionUpgradeService.registry, extensionId: extension.extensionId }
+                : undefined,
+            installed:
+              installedNames.has(extension.installName) ||
+              Boolean(extension.extensionId && installedIds.has(extension.extensionId)),
+          })),
+      );
       return c.json({ extensions, marketplace }, 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
