@@ -59,7 +59,11 @@ const useSidenavContextActions = (
   onChange: SidenavContextActionsChange | undefined,
 ) => {
   const actionsRef = useRef(actions);
-  actionsRef.current = actions;
+  // Updated after render, before the effect below reads it: React Compiler skips hooks that write
+  // refs while rendering.
+  useEffect(() => {
+    actionsRef.current = actions;
+  }, [actions]);
 
   useEffect(() => {
     void revision;
