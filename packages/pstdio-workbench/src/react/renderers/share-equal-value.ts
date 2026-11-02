@@ -80,15 +80,18 @@ const shareParts = <T>(previous: unknown, next: T, active: WeakSet<object>, cycl
 };
 
 /**
- * Returns `value`, sharing every part that equals the value this hook returned last for the same `key` (see
+ * Returns `value`, sharing every part that equals the value this hook returned last for the same `scope` (see
  * `shareEqualValue`), so a component whose sources return new but equal objects passes the same objects on.
- * A new `key` starts over: objects from another query can carry another source. React Compiler treats a hook
+ * A `scope` with any different item starts over: objects from another query or registration can carry another
+ * source. React Compiler treats a hook
  * result as unchanging, so it can cache what is built from it. Parts that are not plain data, such as functions,
  * must keep their identity between renders, or every render would store a new value.
  */
-export const useSharedEqualValue = <T>(value: T, key: string): T => {
-  const [shown, setShown] = useState({ key, value });
-  const shared = shown.key === key ? shareEqualValue(shown.value, value) : value;
-  if (shown.key !== key || shared !== shown.value) setShown({ key, value: shared });
+export const useSharedEqualValue = <T>(value: T, scope: readonly unknown[]): T => {
+  const [shown, setShown] = useState({ scope, value });
+  const sameScope =
+    shown.scope.length === scope.length && shown.scope.every((item, index) => Object.is(item, scope[index]));
+  const shared = sameScope ? shareEqualValue(shown.value, value) : value;
+  if (!sameScope || shared !== shown.value) setShown({ scope, value: shared });
   return shared;
 };

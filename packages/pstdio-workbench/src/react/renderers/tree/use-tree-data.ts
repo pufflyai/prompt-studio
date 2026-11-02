@@ -47,6 +47,14 @@ export const useTreeData = (
         navigationTrees: workbench.navigationTrees,
       }).map(({ owner, location }) => [owner, resourceKey(location.resource)]),
     );
+  const navigationRegistrations = useSyncExternalStore(
+    (listener) => {
+      const subscription = workbench.navigationTrees.onDidChange(listener);
+      return () => subscription.dispose();
+    },
+    () => workbench.navigationTrees.getRegistrationRevision(),
+    () => workbench.navigationTrees.getRegistrationRevision(),
+  );
   const pageOwner = useSyncExternalStore(
     (listener) => {
       const subscription = workbench.navigationTrees.onDidChange(listener);
@@ -150,7 +158,13 @@ export const useTreeData = (
   // The renderer's structure, cached reads, and each load step return new objects even when nothing changed.
   // Parts equal to the tree on screen keep their objects, so React Compiler skips the rows whose data did not
   // change instead of rebuilding every row on each step.
-  const tree = useSharedEqualValue(loaded, queryKey);
+  // Rows keep the objects their renderer registered sources for, so a re-registered renderer or navigation
+  // contribution starts over, like a new query.
+  const tree = useSharedEqualValue(loaded, [
+    queryKey,
+    getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId),
+    navigationRegistrations,
+  ]);
   const renderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
   const movement = useTreeMovement({
     scope: childrenKey,
