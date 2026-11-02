@@ -3,7 +3,6 @@ import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/work
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { setDashboardExtensionsReadyProject } from "@/shared/extensions/extension-readiness";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { resolveDashboardPersistenceScope } from "@/shared/workbench/dashboard-persistence-scope";
 import { createBootstrapModule } from "./bootstrap";
 import { createExtensionsModule } from "./extensions/module";
 import { emptyAppearance, flushMicrotasks, metadata } from "./extensions/module-test-fixtures";
@@ -31,7 +30,7 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 };
 
 describe("createBootstrapModule", () => {
-  test("waits for project contributions before opening the configured default page", async () => {
+  test("opens Start before project extensions are ready", async () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -40,7 +39,7 @@ describe("createBootstrapModule", () => {
 
     try {
       await flushMicrotasks();
-      expect(workbench.pages.store.getState().activePageId).toBeUndefined();
+      expect(workbench.pages.store.getState().activePageId).toBe("start");
 
       setDashboardExtensionsReadyProject(workbench, "project-1");
       await flushMicrotasks();
@@ -113,34 +112,4 @@ describe("createBootstrapModule", () => {
       }
     });
   }
-});
-
-test("delayed boot preserves the active project recovery overlay", () => {
-  const workbench = createWorkbench({
-    startPage: { kind: "page", extensionId: "pstdio", id: "tools" },
-    resolvePagePersistenceScope: resolveDashboardPersistenceScope,
-  });
-  workbench.modes.registerMode({ id: "project", activate: () => undefined });
-  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-  workbench.pages.registerPage({
-    id: "tools",
-    ref: { kind: "page", extensionId: "pstdio", id: "tools" },
-    path: "tools",
-    modeId: "project",
-    main: { kind: "panels" },
-    slots: [],
-  });
-  workbench.views.registerView({
-    id: "opening",
-    title: "Opening project",
-    body: { kind: "react", render: () => null },
-  });
-  workbench.overlays.registerOverlay({ id: "opening", viewId: "opening", closable: false });
-  const bootstrap = workbench.registerModule(createBootstrapModule());
-  const opening = workbench.overlays.openOverlay("opening");
-  setDashboardExtensionsReadyProject(workbench, "project-1");
-  expect(workbench.layout.getLayout().regions.overlay.widgets.some((placement) => placement.widgetId === opening)).toBe(
-    true,
-  );
-  bootstrap.dispose();
 });

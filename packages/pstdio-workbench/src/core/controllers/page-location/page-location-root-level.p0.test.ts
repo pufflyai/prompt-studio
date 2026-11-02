@@ -135,13 +135,3 @@ describe("last root-level location", () => {
     expect(page(harness.registry.store.getState().location!.page)).toBe(page(startRef));
   });
 });
-
-test("a remembered root page that gains navigation no longer traps the project breadcrumb", () => {
-  const harness = createPageLocationHarness();
-  harness.controller.boot("p1");
-  harness.controller.navigate({ kind: "page", page: ticketsRef });
-  harness.openLevel("tickets");
-  harness.openLevel("sessions");
-  harness.controller.navigate({ kind: "page", page: sessionsRef });
-  expect(harness.controller.navigateToRootLevel()).toMatchObject({ ok: true, location: { page: startRef } });
-});

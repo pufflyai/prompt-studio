@@ -131,7 +131,6 @@ export const workbenchCommands = {
     extensionId: "pstdio",
     id: "dashboard.openCommandPalette",
   }),
-  openSettings: commandRef<{ panelId?: string }, void>({ extensionId: "pstdio", id: "workbench.settings.open" }),
   retryProjectSetup: commandRef<Record<string, never>, void>({
     extensionId: "pstdio",
     id: "workbench.project.retrySetup",

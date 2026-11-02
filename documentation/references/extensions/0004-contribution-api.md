@@ -678,6 +678,6 @@ keeps those rows and shows Retry, which reloads from the first page.
 
 ## Dashboard commands and session ordering (API 0.3.1 on main)
 
-Dashboard webviews with `commands.execute` can use public `workbenchCommands` refs: `newConversation`, `openToolSearch`, `openSettings` (optional `panelId`), and `retryProjectSetup`. Pass the ref's `id` to the host capability. Commands run in the webview's selected project; stale project invocations are rejected. Setup retry uses the existing project setup service and returns only after it finishes. These are dashboard commands, not server-side extension commands or CLI actions. Publish the SDK and host before extensions adopt these additions.
+Dashboard webviews with `commands.execute` can use public `workbenchCommands` refs: `newConversation`, `openToolSearch`, and `retryProjectSetup`. Pass the ref's `id` to the host capability. Commands run in the webview's selected project; stale project invocations are rejected. Setup retry uses the existing project setup service and returns only after it finishes. These are dashboard commands, not server-side extension commands or CLI actions. Publish the SDK and host before extensions adopt these additions.
 
 `ctx.sessions.query({ orderBy: "updated", limit: 5 })` returns the most recently updated conversations. Unlike `lastActivity`, this order uses only `updatedAt`, with descending IDs to break ties. Its cursor preserves that order across local and synced personal history.
