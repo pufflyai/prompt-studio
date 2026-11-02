@@ -1,4 +1,3 @@
-import { relayEventSchema, relayPath, type Scope } from "pstdio-sync-contracts";
 import { serviceAddress, serviceUrl } from "./http";
 
 const NativeWebSocket = globalThis.WebSocket as { new (url: string | URL, options?: Bun.WebSocketOptions): WebSocket };
@@ -278,17 +277,5 @@ export const createRelaySocket = (input: RelaySocketInput) => {
     },
   };
 };
-
-export const createRelayConnection = (
-  input: Omit<RelaySocketInput, "path" | "message" | "headers"> & { scope: Scope },
-) =>
-  createRelaySocket({
-    ...input,
-    path: relayPath(input.scope, "changes"),
-    message: (body) => {
-      const event = relayEventSchema.parse(body);
-      return event.type === "ready" ? "ready" : "changed";
-    },
-  });
 
 export { createDocumentRelayConnection } from "./document-connection";

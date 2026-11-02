@@ -3,15 +3,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./conformance": "./src/conformance/index.ts"
+    ".": "./src/index.ts"
   },
   "sideEffects": false,
   "scripts": {
     "test": "bun ../../scripts/ci/run-bun-tests.ts",
     "typecheck": "bun check",
-    "lint": "bun run typecheck && biome check .",
-    "test:integration": "bun scripts/isolated.ts"
+    "lint": "bun run typecheck && biome check ."
   },
   "dependencies": {
     "zod": "^4.3.6"

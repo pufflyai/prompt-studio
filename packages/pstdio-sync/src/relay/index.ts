@@ -1,9 +1,9 @@
 export { createRelayAccess } from "./access";
-export { createDocumentRelayConnection, createRelayConnection } from "./connection";
+export { createDocumentRelayConnection } from "./document-connection";
 export { createDocumentRelay } from "./document-http";
 export { createDocumentSync, latestStateLimits } from "./document-sync";
 export type { DocumentRelay, DocumentSyncInput, SyncFailure } from "./document-sync-types";
-export { createRelayAdapter, type RelayHttpInput, serviceAddress, serviceUrl } from "./http";
+export { serviceAddress, serviceUrl } from "./http";
 export { fetchSyncSpaces } from "./keys";
 export * from "./live";
 export type { AssetReferences } from "./record-assets";

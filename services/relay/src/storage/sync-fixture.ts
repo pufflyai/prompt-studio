@@ -35,9 +35,9 @@ export const createSyncFixture = () => {
     bucket,
     s3,
     databaseUrl,
-    async initialize() {
+    async initialize(migrations = resolve(import.meta.dir, "../../drizzle")) {
       await client.send(new CreateBucketCommand({ Bucket: bucket }));
-      await migrateRelayStorage(databaseUrl, resolve(import.meta.dir, "../../drizzle"));
+      await migrateRelayStorage(databaseUrl, migrations);
     },
     open(limits: Partial<RelayLimits> = {}) {
       const assets = createRelayAssets({ databaseUrl, bucket, s3 });
