@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { sessions, workspace_sessions, workspaces } from "../../db/schemas.pg";
 import { sessionColumns, workspaceColumns } from "../legacy-resource-links";
@@ -51,5 +51,13 @@ export const createWorkspaceSessionsDBService = (db: DbClient) => {
           and(eq(workspaces.project_id, projectId), eq(sessions.project_id, projectId), isNull(workspaces.deleted_at)),
         )
     ).map((row) => row.link);
-  return { link, getWorkspaceBySessionId, listByWorkspace, listLinks };
+  const activeWorkspaceIds = async () => {
+    const rows = await db
+      .selectDistinct({ id: workspace_sessions.workspace_id })
+      .from(workspace_sessions)
+      .innerJoin(sessions, eq(workspace_sessions.session_id, sessions.id))
+      .where(inArray(sessions.status, ["in_progress", "awaiting_input"]));
+    return rows.map((row) => row.id);
+  };
+  return { link, getWorkspaceBySessionId, listByWorkspace, listLinks, activeWorkspaceIds };
 };

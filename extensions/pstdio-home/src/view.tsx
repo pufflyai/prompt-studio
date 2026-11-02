@@ -96,7 +96,11 @@ const HomeApp = (props: AppProps) => {
     }
   };
   const browse = () => {
-    void run("browse-extensions", workbenchCommands.openSettings.id, { panelId: "extensions" });
+    void context.host
+      .call("navigation.open", {
+        target: { kind: "page", page: { kind: "page", extensionId: "pstdio", id: "extensions" } },
+      })
+      .catch((error) => setActionError({ id: "browse-extensions", message: String(error) }));
   };
   const actions = [
     {

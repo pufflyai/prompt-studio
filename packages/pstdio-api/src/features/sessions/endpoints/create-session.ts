@@ -156,6 +156,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
         async (attachments: HarnessAttachment[]) =>
           scheduler.createSession({
             projectId: input.project_id,
+            workspaceId: resolvedWorkspaceId,
             title: input.title,
             agentId,
             prompt,

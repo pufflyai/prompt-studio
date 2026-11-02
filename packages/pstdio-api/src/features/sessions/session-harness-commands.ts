@@ -149,7 +149,8 @@ export const invokeSessionHarnessOperation = async (
     }
     if (["in_progress", "awaiting_input", "queued"].includes(session.status))
       throw new HarnessOperationError("Finish or stop the current work before running this command.", 409);
-    if (prepared.execution === "exclusive" && !(await hasCreateCapacity(deps)))
+    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
+    if (prepared.execution === "exclusive" && !(await hasCreateCapacity(deps, workspace?.id)))
       throw new HarnessOperationError("All execution slots are in use. Try again when one is free.", 409);
     const resumed = await deps.sessionService.resume(id, {
       expectedStatus: session.status as "completed" | "failed" | "cancelled" | "disconnected",

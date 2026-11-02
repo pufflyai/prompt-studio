@@ -17,7 +17,7 @@ the newest released version its extension API supports. Withdrawn versions are s
 keeps the working extension. Installed extensions keep running when the registry
 is unavailable.
 
-The Settings → Extensions Upgrade action uses the same update path. Each
+The Extensions Upgrade action uses the same update path. Each
 extension shows its own version. Git and local development sources keep their
 chosen source.
 

@@ -63,6 +63,12 @@ Queued capacity does not include:
 
 `null` means unlimited concurrency. A positive integer means the scheduler only starts more work when active sessions are below that limit.
 
+The host also owns a device-local workspace limit in `storage/device-workspace-capacity.json`. It is outside synced database state. `workspaceCapacityService` reads this file and derives active workspace IDs from local session links with `in_progress` or `awaiting_input` status. It does not count synced personal history. Several active sessions in one workspace occupy one workspace slot. The scheduler checks both limits under its existing scheduling lock, before reserving a new run.
+
+`GET /v1/workspaces/capacity` returns this device's identity, name, active count, and limit across projects. `PATCH` accepts `{ limit: positiveInteger | null }`, saves it atomically, and drains waiting work. Extension commands and the SDK client expose `workspaces.getCapacity()` and `workspaces.updateCapacity()`.
+
+A queue entry for an already active workspace can run even if an earlier entry needs a new workspace slot. New workspace slots still go to waiting entries in order. Workspace creation remains unlimited. Lowering the limit does not interrupt existing runs.
+
 ## Queue Ownership
 
 Queued sessions are scheduler-owned. A queued session must have a matching `session_queue_entries` row containing the prompt, request kind, optional question response payload, and dispatch claim metadata.
