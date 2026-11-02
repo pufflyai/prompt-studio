@@ -1,6 +1,13 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame, homePage } from "../helpers/home-loading";
+
+const emptyMain = (page: Page) => {
+  const main = page.locator('[data-workbench-panel="main"]');
+  return main
+    .getByRole("group", { name: "Available tabs", exact: true })
+    .or(main.getByText("No tabs available", { exact: true }));
+};
 
 test("Home opens recent conversations and public actions without prematurely creating a session", async ({
   page,
@@ -24,6 +31,7 @@ test("Home opens recent conversations and public actions without prematurely cre
   }
   await page.goto(`/projects/${project.id}`);
   await expect(homePage(page)).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-home/home$`));
   await expect(homeFrame(page).getByRole("button", { name: /^Home conversation/ })).toHaveCount(5);
   await expect(homeFrame(page).getByRole("button", { name: sessions[6].title, exact: true })).toBeVisible();
   await homeFrame(page).getByRole("button", { name: sessions[6].title, exact: true }).click();
@@ -45,7 +53,7 @@ test("Home opens recent conversations and public actions without prematurely cre
   await expect(page.getByTestId("extensions-panel")).toBeVisible();
 });
 
-test("disabling Home keeps project navigation usable and enabling it restores one page", async ({ page, request }) => {
+test("disabling Home exposes the existing empty panel and enabling it restores one page", async ({ page, request }) => {
   const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Home lifecycle" }) });
   expect(created.status()).toBe(201);
   const project = (await created.json()) as { id: string };
@@ -60,9 +68,11 @@ test("disabling Home keeps project navigation usable and enabling it restores on
     request.patch(`/v1/projects/${project.id}/extensions/${instance.id}`, { data: { enabled } });
   expect((await enable(false)).ok()).toBe(true);
   await expect(page.getByRole("option", { name: "Home", exact: true })).toHaveCount(0);
+  await expect(emptyMain(page)).toBeVisible();
   await page.reload();
   await expect(page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
   await expect(page.getByRole("option", { name: "Home", exact: true })).toHaveCount(0);
+  await expect(emptyMain(page)).toBeVisible();
   await page.getByRole("option", { name: "Search", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -72,7 +82,6 @@ test("disabling Home keeps project navigation usable and enabling it restores on
   });
   expect((await enable(true)).ok()).toBe(true);
   await reenabled;
-  await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
   await expect(homePage(page)).toBeVisible();
   await expect(page.locator('iframe[title="Home"]')).toHaveCount(1);
@@ -81,6 +90,34 @@ test("disabling Home keeps project navigation usable and enabling it restores on
   await page.keyboard.press("g");
   await page.keyboard.press("h");
   await expect(homePage(page)).toBeVisible();
+});
+
+test("uninstalled Home leaves the project root on the existing empty panel", async ({ page, request }) => {
+  const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Home unavailable" }) });
+  expect(created.status()).toBe(201);
+  const project = (await created.json()) as { id: string };
+  const listed = (await (await request.get(`/v1/projects/${project.id}/extensions`)).json()) as {
+    extensions: { id: string; installName: string }[];
+  };
+  const instance = listed.extensions.find((entry) => entry.installName === "pstdio-home")!;
+  expect(instance).toBeTruthy();
+  expect((await request.delete(`/v1/projects/${project.id}/extensions/${instance.id}?deleteUserData=true`)).ok()).toBe(
+    true,
+  );
+  await page.goto(`/projects/${project.id}`);
+  await expect(page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
+  await expect(emptyMain(page)).toBeVisible();
+  await expect(page.locator('iframe[title="Home"]')).toHaveCount(0);
+  await page.getByRole("option", { name: "Sessions", exact: true }).click();
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
+  await expect(emptyMain(page)).toBeVisible();
+  await expect(page.getByRole("option", { name: "Notes", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}$`));
+  await page.goto(`/projects/${project.id}/workspaces`);
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/workspaces$`));
+  await page.getByRole("option", { name: "Sessions", exact: true }).click();
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/workspaces$`));
 });
 
 test("Home keeps setup and availability recovery feedback beside the action", async ({ page, request }) => {

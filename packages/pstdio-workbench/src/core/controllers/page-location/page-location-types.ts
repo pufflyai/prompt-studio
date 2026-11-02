@@ -96,8 +96,8 @@ export interface WorkbenchPageLocationController {
   /** Update Main's route after selecting a view already in its current tray. */
   select(location: PageLocation): WorkbenchPageNavigationResult;
   navigateToParent(): WorkbenchPageNavigationResult;
-  /** Opens the last location outside every Sidenav level, or the start page when there is none. */
-  navigateToRootLevel(): WorkbenchPageNavigationResult;
+  /** Opens the last root location or the configured start page; leaves the mode empty if that page is unavailable. */
+  navigateToRootLevel(): WorkbenchPageNavigationResult | undefined;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
   removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   goBack(): void;

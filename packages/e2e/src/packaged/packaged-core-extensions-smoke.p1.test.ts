@@ -85,7 +85,7 @@ test(
       );
 
       expect(metadata.pages).toContainEqual(
-        expect.objectContaining({ extensionId: "pstdio.pstdio-home", projectLanding: true, path: "home" }),
+        expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),
       );
       const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
       expect(planner).toBeDefined();

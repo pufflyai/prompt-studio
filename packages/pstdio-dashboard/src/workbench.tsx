@@ -103,6 +103,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const urlProjectId = pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
   const workbench = createWorkbench({
+    startPage: { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" },
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
     regionSettings: {

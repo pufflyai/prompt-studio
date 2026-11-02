@@ -327,21 +327,3 @@ describe("page identity and hierarchy validation", () => {
     expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_page_missing")).toHaveLength(1);
   });
 });
-
-test("publishes a resource-free extension root as the project landing page", () => {
-  const page = definePage({
-    id: "home",
-    title: "Home",
-    path: "home",
-    mode: workbenchModes.project,
-    projectLanding: true,
-    main: { kind: "view", view: pageView.ref, cardinality: "one", presentation: "page" },
-    slots: [],
-  });
-  const runtime = normalizeExtensionSources([source(defineExtension({ views: [pageView], pages: [page] }))]);
-  expect(runtime.diagnostics).toEqual([]);
-  expect(runtime.pages[0]?.contribution.projectLanding).toBe(true);
-  const { ref, panels, ...declaration } = page;
-  const invalid = definePage({ ...declaration, parent: ref });
-  expect(diagnosticsFor(defineExtension({ views: [pageView], pages: [invalid] })).length).toBeGreaterThan(0);
-});

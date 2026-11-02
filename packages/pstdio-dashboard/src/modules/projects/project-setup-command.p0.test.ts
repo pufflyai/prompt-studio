@@ -22,7 +22,8 @@ test("setup retry uses the selected project's public API and propagates action e
     port: 0,
     fetch(request) {
       requests.push(`${request.method} ${new URL(request.url).pathname}`);
-      if (requests.length > 1) return Response.json({ error: "Setup unavailable" }, { status: 503 });
+      if (requests.length === 2) return Response.json({ id: "workspace-1", setupError: "Provider setup failed" });
+      if (requests.length > 2) return Response.json({ error: "Setup unavailable" }, { status: 503 });
       return Response.json({ id: "workspace-1" });
     },
   });
@@ -36,6 +37,9 @@ test("setup retry uses the selected project's public API and propagates action e
     registerProjectSetupCommand(core);
     await core.commands.executeCommand(workbenchCommands.retryProjectSetup.id, {}, { projectId: "project-2" });
     expect(requests).toEqual(["POST /v1/projects/project-2/retry-setup"]);
+    await expect(core.commands.executeCommand(workbenchCommands.retryProjectSetup.id)).rejects.toThrow(
+      "Provider setup failed",
+    );
     await expect(core.commands.executeCommand(workbenchCommands.retryProjectSetup.id)).rejects.toThrow(
       "Setup unavailable",
     );

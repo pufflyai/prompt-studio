@@ -11,7 +11,8 @@ export const registerProjectSetupCommand = (ctx: WorkbenchModuleContext) =>
         const projectId = getDashboardSelectedProjectId(ctx);
         if (!projectId) throw new Error("Setup retry requires a selected project");
         if (context?.projectId && context.projectId !== projectId) throw new Error("The selected project changed");
-        await getApiClient().projects.retrySetup(projectId);
+        const workspace = await getApiClient().projects.retrySetup(projectId);
+        if (workspace.setupError) throw new Error(workspace.setupError);
       },
     },
   );

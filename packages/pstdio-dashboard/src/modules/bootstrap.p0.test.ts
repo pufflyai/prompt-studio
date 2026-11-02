@@ -31,7 +31,7 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 };
 
 describe("createBootstrapModule", () => {
-  test("waits for project landing contributions before opening the fallback Start page", async () => {
+  test("waits for project contributions before opening the configured default page", async () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -115,42 +115,11 @@ describe("createBootstrapModule", () => {
   }
 });
 
-for (const withStart of [false, true])
-  test(`delayed landing wins over fallback pages (host Start: ${withStart})`, async () => {
-    const workbench = createWorkbench({ pageLocationBrowser: browserAt("/projects/project-1") });
-    workbench.modes.registerMode({ id: "project", activate: () => undefined });
-    selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-    if (withStart) workbench.registerModule(createStartModule());
-    workbench.pages.registerPage({
-      id: "tools",
-      ref: { kind: "page", extensionId: "pstdio", id: "tools" },
-      path: "tools",
-      modeId: "project",
-      main: { kind: "panels" },
-      slots: [],
-    });
-    const bootstrap = workbench.registerModule(createBootstrapModule());
-    expect(workbench.pages.store.getState().activePageId).toBeUndefined();
-    expect(workbench.layout.getPlaceholder("main")).toBeDefined();
-    const home = { kind: "page" as const, extensionId: "acme.home", id: "home" };
-    workbench.pages.registerPage({
-      id: "acme.home.page.home",
-      ref: home,
-      path: "home",
-      modeId: "project",
-      projectLanding: true,
-      main: { kind: "panels" },
-      slots: [],
-    });
-    setDashboardExtensionsReadyProject(workbench, "project-1");
-    await flushMicrotasks();
-    expect(workbench.pages.store.getState().location?.page).toEqual(home);
-    expect(workbench.layout.getPlaceholder("main")).toBeUndefined();
-    bootstrap.dispose();
-  });
-
 test("delayed boot preserves the active project recovery overlay", () => {
-  const workbench = createWorkbench({ resolvePagePersistenceScope: resolveDashboardPersistenceScope });
+  const workbench = createWorkbench({
+    startPage: { kind: "page", extensionId: "pstdio", id: "tools" },
+    resolvePagePersistenceScope: resolveDashboardPersistenceScope,
+  });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   workbench.pages.registerPage({

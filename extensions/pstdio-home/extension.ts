@@ -25,7 +25,6 @@ export const home = definePage({
   icon: "house",
   path: "home",
   mode: workbenchModes.project,
-  projectLanding: true,
   main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });

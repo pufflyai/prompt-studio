@@ -86,7 +86,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             return true;
           }
           // Resolve automatic destinations only after this project's contributions arrive.
-          // A core fallback must not consume an extension landing page's first navigation.
+          // A destination must not be discarded while its extension is still loading.
           if (getDashboardExtensionsReadyProjectId(ctx) !== projectId) return false;
           readyUnsubscribe?.();
           readyUnsubscribe = undefined;
