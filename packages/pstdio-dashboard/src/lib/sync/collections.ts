@@ -224,7 +224,7 @@ export const createRuntimeCollections = (connection = apiClientOptions()) => {
 };
 export type RuntimeCollections = ReturnType<typeof createRuntimeCollections>;
 
-const stores = new Map<string, { collections: ReturnType<typeof createRuntimeCollections>; connections: number }>();
+const stores = new Map<string, { collections: RuntimeCollections; connections: number; closing?: AbortController }>();
 const runtimeStore = (connection: ReturnType<typeof apiClientOptions>) => {
   const key = JSON.stringify(connection);
   let store = stores.get(key);
@@ -237,6 +237,8 @@ const runtimeStore = (connection: ReturnType<typeof apiClientOptions>) => {
 export const getRuntimeCollections = (connection = apiClientOptions()) => runtimeStore(connection).collections;
 export const retainRuntimeCollections = (connection: ReturnType<typeof apiClientOptions>) => {
   const store = runtimeStore(connection);
+  store.closing?.abort();
+  store.closing = undefined;
   store.connections += 1;
   return store.collections;
 };
@@ -248,6 +250,29 @@ export const releaseRuntimeCollections = async (connection: ReturnType<typeof ap
   // React can clean up and immediately remount an effect. Keep the same collection
   // objects for that remount so live queries do not retain a disposed collection.
   await Promise.resolve();
+  if (store.connections !== 0 || stores.get(key) !== store) return;
+  store.closing?.abort();
+  const closing = new AbortController();
+  store.closing = closing;
+  // Live queries release their source subscriptions during asynchronous GC.
+  // Wait for those subscriptions rather than guessing when the GC will run.
+  await Promise.all(
+    [...store.collections.getAllCollections().values()].map((collection) => {
+      if (collection.subscriberCount === 0) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const finish = () => {
+          unsubscribe();
+          closing.signal.removeEventListener("abort", finish);
+          resolve();
+        };
+        const unsubscribe = collection.on("subscribers:change", ({ subscriberCount }) => {
+          if (subscriberCount === 0) finish();
+        });
+        closing.signal.addEventListener("abort", finish, { once: true });
+      });
+    }),
+  );
+  if (closing.signal.aborted) return;
   if (store.connections !== 0 || stores.get(key) !== store) return;
   stores.delete(key);
   await store.collections.dispose();

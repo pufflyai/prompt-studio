@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
+import { createLiveQueryCollection } from "@tanstack/react-db";
 import {
   type CollectionChange,
   createRuntimeCollections,
@@ -11,6 +12,29 @@ import {
   subscribeCollections,
 } from "./collections";
 
+test("unmount releases dependent live queries before disposing their source store", async () => {
+  const connection = { baseUrl: "http://query-unmount", token: "owner" };
+  const collections = retainRuntimeCollections(connection);
+  collections.getWriter("projects")!.upsert({ id: "project" });
+  const query = createLiveQueryCollection({
+    query: (q) => q.from({ project: collections.getCollection("projects") }),
+    gcTime: 1,
+  });
+  const subscription = query.subscribeChanges(() => undefined);
+  const errors = spyOn(console, "error").mockImplementation(() => undefined);
+  try {
+    // Parent effects release the runtime before children unsubscribe their queries.
+    const closing = releaseRuntimeCollections(connection);
+    subscription.unsubscribe();
+    await closing;
+    expect(errors).not.toHaveBeenCalled();
+    expect(collections.isDisposed()).toBe(true);
+  } finally {
+    errors.mockRestore();
+    await query.cleanup();
+  }
+});
+
 test("an effect remount retains its collection store until the last connection closes", async () => {
   const connection = { baseUrl: "http://effect-remount", token: "owner" };
   const initial = retainRuntimeCollections(connection);
@@ -22,6 +46,23 @@ test("an effect remount retains its collection store until the last connection c
   expect(remounted.getCollection("projects").get("project")).toEqual({ id: "project" });
   await releaseRuntimeCollections(connection);
   expect(initial.getWriter("projects")).toBeUndefined();
+});
+
+test("remount cancels disposal while a dependent live query still holds the store", async () => {
+  const connection = { baseUrl: "http://pending-query-remount", token: "owner" };
+  const initial = retainRuntimeCollections(connection);
+  retainRuntimeCollections(connection);
+  const subscription = initial.getCollection("projects").subscribeChanges(() => undefined);
+  const closing = releaseRuntimeCollections(connection);
+  const secondClosing = releaseRuntimeCollections(connection);
+  await Promise.resolve();
+  expect(retainRuntimeCollections(connection)).toBe(initial);
+  await closing;
+  await secondClosing;
+  expect(initial.isDisposed()).toBe(false);
+  subscription.unsubscribe();
+  await releaseRuntimeCollections(connection);
+  expect(initial.isDisposed()).toBe(true);
 });
 
 test("runtime collections isolate overlapping IDs, indexes, readiness, and subscriptions", async () => {
