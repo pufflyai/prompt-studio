@@ -21,7 +21,7 @@ identity and SHA-256 schemas.
 | Update | `updateId`, encrypted `payload`, `blobIds` |
 | Latest state | `stateId`, `baseStateId`, `through` (last included update), encrypted `payload`, encrypted `summary`, `blobIds` |
 | Blob | `sha256` and `byteLength` of the encrypted bytes, uploaded in numbered parts |
-| Live message | `spaceOwner` and encrypted `payload` |
+| Live message | `spaceOwner`, opaque `topic` and encrypted `payload` |
 
 Every other value the relay keeps is routing metadata (R9): project ID, document ID, owner
 of private project data, sending device, sizes, times, update IDs, sequence numbers and blob IDs. IDs are
@@ -47,7 +47,7 @@ token's account. Blob ID lists hold at most 100,000 IDs.
 | `/blobs/~<blob>/parts/<n>` | PUT bytes with `pstdio-sha256` and `Content-Length` | `{}` |
 | `/blobs/~<blob>/finish` | POST `{}` | `{}` once the full blob is verified |
 | `/blobs/~<blob>/read` | POST `{ offset }` | Encrypted bytes from `offset` |
-| `/live` (project only) | GET WebSocket | `ready`, `live` and `changed` messages |
+| `/live` (project only) | GET WebSocket | Versioned [topic events and device calls](0030-live-channel.md) |
 
 Manifest upload requires discovery of `blob-references-v1` first. `createDocumentRelay().manifestBlobs()` performs that discovery and returns an uploader bound to the same project and space. Unknown future feature names are allowed. An old relay or a relay without this feature cannot accept manifests; the client never falls back to an ordinary upload for a manifest. Manifest children are immutable, unique, and limited to 256 opaque IDs. They must already be complete in the same project and space. Ordinary `/begin` accepts no child list.
 
@@ -138,6 +138,8 @@ Operators set limits through environment variables. Defaults are in `services/re
 | `RELAY_MAX_SUMMARY_BYTES` | 64 KiB |
 | `RELAY_MAX_BLOB_BYTES` | 5 GiB |
 | `RELAY_MAX_LIVE_MESSAGE_BYTES` | 64 KiB |
+| `RELAY_MAX_LIVE_SUBSCRIPTIONS` | 4096 combined subscriptions, followers, discovery and registrations per connection |
+| `RELAY_MAX_LIVE_CALLS` | 128 active calls involving one connection |
 | `RELAY_ACCOUNT_QUOTA_BYTES` | 50 GiB |
 | `RELAY_MAX_READ_BYTES` | 8 MiB |
 | `RELAY_REQUESTS_PER_SECOND` and `RELAY_REQUEST_BURST` | 50 per second, bursts of 500, per device |
@@ -153,11 +155,11 @@ project data is an account ID. Team accounts (PS-829) add a user claim to access
 
 ## Live traffic
 
-Devices of one project connect to `/live`. A `live` message goes to every other device in the
-project that can read its space. It is never stored (R31). After an update or latest state commits,
-the relay sends `changed` with the document ID, last sequence and latest state ID. A malformed
-message, a message for another user's space, or an expired token closes the socket with 1008.
-A slow consumer or a device over its rate is closed with 1013 and reconnects.
+Devices share one project connection to `/live`, using the independently versioned
+[live protocol](0030-live-channel.md). Topic subscriptions route encrypted events and document
+change notices. Subscriber followers receive immediate reader-state transitions. Calls route
+to a connected device with a registered procedure and fail immediately otherwise. Only routing
+metadata stays in memory; no payloads are queued or stored (R31, R32).
 
 The relay forwards between connections of one process. It runs as one instance (R47).
 
