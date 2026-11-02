@@ -10,10 +10,11 @@ test("setup retry requires its selected project and rejects a stale webview proj
   await expect(core.commands.executeCommand(workbenchCommands.retryProjectSetup.id)).rejects.toThrow(
     "selected project",
   );
+  core.pageLocations.setProject("project-1");
   selectDashboardProject(core, { id: "project-2", name: "Second" });
   await expect(
     core.commands.executeCommand(workbenchCommands.retryProjectSetup.id, undefined, { projectId: "project-1" }),
-  ).rejects.toThrow("another project");
+  ).rejects.toThrow("The selected project changed");
 });
 
 test("setup retry uses the selected project's public API and propagates action errors", async () => {
