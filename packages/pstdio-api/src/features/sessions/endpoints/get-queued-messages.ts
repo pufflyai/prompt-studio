@@ -26,19 +26,8 @@ export const getQueuedMessagesHandler =
     const { id } = c.req.valid("param");
     const session = await deps.sessionService.get(id);
     if (!session) {
-      if (await deps.personalHistoryService.getSession(id))
-        return c.json(
-          {
-            messages: [],
-            queue: {
-              requests: [],
-              activeRunStartedAt: null,
-              steeringAvailable: false,
-              steeringUnavailableReason: "Continue this session on its device.",
-            },
-          },
-          200,
-        );
+      const shared = await deps.personalHistoryService.queuedMessages(id);
+      if (shared) return c.json(shared, 200);
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
     const queue = await pendingQueuedRequests(deps, id);

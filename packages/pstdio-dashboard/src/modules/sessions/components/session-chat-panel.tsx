@@ -27,7 +27,6 @@ import { useStopSession } from "../hooks/use-stop-session";
 import { useSessionLinks } from "./session-chat-links";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
-import { SessionPersonalDevice } from "./session-personal-device";
 import { SessionQueuedChatPanel } from "./session-queued-chat-panel";
 import { useCommandComposer } from "./use-command-composer";
 import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
@@ -97,7 +96,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     : undefined;
   const commandComposer = useCommandComposer(
     sessionId,
-    selectedAgent,
+    // Another device's harness commands exist only on that device; asking here only fails.
+    view.device ? "" : selectedAgent,
     chatDraft,
     reconnect,
     view.status,
@@ -227,7 +227,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           onChatInputChange={chatDraft.change}
           chatInputCommands={commands(commandComposer.suggestions)}
           composerDecision={decision}
-          composerFallback={view.device ? <SessionPersonalDevice name={view.device.name} /> : undefined}
+          device={view.device}
           attachedResources={attachedResources}
           projectId={projectId}
           sessionId={sessionId}

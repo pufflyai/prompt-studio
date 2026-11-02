@@ -97,6 +97,14 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
       .where(and(eq(session_queue_entries.session_id, sessionId), isNull(session_queue_entries.dispatch_started_at)))
       .orderBy(session_queue_entries.queue_position);
 
+  /** Every queued request not yet dispatched, in queue order. */
+  const listUndispatched = async () =>
+    db
+      .select()
+      .from(session_queue_entries)
+      .where(isNull(session_queue_entries.dispatch_started_at))
+      .orderBy(session_queue_entries.queue_position);
+
   const listDispatchStarted = async () => {
     return db.select().from(session_queue_entries).where(isNotNull(session_queue_entries.dispatch_started_at));
   };
@@ -210,6 +218,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     listPending,
     listPendingBySession,
     listUndispatchedBySession,
+    listUndispatched,
     listDispatchStarted,
     markDispatchStarted,
     updatePending,

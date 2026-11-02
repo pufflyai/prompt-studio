@@ -1,17 +1,17 @@
 import { join } from "node:path";
-import { chromium, expect } from "@playwright/test";
+import { type Browser, chromium, expect } from "@playwright/test";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { signInBrowser } from "./packaged-serve-helpers";
 
 export const openCloudProjectInPicker = async (input: {
+  browser: Browser;
   baseUrl: string;
   token: string;
   projectId: string;
   name: string;
 }) => {
-  const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
-  logTestPhase("Cloud project opening: browser launched");
+  const { browser } = input;
   try {
     const page = await browser.newPage();
     await page.addInitScript(() => {

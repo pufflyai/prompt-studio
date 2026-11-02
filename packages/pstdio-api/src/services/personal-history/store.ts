@@ -1,4 +1,3 @@
-import { type SessionMessage, sessionMessageSchema } from "pstdio-api-contracts";
 import type { DocumentStore } from "pstdio-sync";
 
 export interface PersonalDevice {
@@ -13,7 +12,7 @@ export interface HistoryDocuments {
 
 export const personalHistoryOwner = (input: { projectId: string; accountId: string; managerOrigin: string }) => ({
   workbenchId: input.projectId,
-  extensionId: JSON.stringify(["pstdio.personal-history", input.managerOrigin, input.accountId]),
+  extensionId: JSON.stringify(["pstdio.personal-history.logs-v1", input.managerOrigin, input.accountId]),
 });
 
 export const createPersonalHistoryStore = (input: {
@@ -24,16 +23,13 @@ export const createPersonalHistoryStore = (input: {
 }) => {
   const owner = personalHistoryOwner(input);
   const records = input.documents.open("records");
-  const transcriptName = (id: string) => JSON.stringify(["transcript", id]);
-  const readRecords = (kind: "sessions" | "workspaces" | "workspace_sessions") =>
+  const readRecords = (kind: "sessions" | "workspaces" | "workspace_sessions" | "queues") =>
     records.transaction(owner, async ({ document }) =>
       [...document.getMap<string>(kind).values()].map((value) => JSON.parse(value) as Record<string, unknown>),
     );
   return {
     owner,
     records,
-    transcript: (id: string) => input.documents.open(transcriptName(id)),
-    transcriptName,
     readRecords,
     async claimLocalRecords(kind: "sessions" | "workspaces", ids: string[]) {
       const localOwner = { workbenchId: input.projectId, extensionId: "pstdio.local-history-owners" };
@@ -44,8 +40,18 @@ export const createPersonalHistoryStore = (input: {
         return new Set(ids.filter((id) => owners.get(id) === identity));
       });
     },
+    /** The relay position of each session's log, so other devices know which logs to read. */
+    readHeads: () =>
+      records.transaction(owner, async ({ document }) => new Map(document.getMap<number>("heads").entries())),
+    writeHeads: (heads: Map<string, number>) =>
+      records.transaction(owner, async ({ document }) => {
+        const map = document.getMap<number>("heads");
+        document.transact(() => {
+          for (const [id, sequence] of heads) if ((map.get(id) ?? 0) < sequence) map.set(id, sequence);
+        });
+      }),
     async writeRecords<T extends { id: string }>(
-      kind: "sessions" | "workspaces" | "workspace_sessions",
+      kind: "sessions" | "workspaces" | "workspace_sessions" | "queues",
       device: PersonalDevice,
       rows: T[],
     ) {
@@ -61,23 +67,6 @@ export const createPersonalHistoryStore = (input: {
         });
       });
     },
-    transcriptNames: async () => (await readRecords("sessions")).map((row) => String(row.id)),
-    async writeTranscript(id: string, messages: SessionMessage[]) {
-      await input.documents.open(transcriptName(id)).transaction(owner, async ({ document }) => {
-        const next = JSON.stringify(messages);
-        const content = document.getText("content");
-        if (content.toString() === next) return;
-        document.transact(() => {
-          content.delete(0, content.length);
-          content.insert(0, next);
-        });
-      });
-    },
-    readTranscript: (id: string) =>
-      input.documents.open(transcriptName(id)).transaction(owner, async ({ document }) => {
-        const content = document.getText("content").toString();
-        return content ? sessionMessageSchema.array().parse(JSON.parse(content)) : [];
-      }),
   };
 };
 
