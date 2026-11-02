@@ -2,6 +2,8 @@ import { type LiveClientMessage, liveClientMessageSchema, liveProtocolVersion } 
 
 export interface PeerLiveData {
   discovery: Set<string | null>;
+  deviceId: string;
+  topics: Set<string>;
 }
 const topicKey = (spaceOwner: string | null, topic: string) => JSON.stringify([spaceOwner, topic]);
 
@@ -13,14 +15,22 @@ export const createDocumentPeerLive = () => {
     message: Extract<LiveClientMessage, { topic: string }>,
   ) => {
     const key = topicKey(message.spaceOwner, message.topic);
-    if (message.type === "subscribe") socket.subscribe(key);
-    if (message.type === "unsubscribe") socket.unsubscribe(key);
+    if (message.type === "subscribe") {
+      socket.subscribe(key);
+      socket.data.topics.add(key);
+    }
+    if (message.type === "unsubscribe") {
+      socket.unsubscribe(key);
+      socket.data.topics.delete(key);
+    }
     if (message.type === "follow")
       socket.send(
         JSON.stringify({ type: "subscribers", spaceOwner: message.spaceOwner, topic: message.topic, active: false }),
       );
   };
   return {
+    subscriptions: () =>
+      [...sockets].map((socket) => ({ deviceId: socket.data.deviceId, topics: [...socket.data.topics] })),
     changed(
       notice: { spaceOwner: string | null; documentId: string; lastSequence: number; stateId: unknown },
       created: boolean,
@@ -42,6 +52,17 @@ export const createDocumentPeerLive = () => {
         if (message.type === "discover") socket.data.discovery.add(message.spaceOwner);
         if (message.type === "undiscover") socket.data.discovery.delete(message.spaceOwner);
         if ("topic" in message) topicMessage(socket, message);
+        if (message.type === "publish")
+          socket.publish(
+            topicKey(message.spaceOwner, message.topic),
+            JSON.stringify({
+              type: "event",
+              spaceOwner: message.spaceOwner,
+              topic: message.topic,
+              payload: message.payload,
+              deviceId: socket.data.deviceId,
+            }),
+          );
         if ("requestId" in message && message.requestId)
           socket.send(JSON.stringify({ type: "control-result", requestId: message.requestId, retryAfterMs: 0 }));
       },

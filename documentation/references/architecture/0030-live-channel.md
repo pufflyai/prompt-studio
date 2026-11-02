@@ -123,3 +123,10 @@ No per-topic polling or timers run on an idle channel.
 
 Routing runs inside one relay process. Several processes will require a forwarding layer while
 preserving these project, space and device boundaries.
+
+
+## Native editor presence
+
+Native editors use one encrypted project presence topic derived from `space.documentId(["pstdio.native-document-presence", "v2"])` (with the array JSON-encoded before derivation). Its frames and sender/topic identity are authenticated by the live encryption envelope. Topic admission republishes current local participants. Presence delivery runs independently of held durable document work.
+
+Each shared socket resets retained server controls on every reconnect. Its local disconnect event distinguishes planned credential renewal from loss of connectivity. Renewal cancels old presence encryption/decryption but retains remote participant leases and active durable document jobs; a real disconnect clears remote presence and retires the owner attempt. Exact document hints and their admission catch-up use the same per-document workers, including after an owner retries.

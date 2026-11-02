@@ -1,4 +1,9 @@
-import { extensionResourceRefSchema, jsonObjectSchema, pageParamValueSchema } from "pstdio-api-contracts";
+import {
+  extensionResourceRefSchema,
+  jsonObjectSchema,
+  pageParamValueSchema,
+  textEditingRequestSchema,
+} from "pstdio-api-contracts";
 import type { WebviewHostCapability, WebviewHostCapabilityParams } from "pstdio-api-contracts/extension-kernel";
 import { isNavigationTarget, type NavigationTarget } from "pstdio-api-contracts/extension-kernel";
 import { z } from "zod";
@@ -69,6 +74,7 @@ const schemas = {
   ]),
   "commands.execute": command,
   "editing.session": webviewEditingSessionParamsSchema,
+  "editing.text": textEditingRequestSchema,
   "commands.stream": z.discriminatedUnion("operation", [
     command.extend({ ...streamId, operation: z.literal("start") }),
     z.object({ ...streamId, operation: z.literal("cancel") }),

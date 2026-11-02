@@ -1,4 +1,5 @@
-import { createDocumentStorage, createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
+import { createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
+import { createDocumentStorage } from "pstdio-sync/records";
 
 /** In-memory extension storage with one document store per owner, so owners never share records. */
 export const createTestDocumentStorage = () => {

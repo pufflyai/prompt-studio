@@ -1,5 +1,5 @@
 import { canonicalJson, signedDeviceCallSchema } from "pstdio-sync-contracts";
-import { decodeBytes, encodeBytes } from "../encoding";
+import { decodeBytes, encodeBytes } from "../shared";
 import { open, seal, UnreadableSyncData } from "./sealing";
 import type { SyncSpace } from "./space";
 

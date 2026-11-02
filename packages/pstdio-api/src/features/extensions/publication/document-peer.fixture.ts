@@ -157,7 +157,16 @@ export const documentPeer = (projects: string[] = []) => {
             { error: "protocol-unsupported", supported: [liveProtocolVersion], message: "Update Prompt Studio" },
             { status: 426 },
           );
-        if (server.upgrade(request, { data: { discovery: new Set() } })) return;
+        if (
+          server.upgrade(request, {
+            data: {
+              discovery: new Set(),
+              topics: new Set(),
+              deviceId: request.headers.get("authorization")?.replace(/^Bearer /, "") ?? "wire-device",
+            },
+          })
+        )
+          return;
         return new Response(null, { status: 426 });
       }
       const parts = path.split("/");
@@ -171,6 +180,7 @@ export const documentPeer = (projects: string[] = []) => {
   });
   return {
     origin: server.url.origin,
+    subscriptions: live.subscriptions,
     documents,
     states,
     blobs,

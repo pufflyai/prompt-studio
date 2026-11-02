@@ -5,12 +5,14 @@ import type {
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
 import type { StorageOwner } from "pstdio-sync";
-import { initialRecordRevision, storageRecordId } from "pstdio-sync";
+import { NativeSourcePendingError } from "pstdio-sync";
+import { initialRecordRevision, nativeTextAssetKey, storageRecordId } from "pstdio-sync/records";
 import { z } from "zod";
 import { createRecordAssets } from "../features/extensions/command-environment/record-assets";
 import type { createAssetTransferService } from "./asset-transfer-service";
 import type { createFileService } from "./file-service";
 import { createBlobOwnerResolver } from "./shared-files/blob-owner";
+import { blobHash } from "./shared-files/file-state";
 
 export type ExtensionFileServiceDeps = {
   extensionFilesDBService: ReturnType<typeof createExtensionFilesDBService>;
@@ -46,7 +48,7 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
   const resolve = createBlobOwnerResolver(deps);
   const open = (owner: StorageOwner) =>
     deps.extensionStorageService.open({ owner, assets: createRecordAssets(deps.assetTransferService, owner) });
-  const fileRow = (
+  const fileRow = async (
     owner: StorageOwner,
     record: Awaited<ReturnType<Awaited<ReturnType<typeof open>>["records"]["read"]>>,
   ) => {
@@ -54,6 +56,17 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
     const value = metadata.parse(record.value);
     const identity = JSON.parse(record.recordId) as string[];
     if (identity.length !== 2 || identity[0] !== "blob-file") throw new Error("Invalid blob file identity");
+    const nativeDocumentKey = nativeTextAssetKey(record);
+    let content: Blob | undefined;
+    if (nativeDocumentKey) {
+      try {
+        content = new Blob([
+          await deps.extensionStorageService.openNativeTextDocument({ owner, fileId: nativeDocumentKey }).read(),
+        ]);
+      } catch (error) {
+        if (!(error instanceof NativeSourcePendingError)) throw error;
+      }
+    }
     return {
       id: identity[1]!,
       project_id: owner.workbenchId,
@@ -61,11 +74,13 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
       file_name: value.name,
       file_kind: "extension",
       mime_type: value.mimeType,
-      size_bytes: record.asset.byteLength,
-      hash: record.asset.sha256,
+      size_bytes: content?.size ?? record.asset.byteLength,
+      hash: content ? await blobHash(content) : record.asset.sha256,
       created_at: value.createdAt,
       updated_at: value.updatedAt,
       asset: record.asset,
+      nativeContent: content,
+      nativeDocumentKey,
     };
   };
   const importFile = async (
@@ -140,7 +155,7 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
       if (!record.recordId.startsWith('["blob-file",')) continue;
       const value = metadata.parse(record.value);
       if (value.scopeType !== input.scope_type || value.scopeId !== input.scope_id) continue;
-      const file = fileRow(resolved.owner, record);
+      const file = await fileRow(resolved.owner, record);
       if (file) files.push(file);
     }
     return files.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
@@ -170,11 +185,47 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
     });
     return true;
   };
-  const read = (file: NonNullable<Awaited<ReturnType<typeof getOwnedFile>>>, signal?: AbortSignal) =>
-    deps.assetTransferService.read(
+  const update = async (
+    input: OwnedFileRef & { file_name: string; data: Buffer; mime_type?: string | null; signal?: AbortSignal },
+  ) => {
+    const file = await getOwnedFile(input);
+    const resolved = await resolve(input);
+    if (!file || !resolved) return null;
+    await deps.beforeWrite?.({ project_id: input.project_id, extension_instance_id: resolved.instanceId });
+    const storage = await open(resolved.owner);
+    const record = await storage.records.read(recordId(input.file_id));
+    const replace = {
+      ...metadata.parse(record.value),
+      name: input.file_name,
+      mimeType: input.mime_type ?? null,
+      updatedAt: new Date().toISOString(),
+    };
+    if (nativeTextAssetKey(record)) {
+      const content = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(input.data);
+      await storage.records.writeTextAsset({ recordId: record.recordId, content, replace });
+    } else {
+      const asset = await deps.assetTransferService.stage(
+        resolved.owner,
+        crypto.randomUUID(),
+        new Blob([new Uint8Array(input.data)]),
+        input.signal,
+      );
+      await storage.records.commit({
+        operationId: crypto.randomUUID(),
+        edits: [{ recordId: record.recordId, expectedRevision: record.revision, replace, asset }],
+      });
+    }
+    return fileRow(resolved.owner, await storage.records.read(record.recordId));
+  };
+  const read = async (file: NonNullable<Awaited<ReturnType<typeof getOwnedFile>>>, signal?: AbortSignal) => {
+    signal?.throwIfAborted();
+    if (file.nativeContent) return file.nativeContent.stream();
+    if (file.nativeDocumentKey) throw new NativeSourcePendingError();
+    return deps.assetTransferService.read(
       { workbenchId: file.project_id, extensionId: file.extension_id },
       file.asset,
       signal,
     );
-  return { upload, list, getOwnedFile, remove, read };
+  };
+  return { upload, update, list, getOwnedFile, remove, read };
 };

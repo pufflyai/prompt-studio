@@ -14,9 +14,15 @@ export const installWorkbenchFileRenderer = (workbench: WorkbenchCore) => {
     clearCachedResourceContent(resourceKey(resource));
     return [];
   });
-  getWorkbenchRenderers(workbench).setFileRendererImplementation(({ workbench: scope, instance, fileRendererId }) => {
+  getWorkbenchRenderers(workbench).setFileRendererImplementation((input) => {
+    const { workbench: scope, instance, fileRendererId } = input;
     const contribution = getWorkbenchRenderers(scope).getFileRenderer(fileRendererId);
     if (!contribution) return null;
-    return createElement(WorkbenchFileRendererView, { workbench: scope, contribution, placement: instance });
+    return createElement(WorkbenchFileRendererView, {
+      workbench: scope,
+      contribution,
+      placement: instance,
+      presentationInput: input,
+    });
   });
 };

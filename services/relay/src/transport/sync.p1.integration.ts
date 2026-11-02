@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { Client } from "pg";
-import { openUpdate, sealUpdate, UnreadableSyncData } from "pstdio-sync";
+import { openUpdate, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
 import { fetchSyncSpaces } from "pstdio-sync/relay";
 import {
   type LiveServerMessage,

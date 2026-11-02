@@ -68,6 +68,7 @@ export { pagePlaceholderView } from "./page-placeholder";
 export * from "./page-resource-codec";
 export * from "./page-url";
 export { commandRef, eventRef } from "./refs";
+export { resourceKey } from "./resource-key";
 export { serializeCommandError } from "./serialize-error";
 export { defineSlot } from "./slots";
 export { isFileSourcePosition } from "./source-position";
@@ -76,6 +77,7 @@ export { VIEW_FILTER_CONDITIONS } from "./types/collection-view";
 export { dockedWorkbenchRegions, extensionPanelRegions } from "./types/composition";
 export { DEFAULT_DATA_TABLE_SETTINGS } from "./types/data-table-renderer";
 export { EXTENSION_API_VERSION } from "./types/extension";
+export type * from "./types/text-editing";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   WEBVIEW_DECLARABLE_CAPABILITIES,
