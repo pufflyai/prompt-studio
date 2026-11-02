@@ -19,5 +19,10 @@ export type ReactKanbanRendererContribution<TRow extends KanbanRendererRow = Kan
 
 // The core stores presentation values without choosing a UI framework, as it
 // does for view.render. Installing the React renderer binds that presentation.
-export const bindReactKanbanPresentation = (contribution: RegisteredKanbanRendererContribution) =>
-  contribution as RegisteredKanbanRendererContribution<KanbanRendererRow, ReactNode, ReactColumnIcon>;
+// Components cast their prop to this type instead of calling a function: React Compiler treats a
+// function's result as changeable and stops caching every callback that uses it.
+export type ReactRegisteredKanbanRendererContribution = RegisteredKanbanRendererContribution<
+  KanbanRendererRow,
+  ReactNode,
+  ReactColumnIcon
+>;

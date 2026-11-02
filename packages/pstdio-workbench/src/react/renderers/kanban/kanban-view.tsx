@@ -6,7 +6,7 @@ import {
   KanbanRendererSkeleton,
   useKanbanRendererStore,
 } from "@pstdio/ui/kanban-renderer";
-import { type ReactNode, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
 import type {
   KanbanRendererRow,
   RegisteredKanbanRendererContribution,
@@ -21,12 +21,13 @@ import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions
 import { kanbanPageFields } from "../renderer-page-fields";
 import { rendererQueryKey } from "../renderer-query-key";
 import { RendererReadNotice } from "../renderer-read-notice";
+import { shareEqualValue } from "../share-equal-value";
 import { usePageParams } from "../use-page-params";
 import { useRendererPages } from "../use-renderer-pages";
 import { useRendererRead } from "../use-renderer-read";
 import { ViewToolbarActions } from "../view-toolbar-actions";
 import { prepareKanbanMove } from "./kanban-move";
-import { bindReactKanbanPresentation } from "./kanban-presentation";
+import type { ReactRegisteredKanbanRendererContribution } from "./kanban-presentation";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 import { useKanbanAttributes } from "./use-kanban-attributes";
 
@@ -85,7 +86,7 @@ export const mergeKanbanViewRowActions = (
 export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const { workbench, placement } = props;
   const pageParams = usePageParams(workbench, placement);
-  const contribution = bindReactKanbanPresentation(props.contribution);
+  const contribution = props.contribution as ReactRegisteredKanbanRendererContribution;
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const attributes = useKanbanAttributes(contribution.attributes);
   const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement, contribution.storageScope);
@@ -111,6 +112,9 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     append: true,
   });
   const paged = Boolean(contribution.executePage);
+  // The board on screen, for the next load to compare against. Kept in a ref updated after
+  // render, because reading `read` inside its own load stops React Compiler caching the callbacks.
+  const shownValue = useRef<unknown>(undefined);
 
   const read = useRendererRead({
     workbench,
@@ -121,9 +125,12 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
 
     load: async (signal) => {
       const state = { settings, filter, sorts, pageParams };
-      if (contribution.executePage)
-        return pages.accept(await contribution.executePage({ ...state, page: pages.request }, signal), signal);
-      return { rows: await contribution.executeQuery(state, signal), page: undefined, position: undefined };
+      const loaded = contribution.executePage
+        ? pages.accept(await contribution.executePage({ ...state, page: pages.request }, signal), signal)
+        : { rows: await contribution.executeQuery(state, signal), page: undefined, position: undefined };
+      // Rows equal to the board on screen keep their objects, so a reload that changed nothing,
+      // such as returning to the page, renders no cards again.
+      return shareEqualValue(shownValue.current, loaded);
     },
     subscribe: (refresh) => {
       const invalidate = () => {
@@ -140,10 +147,17 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
       };
     },
   });
+  useEffect(() => {
+    shownValue.current = read.value;
+  }, [read.value]);
   const rows = read.value?.rows ?? [];
-  const mutate = (...args: Parameters<typeof read.mutate>) =>
-    read.mutate(...args).finally(() => {
-      if (paged) pages.reset();
+  // Use the read's and pages' own functions, not the `read` and `pages` objects, which change on
+  // every load step. Row callbacks that change rebuild every card on the board.
+  const { mutate: mutateRead } = read;
+  const { reset: resetPages } = pages;
+  const mutate = (...args: Parameters<typeof mutateRead>) =>
+    mutateRead(...args).finally(() => {
+      if (paged) resetPages();
     });
 
   const handleOpenRow = (row: KanbanRendererRow) => {

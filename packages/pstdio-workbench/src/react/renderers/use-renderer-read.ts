@@ -34,8 +34,11 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   const refreshRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const lastRefreshKey = useRef(refreshKey);
   const callbacks = useRef(options);
-  const mutationBinding = useRef(createRendererMutationBinding<T>());
-  const mutations = useRef(mutationBinding.current.bind(ownerKey, queryKey));
+  // Created once in state, not read from a ref during render, so React Compiler keeps `retry` and
+  // `mutate` stable. New functions on every render made kanban boards rebuild every card.
+  const [mutationBinding] = useState(createRendererMutationBinding<T>);
+  const [initialMutations] = useState(() => mutationBinding.bind(ownerKey, queryKey));
+  const mutations = useRef(initialMutations);
   const saveQueue = useRef(Promise.resolve());
   useEffect(() => {
     callbacks.current = options;
@@ -44,7 +47,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: A connection change reloads views after missed sync events, including local contributions.
   useEffect(() => {
     const binding: RendererReadBinding = workbench.views.reads.bind(ownerKey);
-    const owner = mutationBinding.current.bind(ownerKey, queryKey);
+    const owner = mutationBinding.bind(ownerKey, queryKey);
     mutations.current = owner;
     const handlers = {
       onValue: (value: T, request: symbol) => {
