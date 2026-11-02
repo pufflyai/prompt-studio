@@ -129,7 +129,9 @@ export const useTreeViewCustomization = (
   storageKey: string,
   regions: TreeViewRegions,
   icons: VisibilityToggleIcons,
-  options: TreeViewCustomizationOptions = {},
+  // Optional rather than defaulted: React Compiler drops its caching around a defaulted object parameter,
+  // which rebuilt every section, and every tree row with it, on each render.
+  options?: TreeViewCustomizationOptions,
 ): TreeViewCustomization => {
   const sectionOverrides = useTreeListVisibilityStore(storageKey, (state) => state.sectionOverrides);
   const nodeOverrides = useTreeListVisibilityStore(storageKey, (state) => state.nodeOverrides);
@@ -149,7 +151,7 @@ export const useTreeViewCustomization = (
     nodeOrderBySection: activeNodeOrder,
     withGroupControls,
     newGroupAction,
-  } = useTreeViewGroups(storageKey, sourceSections, nodeOrderBySection, options.allowGroups === true);
+  } = useTreeViewGroups(storageKey, sourceSections, nodeOrderBySection, options?.allowGroups === true);
   const visibilityActions = {
     onToggleSection: toggleSection,
     onToggleNode: toggleNode,
@@ -173,9 +175,9 @@ export const useTreeViewCustomization = (
     orderedSectionsBySlot[slot].push(section);
   }
   const orderedHeaderSections = orderedSectionsBySlot.header;
-  const orderedSections = withoutPinnedOnlyRows(orderedSectionsBySlot.content, options.pinnedOnlyNodeIds ?? new Set());
+  const orderedSections = withoutPinnedOnlyRows(orderedSectionsBySlot.content, options?.pinnedOnlyNodeIds ?? new Set());
   const orderedFooterSections = orderedSectionsBySlot.footer;
-  const includeNodeContextMenus = options.suppressNodeContextMenus !== true;
+  const includeNodeContextMenus = options?.suppressNodeContextMenus !== true;
 
   const headerSections = addSectionNodeVisibilityContextMenuItems(
     orderedHeaderSections,
@@ -204,7 +206,7 @@ export const useTreeViewCustomization = (
       sections,
       filterVisibleSections(sections, sectionOverrides, nodeOverrides),
       sectionOverrides,
-      options.pinnedOnlyNodeIds,
+      options?.pinnedOnlyNodeIds,
     );
   const visibleHeaderSections = visibleIn(headerSections);
   const visibleSections = visibleIn(contentSections);
