@@ -9,6 +9,7 @@ export const keyframeTimelineRecipe = defineSlotRecipe({
     "lane",
     "ruler",
     "tick",
+    "ticks",
     "keyframe",
     "diamond",
     "playhead",
@@ -78,6 +79,7 @@ export const keyframeTimelineRecipe = defineSlotRecipe({
       cursor: "ew-resize",
       _focusVisible: { outline: "2px solid", outlineColor: "border.accent-light", outlineOffset: "-2px" },
     },
+    ticks: { position: "absolute", inset: "0", overflow: "clip", pointerEvents: "none" },
     tick: {
       position: "absolute",
       top: "0",
@@ -88,6 +90,10 @@ export const keyframeTimelineRecipe = defineSlotRecipe({
       pointerEvents: "none",
       color: "fg.muted",
       textStyle: "mono/XS",
+      "&[data-end=true]": {
+        pl: "0",
+        "& > span": { display: "block", pr: "2xs", transform: "translateX(-100%)" },
+      },
     },
     keyframe: {
       position: "absolute",

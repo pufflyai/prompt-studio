@@ -9,6 +9,7 @@ export const TimelineLabel = withContext<HTMLButtonElement, HTMLChakraProps<"but
 export const TimelineLane = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "lane");
 export const TimelineRuler = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "ruler");
 export const TimelineTick = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "tick");
+export const TimelineTicks = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "ticks");
 export const TimelineKey = withContext<HTMLButtonElement, HTMLChakraProps<"button">>("button", "keyframe");
 export const TimelineDiamond = withContext<HTMLSpanElement, HTMLChakraProps<"span">>("span", "diamond");
 export const TimelinePlayhead = withContext<HTMLDivElement, HTMLChakraProps<"div">>("div", "playhead");

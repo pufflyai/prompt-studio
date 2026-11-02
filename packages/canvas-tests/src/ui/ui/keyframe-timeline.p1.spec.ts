@@ -393,6 +393,34 @@ test("Ctrl wheel zooms the timeline ruler around its pointer", async ({ page }) 
   await expect.poll(width).toBeLessThan(expanded);
   await expect(camera).toHaveAttribute("aria-label", cameraBefore!);
   expect(movedBounds.width).toBeGreaterThan(bounds.width);
+  await expect.poll(() => viewport.evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(0);
+  await expect(
+    preview
+      .getByRole("group", { name: "Animation tracks", exact: true })
+      .locator('[data-part="scrollbar"][data-orientation="horizontal"]'),
+  ).toBeHidden();
+  const long = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/keyframe-timeline/keyframe-timeline.canvas.tsx#Long",
+  );
+  const longRuler = long.getByRole("slider", { name: "Timeline playhead", exact: true });
+  const longViewport = long
+    .getByRole("group", { name: "Animation tracks", exact: true })
+    .locator('[data-part="viewport"]');
+  const longBounds = (await longRuler.boundingBox())!;
+  const visible = (await longViewport.boundingBox())!;
+  await page.mouse.move(visible.x + visible.width / 2, longBounds.y + longBounds.height / 2);
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, 10000);
+  await page.keyboard.up("Control");
+  await expect.poll(() => longViewport.evaluate((element) => element.scrollWidth - element.clientWidth)).toBe(0);
+  await expect.poll(() => longViewport.evaluate((element) => element.scrollLeft)).toBe(0);
+  await expect(
+    long
+      .getByRole("group", { name: "Animation tracks", exact: true })
+      .locator('[data-part="scrollbar"][data-orientation="horizontal"]'),
+  ).toBeHidden();
 });
 
 // Critical: a no-op zoom at the limit must not undo a later horizontal pan on an unrelated render.

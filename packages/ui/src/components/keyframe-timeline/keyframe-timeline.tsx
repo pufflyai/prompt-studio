@@ -25,6 +25,7 @@ import {
   TimelineRow,
   TimelineRuler,
   TimelineTick,
+  TimelineTicks,
   TimelineToolbar,
 } from "./timeline-parts";
 import { TimelineSettings } from "./timeline-settings";
@@ -171,11 +172,17 @@ export const KeyframeTimeline = (props: KeyframeTimelineProps) => {
                 }
               }}
             >
-              {ticks.map((time) => (
-                <TimelineTick key={time} left={`${(100 * time) / duration}%`}>
-                  {time.toFixed(2)}
-                </TimelineTick>
-              ))}
+              <TimelineTicks>
+                {ticks.map((time, index) => (
+                  <TimelineTick
+                    key={time}
+                    data-end={index > 0 && index === ticks.length - 1}
+                    left={`${(100 * time) / duration}%`}
+                  >
+                    <span>{time.toFixed(2)}</span>
+                  </TimelineTick>
+                ))}
+              </TimelineTicks>
               <TimelinePlayhead left={playhead} />
             </TimelineRuler>
           </TimelineRow>
