@@ -1,4 +1,5 @@
 import type { WorkbenchWidgetPlacement } from "../../core";
+import { placementIdentityKey } from "../../core/registries/layout/placement-reconciliation";
 
 export const retainViewPlacements = (
   previous: WorkbenchWidgetPlacement[],
@@ -21,7 +22,17 @@ export const retainViewPlacements = (
     const unchanged =
       existing &&
       Object.keys(existing).length === Object.keys(placement).length &&
-      Object.entries(placement).every(([key, value]) => Reflect.get(existing, key) === value);
+      Object.entries(placement).every(([key, value]) => {
+        const previousValue = Reflect.get(existing, key);
+        if (previousValue === value) return true;
+        // Navigation recomposes page placements, so an unchanged identity can arrive as a new object.
+        return (
+          key === "placementIdentity" &&
+          previousValue !== undefined &&
+          value !== undefined &&
+          placementIdentityKey(previousValue) === placementIdentityKey(value)
+        );
+      });
     retained.set(placement.widgetId, unchanged ? existing : placement);
   }
   const next = [...retained.values()];
