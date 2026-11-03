@@ -193,8 +193,10 @@ test("explicitly forgets a missing-provider record without a backing reference",
   );
 });
 
-test("forget returns a conflict when recovery saves a reference during session archival", async () => {
+test("rejected forget leaves active and completed sessions untouched when recovery wins", async () => {
   const workspace = await createMissingProviderWorkspace();
+  let cancelled = 0;
+  let archived = 0;
   const recovering = new OpenAPIHono<AppBindings>();
   recovering.route(
     "/v1",
@@ -202,14 +204,24 @@ test("forget returns a conflict when recovery saves a reference during session a
       ...appHandle.deps,
       workspaceSessionService: {
         ...appHandle.deps.workspaceSessionService,
-        listByWorkspace: async () => [{ id: "completed-session", status: "completed", archived: false }] as never,
+        listByWorkspace: async () => {
+          await appHandle.deps.workspaceService.updateProviderProjection(workspace.id, {
+            provider_ref_json: { version: 1, data: { remoteId: "recovered-before-delete" } },
+          });
+          return [
+            { id: "active-session", status: "in_progress", archived: false },
+            { id: "completed-session", status: "completed", archived: false },
+          ] as never;
+        },
       },
       sessionService: {
         ...appHandle.deps.sessionService,
+        cancel: async () => {
+          cancelled++;
+          return null;
+        },
         archive: async () => {
-          await appHandle.deps.workspaceService.updateProviderProjection(workspace.id, {
-            provider_ref_json: { version: 1, data: { remoteId: "recovered-during-archive" } },
-          });
+          archived++;
           return null;
         },
       },
@@ -219,9 +231,11 @@ test("forget returns a conflict when recovery saves a reference during session a
   const response = await recovering.request(`/v1/workspaces/${workspace.id}?forget=true`, { method: "DELETE" });
 
   expect(response.status).toBe(409);
+  expect(cancelled).toBe(0);
+  expect(archived).toBe(0);
   expect(await appHandle.deps.workspaceService.get(workspace.id)).toMatchObject({
     deleted_at: null,
-    provider_ref_json: { version: 1, data: { remoteId: "recovered-during-archive" } },
+    provider_ref_json: { version: 1, data: { remoteId: "recovered-before-delete" } },
   });
 });
 

@@ -55,6 +55,8 @@ Forgetting removes the record and archives its sessions. It abandons recovery an
 
 The HTTP API accepts `DELETE /v1/workspaces/{id}?forget=true`. SDK clients use `client.workspaces.delete(id, { forget: true })`. Omitting the option, or passing `false`, keeps normal deletion behavior.
 
+Forgetting checks eligibility before cancelling or archiving sessions. If session cleanup fails after the record is removed, repeat the HTTP or SDK request with the same workspace ID to finish cleanup. The saved workspace/session links remain available for that retry.
+
 Run `pst workspaces <command> --help` for current options.
 
 ## File links

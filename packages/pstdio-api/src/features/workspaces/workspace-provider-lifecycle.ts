@@ -124,19 +124,22 @@ export const finalizeWorkspaceDelete = async (
   options?: { forget?: boolean },
 ) => {
   const sessions = await deps.workspaceSessionService.listByWorkspace(workspace.id);
+  if (options?.forget) {
+    // Commit the guard before session changes. Persisted workspace/session links
+    // let a retry finish cleanup even when the record was already forgotten.
+    if (!workspace.deleted_at && !(await deps.workspaceService.softDelete(workspace.id, options))) {
+      throw new Error(
+        "Workspace changed before it could be forgotten. Check its provider and backing resource before retrying.",
+      );
+    }
+    await cancelWorkspaceSessions(deps, workspace.id);
+  }
   // Session writes share one database. Parallel workspaces must not multiply
   // into an unbounded queue of writes and sync events for long session histories.
   for (const session of sessions) {
     if (!session.archived) await deps.sessionService.archive(session.id);
   }
-  const deleted = options
-    ? await deps.workspaceService.softDelete(workspace.id, options)
-    : await deps.workspaceService.softDelete(workspace.id);
-  if (options?.forget && !deleted) {
-    throw new Error(
-      "Workspace changed before it could be forgotten. Check its provider and backing resource before retrying.",
-    );
-  }
+  if (!options?.forget) await deps.workspaceService.softDelete(workspace.id);
 };
 
 export const cancelProviderBackedWorkspace = async (
