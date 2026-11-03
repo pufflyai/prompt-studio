@@ -1,6 +1,5 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { WorkspaceBadge } from "@pstdio/ui";
 import { CollectionBadge, KanbanRendererCard } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
 
@@ -12,6 +11,12 @@ interface LinkedResource {
   unavailable?: boolean;
 }
 
+const workspace: LinkedResource = {
+  id: "workspace-attempt",
+  label: "PS-1042_A1",
+  icon: "folder",
+  description: "Workspace · PS-1042_A1",
+};
 const pullRequest: LinkedResource = {
   id: "github-pr-1602",
   label: "prompt-studio #1602",
@@ -36,24 +41,15 @@ function TicketResourceBadges(props: { resources: LinkedResource[] }) {
           title="Add GitHub PR resources and replace Planner pull request links"
           badges={[{ attributeId: "type", label: "Feature", color: "green" }]}
           onClick={() => setOpened("PS-1042 · Ticket")}
-          customSlots={[
-            <WorkspaceBadge
-              key="workspace"
-              workspaceType="worktree"
-              shorthand="PS-1042_A1"
-              showLeadingSessionIndicator={false}
-              onClick={() => setOpened("PS-1042_A1 · Workspace")}
-            />,
-            ...resources.map((resource) => (
-              <CollectionBadge
-                key={resource.id}
-                label={resource.label}
-                icon={resource.unavailable ? "circle-alert" : resource.icon}
-                tooltip={resource.unavailable ? `${resource.description} · Unavailable` : resource.description}
-                onClick={resource.unavailable ? undefined : () => setOpened(resource.description)}
-              />
-            )),
-          ]}
+          customSlots={resources.map((resource) => (
+            <CollectionBadge
+              key={resource.id}
+              label={resource.label}
+              icon={resource.unavailable ? "circle-alert" : resource.icon}
+              tooltip={resource.unavailable ? `${resource.description} · Unavailable` : resource.description}
+              onClick={resource.unavailable ? undefined : () => setOpened(resource.description)}
+            />
+          ))}
         />
         {opened ? (
           <Text role="status" textStyle="label/S/regular" color="fg.muted">
@@ -67,19 +63,18 @@ function TicketResourceBadges(props: { resources: LinkedResource[] }) {
 
 export default {
   title: "Proposals/PS-1042 Linked resource badges",
-  description:
-    "Existing ticket card and workspace badge with clickable owner-provided resource badges. Sample data only.",
+  description: "One linked-resource badge list for workspaces, PRs, and artifacts. Sample data only.",
 } satisfies CanvasMeta;
 
 export const PullRequestAndWorkspace: CanvasFrame = {
-  render: () => <TicketResourceBadges resources={[pullRequest]} />,
+  render: () => <TicketResourceBadges resources={[workspace, pullRequest]} />,
 };
 export const MultipleResourceKinds: CanvasFrame = {
-  render: () => <TicketResourceBadges resources={[pullRequest, artifact]} />,
+  render: () => <TicketResourceBadges resources={[workspace, pullRequest, artifact]} />,
 };
 export const NoLinkedResources: CanvasFrame = {
   render: () => <TicketResourceBadges resources={[]} />,
 };
 export const UnavailableResource: CanvasFrame = {
-  render: () => <TicketResourceBadges resources={[{ ...pullRequest, unavailable: true }]} />,
+  render: () => <TicketResourceBadges resources={[workspace, { ...pullRequest, unavailable: true }]} />,
 };
