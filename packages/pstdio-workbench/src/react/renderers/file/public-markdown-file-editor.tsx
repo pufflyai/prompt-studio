@@ -35,16 +35,20 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
   } = props;
   const connectRef = useRef(connect);
   connectRef.current = connect;
-  const [session, setSession] = useState<TextEditingSession>();
+  const [connection, setConnection] = useState<{
+    session: TextEditingSession;
+    presentation: NativeTextPresentation;
+  }>();
+  const session = connection?.session;
   const [openingError, setOpeningError] = useState<string>();
   const retryRef = useRef<() => Promise<void>>(async () => {});
   const state = useSyncExternalStore(session?.subscribe ?? subscribeEmpty, session?.getSnapshot ?? empty, empty);
   useEffect(() => {
-    if (!session || !registerPendingDraft) return;
-    return registerPendingDraft(() => session.getSnapshot().pending);
-  }, [session, registerPendingDraft]);
+    if (!connection || !registerPendingDraft) return;
+    return registerPendingDraft(() => connection.session.getSnapshot().pending, connection.presentation.sourceRemoved);
+  }, [connection, registerPendingDraft]);
   useEffect(() => {
-    setSession(undefined);
+    setConnection(undefined);
     setOpeningError(undefined);
     if (!open) return;
     const presentation = connectRef.current();
@@ -53,14 +57,14 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
       setOpeningError(undefined);
       try {
         const value = await presentation.retry();
-        if (mounted) setSession(value);
+        if (mounted) setConnection({ session: value, presentation });
       } catch (error) {
         if (mounted) setOpeningError(error instanceof Error ? error.message : String(error));
       }
     };
     void presentation.open().then(
       (value) => {
-        if (mounted) setSession(value);
+        if (mounted) setConnection({ session: value, presentation });
       },
       (error) => {
         if (mounted) setOpeningError(error instanceof Error ? error.message : String(error));

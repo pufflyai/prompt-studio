@@ -18,6 +18,7 @@ export const createNativeTextPresentation = (input: NativeTextPresentationInput)
   let opening: Promise<TextEditingSession> | undefined;
   let retrying: Promise<TextEditingSession> | undefined;
   let closing: Promise<void> | undefined;
+  let removed = false;
   const closed = () =>
     Object.assign(new Error("This text view is no longer open"), {
       code: "session_closed",
@@ -26,6 +27,11 @@ export const createNativeTextPresentation = (input: NativeTextPresentationInput)
   const prepareSessionClose = () => {
     closing ??= Promise.resolve()
       .then(async () => {
+        // Explicitly closing a retained removed-source draft discards it; it can no longer be saved.
+        if (removed) {
+          await releasePlacementTextGuest(input.workbench, events);
+          return;
+        }
         // Failed admission has no local session. The enclosing guest still owns its admitted member cleanup.
         const session = await opening?.catch(() => undefined);
         if (session) await session.close();
@@ -75,6 +81,9 @@ export const createNativeTextPresentation = (input: NativeTextPresentationInput)
   };
   return {
     open,
+    sourceRemoved() {
+      removed = true;
+    },
     retry() {
       if (lifetime.signal.aborted || closing) return Promise.reject(closed());
       if (!opening) return open();

@@ -13,7 +13,7 @@ const fixture = () => {
   const release = Promise.withResolvers<void>();
   let holdOpen = false;
   let refuseConnection = false;
-  let refuseSubmit = false;
+  let refuseSubmit: false | "source_unavailable" | "source_retired" = false;
   let revision = 1;
   const snapshot = () => ({
     state: Buffer.from(Y.encodeStateAsUpdate(document)).toString("base64"),
@@ -42,7 +42,7 @@ const fixture = () => {
       if (refuseSubmit)
         return Response.json({
           ok: false,
-          error: { code: "source_unavailable", message: "Write interrupted", retryable: true },
+          error: { code: refuseSubmit, message: "Write interrupted", retryable: refuseSubmit !== "source_retired" },
         });
       Y.applyUpdate(document, Buffer.from(input.update!, "base64"));
       revision++;
@@ -113,8 +113,8 @@ const fixture = () => {
     refuseConnection() {
       refuseConnection = true;
     },
-    refuseSubmit(value: boolean) {
-      refuseSubmit = value;
+    refuseSubmit(value: boolean | "source_retired") {
+      refuseSubmit = value === true ? "source_unavailable" : value;
     },
     resume() {
       release.resolve();
@@ -215,6 +215,46 @@ test("a failed native Retry keeps the admitted public session and its unacknowle
     expect(f.calls.filter((call) => call === "open")).toHaveLength(1);
     expect(f.document.getText("content").toString()).toBe("source kept");
   } finally {
+    await f.stop();
+  }
+});
+
+test("a removed source keeps its refused draft until the user closes its placement", async () => {
+  const f = fixture();
+  try {
+    const session = await f.presentation.open();
+    f.refuseSubmit("source_retired");
+    session.transact((text) => text.insert(text.length, " recover me"));
+    await expect(session.flush()).rejects.toMatchObject({ code: "source_retired" });
+    expect(session.getSnapshot().pending).toBe(true);
+    expect(session.getSnapshot().text.toString()).toBe("source recover me");
+    f.presentation.sourceRemoved();
+    expect(f.calls).not.toContain("disconnect");
+    await f.workbench.closePlacement(f.placement.placementIdentity!);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
+    expect(f.calls).toContain("disconnect");
+    expect(f.document.getText("content").toString()).toBe("source");
+  } finally {
+    await f.stop();
+  }
+});
+
+test("a save rejection alone cannot discard a live placement's draft on close", async () => {
+  const f = fixture();
+  try {
+    const session = await f.presentation.open();
+    f.refuseSubmit("source_retired");
+    session.transact((text) => text.insert(text.length, " keep me"));
+    await expect(session.flush()).rejects.toMatchObject({ code: "source_retired" });
+    await expect(f.workbench.closePlacement(f.placement.placementIdentity!)).rejects.toMatchObject({
+      code: "source_retired",
+    });
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    expect(session.getSnapshot().pending).toBe(true);
+    expect(session.getSnapshot().text.toString()).toBe("source keep me");
+    expect(f.calls).not.toContain("disconnect");
+  } finally {
+    f.presentation.sourceRemoved();
     await f.stop();
   }
 });

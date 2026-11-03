@@ -222,7 +222,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       if (resourceKey(resource) !== resourceKey(resourceRef.current)) return [];
       removed = true;
       const retain = controllerRef.current?.markRemoved();
-      retained ||= Boolean(retain || pendingDraft.hasPending(loadKey));
+      const retainPublic = pendingDraft.retainRemoved(loadKey);
+      retained ||= Boolean(retain || retainPublic);
       if (retained) setEditState((state) => ({ ...state, removed: true }));
       const identity = placementRef.current?.placementIdentity;
       return retained && identity ? [identity] : [];
@@ -320,7 +321,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           title={resource?.label ?? contribution.title}
           connectDocument={connectDocument}
           connectText={connectText}
-          registerPendingDraft={(pending) => pendingDraft.register(loadKey, pending)}
+          registerPendingDraft={(pending, onRemoved) => pendingDraft.register(loadKey, pending, onRemoved)}
         />
       </Box>
     </Flex>
