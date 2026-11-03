@@ -1,6 +1,6 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
-import type { AutoBuildButtonProps } from "../../src/timeline/view/auto-build-button";
+import type { AutoBuildButtonProps } from "./auto-build-button";
 
 interface AutoBuildWarningsProps
   extends Pick<

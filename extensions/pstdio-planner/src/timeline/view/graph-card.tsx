@@ -69,10 +69,7 @@ export function GraphCard(props: GraphCardProps) {
   const activate = () => {
     element.current?.focus({ preventScroll: true });
     actions.onSelect(row.id);
-    if (actions.onOpenRequests && (row.requestErrors.length || row.requests.some(({ state }) => state === "open"))) {
-      actions.onOpenRequests(row);
-    } else if (interaction)
-      void interaction.host.call("navigation.open", { target: timelineTicketPreviewTarget(row.target) });
+    if (interaction) void interaction.host.call("navigation.open", { target: timelineTicketPreviewTarget(row.target) });
   };
   const waiting = row.flags.includes("waiting");
   let opacity = 1;

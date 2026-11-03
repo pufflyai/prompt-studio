@@ -17,9 +17,9 @@ export function RequestCarousel(props: RequestCarouselProps) {
     pending.findIndex(({ id }) => id === selectedId),
   );
   const active = pending[index];
-  if (!active) return <Text color="fg.muted">Nothing needs attention.</Text>;
   return (
     <Stack gap="sm">
+      {!active ? <Text color="fg.muted">Nothing needs attention.</Text> : null}
       {pending.length > 1 ? (
         <HStack justify="space-between">
           <Button
@@ -39,7 +39,11 @@ export function RequestCarousel(props: RequestCarouselProps) {
       ) : null}
       {/* Keep every pending form mounted so navigation and live refreshes preserve drafts. */}
       {pending.map((request) => (
-        <Stack key={request.id} hidden={request.id !== active.id} display={request.id === active.id ? "flex" : "none"}>
+        <Stack
+          key={request.id}
+          hidden={request.id !== active?.id}
+          display={request.id === active?.id ? "flex" : "none"}
+        >
           <RequestForm
             request={request}
             onAnswer={async (id, response) => {

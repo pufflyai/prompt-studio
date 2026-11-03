@@ -1,5 +1,5 @@
 import { Button, HStack, Popover, Portal, Separator, Stack, Text, useRecipe, useSlotRecipe } from "@chakra-ui/react";
-import { PopoverHeader, ScrollArea } from "@pstdio/ui";
+import { EmptyState, PopoverHeader, ScrollArea } from "@pstdio/ui";
 import { psTheme } from "@pstdio/ui/theme";
 import { Pause, Play, Square } from "lucide-react";
 import { type ReactElement, useRef } from "react";
@@ -8,6 +8,7 @@ import { AutoBuildHelp } from "./auto-build-help";
 import { AutoBuildRequests } from "./auto-build-requests";
 import { AutoBuildSessionRow } from "./auto-build-session-row";
 import { AutoBuildSessions } from "./auto-build-sessions";
+import { AutoBuildWarnings } from "./auto-build-warnings";
 
 interface AutoBuildActivityProps
   extends Pick<
@@ -64,7 +65,7 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
     t,
     ...sessions
   } = props;
-  const { supervisor, completed, failed, starting, onOpenSession } = sessions;
+  const { supervisor, completed, failed, onOpenSession } = sessions;
   const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   const content = useRef<HTMLDivElement>(null);
   const danger = useRecipe({ recipe: psTheme.getRecipe("button") })({ variant: "destructive" });
@@ -99,9 +100,18 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
               }
               actions={<AutoBuildHelp t={t} />}
             />
-            <Popover.Body display="flex" flexDirection="column" minH="0" flex="1" px="md" pb="sm">
+            <Popover.Body display="flex" flexDirection="column" minH="0" flex="1" p="0">
               <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
-                <Stack gap="md">
+                <Stack gap="md" p="sm">
+                  <AutoBuildWarnings {...sessions} enabled={enabled} actionError={actionError} t={t} />
+                  <AutoBuildRequests
+                    reviewRequests={reviewRequests}
+                    requestErrors={requestErrors}
+                    onAnswerRequest={onAnswerRequest}
+                    onOpenRequestChat={onOpenRequestChat}
+                    t={t}
+                  />
+                  <Separator />
                   <Stack gap="2xs">
                     <Text textStyle="label/2XS/medium" color="fg.muted">
                       {t("timeline.autoBuild.supervisor", "Supervisor")}
@@ -113,37 +123,16 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
                         onOpen={onOpenSession}
                       />
                     ) : (
-                      <Text textStyle="paragraph/S/regular">
-                        {enabled && starting
-                          ? t("timeline.autoBuild.starting", "Waiting to start the supervisor")
-                          : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
-                      </Text>
+                      <EmptyState size="sm" title={t("timeline.autoBuild.noSupervisor", "No supervisor")} />
                     )}
                   </Stack>
                   <Separator />
-                  {reviewRequests.length || requestErrors.length ? (
-                    <>
-                      <AutoBuildRequests
-                        reviewRequests={reviewRequests}
-                        requestErrors={requestErrors}
-                        onAnswerRequest={onAnswerRequest}
-                        onOpenRequestChat={onOpenRequestChat}
-                        t={t}
-                      />
-                      <Separator />
-                    </>
-                  ) : null}
-                  <AutoBuildSessions {...sessions} enabled={enabled} t={t} />
+                  <AutoBuildSessions {...sessions} t={t} />
                 </Stack>
               </ScrollArea>
             </Popover.Body>
-            <Popover.Footer flexShrink="0" px="md" pb="sm">
+            <Popover.Footer flexShrink="0" p="sm">
               <Stack w="full" alignItems="end">
-                {actionError ? (
-                  <Text role="alert" color="fg.error">
-                    {actionError}
-                  </Text>
-                ) : null}
                 {enabled ? (
                   <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onPause?.()}>
                     <Pause />

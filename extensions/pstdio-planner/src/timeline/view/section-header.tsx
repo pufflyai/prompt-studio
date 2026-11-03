@@ -2,7 +2,7 @@
 import { Box, Flex, Icon, IconButton, Text, useRecipe } from "@chakra-ui/react";
 import { psTheme, Tooltip } from "@pstdio/ui";
 import { CheckCircle2, ChevronsDownUp, ChevronsUpDown, MessageCircleWarning, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { isComplete } from "../model/filter";
 import { statusProgress } from "../model/status-progress";
 import { formatDay } from "./flags";
@@ -77,6 +77,7 @@ function DeleteButton(props: { deadlineId: string; label: string } & Pick<Props,
 
 export function SectionHeader(props: Props) {
   const { entry, onToggle, onDelete, onRenameDeadline, onReview } = props;
+  const toggle = useRef<HTMLButtonElement>(null);
   const { deadline, counts } = entry.section;
   const complete = isComplete(entry.section);
   const label = deadline ? (deadline.name ?? formatDay(deadline.date)) : "Unscheduled";
@@ -87,6 +88,7 @@ export function SectionHeader(props: Props) {
           size="2xs"
           variant="ghost"
           color="fg.subtle"
+          ref={toggle}
           aria-label={`${entry.collapsed ? "Expand" : "Collapse"} ${label}`}
           onClick={() => onToggle(deadline?.id ?? null)}
         >
@@ -113,7 +115,10 @@ export function SectionHeader(props: Props) {
             variant="ghost"
             color="orange.fg"
             aria-label={`Open ${counts.humanNeeded} tickets needing attention in ${label}`}
-            onClick={() => onReview(deadline?.id ?? null)}
+            onClick={(event) => {
+              event.currentTarget.focus({ preventScroll: true });
+              onReview(deadline?.id ?? null, event.currentTarget, toggle.current);
+            }}
           >
             <Icon as={MessageCircleWarning} />
             <Text textStyle="label/XS/medium">{counts.humanNeeded}</Text>

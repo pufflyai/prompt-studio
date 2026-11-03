@@ -1,5 +1,6 @@
 // Put Planner review requests first in the overview, open requests before answered ones.
 import { Stack, Text } from "@chakra-ui/react";
+import { useRef } from "react";
 import type { PlanRow } from "../contracts";
 import { RequestCarousel } from "./request-carousel";
 import { RequestForm, type RequestHandlers } from "./request-form";
@@ -12,9 +13,14 @@ interface RequestsPanelProps extends RequestHandlers {
 
 export function RequestsPanel(props: RequestsPanelProps) {
   const { row, onAnswer, onOpenChat, heading = true, pendingOnly = false } = props;
+  const panel = useRef<HTMLDivElement>(null);
+  const answer: RequestHandlers["onAnswer"] = async (id, response) => {
+    await onAnswer(id, response);
+    requestAnimationFrame(() => panel.current?.focus());
+  };
   const requests = [...row.requests].sort((a, b) => Number(a.state !== "open") - Number(b.state !== "open"));
   return (
-    <Stack gap="sm">
+    <Stack gap="sm" ref={panel} tabIndex={-1}>
       {heading ? (
         <Text textStyle="label/S/medium" color="fg.muted">
           NEEDS ATTENTION
@@ -32,7 +38,7 @@ export function RequestsPanel(props: RequestsPanelProps) {
       {requests.some(({ state }) => state === "open") ? (
         <RequestCarousel
           requests={requests.filter(({ state }) => state === "open")}
-          onAnswer={onAnswer}
+          onAnswer={answer}
           onOpenChat={onOpenChat}
         />
       ) : null}
@@ -43,7 +49,7 @@ export function RequestsPanel(props: RequestsPanelProps) {
             <RequestForm
               key={`${request.id}:${JSON.stringify(request.outcome)}`}
               request={request}
-              onAnswer={onAnswer}
+              onAnswer={answer}
               onOpenChat={onOpenChat}
             />
           ))}

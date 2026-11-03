@@ -10,10 +10,12 @@ import { TicketRequestsDialog } from "./ticket-requests-dialog";
 interface AutoBuildPreviewProps {
   requests: ReviewRequestView[];
   failSave?: boolean;
+  empty?: boolean;
+  warning?: boolean;
 }
 
 export function AutoBuildPreview(props: AutoBuildPreviewProps) {
-  const { requests, failSave } = props;
+  const { requests, failSave, empty, warning } = props;
   const [open, setOpen] = useState(true);
   const [paused, setPaused] = useState(false);
   return (
@@ -28,9 +30,11 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
       enabled={!paused}
       paused={paused}
       failed={false}
-      sessions={[]}
-      supervisor={{ id: "supervisor", title: "Build the notes tool", status: "completed" }}
-      running={0}
+      sessions={empty ? [] : [{ id: "demo-agent", title: "Build notes sharing", status: "awaiting_input" }]}
+      supervisor={empty ? null : { id: "supervisor", title: "Build the notes tool", status: "in_progress" }}
+      stuck={warning}
+      error={warning ? "An agent needs a decision before work can continue." : undefined}
+      running={empty ? 0 : 1}
       capacity={2}
       onOpenChange={setOpen}
       onStop={() => setOpen(false)}
@@ -55,7 +59,8 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
 }
 
 export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
-  const { row } = props;
+  const [row, setRow] = useState(props.row);
+  const [pendingOnly, setPendingOnly] = useState(() => row.requests.some(({ state }) => state === "open"));
   const [open, setOpen] = useState(false);
   const [trigger, setTrigger] = useState<HTMLElement | null>(null);
   return (
@@ -68,6 +73,7 @@ export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
           dropBefore={false}
           onSelect={() => {}}
           onOpenRequests={() => {
+            setPendingOnly(row.requests.some(({ state }) => state === "open"));
             setTrigger(document.activeElement as HTMLElement | null);
             setOpen(true);
           }}
@@ -76,15 +82,34 @@ export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
           onDrop={() => {}}
         />
       </Box>
-      {open ? (
-        <TicketRequestsDialog
-          row={row}
-          trigger={trigger}
-          onClose={() => setOpen(false)}
-          onAnswer={async () => {}}
-          onOpenChat={async () => {}}
-        />
-      ) : null}
+      <TicketRequestsDialog
+        rows={[row]}
+        title={`${row.shorthand} · ${row.title}`}
+        open={open}
+        pendingOnly={pendingOnly}
+        trigger={trigger}
+        onClose={() => setOpen(false)}
+        onAnswer={async (id, response) => {
+          setRow((current) => ({
+            ...current,
+            requests: current.requests.map((request) =>
+              request.id === id
+                ? {
+                    ...request,
+                    state: "answered",
+                    outcome: {
+                      kind: "answered",
+                      at: "2026-11-03T12:00:00.000Z",
+                      by: { type: "human", id: "demo", displayName: "Human" },
+                      response,
+                    },
+                  }
+                : request,
+            ),
+          }));
+        }}
+        onOpenChat={async () => {}}
+      />
     </>
   );
 }

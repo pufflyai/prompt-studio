@@ -4,7 +4,7 @@
 
 Missing resources, credentials, access, reproduction details and non-decision actions use **Blocked** and a specific blocked reason: what is missing and what allows work to continue. Clear the reason when resolved. Dependency waiting belongs in dependency links. Routine assumptions, risk checklists and handing in work do not by themselves need a request.
 
-Planner owns the saved requests and answers used by Auto Build, the card modal and the ticket page. The numbered **Needs attention** bubble counts open or unreadable requests. “Review” here means a person's answer. Code reviews use `run-review` and `submit-review`; see [Attempts](0002-attempts.md).
+Planner owns the saved requests and answers used by Auto Build, card and milestone modals, and the ticket page. The numbered **Needs attention** bubble counts open or unreadable requests. “Review” here means a person's answer. Code reviews use `run-review` and `submit-review`; see [Attempts](0002-attempts.md).
 
 ## Request forms
 
@@ -31,7 +31,7 @@ Revising an answer does not undo actions already taken using the earlier answer.
 
 New requests need a ticket that is not done. Answers and cancellations still work after the ticket is done, because a merge can finish the ticket before its approval request is answered. Deleting a ticket deletes its requests.
 
-Answering or cancelling the last open request resolves pending input when no unreadable record remains. In Project Timeline, a card with pending decisions or its attention indicator opens that ticket’s forms in a modal. Closing it restores focus to the card control. Tickets board attention counts continue to open the Side Panel. Auto Build shows its current work’s requests inline below the supervisor. Previous and Next show one pending request and its position, preserving each draft. Saving removes the resolved item and selects the next; a failed save preserves the draft and shows an inline error. A single request has no carousel controls. The ticket sidebar's **Needs attention** entry still opens the full page beside the ticket navigation. Both surfaces use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
+Answering or cancelling the last open request resolves pending input when no unreadable record remains. In Project Timeline, only a card’s Needs attention bubble opens that ticket’s forms in a modal. The milestone’s bubble opens the same modal for requests from its tickets, with each request labeled by ticket. Closing it restores focus to the activating bubble. Clicking the rest of the card keeps its normal ticket preview behavior. Tickets board attention counts continue to open the Side Panel. Auto Build shows warnings first, then its current work’s requests inline, Supervisor, and Agents. Previous and Next show one pending request and its position, preserving each draft. Saving removes the resolved item and selects the next; a failed save preserves the draft and shows an inline error. A single request has no carousel controls. The ticket sidebar's **Needs attention** entry still opens the full page beside the ticket navigation. Both surfaces use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
 
 ## CLI
 
