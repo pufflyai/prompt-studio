@@ -16,6 +16,7 @@ Benchmarks run only on GitHub Actions. A developer machine has other work runnin
 | `chat` | `packages/ui/src/components/chat-ui/performance/*.p3.bench.ts` | Chat loading, switching, streaming, rendering, and page heap |
 | `subnav` | `packages/e2e/src/perf/subnav.p3.bench.ts` | Side navigation sections, data, and editor times |
 | `planner` | `packages/e2e/src/perf/planner-board-cold-open.p3.bench.ts` | Tickets cold open with 1,000 tickets |
+| `planner` | `packages/e2e/src/perf/planner-linked-resources.p3.bench.ts` | [200 tickets with workspaces, PRs and builds](0007-planner-linked-resources.md), including all badge and navigation checks |
 | `storage` | `packages/pstdio-db/src/services/**/*.bench.ts` | Record saves, session badge query, and peak memory |
 | `runtime` | `pstdio-api`, `pstdio-api-runtime-host`, and `pstdio-workbench` `*.bench.ts` | Session resources, open-resource lookups, workspace cleanup, and peak memory |
 | `relay` | `services/relay/scripts/storage-bound.p3.bench.ts` | Relay storage bound; Linux only, because it needs Docker |
