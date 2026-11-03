@@ -54,9 +54,12 @@ export const createEventStore = (options?: EventStoreOptions) => {
 
   const getHistory = () => history.map((entry) => entry.patch);
 
-  const subscribe = (): AsyncIterable<JsonPatch> => ({
+  const subscribe = (options?: { conversationSnapshot: () => JsonPatch }): AsyncIterable<JsonPatch> => ({
     [Symbol.asyncIterator]: () => {
       const queue: StoredPatch[] = [];
+      let queuedBytes = 0;
+      let conversationChanged = false;
+      let controlsBeforeSnapshot = 0;
       let resolve: ((value: IteratorResult<JsonPatch>) => void) | null = null;
       let done = closed;
 
@@ -66,11 +69,18 @@ export const createEventStore = (options?: EventStoreOptions) => {
           resolve = null;
           r({ value: entry.patch, done: false });
         } else {
-          queue.push(entry);
+          if (options && (entry.patch.path === "/messages" || entry.patch.path.startsWith("/messages/"))) {
+            // Keep the owner reference in options, never a snapshot per producer update.
+            if (!conversationChanged) controlsBeforeSnapshot = queue.length;
+            conversationChanged = true;
+          } else {
+            queue.push(entry);
+            queuedBytes += entry.size;
+          }
         }
       };
 
-      onPatch.diagnostics = () => ({ events: queue.length, bytes: byteLength(queue) });
+      onPatch.diagnostics = () => ({ events: queue.length, bytes: queuedBytes });
 
       const onClose = () => {
         done = true;
@@ -91,8 +101,14 @@ export const createEventStore = (options?: EventStoreOptions) => {
 
       return {
         next: () => {
+          if (conversationChanged && controlsBeforeSnapshot === 0) {
+            conversationChanged = false;
+            return Promise.resolve({ value: options!.conversationSnapshot(), done: false });
+          }
           if (queue.length > 0) {
             const entry = queue.shift()!;
+            queuedBytes -= entry.size;
+            if (conversationChanged) controlsBeforeSnapshot--;
             return Promise.resolve({ value: entry.patch, done: false });
           }
 
@@ -106,6 +122,9 @@ export const createEventStore = (options?: EventStoreOptions) => {
         },
 
         return: () => {
+          conversationChanged = false;
+          queue.length = 0;
+          queuedBytes = 0;
           onClose();
           return Promise.resolve({ value: undefined as never, done: true });
         },

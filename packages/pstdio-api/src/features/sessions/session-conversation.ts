@@ -39,7 +39,11 @@ export const createSessionConversation = (
       return messages.length;
     },
     snapshotAndSubscribe() {
-      const iterator = events.subscribe()[Symbol.asyncIterator]();
+      const iterator = events
+        .subscribe({
+          conversationSnapshot: () => ({ op: "replace", path: "/messages", value: [...messages] }),
+        })
+        [Symbol.asyncIterator]();
       return { messages: [...messages], stream: { [Symbol.asyncIterator]: () => iterator } };
     },
     close() {

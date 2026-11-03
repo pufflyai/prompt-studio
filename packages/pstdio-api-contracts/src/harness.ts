@@ -15,7 +15,7 @@ export type JsonPatch = {
 export type EventStore = {
   push(patch: JsonPatch): void;
   getHistory(): JsonPatch[];
-  subscribe(): AsyncIterable<JsonPatch>;
+  subscribe(options?: { conversationSnapshot: () => JsonPatch }): AsyncIterable<JsonPatch>;
   historyPlusStream(): AsyncIterable<JsonPatch>;
   snapshotAndSubscribe(): { history: JsonPatch[]; stream: AsyncIterable<JsonPatch> };
 };
