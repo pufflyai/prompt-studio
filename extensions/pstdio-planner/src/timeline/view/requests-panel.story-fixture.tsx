@@ -1,9 +1,8 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import { useState } from "react";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
-import { AutoBuildActivity } from "./auto-build-activity";
-import { AutoBuildIndicator } from "./auto-build-indicator";
+import { AutoBuildButton } from "./auto-build-button";
 import { GraphCard } from "./graph-card";
 import { TicketRequestsDialog } from "./ticket-requests-dialog";
 
@@ -16,29 +15,18 @@ interface AutoBuildPreviewProps {
 
 export function AutoBuildPreview(props: AutoBuildPreviewProps) {
   const { requests, failSave, empty, warning } = props;
-  const [open, setOpen] = useState(true);
   const [paused, setPaused] = useState(false);
   return (
-    <AutoBuildActivity
-      open={open}
-      trigger={
-        <Button size="xs" variant="outline" onClick={() => setOpen(true)}>
-          <AutoBuildIndicator status={paused ? "paused" : "awaiting_input"} label="Auto Build needs attention" />
-          Auto Build
-        </Button>
-      }
+    <AutoBuildButton
       enabled={!paused}
       paused={paused}
-      failed={false}
       sessions={empty ? [] : [{ id: "demo-agent", title: "Build notes sharing", status: "awaiting_input" }]}
       supervisor={empty ? null : { id: "supervisor", title: "Build the notes tool", status: "in_progress" }}
       stuck={warning}
       error={warning ? "An agent needs a decision before work can continue." : undefined}
       running={empty ? 0 : 1}
       capacity={2}
-      onOpenChange={setOpen}
-      onStop={() => setOpen(false)}
-      onConfigure={() => {}}
+      onStop={async () => true}
       onPause={async () => {
         setPaused(true);
         return true;

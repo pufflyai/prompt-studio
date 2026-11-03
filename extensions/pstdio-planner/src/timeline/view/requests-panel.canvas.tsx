@@ -218,15 +218,15 @@ export const UnreadableRequest: Story = {
 };
 
 export const AutoBuildPopover: Story = {
-  name: "Auto Build — Needs attention inline",
+  name: "Auto Build — open Needs attention",
   render: () => <AutoBuildPreview requests={[proposalReview, decision]} />,
 };
 export const AutoBuildSingleRequest: Story = {
-  name: "Auto Build — one request inline",
+  name: "Auto Build — one pending request",
   render: () => <AutoBuildPreview requests={[proposalReview]} />,
 };
 export const AutoBuildSaveError: Story = {
-  name: "Auto Build — answer save error",
+  name: "Auto Build — modal answer save error",
   render: () => <AutoBuildPreview requests={[proposalReview]} failSave />,
 };
 export const CardModal: Story = {

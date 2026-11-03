@@ -31,16 +31,24 @@ test("card decisions preserve drafts across navigation and restore focus after s
   await expect(modal.getByRole("button", { name: "Previous", exact: true })).toHaveCount(0);
 });
 
-// Critical: the constrained popover must keep the answer usable and retain it after a failed write.
-test("Auto Build answers stay inline and save failures keep the selected choice", async ({ page }) => {
+// Critical: moving the form out of Auto Build must preserve access, drafts, failures, and dismissal focus.
+test("Auto Build opens Needs attention in the shared modal and preserves the answer draft", async ({ page }) => {
   const preview = await openCanvasPreview(page, `${canvas}#AutoBuildSaveError`);
-  const activity = preview.getByRole("dialog", { name: "Auto Build", exact: true });
-  await expect(activity).toBeVisible();
-  await activity.getByText("2. Several tags at once", { exact: true }).click();
-  await activity.getByRole("button", { name: "Submit answer", exact: true }).click();
-  await expect(activity.getByRole("alert")).toContainText("Unable to save. Try again.");
-  await expect(activity.getByRole("radio", { name: /Several tags at once/ })).toBeChecked();
-  await expect(activity.getByRole("button", { name: "Submit answer", exact: true })).toBeEnabled();
+  const trigger = preview.getByRole("button", { name: "Auto Build", exact: true });
+  const activity = preview.getByRole("dialog", { name: "Auto Build activity", exact: true });
+  await trigger.press("Enter");
+  await activity.getByRole("button", { name: "Needs attention", exact: true }).press("Enter");
+  const modal = preview.getByRole("dialog", { name: "Needs attention", exact: true });
+  await expect(modal).toBeVisible();
+  await modal.getByText("2. Several tags at once", { exact: true }).click();
+  await modal.getByRole("button", { name: "Submit answer", exact: true }).click();
+  await expect(modal.getByRole("alert")).toContainText("Unable to save. Try again.");
+  await modal.press("Escape");
+  await expect(trigger).toBeFocused();
+  await trigger.press("Enter");
+  await activity.getByRole("button", { name: "Needs attention", exact: true }).press("Enter");
+  await expect(modal.getByRole("radio", { name: /Several tags at once/ })).toBeChecked();
+  await expect(modal.getByRole("button", { name: "Submit answer", exact: true })).toBeEnabled();
 });
 
 // Critical: resolved indicators must still offer access to saved answers.

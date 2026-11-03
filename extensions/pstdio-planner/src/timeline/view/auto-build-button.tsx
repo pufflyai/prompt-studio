@@ -1,7 +1,7 @@
 import { Button, CloseButton, Dialog, HStack, Portal } from "@chakra-ui/react";
 import { installPrismGlobal } from "@pstdio/ui";
 import { Play } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import type { WaitingTicket } from "../../commands/next-ticket-types";
 import type { ReviewRequestView, ReviewResponse } from "../../data/review-request-types";
 import { AutoBuildActivity } from "./auto-build-activity";
@@ -9,6 +9,7 @@ import type { AutoBuildFormProps } from "./auto-build-form";
 import { AutoBuildHelp } from "./auto-build-help";
 import { AutoBuildIndicator, resolveAutoBuildIndicatorStatus } from "./auto-build-indicator";
 import type { AutoBuildSession } from "./auto-build-session-row";
+import { RequestsDialog } from "./ticket-requests-dialog";
 
 const AutoBuildForm = lazy(async () => {
   await installPrismGlobal();
@@ -56,9 +57,14 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
     configuration,
     onStop,
     starting,
+    reviewRequests = [],
+    requestErrors = [],
+    onAnswerRequest,
+    onOpenRequestChat,
     t,
   } = props;
-  const [content, setContent] = useState<"configuration" | "sessions" | null>(null);
+  const [content, setContent] = useState<"configuration" | "sessions" | "requests" | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
   const inspectable = enabled || paused || failed;
   const status = resolveAutoBuildIndicatorStatus({
@@ -85,6 +91,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
         {...props}
         trigger={
           <Button
+            ref={trigger}
             aria-label={t("timeline.autoBuild.start", "Auto Build")}
             aria-description={enabled || paused || failed ? `Auto Build ${activity}` : undefined}
             size="xs"
@@ -108,6 +115,23 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
         }}
         onStop={() => void stop()}
         onConfigure={() => setContent("configuration")}
+        onOpenRequests={() => setContent("requests")}
+      />
+      <RequestsDialog
+        title={t("timeline.autoBuild.requests", "Needs attention")}
+        row={{ requests: reviewRequests, requestErrors }}
+        open={content === "requests"}
+        pendingOnly
+        trigger={trigger.current}
+        onClose={() => setContent(null)}
+        onAnswer={async (id, response) => {
+          if (!onAnswerRequest) throw new Error("Answering requests is unavailable.");
+          return onAnswerRequest(id, response);
+        }}
+        onOpenChat={async (id) => {
+          if (!onOpenRequestChat) throw new Error("Opening a session is unavailable.");
+          return onOpenRequestChat(id);
+        }}
       />
       <Dialog.Root
         lazyMount

@@ -17,8 +17,6 @@ interface AutoBuildActivityProps
     | "paused"
     | "reviewRequests"
     | "requestErrors"
-    | "onAnswerRequest"
-    | "onOpenRequestChat"
     | "onPause"
     | "onResume"
     | "completed"
@@ -43,6 +41,7 @@ interface AutoBuildActivityProps
   onOpenChange: (open: boolean) => void;
   onStop: () => void;
   onConfigure: () => void;
+  onOpenRequests: () => void;
 }
 
 export function AutoBuildActivity(props: AutoBuildActivityProps) {
@@ -59,8 +58,7 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
     onResume,
     reviewRequests = [],
     requestErrors = [],
-    onAnswerRequest,
-    onOpenRequestChat,
+    onOpenRequests,
     actionError,
     t,
     ...sessions
@@ -104,14 +102,12 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
               <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
                 <Stack gap="md" p="sm">
                   <AutoBuildWarnings {...sessions} enabled={enabled} actionError={actionError} t={t} />
-                  <AutoBuildRequests
-                    reviewRequests={reviewRequests}
-                    requestErrors={requestErrors}
-                    onAnswerRequest={onAnswerRequest}
-                    onOpenRequestChat={onOpenRequestChat}
-                    t={t}
-                  />
-                  <Separator />
+                  {reviewRequests.some(({ state }) => state === "open") || requestErrors.length ? (
+                    <>
+                      <AutoBuildRequests onOpen={onOpenRequests} t={t} />
+                      <Separator />
+                    </>
+                  ) : null}
                   <Stack gap="2xs">
                     <Text textStyle="label/2XS/medium" color="fg.muted">
                       {t("timeline.autoBuild.supervisor", "Supervisor")}

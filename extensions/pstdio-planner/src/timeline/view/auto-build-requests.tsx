@@ -1,27 +1,19 @@
-import type { AutoBuildButtonProps } from "./auto-build-button";
-import { RequestsPanel } from "./requests-panel";
+import { Button } from "@chakra-ui/react";
+import { getIconComponent } from "@pstdio/ui";
+import { REVIEW_REQUEST_ICON } from "../../data/review-request-summary";
 
-interface AutoBuildRequestsProps
-  extends Pick<
-    AutoBuildButtonProps,
-    "reviewRequests" | "requestErrors" | "onAnswerRequest" | "onOpenRequestChat" | "t"
-  > {}
+interface AutoBuildRequestsProps {
+  onOpen: () => void;
+  t: (key: string, fallback?: string) => string;
+}
 
 export function AutoBuildRequests(props: AutoBuildRequestsProps) {
-  const { reviewRequests = [], requestErrors = [], onAnswerRequest, onOpenRequestChat } = props;
+  const { onOpen, t } = props;
+  const AttentionIcon = getIconComponent(REVIEW_REQUEST_ICON);
   return (
-    <RequestsPanel
-      row={{ requests: reviewRequests, requestErrors }}
-      heading={false}
-      pendingOnly
-      onAnswer={async (id, response) => {
-        if (!onAnswerRequest) throw new Error("Answering requests is unavailable.");
-        return onAnswerRequest(id, response);
-      }}
-      onOpenChat={async (id) => {
-        if (!onOpenRequestChat) throw new Error("Opening a session is unavailable.");
-        return onOpenRequestChat(id);
-      }}
-    />
+    <Button size="sm" variant="outline" onClick={onOpen}>
+      <AttentionIcon />
+      {t("timeline.autoBuild.requests", "Needs attention")}
+    </Button>
   );
 }

@@ -4,8 +4,8 @@ import type { PlanRow } from "../contracts";
 import type { RequestHandlers } from "./request-form";
 import { RequestsPanel } from "./requests-panel";
 
-interface TicketRequestsDialogProps extends RequestHandlers {
-  rows: PlanRow[];
+interface RequestsDialogProps extends RequestHandlers {
+  row: Pick<PlanRow, "requests" | "requestErrors">;
   title: string;
   open: boolean;
   pendingOnly: boolean;
@@ -14,14 +14,19 @@ interface TicketRequestsDialogProps extends RequestHandlers {
   onClose: () => void;
 }
 
-export function TicketRequestsDialog(props: TicketRequestsDialogProps) {
-  const { rows, title, open, pendingOnly, trigger, fallback, onClose, ...handlers } = props;
+export function TicketRequestsDialog(props: Omit<RequestsDialogProps, "row"> & { rows: PlanRow[] }) {
+  const { rows, ...dialog } = props;
   const row = {
     requests: rows.flatMap((row) =>
       row.requests.map((request) => ({ ...request, ticketLabel: `${row.shorthand} · ${row.title}` })),
     ),
     requestErrors: rows.flatMap((row) => row.requestErrors),
   };
+  return <RequestsDialog {...dialog} row={row} />;
+}
+
+export function RequestsDialog(props: RequestsDialogProps) {
+  const { row, title, open, pendingOnly, trigger, fallback, onClose, ...handlers } = props;
   return (
     <Dialog.Root
       open={open}
