@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { AutoBuildPreview, CardNeedsAttentionPreview } from "../../../proposals/PS-1038/placements-preview";
+import { previewRequests } from "../../../proposals/PS-1038/review-requests.story-fixture";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
@@ -218,17 +219,27 @@ export const UnreadableRequest: Story = {
 
 export const AutoBuildPopover: Story = {
   name: "Auto Build — Needs attention inline",
-  render: () => <AutoBuildPreview requests={[proposalReview, decision]} />,
+  render: () => <AutoBuildPreview requests={previewRequests} />,
 };
 export const AutoBuildSingleRequest: Story = {
   name: "Auto Build — one request inline",
-  render: () => <AutoBuildPreview requests={[proposalReview]} />,
+  render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} />,
 };
 export const AutoBuildSaveError: Story = {
   name: "Auto Build — answer save error",
-  render: () => <AutoBuildPreview requests={[proposalReview]} failSave />,
+  render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} failSave />,
 };
 export const CardModal: Story = {
   name: "Card — open Needs attention",
-  render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [proposalReview, decision] }} />,
+  render: () => (
+    <CardNeedsAttentionPreview
+      row={{
+        ...row,
+        id: "demo-notes",
+        shorthand: "DEMO-12",
+        title: "Build a notes tool",
+        requests: previewRequests.filter((request) => request.ticketId === "demo-notes"),
+      }}
+    />
+  ),
 };

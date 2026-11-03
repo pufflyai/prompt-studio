@@ -7,6 +7,7 @@ import { AutoBuildIndicator } from "../../src/timeline/view/auto-build-indicator
 import { GraphCard } from "../../src/timeline/view/graph-card";
 import { AutoBuildActivity } from "./auto-build-activity";
 import { NeedsAttentionPreview } from "./needs-attention-preview";
+import { previewAgentSessions } from "./review-requests.story-fixture";
 
 interface AutoBuildPreviewProps {
   requests: ReviewRequestView[];
@@ -30,10 +31,10 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
         enabled={!paused}
         paused={paused}
         failed={false}
-        sessions={[]}
-        supervisor={{ id: "supervisor", title: "Build the notes tool", status: "completed" }}
-        running={0}
-        capacity={2}
+        sessions={previewAgentSessions}
+        supervisor={{ id: "demo-supervisor", title: "Coordinate the notes tool and importer", status: "in_progress" }}
+        running={previewAgentSessions.length}
+        capacity={3}
         onClose={() => setOpen(false)}
         onStop={() => setOpen(false)}
         onConfigure={() => {}}
