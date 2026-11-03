@@ -121,7 +121,10 @@ test("two encrypted hosts preserve native selection presence and table drafts th
   await secondPage.goto(`${route(second.host.baseUrl)}/native`);
   const right = await verifyNativePublicTextEditor(secondPage, "Shared source");
   const people = nativePage.getByRole("list", { name: "Other editors" }).getByRole("listitem");
-  await expect(people).toHaveText(["owner@example.test", "owner@example.test"]);
+  await expect(people).toHaveText(["owner@example.test"]);
+  await expect(secondPage.getByRole("list", { name: "Other editors" }).getByRole("listitem")).toHaveText([
+    "owner@example.test",
+  ]);
   const gate = Promise.withResolvers<void>();
   const held = new Set<string>();
   const admit = (name: string) => async (route: Route) => {
@@ -161,7 +164,7 @@ test("two encrypted hosts preserve native selection presence and table drafts th
   await projected(`PREFIX ${concurrent}`);
   await expect.poll(selection).toBe("Shared source");
   await secondPage.close();
-  await expect(people).toHaveText(["owner@example.test"]);
+  await expect(people).toHaveCount(0);
 
   const peerPage = await secondContext.newPage();
   await peerPage.goto(`${route(second.host.baseUrl)}/shared`);
@@ -169,7 +172,7 @@ test("two encrypted hosts preserve native selection presence and table drafts th
   const initial = "| A | B |\n| --- | --- |\n| left | right |\n\nOutside marker\n";
   await peer.fill(initial);
   await projected(initial);
-  await expect(people).toHaveText(["owner@example.test", "owner@example.test"]);
+  await expect(people).toHaveText(["owner@example.test"]);
   const table = nativePage.getByTestId("markdown-table-node");
   await expect(table.getByRole("cell", { name: "left", exact: true })).toBeVisible();
   await expect.poll(() => observed.submissions().length).toBeGreaterThan(0);
@@ -220,6 +223,6 @@ test("two encrypted hosts preserve native selection presence and table drafts th
   await received(committed);
   await expect(table.getByRole("cell", { name: "local left", exact: true })).toBeVisible();
   await peerPage.close();
-  await expect(people).toHaveText(["owner@example.test"]);
+  await expect(people).toHaveCount(0);
   await projected(committed);
 });
