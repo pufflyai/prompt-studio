@@ -30,8 +30,7 @@ export const createNativeProjectionQueue = (input: {
       job.completed = (await input.reconcile(address)) ?? 0;
       completeProjectionFences(job);
     } catch (error) {
-      // A newer request still needs its pass even when the previous one failed.
-      if (!job.dirty) throw error;
+      return { error };
     }
   };
   const request = (address: Address) => {
@@ -46,7 +45,9 @@ export const createNativeProjectionQueue = (input: {
       try {
         while (job.dirty) {
           job.dirty = false;
-          await reconcile(job, address);
+          const failed = await reconcile(job, address);
+          // Decide before cleanup, so work queued during this pass is never discarded.
+          if (failed && !job.dirty) throw failed.error;
         }
         if (job.fences.size) throw new Error("The requested projection revision is unavailable");
       } catch (error) {
