@@ -20,6 +20,27 @@ afterEach(async () => {
 });
 
 describe("workspace provider operations", () => {
+  test("rejects stale recovery writes after a workspace is forgotten", async () => {
+    const workspace = await workspacesService.createStandalone({
+      project_id: projectId,
+      provider_id: "example.remote",
+      provider_state: "provider_missing",
+      provider_operation_id: "recover-create",
+      provider_operation_kind: "delete",
+    });
+    await workspacesService.softDelete(workspace.id);
+    const deleted = await workspacesService.get(workspace.id);
+
+    const updated = await workspacesService.updateProviderOperationProjection(workspace.id, {
+      operationId: "recover-create",
+      operationKind: "delete",
+      patch: { provider_params_json: { recovered: true } },
+    });
+
+    expect(updated).toBeNull();
+    expect(await workspacesService.get(workspace.id)).toEqual(deleted);
+  });
+
   test("atomically replaces a referenced pending create with a cleanup operation", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,

@@ -12,6 +12,54 @@ const deferred = () => {
   return { promise, resolve };
 };
 
+test("forgetting an orphan stops active sessions and archives its history without calling a provider", async () => {
+  const workspace = makeWorkspace({ provider_state: "provider_missing", provider_ref_json: null });
+  const events: string[] = [];
+  const deps = {
+    workspaceService: {
+      get: async () => workspace,
+      softDelete: async () => {
+        events.push("delete record");
+      },
+    },
+    workspaceSessionService: {
+      listByWorkspace: async () => [
+        { id: "running", status: "in_progress", archived: false },
+        { id: "done", status: "completed", archived: false },
+      ],
+    },
+    sessionService: {
+      cancel: async (id: string) => {
+        events.push(`cancel ${id}`);
+      },
+      archive: async (id: string) => {
+        events.push(`archive ${id}`);
+      },
+    },
+  } as never;
+
+  await deleteWorkspace(deps, workspace as never, { forget: true });
+
+  expect(events).toEqual(["cancel running", "archive running", "archive done", "delete record"]);
+});
+
+test("forgetting rechecks the latest workspace and preserves a recovered provider reference", async () => {
+  const old = makeWorkspace({ provider_state: "provider_missing", provider_ref_json: null });
+  const current = makeWorkspace();
+  let deleted = false;
+  const deps = {
+    workspaceService: {
+      get: async () => current,
+      softDelete: async () => {
+        deleted = true;
+      },
+    },
+  } as never;
+
+  await expect(deleteWorkspace(deps, old as never, { forget: true })).rejects.toThrow(/no backing reference/);
+  expect(deleted).toBe(false);
+});
+
 test("HTTP and extension deletions across projects share two slots through session archival", async () => {
   const release = deferred();
   const slotsStarted = deferred();

@@ -1,5 +1,6 @@
 import { worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import { fireExtensionEventAsync } from "../extensions/extension-event-runtime";
+import { cancelWorkspaceSessions } from "./cancel-workspace-sessions";
 import type { WorkspacesRouteDeps } from "./deps";
 import { toExtensionWorkspace } from "./extension-workspace";
 import {
@@ -44,6 +45,7 @@ export const deleteWorkspace = (
   deps: WorkspacesRouteDeps,
   workspace: WorkspaceRecord,
   overrides: {
+    forget?: boolean;
     deleteProviderBackedWorkspace?: typeof deleteProviderBackedWorkspace;
     fireExtensionEventAsync?: typeof fireExtensionEventAsync;
   } = {},
@@ -54,6 +56,25 @@ export const deleteWorkspace = (
     queues.set(deps.workspaceService, queue);
   }
   return queue(workspace.id, async () => {
+    // Recheck after waiting for a slot: a provider may have recovered its reference.
+    if (overrides.forget) {
+      const current = await deps.workspaceService.get(workspace.id);
+      if (!current || current.deleted_at) return;
+      assertWorkspaceDeleteAllowed(current);
+      if (
+        current.provider_state !== "provider_missing" ||
+        current.execution_kind !== "remote" ||
+        current.provider_ref_json ||
+        current.root_path
+      ) {
+        throw new Error(
+          "Only a remote workspace with a missing provider and no backing reference or local path can be forgotten.",
+        );
+      }
+      await cancelWorkspaceSessions(deps, current.id);
+      await finalizeWorkspaceDelete(deps, current);
+      return;
+    }
     assertWorkspaceDeleteAllowed(workspace);
     const remove = overrides.deleteProviderBackedWorkspace ?? deleteProviderBackedWorkspace;
     const removed = await remove(deps, workspace);

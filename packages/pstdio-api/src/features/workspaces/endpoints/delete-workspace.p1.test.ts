@@ -166,3 +166,65 @@ test("archives all sessions within the workspace", async () => {
   const updatedSession = await updatedSessionRes.json();
   expect(updatedSession.archived).toBe(true);
 });
+
+const createMissingProviderWorkspace = async (overrides = {}) => {
+  const workspace = await appHandle.deps.workspaceService.createStandalone({
+    project_id: projectId,
+    provider_id: "nope",
+  });
+  return (await appHandle.deps.workspaceService.updateProviderProjection(workspace.id, {
+    provider_state: "provider_missing",
+    execution_kind: "remote",
+    provider_operation_id: "lost-create-response",
+    provider_operation_kind: "delete",
+    ...overrides,
+  }))!;
+};
+
+test("explicitly forgets a missing-provider record without a backing reference", async () => {
+  const workspace = await createMissingProviderWorkspace();
+  const response = await app.request(`/v1/workspaces/${workspace.id}?forget=true`, { method: "DELETE" });
+
+  expect(response.status).toBe(200);
+  expect((await appHandle.deps.workspaceService.get(workspace.id))?.deleted_at).toBeTruthy();
+  expect(await appHandle.deps.workspaceService.list(projectId)).not.toContainEqual(
+    expect.objectContaining({ id: workspace.id }),
+  );
+});
+
+test.each([
+  undefined,
+  "false",
+])("normal deletion preserves unresolved remote recovery with forget=%s", async (forget) => {
+  const workspace = await createMissingProviderWorkspace();
+  const query = forget === undefined ? "" : `?forget=${forget}`;
+  const response = await app.request(`/v1/workspaces/${workspace.id}${query}`, { method: "DELETE" });
+
+  expect(response.status).toBe(409);
+  expect(await appHandle.deps.workspaceService.get(workspace.id)).toMatchObject({
+    deleted_at: null,
+    provider_operation_id: "lost-create-response",
+    provider_operation_kind: "delete",
+  });
+});
+
+test.each([
+  { provider_ref_json: { version: 1, data: { remoteId: "known-resource" } } },
+  { execution_kind: "local" },
+  { provider_state: "provisioning", provider_operation_kind: "create" },
+  { root_path: "/chosen/folder" },
+])("refuses to forget a workspace with protected backing or lifecycle state: %j", async (overrides) => {
+  const workspace = await createMissingProviderWorkspace(overrides);
+  const response = await app.request(`/v1/workspaces/${workspace.id}?forget=true`, { method: "DELETE" });
+
+  expect(response.status).toBe(409);
+  expect((await appHandle.deps.workspaceService.get(workspace.id))?.deleted_at).toBeNull();
+});
+
+test("cannot forget the default workspace", async () => {
+  const workspace = (await appHandle.deps.workspaceService.getDefault(projectId))!;
+  const response = await app.request(`/v1/workspaces/${workspace.id}?forget=true`, { method: "DELETE" });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({ error: "Default workspace cannot be deleted." });
+  expect((await appHandle.deps.workspaceService.get(workspace.id))?.deleted_at).toBeNull();
+});

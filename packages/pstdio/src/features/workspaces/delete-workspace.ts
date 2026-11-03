@@ -4,6 +4,7 @@ import { getWorkspace as defaultGetWorkspace } from "./api/get-workspace";
 type DeleteWorkspaceInput = {
   projectId: string;
   workspaceShorthand: string;
+  forget?: boolean;
 };
 
 type Deps = {
@@ -24,7 +25,12 @@ export const deleteWorkspace = async (input: DeleteWorkspaceInput, deps: Deps = 
   const workspace = await deps.getWorkspace(projectId, workspaceShorthand);
   if (!workspace) throw new Error(`Workspace not found: ${workspaceShorthand}`);
 
-  await deps.deleteWorkspace(workspace.id);
+  if (input.forget) await deps.deleteWorkspace(workspace.id, { forget: true });
+  else await deps.deleteWorkspace(workspace.id);
 
-  deps.log(`Deleted workspace ${workspaceShorthand}`);
+  deps.log(
+    input.forget
+      ? `Forgot workspace ${workspaceShorthand}; any remote resource was left unchanged.`
+      : `Deleted workspace ${workspaceShorthand}`,
+  );
 };

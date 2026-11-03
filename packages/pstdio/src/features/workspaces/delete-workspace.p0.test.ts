@@ -9,6 +9,16 @@ const baseDeps = {
 };
 
 describe("delete workspace", () => {
+  test("passes explicit orphan forgetting through to the API", async () => {
+    const deleteWorkspaceApi = mock(async () => {});
+    const log = mock();
+    await deleteWorkspace(
+      { projectId: "proj-1", workspaceShorthand: "PS-1_A1", forget: true },
+      { ...baseDeps, deleteWorkspace: deleteWorkspaceApi, log },
+    );
+    expect(deleteWorkspaceApi).toHaveBeenCalledWith("ws-1", { forget: true });
+    expect(log.mock.calls).toEqual([["Forgot workspace PS-1_A1; any remote resource was left unchanged."]]);
+  });
   test("deletes a provider workspace by ID and confirms completion", async () => {
     const log = mock();
     const deleteWorkspaceApi = mock(async () => {});
