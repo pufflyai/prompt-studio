@@ -10,7 +10,7 @@ import {
   useRecipe,
   useSlotRecipe,
 } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { EmptyState, ScrollArea } from "@pstdio/ui";
 import { psTheme } from "@pstdio/ui/theme";
 import { Pause, Play, Square } from "lucide-react";
 import { type ReactNode, type RefObject, useRef } from "react";
@@ -18,6 +18,8 @@ import type { AutoBuildButtonProps } from "../../src/timeline/view/auto-build-bu
 import { AutoBuildHelp } from "../../src/timeline/view/auto-build-help";
 import { AutoBuildSessionRow } from "../../src/timeline/view/auto-build-session-row";
 import { AutoBuildSessions } from "./auto-build-sessions";
+import { AutoBuildWarnings } from "./auto-build-warnings";
+import { popoverRecipe } from "./popover";
 
 interface AutoBuildActivityProps
   extends Pick<
@@ -68,11 +70,11 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
     t,
     ...sessions
   } = props;
-  const { supervisor, completed, failed, starting, onOpenSession } = sessions;
+  const { supervisor, completed, failed, onOpenSession } = sessions;
   const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   const content = useRef<HTMLDivElement>(null);
   const danger = useRecipe({ recipe: psTheme.getRecipe("button") })({ variant: "destructive" });
-  const styles = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "panel" });
+  const styles = useSlotRecipe({ recipe: popoverRecipe })({ variant: "widget" });
   return (
     <Popover.Root
       lazyMount
@@ -87,12 +89,13 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
           <Popover.Content
             ref={content}
             css={styles.content}
+            width="popover-panel"
             display="flex"
             flexDirection="column"
             maxH="min({sizes.filter-picker-height}, var(--available-height))"
             aria-label="Auto Build activity"
           >
-            <Popover.Header flexShrink="0">
+            <Popover.Header flexShrink="0" p="sm">
               <HStack gap="xs">
                 <Popover.Title>
                   {t("timeline.autoBuild.start", "Auto Build")}
@@ -102,9 +105,12 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
                 <CloseButton size="sm" disabled={disabled} onClick={onClose} marginLeft="auto" />
               </HStack>
             </Popover.Header>
-            <Popover.Body display="flex" flexDirection="column" minH="0" flex="1">
+            <Popover.Body display="flex" flexDirection="column" minH="0" flex="1" p="0">
               <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
-                <Stack gap="md">
+                <Stack gap="md" p="sm">
+                  <AutoBuildWarnings {...sessions} enabled={enabled} actionError={actionError} t={t} />
+                  {attention}
+                  <Separator />
                   <Stack gap="2xs">
                     <Text textStyle="label/2XS/medium" color="fg.muted">
                       {t("timeline.autoBuild.supervisor", "Supervisor")}
@@ -116,27 +122,16 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
                         onOpen={onOpenSession}
                       />
                     ) : (
-                      <Text textStyle="paragraph/S/regular">
-                        {enabled && starting
-                          ? t("timeline.autoBuild.starting", "Waiting to start the supervisor")
-                          : t("timeline.autoBuild.noSupervisor", "No supervisor session")}
-                      </Text>
+                      <EmptyState size="sm" title={t("timeline.autoBuild.noSupervisor", "No supervisor")} />
                     )}
                   </Stack>
-                  <Separator />
-                  {attention}
                   <Separator />
                   <AutoBuildSessions {...sessions} enabled={enabled} t={t} />
                 </Stack>
               </ScrollArea>
             </Popover.Body>
-            <Popover.Footer flexShrink="0">
+            <Popover.Footer flexShrink="0" p="sm">
               <Stack w="full" alignItems="end">
-                {actionError ? (
-                  <Text role="alert" color="fg.error">
-                    {actionError}
-                  </Text>
-                ) : null}
                 {enabled ? (
                   <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onPause?.()}>
                     <Pause />

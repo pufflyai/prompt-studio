@@ -12,10 +12,12 @@ import { previewAgentSessions } from "./review-requests.story-fixture";
 interface AutoBuildPreviewProps {
   requests: ReviewRequestView[];
   failSave?: boolean;
+  empty?: boolean;
+  warning?: boolean;
 }
 
 export function AutoBuildPreview(props: AutoBuildPreviewProps) {
-  const { requests, failSave } = props;
+  const { requests, failSave, empty, warning } = props;
   const [open, setOpen] = useState(true);
   const [paused, setPaused] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
@@ -31,9 +33,15 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
         enabled={!paused}
         paused={paused}
         failed={false}
-        sessions={previewAgentSessions}
-        supervisor={{ id: "demo-supervisor", title: "Coordinate the notes tool and importer", status: "in_progress" }}
-        running={previewAgentSessions.length}
+        sessions={empty ? [] : previewAgentSessions}
+        supervisor={
+          empty
+            ? null
+            : { id: "demo-supervisor", title: "Coordinate the notes tool and importer", status: "in_progress" }
+        }
+        running={empty ? 0 : previewAgentSessions.length}
+        stuck={warning}
+        error={warning ? "An agent needs a decision before work can continue." : undefined}
         capacity={3}
         onClose={() => setOpen(false)}
         onStop={() => setOpen(false)}

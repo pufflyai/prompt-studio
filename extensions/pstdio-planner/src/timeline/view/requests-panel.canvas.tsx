@@ -230,6 +230,14 @@ export const AutoBuildSaveError: Story = {
   name: "Auto Build — answer save error",
   render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} failSave />,
 };
+export const AutoBuildEmptySessions: Story = {
+  name: "Auto Build — no supervisor or agents",
+  render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} empty />,
+};
+export const AutoBuildWarning: Story = {
+  name: "Auto Build — warning above requests",
+  render: () => <AutoBuildPreview requests={previewRequests} warning />,
+};
 export const CardModal: Story = {
   name: "Card — open Needs attention",
   render: () => (
