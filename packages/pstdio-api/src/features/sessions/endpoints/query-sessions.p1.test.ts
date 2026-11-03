@@ -180,3 +180,22 @@ test("HTTP session queries reject incomplete anchors and unsupported sort orders
     expect(response.status).toBe(400);
   }
 });
+
+test("SDK and extension queries page by update time using the same public order", async () => {
+  const project = await handle.deps.projectService.create({ name: "Updated conversations" });
+  const first = await handle.deps.sessionService.create({ project_id: project.id, title: "First", agent: "worker" });
+  const second = await handle.deps.sessionService.create({ project_id: project.id, title: "Second", agent: "worker" });
+  const changed = await handle.deps.sessionService.update(first.id, {
+    last_request_started: "2030-01-01T00:00:00.000Z",
+  });
+  const renamed = await handle.deps.sessionService.update(second.id, { title: "Renamed" });
+  const expected = [changed!, renamed!].sort(
+    (a, b) => b.updated_at.localeCompare(a.updated_at) || b.id.localeCompare(a.id),
+  );
+  const input = { orderBy: "updated" as const, limit: 1 };
+  const api = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "P" } });
+  expect((await api.query(input)).items.map((row) => row.id)).toEqual([expected[0].id]);
+  const actual = [];
+  for await (const row of client.sessions.iterate(project.id, input)) actual.push(row.id);
+  expect(actual).toEqual(expected.map((row) => row.id));
+});

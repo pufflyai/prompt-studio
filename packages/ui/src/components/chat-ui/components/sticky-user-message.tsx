@@ -2,7 +2,7 @@ import { Box, useSlotRecipe } from "@chakra-ui/react";
 import { useLayoutEffect, useRef, useState, type WheelEvent } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ChatMessage } from "./ai-message";
-import { messageFadeInProps } from "./chat-message-animation";
+import { useMessageFadeIn } from "./chat-message-animation";
 import { StickyMessageToggle } from "./chat-message-list-items";
 import { shouldStopStickyUserMessageWheel } from "./chat-panel-sticky-user-message";
 import { MessageActionPanel } from "./message-action-panel";
@@ -12,7 +12,7 @@ import type { SessionMessage } from "./message-types";
 interface StickyUserMessageProps {
   message: SessionMessage;
   expanded: boolean;
-  animate: boolean;
+  animatedKeys: Set<string>;
   onToggle: (messageId: string) => void;
 }
 
@@ -21,7 +21,8 @@ const handleWheel = (event: WheelEvent<HTMLElement>) => {
 };
 
 export function StickyUserMessage(props: StickyUserMessageProps) {
-  const { message, expanded, animate, onToggle } = props;
+  const { message, expanded, animatedKeys, onToggle } = props;
+  const fadeInProps = useMessageFadeIn(message.animationKey ?? message.id, animatedKeys);
   const viewportRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -54,7 +55,7 @@ export function StickyUserMessage(props: StickyUserMessageProps) {
 
   const actions = <MessageActionPanel message={message} alwaysVisible copyAlwaysVisible={false} />;
   return (
-    <ChatMessage.Root from="user" delivery={message.delivery ?? "sent"} {...(animate ? messageFadeInProps : undefined)}>
+    <ChatMessage.Root from="user" delivery={message.delivery ?? "sent"} {...fadeInProps}>
       <ChatMessage.Content from="user" css={styles.root}>
         <Box ref={previewRef} css={styles.preview} aria-hidden="true" />
         <ScrollArea viewportRef={viewportRef} showVerticalScrollbar={isExpanded} viewportProps={viewportProps}>
@@ -67,7 +68,7 @@ export function StickyUserMessage(props: StickyUserMessageProps) {
           <StickyMessageToggle
             expanded={isExpanded}
             label={isExpanded ? "Show less" : "Show more"}
-            onClick={() => onToggle(message.id)}
+            onClick={() => onToggle(message.animationKey ?? message.id)}
             actionPanel={actions}
           />
         ) : null}

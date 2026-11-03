@@ -8,6 +8,7 @@
   "scripts": {
     "start": "bun --conditions=source run src/server.ts",
     "dev": "bun --conditions=source run --hot src/index.ts",
+    "bench:personal-history": "bun src/services/personal-history/log-memory.diagnostic.ts",
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
     "analyze-bundle": "bun build ./src/index.ts --outdir ./dist --target bun --metafile=./dist/bundle-meta.json --metafile-md=./dist/bundle-meta.md",
     "typecheck": "bun check",

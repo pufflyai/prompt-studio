@@ -224,18 +224,21 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           remoteRef.current = remote;
           hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
 
+          const initialProps = propsRef.current;
           await remote.init({
             keyboardShortcuts: keyboardRef.current.shortcuts,
             sizing,
             moduleUrl: moduleUrlAtConnect,
             styles: stylesAtConnect,
-            props: propsRef.current,
+            props: initialProps,
             theme: resolveActiveTheme(themeRef.current, themeRootRef.current?.()),
             themeVariables: collectChakraThemeVariables(themeRootRef.current?.()),
             extensionId: view.extensionId,
           });
           if (iframeRef.current !== iframe) return;
           initializedRef.current = true;
+          // Props can change while the guest imports or mounts asynchronously.
+          if (propsRef.current !== initialProps) await remote.propsUpdate({ props: propsRef.current });
           await remote.keyboardUpdate?.(keyboardRef.current.shortcuts);
           onReadyRef.current?.();
         })

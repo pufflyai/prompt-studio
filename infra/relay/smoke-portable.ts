@@ -23,7 +23,6 @@ const env = {
   GOOGLE_CLIENT_ID: "owned-fixture-client",
   GOOGLE_CLIENT_SECRET: "owned-fixture-secret",
   RELAY_ACCESS_TRUST: "{}",
-  RELAY_RECOVERY_KEY: Buffer.alloc(32).toString("base64"),
 };
 let active: ReturnType<typeof Bun.spawn> | undefined;
 const interrupt = () => active?.kill("SIGTERM");
@@ -118,10 +117,8 @@ config.services.manager.volumes = fixtures.services.authority.volumes;
 config.services.manager.networks.edge = { aliases: ["authority"] };
 config.services.manager.healthcheck = fixtures.services.authority.healthcheck;
 delete config.services.relay.environment.RELAY_ACCESS_TRUST;
-delete config.services.relay.environment.RELAY_RECOVERY_KEY;
 Object.assign(config.services.relay.environment, {
   RELAY_ACCESS_TRUST_FILE: "/access-trust/trust.json",
-  RELAY_RECOVERY_KEY_FILE: "/recovery/key",
 });
 config.services.relay.volumes = fixtures.services.relay.volumes;
 config.services.relay.healthcheck = fixtures.services.relay.healthcheck;

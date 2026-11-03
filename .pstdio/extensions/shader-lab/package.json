@@ -32,5 +32,6 @@
     "@types/react-dom": "^19.2.0",
     "typescript": "6.0.2"
   },
-  "packageManager": "bun@1.4.4"
+  "packageManager": "bun@1.4.4",
+  "icon": "Sparkles"
 }

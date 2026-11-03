@@ -129,7 +129,7 @@ const createEntry = (input: {
     ),
     onActivate: () => {
       const context = commandExecutionContext(workbench);
-      if (hasCommandParameters(record.command.params) && onRequestParams) {
+      if (args === undefined && hasCommandParameters(record.command.params) && onRequestParams) {
         onClose();
         onRequestParams({ record, action, label, args, context });
         return;

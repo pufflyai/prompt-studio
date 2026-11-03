@@ -1,0 +1,697 @@
+{
+  "id": "d5c38b0e-88ce-4a97-b176-2a818ed13e98",
+  "prevId": "e3c5d76a-67bb-4275-938c-2e4a3df4e83f",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.relay_sync_blobs": {
+      "name": "relay_sync_blobs",
+      "schema": "",
+      "columns": {
+        "projectKey": {
+          "name": "projectKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blobId": {
+          "name": "blobId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "spaceOwner": {
+          "name": "spaceOwner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "children": {
+          "name": "children",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byteLength": {
+          "name": "byteLength",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completedAt": {
+          "name": "completedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lastUsedAt": {
+          "name": "lastUsedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "relay_sync_blobs_children": {
+          "name": "relay_sync_blobs_children",
+          "columns": [
+            {
+              "expression": "children",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "relay_sync_blobs_projectKey_relay_sync_projects_projectKey_fk": {
+          "name": "relay_sync_blobs_projectKey_relay_sync_projects_projectKey_fk",
+          "tableFrom": "relay_sync_blobs",
+          "tableTo": "relay_sync_projects",
+          "columnsFrom": ["projectKey"],
+          "columnsTo": ["projectKey"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "relay_sync_blobs_projectKey_blobId_pk": {
+          "name": "relay_sync_blobs_projectKey_blobId_pk",
+          "columns": ["projectKey", "blobId"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_sync_documents": {
+      "name": "relay_sync_documents",
+      "schema": "",
+      "columns": {
+        "projectKey": {
+          "name": "projectKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "documentId": {
+          "name": "documentId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "spaceOwner": {
+          "name": "spaceOwner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lastSequence": {
+          "name": "lastSequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stateId": {
+          "name": "stateId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "relay_sync_documents_projectKey_relay_sync_projects_projectKey_fk": {
+          "name": "relay_sync_documents_projectKey_relay_sync_projects_projectKey_fk",
+          "tableFrom": "relay_sync_documents",
+          "tableTo": "relay_sync_projects",
+          "columnsFrom": ["projectKey"],
+          "columnsTo": ["projectKey"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "relay_sync_documents_projectKey_documentId_pk": {
+          "name": "relay_sync_documents_projectKey_documentId_pk",
+          "columns": ["projectKey", "documentId"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_sync_object_deletions": {
+      "name": "relay_sync_object_deletions",
+      "schema": "",
+      "columns": {
+        "objectKey": {
+          "name": "objectKey",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_sync_projects": {
+      "name": "relay_sync_projects",
+      "schema": "",
+      "columns": {
+        "projectKey": {
+          "name": "projectKey",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "accountId": {
+          "name": "accountId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "relay_sync_projects_account": {
+          "name": "relay_sync_projects_account",
+          "columns": [
+            {
+              "expression": "accountId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_sync_states": {
+      "name": "relay_sync_states",
+      "schema": "",
+      "columns": {
+        "projectKey": {
+          "name": "projectKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "documentId": {
+          "name": "documentId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stateId": {
+          "name": "stateId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "baseStateId": {
+          "name": "baseStateId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "through": {
+          "name": "through",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byteLength": {
+          "name": "byteLength",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "objectKey": {
+          "name": "objectKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blobIds": {
+          "name": "blobIds",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deviceId": {
+          "name": "deviceId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "replacedAt": {
+          "name": "replacedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "relay_sync_states_object": {
+          "name": "relay_sync_states_object",
+          "columns": [
+            {
+              "expression": "objectKey",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relay_sync_states_replaced": {
+          "name": "relay_sync_states_replaced",
+          "columns": [
+            {
+              "expression": "replacedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relay_sync_states_blobs": {
+          "name": "relay_sync_states_blobs",
+          "columns": [
+            {
+              "expression": "blobIds",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "relay_sync_states_projectKey_documentId_stateId_pk": {
+          "name": "relay_sync_states_projectKey_documentId_stateId_pk",
+          "columns": ["projectKey", "documentId", "stateId"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_sync_updates": {
+      "name": "relay_sync_updates",
+      "schema": "",
+      "columns": {
+        "projectKey": {
+          "name": "projectKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "documentId": {
+          "name": "documentId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updateId": {
+          "name": "updateId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deviceId": {
+          "name": "deviceId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byteLength": {
+          "name": "byteLength",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "objectKey": {
+          "name": "objectKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blobIds": {
+          "name": "blobIds",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "coveredAt": {
+          "name": "coveredAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "relay_sync_updates_identity": {
+          "name": "relay_sync_updates_identity",
+          "columns": [
+            {
+              "expression": "projectKey",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "documentId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updateId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relay_sync_updates_object": {
+          "name": "relay_sync_updates_object",
+          "columns": [
+            {
+              "expression": "objectKey",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relay_sync_updates_covered": {
+          "name": "relay_sync_updates_covered",
+          "columns": [
+            {
+              "expression": "coveredAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relay_sync_updates_blobs": {
+          "name": "relay_sync_updates_blobs",
+          "columns": [
+            {
+              "expression": "blobIds",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "relay_sync_updates_projectKey_documentId_sequence_pk": {
+          "name": "relay_sync_updates_projectKey_documentId_sequence_pk",
+          "columns": ["projectKey", "documentId", "sequence"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_asset_parts": {
+      "name": "relay_asset_parts",
+      "schema": "",
+      "columns": {
+        "ownerId": {
+          "name": "ownerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uploadId": {
+          "name": "uploadId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byteLength": {
+          "name": "byteLength",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "etag": {
+          "name": "etag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "relay_asset_parts_ownerId_uploadId_number_pk": {
+          "name": "relay_asset_parts_ownerId_uploadId_number_pk",
+          "columns": ["ownerId", "uploadId", "number"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_asset_uploads": {
+      "name": "relay_asset_uploads",
+      "schema": "",
+      "columns": {
+        "ownerId": {
+          "name": "ownerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset": {
+          "name": "asset",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "objectKey": {
+          "name": "objectKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "partSize": {
+          "name": "partSize",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "multipartId": {
+          "name": "multipartId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "relay_asset_uploads_ownerId_id_pk": {
+          "name": "relay_asset_uploads_ownerId_id_pk",
+          "columns": ["ownerId", "id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_verified_assets": {
+      "name": "relay_verified_assets",
+      "schema": "",
+      "columns": {
+        "ownerId": {
+          "name": "ownerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset": {
+          "name": "asset",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "objectKey": {
+          "name": "objectKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "etag": {
+          "name": "etag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "relay_verified_assets_ownerId_reference_pk": {
+          "name": "relay_verified_assets_ownerId_reference_pk",
+          "columns": ["ownerId", "reference"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 export interface MessageAnimationState {
   initialized: boolean;
@@ -67,4 +67,14 @@ export const useMessageAnimationKeys = (itemKeys: string[]) => {
   lastResultRef.current = { itemKeys: [...itemKeys], animatedKeys: next.animatedKeys };
 
   return next.animatedKeys;
+};
+
+export const useMessageFadeIn = (key: string, animatedKeys: Set<string>) => {
+  const [animate, setAnimate] = useState(false);
+  useLayoutEffect(() => {
+    // Claim on commit, before paint. The mounted row finishes its fade, while virtual remounts
+    // and confirmed copies of this message cannot start it again.
+    if (animatedKeys.delete(key)) setAnimate(true);
+  }, [key, animatedKeys]);
+  return animate ? messageFadeInProps : undefined;
 };

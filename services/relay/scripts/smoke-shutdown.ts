@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { Client } from "pg";
 import type { createAccountManager } from "pstdio-account-manager";
-import { relayPath, type Scope } from "pstdio-sync-contracts";
+import { type Scope, syncPath, syncProtocolHeader, syncProtocolVersion } from "pstdio-sync-contracts";
 import { renewFixtureAccess } from "./manager.fixture";
 
 export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccountManager>, scope: Scope) => {
@@ -16,7 +16,6 @@ export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccoun
     "PATH",
     "HOME",
     "RELAY_ACCESS_TRUST_FILE",
-    "RELAY_RECOVERY_KEY_FILE",
     "DATABASE_URL",
     "S3_ENDPOINT",
     "S3_BUCKET",
@@ -48,13 +47,31 @@ export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccoun
     assert(origin);
     console.log("Built shutdown: actual server ready");
     await database.query("BEGIN");
-    await database.query("LOCK relay_scopes IN ACCESS EXCLUSIVE MODE");
+    await database.query("LOCK relay_sync_documents IN ACCESS EXCLUSIVE MODE");
     reading = Promise.all(
       Array.from({ length: 12 }, () =>
-        fetch(new URL(relayPath(scope, "snapshot"), origin), {
-          headers: { authorization: `Bearer ${access.token}` },
-          signal: controller.signal,
-        }).catch((error: unknown) => error),
+        fetch(
+          new URL(
+            syncPath({
+              kind: "document",
+              projectId: scope.workbenchId,
+              spaceOwner: null,
+              documentId: "a".repeat(64),
+              operation: "read",
+            }),
+            origin,
+          ),
+          {
+            method: "POST",
+            headers: {
+              authorization: `Bearer ${access.token}`,
+              [syncProtocolHeader]: String(syncProtocolVersion),
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ after: 0 }),
+            signal: controller.signal,
+          },
+        ).catch((error: unknown) => error),
       ),
     );
     while (true) {
@@ -66,6 +83,7 @@ export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccoun
     }
     console.log("Built shutdown: 12 requests admitted and 10 backends blocked");
     // Unblock only a broken smoke so it can fail and clean its owned resources.
+    const shutdownStarted = performance.now();
     guard = setTimeout(() => {
       unlockedByGuard = true;
       void database.query("ROLLBACK");
@@ -74,11 +92,22 @@ export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccoun
     assert.equal(await child.exited, 0);
     console.log("Built shutdown: actual server exited before unlock");
     assert.equal(await errors, "");
-    assert.equal(unlockedByGuard, false);
-    const waiting = await observer.query(
+    let waiting = await observer.query(
       "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock'",
     );
+    // PostgreSQL processes cancellation asynchronously after the clients close.
+    // Keep the original guard armed until every blocked backend has actually left.
+    while (waiting.rows[0].count !== 0 && !unlockedByGuard) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      waiting = await observer.query(
+        "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock'",
+      );
+    }
+    assert.equal(unlockedByGuard, false);
     assert.equal(waiting.rows[0].count, 0);
+    console.log(
+      `Built shutdown: all blocked backends drained in ${(performance.now() - shutdownStarted).toFixed(1)}ms`,
+    );
     console.log("Built actual server drained 12 readers and cancelled 10 owned backends before external unlock");
   } finally {
     clearTimeout(guard);

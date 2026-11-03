@@ -40,6 +40,7 @@ Use this map to choose the first component to inspect in the live Canvas catalog
 
 - `AlertMessage`, `EmptyState`, `SessionIndicator`, and `Toaster` cover status and feedback.
 - `DeleteConfirmationModal`, `Palette`, and `RepoPickerDialog` cover overlay interactions.
+- `PopoverHeader` gives titled popovers a shared icon, title, and optional actions. Pass `Popover.Title` as its title inside a Chakra popover. Keep dismissal on Escape and outside clicks; do not add a close icon.
 
 ## Text and agent UI
 

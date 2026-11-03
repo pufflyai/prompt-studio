@@ -2,7 +2,7 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 import { createDatabaseLeases } from "../database-leases";
-import * as schema from "./schema";
+import * as schema from "./document-schema";
 
 export const connectRelay = (databaseUrl: string) => {
   if (!databaseUrl) throw new Error("Relay storage requires a PostgreSQL URL");

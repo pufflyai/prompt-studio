@@ -22,7 +22,10 @@ export function usePlanActions({
   plan: Plan | undefined;
 } & Pick<ReturnType<typeof useViewSections>, "sections" | "toggle"> &
   Pick<PlanViewProps, "tracks">) {
-  const [selectedId, setSelectedId] = useState<string>();
+  // Ordinary previews highlight the graph without also opening inline details.
+  const [selection, setSelection] = useState<{ id: string; presentation: "preview" | "details" }>();
+  const selectedId = selection?.id;
+  const setSelectedId = (id?: string) => setSelection(id ? { id, presentation: "details" } : undefined);
   const [editor, setEditor] = useState<Editor>();
   const [context, setContext] = useState<BackgroundContext>();
   const dnd = useDragAndDrop(client);
@@ -40,7 +43,7 @@ export function usePlanActions({
     selectedId,
     dragId: dnd.dragId,
     dropTarget: dnd.dropTarget,
-    onSelect: setSelectedId,
+    onSelect: (id) => setSelection({ id, presentation: "preview" }),
     onDragStart: dnd.setDragId,
     onDragTarget: dnd.setDropTarget,
     onDrop: () => void dnd.drop(),
@@ -71,7 +74,7 @@ export function usePlanActions({
   };
   return {
     viewProps,
-    selected,
+    selected: selected?.gate || selection?.presentation === "details" ? selected : undefined,
     open,
     review,
     editor,

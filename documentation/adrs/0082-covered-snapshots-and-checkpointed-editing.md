@@ -73,4 +73,4 @@ host/live editing; PS-780 owns production backup capture; PS-781 owns automatic
 production retirement and deletion. This decision does not claim those production
 owners are deployed. The runtime and relay must adopt protocol 2 together, without
 falling back to per-pause durable saves for collaborative documents. See
-[checkpoint contracts](../references/architecture/0027-covered-checkpoints.md).
+[current storage contracts](../references/architecture/0026-synchronization-contracts.md).

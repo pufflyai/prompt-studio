@@ -13,6 +13,7 @@ export { isStorageLimitError, type StorageLimitError, storageLimits } from "pstd
 export { parseExtensionApiDeclaration, supportsExtensionApiVersion } from "./api-versions";
 export { normalizeBooleanViewRule } from "./boolean-view-filter";
 export {
+  workbenchCommands,
   workbenchModeDefinitions,
   workbenchModes,
   workbenchPageDefinitions,

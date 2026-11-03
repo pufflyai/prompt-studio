@@ -54,8 +54,8 @@ export interface WorkbenchPageHistoryState {
   kind: "pstdio.page-location";
   index: number;
   projectId: string;
-  routeKey: string;
-  location: PageLocation;
+  routeKey?: string;
+  location?: PageLocation;
   removalVersion?: number;
   removalEpoch?: string;
 }
@@ -68,7 +68,7 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   registry: WorkbenchPageRegistry<Value>;
   browser: WorkbenchPageLocationBrowser;
   navigationTrees: NavigationTreeRegistry;
-  modes: NavigationLevelModes;
+  modes: NavigationLevelModes & { getActiveModeId?(): string | undefined };
   persistence: WorkbenchPageLocationPersistence;
   startPage: PageRef;
   getResourceRemovalVersion?(): number;
