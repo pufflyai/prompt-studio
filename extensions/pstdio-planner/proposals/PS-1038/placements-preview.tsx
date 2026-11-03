@@ -1,7 +1,7 @@
-import { Box, Button } from "@chakra-ui/react";
-import { getIconComponent } from "@pstdio/ui";
+import { Box, Button, useRecipe } from "@chakra-ui/react";
+import { psTheme } from "@pstdio/ui/theme";
+import { MessageCircleWarning } from "lucide-react";
 import { useRef, useState } from "react";
-import { REVIEW_REQUEST_ICON } from "../../src/data/review-request-summary";
 import type { ReviewRequestView } from "../../src/data/review-request-types";
 import type { PlanRow } from "../../src/timeline/contracts";
 import { AutoBuildIndicator } from "../../src/timeline/view/auto-build-indicator";
@@ -24,10 +24,10 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
   const anchor = useRef<HTMLButtonElement>(null);
   const [requestsOpen, setRequestsOpen] = useState(false);
   const [answered, setAnswered] = useState<string[]>([]);
-  const AttentionIcon = getIconComponent(REVIEW_REQUEST_ICON);
+  const headerButton = useRecipe({ recipe: psTheme.getRecipe("button") })({ size: "xs", variant: "outline" });
   return (
     <>
-      <Button ref={anchor} size="xs" variant="outline" onClick={() => setOpen(true)}>
+      <Button ref={anchor} size="xs" css={headerButton} variant="outline" onClick={() => setOpen(true)}>
         <AutoBuildIndicator status={paused ? "paused" : "awaiting_input"} label="Auto Build needs attention" />
         Auto Build
       </Button>
@@ -70,7 +70,7 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
                 setRequestsOpen(true);
               }}
             >
-              <AttentionIcon />
+              <MessageCircleWarning />
               Needs attention
             </Button>
           ) : null

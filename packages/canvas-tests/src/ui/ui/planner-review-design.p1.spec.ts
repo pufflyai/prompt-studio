@@ -28,7 +28,7 @@ test("milestone preview updates attention counts and restores focus after its fi
   await remaining.press("Enter");
   await modal.getByRole("radio", { name: /Start with CSV/ }).press("Space");
   await modal.getByRole("button", { name: "Submit answer", exact: true }).click();
-  await modal.press("Escape");
+  await expect(modal).toBeHidden();
   await expect(preview.getByRole("button", { name: /tickets needing attention/ })).toHaveCount(0);
   await expect(preview.getByRole("button", { name: "Collapse Notes tool preview", exact: true })).toBeFocused();
 });
