@@ -206,6 +206,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       if (resourceKey(resource) !== resourceKey(resourceRef.current)) return [];
       removed = true;
       const retain = controllerRef.current?.markRemoved();
+      setEditState((state) => ({ ...state, removed: true }));
       const identity = placementRef.current?.placementIdentity;
       return retain && identity ? [identity] : [];
     });
@@ -239,9 +240,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [manualSave]);
-  const handleChange = (value: string) => {
-    controllerRef.current?.handleChange(value);
-  };
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
   if (currentLoaded?.textEditor)
@@ -307,7 +305,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
               ? (sectionId) => syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId })
               : undefined
           }
-          onChange={handleChange}
+          onChange={(value) => controllerRef.current?.handleChange(value)}
           rendererRef={rendererRef}
           sectionNavigation={editorSectionNavigation}
           title={resource?.label ?? contribution.title}

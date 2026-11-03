@@ -348,6 +348,22 @@ test("a removed guest's late close cannot remove a successor scope in the same v
   }
 });
 
+test("explicit close releases a removed installed editor while its automatic close barrier is blocked", async () => {
+  const f = await fixture();
+  await f.frame()();
+  f.holdClose();
+  try {
+    f.workbench.resources.removed(f.placement.resource!);
+    await f.closeStarted;
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    await f.workbench.closePlacement(f.placement.placementIdentity!);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
+    expect(f.disconnected).toEqual(["connection-1"]);
+  } finally {
+    f.resumeClose();
+  }
+});
+
 test("one webview uses its captured public scope and forwards events across adapter rerenders", async () => {
   const f = await fixture();
   expect(await f.frame()()).toEqual({ token: "selected" });

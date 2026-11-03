@@ -252,6 +252,10 @@ test("resource removal preserves an active public draft even without pending par
   const session = await f.presentation.open();
   const draft = session.createDraft();
   const refused = Promise.withResolvers<void>();
+  const completed = Promise.withResolvers<void>();
+  const notification = f.workbench.notifications.subscribe((event) => {
+    if (event.type === "show" && event.notification.inlineTarget === f.placement.instanceId) completed.resolve();
+  });
   const stop = session.subscribe(() => {
     if (session.getSnapshot().error?.code === "draft_active") refused.resolve();
   });
@@ -261,14 +265,37 @@ test("resource removal preserves an active public draft even without pending par
     f.workbench.resources.removed(f.placement.resource!);
     expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
     await refused.promise;
+    await completed.promise;
     expect(session.getSnapshot().error?.code).toBe("draft_active");
-    await expect(f.presentation.close()).rejects.toMatchObject({ code: "draft_active" });
     expect(draft.text.toString()).toBe("source tentative");
     expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
     draft.cancel();
   } finally {
     stop();
+    notification.dispose();
     draft.cancel();
+    await f.stop();
+  }
+});
+
+test("only authoritative removal lets the user explicitly close a refused public draft", async () => {
+  const f = fixture();
+  try {
+    const session = await f.presentation.open();
+    f.refuseSubmit(true);
+    session.transact((text) => text.insert(text.length, " recover me"));
+    await expect(session.flush()).rejects.toMatchObject({ code: "source_unavailable" });
+    await expect(f.workbench.closePlacement(f.placement.placementIdentity!)).rejects.toMatchObject({
+      code: "source_unavailable",
+    });
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    expect(session.getSnapshot().text.toString()).toBe("source recover me");
+    f.workbench.resources.removed(f.placement.resource!);
+    await f.workbench.closePlacement(f.placement.placementIdentity!);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
+    expect(f.document.getText("content").toString()).toBe("source");
+  } finally {
+    f.refuseSubmit(false);
     await f.stop();
   }
 });

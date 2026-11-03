@@ -13,6 +13,7 @@ type NativeTextPresentationInput = Required<
 /** Native Markdown is a public guest with the same selected-source dispatcher as an installed editor. */
 export const createNativeTextPresentation = (input: NativeTextPresentationInput) => {
   const lifetime = new AbortController();
+  const removalVersion = input.workbench.resources.getRemovalVersion();
   const events = createHostEventPublisher();
   const listeners = new Map<string, Set<(event: unknown) => void>>();
   let opening: Promise<TextEditingSession> | undefined;
@@ -97,7 +98,12 @@ export const createNativeTextPresentation = (input: NativeTextPresentationInput)
       return retrying;
     },
     async close() {
-      await prepareSessionClose();
+      if (
+        input.placement.resource &&
+        input.workbench.resources.wasRemovedSince(input.placement.resource, removalVersion)
+      )
+        await releasePlacementTextGuest(input.workbench, events);
+      else await prepareSessionClose();
       lifetime.abort();
       events.unbind();
       listeners.clear();

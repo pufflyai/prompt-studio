@@ -144,7 +144,17 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
     }),
   );
   if (placement.placementIdentity)
-    cleanups.push(registerPlacementCloseGuard(workbench, placement.placementIdentity, () => owner.close()));
+    cleanups.push(
+      registerPlacementCloseGuard(workbench, placement.placementIdentity, async () => {
+        if (
+          placement.resource &&
+          workbench.resources.wasRemovedSince(placement.resource, invocation.removalVersion ?? 0)
+        ) {
+          // Explicit close discards this removed resource's recovery view, never its admitted durability.
+          await retire(state, owner);
+        } else await owner.close();
+      }),
+    );
   return owner;
 };
 
