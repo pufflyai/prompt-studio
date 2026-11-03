@@ -13,7 +13,7 @@ import type { WorkspaceRecord } from "./workspace-provider-projection";
 const createDeletionQueue = () => {
   let active = 0;
   const waiting: (() => void)[] = [];
-  const pending = new Map<string, Promise<void>>();
+  const pending = new Map<string, { forget: boolean; task: Promise<void> }>();
 
   const run = async (remove: () => Promise<void>) => {
     if (active >= 2) await new Promise<void>((resolve) => waiting.push(resolve));
@@ -28,11 +28,16 @@ const createDeletionQueue = () => {
     }
   };
 
-  return (id: string, remove: () => Promise<void>) => {
+  return (id: string, forget: boolean, remove: () => Promise<void>) => {
     const existing = pending.get(id);
-    if (existing) return existing;
+    if (existing) {
+      if (existing.forget !== forget) {
+        return Promise.reject(new Error("Workspace deletion is already in progress with a different deletion mode."));
+      }
+      return existing.task;
+    }
     const task = run(remove).finally(() => pending.delete(id));
-    pending.set(id, task);
+    pending.set(id, { forget, task });
     return task;
   };
 };
@@ -55,7 +60,7 @@ export const deleteWorkspace = (
     queue = createDeletionQueue();
     queues.set(deps.workspaceService, queue);
   }
-  return queue(workspace.id, async () => {
+  return queue(workspace.id, overrides.forget === true, async () => {
     // Recheck after waiting for a slot: a provider may have recovered its reference.
     if (overrides.forget) {
       const current = await deps.workspaceService.get(workspace.id);
@@ -72,7 +77,7 @@ export const deleteWorkspace = (
         );
       }
       await cancelWorkspaceSessions(deps, current.id);
-      await finalizeWorkspaceDelete(deps, current);
+      await finalizeWorkspaceDelete(deps, current, { forget: true });
       return;
     }
     assertWorkspaceDeleteAllowed(workspace);

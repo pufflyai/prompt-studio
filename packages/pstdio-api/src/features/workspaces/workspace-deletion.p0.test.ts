@@ -20,6 +20,7 @@ test("forgetting an orphan stops active sessions and archives its history withou
       get: async () => workspace,
       softDelete: async () => {
         events.push("delete record");
+        return true;
       },
     },
     workspaceSessionService: {
@@ -58,6 +59,52 @@ test("forgetting rechecks the latest workspace and preserves a recovered provide
 
   await expect(deleteWorkspace(deps, old as never, { forget: true })).rejects.toThrow(/no backing reference/);
   expect(deleted).toBe(false);
+});
+
+test.each([
+  true,
+  false,
+])("overlapping requests cannot inherit a different deletion mode, forget first=%s", async (forgetFirst) => {
+  const started = deferred();
+  const release = deferred();
+  const workspace = makeWorkspace({ provider_state: "provider_missing", provider_ref_json: null });
+  let providerCalls = 0;
+  const deps = {
+    workspaceService: {
+      get: async () => workspace,
+      softDelete: async () => true,
+    },
+    workspaceSessionService: {
+      listByWorkspace: async () => {
+        started.resolve();
+        await release.promise;
+        return [];
+      },
+    },
+  } as never;
+  const providerDelete = async () => {
+    providerCalls++;
+    started.resolve();
+    await release.promise;
+    return false;
+  };
+  const first = deleteWorkspace(deps, workspace as never, {
+    forget: forgetFirst,
+    deleteProviderBackedWorkspace: providerDelete,
+  });
+  await started.promise;
+  const second = deleteWorkspace(deps, workspace as never, {
+    forget: !forgetFirst,
+    deleteProviderBackedWorkspace: providerDelete,
+  }).then(
+    () => null,
+    (error: Error) => error.message,
+  );
+  release.resolve();
+  await first;
+
+  expect(await second).toMatch(/different.*mode/i);
+  expect(providerCalls).toBe(forgetFirst ? 0 : 1);
 });
 
 test("HTTP and extension deletions across projects share two slots through session archival", async () => {

@@ -20,6 +20,35 @@ afterEach(async () => {
 });
 
 describe("workspace provider operations", () => {
+  test.each([
+    { provider_ref_json: { version: 1 as const, data: { remoteId: "recovered" } } },
+    { provider_state: "ready" as const },
+    { execution_kind: "local" as const },
+    { root_path: "/recovered/path" },
+  ])("forget atomically rejects changed eligibility: %j", async (recovered) => {
+    const workspace = await workspacesService.createStandalone({ project_id: projectId, provider_id: "nope" });
+    await workspacesService.updateProviderProjection(workspace.id, {
+      provider_state: "provider_missing",
+      execution_kind: "remote",
+      ...recovered,
+    });
+    const before = await workspacesService.get(workspace.id);
+
+    expect(await workspacesService.softDelete(workspace.id, { forget: true })).toBeNull();
+    expect(await workspacesService.get(workspace.id)).toEqual(before);
+  });
+
+  test("forget atomically removes an eligible orphan", async () => {
+    const workspace = await workspacesService.createStandalone({ project_id: projectId, provider_id: "nope" });
+    await workspacesService.updateProviderProjection(workspace.id, {
+      provider_state: "provider_missing",
+      execution_kind: "remote",
+    });
+
+    expect(await workspacesService.softDelete(workspace.id, { forget: true })).not.toBeNull();
+    expect((await workspacesService.get(workspace.id))?.deleted_at).toBeTruthy();
+  });
+
   test("rejects stale recovery writes after a workspace is forgotten", async () => {
     const workspace = await workspacesService.createStandalone({
       project_id: projectId,
