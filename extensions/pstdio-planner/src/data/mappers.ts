@@ -1,33 +1,25 @@
 import type {
-  CollectionBadgeItem,
-  ExtensionWorkspace,
   KanbanRendererAttributeDescriptor,
   KanbanRendererBoardColumnConfig,
   KanbanRendererEnumOption,
   Localizable,
-  NavigationTargetPage,
 } from "@pstdio/sdk/extensions";
-import { l10n, workbenchPages } from "@pstdio/sdk/extensions";
+import { l10n } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
-import { ticketPageTarget } from "./ticket-page-target";
 import {
-  resolveTicketHierarchy,
-  type TicketParentLookup,
-  type TicketResourceReference,
-  ticketDisplayTitle,
-} from "./ticket-resource-hierarchy";
+  TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE,
+  TICKET_LINKED_RESOURCES_ATTRIBUTE,
+  type TicketLinkedResourceLookup,
+} from "./ticket-linked-resources";
+import { resolveTicketHierarchy, type TicketParentLookup, ticketDisplayTitle } from "./ticket-resource-hierarchy";
 import type { TicketSummary } from "./ticket-summary";
 import { isSingleSelectTicketTag, tagValueIds } from "./ticket-tags";
 import type { StoredStatus, StoredTag } from "./types";
-import { workspacePresentation } from "./workspace-presentation";
-import type { TicketWorkspaceSession, TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
 export { ticketDisplayTitle } from "./ticket-resource-hierarchy";
 
 export const TICKET_RESOURCE_KIND = "ticket";
 export const TICKET_RESOURCE_ICON = "component";
-export const TICKET_WORKSPACE_ATTRIBUTE_ID = "workspace";
-export const TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID = "workspaceItems";
 export const TICKET_ARCHIVE_STATE_ATTRIBUTE_ID = "archived";
 export const TICKET_ARCHIVE_STATE_ACTIVE = "active";
 export const TICKET_ARCHIVE_STATE_ARCHIVED = "archived";
@@ -41,14 +33,6 @@ const COLUMN_ACTION_ICONS: Record<string, string> = {
 };
 
 type TagOptionsLookup = Array<{ tag: StoredTag; optionIds: Set<string> }>;
-export type TicketWorkspaceBadgeItem = CollectionBadgeItem & {
-  target?: NavigationTargetPage;
-  createdAt?: string;
-  resourceParent?: TicketResourceReference;
-  session?: TicketWorkspaceSession;
-};
-export type TicketWorkspaceLookup = Map<string, TicketWorkspaceBadgeItem[]>;
-
 const DEFAULT_TAG_ATTRIBUTE_IDS: Record<string, string> = {
   "default-priority": "priority",
   "default-type": "type",
@@ -75,96 +59,11 @@ const ticketTagValues = (ticket: TicketSummary, tagOptions: TagOptionsLookup) =>
     }),
   );
 
-const workspaceDisplayName = (workspace: ExtensionWorkspace) => {
-  const name = workspace.name?.trim();
-  if (name) return name;
-  const shorthand = workspace.workspace_shorthand?.trim();
-  if (shorthand) return shorthand;
-  return workspace.id;
-};
-
-const workspaceToBadgeItem = (
-  workspace: ExtensionWorkspace,
-  session: TicketWorkspaceSession | undefined,
-): TicketWorkspaceBadgeItem => {
-  const { icon, workspaceType } = workspacePresentation(workspace);
-  const label = workspaceDisplayName(workspace);
-  return {
-    id: workspace.id,
-    label,
-    icon,
-    resource: {
-      type: "workspace",
-      id: workspace.id,
-      label,
-      metadata: {
-        workspaceId: workspace.id,
-        workspaceType,
-        ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
-      },
-    },
-    ...(workspace.created_at ? { createdAt: workspace.created_at } : {}),
-    // Carried per workspace so switching among a ticket's workspaces never shows another one's status.
-    ...(session ? { session } : {}),
-  };
-};
-
-const byNewestWorkspace = (left: TicketWorkspaceBadgeItem, right: TicketWorkspaceBadgeItem) =>
-  (right.createdAt ?? "").localeCompare(left.createdAt ?? "") ||
-  right.label.localeCompare(left.label, undefined, { numeric: true });
-
-export const createTicketWorkspaceLookup = (
-  workspaces: ExtensionWorkspace[] = [],
-  sessions: TicketWorkspaceSessionLookup = new Map(),
-) => {
-  const lookup: TicketWorkspaceLookup = new Map();
-
-  for (const workspace of workspaces) {
-    for (const { id: ticketId } of (workspace.anchors_json ?? []).filter(({ type }) => type === "ticket")) {
-      const items = lookup.get(ticketId) ?? [];
-      items.push(workspaceToBadgeItem(workspace, sessions.get(workspace.id)));
-      lookup.set(ticketId, items);
-    }
-  }
-
-  for (const items of lookup.values()) items.sort(byNewestWorkspace);
-  return lookup;
-};
-
-const ticketWorkspaceValues = (
-  ticket: TicketSummary,
-  workspaceLookup: TicketWorkspaceLookup,
-  resourceReference: TicketResourceReference,
-) => {
-  const parentMetadata = { resourceParent: resourceReference };
-  const items = (workspaceLookup.get(ticket.id) ?? []).map((item) => ({
-    ...item,
-    ...parentMetadata,
-    ...(item.resource
-      ? {
-          target: {
-            kind: "page" as const,
-            page: workbenchPages.workspace,
-            resource: item.resource,
-            parent: ticketPageTarget(resourceReference),
-          },
-        }
-      : {}),
-    resource: item.resource
-      ? { ...item.resource, metadata: { ...item.resource.metadata, ...parentMetadata } }
-      : undefined,
-  }));
-  return {
-    [TICKET_WORKSPACE_ATTRIBUTE_ID]: items[0]?.id ?? "",
-    [TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID]: items,
-  };
-};
-
 const ticketToRowWithTags = (
   ticket: TicketSummary,
   projectId: string,
   tagOptions: TagOptionsLookup,
-  workspaceLookup: TicketWorkspaceLookup,
+  linkedResources: TicketLinkedResourceLookup,
   parentLookup: TicketParentLookup,
 ) => {
   const hierarchy = resolveTicketHierarchy(ticket, parentLookup);
@@ -192,7 +91,8 @@ const ticketToRowWithTags = (
       updated: ticket.updatedAt,
       id: hierarchy.breadcrumb,
       parent: hierarchy.parent?.shorthand ?? "",
-      ...ticketWorkspaceValues(ticket, workspaceLookup, hierarchy.identity),
+      [TICKET_LINKED_RESOURCES_ATTRIBUTE]: linkedResources.get(ticket.id)?.[0]?.id ?? "",
+      [TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE]: linkedResources.get(ticket.id) ?? [],
       ...ticketTagValues(ticket, tagOptions),
     },
   };
@@ -202,18 +102,18 @@ export const ticketToRow = (
   ticket: TicketSummary,
   projectId: string,
   tags: StoredTag[] = [],
-  workspaceLookup: TicketWorkspaceLookup = new Map(),
+  linkedResources: TicketLinkedResourceLookup = new Map(),
   parentLookup: TicketParentLookup = new Map(),
-) => ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags), workspaceLookup, parentLookup);
+) => ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags), linkedResources, parentLookup);
 
 export const createTicketRowMapper = (
   projectId: string,
   tags: StoredTag[] = [],
-  workspaceLookup: TicketWorkspaceLookup = new Map(),
+  linkedResources: TicketLinkedResourceLookup = new Map(),
   parentLookup: TicketParentLookup = new Map(),
 ) => {
   const tagOptions = createTagOptionsLookup(tags);
-  return (ticket: TicketSummary) => ticketToRowWithTags(ticket, projectId, tagOptions, workspaceLookup, parentLookup);
+  return (ticket: TicketSummary) => ticketToRowWithTags(ticket, projectId, tagOptions, linkedResources, parentLookup);
 };
 
 const statusToOption = (status: StoredStatus): KanbanRendererEnumOption => ({
@@ -289,11 +189,11 @@ export const buildTicketAttributes = (
     filterable: true,
   },
   {
-    id: TICKET_WORKSPACE_ATTRIBUTE_ID,
-    label: l10n("displayMenu.propertyOptions.workspace", "Workspace"),
+    id: TICKET_LINKED_RESOURCES_ATTRIBUTE,
+    label: l10n("displayMenu.propertyOptions.linkedResources", "Linked resources"),
     type: { kind: "string" },
     displayable: true,
-    display: { kind: "badge-list", itemsAttributeId: TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID },
+    display: { kind: "badge-list", itemsAttributeId: TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE },
   },
   ...[...tags].sort(bySortOrder).map(tagToAttribute),
 ];

@@ -82,10 +82,10 @@ For the reported macOS case, run the same filesystem workload on the same volume
 
 ## Regression coverage
 
-Tests cover 28 mixed HTTP and extension requests sharing two slots through finalization; duplicate deletion; failed slots draining and retrying; sequential session archival before workspace deletion; immediate column archival with background cleanup and failure reporting; shared-workspace protection; correct ongoing/completed badge selection; and overlapping badge refreshes sharing the read limit.
+Tests cover 28 mixed HTTP and extension requests sharing two slots through finalization; duplicate deletion; failed slots draining and retrying; sequential session archival before workspace deletion; immediate column archival with background cleanup and failure reporting; shared-workspace protection. Ticket badges now use the separate batched linked-resource lookup.
 
 The packaged smoke test uses a disposable remote provider to hold cleanup open, observes two active deletions from six HTTP requests, releases them, and checks that all six finish. It verifies the queue survives compilation and host wiring without relying on filesystem timing.
 
 Targeted API and Planner tests, API/DB/Planner type checks, scoped Biome checks, and documentation link checks passed. Package verification built all platform binaries and passed published-type and package-consumer checks. Its CLI suite passed 92 tests. Six browser checks initially could not launch because the separate Playwright headless shell was absent; after installing that dependency, all six passed on rerun. The other seven browser checks passed on the initial run; four existing Firefox/WebKit cases were skipped by their environment conditions. The final host binary was rebuilt, its cleanup smoke passed again, and the remaining compiled-Bun smoke stage passed separately. The entire verification command was not repeated after fixing the browser dependency.
 
-See [workspace lifecycle ownership](../architecture/0023-worktrees.md), the [host deletion queue](../../../packages/pstdio-api/src/features/workspaces/workspace-deletion.ts), and [Planner session lookups](../../../extensions/pstdio-planner/src/data/workspace-sessions.ts).
+See [workspace lifecycle ownership](../architecture/0023-worktrees.md), the [host deletion queue](../../../packages/pstdio-api/src/features/workspaces/workspace-deletion.ts), and [Planner linked-resource lookups](../../../extensions/pstdio-planner/src/data/ticket-linked-resources.ts).

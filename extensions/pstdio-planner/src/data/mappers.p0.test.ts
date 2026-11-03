@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
-import { createTicketParentLookup, createTicketWorkspaceLookup, TICKET_RESOURCE_KIND, ticketToRow } from "./mappers";
+import { createTicketParentLookup, TICKET_RESOURCE_KIND, ticketToRow } from "./mappers";
 import type { StoredTag, Ticket } from "./types";
 
 const ticket: Ticket = {
@@ -42,7 +41,7 @@ describe("ticketToRow", () => {
       id: "T-1",
       parent: "",
       workspace: "",
-      workspaceItems: [],
+      linkedResourceItems: [],
     });
   });
 
@@ -117,63 +116,5 @@ describe("ticketToRow", () => {
     );
 
     expect((row.attributes as Record<string, unknown>).type).toBe("default-type-bug");
-  });
-});
-
-describe("createTicketWorkspaceLookup", () => {
-  const workspace = (id: string, shorthand: string, createdAt: string): ExtensionWorkspace => ({
-    id,
-    workspace_shorthand: shorthand,
-    anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
-    root_path: `/worktrees/${shorthand}`,
-    created_at: createdAt,
-  });
-
-  test("attaches each workspace's latest session to its own badge item", () => {
-    const items = createTicketWorkspaceLookup(
-      [
-        workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z"),
-        workspace("workspace-2", "T-1_A2", "2026-01-03T00:00:00.000Z"),
-      ],
-      new Map([
-        ["workspace-1", { id: "session-1", status: "completed" as const }],
-        ["workspace-2", { id: "session-2", status: "in_progress" as const }],
-      ]),
-    ).get("ticket-1");
-
-    // Newest workspace first, each carrying the session of that same workspace.
-    expect(items?.map((item) => [item.id, item.session])).toEqual([
-      ["workspace-2", { id: "session-2", status: "in_progress" }],
-      ["workspace-1", { id: "session-1", status: "completed" }],
-    ]);
-  });
-
-  test("omits the session field for workspaces without sessions", () => {
-    const items = createTicketWorkspaceLookup([workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z")]).get(
-      "ticket-1",
-    );
-
-    expect(items?.[0]).not.toHaveProperty("session");
-  });
-
-  test("passes every supported session status through unchanged", () => {
-    const statuses = [
-      "queued",
-      "in_progress",
-      "awaiting_input",
-      "completed",
-      "failed",
-      "cancelled",
-      "disconnected",
-    ] as const;
-
-    for (const status of statuses) {
-      const items = createTicketWorkspaceLookup(
-        [workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z")],
-        new Map([["workspace-1", { id: "session-1", status }]]),
-      ).get("ticket-1");
-
-      expect(items?.[0]?.session).toEqual({ id: "session-1", status });
-    }
   });
 });

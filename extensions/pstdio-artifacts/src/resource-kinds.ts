@@ -6,6 +6,7 @@ export const artifact = defineResourceKind({
   label: l10n("resources.artifact", "Artifact"),
   icon: "file-code",
   resolve: { kind: "command", id: "resolve-resource" },
+  resolveMany: { kind: "command", id: "resolve-resources" },
   paths: [{ prefix: sitesPath, resolve: { kind: "command", id: "resolve-path" } }],
   menuSlots: [{ id: "actions", placement: "context-menu", access: "owner" }],
 });

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
-import { deleteResource, renameResource, resolvePath, resolveResource } from "./artifact-actions";
+import { deleteResource, renameResource, resolvePath, resolveResource, resolveResources } from "./artifact-actions";
 import { commands } from "./commands";
 import { artifact as artifactKind } from "./resource-kinds";
 
@@ -32,6 +32,31 @@ test("renames the selected artifact through its stable resource identity", async
     label: "Launch plan",
     type: "artifact",
     projectId: ctx.projectId,
+  });
+});
+
+test("batch resolution supplies current labels and artifact navigation while omitting missing or foreign resources", async () => {
+  const { ctx, artifact } = await fixture();
+  await renameResource.run(ctx, { artifactId: artifact.artifactId, name: "Renamed prototype" });
+  const ref = {
+    type: "artifact",
+    id: artifact.artifactId,
+    extensionId: "pstdio.pstdio-artifacts",
+    projectId: ctx.projectId,
+  };
+  const result = await resolveResources.run(ctx, {
+    resources: [
+      ref,
+      { ...ref, id: "missing" },
+      { ...ref, projectId: "other" },
+      { ...ref, extensionId: "other.owner" },
+      ref,
+    ],
+  });
+  expect(result).toHaveLength(1);
+  expect(result[0]).toMatchObject({
+    resource: { id: artifact.artifactId, label: "Renamed prototype", icon: "file-code" },
+    target: { kind: "page", page: { extensionId: "pstdio.pstdio-artifacts", id: "artifact" } },
   });
 });
 
