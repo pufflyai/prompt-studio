@@ -1,6 +1,6 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
 import { type PageParams, resourceKey } from "@pstdio/sdk/extensions";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type {
   RegisteredFileRendererContribution,
   WorkbenchCore,
@@ -29,10 +29,12 @@ import {
   storeCachedFileContent,
 } from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
+import { createFileRendererPendingDraft } from "./file-renderer-pending-draft";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 import { useFileSectionSelection } from "./file-renderer-sections";
 import { FileRendererStatusNotice } from "./file-renderer-status-notice";
 import { SelectedTextEditor } from "./selected-text-editor";
+import { useFlushFileOnHide } from "./use-flush-file-on-hide";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -73,18 +75,6 @@ const getEditorSectionNavigation = (
     targetId: resolveFileSectionTargetId(navigation, selectedNodeId),
   };
 };
-const FileRendererHeader = (props: { file: LoadedFile; dirty: boolean; saving: boolean }) => {
-  const { file, dirty, saving } = props;
-  return file.filePath ? (
-    <FileRendererPathHeader
-      fileName={file.fileName ?? file.filePath}
-      filePath={file.filePath}
-      dirty={dirty}
-      saving={saving}
-    />
-  ) : null;
-};
-
 const fileRendererOwnerKey = (
   placement: WorkbenchPanelInstance | undefined,
   contributionId: string,
@@ -142,6 +132,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     message: string;
   } | null>(null);
   const [editState, setEditState] = useState<FileEditControllerState>({ dirty: false, saving: false });
+  const [pendingDraft] = useState(createFileRendererPendingDraft);
   const controllerRef = useRef<FileEditController | null>(null);
   const retryReadRef = useRef<(() => void) | undefined>(undefined);
   const rendererRef = useRef<HTMLDivElement>(null);
@@ -168,6 +159,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   useLayoutEffect(() => {
     let cancelled = false;
     let removed = false;
+    let retained = false;
     const boundResource = resourceRef.current;
     const boundContribution = contributionRef.current;
     const read = workbench.views.reads.bind(ownerKey);
@@ -230,8 +222,10 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       if (resourceKey(resource) !== resourceKey(resourceRef.current)) return [];
       removed = true;
       const retain = controllerRef.current?.markRemoved();
+      retained ||= Boolean(retain || pendingDraft.hasPending(loadKey));
+      if (retained) setEditState((state) => ({ ...state, removed: true }));
       const identity = placementRef.current?.placementIdentity;
-      return retain && identity ? [identity] : [];
+      return retained && identity ? [identity] : [];
     });
     const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshFileRenderer((event) => {
       if (removed || event.fileRendererId !== contributionId) return;
@@ -249,20 +243,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       if (!manualSave) controller?.flush();
       if (controllerRef.current === controller) controllerRef.current = null;
     };
-  }, [contributionId, hasSave, workbench, loadKey, ownerKey, instanceId, manualSave]);
-  useEffect(() => {
-    if (manualSave) return;
-    const flush = () => controllerRef.current?.flush();
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") flush();
-    };
-    window.addEventListener("beforeunload", flush);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("beforeunload", flush);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [manualSave]);
+  }, [contributionId, hasSave, workbench, loadKey, ownerKey, instanceId, manualSave, pendingDraft]);
+  useFlushFileOnHide(manualSave, controllerRef);
   const handleChange = (value: string) => {
     controllerRef.current?.handleChange(value);
   };
@@ -310,9 +292,10 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
         }
       }}
     >
-      {currentLoaded && !sharedEditor && (
-        <FileRendererHeader
-          file={currentLoaded}
+      {currentLoaded?.filePath && !sharedEditor && (
+        <FileRendererPathHeader
+          fileName={currentLoaded.fileName ?? currentLoaded.filePath}
+          filePath={currentLoaded.filePath}
           dirty={manualSave && editState.dirty}
           saving={manualSave && editState.saving}
         />
@@ -337,6 +320,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           title={resource?.label ?? contribution.title}
           connectDocument={connectDocument}
           connectText={connectText}
+          registerPendingDraft={(pending) => pendingDraft.register(loadKey, pending)}
         />
       </Box>
     </Flex>

@@ -7,6 +7,7 @@ import type { NativeTextPresentation } from "../../../extensions/bridge/native-t
 import { participantColor } from "../../shared/participant-color";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { FileRendererLoading } from "./file-renderer-loading";
+import type { RegisterFilePendingDraft } from "./file-renderer-pending-draft";
 
 interface PublicMarkdownFileEditorProps {
   connect: () => NativeTextPresentation;
@@ -16,18 +17,32 @@ interface PublicMarkdownFileEditorProps {
   sectionNavigation?: MarkdownEditorProps["sectionNavigation"];
   onActiveSectionChange?: MarkdownEditorProps["onActiveSectionChange"];
   errorNotice?: ReactNode;
+  registerPendingDraft?: RegisterFilePendingDraft;
 }
 const subscribeEmpty = () => () => {};
 const empty = () => undefined;
 
 export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) => {
-  const { connect, presence, open, placeholder, sectionNavigation, onActiveSectionChange, errorNotice } = props;
+  const {
+    connect,
+    presence,
+    open,
+    placeholder,
+    sectionNavigation,
+    onActiveSectionChange,
+    errorNotice,
+    registerPendingDraft,
+  } = props;
   const connectRef = useRef(connect);
   connectRef.current = connect;
   const [session, setSession] = useState<TextEditingSession>();
   const [openingError, setOpeningError] = useState<string>();
   const retryRef = useRef<() => Promise<void>>(async () => {});
   const state = useSyncExternalStore(session?.subscribe ?? subscribeEmpty, session?.getSnapshot ?? empty, empty);
+  useEffect(() => {
+    if (!session || !registerPendingDraft) return;
+    return registerPendingDraft(() => session.getSnapshot().pending);
+  }, [session, registerPendingDraft]);
   useEffect(() => {
     setSession(undefined);
     setOpeningError(undefined);

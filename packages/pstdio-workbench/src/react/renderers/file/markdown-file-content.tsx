@@ -20,6 +20,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
     rendererRef,
     editorKey,
     connectText,
+    registerPendingDraft,
     connectDocument,
     presence,
     open,
@@ -41,6 +42,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
           sectionNavigation={sectionNavigation}
           onActiveSectionChange={onActiveSectionChange}
           errorNotice={errorNotice}
+          registerPendingDraft={registerPendingDraft}
         />
       </Flex>
     );

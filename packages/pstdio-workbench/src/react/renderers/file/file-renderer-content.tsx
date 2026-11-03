@@ -8,6 +8,7 @@ import type { NativeDocumentSession } from "../../../core/native-documents/nativ
 import type { WorkbenchPresence } from "../../../core/presence/workbench-presence";
 import type { NativeTextPresentation } from "../../../extensions/bridge/native-text-presentation";
 import { FileRendererLoading } from "./file-renderer-loading";
+import type { RegisterFilePendingDraft } from "./file-renderer-pending-draft";
 import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 import { MarkdownFileContent } from "./markdown-file-content";
 
@@ -29,6 +30,7 @@ export interface FileRendererContentViewProps {
   title: string;
   connectDocument?: () => NativeDocumentSession;
   connectText?: () => NativeTextPresentation;
+  registerPendingDraft?: RegisterFilePendingDraft;
 }
 
 export const FileRendererContentView = (props: FileRendererContentViewProps) => {
