@@ -11,7 +11,6 @@ import { type ReactNode, useLayoutEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
-import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
 import { WorkbenchKeyboardLayer } from "../keybindings/keyboard-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
@@ -148,17 +147,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     movePanelHost(sidePanelHost, slot);
   }, [sidePanelHost, presentedSideMode, attachedSidePanelSlot, floatingSidePanelSlot]);
 
-  const contentWithHeader = (
-    <Flex direction="column" h="full" minH="0" minW="0" w="full">
-      <WorkbenchNavChrome
-        workbench={workbench}
-        hasNav={hasNavWidgets}
-        panelControls={panelControlsPlacement !== "host"}
-      />
-      <Flex flex="1" minH="0" minW="0" overflow="hidden">
-        <WorkbenchBody workbench={workbench} />
-      </Flex>
-    </Flex>
+  const contentWithMainPanel = (
+    <WorkbenchBody workbench={workbench} hasNav={hasNavWidgets} panelControls={panelControlsPlacement !== "host"} />
   );
 
   const contentWithSidenav = (
@@ -173,7 +163,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           <WorkbenchSidePanelBoundary
             workbench={workbench}
             showAttachedSidePanel={showAttachedSidePanel}
-            contentFrame={contentWithHeader}
+            contentFrame={contentWithMainPanel}
             sideHeader={sideHeader}
             contentMinSizePx={CONTENT_MIN_SIZE_PX}
             onAttachedSlotChange={setAttachedSidePanelSlot}

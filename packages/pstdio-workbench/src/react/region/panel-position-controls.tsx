@@ -43,8 +43,11 @@ export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchP
     workbench.layout.store,
     () => region === "side" && workbench.sidePanel.getMode() === "floating",
   );
-  const fullscreenSide = useWorkbenchStore(workbench.fullscreen.store, (state) => region === "side" && state.active);
-  const disabled = !canMove || floatingSide || fullscreenSide;
+  const fullscreenPanel = useWorkbenchStore(
+    workbench.fullscreen.store,
+    (state) => (region === "side" || region === "main") && state.active,
+  );
+  const disabled = !canMove || floatingSide || fullscreenPanel;
   const drag = useDraggable({
     id: `panel:${region}`,
     data: { panelRegion: region },
