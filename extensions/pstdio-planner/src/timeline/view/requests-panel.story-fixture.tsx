@@ -1,5 +1,5 @@
 import { Box, Button } from "@chakra-ui/react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { AutoBuildActivity } from "./auto-build-activity";
@@ -57,17 +57,20 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
 export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
   const { row } = props;
   const [open, setOpen] = useState(false);
-  const card = useRef<HTMLDivElement>(null);
+  const [trigger, setTrigger] = useState<HTMLElement | null>(null);
   return (
     <>
-      <Box ref={card} position="relative" minH="xs">
+      <Box position="relative" minH="xs">
         <GraphCard
           row={row}
           x={0}
           y={0}
           dropBefore={false}
           onSelect={() => {}}
-          onOpenRequests={() => setOpen(true)}
+          onOpenRequests={() => {
+            setTrigger(document.activeElement as HTMLElement | null);
+            setOpen(true);
+          }}
           onDragStart={() => {}}
           onDragOver={() => {}}
           onDrop={() => {}}
@@ -76,7 +79,7 @@ export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
       {open ? (
         <TicketRequestsDialog
           row={row}
-          trigger={card.current?.querySelector<HTMLElement>("[data-ticket]") ?? null}
+          trigger={trigger}
           onClose={() => setOpen(false)}
           onAnswer={async () => {}}
           onOpenChat={async () => {}}

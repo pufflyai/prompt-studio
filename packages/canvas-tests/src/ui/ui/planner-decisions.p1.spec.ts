@@ -39,8 +39,14 @@ test("Auto Build answers stay inline and save failures keep the selected choice"
 // Critical: resolved indicators must still offer access to saved answers.
 test("a resolved card indicator opens its editable saved decision", async ({ page }) => {
   const preview = await openCanvasPreview(page, `${canvas}#ResolvedCard`);
-  await preview.getByRole("button", { name: "1 item resolved", exact: true }).click();
+  const card = preview.getByRole("button", { name: "PS-32 Ship the preview", exact: true });
+  const indicator = preview.getByRole("button", { name: "1 item resolved", exact: true });
+  await card.focus();
+  // Safari mouse activation does not focus buttons. Dispatching click exercises that path.
+  await indicator.dispatchEvent("click");
   const modal = preview.getByRole("dialog", { name: "PS-32 · Ship the preview" });
   await expect(modal.getByRole("button", { name: "Update answer", exact: true })).toBeEnabled();
   await expect(modal.getByRole("radio", { name: /Preview/ })).toBeChecked();
+  await modal.press("Escape");
+  await expect(indicator).toBeFocused();
 });
