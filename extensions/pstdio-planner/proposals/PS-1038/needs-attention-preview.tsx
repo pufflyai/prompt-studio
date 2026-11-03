@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReviewRequestView } from "../../src/data/review-request-types";
 import { RequestsPanel } from "./requests-panel";
 
@@ -13,14 +13,16 @@ export function NeedsAttentionPreview(props: NeedsAttentionPreviewProps) {
   const { requests, failSave } = props;
   const [pending, setPending] = useState(requests);
   const [index, setIndex] = useState(0);
+  const panel = useRef<HTMLDivElement>(null);
   const active = pending[index];
   const answer = async (id: string) => {
     if (failSave) throw new Error("Unable to save. Try again.");
     setPending((current) => current.filter((request) => request.id !== id));
     setIndex(Math.max(0, Math.min(index, pending.length - 2)));
+    requestAnimationFrame(() => panel.current?.focus());
   };
   return (
-    <Stack gap="sm">
+    <Stack ref={panel} tabIndex={-1} gap="sm">
       {pending.length > 1 ? (
         <HStack justify="space-between">
           <Button size="xs" variant="ghost" onClick={() => setIndex((index + pending.length - 1) % pending.length)}>
