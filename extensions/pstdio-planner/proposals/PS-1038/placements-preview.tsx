@@ -64,6 +64,7 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
 
 export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
   const { row } = props;
+  const [answered, setAnswered] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(false);
   const trigger = useRef<HTMLElement | null>(null);
@@ -77,7 +78,12 @@ export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
         }}
       >
         <GraphCard
-          row={row}
+          row={{
+            ...row,
+            requests: row.requests.map((request) =>
+              answered.includes(request.id) ? { ...request, state: "answered" } : request,
+            ),
+          }}
           x={0}
           y={0}
           dropBefore={false}
@@ -93,6 +99,8 @@ export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
         />
       </Box>
       <RequestModal
+        answered={answered}
+        onAnswered={(id) => setAnswered((current) => [...current, id])}
         title={`${row.shorthand} · ${row.title}`}
         requests={row.requests}
         open={open}

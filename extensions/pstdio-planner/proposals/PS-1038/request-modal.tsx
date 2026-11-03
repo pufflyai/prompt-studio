@@ -7,12 +7,14 @@ interface RequestModalProps {
   title: string;
   requests: ReviewRequestView[];
   open: boolean;
+  answered?: string[];
+  onAnswered?: (id: string) => void;
   onClose: () => void;
   finalFocusEl: () => HTMLElement | null;
 }
 
 export function RequestModal(props: RequestModalProps) {
-  const { title, requests, open, onClose, finalFocusEl } = props;
+  const { title, requests, open, onClose, finalFocusEl, answered, onAnswered } = props;
   return (
     <Dialog.Root
       unmountOnExit={false}
@@ -34,7 +36,7 @@ export function RequestModal(props: RequestModalProps) {
             </Dialog.Header>
             <Dialog.Body>
               <ScrollArea>
-                <NeedsAttentionPreview requests={requests} />
+                <NeedsAttentionPreview requests={requests} answered={answered} onAnswered={onAnswered} />
               </ScrollArea>
             </Dialog.Body>
           </Dialog.Content>
