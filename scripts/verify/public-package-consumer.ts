@@ -62,6 +62,32 @@ const consumerDependencies = (packages: { path: string; archive: string }[], rea
   return { dependencies, overrides, imports };
 };
 
+const writeConsumerTypecheckConfig = (directory: string, react: boolean, workbenchConsumer: string | undefined) => {
+  writeFileSync(
+    join(directory, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: {
+        strict: true,
+        skipLibCheck: false,
+        noEmit: true,
+        module: "ESNext",
+        moduleResolution: "Bundler",
+        target: "ES2022",
+        lib: ["ES2022", "ES2023.Intl", "ESNext.Disposable", "DOM", "DOM.Iterable"],
+        jsx: "react-jsx",
+        types: react ? ["node", "vite/client"] : [],
+      },
+      include: [
+        "consumer.ts",
+        "storage-consumer.ts",
+        ...(workbenchConsumer ? [workbenchConsumer] : []),
+        "performance-example/*.ts",
+        "performance-example/*.tsx",
+      ],
+    }),
+  );
+};
+
 const checkConsumer = (
   root: string,
   packages: { path: string; archive: string }[],
@@ -231,38 +257,16 @@ void [invalidAttribute, invalidColumn];
         : ""),
   );
   writeStoragePackageConsumer(directory);
-  writeWorkbenchPackageConsumer(directory, react);
+  const workbenchConsumer = writeWorkbenchPackageConsumer(directory, react, Object.keys(overrides));
   if (react && dependencies["@pstdio/ui"]) {
     cpSync(join(directory, "node_modules/@pstdio/ui/examples/performance"), join(directory, "performance-example"), {
       recursive: true,
     });
   }
-  writeFileSync(
-    join(directory, "tsconfig.json"),
-    JSON.stringify({
-      compilerOptions: {
-        strict: true,
-        skipLibCheck: false,
-        noEmit: true,
-        module: "ESNext",
-        moduleResolution: "Bundler",
-        target: "ES2022",
-        lib: ["ES2022", "ES2023.Intl", "ESNext.Disposable", "DOM", "DOM.Iterable"],
-        jsx: "react-jsx",
-        types: react ? ["node", "vite/client"] : [],
-      },
-      include: [
-        "consumer.ts",
-        "storage-consumer.ts",
-        "workbench-consumer.ts",
-        "performance-example/*.ts",
-        "performance-example/*.tsx",
-      ],
-    }),
-  );
+  writeConsumerTypecheckConfig(directory, react, workbenchConsumer);
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
   run(directory, ["check", "-p", "tsconfig.json"]);
-  run(directory, ["workbench-consumer.ts"]);
+  if (workbenchConsumer) run(directory, [workbenchConsumer]);
   if (react) {
     writeFileSync(
       join(directory, "vite.config.ts"),
