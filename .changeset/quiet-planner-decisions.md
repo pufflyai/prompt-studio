@@ -2,4 +2,4 @@
 "pstdio-planner": patch
 ---
 
-Answer review decisions inline and from timeline cards, show progress by status, and defer Auto Build wakes while worker capacity is full.
+Open review decisions from Auto Build and timeline attention indicators, show progress by status, defer Auto Build wakes while worker capacity is full, and let eligible blocked work be investigated.
