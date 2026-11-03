@@ -60,7 +60,7 @@ export const installLinkedResourceFixture = async (
   const source = join(root, "linked-resource-owner");
   mkdirSync(source, { recursive: true });
   const built = await Bun.build({
-    entrypoints: [join(import.meta.dir, "planner-linked-resources-extension.ts")],
+    entrypoints: [join(import.meta.dir, "planner-linked-resources-extension.fixture.ts")],
     outdir: source,
     naming: "extension.js",
     target: "bun",
