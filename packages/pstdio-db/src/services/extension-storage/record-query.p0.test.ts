@@ -1,7 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { installRecordIndexes } from "./record-index-installation";
 
 const indexes: StorageRecordIndex[] = [
   {
@@ -125,4 +127,29 @@ test("indexed pages filter before limiting and retain stable record order after 
   expect((await reopened.records.aggregate({ ...request, groupBy: "status" })).groups).toEqual([
     { value: "ready", count: 120 },
   ]);
+});
+
+test("reinstalling unchanged indexes leaves the shared table's statistics alone", async () => {
+  const f = await createExtensionStorageFixture();
+  cleanup.push(f.close);
+  const analyzeCount = async () => {
+    await f.db.execute(sql`SELECT pg_stat_force_next_flush()`);
+    const { rows } = await f.db.execute<{ analyze_count: string }>(
+      sql`SELECT analyze_count FROM pg_stat_user_tables WHERE relname = 'storage_current_records'`,
+    );
+    return Number(rows[0].analyze_count);
+  };
+  // Neither owner has records, like most extensions when a project's runtime reloads.
+  const owners = [
+    { owner: { workbenchId: f.projectAId, extensionId: "ext.indexed" }, definitions: indexes },
+    { owner: { workbenchId: f.projectAId, extensionId: "ext.plain" }, definitions: [] },
+  ];
+  await installRecordIndexes(f.db, owners, () => {});
+  const installed = await analyzeCount();
+  expect(installed).toBe(1);
+  await installRecordIndexes(f.db, owners, () => {});
+  expect(await analyzeCount()).toBe(installed);
+  const renamed = [{ ...owners[0], definitions: [{ ...indexes[0], name: "renamed" }] }, owners[1]];
+  await installRecordIndexes(f.db, renamed, () => {});
+  expect(await analyzeCount()).toBe(installed + 1);
 });
