@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
+import { saveTextDocument } from "pstdio-sync/text";
+import * as Y from "yjs";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 
 test("a bound artifact projects peer text once and merges outside edits against its physical copy", async () => {
@@ -111,9 +113,17 @@ test("a peer text projection updates its physical copy without reading unrelated
     await mount.readText("note.md");
     const unrelated = await f.storage.records.read(f.recordId("documents/unrelated.md"));
     await writeFile(f.pathFor("documents/unrelated.md"), "outside edit stays local");
-    await f.deps.extensionStorageService
-      .openNativeTextDocument({ owner: f.owner, fileId: documentKey })
-      .save("from peer");
+    const text = f.deps.extensionStorageService.openNativeTextDocument({ owner: f.owner, fileId: documentKey });
+    const peer = new Y.Doc();
+    try {
+      Y.applyUpdate(peer, await text.exportUpdate());
+      saveTextDocument(peer, "from peer");
+      const merged = await text.store.initialHistory.merge(f.owner, peer);
+      merged?.destroy();
+    } finally {
+      peer.destroy();
+    }
+    expect(await Bun.file(f.pathFor("documents/note.md")).text()).toBe("before");
     await mount.refreshText(documentKey);
     expect(await Bun.file(f.pathFor("documents/note.md")).text()).toBe("from peer");
     expect((await f.storage.records.read(f.recordId("documents/unrelated.md"))).revision).toBe(unrelated.revision);
