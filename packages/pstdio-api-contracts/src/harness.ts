@@ -3,7 +3,7 @@
 // neutral HarnessSession handle. Providers never control persistence or status;
 // they emit JSON patches and settle `done`.
 
-import type { JsonPatch } from "./conversation-events";
+import type { HarnessEventSink, JsonPatch } from "./conversation-events";
 import type { WorkspaceExecutionTarget } from "./extension-kernel/types/extension";
 import type { SessionMessage } from "./session-messages";
 
