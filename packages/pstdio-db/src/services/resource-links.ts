@@ -38,17 +38,26 @@ const key = (row: Edge) => [
   row.target_kind,
   row.target_id,
 ];
-const item = (row: Edge) => ({
-  source: { projectId: row.project_id, extensionId: row.source_owner, type: row.source_kind, id: row.source_id },
-  target: {
-    ...row.details,
-    projectId: row.project_id,
-    extensionId: row.target_owner,
-    type: row.target_kind,
-    id: row.target_id,
-    role: row.role,
-  },
-});
+const item = (row: Edge) => {
+  const { sourceRef, ...details } = row.details;
+  return {
+    source: {
+      ...sourceRef,
+      projectId: row.project_id,
+      extensionId: row.source_owner,
+      type: row.source_kind,
+      id: row.source_id,
+    },
+    target: {
+      ...details,
+      projectId: row.project_id,
+      extensionId: row.target_owner,
+      type: row.target_kind,
+      id: row.target_id,
+      role: row.role,
+    },
+  };
+};
 
 // Creation and legacy adapters use this inside their existing database transaction.
 export const writeResourceLinks = async (
@@ -71,20 +80,30 @@ export const writeResourceLinks = async (
       target_kind: anchor.type,
       target_id: anchor.id,
       role: anchor.role ?? "context",
-      details: details[position]!,
+      details: {
+        ...details[position]!,
+        sourceRef: { label: resource.label, icon: resource.icon, shorthand: resource.shorthand },
+      },
     });
   }
   if (!rows.size) return [];
+  // An identity-only link refresh must retain saved presentation at both endpoints.
+  const mergedDetails = sql`(excluded.details || jsonb_strip_nulls(jsonb_build_object(
+    'label', coalesce(excluded.details->'label', ${edges.details}->'label'),
+    'icon', coalesce(excluded.details->'icon', ${edges.details}->'icon'),
+    'shorthand', coalesce(excluded.details->'shorthand', ${edges.details}->'shorthand')
+  )) || jsonb_build_object('sourceRef',
+    coalesce(${edges.details}->'sourceRef', '{}'::jsonb) || (excluded.details->'sourceRef')))`;
   const changed = await db
     .insert(edges)
     .values([...rows.values()])
     .onConflictDoUpdate({
       target: [edges.project_id, ...keyColumns],
-      set: { role: sql`excluded.role`, details: sql`excluded.details` },
+      set: { role: sql`excluded.role`, details: mergedDetails },
       // Identity and role are already stored in dedicated columns. Legacy details may omit them.
       setWhere: sql`${edges.role} is distinct from excluded.role or
         (${edges.details} - array['extensionId', 'projectId', 'type', 'id', 'role']) is distinct from
-        (excluded.details - array['extensionId', 'projectId', 'type', 'id', 'role'])`,
+        (${mergedDetails} - array['extensionId', 'projectId', 'type', 'id', 'role'])`,
     })
     .returning();
   return changed.map(item);
@@ -184,42 +203,65 @@ export const createResourceLinksDBService = (db: Database) => ({
       .returning();
     return changed.map(item);
   },
-  list: async (input: {
+  list: (input: {
     resource: CanonicalResource;
     direction?: "outgoing" | "incoming" | "both";
     role?: ResourceRole;
     cursor?: string;
     limit?: number;
-  }) => {
-    const direction = input.direction ?? "outgoing";
-    const limit = input.limit ?? 50;
-    if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Limit must be between 1 and 100.");
-    let match = sourceMatch(input.resource);
-    if (direction === "incoming") match = targetMatch(input.resource);
-    if (direction === "both") match = or(sourceMatch(input.resource), targetMatch(input.resource));
-    const conditions = [match];
-    if (input.role) conditions.push(eq(edges.role, input.role));
-    if (input.cursor) {
-      const values = decodeCursor(input.cursor);
-      conditions.push(
-        sql`(${sql.join(keyColumns, sql`, `)}) > (${sql.join(
-          values.map((value) => sql`${value}`),
-          sql`, `,
-        )})`,
-      );
-    }
-    const rows = await db
-      .select()
-      .from(edges)
-      .where(and(...conditions))
-      .orderBy(...keyColumns)
-      .limit(limit + 1);
-    const page = rows.slice(0, limit);
-    return {
-      items: page.map(item),
-      ...(rows.length > limit
-        ? { nextCursor: Buffer.from(JSON.stringify(key(page.at(-1)!))).toString("base64url") }
-        : {}),
-    };
-  },
+  }) => listResourceLinks(db, { ...input, resources: [input.resource] }),
+  listMany: (input: {
+    resources: CanonicalResource[];
+    direction?: "outgoing" | "incoming" | "both";
+    role?: ResourceRole;
+    cursor?: string;
+    limit?: number;
+  }) => listResourceLinks(db, input),
 });
+
+const listResourceLinks = async (
+  db: Database,
+  input: {
+    resources: CanonicalResource[];
+    direction?: "outgoing" | "incoming" | "both";
+    role?: ResourceRole;
+    cursor?: string;
+    limit?: number;
+  },
+) => {
+  const direction = input.direction ?? "outgoing";
+  const limit = input.limit ?? 50;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Limit must be between 1 and 100.");
+  if (!input.resources.length) return { items: [] };
+  const match = or(
+    ...input.resources.map((resource) => {
+      if (direction === "incoming") return targetMatch(resource);
+      if (direction === "both") return or(sourceMatch(resource), targetMatch(resource));
+      return sourceMatch(resource);
+    }),
+  );
+  const conditions = [match];
+  if (input.role) conditions.push(eq(edges.role, input.role));
+  if (input.cursor) {
+    const values = decodeCursor(input.cursor);
+    conditions.push(
+      sql`(${sql.join(keyColumns, sql`, `)}) > (${sql.join(
+        values.map((value) => sql`${value}`),
+        sql`, `,
+      )})`,
+    );
+  }
+  const rows = await db
+    .select()
+    .from(edges)
+    .where(and(...conditions))
+    .orderBy(...keyColumns)
+    .limit(limit + 1);
+  const page = rows.slice(0, limit);
+  return {
+    items: page.map(item),
+    ...(rows.length > limit
+      ? { nextCursor: Buffer.from(JSON.stringify(key(page.at(-1)!))).toString("base64url") }
+      : {}),
+  };
+};

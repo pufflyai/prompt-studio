@@ -2,6 +2,18 @@ import { expect, test } from "bun:test";
 import { makeCommandContext } from "./command-context";
 import { createMemoryStorage } from "./memory-storage";
 
+test("resource link fixtures retain saved endpoint names on identity-only relinks", async () => {
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
+  const source = { type: "ticket", id: "ticket", label: "Saved ticket" };
+  const target = { type: "artifact", id: "artifact", label: "Saved prototype" };
+  await ctx.resources.addAnchors(source, [target]);
+  await ctx.resources.addAnchors({ type: source.type, id: source.id }, [{ type: target.type, id: target.id }]);
+  const page = await ctx.resources.queryAnchorsMany({ resources: [source, target], direction: "both" });
+  expect(page.items).toHaveLength(1);
+  expect(page.items[0]?.source.label).toBe(source.label);
+  expect(page.items[0]?.target.label).toBe(target.label);
+});
+
 test("resource identity batches preserve request order and unknown IDs", async () => {
   const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {}, resourcePrefixes: { ticket: "PS" } });
   const first = await ctx.resources.allocate({ kind: "ticket" });

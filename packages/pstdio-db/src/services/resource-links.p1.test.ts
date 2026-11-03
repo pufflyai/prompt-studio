@@ -30,6 +30,33 @@ test("directed resource links separate owners, preserve metadata, paginate and c
   }
 });
 
+test("incoming unavailable links retain source labels across identity-only refreshes", async () => {
+  const connection = await createDb({ path: ":memory:" });
+  try {
+    const project = await createProjectsDBService(connection.db).create({ name: "Saved labels" });
+    const links = createResourceLinksDBService(connection.db);
+    const source = {
+      projectId: project.id,
+      extensionId: "example.art",
+      type: "artifact",
+      id: "art",
+      label: "Saved prototype",
+      icon: "file-code",
+    };
+    const target = { ...source, extensionId: "example.planner", type: "ticket", id: "ticket", label: "Saved ticket" };
+    await links.add(source, [target]);
+    const { label: _label, icon: _icon, ...identity } = source;
+    expect(await links.add(identity, [target])).toEqual([]);
+    const { label: _targetLabel, icon: _targetIcon, ...targetIdentity } = target;
+    expect(await links.add(identity, [targetIdentity])).toEqual([]);
+    const page = await links.listMany({ resources: [target, source], direction: "both" });
+    expect(page.items).toEqual([{ source, target: { ...target, role: "context" } }]);
+    expect(page.items[0]?.target).not.toHaveProperty("sourceRef");
+  } finally {
+    await connection.close();
+  }
+});
+
 test("workspace creation commits links atomically and deletion removes incoming and outgoing links", async () => {
   const { createWorkspacesDBService } = await import("./workspaces/workspaces");
   const connection = await createDb({ path: ":memory:" });
