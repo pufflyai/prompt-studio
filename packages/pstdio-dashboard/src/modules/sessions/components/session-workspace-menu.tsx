@@ -71,11 +71,11 @@ export const SessionWorkspaceMenu = (props: SessionWorkspaceMenuProps) => {
 
   if (isDisabled) {
     return (
-      <Tooltip content="Open workspace">
+      <Tooltip content="Open workspace" disabled={!onOpenWorkspace}>
         <Box minW="0">
           <WorkspaceMenuButton
             label={selectedLabel}
-            opensWorkspace
+            opensWorkspace={Boolean(onOpenWorkspace)}
             disabled={!onOpenWorkspace}
             onClick={onOpenWorkspace}
           />

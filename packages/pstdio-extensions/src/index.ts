@@ -90,6 +90,7 @@ export {
   validateCommandParams,
 } from "./runtime";
 export { collectConventionDiagnostics } from "./runtime/conventions";
+export { extensionIconAssetName, readExtensionIcon } from "./runtime/extension-icon";
 export { mirrorNodeModules } from "./runtime/mirror-node-modules";
 export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
 export { createReadBoundary } from "./runtime/read-boundary";

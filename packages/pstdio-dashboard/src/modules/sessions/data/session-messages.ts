@@ -15,9 +15,39 @@ export const visibleSessionMessages = (messages: readonly SessionMessage[]) =>
     return [parts.length === message.parts.length ? message : { ...message, parts }];
   });
 
+const promptText = (message: SessionMessage) =>
+  message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n");
+
+const retainUserMessageIdentity = (previous: SessionMessage | undefined, message: SessionMessage) => {
+  if (!previous || message.animationKey) return message;
+  if (previous.id === message.id)
+    return previous.animationKey ? { ...message, animationKey: previous.animationKey } : message;
+  if (
+    previous.role !== "user" ||
+    message.role !== "user" ||
+    previous.createdAt === undefined ||
+    previous.createdAt !== message.createdAt ||
+    promptText(previous) !== promptText(message)
+  )
+    return message;
+  // Harnesses can replace their own optimistic echo after the dashboard's pending send has cleared.
+  return { ...message, animationKey: previous.animationKey ?? previous.id };
+};
+
 export const applyDashboardSessionMessagePatch = (messages: SessionMessage[], patch: DashboardSessionMessagePatch) => {
   if (patch.path === "/messages" && (patch.op === "add" || patch.op === "replace")) {
-    return Array.isArray(patch.value) ? (patch.value as SessionMessage[]) : messages;
+    if (!Array.isArray(patch.value)) return messages;
+    const incoming = patch.value as SessionMessage[];
+    const known = new Map(messages.map((message) => [message.id, message]));
+    const incomingIds = new Set(incoming.map((message) => message.id));
+    return incoming.map((message, index) => {
+      let previous = known.get(message.id);
+      if (!previous && !incomingIds.has(messages[index]?.id)) previous = messages[index];
+      return retainUserMessageIdentity(previous, message);
+    });
   }
   const match = patch.path.match(/^\/messages\/(\d+)$/);
   if (!match) return messages;
@@ -26,7 +56,8 @@ export const applyDashboardSessionMessagePatch = (messages: SessionMessage[], pa
   if (index > limit || !Number.isSafeInteger(index)) return messages;
   const next = [...messages];
   if (patch.op === "add") next.splice(index, 0, patch.value as SessionMessage);
-  else if (patch.op === "replace") next[index] = patch.value as SessionMessage;
+  else if (patch.op === "replace")
+    next[index] = retainUserMessageIdentity(messages[index], patch.value as SessionMessage);
   else next.splice(index, 1);
   return next;
 };

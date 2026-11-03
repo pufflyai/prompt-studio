@@ -20,7 +20,13 @@ test("closing a personal owner during topic derivation leaves no subscription on
   });
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
-  const channel = createPersonalLive({ live, owns: () => false, received: async () => {}, changed: () => {} });
+  const channel = createPersonalLive({
+    live,
+    owns: () => false,
+    received: async () => {},
+    changed: () => {},
+    ready: () => {},
+  });
   try {
     const preparing = channel.prepare({
       ...space,

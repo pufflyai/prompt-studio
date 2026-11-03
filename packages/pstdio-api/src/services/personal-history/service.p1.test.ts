@@ -26,6 +26,18 @@ beforeAll(async () => {
   destination = await createTestApp({ databasePath, storageRoot });
 });
 
+const publishTerminalPosition = async (
+  history: ReturnType<typeof createPersonalHistoryStore>,
+  sessionId: string,
+  head: number,
+) => {
+  const session = (await history.readRecords("sessions")).find((row) => row.id === sessionId)!;
+  await history.writeHeads(
+    new Map([[sessionId, head]]),
+    new Map([[sessionId, { head, version: JSON.stringify([session.status, session.updated_at]) }]]),
+  );
+};
+
 const verifyMetadataOwnership = async (
   native: ReturnType<typeof createNativeStore>,
   login: Parameters<ReturnType<typeof createNativeStore>["save"]>[0],
@@ -113,9 +125,11 @@ test("personal history is readable offline after restart, private to the account
       (await sourceLinks.listAnchors({ resource: { type: "project", id: project.id }, direction: "incoming" })).items[0]
         ?.source.device,
     ).toEqual(device);
-    await destination.deps.personalHistoryService.logs.append(
+    await publishTerminalPosition(history, session.id, 1);
+    await destination.deps.personalHistoryService.logs.savePage(
       historyNamespace({ managerOrigin, accountId, projectId: project.id }),
       session.id,
+      1,
       messages.flatMap((message, index) => messageEntries(index, message)),
     );
     for (const name of ["records"]) {

@@ -1,4 +1,5 @@
 import type { SessionMessage } from "pstdio-api-contracts";
+import { sessionLogVersion } from "../../../services/personal-history/log-publication";
 import type { SessionsRouteDeps } from "../deps";
 import type { SessionEventSink } from "../session-stream-connections";
 
@@ -6,7 +7,7 @@ const finished = ["completed", "failed", "cancelled", "disconnected"];
 
 /**
  * Reading a synced conversation never attaches a local harness to the source device's session. The reader gets
- * the saved conversation once, then only the messages that arrive or stream from the other device.
+ * the saved conversation, arriving updates, and a final durable snapshot after completion catches up.
  */
 export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps, sink: SessionEventSink) => {
   if (await deps.sessionService.get(id)) return false;
@@ -70,11 +71,24 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
         }
       }
     };
+    const complete = async () => {
+      if (!session || !finished.includes(session.status)) return false;
+      const version = sessionLogVersion(session);
+      if (!(await deps.personalHistoryService.messagesReady(id, projectId, version))) return false;
+      await flush();
+      // A page commits before its watcher runs; the final snapshot must use that committed page.
+      const final = await deps.personalHistoryService.messages(id, projectId);
+      if (!final || sink.aborted) return sink.aborted;
+      messages = final;
+      await sink.write("patch", { op: "replace", path: "/messages", value: messages });
+      return await deps.personalHistoryService.messagesReady(id, projectId, version);
+    };
     while (!sink.aborted) {
       if (!(await deps.personalHistoryService.getSession(id))) break;
       await flush();
       await sendQueue();
-      if (sink.aborted || finished.includes(session?.status ?? "")) break;
+      if (sink.aborted) break;
+      if (await complete()) break;
       if (!arrived.length && !queueChanged) {
         // The queue record can sync in a later round than its session row, so a quiet reader checks it again.
         const timedOut = await Promise.race([

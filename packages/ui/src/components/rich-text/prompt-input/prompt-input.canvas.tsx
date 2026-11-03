@@ -77,3 +77,13 @@ export const FocusRequest: Story = {
   id: "patterns-editors-prompt-editor--focus-request",
   render: (args) => <LockedFocusRequest {...args} />,
 };
+
+export const LongCommandDescriptions: Story = {
+  args: {
+    commands: [
+      { name: "/plan", description: "Plan the implementation and review the proposed changes before starting work." },
+      { name: "/compact", description: "Summarize the conversation so you can continue with a smaller context." },
+      { name: "/review", description: "Review changes", disabledReason: "Select a workspace to review its changes." },
+    ],
+  },
+};

@@ -36,6 +36,7 @@ import { useSessionHarness } from "./use-session-harness";
 import { useSessionModelSelection } from "./use-session-model-selection";
 
 interface DashboardSessionChatPanelProps {
+  conversationKey?: string;
   input: SessionViewContext;
   view: DashboardSessionView;
   history: ReturnType<typeof useDashboardSessionMessages>;
@@ -53,8 +54,7 @@ export const openSelectedWorkspace = (
 const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
-  const { input, view, emptyStateTitle, emptyStateDescription, drafts, history } = props;
-  const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
+  const { input, view, conversationKey, emptyStateTitle, emptyStateDescription, drafts, history } = props;
   const sessionId = view.sessionId ?? null;
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
     const value = state.values[dashboardSelectedProjectIdContextKey];
@@ -181,7 +181,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
         <SessionQueuedChatPanel
           // Keying on the session id gives each session its own draft and scroll
           // state, so switching sessions in the bubble is a real switch.
-          conversationKey={`dashboard-workbench-session:${view.id}`}
+          conversationKey={`dashboard-workbench-session:${conversationKey ?? view.id}`}
           messages={chatMessages}
           linkHandler={links.handler}
           conversationNotices={
@@ -223,12 +223,13 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           hideComposer={noHarnessAvailable}
           loaderComponent={<ChatSkeleton />}
           chatInputPlaceholder="Reply to the agent..."
+          chatInputAutoFocus={!view.sessionId}
           chatInputDefaultValue={chatDraft.text}
           onChatInputChange={chatDraft.change}
           chatInputCommands={commands(commandComposer.suggestions)}
           composerDecision={decision}
           device={view.device}
-          attachedResources={attachedResources}
+          attachedResources={[view.workspaceTitle, view.workspaceShorthand].filter(Boolean)}
           projectId={projectId}
           sessionId={sessionId}
           draftKey={view.draftKey}

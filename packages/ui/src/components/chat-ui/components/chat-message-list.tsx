@@ -35,14 +35,14 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   } = props;
   const { scrollRef } = useStickToBottomContext();
   const rows = buildChatMessageRows(leadingResponses, groups);
-  const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.key));
+  const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.message.animationKey ?? row.key));
   const initialHeight = scrollRef.current?.clientHeight || 1;
   const gapCount = Math.max(leadingResponses.length + groups.length - 1, 0);
   const { virtualizer, virtualItems, totalSize, measurements } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: rows.length,
     getScrollElement: () => scrollRef.current as HTMLDivElement | null,
     estimateSize: (index) => ESTIMATED_MESSAGE_HEIGHT + (hasChatRowGap(rows, index) ? VIRTUAL_LIST_GAP : 0),
-    getItemKey: (index) => rows[index].key,
+    getItemKey: (index) => rows[index].message.animationKey ?? rows[index].key,
     overscan: VIRTUAL_LIST_OVERSCAN,
     initialRect: { width: 0, height: initialHeight },
     initialOffset: () =>
@@ -89,8 +89,8 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                 >
                   <StickyUserMessage
                     message={row.message}
-                    expanded={expandedStickyMessageIds.has(row.key)}
-                    animate={animatedKeys.has(row.key)}
+                    expanded={expandedStickyMessageIds.has(row.message.animationKey ?? row.key)}
+                    animatedKeys={animatedKeys}
                     onToggle={onToggleStickyMessage}
                   />
                 </Box>
@@ -114,7 +114,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                 message={row.message}
                 streaming={streaming && row.isActiveTurn && row.showAssistantActions}
                 hideQuestionForms={!row.isActiveTurn || hideActiveQuestionForms}
-                animate={animatedKeys.has(row.key)}
+                animatedKeys={animatedKeys}
                 showAssistantActions={row.showAssistantActions}
               />
             </Box>
