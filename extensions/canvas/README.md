@@ -68,7 +68,7 @@ Project frames can advertise number, toggle, and choice controls. Select a frame
 
 A literal `save: { file: "default.json", key: "values" }` declaration enables selection, explicit saving, and named JSON versions beside the canvas. The menu can rename or delete versions, while protecting the source's imported version. Errors preserve edits for retry. Agents use `pst canvas parameters <action> --help` for the same actions.
 
-This repository's motion and shader studies now use this workflow. Their source paths remain stable. The former Lab extensions retain read-only commands to import saved review and comparison choices; Canvas owns current commands and storage. The project builder owns compilation. Ordinary projects need neither legacy bridge installed.
+UI Canvas owns motion and shader study commands, saved reviews, and comparison choices. The project builder compiles their canvas files.
 
 ## How frames load
 

@@ -1,8 +1,8 @@
 # Shader studies in UI Canvas
 
-Run `bun run canvas`, then open **Shaders** in UI Canvas. Select a frame and open **Parameters**. Changes stay temporary until **Save** updates the selected JSON version or **Save as new version** creates a named sibling file. Reset restores that version. Rename and delete are explicit actions; the version imported by the canvas cannot be deleted from its Parameters menu.
+Run `bun run canvas`, then open **Shaders** in UI Canvas. Select a frame and open **Parameters**. Changes stay temporary until **Save** updates the selected JSON version or **Save as new version** creates a named sibling file. Selecting a saved version loads its values. Rename and delete are explicit actions; the version imported by the canvas cannot be deleted from its Parameters menu.
 
-Versions remain at `design/shaders/<shader>/<version>.json` with `name` and numeric `values`. Each shader's `shader.canvas.tsx` supplies Preview and Compare frames. Version and theme choices are independent. A previous Shader Lab comparison choice is imported when Compare first opens. Saving errors keep edits available for retry.
+Versions remain at `design/shaders/<shader>/<version>.json` with `name` and numeric `values`. Each shader's `shader.canvas.tsx` supplies Preview and Compare frames. Version and theme choices are independent. Canvas stores the selected comparison version. Saving errors keep edits available for retry.
 
 `catalog.json` defines shader ids, fields, bounds, steps, and defaults. `library/` owns the project renderers. Motion is driven by Canvas time, including CSS animation seeks, so paused frames do no continuous work. No shader compiler runs in the extension.
 

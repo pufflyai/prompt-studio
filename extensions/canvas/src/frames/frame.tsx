@@ -183,9 +183,6 @@ export const FramePreview = (props: FramePreviewProps) => {
                   active={frameSelected}
                   item={item}
                   parameters={parameters}
-                  restoreTheme={(theme) => {
-                    if (!runtime.get().themes[item.id]) runtime.setTheme(item.id, theme);
-                  }}
                   onChange={(args) => postFrame(frame.current, { nonce: nonce.current, type: "args", args })}
                 />
               </Suspense>

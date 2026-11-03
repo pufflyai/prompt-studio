@@ -33,7 +33,7 @@ export const SceneWindow = (props: { children: ReactNode; title?: string; sideba
             <Text px="xs" pt="md" textStyle="label/XS/regular" color="fg.muted">
               Tools
             </Text>
-            <ListRow label="Motion Lab" variant="compact" />
+            <ListRow label="UI Canvas" variant="compact" />
           </Stack>
         </Stack>
       )}

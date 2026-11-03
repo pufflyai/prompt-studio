@@ -103,7 +103,7 @@ const NavigationTree = (props: SceneProps) => {
                   label: "Tools",
                   collapsible: true,
                   nodes: [
-                    { id: "lab", label: "Motion Lab", icon: <Files /> },
+                    { id: "canvas", label: "UI Canvas", icon: <Files /> },
                     { id: "kiln", label: "Kiln", icon: <Files /> },
                   ],
                 },

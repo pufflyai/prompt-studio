@@ -4,7 +4,7 @@ import { listStudies, readStudy, studiesPath } from "./studies";
 import { studiesChanged } from "./study-events";
 import { canvasSchema, studyId } from "./study-schema";
 export const projectFiles = (ctx: Pick<CommandContext, "projectFiles">) => {
-  if (!ctx.projectFiles) throw new Error("Motion Lab needs a local project folder");
+  if (!ctx.projectFiles) throw new Error("Animation studies need a local project folder");
   return ctx.projectFiles;
 };
 const list = defineCommand({
@@ -74,7 +74,6 @@ const remove = defineCommand({
     const id = studyId.parse(input.study);
     await projectFiles(ctx).delete(`${studiesPath}/${id}`);
     await ctx.storage.collection("reviews").delete(id);
-    await ctx.storage.collection<boolean>("legacy-imports").put(`motion:${id}`, true);
     await ctx.resources.removed({ type: canvasResource.id, id: `${studiesPath}/${id}/study.canvas.tsx` });
     await ctx.events.emit(studiesChanged, { studies: [id] });
     return { id };

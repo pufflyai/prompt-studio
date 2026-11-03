@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import type { CommandContext } from "@pstdio/sdk/extensions";
 import {
   createMemoryRepoFiles,
   createMemoryResources,
@@ -7,8 +6,7 @@ import {
   makeCommandArgs,
 } from "@pstdio/sdk/testing";
 import { motionCommands as commands } from "./review-commands";
-import { initialState, type ReviewChange } from "./review-state";
-import { readStudy } from "./studies";
+import type { ReviewChange } from "./review-state";
 
 const fixture = async () => {
   const storage = createMemoryStorage();
@@ -23,34 +21,27 @@ const fixture = async () => {
   return { storage, projectFiles };
 };
 
-test("imports a legacy review once and keeps subsequent Canvas review changes", async () => {
+test("keeps saved Canvas reviews and starts recreated studies with defaults", async () => {
   const context = await fixture();
-  const input = { study: "tabs" };
-  const args = makeCommandArgs({ ...context, overrides: { projectFiles: context.projectFiles }, params: input });
-  const initial = await commands["review.read"].run(...args);
-  const legacy = {
-    ...initial,
+  const args = makeCommandArgs({
+    ...context,
+    overrides: { projectFiles: context.projectFiles },
+    params: { study: "tabs" },
+  });
+  await commands["review.update"].run(args[0], {
+    study: "tabs",
+    change: { frame: 90, rate: 0.5, loop: true, settings: { theme: "light" } },
+  });
+  expect(await commands["review.read"].run(...args)).toMatchObject({
     frame: 90,
     rate: 0.5,
     loop: true,
-    settings: { ...initial.settings, theme: "light" as const },
-  };
-  let exports = 0;
-  args[0].commands.execute = (async () => {
-    exports += 1;
-    return { ok: true, status: "success", value: legacy };
-  }) as CommandContext["commands"]["execute"];
-  const imported = await commands["review.read"].run(...args);
-  expect(imported).toMatchObject({ frame: 90, rate: 0.5, loop: true, legacy: true, restored: true });
-  await commands["review.update"].run(args[0], { study: "tabs", change: { frame: 120 } });
-  expect((await commands["review.read"].run(...args)).frame).toBe(120);
-  expect(exports).toBe(1);
+    settings: { theme: "light" },
+    restored: true,
+  });
   await commands["study.delete"].run(args[0], { study: "tabs" });
   await commands["study.create"].run(args[0], { id: "tabs", title: "New tabs", group: "Workbench", duration: 7 });
-  const recreated = await commands["review.read"].run(...args);
-  expect(recreated.frame).toBe(0);
-  expect(recreated.restored).toBe(false);
-  expect(exports).toBe(1);
+  expect(await commands["review.read"].run(...args)).toMatchObject({ frame: 0, restored: false });
 });
 test("public playback actions update the chosen study's shared review state", async () => {
   const context = await fixture();
@@ -226,27 +217,4 @@ test("reconciles saved choices with live metadata defaults and options", async (
   );
   expect(review.settings.right.values).toEqual({ "treatment.mode": "fade" });
   expect(review.settings.left.values).toEqual({ "treatment.mode": "fade" });
-});
-
-test("deleting a study before its first Canvas review prevents importing its old review on recreation", async () => {
-  const context = await fixture();
-  const result = await readStudy(context.projectFiles, "tabs");
-  if (!result.ok) throw new Error(result.reason);
-  const legacy = { ...initialState(result.study), frame: 90 };
-  const args = makeCommandArgs({
-    ...context,
-    overrides: { projectFiles: context.projectFiles },
-    params: { study: "tabs" },
-  });
-  let exports = 0;
-  args[0].commands.execute = (async () => {
-    exports += 1;
-    return { ok: true, status: "success", value: legacy };
-  }) as CommandContext["commands"]["execute"];
-  await commands["study.delete"].run(args[0], { study: "tabs" });
-  await commands["study.create"].run(args[0], { id: "tabs", title: "New tabs", group: "Workbench", duration: 7 });
-  const recreated = await commands["review.read"].run(...args);
-  expect(recreated.frame).toBe(0);
-  expect(recreated.restored).toBe(false);
-  expect(exports).toBe(0);
 });

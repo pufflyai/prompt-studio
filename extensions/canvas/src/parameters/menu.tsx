@@ -18,7 +18,6 @@ interface ParameterEditorProps {
   item: CanvasItem;
   parameters: FrameParameters;
   onChange: (values: Values) => void;
-  restoreTheme?: (theme: string) => void;
 }
 interface Version {
   file: string;
@@ -89,7 +88,6 @@ export const ParameterEditor = (props: ParameterEditorProps) => {
       setValues((current) => ({ ...current, ...next }));
       send.current(next);
     },
-    restoreTheme: props.restoreTheme,
   });
   useEffect(() => {
     if (!host || !item.preview.save) return;

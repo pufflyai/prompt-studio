@@ -1,5 +1,4 @@
 import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { readLegacyComparison } from "../legacy";
 import { selectionKey } from "../parameters/commands";
 import { readCatalog } from "./catalog";
 import {
@@ -20,7 +19,7 @@ const findShader = async (ctx: CommandContext, id: string) => {
 };
 
 const projectFiles = (ctx: Pick<CommandContext, "projectFiles">) => {
-  if (!ctx.projectFiles) throw new Error("Shader Lab needs a local project folder");
+  if (!ctx.projectFiles) throw new Error("Shader studies need a local project folder");
   return ctx.projectFiles;
 };
 const version = { shader: params.text({ required: true }), version: params.text({ required: true }) };
@@ -42,7 +41,7 @@ const add = defineCommand({
   id: "shaders.add",
   cli: true,
   mutating: true,
-  title: l10n("shaders.add", "Add a shader to the lab"),
+  title: l10n("shaders.add", "Add a shader study"),
   params: {
     shader: params.text({ required: true }),
   },
@@ -139,17 +138,8 @@ const compareRead = defineCommand({
     const collection = ctx.storage.collection<string>("parameter-versions");
     const key = comparisonKey(input.shader);
     let file = await collection.get(key);
-    if (!file && !(await ctx.storage.collection("legacy-imports").get(`shader:${input.shader}`))) {
-      const previous = await readLegacyComparison(ctx, input.shader);
-      if (typeof previous === "string") {
-        file = `${previous}.json`;
-        await collection.put(key, file);
-        await ctx.storage.collection<boolean>("legacy-imports").put(`shader:${input.shader}`, true);
-      }
-    }
     if (file && !(await versionExists(ctx, input.shader, file))) {
       await collection.delete(key);
-      await ctx.storage.collection<boolean>("legacy-imports").put(`shader:${input.shader}`, true);
       file = undefined;
     }
     return { version: file?.replace(/\.json$/, "") ?? null };
@@ -169,7 +159,6 @@ const compareUpdate = defineCommand({
       if (!(await versionExists(ctx, input.shader, file))) throw new Error("That shader version does not exist");
       await collection.put(key, file);
     } else await collection.delete(key);
-    await ctx.storage.collection<boolean>("legacy-imports").put(`shader:${input.shader}`, true);
     await ctx.events.emit(shadersChanged, {});
     return { version: input.version ?? null };
   },

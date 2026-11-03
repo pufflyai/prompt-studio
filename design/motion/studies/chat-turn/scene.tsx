@@ -4,7 +4,7 @@ import { Composer, duration, Message, progress, reveal, SessionWindow, timings }
 import { ComposerEdge, TurnStatus } from "./turn-status";
 
 const answer =
-  "I’ll build the motion examples in design/motion and make them available in the Motion Lab extension. Each example will use the same visual language as Prompt Studio.";
+  "I’ll build the motion examples in design/motion and make them available in UI Canvas. Each example will use the same visual language as Prompt Studio.";
 const words = answer.match(/\S+\s*/g) ?? [];
 const send = 1;
 const wait = 1.3;

@@ -14,7 +14,6 @@ export interface PlaybackSettings {
 export const editableValues = (parameters: FrameParameters, values: Values) =>
   Object.fromEntries(Object.entries(values).filter(([key]) => Object.hasOwn(parameters.controls, key)));
 
-// Review settings are read through their storage owner, never from another extension's files.
 // Hydration must not replace an edit made while that asynchronous read was pending.
 export const useMotionReview = (props: {
   host?: GuestHost;
@@ -22,7 +21,6 @@ export const useMotionReview = (props: {
   parameters: FrameParameters;
   untouched: () => boolean;
   apply: (values: Values) => void;
-  restoreTheme?: (theme: string) => void;
 }) => {
   const { host, item, parameters } = props;
   const callbacks = useRef(props);
@@ -57,9 +55,8 @@ export const useMotionReview = (props: {
               review.loopRange ? [review.loopRange[0] / 60, review.loopRange[1] / 60] : undefined,
             ),
           });
-          if (review.legacy) callbacks.current.restoreTheme?.(`pstdio-${review.settings.theme}`);
         },
-        () => {}, // Source-owned motion frames also work without a saved legacy review.
+        () => {}, // Frames use source defaults when no saved review is available.
       );
     return () => {
       active = false;

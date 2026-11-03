@@ -1,5 +1,4 @@
 import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { readLegacyMotion } from "../legacy";
 import {
   applyReviewChange,
   initialState,
@@ -13,16 +12,7 @@ import { projectFiles, studyCommands } from "./study-commands";
 import type { StudyMetadata } from "./study-schema";
 
 const read = async (ctx: CommandContext, study: StudyMetadata) => {
-  const storage = ctx.storage;
-  let stored = await storage.collection<ReviewState>("reviews").get(study.id);
-  if (!stored && !(await storage.collection("legacy-imports").get(`motion:${study.id}`))) {
-    const previous = await readLegacyMotion(ctx, study.id);
-    if (previous?.settings) {
-      stored = previous;
-      await storage.collection<ReviewState>("reviews").put(study.id, stored);
-      await storage.collection<boolean>("legacy-imports").put(`motion:${study.id}`, true);
-    }
-  }
+  const stored = await ctx.storage.collection<ReviewState>("reviews").get(study.id);
   const state = stored?.settings.left.values && stored?.settings.right.values ? stored : initialState(study);
   const settings = { ...state.settings };
   for (const side of ["left", "right"] as const) {
@@ -70,7 +60,6 @@ const readState = defineCommand({
     return {
       ...state,
       restored: Boolean(await ctx.storage.collection("reviews").get(input.study)),
-      legacy: Boolean(await ctx.storage.collection("legacy-imports").get(`motion:${input.study}`)),
     };
   },
 });

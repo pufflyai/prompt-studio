@@ -39,7 +39,7 @@ in their owning PRs.
 | HTTP workspace `provider_operation_kind: "archive"` value | `"delete"` for new operations | Historical workspace rows and external clients; no new archive operations | Convert stored operation kinds, provider capability JSON and archived provider states in the separate 0.45 conversion PR | 0.45 |
 | Render-context `page` and `files` helpers | `createWebviewClient(host).page` and `.files` | Existing extensions adopt after published 0.44 SDK | None | 0.45 |
 | `WebviewNotificationShowParams` and `notification.show` `{ level, title, message? }` | `CommandNotice`; `client.notify.toast({ type, title?, message })` | Existing extension toast callers | None | 0.45 |
-| Webview `lastCommand` props | `client.events.subscribe` or `useCommandQuery.refreshOn` | Extension Lab and Motion Lab | None | 0.45 |
+| Webview `lastCommand` props | `client.events.subscribe` or `useCommandQuery.refreshOn` | Extension Lab | None | 0.45 |
 | `terminal.session`, `createTerminalSessionBridge`, `TerminalSessionBridge` and renderer `TerminalSessionAdapter` | Host terminal surface | No maintained extension callers | None | 0.45 |
 | `files.list` and `files.delete` capabilities and client methods | Extension commands and owned storage | No maintained extension callers | None | 0.45 |
 | Versioned capability declarations such as `clipboard.write@1` | Bare capability names | Existing manifests remain accepted through 0.44 | None | 0.45 |

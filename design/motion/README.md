@@ -4,7 +4,7 @@ Review animation studies in UI Canvas under **Motion**. Run `bun run canvas` in 
 
 Each `design/motion/studies/<id>/` folder owns `study.json`, its React `scene.tsx`, and `study.canvas.tsx`. The project builder compiles the canvas; no extension compiles scenes. Shared scene helpers live in `design/motion/kit`. Production components do not depend on this design workspace.
 
-Select **Instant** or **Subtle**, then open **Parameters** to change presets, reduced motion, or a study's choices. These changes stay temporary. Each frame has independent playback, speed, markers, and a loop range. Use Theme to compare light and dark. Reset parameters restores the selected frame's initial review values. Existing saved Motion Lab review choices are imported through the legacy extension's read-only command; playback resumes paused.
+Select **Instant** or **Subtle**, then open **Parameters** to change presets, reduced motion, or a study's choices. These changes stay temporary. Each frame has independent playback, speed, markers, and a loop range. Use Theme to compare light and dark. Reset parameters restores the selected frame's initial review values. Saved Canvas review choices load with playback paused.
 
 ```sh
 pst canvas study create --id example --title "Example" --group Workbench --duration 6
