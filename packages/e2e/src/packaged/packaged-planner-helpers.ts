@@ -11,6 +11,7 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "./package
 export interface PackagedPlanner {
   baseUrl: string;
   projectId: string;
+  projectPath: string;
   headers: Record<string, string>;
   metadata: WorkbenchExtensionMetadata;
 }
@@ -57,10 +58,11 @@ export async function withPackagedPlanner(check: (input: PackagedPlanner) => Pro
     phase("runtime ready");
     const headers = runtimeAuthorization(host.descriptor);
     phase("project create start");
+    const projectInput = folderProjectInput({ name: "packaged-workspace-action-project" });
     const response = await fetch(`${host.baseUrl}/v1/projects`, {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "packaged-workspace-action-project" })),
+      body: JSON.stringify(projectInput),
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
@@ -68,7 +70,13 @@ export async function withPackagedPlanner(check: (input: PackagedPlanner) => Pro
     const metadata = await fetch(`${host.baseUrl}/v1/projects/${project.id}/extensions/ui`, { headers });
     expect(metadata.status).toBe(200);
     phase("metadata complete");
-    await check({ baseUrl: host.baseUrl, projectId: project.id, headers, metadata: await metadata.json() });
+    await check({
+      baseUrl: host.baseUrl,
+      projectId: project.id,
+      projectPath: projectInput.initial_workspace.params.path,
+      headers,
+      metadata: await metadata.json(),
+    });
     phase("checks complete");
   } finally {
     phase("cleanup start");

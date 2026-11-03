@@ -1,12 +1,11 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { MilestoneNeedsAttentionPreview } from "../../../proposals/PS-1038/milestone-preview";
-import { AutoBuildPreview, CardNeedsAttentionPreview } from "../../../proposals/PS-1038/placements-preview";
-import { previewRequests } from "../../../proposals/PS-1038/review-requests.story-fixture";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
+import { MilestoneNeedsAttentionPreview } from "./milestone-requests.story-fixture";
 import { RequestsPanel } from "./requests-panel";
+import { AutoBuildPreview, CardNeedsAttentionPreview } from "./requests-panel.story-fixture";
 
 const person = { type: "human" as const, id: "person", displayName: "Human" };
 const agent = { type: "agent" as const, id: "agent", displayName: "Agent" };
@@ -220,49 +219,48 @@ export const UnreadableRequest: Story = {
 
 export const AutoBuildPopover: Story = {
   name: "Auto Build — open Needs attention",
-  render: () => <AutoBuildPreview requests={previewRequests} />,
+  render: () => <AutoBuildPreview requests={[proposalReview, decision]} />,
 };
 export const AutoBuildSingleRequest: Story = {
   name: "Auto Build — one pending request",
-  render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} />,
+  render: () => <AutoBuildPreview requests={[proposalReview]} />,
 };
 export const AutoBuildSaveError: Story = {
   name: "Auto Build — modal answer save error",
-  render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} failSave />,
-};
-export const AutoBuildEmptySessions: Story = {
-  name: "Auto Build — no supervisor or agents",
-  render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} empty />,
-};
-export const AutoBuildWarning: Story = {
-  name: "Auto Build — warning above requests",
-  render: () => <AutoBuildPreview requests={previewRequests} warning />,
+  render: () => <AutoBuildPreview requests={[proposalReview]} failSave />,
 };
 export const CardModal: Story = {
   name: "Card — open Needs attention",
-  render: () => (
-    <CardNeedsAttentionPreview
-      row={{
-        ...row,
-        id: "demo-notes",
-        shorthand: "DEMO-12",
-        title: "Build a notes tool",
-        requests: previewRequests.filter((request) => request.ticketId === "demo-notes"),
-      }}
-    />
-  ),
+  render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [proposalReview, decision] }} />,
+};
+
+export const ResolvedCard: Story = {
+  name: "Card — inspect a saved decision",
+  render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [answeredDecision] }} />,
+};
+
+export const AutoBuildEmptySessions: Story = {
+  name: "Auto Build — no supervisor or agents",
+  render: () => <AutoBuildPreview requests={[proposalReview]} empty />,
+};
+export const AutoBuildWarning: Story = {
+  name: "Auto Build — warning above requests",
+  render: () => <AutoBuildPreview requests={[proposalReview, decision]} warning />,
 };
 export const MilestoneModal: Story = {
   name: "Milestone — open Needs attention",
   render: () => (
     <MilestoneNeedsAttentionPreview
-      rows={["demo-notes", "demo-importer"].map((id, index) => ({
-        ...row,
-        id,
-        shorthand: index === 0 ? "DEMO-12" : "DEMO-21",
-        title: index === 0 ? "Build a notes tool" : "Build the importer",
-        requests: previewRequests.filter((request) => request.ticketId === id),
-      }))}
+      rows={[
+        { ...row, requests: [proposalReview] },
+        {
+          ...row,
+          id: "importer",
+          shorthand: "PS-33",
+          title: "Import notes",
+          requests: [{ ...decision, ticketId: "importer" }],
+        },
+      ]}
     />
   ),
 };

@@ -51,6 +51,11 @@ export function RequestForm(props: RequestFormProps) {
 
   return (
     <Stack gap="sm" p="sm" bg="bg.subtle" borderRadius="md">
+      {request.ticketLabel ? (
+        <Text textStyle="label/S/medium" color="fg.muted">
+          {request.ticketLabel}
+        </Text>
+      ) : null}
       <Text textStyle="label/M/medium">{request.title}</Text>
       <Instructions text={request.instructions} />
       {request.state === "cancelled" ? <Text color="fg.muted">{request.outcomeText}</Text> : null}
