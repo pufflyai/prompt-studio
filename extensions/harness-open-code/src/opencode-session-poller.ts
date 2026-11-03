@@ -1,10 +1,12 @@
 import type { HarnessEventSink, HarnessExit, SessionMessage } from "@pstdio/sdk/extensions";
+import { publishConversationChanges } from "@pstdio/sdk/extensions";
 import { composeOwnedOpencodeSnapshot } from "./history-reconciliation";
 import { normalizeErrorPart } from "./normalized-error";
 import { isTransportTimeout } from "./opencode-http";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { isTurnCompleted, isTurnInFlight, isTurnStale, resolveInFlightTurnProgressAt } from "./opencode-turn-state";
 import type { OpencodeSessionMessage } from "./opencode-types";
+import { retainOpencodeResults } from "./retained-results";
 
 export interface PostState {
   settled: boolean;
@@ -126,8 +128,7 @@ export const appendFailureMessage = (input: {
     index: latestMessages.length,
   };
 
-  const nextMessages = [...latestMessages, normalizedFailureMessage];
-  events.push({ op: "replace", path: "/messages", value: nextMessages });
+  events.push({ op: "add", path: `/messages/${latestMessages.length}`, value: normalizedFailureMessage });
   return failTurn(events);
 };
 
@@ -143,7 +144,7 @@ export const readSessionSnapshot = async (input: {
   const { loadMessages, sessionId, cwd, events } = input;
 
   try {
-    const raw = await loadMessages(sessionId, cwd);
+    const raw = retainOpencodeResults(await loadMessages(sessionId, cwd));
     const normalized = composeOwnedOpencodeSnapshot(events, raw.map(normalizeOpencodeMessage), input.onHistoryRecovery);
     const snapshot = JSON.stringify(normalized);
 
@@ -155,7 +156,7 @@ export const readSessionSnapshot = async (input: {
       } satisfies PollSnapshot;
     }
 
-    events.push({ op: "replace", path: "/messages", value: normalized });
+    publishConversationChanges(events, normalized);
     return {
       snapshotChanged: true,
       lastObserved: raw,

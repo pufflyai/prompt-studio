@@ -6,12 +6,11 @@ import {
   historyValueKey,
   mergeHistoryMetadata,
   reconcileMessageHistory,
+  toolOutputFingerprint,
 } from "@pstdio/sdk/extensions";
 
 const tool = (message: SessionMessage) =>
   message.parts.length === 1 && message.parts[0].type === "tool" ? message.parts[0] : undefined;
-const display = (output: unknown) =>
-  output && typeof output === "object" && "returnDisplay" in output ? output.returnDisplay : output;
 
 const projection: HistoryProjection = {
   key: (message) => {
@@ -23,9 +22,13 @@ const projection: HistoryProjection = {
     const b = tool(native);
     if (!a || !b) return mergeHistoryMetadata(known, native);
     for (const field of ["input", "output"] as const) {
-      const left = field === "output" ? display(a.state?.output) : a.state?.input;
-      const right = field === "output" ? display(b.state?.output) : b.state?.input;
-      if (left !== undefined && right !== undefined && historyValueKey(left) !== historyValueKey(right)) {
+      const left = a.state?.[field];
+      const right = b.state?.[field];
+      const equal =
+        field === "output"
+          ? toolOutputFingerprint(a) === toolOutputFingerprint(b)
+          : historyValueKey(left) === historyValueKey(right);
+      if (left !== undefined && right !== undefined && !equal) {
         throw new HistoryConflict(`conflicting_tool_${field}`);
       }
     }

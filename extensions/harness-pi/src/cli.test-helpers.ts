@@ -110,7 +110,13 @@ export const piFixture = async (installed = false) => {
       getMessages: () => messages,
       push(patch: JsonPatch) {
         patches.push(patch);
-        messages = structuredClone(patch.value) as SessionMessage[];
+        if (patch.path === "/messages") messages = structuredClone(patch.value) as SessionMessage[];
+        else if (/^\/messages\/\d+$/.test(patch.path)) {
+          const index = Number(patch.path.split("/").at(-1));
+          if (patch.op === "remove") messages.splice(index, 1);
+          else if (patch.op === "add") messages.splice(index, 0, structuredClone(patch.value) as SessionMessage);
+          else messages[index] = structuredClone(patch.value) as SessionMessage;
+        }
       },
     };
   };

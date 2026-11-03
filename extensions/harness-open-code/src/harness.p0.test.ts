@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
+import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { ctx, harnessDefaults, serviceOverrides } from "./harness.test-helpers";
 import { recordingSink } from "./opencode-session-poller.test-helpers";
@@ -458,10 +458,8 @@ describe("resume", () => {
 
     await session.done;
 
-    const messagePatches = patches.filter((p) => p.path === "/messages");
-    expect(messagePatches.length).toBeGreaterThan(0);
-
-    const lastMessages = messagePatches[messagePatches.length - 1].value as SessionMessage[];
+    expect(patches.some((patch) => patch.path.startsWith("/messages/"))).toBe(true);
+    const lastMessages = sink.getMessages();
     expect(lastMessages).toHaveLength(4);
     expect(lastMessages[2].parts[0]).toMatchObject({ type: "text", text: "follow-up" });
     expect(lastMessages[3].parts[0]).toMatchObject({ type: "text", text: "Reply: follow-up" });
@@ -484,7 +482,7 @@ describe("resume", () => {
     };
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -497,15 +495,9 @@ describe("resume", () => {
     const exit = await session.done;
     expect(exit).toEqual({ status: "failed" });
 
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const hasConversationError = messagePatches.some((patch) => {
-      if (!Array.isArray(patch.value)) return false;
-
-      return patch.value.some((message) => {
-        const parts = (message as SessionMessage).parts ?? [];
-        return parts.some((part) => part.type === "error");
-      });
-    });
+    const hasConversationError = sink
+      .getMessages()
+      .some((message) => message.parts.some((part) => part.type === "error"));
 
     expect(hasConversationError).toBe(true);
   });
@@ -587,8 +579,7 @@ describe("resume", () => {
     const statusPatches = patches.filter((p) => p.path === "/status");
     expect(statusPatches.at(-1)?.value).toBe("completed");
 
-    const messagePatches = patches.filter((p) => p.path === "/messages");
-    const last = messagePatches.at(-1)?.value as SessionMessage[];
+    const last = sink.getMessages();
     expect(last.at(-1)?.parts[0]).toMatchObject({ type: "text", text: "done" });
   });
 
@@ -677,7 +668,7 @@ describe("resume", () => {
     };
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -689,8 +680,7 @@ describe("resume", () => {
 
     await session.done;
 
-    const messagePatches = patches.filter((p) => p.path === "/messages");
-    const finalMessages = messagePatches[messagePatches.length - 1]?.value as SessionMessage[];
+    const finalMessages = sink.getMessages();
 
     expect(finalMessages.at(-1)?.parts).toContainEqual({
       type: "error",
@@ -751,8 +741,7 @@ describe("reattach", () => {
     const statusPatches = patches.filter((p) => p.path === "/status");
     expect(statusPatches.at(-1)?.value).toBe("completed");
 
-    const messagePatches = patches.filter((p) => p.path === "/messages");
-    const last = messagePatches.at(-1)?.value as SessionMessage[];
+    const last = sink.getMessages();
     expect(last.at(-1)?.parts[0]).toMatchObject({ type: "text", text: "done" });
   });
 

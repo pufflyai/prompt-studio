@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessAttachment, HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
-import { recordingSink } from "./opencode-session-poller.test-helpers";
+import { messagesFromPatches, recordingSink } from "./opencode-session-poller.test-helpers";
 
 const notesPath = join(tmpdir(), "pstdio-oc-notes.txt");
 writeFileSync(notesPath, "hello notes");
@@ -84,8 +84,7 @@ const harness = (messages: Record<string, unknown[]>) =>
   );
 
 const latestMessages = (patches: ReturnType<typeof recordingSink>["patches"]) => {
-  const messagePatch = patches.filter((patch) => patch.path === "/messages").at(-1);
-  return messagePatch?.value as SessionMessage[];
+  return messagesFromPatches(patches);
 };
 
 const expectUserAttachment = (message: SessionMessage | undefined, text: string) => {

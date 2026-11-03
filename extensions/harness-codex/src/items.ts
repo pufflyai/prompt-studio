@@ -1,4 +1,5 @@
 import type { SessionMessage, ToolPart, ToolPartStatus } from "@pstdio/sdk/extensions";
+import { normalizeToolResult } from "@pstdio/sdk/extensions";
 import type { CodexThreadItem, CodexUsage } from "./types";
 
 const EXECUTE_TOOLS = new Set(["shell", "exec_command", "command_execution"]);
@@ -32,10 +33,11 @@ const toolMessage = (item: CodexThreadItem, id: string, tool: string, input: unk
       input,
       output: item.output ?? item.aggregated_output,
       metadata: item.metadata,
+      resultSummary: item.resultSummary,
       errorText: status === "failed" ? "Tool execution failed" : undefined,
     },
   };
-  return { id, role: "assistant", parts: [part] };
+  return { id, role: "assistant", parts: [normalizeToolResult(part)] };
 };
 
 export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionMessage | null => {

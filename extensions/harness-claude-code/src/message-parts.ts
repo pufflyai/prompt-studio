@@ -5,6 +5,7 @@ import type {
   ToolPart,
   ToolPartActionType,
 } from "@pstdio/sdk/extensions";
+import { normalizeToolResult } from "@pstdio/sdk/extensions";
 import { EXIT_PLAN_MODE, planQuestionInput } from "./plan-mode";
 import type { AskUserQuestionInput, ClaudeCodeToolResultBlock, ClaudeCodeToolUseBlock } from "./types";
 
@@ -73,14 +74,14 @@ export const toolResultPart = (tool: string, block: ClaudeCodeToolResultBlock, t
     !isQuestion && isRecord(toolUseResult) ? { ...toolUseResult, returnDisplay: block.content } : block.content;
   const errorText = isQuestion && typeof block.content === "string" ? block.content : "Tool execution failed";
 
-  return {
+  return normalizeToolResult({
     type: "tool",
     tool: isPlan ? QUESTION_TOOL : tool,
     callId: block.tool_use_id,
     actionType: classifyToolAction(tool),
     status: isError ? "failed" : "completed",
     state: { ...(isPlan ? { input: planQuestionInput() } : {}), output, errorText: isError ? errorText : undefined },
-  };
+  });
 };
 
 export const isOpenQuestion = (part: SessionMessagePart): part is ToolPart =>

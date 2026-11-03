@@ -1,4 +1,5 @@
-import type { SessionMessage, SessionMessagePart, ToolPart } from "@pstdio/sdk/extensions";
+import type { SessionMessage, SessionMessagePart, ToolPart, ToolResultSummary } from "@pstdio/sdk/extensions";
+import { normalizeToolResult } from "@pstdio/sdk/extensions";
 
 export interface PiContent {
   type: string;
@@ -24,6 +25,8 @@ export interface PiMessage {
   errorMessage?: string;
   usage?: { input: number; output: number; cacheRead?: number; cacheWrite?: number };
   display?: boolean;
+  resultSummary?: ToolResultSummary;
+  details?: unknown;
 }
 
 const contentParts = (content: PiMessage["content"]) => {
@@ -69,12 +72,40 @@ const normalizeMessage = (message: PiMessage, index: number) => {
   } satisfies SessionMessage;
 };
 
-const applyToolResult = (tool: ToolPart, message: PiMessage) => {
-  tool.status = message.isError ? "failed" : "completed";
+export const retainPiToolResult = (message: PiMessage) => {
+  if (message.role !== "toolResult" || message.resultSummary) return message;
   const output = contentParts(message.content)
     .flatMap((part) => (part.type === "text" ? [part.text] : []))
     .join("\n");
-  tool.state = { ...tool.state, output, ...(message.isError ? { errorText: output } : {}) };
+  const bounded = normalizeToolResult({
+    type: "tool",
+    tool: message.toolName ?? "unknown",
+    state: { output, metadata: message.details, ...(message.isError ? { errorText: output } : {}) },
+  });
+  return {
+    role: message.role,
+    timestamp: message.timestamp,
+    toolCallId: message.toolCallId,
+    toolName: message.toolName,
+    isError: message.isError,
+    content: bounded.state?.output as string,
+    details: bounded.state?.metadata,
+    resultSummary: bounded.state?.resultSummary,
+  };
+};
+
+const applyToolResult = (tool: ToolPart, original: PiMessage) => {
+  const message = retainPiToolResult(original);
+  tool.status = message.isError ? "failed" : "completed";
+  const output = message.content as string;
+  if (message.resultSummary) tool.state = { ...tool.state, output, resultSummary: message.resultSummary };
+  else
+    tool.state = {
+      ...tool.state,
+      output,
+      metadata: message.details,
+      ...(message.isError ? { errorText: output } : {}),
+    };
 };
 
 export const normalizePiMessages = (native: PiMessage[], offset = 0) => {
