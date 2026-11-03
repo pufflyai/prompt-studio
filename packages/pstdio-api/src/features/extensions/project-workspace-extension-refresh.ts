@@ -14,15 +14,17 @@ export const subscribeProjectWorkspaceExtensionRefresh = (input: RefreshInput) =
     const row = event.data as Record<string, unknown>;
     // Synced history shows other devices' folders; extensions load only from this device's folder.
     if (row.device) return;
-    // Project setup creates its files before extension watchers can load them.
+    // Only a ready default folder changes what extensions load. Default workspaces cannot be
+    // deleted, so delete events never qualify. Project setup creates its files before
+    // extension watchers can load them.
     if (
-      event.op === "set" &&
-      (!row.is_default ||
-        row.execution_kind !== "local" ||
-        !row.root_path ||
-        row.initializing ||
-        row.setup_error ||
-        row.provider_state !== "ready")
+      event.op !== "set" ||
+      !row.is_default ||
+      row.execution_kind !== "local" ||
+      !row.root_path ||
+      row.initializing ||
+      row.setup_error ||
+      row.provider_state !== "ready"
     )
       return;
     const projectId = typeof row.project_id === "string" ? row.project_id : undefined;
