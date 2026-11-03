@@ -9,7 +9,7 @@ export const historyNamespace = (input: { managerOrigin: string; accountId: stri
     .digest("hex")
     .slice(0, 32);
 
-type Published = { updatedAt: string | null; fingerprints: string[]; head?: number };
+type Published = { updatedAt: string | null; status?: string; fingerprints: string[]; head?: number };
 
 const readJson = async <T>(path: string, fallback: T) => {
   try {
