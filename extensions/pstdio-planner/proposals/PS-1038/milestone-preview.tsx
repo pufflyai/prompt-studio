@@ -29,7 +29,12 @@ export function MilestoneNeedsAttentionPreview(props: { rows: PlanRow[] }) {
   };
   return (
     <>
-      <Box h="10">
+      <Box
+        h="10"
+        onClickCapture={(event) => {
+          if (event.target instanceof Element) event.target.closest("button")?.focus({ preventScroll: true });
+        }}
+      >
         <SectionHeader
           entry={entry}
           onToggle={() => {}}
