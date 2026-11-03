@@ -1,6 +1,8 @@
 import { commandRef } from "./refs";
 import { dockedWorkbenchRegions, type ResourceKindDefinition } from "./types/composition";
 import type { ContributionKind } from "./types/contribution-identity";
+import type { NavigationTarget } from "./types/navigation-target";
+import type { ResourceRef } from "./types/resources";
 
 const hostRef = <Kind extends ContributionKind>(kind: Kind, id: string) => ({ extensionId: "pstdio", kind, id });
 
@@ -126,6 +128,13 @@ export const workbenchSlots = {
 
 /** Dashboard commands available through a webview's commands.execute capability. */
 export const workbenchCommands = {
+  recentResources: commandRef<
+    Record<string, never>,
+    Array<{ resource: ResourceRef; target: Extract<NavigationTarget, { kind: "page" | "compound" }> }>
+  >({
+    extensionId: "pstdio",
+    id: "workbench.resources.recent",
+  }),
   newConversation: commandRef<Record<string, never>, void>({ extensionId: "pstdio", id: "dashboard.createSession" }),
   openToolSearch: commandRef<Record<string, never>, void>({
     extensionId: "pstdio",
