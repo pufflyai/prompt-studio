@@ -51,6 +51,19 @@ test("Auto Build opens Needs attention in the shared modal and preserves the ans
   await expect(modal.getByRole("button", { name: "Submit answer", exact: true })).toBeEnabled();
 });
 
+// Critical: the final answer must dismiss the modal and restore a connected control.
+test("Auto Build closes Needs attention after its last answer", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#AutoBuildSingleRequest`);
+  const trigger = preview.getByRole("button", { name: "Auto Build", exact: true });
+  await trigger.press("Enter");
+  await preview.getByRole("button", { name: "Needs attention", exact: true }).press("Enter");
+  const modal = preview.getByRole("dialog", { name: "Needs attention", exact: true });
+  await modal.getByText("2. Several tags at once", { exact: true }).click();
+  await modal.getByRole("button", { name: "Submit answer", exact: true }).click();
+  await expect(modal).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
 // Critical: resolved indicators must still offer access to saved answers.
 test("a resolved card indicator opens its editable saved decision", async ({ page }) => {
   const preview = await openCanvasPreview(page, `${canvas}#ResolvedCard`);
@@ -95,7 +108,7 @@ test("milestone attention opens decisions across its tickets in the modal", asyn
   await remaining.press("Enter");
   await modal.getByText("2. Several tags at once", { exact: true }).click();
   await modal.getByRole("button", { name: "Submit answer", exact: true }).click();
-  await modal.press("Escape");
+  await expect(modal).toBeHidden();
   await expect(preview.getByRole("button", { name: "Collapse Notes tool preview", exact: true })).toBeFocused();
   await expect(preview.getByRole("button", { name: /tickets needing attention/ })).toHaveCount(0);
 });
@@ -111,7 +124,7 @@ test("a pending card becomes an editable resolved decision after submission", as
   await modal.getByRole("tab", { name: "Limits (not answered)", exact: true }).click();
   await modal.getByRole("textbox").fill("Internal project first.");
   await modal.getByRole("button", { name: "Submit answer", exact: true }).click();
-  await modal.press("Escape");
+  await expect(modal).toBeHidden();
   const resolved = preview.getByRole("button", { name: "2 items resolved", exact: true });
   await resolved.press("Enter");
   await expect(modal.getByRole("button", { name: "Update answer", exact: true })).toHaveCount(2);

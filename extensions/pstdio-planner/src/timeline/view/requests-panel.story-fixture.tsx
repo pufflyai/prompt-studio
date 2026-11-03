@@ -16,6 +16,7 @@ interface AutoBuildPreviewProps {
 export function AutoBuildPreview(props: AutoBuildPreviewProps) {
   const { requests, failSave, empty, warning } = props;
   const [paused, setPaused] = useState(false);
+  const [pending, setPending] = useState(requests);
   return (
     <AutoBuildButton
       enabled={!paused}
@@ -37,9 +38,10 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
       }}
       onOpenSession={() => {}}
       t={(_key, fallback) => fallback ?? _key}
-      reviewRequests={requests}
-      onAnswerRequest={async () => {
+      reviewRequests={pending}
+      onAnswerRequest={async (id) => {
         if (failSave) throw new Error("Unable to save. Try again.");
+        setPending((current) => current.filter((request) => request.id !== id));
       }}
       onOpenRequestChat={async () => {
         throw new Error("Session navigation is unavailable in this isolated preview.");

@@ -1,5 +1,6 @@
 import { CloseButton, Dialog, Portal } from "@chakra-ui/react";
 import { ScrollArea } from "@pstdio/ui";
+import { useEffect } from "react";
 import type { PlanRow } from "../contracts";
 import type { RequestHandlers } from "./request-form";
 import { RequestsPanel } from "./requests-panel";
@@ -27,9 +28,13 @@ export function TicketRequestsDialog(props: Omit<RequestsDialogProps, "row"> & {
 
 export function RequestsDialog(props: RequestsDialogProps) {
   const { row, title, open, pendingOnly, trigger, fallback, onClose, ...handlers } = props;
+  const empty = !row.requestErrors.length && !row.requests.some(({ state }) => !pendingOnly || state === "open");
+  useEffect(() => {
+    if (open && empty) onClose();
+  }, [open, empty, onClose]);
   return (
     <Dialog.Root
-      open={open}
+      open={open && !empty}
       unmountOnExit={false}
       onOpenChange={({ open }) => !open && onClose()}
       size="md"

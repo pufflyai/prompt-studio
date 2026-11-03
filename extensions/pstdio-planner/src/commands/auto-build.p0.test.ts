@@ -176,7 +176,14 @@ test("repeated checks do not wake for startable jobs outside the supervisor scop
   const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
   const parent = await ticket("Requested project");
   const scoped = await ticket("Waiting for a decision");
-  await putTicket(storage, { ...scoped, parentId: parent.id, blockedReason: "Needs a decision" });
+  await putTicket(storage, { ...scoped, parentId: parent.id });
+  const { requestHumanCommand, reviewCommand } = await import("./review-requests");
+  const decision = await requestHumanCommand.run(ctx, {
+    ticket: scoped.id,
+    title: "Choose the scope",
+    instructions: "Choose before continuing",
+    request: { kind: "task" },
+  });
   await ticket("Startable job in another project");
   await autoBuildCommand.run(ctx, {});
   await storage.set("auto-build-supervisor", {
@@ -187,7 +194,7 @@ test("repeated checks do not wake for startable jobs outside the supervisor scop
   for (let check = 0; check < 3; check++)
     expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
   expect(prompts).toHaveLength(1);
-  await putTicket(storage, { ...scoped, parentId: parent.id });
+  await reviewCommand.run(ctx, { requestId: decision.id, response: { confirmed: true } });
   expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true });
 });
 

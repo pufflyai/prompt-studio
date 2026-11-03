@@ -1,4 +1,4 @@
-import { Button, HStack, Popover, Portal, Separator, Stack, Text, useRecipe, useSlotRecipe } from "@chakra-ui/react";
+import { Button, HStack, Popover, Portal, Stack, Text, useRecipe, useSlotRecipe } from "@chakra-ui/react";
 import { EmptyState, PopoverHeader, ScrollArea } from "@pstdio/ui";
 import { psTheme } from "@pstdio/ui/theme";
 import { Pause, Play, Square } from "lucide-react";
@@ -103,10 +103,7 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
                 <Stack gap="md" p="sm">
                   <AutoBuildWarnings {...sessions} enabled={enabled} actionError={actionError} t={t} />
                   {reviewRequests.some(({ state }) => state === "open") || requestErrors.length ? (
-                    <>
-                      <AutoBuildRequests onOpen={onOpenRequests} t={t} />
-                      <Separator />
-                    </>
+                    <AutoBuildRequests onOpen={onOpenRequests} t={t} />
                   ) : null}
                   <Stack gap="2xs">
                     <Text textStyle="label/2XS/medium" color="fg.muted">
@@ -122,7 +119,6 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
                       <EmptyState size="sm" title={t("timeline.autoBuild.noSupervisor", "No supervisor")} />
                     )}
                   </Stack>
-                  <Separator />
                   <AutoBuildSessions {...sessions} t={t} />
                 </Stack>
               </ScrollArea>

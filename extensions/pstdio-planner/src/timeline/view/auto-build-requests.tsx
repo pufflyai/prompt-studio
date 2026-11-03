@@ -1,6 +1,5 @@
 import { Button } from "@chakra-ui/react";
-import { getIconComponent } from "@pstdio/ui";
-import { REVIEW_REQUEST_ICON } from "../../data/review-request-summary";
+import { MessageCircleWarning } from "lucide-react";
 
 interface AutoBuildRequestsProps {
   onOpen: () => void;
@@ -9,10 +8,9 @@ interface AutoBuildRequestsProps {
 
 export function AutoBuildRequests(props: AutoBuildRequestsProps) {
   const { onOpen, t } = props;
-  const AttentionIcon = getIconComponent(REVIEW_REQUEST_ICON);
   return (
     <Button size="sm" variant="outline" onClick={onOpen}>
-      <AttentionIcon />
+      <MessageCircleWarning />
       {t("timeline.autoBuild.requests", "Needs attention")}
     </Button>
   );

@@ -1,5 +1,6 @@
-import { Button, CloseButton, Dialog, HStack, Portal } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, HStack, Portal, useRecipe } from "@chakra-ui/react";
 import { installPrismGlobal } from "@pstdio/ui";
+import { psTheme } from "@pstdio/ui/theme";
 import { Play } from "lucide-react";
 import { lazy, Suspense, useRef, useState } from "react";
 import type { WaitingTicket } from "../../commands/next-ticket-types";
@@ -65,6 +66,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
   } = props;
   const [content, setContent] = useState<"configuration" | "sessions" | "requests" | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const headerButton = useRecipe({ recipe: psTheme.getRecipe("button") })({ size: "xs", variant: "outline" });
   const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
   const inspectable = enabled || paused || failed;
   const status = resolveAutoBuildIndicatorStatus({
@@ -95,6 +97,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
             aria-label={t("timeline.autoBuild.start", "Auto Build")}
             aria-description={enabled || paused || failed ? `Auto Build ${activity}` : undefined}
             size="xs"
+            css={headerButton}
             variant="outline"
             disabled={disabled}
             onClick={(event) => {
