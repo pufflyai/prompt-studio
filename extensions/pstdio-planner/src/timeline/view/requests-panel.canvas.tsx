@@ -3,6 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
+import { MilestoneNeedsAttentionPreview } from "./milestone-requests.story-fixture";
 import { RequestsPanel } from "./requests-panel";
 import { AutoBuildPreview, CardNeedsAttentionPreview } from "./requests-panel.story-fixture";
 
@@ -236,4 +237,30 @@ export const CardModal: Story = {
 export const ResolvedCard: Story = {
   name: "Card — inspect a saved decision",
   render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [answeredDecision] }} />,
+};
+
+export const AutoBuildEmptySessions: Story = {
+  name: "Auto Build — no supervisor or agents",
+  render: () => <AutoBuildPreview requests={[proposalReview]} empty />,
+};
+export const AutoBuildWarning: Story = {
+  name: "Auto Build — warning above requests",
+  render: () => <AutoBuildPreview requests={[proposalReview, decision]} warning />,
+};
+export const MilestoneModal: Story = {
+  name: "Milestone — open Needs attention",
+  render: () => (
+    <MilestoneNeedsAttentionPreview
+      rows={[
+        { ...row, requests: [proposalReview] },
+        {
+          ...row,
+          id: "importer",
+          shorthand: "PS-33",
+          title: "Import notes",
+          requests: [{ ...decision, ticketId: "importer" }],
+        },
+      ]}
+    />
+  ),
 };
