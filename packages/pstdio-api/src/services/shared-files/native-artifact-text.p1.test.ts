@@ -99,3 +99,26 @@ test.each([
     await f.close();
   }
 });
+
+test("a peer text projection updates its physical copy without reading unrelated artifacts", async () => {
+  const f = await artifactFilesFixture();
+  try {
+    const mount = f.mount();
+    await mount.writeText("note.md", "before");
+    await mount.writeText("unrelated.md", "keep");
+    const documentKey = "a".repeat(64);
+    await f.storage.records.bindText({ recordId: f.recordId("documents/note.md"), documentKey, content: "before" });
+    await mount.readText("note.md");
+    const unrelated = await f.storage.records.read(f.recordId("documents/unrelated.md"));
+    await writeFile(f.pathFor("documents/unrelated.md"), "outside edit stays local");
+    await f.deps.extensionStorageService
+      .openNativeTextDocument({ owner: f.owner, fileId: documentKey })
+      .save("from peer");
+    await mount.refreshText(documentKey);
+    expect(await Bun.file(f.pathFor("documents/note.md")).text()).toBe("from peer");
+    expect((await f.storage.records.read(f.recordId("documents/unrelated.md"))).revision).toBe(unrelated.revision);
+    expect(await Bun.file(f.pathFor("documents/unrelated.md")).text()).toBe("outside edit stays local");
+  } finally {
+    await f.close();
+  }
+});
