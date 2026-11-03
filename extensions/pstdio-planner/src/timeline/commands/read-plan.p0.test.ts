@@ -6,6 +6,7 @@ import { createTicketCommand } from "../../commands/create-ticket";
 import { requestHumanCommand, reviewCommand } from "../../commands/review-requests";
 import { putAttempt } from "../../data/attempt-storage";
 import { statusesCollection } from "../../data/collections";
+import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../../data/document-selection";
 import { migratePlannerStorage } from "../../data/migrate-storage";
 import { DEFAULT_STATUSES } from "../../data/seed";
 import { createTicketTag } from "../../data/tag-operations";
@@ -308,6 +309,8 @@ test("answering one request keeps another open request awaiting input", async ()
   const row = plan.sections.flatMap((section) => section.rows).find((entry) => entry.id === ticket.id);
   expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
   expect(row?.requests.map((request) => request.state).sort()).toEqual(["answered", "open"]);
+  expect(row?.target.page.id).toBe("ticket");
+  expect(selectedDocumentFromResource(row?.target.resource)).toBe(TICKET_BODY_DOCUMENT);
   expect(await reviewState()).toBe("requested");
   expect(plan.sections.find((section) => section.rows.includes(row!))?.counts.humanNeeded).toBe(1);
 
