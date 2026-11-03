@@ -39,12 +39,14 @@ test(
         id: "worker", ref: { kind: "harness", id: "worker" }, label: "Large result", capabilities: () => [],
         async start(_ctx, input) {
           const output = "START" + "x".repeat(76_000_000) + "END";
-          input.events.push({ op: "add", path: "/messages/0", value: { id: "tool", role: "assistant", parts: [
+          const index = input.events.getMessages().length;
+          input.events.push({ op: "add", path: "/messages/" + index, value: { id: "tool", role: "assistant", parts: [
             { type: "tool", tool: "shell", callId: "call", status: "failed", state: { output, errorText: output, metadata: { copy: output } } }
           ] } });
-          input.events.push({ op: "add", path: "/messages/1", value: { id: "later", role: "assistant", parts: [{ type: "text", text: "Later reply" }] } });
+          input.events.push({ op: "add", path: "/messages/" + (index + 1), value: { id: "later", role: "assistant", parts: [{ type: "text", text: "Later reply" }] } });
           return { agentSessionId: "native-large", done: Promise.resolve({ status: "completed" }), stop() {} };
         },
+        resume() { throw new Error("This fixture does not resume"); },
         getMessages() { return []; },
         recoverMessages(_ctx, input) { return { kind: "recovered", messages: input.knownMessages }; }
       }] };
@@ -67,6 +69,7 @@ test(
       const project = await request("/projects", "POST", folderProjectInput({ name: "Bounded output" }, folder));
       const session = await request("/sessions", "POST", {
         project_id: project.id,
+        title: "Large tool result",
         prompt: "Print output",
         agent: "test.large-result.harness.worker",
       });
@@ -79,8 +82,8 @@ test(
       expect((await request(`/sessions/${session.id}`)).status).toBe("completed");
       const read = async () => (await request(`/sessions/${session.id}/conversation`)).messages as SessionMessage[];
       const before = await read();
-      const part = before[0].parts[0];
-      if (part.type !== "tool") throw new Error("Missing tool output");
+      const part = before.flatMap((message) => message.parts).find((part) => part.type === "tool");
+      if (!part || part.type !== "tool") throw new Error("Missing tool output");
       expect(part.status).toBe("failed");
       expect(toolResultBytes(part)).toBeLessThanOrEqual(262144);
       expect(part.state?.output).toContain("START");
