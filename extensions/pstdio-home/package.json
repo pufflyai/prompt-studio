@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "displayName": "Home",
   "icon": "house",
-  "description": "Project home, recent conversations, and setup recovery.",
+  "description": "Project home, recent resources, and setup recovery.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {

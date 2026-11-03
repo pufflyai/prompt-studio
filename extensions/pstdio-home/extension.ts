@@ -16,7 +16,7 @@ const view = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/view.tsx", import.meta.url),
-    capabilities: ["commands.execute", "navigation.open", "harnesses.read"],
+    capabilities: ["commands.execute", "navigation.open"],
   },
 });
 export const home = definePage({
@@ -41,6 +41,7 @@ export default defineExtension({
       label: l10n("home.title", "Home"),
       icon: "house",
       owner: workbenchModes.project,
+      slot: "header",
       action: target,
     }),
   ],

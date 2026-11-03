@@ -5,4 +5,4 @@
 "pstdio-skills": patch
 ---
 
-Provide the existing project Home page as a default extension using public navigation, session queries, and setup recovery.
+Provide the existing project Home page as a default extension using public navigation, recently opened resources with session status, and setup recovery.

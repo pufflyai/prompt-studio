@@ -14,7 +14,7 @@ test.afterEach(async ({ page }) => {
   await page.unrouteAll({ behavior: "wait" });
 });
 
-test("Home opens recent conversations and public actions without prematurely creating a session", async ({
+test("Home resumes opened resources and public actions without prematurely creating a session", async ({
   page,
   request,
 }) => {
@@ -37,9 +37,19 @@ test("Home opens recent conversations and public actions without prematurely cre
   await page.goto(`/projects/${project.id}`);
   await expect(homePage(page)).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-home/home$`));
-  await expect(homeFrame(page).getByRole("button", { name: /^Home conversation/ })).toHaveCount(5);
-  await expect(homeFrame(page).getByRole("button", { name: sessions[6].title, exact: true })).toBeVisible();
-  await homeFrame(page).getByRole("button", { name: sessions[6].title, exact: true }).click();
+  await expect(homeFrame(page).getByText("Nothing opened yet", { exact: true })).toBeVisible();
+  await expect(page.getByRole("option").first()).toHaveText("Home");
+  const session = sessions[6];
+  await page.goto(
+    `/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${session.id}`)}`,
+  );
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(session.title);
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
+  await page.getByRole("option", { name: "Home", exact: true }).click();
+  const recent = homeFrame(page).getByRole("button", { name: session.title, exact: true });
+  await expect(recent).toBeVisible();
+  await expect(recent.getByLabel(/Session status/)).toBeVisible();
+  await recent.click();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/session\\?`));
   await page.reload();
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(sessions[6].title);
@@ -133,7 +143,7 @@ test("uninstalled Home leaves the project root on the existing empty panel", asy
   }
 });
 
-test("Home keeps setup and availability recovery feedback beside the action", async ({ page, request }) => {
+test("Home keeps setup recovery feedback beside the action", async ({ page, request }) => {
   const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Home recovery" }) });
   expect(created.status()).toBe(201);
   const project = (await created.json()) as { id: string };
@@ -152,9 +162,6 @@ test("Home keeps setup and availability recovery feedback beside the action", as
     setupBlocked = false;
     await route.continue();
   });
-  await page.route(`**/v1/agents/info?projectId=${project.id}`, async (route) => {
-    await route.fulfill(setupBlocked ? { status: 503, json: { error: "Availability unavailable" } } : { json: [] });
-  });
   await page.goto(`/projects/${project.id}`);
   const home = homeFrame(page);
   await expect(home.getByText("Setup needs recovery", { exact: true })).toBeVisible();
@@ -162,8 +169,5 @@ test("Home keeps setup and availability recovery feedback beside the action", as
   await expect(home.getByText(/Setup temporarily unavailable/)).toBeVisible();
   await home.getByRole("button", { name: "Retry setup", exact: true }).click();
   await expect(home.getByRole("button", { name: "Retry setup", exact: true })).toHaveCount(0);
-  await expect(home.getByText("Could not check agent availability", { exact: true })).toBeVisible();
-  await home.getByRole("button", { name: "Check again", exact: true }).click();
-  await expect(home.getByText("No agent available", { exact: true })).toBeVisible();
   expect(retries).toBe(2);
 });

@@ -22,6 +22,7 @@ import { createNotificationsModule } from "./modules/notifications/module";
 import { createPerformanceModule } from "./modules/performance/module";
 import type { DesktopProjectTabsController } from "./modules/projects/desktop-project-tabs-controller";
 import { createProjectsModule } from "./modules/projects/module";
+import { createRecentResourcesModule } from "./modules/recent-resources/module";
 import { createResourceLinksModule } from "./modules/resource-links/module";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
@@ -54,6 +55,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
   createWorkspacesModule(),
   createExtensionsModule(),
   createResourceLinksModule(),
+  createRecentResourcesModule(),
   createProjectsModule({
     initialProjectId: input.initialProjectId,
     projectSelectionPersistence: input.projectSelectionPersistence,

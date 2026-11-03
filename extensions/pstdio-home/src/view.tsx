@@ -4,8 +4,8 @@ import {
   createWebviewClient,
   defineExtensionView,
   type ExtensionViewRenderContext,
+  getCommandValue,
   workbenchCommands,
-  workbenchPages,
 } from "@pstdio/sdk/extensions";
 import { AlertMessage, ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -14,12 +14,12 @@ import type { commands } from "./commands";
 import { ProjectSetupStatus } from "./components/project-setup-status";
 import { StartAboutPanel } from "./components/start-about-panel";
 import { StartActionList } from "./components/start-action-list";
-import { StartHarnessStatus } from "./components/start-harness-status";
 import { StartRecentList } from "./components/start-recent-list";
-import type { HomeHarness as AgentInfo, readHome } from "./data";
+import type { readHome } from "./data";
+import { type RecentProjectResource, recentProjectResources } from "./recent-resources";
 import { subscribeHome } from "./subscriptions";
 
-type HomeData = Awaited<ReturnType<typeof readHome>>;
+type HomeData = Awaited<ReturnType<typeof readHome>> & { recent: RecentProjectResource[] };
 interface HostProps {
   projectId: string;
 }
@@ -35,20 +35,20 @@ const HomeApp = (props: AppProps) => {
   const [loadError, setLoadError] = useState<string>();
   const [actionError, setActionError] = useState<{ id: string; message: string }>();
   const [pending, setPending] = useState<string>();
-  const [harnesses, setHarnesses] = useState<AgentInfo[]>();
-  const [harnessError, setHarnessError] = useState(false);
-  const [harnessCheck, setHarnessCheck] = useState(0);
-  const [checking, setChecking] = useState(true);
-
   useEffect(() => subscribeHome(client.events, () => setRefresh((value) => value + 1)), [client]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: host events invalidate the query.
   useEffect(() => {
     let cancelled = false;
-    void client.commands
-      .read()
-      .then((value) => {
+    void Promise.all([
+      client.commands.read(),
+      context.host.call("commands.execute", { commandId: workbenchCommands.recentResources.id, params: {} }),
+    ])
+      .then(([value, recent]) => {
         if (!cancelled) {
-          setData(value);
+          const resources = getCommandValue(recent.outcome) as NonNullable<
+            typeof workbenchCommands.recentResources.result
+          >;
+          setData({ ...value, recent: recentProjectResources(resources) });
           setLoadError(undefined);
         }
       })
@@ -58,30 +58,7 @@ const HomeApp = (props: AppProps) => {
     return () => {
       cancelled = true;
     };
-  }, [client, refresh]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: explicit availability checks repeat the host read.
-  useEffect(() => {
-    let cancelled = false;
-    setChecking(true);
-    void context.host
-      .call("harnesses.read", {})
-      .then((result) => {
-        if (!cancelled) {
-          setHarnesses(result.harnesses);
-          setHarnessError(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setHarnessError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setChecking(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [context.host, harnessCheck]);
-
+  }, [client, context.host, refresh]);
   const run = async (id: string, commandId: string, params = {}) => {
     setPending(id);
     setActionError(undefined);
@@ -157,16 +134,6 @@ const HomeApp = (props: AppProps) => {
           />
         )}
         <StartAboutPanel />
-        {!data?.setupError && (
-          <StartHarnessStatus
-            agents={harnesses ?? []}
-            isPending={checking && !harnesses}
-            isFetching={checking}
-            isError={harnessError}
-            onReviewExtensions={browse}
-            onCheckAgain={() => setHarnessCheck((value) => value + 1)}
-          />
-        )}
         <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
           <Box flex="1" minW="0" w="full">
             <StartActionList actions={actions} pending={pending} error={actionError} />
@@ -177,7 +144,7 @@ const HomeApp = (props: AppProps) => {
               onOpen={(recent) => {
                 void context.host
                   .call("navigation.open", {
-                    target: { kind: "page", page: workbenchPages.session, resource: recent.resource },
+                    target: recent.target,
                   })
                   .catch((error) => setLoadError(String(error)));
               }}

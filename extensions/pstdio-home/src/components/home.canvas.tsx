@@ -1,10 +1,10 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { ListRow, SessionIndicator } from "@pstdio/ui";
-import { HomeIcon } from "./home-icon";
+import { recentProjectResources } from "../recent-resources";
 import { ProjectSetupStatus } from "./project-setup-status";
 import { StartAboutPanel } from "./start-about-panel";
 import { type StartAction, StartActionList } from "./start-action-list";
+import { StartRecentList } from "./start-recent-list";
 
 interface PreviewResource {
   id: string;
@@ -18,34 +18,6 @@ const resources: PreviewResource[] = [
   { id: "artifact-1", title: "Weekly activity summary", icon: "file-code" },
   { id: "workspace-1", title: "PS-231_A1", icon: "computer" },
 ];
-const StartRecentList = ({ resources }: { resources: PreviewResource[]; onOpen?: () => void }) => (
-  <Stack gap="sm">
-    <Text textStyle="label/L/regular">Recent</Text>
-    <Stack gap="none">
-      {resources.map((resource) => (
-        <ListRow
-          key={resource.id}
-          id={resource.id}
-          label={resource.title}
-          role="button"
-          icon={
-            resource.status ? (
-              <SessionIndicator status={resource.status} />
-            ) : (
-              <HomeIcon name={resource.icon} size={14} />
-            )
-          }
-        />
-      ))}
-      {resources.length === 0 && (
-        <Text textStyle="label/S/regular" color="fg.muted">
-          Nothing opened yet
-        </Text>
-      )}
-    </Stack>
-  </Stack>
-);
-
 const actions: StartAction[] = [
   { id: "new-conversation", label: "New conversation", icon: "message-square", run: () => undefined },
   { id: "open-tool", label: "Open a tool", icon: "panels-top-left", run: () => undefined },
@@ -73,7 +45,21 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
           <StartActionList actions={actions} />
         </Box>
         <Box flex="1" minW="0" w="full">
-          <StartRecentList resources={resources} onOpen={() => undefined} />
+          <StartRecentList
+            resources={recentProjectResources(
+              resources.map(({ id, title, icon, status }) => ({
+                resource: {
+                  id,
+                  type: status ? "session" : "example",
+                  label: title,
+                  icon,
+                  metadata: status ? { status } : {},
+                },
+                target: { kind: "page", page: { kind: "page", extensionId: "example", id: "detail" } },
+              })),
+            )}
+            onOpen={() => undefined}
+          />
         </Box>
       </Stack>
     </Stack>
