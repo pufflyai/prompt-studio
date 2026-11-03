@@ -3,14 +3,11 @@
 // neutral HarnessSession handle. Providers never control persistence or status;
 // they emit JSON patches and settle `done`.
 
+import type { JsonPatch } from "./conversation-events";
 import type { WorkspaceExecutionTarget } from "./extension-kernel/types/extension";
 import type { SessionMessage } from "./session-messages";
 
-export type JsonPatch = {
-  op: "add" | "replace" | "remove";
-  path: string;
-  value?: unknown;
-};
+export type { HarnessEventSink, JsonPatch } from "./conversation-events";
 
 export type EventSubscriptionOptions = { conversationSnapshot?: () => JsonPatch; activityOnly?: boolean };
 
@@ -104,11 +101,6 @@ export type ApprovalService = {
 
 /** "activity": the host kills the session when no events arrive for a while; "provider": the provider self-terminates. */
 export type TimeoutStrategy = "activity" | "provider";
-
-export type HarnessEventSink = {
-  push(patch: JsonPatch): void;
-  getMessages(): readonly SessionMessage[];
-};
 
 export type HarnessAttachment = {
   fileId: string;

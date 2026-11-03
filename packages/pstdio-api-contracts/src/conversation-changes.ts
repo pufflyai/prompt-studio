@@ -1,4 +1,4 @@
-import type { HarnessEventSink } from "./harness";
+import type { HarnessEventSink } from "./conversation-events";
 import type { SessionMessage } from "./session-messages";
 import { normalizeMessageResults } from "./tool-result";
 
