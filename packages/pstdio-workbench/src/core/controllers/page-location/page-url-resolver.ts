@@ -15,8 +15,8 @@ export const isPageHistoryState = (value: unknown): value is WorkbenchPageHistor
     state.kind === "pstdio.page-location" &&
     typeof state.index === "number" &&
     typeof state.projectId === "string" &&
-    typeof state.routeKey === "string" &&
-    Boolean(state.location && typeof state.location === "object")
+    ((state.location === undefined && state.routeKey === undefined) ||
+      (typeof state.routeKey === "string" && Boolean(state.location && typeof state.location === "object")))
   );
 };
 const locationWithUrlParams = (
@@ -36,13 +36,20 @@ export const createPageUrlResolver =
     pages(): WorkbenchPageContribution[];
     resources: WorkbenchPageResourceCodec;
     normalize(location: PageLocation): ResolvedPageLocation;
+    root?(): ResolvedPageLocation;
   }) =>
   (projectId: string, entry: WorkbenchPageBrowserEntry) => {
+    if (
+      input.root &&
+      new URL(entry.url, "http://workbench.local").pathname.replace(/\/$/, "") ===
+        `/projects/${encodeURIComponent(projectId)}`
+    )
+      return input.root();
     const pages = input.pages();
     const parsed = parseWorkbenchPageUrl({ url: entry.url, projectId, pages, resources: input.resources });
     if (!parsed) return undefined;
     const direct = normalizeDirectWorkbenchPageLocation({ ...parsed, pages, resources: input.resources });
-    if (!isPageHistoryState(entry.state) || entry.state.projectId !== projectId) return direct;
+    if (!isPageHistoryState(entry.state) || entry.state.projectId !== projectId || !entry.state.location) return direct;
     const sourcePage = pages.find((page) => page.id === parsed.pageId)!;
     const withParams = locationWithUrlParams(entry.state.location, sourcePage.ref, parsed.params);
     if (!withParams) return direct;
