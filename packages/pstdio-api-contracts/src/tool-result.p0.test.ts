@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { createHash } from "node:crypto";
+import { resolve } from "node:path";
 import type { ToolPart } from "./session-messages";
 import { createToolOutputBuffer, normalizeToolResult, toolOutputFingerprint, toolResultBytes } from "./tool-result";
 
@@ -80,4 +82,30 @@ test("streaming split surrogate pairs has the same identity as complete Unicode 
   const streamed = tool(buffer.result());
   expect(toolOutputFingerprint(streamed)).toBe(toolOutputFingerprint(tool({ output: `😀${"é".repeat(200000)}😀` })));
   expect(String(streamed.state?.output)).not.toContain("\ufffd");
+});
+
+test("host and browser results preserve standard SHA-256 identity across streaming snapshots", async () => {
+  const build = await Bun.build({
+    entrypoints: [resolve(import.meta.dir, "tool-result.ts")],
+    target: "browser",
+    define: { Bun: "undefined" },
+  });
+  expect(build.success).toBe(true);
+  const browser: typeof import("./tool-result") = await import(
+    `data:text/javascript;base64,${Buffer.from(await build.outputs[0].text()).toString("base64")}`
+  );
+  const output = '😀"\n\\é'.repeat(50000);
+  const digest = (value: string) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  for (const api of [{ createToolOutputBuffer, normalizeToolResult }, browser]) {
+    const buffer = api.createToolOutputBuffer();
+    buffer.append(output.slice(0, 1));
+    buffer.append(output.slice(1));
+    const first = buffer.result();
+    expect(first.resultSummary?.outputFingerprint).toBe(digest(output));
+    expect(buffer.result()).toEqual(first);
+    buffer.append("TAIL");
+    expect(buffer.result().resultSummary?.outputFingerprint).toBe(digest(`${output}TAIL`));
+    const normalized = api.normalizeToolResult(tool({ output }));
+    expect(normalized.state?.resultSummary?.outputFingerprint).toBe(digest(output));
+  }
 });

@@ -1,11 +1,9 @@
-import { sha256 } from "@noble/hashes/sha2.js";
-import { bytesToHex } from "@noble/hashes/utils.js";
+import { createResultHash } from "./result-hash";
 import { visitJson, visitText } from "./result-json";
 import { createResultTextWindow, fitResultText, utf8Bytes } from "./result-text-window";
 import type { SessionMessage, ToolPart, ToolResultSummary } from "./session-messages";
 
 export const TOOL_RESULT_LIMIT_BYTES = 256 * 1024;
-const encoder = new TextEncoder();
 const resultFields = (part: ToolPart) => ({
   output: part.state?.output,
   errorText: part.state?.errorText,
@@ -22,9 +20,9 @@ export const toolResultBytes = (part: ToolPart) => {
 };
 
 const fingerprint = (value: unknown) => {
-  const hash = sha256.create();
-  visitJson(value, (chunk) => hash.update(encoder.encode(chunk)));
-  return bytesToHex(hash.digest());
+  const hash = createResultHash();
+  visitJson(value, (chunk) => hash.update(chunk));
+  return hash.digest();
 };
 
 const originalOutputFingerprint = (part: ToolPart) => {
@@ -137,7 +135,8 @@ export const normalizeMessageResults = (message: SessionMessage) => {
 /** Keeps bounded text before a harness publishes each whole-message revision. */
 export const createToolOutputBuffer = (allowance = TOOL_RESULT_LIMIT_BYTES) => {
   const window = createResultTextWindow(allowance);
-  const hash = sha256.create().update(encoder.encode('"'));
+  const hash = createResultHash();
+  hash.update('"');
   let pending = "";
   const append = (delta: string) => {
     let text = pending + delta;
@@ -149,7 +148,7 @@ export const createToolOutputBuffer = (allowance = TOOL_RESULT_LIMIT_BYTES) => {
     }
     visitText(text, (chunk) => {
       window.append(chunk);
-      hash.update(encoder.encode(JSON.stringify(chunk).slice(1, -1)));
+      hash.update(JSON.stringify(chunk).slice(1, -1));
     });
   };
   return {
@@ -163,11 +162,7 @@ export const createToolOutputBuffer = (allowance = TOOL_RESULT_LIMIT_BYTES) => {
       const output = window.head() + pending;
       if (size <= allowance && utf8Bytes(JSON.stringify({ output })) <= allowance)
         return { output, resultSummary: undefined };
-      const digest = hash
-        .clone()
-        .update(encoder.encode(`${JSON.stringify(pending).slice(1, -1)}"`))
-        .digest();
-      const id = bytesToHex(digest);
+      const id = hash.digest(`${JSON.stringify(pending).slice(1, -1)}"`);
       return summarize(
         window.head(),
         window.tail() + pending,
