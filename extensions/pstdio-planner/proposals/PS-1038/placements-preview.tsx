@@ -69,7 +69,13 @@ export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
   const trigger = useRef<HTMLElement | null>(null);
   return (
     <>
-      <Box position="relative" minH="xs">
+      <Box
+        position="relative"
+        minH="xs"
+        onClickCapture={(event) => {
+          if (event.target instanceof Element) event.target.closest("button")?.focus({ preventScroll: true });
+        }}
+      >
         <GraphCard
           row={row}
           x={0}
