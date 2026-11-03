@@ -3,6 +3,7 @@ import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { readSessionHistory } from "../data/session-history";
 import { withWriteGuard } from "../data/write-guard";
+import { readImplementationCapacity } from "./attempt-readiness";
 import { initialSupervisorPrompt, supervisorWakePrompt } from "./auto-build-prompts";
 import { isLiveSession } from "./auto-build-sessions";
 import { readNextTickets } from "./next-tickets";
@@ -46,10 +47,13 @@ async function wakeSupervisor(ctx: CommandContext) {
     const stalled = Boolean(session && Date.now() - Math.max(progressAt, lastPromptAt) >= 60 * 60 * 1000);
     if (
       (!candidates.length && !(stalled && active > 0)) ||
-      (capacity.running >= capacity.limit && !stalled) ||
+      capacity.running >= capacity.limit ||
       (snapshot === supervisor.lastWake && active > 0 && !stalled)
     )
       return { prompted: false };
+    const home = await ctx.workspaces.getDefault();
+    const latestCapacity = await readImplementationCapacity(ctx);
+    if (latestCapacity.running >= latestCapacity.limit) return { prompted: false };
     const current = await readAutoBuildMode(ctx);
     if (!current.enabled || current.revision !== mode.revision) return { prompted: false };
     let supervisorId = session?.id;
@@ -59,7 +63,6 @@ async function wakeSupervisor(ctx: CommandContext) {
         prompt: supervisorWakePrompt({ stalled, refreshScope: supervisor.scope?.revision !== mode.revision }),
       });
     } else {
-      const home = await ctx.workspaces.getDefault();
       const created = await ctx.sessions.create({
         title: "Auto Build supervisor",
         workspaceId: home?.id,

@@ -1,12 +1,14 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
+import { useState } from "react";
 import { DEFAULT_STATUSES, DEFAULT_TAGS } from "../../data/seed";
 import { emptyWorkflowStatuses } from "../../data/workflow-statuses";
 import { buildPlan } from "../model/build-plan";
 import { buildTracks } from "../model/tracks";
 import { useViewSections } from "./plan-state";
 import { SectionHeader } from "./section-header";
+import { TicketRequestsDialog } from "./ticket-requests-dialog";
 import type { PlanClient } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
 
@@ -19,10 +21,11 @@ const host: GuestHost = {
 };
 const client = createWebviewClient(host) as PlanClient;
 function MilestoneHeaderStory(props: {
-  state: "forecast" | "learning" | "complete" | "unstarted";
+  state: "forecast" | "learning" | "complete" | "unstarted" | "statuses";
   visible?: string[];
 }) {
   const { state, visible } = props;
+  const remainingStatus = state === "complete" ? "done" : "ready";
   const plan = buildPlan({
     workflow: { ...emptyWorkflowStatuses(), completedStatusIds: ["done"] },
     today: "2026-10-13",
@@ -45,7 +48,7 @@ function MilestoneHeaderStory(props: {
         shorthand: "P-2",
         title: "Complex work",
         content: "",
-        statusId: state === "complete" ? "done" : "ready",
+        statusId: state === "statuses" ? "in-progress" : remainingStatus,
         tags: { "default-complexity": "default-complexity-complex" },
       },
       {
@@ -53,7 +56,7 @@ function MilestoneHeaderStory(props: {
         shorthand: "P-3",
         title: "Other work",
         content: "",
-        statusId: state === "complete" ? "done" : "ready",
+        statusId: state === "statuses" ? "blocked" : remainingStatus,
         tags: { "default-complexity": "default-complexity-simple" },
       },
     ],
@@ -69,13 +72,15 @@ function MilestoneHeaderStory(props: {
     },
   });
   const { sections, toggle } = useViewSections(plan, new Set(visible ?? ["done", "open", "hidden"]));
-  const { viewProps, selected, review } = usePlanActions({
+  const [attention, setAttention] = useState<{ id: string | null; trigger: HTMLElement | null }>();
+  const { viewProps } = usePlanActions({
     host,
     client,
     plan,
     sections,
     toggle,
     tracks: buildTracks(undefined, []),
+    onReview: (id) => setAttention({ id, trigger: document.activeElement as HTMLElement | null }),
   });
   return (
     <Box maxW="full" w="full" h="40px">
@@ -86,10 +91,17 @@ function MilestoneHeaderStory(props: {
         onRenameDeadline={async () => {}}
         onReview={viewProps.onReview}
       />
-      {selected ? (
-        <Box role="status">
-          {selected.title} · {review?.length} tickets to review
-        </Box>
+      {attention ? (
+        <TicketRequestsDialog
+          rows={plan.sections.find(({ deadline }) => (deadline?.id ?? null) === attention.id)?.rows ?? []}
+          title="Preview"
+          pendingOnly
+          open
+          trigger={attention.trigger}
+          onClose={() => setAttention(undefined)}
+          onAnswer={async () => {}}
+          onOpenChat={async () => {}}
+        />
       ) : null}
     </Box>
   );
@@ -128,3 +140,5 @@ export const Unstarted: Story = {
   id: "extensions-planner-milestone-header--unstarted",
   args: { state: "unstarted" },
 };
+
+export const StatusGroups: Story = { name: "Progress by status", args: { state: "statuses" } };

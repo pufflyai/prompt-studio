@@ -163,8 +163,25 @@ export const ReviewRequests: Story = {
         id: "release-decision",
         ticketId: "ticket",
         title: "P-1 · Choose the release scope",
-        instructions: "Which tool should the builder finish first?",
-        request: { kind: "task" },
+        instructions:
+          "**Problem:** We need to choose a first release. **Solutions:** Internal project first (recommended), or everyone now. **Downsides:** Internal delays wider access; everyone exposes more people to faults.",
+        request: {
+          kind: "decision",
+          questions: [
+            {
+              id: "scope",
+              label: "Who should receive the release?",
+              required: true,
+              input: {
+                kind: "single-choice",
+                options: [
+                  { id: "internal", label: "Internal project first (recommended)" },
+                  { id: "everyone", label: "Everyone now" },
+                ],
+              },
+            },
+          ],
+        },
         requestedAt: "2026-10-22T12:00:00Z",
         requestedBy: { type: "agent", id: "builder", displayName: "Builder" },
         context: { reason: null, workspaceId: null, attemptRevision: null, sessionId: null, relatedSessionId: null },
@@ -173,6 +190,7 @@ export const ReviewRequests: Story = {
         outcomeText: null,
       },
     ],
-    onOpenRequest: () => {},
+    onAnswerRequest: async () => {},
+    onOpenRequestChat: async () => {},
   },
 };

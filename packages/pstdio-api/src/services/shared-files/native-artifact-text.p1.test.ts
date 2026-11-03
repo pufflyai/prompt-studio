@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
+import { saveTextDocument } from "pstdio-sync/text";
+import * as Y from "yjs";
 import { artifactFilesFixture } from "./artifact-files.fixture";
 
 test("a bound artifact projects peer text once and merges outside edits against its physical copy", async () => {
@@ -95,6 +97,37 @@ test.each([
     expect(await Bun.file(f.pathFor("documents/note.md")).text()).toBe(content);
     expect(await f.mount().readText("note.md")).toBe(content);
     expect((await f.storage.records.bindText({ ...source, content })).documentKey).toBe(next.documentKey);
+  } finally {
+    await f.close();
+  }
+});
+
+test("a peer text projection updates its physical copy without reading unrelated artifacts", async () => {
+  const f = await artifactFilesFixture();
+  try {
+    const mount = f.mount();
+    await mount.writeText("note.md", "before");
+    await mount.writeText("unrelated.md", "keep");
+    const documentKey = "a".repeat(64);
+    await f.storage.records.bindText({ recordId: f.recordId("documents/note.md"), documentKey, content: "before" });
+    await mount.readText("note.md");
+    const unrelated = await f.storage.records.read(f.recordId("documents/unrelated.md"));
+    await writeFile(f.pathFor("documents/unrelated.md"), "outside edit stays local");
+    const text = f.deps.extensionStorageService.openNativeTextDocument({ owner: f.owner, fileId: documentKey });
+    const peer = new Y.Doc();
+    try {
+      Y.applyUpdate(peer, await text.exportUpdate());
+      saveTextDocument(peer, "from peer");
+      const merged = await text.store.initialHistory.merge(f.owner, peer);
+      merged?.destroy();
+    } finally {
+      peer.destroy();
+    }
+    expect(await Bun.file(f.pathFor("documents/note.md")).text()).toBe("before");
+    await mount.refreshText(documentKey);
+    expect(await Bun.file(f.pathFor("documents/note.md")).text()).toBe("from peer");
+    expect((await f.storage.records.read(f.recordId("documents/unrelated.md"))).revision).toBe(unrelated.revision);
+    expect(await Bun.file(f.pathFor("documents/unrelated.md")).text()).toBe("outside edit stays local");
   } finally {
     await f.close();
   }

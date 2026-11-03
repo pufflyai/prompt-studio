@@ -1,6 +1,4 @@
 import type { NavigationTargetPage, NavigationTargetPanel, PageSlot } from "@pstdio/sdk/extensions";
-import { attentionPanelTarget } from "../attention-panel";
-import { ticketRequestsPage } from "../data/ticket-page-target";
 import { ticketResourceKind } from "../resource-kinds";
 
 export const ticketPreviewPanel = {
@@ -17,9 +15,6 @@ export const ticketPreviewPanel = {
 } satisfies PageSlot;
 
 export const timelineTicketPreviewTarget = (target: NavigationTargetPage) => {
-  if (target.page.id === ticketRequestsPage.id) {
-    return attentionPanelTarget(target.resource!, "timeline");
-  }
   return {
     kind: "panel",
     panel: {
