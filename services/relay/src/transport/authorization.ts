@@ -1,5 +1,4 @@
 import type { RelayOwners } from "./owners";
-import { relayResponse } from "./responses";
 
 /** Returns the verified access of a bearer token for this workbench, or null. */
 export const verifyBearer = async (
@@ -15,10 +14,4 @@ export const verifyBearer = async (
   } catch {
     return null;
   }
-};
-
-export const authorizeRelayRequest = async (owners: RelayOwners, request: Request, workbenchId: string) => {
-  const identity = await verifyBearer(owners, request, workbenchId);
-  if (!identity) return relayResponse({ error: "Unauthorized" }, 401, { "www-authenticate": 'Bearer realm="relay"' });
-  return { identity };
 };

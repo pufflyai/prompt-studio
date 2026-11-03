@@ -30,7 +30,6 @@ export const deploy = async (image: string, log: (message: string) => void, sign
     GOOGLE_CLIENT_ID: "unused",
     GOOGLE_CLIENT_SECRET: "unused",
     RELAY_ACCESS_TRUST: JSON.stringify(trust),
-    RELAY_RECOVERY_KEY: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64"),
   };
   const run = async (args: string[], cleanup = false) => {
     if (!cleanup) signal.throwIfAborted();

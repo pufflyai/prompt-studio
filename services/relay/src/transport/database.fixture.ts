@@ -9,7 +9,7 @@ export const withFixtureDatabase = async <T>(url: string, action: (client: Clien
     await client.end();
   }
 };
-export const blockFixtureTable = async (url: string, table: "manager_accounts" | "relay_scopes") => {
+export const blockFixtureTable = async (url: string, table: "manager_accounts" | "relay_sync_documents") => {
   const client = new Client({ connectionString: url });
   await client.connect();
   try {

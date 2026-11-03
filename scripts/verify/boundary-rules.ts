@@ -32,7 +32,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "pstdio-sync",
     "pstdio-sync-contracts",
-    "pstdio-relay",
     "pstdio-benchmarks",
     "storage-scale-fixture",
   ],

@@ -69,7 +69,7 @@ jobs:
         include:
           - service: relay
             module: ./storage.js
-            export: createRelayStorage
+            export: createRelaySync
           - service: account-manager
             module: ./dist/index.js
             export: createAccountManager

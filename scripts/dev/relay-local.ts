@@ -111,7 +111,6 @@ if (process.argv.includes("--down")) {
     "-e",
     "if (!await Bun.file('/fixture/grant.json').exists()) await import('/app/initialize.js')",
   );
-  await docker("run", "--rm", "--no-deps", "initialize", "bun", "/app/recovery-key.js");
   await docker("up", "--wait", ...(refreshTls ? ["--force-recreate"] : []), "authority", "relay");
   await docker("cp", "authority:/tls-public/trust.pem", certificate);
   const trustChanged = previousTrust !== (await Bun.file(certificate).text());

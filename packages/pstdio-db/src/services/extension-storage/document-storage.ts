@@ -87,6 +87,25 @@ const documentRevision = (db: DbClient, documentId: string) => async (owner: Sto
   return row?.revision ?? 0;
 };
 
+const discardDocument = async (
+  db: DbClient,
+  cache: ReturnType<typeof createDocumentCache>,
+  owner: StorageOwner,
+  documentId: string,
+) => {
+  const address = addressFor(owner, documentId);
+  await db
+    .delete(storage_documents)
+    .where(
+      and(
+        eq(storage_documents.workbench_id, owner.workbenchId),
+        eq(storage_documents.extension_id, owner.extensionId),
+        eq(storage_documents.document_id, documentId),
+      ),
+    );
+  cache.discard(JSON.stringify(address));
+};
+
 export const createDocumentStorageDBService = (
   db: DbClient,
   observer?: StorageObserver,
@@ -179,6 +198,7 @@ export const createDocumentStorageDBService = (
       };
     },
     documents: {
+      discard: (owner: StorageOwner, documentId: string) => discardDocument(db, cache, owner, documentId),
       open: (documentId: string) =>
         documentId.startsWith('["native-markdown",')
           ? nativeStore(documentId)

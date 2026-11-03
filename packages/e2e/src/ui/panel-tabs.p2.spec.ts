@@ -50,6 +50,8 @@ test("opens the Session tab context menu while normal clicks only select", async
     selected: true,
   });
   await expect(sessionTab).toBeVisible();
+  // The new composer's initial focus must settle before the menu owns focus.
+  await expect(page.locator('[data-workbench-region="side"]').getByRole("textbox").last()).toBeFocused();
   await sessionTab.click();
   await sessionTab.click();
   await expect(page.getByRole("menu")).toHaveCount(0);

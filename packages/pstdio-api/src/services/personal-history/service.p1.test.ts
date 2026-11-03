@@ -9,6 +9,8 @@ import { inertSessionChannelHooks } from "../../features/sessions/session-store.
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createNativeStore } from "../account/native-store";
 import { capturePersonalHistory } from "./capture";
+import { messageEntries } from "./log-entries";
+import { historyNamespace } from "./log-files";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore } from "./store";
 
@@ -23,6 +25,18 @@ beforeAll(async () => {
 beforeAll(async () => {
   destination = await createTestApp({ databasePath, storageRoot });
 });
+
+const publishTerminalPosition = async (
+  history: ReturnType<typeof createPersonalHistoryStore>,
+  sessionId: string,
+  head: number,
+) => {
+  const session = (await history.readRecords("sessions")).find((row) => row.id === sessionId)!;
+  await history.writeHeads(
+    new Map([[sessionId, head]]),
+    new Map([[sessionId, { head, version: JSON.stringify([session.status, session.updated_at]) }]]),
+  );
+};
 
 const verifyMetadataOwnership = async (
   native: ReturnType<typeof createNativeStore>,
@@ -111,7 +125,14 @@ test("personal history is readable offline after restart, private to the account
       (await sourceLinks.listAnchors({ resource: { type: "project", id: project.id }, direction: "incoming" })).items[0]
         ?.source.device,
     ).toEqual(device);
-    for (const name of ["records", history.transcriptName(session.id)]) {
+    await publishTerminalPosition(history, session.id, 1);
+    await destination.deps.personalHistoryService.logs.savePage(
+      historyNamespace({ managerOrigin, accountId, projectId: project.id }),
+      session.id,
+      1,
+      messages.flatMap((message, index) => messageEntries(index, message)),
+    );
+    for (const name of ["records"]) {
       const from = createDocumentStorage({
         owner: history.owner,
         store: source.deps.extensionStorageService.documents.open(name),
@@ -224,26 +245,19 @@ test("personal history is readable offline after restart, private to the account
     await native.save(login);
     const startedRead = Promise.withResolvers<void>();
     const releaseRead = Promise.withResolvers<void>();
-    const documents = destination.deps.extensionStorageService.documents;
-    const open = documents.open.bind(documents);
-    documents.open = (name) => {
-      const document = open(name);
-      if (name !== history.transcriptName(session.id)) return document;
-      return {
-        ...document,
-        transaction: async (owner, action) => {
-          startedRead.resolve();
-          await releaseRead.promise;
-          return document.transaction(owner, action);
-        },
-      };
+    const logs = destination.deps.personalHistoryService.logs;
+    const readLog = logs.read;
+    logs.read = async (namespace, sessionId) => {
+      startedRead.resolve();
+      await releaseRead.promise;
+      return readLog(namespace, sessionId);
     };
     const pendingRead = destination.app.request(`/v1/sessions/${session.id}/conversation`);
     await startedRead.promise;
     await native.save({ ...login, accountId: "bob" });
     releaseRead.resolve();
     const switched = await pendingRead;
-    documents.open = open;
+    logs.read = readLog;
     expect(switched.status).toBe(404);
     expect(await switched.text()).not.toContain("Private session");
     expect((await destination.app.request(`/v1/sessions/${session.id}/conversation`)).status).toBe(404);
