@@ -35,6 +35,7 @@ import { createNativeDocumentService } from "./services/native-documents/documen
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
 import { resolveNativeTextAccess } from "./services/native-documents/source-access";
 import { initializeNativeSource } from "./services/native-documents/source-binding";
+import { createSessionLogFiles } from "./services/personal-history/log-files";
 import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
@@ -263,6 +264,7 @@ const buildApp = async (
       documents: extensionStorageDBService.documents,
       account: account.accountService,
       projects: projectService,
+      logs: createSessionLogFiles(storageRoot),
     }),
     accountService: account.accountService,
     assetTransferService,

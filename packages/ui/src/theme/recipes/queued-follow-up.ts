@@ -14,6 +14,7 @@ export const queuedFollowUpRecipe = defineSlotRecipe({
       color: "inherit",
       cursor: "pointer",
       width: "full",
+      "&[data-read-only]": { cursor: "default" },
       _focusVisible: { outline: "2px solid {colors.border.accent}", outlineOffset: "2px" },
     },
     sendNowHit: { position: "absolute", bottom: "100%", insetX: 0, h: "touch-target", zIndex: 2 },
@@ -27,6 +28,8 @@ export const queuedFollowUpRecipe = defineSlotRecipe({
       borderTopRadius: "xs",
       bg: "bg",
       "&[data-send-now-visible=true]": { borderTopRadius: "0" },
+      // A read-only queue sits above a fallback instead of the input, so it closes its own edge.
+      "&[data-read-only]": { borderBottomWidth: "1px", borderBottomRadius: "xs" },
     },
     row: {
       position: "relative",
@@ -39,6 +42,7 @@ export const queuedFollowUpRecipe = defineSlotRecipe({
       textStyle: "label/S/regular",
       color: "fg",
       cursor: "pointer",
+      "&[data-read-only]": { cursor: "default" },
       "&[data-drag-source=true]": { opacity: 0.5 },
       "&[data-combine-target=true]": { bg: "bg.button.primary.default", color: "fg.button.primary.default" },
       _focusVisible: { outline: "2px solid {colors.border.accent}", outlineOffset: "-2px" },

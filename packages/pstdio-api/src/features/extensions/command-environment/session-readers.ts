@@ -22,7 +22,7 @@ export const createSessionReaders = (deps: ExtensionsRouteDeps, input: SessionAp
         const messages = await read(() => getSessionHistory(id, deps));
         const queued = (await getProjectSession(id))
           ? await read(() => getQueuedSessionMessages(deps, input.projectId, id))
-          : [];
+          : ((await read(() => deps.personalHistoryService.queuedMessages(id, input.projectId)))?.messages ?? []);
         return {
           session: toExtensionSessionDetails(session, workspace?.project_id === input.projectId ? workspace.id : null),
           messages: [...messages, ...queued],
@@ -42,16 +42,11 @@ export const createSessionReaders = (deps: ExtensionsRouteDeps, input: SessionAp
     getQueuedMessages: (id) =>
       read(async () => {
         await requireReadableSession(id);
-        if (!(await getProjectSession(id)))
-          return {
-            messages: [],
-            queue: {
-              requests: [],
-              activeRunStartedAt: null,
-              steeringAvailable: false,
-              steeringUnavailableReason: "Continue this session on its device.",
-            },
-          };
+        if (!(await getProjectSession(id))) {
+          const shared = await read(() => deps.personalHistoryService.queuedMessages(id, input.projectId));
+          if (!shared) throw new Error(`Session not found: ${id}`);
+          return shared;
+        }
         const queue = await read(() => pendingQueuedRequests(deps, id));
         const messages = await read(() => queuedMessagesFromRequests(deps, input.projectId, id, queue.requests));
         return { messages, queue };
