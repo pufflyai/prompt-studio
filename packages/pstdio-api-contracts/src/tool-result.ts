@@ -161,7 +161,8 @@ export const createToolOutputBuffer = (allowance = TOOL_RESULT_LIMIT_BYTES) => {
     result() {
       const size = window.size + utf8Bytes(pending);
       const output = window.head() + pending;
-      if (size <= allowance && utf8Bytes(JSON.stringify({ output })) <= allowance) return { output };
+      if (size <= allowance && utf8Bytes(JSON.stringify({ output })) <= allowance)
+        return { output, resultSummary: undefined };
       const digest = hash
         .clone()
         .update(encoder.encode(`${JSON.stringify(pending).slice(1, -1)}"`))
