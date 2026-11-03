@@ -94,8 +94,8 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
       await dashboard.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
       await expect(dashboard.getByTestId("content-editable").first()).toContainText(ticket.title);
     }
-    await page.route("**/extensions/commands/*/execute", async (route) => {
-      if (typeof route.request().postDataJSON()?.params?.content === "string") {
+    await page.route("**/text-editing/request", async (route) => {
+      if (route.request().postDataJSON()?.request?.operation === "submit") {
         held.push(route);
         return;
       }
