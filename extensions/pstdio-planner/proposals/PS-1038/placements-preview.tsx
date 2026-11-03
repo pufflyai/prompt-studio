@@ -1,5 +1,4 @@
-import { Box, Button, CloseButton, Dialog, Portal } from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { Box, Button } from "@chakra-ui/react";
 import { useRef, useState } from "react";
 import type { ReviewRequestView } from "../../src/data/review-request-types";
 import type { PlanRow } from "../../src/timeline/contracts";
@@ -7,6 +6,7 @@ import { AutoBuildIndicator } from "../../src/timeline/view/auto-build-indicator
 import { GraphCard } from "../../src/timeline/view/graph-card";
 import { AutoBuildActivity } from "./auto-build-activity";
 import { NeedsAttentionPreview } from "./needs-attention-preview";
+import { RequestModal } from "./request-modal";
 import { previewAgentSessions } from "./review-requests.story-fixture";
 
 interface AutoBuildPreviewProps {
@@ -57,48 +57,34 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
 export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
   const { row } = props;
   const [open, setOpen] = useState(false);
-  const card = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState(false);
+  const trigger = useRef<HTMLElement | null>(null);
   return (
-    <Dialog.Root
-      open={open}
-      onOpenChange={({ open }) => setOpen(open)}
-      size="md"
-      scrollBehavior="inside"
-      finalFocusEl={() => card.current?.querySelector<HTMLElement>("[data-ticket]") ?? null}
-    >
-      <Box ref={card} position="relative" minH="xs">
+    <>
+      <Box position="relative" minH="xs">
         <GraphCard
           row={row}
           x={0}
           y={0}
           dropBefore={false}
-          onSelect={() => setOpen(true)}
-          onOpenRequests={() => setOpen(true)}
+          relation={selected ? "selected" : undefined}
+          onSelect={() => setSelected(true)}
+          onOpenRequests={() => {
+            trigger.current = document.activeElement as HTMLElement;
+            setOpen(true);
+          }}
           onDragStart={() => {}}
           onDragOver={() => {}}
           onDrop={() => {}}
         />
       </Box>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>
-                {row.shorthand} · {row.title}
-              </Dialog.Title>
-              <Dialog.CloseTrigger asChild>
-                <CloseButton size="sm" />
-              </Dialog.CloseTrigger>
-            </Dialog.Header>
-            <Dialog.Body>
-              <ScrollArea>
-                <NeedsAttentionPreview requests={row.requests} />
-              </ScrollArea>
-            </Dialog.Body>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+      <RequestModal
+        title={`${row.shorthand} · ${row.title}`}
+        requests={row.requests}
+        open={open}
+        onClose={() => setOpen(false)}
+        finalFocusEl={() => trigger.current}
+      />
+    </>
   );
 }

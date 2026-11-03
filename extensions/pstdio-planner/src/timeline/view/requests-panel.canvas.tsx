@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { MilestoneNeedsAttentionPreview } from "../../../proposals/PS-1038/milestone-preview";
 import { AutoBuildPreview, CardNeedsAttentionPreview } from "../../../proposals/PS-1038/placements-preview";
 import { previewRequests } from "../../../proposals/PS-1038/review-requests.story-fixture";
 import type { ReviewRequestView } from "../../data/review-request-types";
@@ -240,6 +241,20 @@ export const CardModal: Story = {
         title: "Build a notes tool",
         requests: previewRequests.filter((request) => request.ticketId === "demo-notes"),
       }}
+    />
+  ),
+};
+export const MilestoneModal: Story = {
+  name: "Milestone — open Needs attention",
+  render: () => (
+    <MilestoneNeedsAttentionPreview
+      rows={["demo-notes", "demo-importer"].map((id, index) => ({
+        ...row,
+        id,
+        shorthand: index === 0 ? "DEMO-12" : "DEMO-21",
+        title: index === 0 ? "Build a notes tool" : "Build the importer",
+        requests: previewRequests.filter((request) => request.ticketId === id),
+      }))}
     />
   ),
 };
