@@ -29,6 +29,9 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
   const retryRef = useRef<() => Promise<void>>(async () => {});
   const state = useSyncExternalStore(session?.subscribe ?? subscribeEmpty, session?.getSnapshot ?? empty, empty);
   useEffect(() => {
+    setSession(undefined);
+    setOpeningError(undefined);
+    if (!open) return;
     const presentation = connectRef.current();
     let mounted = true;
     retryRef.current = async () => {
@@ -54,7 +57,7 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
       // Ordinary close is drained by the placement owner before this render tree unmounts.
       void presentation.close().catch(() => {});
     };
-  }, []);
+  }, [open]);
   useEffect(() => {
     if (!session || !open) return;
     const registration = presence.register({
