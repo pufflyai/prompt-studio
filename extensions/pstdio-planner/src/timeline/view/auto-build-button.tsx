@@ -1,14 +1,16 @@
-import { Button, CloseButton, Dialog, HStack, Portal } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, HStack, Portal, useRecipe } from "@chakra-ui/react";
 import { installPrismGlobal } from "@pstdio/ui";
+import { psTheme } from "@pstdio/ui/theme";
 import { Play } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import type { WaitingTicket } from "../../commands/next-ticket-types";
-import type { ReviewRequestView } from "../../data/review-request-types";
+import type { ReviewRequestView, ReviewResponse } from "../../data/review-request-types";
 import { AutoBuildActivity } from "./auto-build-activity";
 import type { AutoBuildFormProps } from "./auto-build-form";
 import { AutoBuildHelp } from "./auto-build-help";
 import { AutoBuildIndicator, resolveAutoBuildIndicatorStatus } from "./auto-build-indicator";
 import type { AutoBuildSession } from "./auto-build-session-row";
+import { RequestsDialog } from "./ticket-requests-dialog";
 
 const AutoBuildForm = lazy(async () => {
   await installPrismGlobal();
@@ -20,7 +22,8 @@ export interface AutoBuildButtonProps {
   paused?: boolean;
   reviewRequests?: ReviewRequestView[];
   requestErrors?: string[];
-  onOpenRequest?: (request: ReviewRequestView) => void;
+  onAnswerRequest?: (requestId: string, response: ReviewResponse) => Promise<unknown>;
+  onOpenRequestChat?: (requestId: string) => Promise<unknown>;
   onPause?: () => Promise<boolean>;
   onResume?: () => Promise<boolean>;
   completed?: boolean;
@@ -55,9 +58,15 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
     configuration,
     onStop,
     starting,
+    reviewRequests = [],
+    requestErrors = [],
+    onAnswerRequest,
+    onOpenRequestChat,
     t,
   } = props;
-  const [content, setContent] = useState<"configuration" | "sessions" | null>(null);
+  const [content, setContent] = useState<"configuration" | "sessions" | "requests" | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const headerButton = useRecipe({ recipe: psTheme.getRecipe("button") })({ size: "xs", variant: "outline" });
   const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
   const inspectable = enabled || paused || failed;
   const status = resolveAutoBuildIndicatorStatus({
@@ -84,9 +93,11 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
         {...props}
         trigger={
           <Button
+            ref={trigger}
             aria-label={t("timeline.autoBuild.start", "Auto Build")}
             aria-description={enabled || paused || failed ? `Auto Build ${activity}` : undefined}
             size="xs"
+            css={headerButton}
             variant="outline"
             disabled={disabled}
             onClick={(event) => {
@@ -107,6 +118,23 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
         }}
         onStop={() => void stop()}
         onConfigure={() => setContent("configuration")}
+        onOpenRequests={() => setContent("requests")}
+      />
+      <RequestsDialog
+        title={t("timeline.autoBuild.requests", "Needs attention")}
+        row={{ requests: reviewRequests, requestErrors }}
+        open={content === "requests"}
+        pendingOnly
+        trigger={trigger.current}
+        onClose={() => setContent(null)}
+        onAnswer={async (id, response) => {
+          if (!onAnswerRequest) throw new Error("Answering requests is unavailable.");
+          return onAnswerRequest(id, response);
+        }}
+        onOpenChat={async (id) => {
+          if (!onOpenRequestChat) throw new Error("Opening a session is unavailable.");
+          return onOpenRequestChat(id);
+        }}
       />
       <Dialog.Root
         lazyMount

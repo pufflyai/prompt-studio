@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { autoBuildDispatches } from "../data/auto-build-dispatches";
+import { autoBuildDispatches, autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
 import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 
@@ -47,6 +47,7 @@ async function monitorFixture() {
     return {
       ...source,
       list: async () => {
+        if (name === "planner-attempts") return source.list();
         throw new Error(`Scheduled wake must not list project collection ${name}`);
       },
       get: async (id) => {
@@ -282,6 +283,21 @@ test.each([
   await checkAutoBuildCommand.run(ctx, {});
   expect(followups).toEqual([]);
   changed = true;
+  if (wakes) {
+    await ctx.settings.set("automation.maxInProgress", 1);
+    const other = sessionRecord({ id: "unrelated-owner", title: "Unrelated implementation", status: "in_progress" });
+    await putAttempt(ctx.storage, {
+      ...attempt,
+      workspaceId: "unrelated-workspace",
+      implementationSessionId: other.id,
+    });
+    const getSession = ctx.sessions.get;
+    ctx.sessions.get = async (id) => (id === other.id ? other : getSession(id));
+    for (let check = 0; check < 2; check++) await checkAutoBuildCommand.run(ctx, {});
+    expect(followups).toEqual([]);
+    expect(await autoBuildPullRequestNotifications(ctx, supervisor.id).get(dispatched.workspaceId)).toBeUndefined();
+    other.status = "completed";
+  }
   await checkAutoBuildCommand.run(ctx, {});
   if (!wakes) {
     expect(followups).toEqual([]);
@@ -383,4 +399,65 @@ test("unchanged PR evidence wakes once while a human request prevents repair, th
   conflict = true;
   await checkAutoBuildCommand.run(ctx, {});
   expect(followups).toEqual(["supervisor", "supervisor"]);
+});
+
+test.each([
+  "changed",
+  "pending",
+  "failed",
+  "stalled",
+])("full shared capacity defers %s wakes until a slot is free", async (reason) => {
+  const { ctx, supervisor, worker, followups, task, dispatched, collection } = await monitorFixture();
+  await ctx.settings.set("automation.maxInProgress", 1);
+  worker.status = "in_progress";
+  if (reason === "pending")
+    await ctx.storage.set("auto-build-supervisor", { sessionId: supervisor.id, pendingWakeRevision: "test" });
+  if (reason === "pending" || reason === "failed")
+    supervisor.lastRequestStarted = new Date(Date.now() + 1000).toISOString();
+  if (reason === "failed") supervisor.status = "failed";
+  if (reason === "stalled") {
+    const attempt = (await collection<AttemptRecord>("planner-attempts").get(dispatched.workspaceId))!;
+    await putAttempt(ctx.storage, { ...attempt, updatedAt: ago(120) });
+    await ticketsCollection(ctx.storage).put(task.id, { ...task, updatedAt: ago(120) });
+    await autoBuildDispatches(ctx, supervisor.id).put(dispatched.workspaceId, {
+      workspaceId: dispatched.workspaceId,
+      dispatchedAt: ago(120),
+    });
+    supervisor.lastRequestStarted = ago(61);
+    worker.updatedAt = ago(120);
+    worker.lastRequestStarted = ago(120);
+  }
+  for (let check = 0; check < 2; check++) await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual([]);
+  if (reason === "pending")
+    expect(await ctx.storage.get("auto-build-supervisor")).toMatchObject({ pendingWakeRevision: "test" });
+  worker.status = "completed";
+  worker.updatedAt = new Date().toISOString();
+  await checkAutoBuildCommand.run(ctx, {});
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual(["supervisor"]);
+});
+
+test("capacity filled during progress inspection suppresses the followup", async () => {
+  const { ctx, worker, followups } = await monitorFixture();
+  await ctx.settings.set("automation.maxInProgress", 1);
+  const get = ctx.sessions.get;
+  let reads = 0;
+  ctx.sessions.get = async (id) => {
+    if (id === worker.id && ++reads > 1) worker.status = "in_progress";
+    return get(id);
+  };
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual([]);
+});
+
+test.each(["paused", "stopped"])("%s during a capacity read suppresses scheduled wakes", async (state) => {
+  const { ctx, followups } = await monitorFixture();
+  const all = ctx.settings.all;
+  ctx.settings.all = async () => {
+    await ctx.storage.set("auto-build", { enabled: false, state, revision: "test" });
+    return all();
+  };
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual([]);
 });

@@ -57,7 +57,7 @@ the one `WebviewClient`.
 Host props are typed `unknown`. The dashboard sends eight props, the workbench two and the testbench
 five. Add `WebviewHostProps` to the contracts with `projectId`, `themePreference`, `locale`,
 `resource`, `pageLocation`, `pageParams` and `translations`. Deprecate `lastCommand`; extension-lab
-and motion-lab use it to trigger refreshes. The replacement is `client.events.subscribe`.
+uses it to trigger refreshes. The replacement is `client.events.subscribe`.
 
 Other shape fixes:
 
