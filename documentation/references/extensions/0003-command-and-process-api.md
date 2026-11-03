@@ -527,6 +527,8 @@ The dashboard previews the change in navigation, tabs, and breadcrumbs while the
 | `ctx.sessions.readAttachment(fileId)` | Reads attachment bytes from this project. |
 | `ctx.sessions.deleteAttachment(fileId)` | Deletes an unsubmitted attachment; submitted or in-flight files are kept. |
 
+Conversation patches may replace all `/messages` or update an individual `/messages/<index>`. While a stream callback is busy, pending conversation changes are coalesced into a current `/messages` snapshot. Apply each patch to the conversation instead of waiting for a particular indexed patch.
+
 Streams and resource retention are released when the invoking command ends or is cancelled. Closing a stream or retention handle does not stop the agent session. A webview can forward stream events through a command declared with `streamOf`, using `await ctx.stream.write(event)` in the callback. See [command streams](#stream-command-output).
 
 `ctx.sessions.create` also accepts `operation` to start with a native command instead of a prompt, and returns its optional `operationResult`. `ctx.sessions.followup` accepts `harness` to select the next harness, model, or parameters, `questionResponse: { callId?, answers }` to answer a structured question, and `summaryFromSessionId`, `summaryFormat`, and `summaryRole` to include another project session's summary. Attachments remain references of the form `{ file_id }`. An answer to a question cannot include attachments. Existing `expectedRun` guards still reject continuation after execution changes.
