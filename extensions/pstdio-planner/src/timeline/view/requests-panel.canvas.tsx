@@ -1,5 +1,8 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { MilestoneNeedsAttentionPreview } from "../../../proposals/PS-1038/milestone-preview";
+import { AutoBuildPreview, CardNeedsAttentionPreview } from "../../../proposals/PS-1038/placements-preview";
+import { previewRequests } from "../../../proposals/PS-1038/review-requests.story-fixture";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
@@ -57,22 +60,22 @@ const decision: ReviewRequestView = {
     ],
   },
 };
-// The shape the create-proposal skill asks for: decisions, assumptions, and risks as readable options.
+// A concise decision uses the existing Needs attention form and Chat UI question controls.
 const proposalReview: ReviewRequestView = {
   ...task,
   id: "proposal-review",
-  title: "Review the note tags proposal",
+  title: "PS-32 · Choose how tag filtering works",
   instructions: [
-    "- **D1.** The sidebar can filter by one tag or by several tags at once.",
-    "- **C1.** A note can have several tags, and tag names ignore case and surrounding spaces.",
-    "- **R1.** Tag edits change a note's modified time, which can reorder recent notes.",
-  ].join("\n"),
+    "**Problem:** People need to narrow down a long list of notes by tag.",
+    "**Solutions:** Filter by one tag (recommended), or combine several tags.",
+    "**Downsides:** One tag cannot narrow the list as much. Combining tags adds controls to learn.",
+  ].join("\n\n"),
   request: {
     kind: "decision",
     questions: [
       {
         id: "d1-filter",
-        label: "D1. How many tags can the sidebar filter by?",
+        label: "How many tags can the sidebar filter by?",
         required: true,
         input: {
           kind: "single-choice",
@@ -82,25 +85,6 @@ const proposalReview: ReviewRequestView = {
           ],
         },
       },
-      {
-        id: "confirm",
-        label: "Tick each assumption you accept",
-        required: false,
-        input: {
-          kind: "multiple-choice",
-          options: [{ id: "c1", label: "C1. A note can have several tags, and names ignore case and spaces" }],
-        },
-      },
-      {
-        id: "risks",
-        label: "Tick each risk you accept",
-        required: false,
-        input: {
-          kind: "multiple-choice",
-          options: [{ id: "r1", label: "R1. Tag edits can reorder recent notes" }],
-        },
-      },
-      { id: "notes", label: "Corrections or other answers", required: false, input: { kind: "text" } },
     ],
   },
 };
@@ -232,4 +216,53 @@ export const CompleteTicket: Story = {
 export const UnreadableRequest: Story = {
   id: "extensions-planner-needs-attention--unreadable-request",
   args: { row: { ...row, requestErrors: ["Request broken: Request title is required."] } },
+};
+
+export const AutoBuildPopover: Story = {
+  name: "Auto Build — open Needs attention",
+  render: () => <AutoBuildPreview requests={previewRequests} />,
+};
+export const AutoBuildSingleRequest: Story = {
+  name: "Auto Build — one pending request",
+  render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} />,
+};
+export const AutoBuildSaveError: Story = {
+  name: "Auto Build — modal answer save error",
+  render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} failSave />,
+};
+export const AutoBuildEmptySessions: Story = {
+  name: "Auto Build — no supervisor or agents",
+  render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} empty />,
+};
+export const AutoBuildWarning: Story = {
+  name: "Auto Build — warning above requests",
+  render: () => <AutoBuildPreview requests={previewRequests} warning />,
+};
+export const CardModal: Story = {
+  name: "Card — open Needs attention",
+  render: () => (
+    <CardNeedsAttentionPreview
+      row={{
+        ...row,
+        id: "demo-notes",
+        shorthand: "DEMO-12",
+        title: "Build a notes tool",
+        requests: previewRequests.filter((request) => request.ticketId === "demo-notes"),
+      }}
+    />
+  ),
+};
+export const MilestoneModal: Story = {
+  name: "Milestone — open Needs attention",
+  render: () => (
+    <MilestoneNeedsAttentionPreview
+      rows={["demo-notes", "demo-importer"].map((id, index) => ({
+        ...row,
+        id,
+        shorthand: index === 0 ? "DEMO-12" : "DEMO-21",
+        title: index === 0 ? "Build a notes tool" : "Build the importer",
+        requests: previewRequests.filter((request) => request.ticketId === id),
+      }))}
+    />
+  ),
 };

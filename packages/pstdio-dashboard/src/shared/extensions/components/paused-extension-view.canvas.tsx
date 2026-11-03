@@ -5,7 +5,7 @@ import { PausedExtensionView } from "./paused-extension-view";
 const meta = {
   title: "Extensions/Paused extension view",
   component: PausedExtensionView,
-  args: { installedExtensionId: "shader", name: "Shader Lab" },
+  args: { installedExtensionId: "example", name: "Example tool" },
 } satisfies CanvasMeta<typeof PausedExtensionView>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
