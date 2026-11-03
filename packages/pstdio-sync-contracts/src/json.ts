@@ -29,13 +29,3 @@ function isJson(value: unknown) {
 
 // Zod's object/record parsers discard special keys. JSON values must retain them.
 export const jsonSchema = z.custom<Json>(isJson, "Expected a JSON value without loss of object keys");
-export function dictionarySchema<T extends z.ZodType>(valueSchema: T) {
-  return z.custom<Record<string, z.infer<T>>>(
-    (value) =>
-      value !== null &&
-      typeof value === "object" &&
-      !Array.isArray(value) &&
-      Object.values(value).every((entry) => valueSchema.safeParse(entry).success),
-    "Invalid dictionary",
-  );
-}

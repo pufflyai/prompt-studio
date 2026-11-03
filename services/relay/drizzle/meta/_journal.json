@@ -29,6 +29,13 @@
       "when": 1792726361349,
       "tag": "0003_milky_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793656844686,
+      "tag": "0004_jazzy_nomad",
+      "breakpoints": true
     }
   ]
 }

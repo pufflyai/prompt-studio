@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { type AddressInfo, createServer } from "node:net";
-import { createDocumentRelayConnection, createRelayConnection, createRelaySocket } from "./connection";
+import { createDocumentRelayConnection, createRelaySocket } from "./connection";
 
 test("an established socket failure reconnects without an HTTP handshake probe", async () => {
   const controller = new AbortController();
@@ -72,9 +72,10 @@ test("credential rotation opens a fresh socket while durable synchronization is 
       message() {},
     },
   });
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     signal: controller.signal,
     access: async () => ({
       token: `grant-${++grants}`,
@@ -123,9 +124,10 @@ test("denied renewal cancels durable synchronization and reports an offline conn
       message() {},
     },
   });
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     signal: controller.signal,
     access: async () => {
       if (++grants > 1) throw new Error("Access revoked");
@@ -155,9 +157,10 @@ test("an expired access grant uses the failure path without opening a socket", a
   const controller = new AbortController();
   const offline = Promise.withResolvers<void>();
   let grants = 0;
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: "http://127.0.0.1:1",
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     signal: controller.signal,
     access: async () => {
       grants++;
@@ -200,9 +203,10 @@ test("credential renewal keeps the current synchronization attempt", async () =>
       message() {},
     },
   });
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     signal: controller.signal,
     access: async () => ({
       token: `grant-${++grants}`,
@@ -236,7 +240,7 @@ test("a closed socket cancels stalled synchronization before reconnecting withou
     hostname: "127.0.0.1",
     port: 0,
     fetch(request, server) {
-      if (new URL(request.url).pathname.endsWith("/changes")) {
+      if (new URL(request.url).pathname === "/live") {
         if (server.upgrade(request)) return;
         return new Response(null, { status: 426 });
       }
@@ -258,9 +262,10 @@ test("a closed socket cancels stalled synchronization before reconnecting withou
       message() {},
     },
   });
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     access: async () => ({ token: "fixture-access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
     signal: controller.signal,
     synchronize: async (signal: AbortSignal) => {
@@ -363,9 +368,10 @@ test("transport status follows the socket through offline and back and signals e
     signalled();
     return reached.promise;
   };
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     access: async () => ({ token: "fixture-access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
     signal: controller.signal,
     synchronize: async () => {},
@@ -422,9 +428,10 @@ test("a permanent synchronization error during access renewal retires its attemp
       message() {},
     },
   });
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "a", workbenchId: "w", extensionId: "e" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     signal: controller.signal,
     access: async () => {
       const n = ++grants;
@@ -482,9 +489,10 @@ test("a planned access renewal reconnects at once without reporting the connecti
     },
   });
   const changes: { connected: boolean; busy: boolean }[] = [];
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     access: async () => ({ token: "short-access", expiresAt: new Date(Date.now() + 200).toISOString() }),
     signal: controller.signal,
     synchronize: async () => {},
@@ -525,9 +533,10 @@ test.each([false, true])("retry reconnects before backoff, including during tear
       message() {},
     },
   });
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     access: async () => ({ token: "access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
     signal: controller.signal,
     synchronize: async (signal) => {
@@ -591,9 +600,10 @@ test("retry during access renewal waits for the renewed socket without aborting 
       message() {},
     },
   });
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     access: async () => {
       if (++accesses === 2) {
         renewing.resolve();
@@ -668,9 +678,10 @@ test("manual retry waits for relay protocol readiness after the renewed transpor
       message() {},
     },
   });
-  const connection = createRelayConnection({
+  const connection = createRelaySocket({
     origin: server.url.origin,
-    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    path: "/live",
+    message: (body) => ((body as { type: string }).type === "ready" ? "ready" : "changed"),
     signal: controller.signal,
     access: async () => ({
       token: "renewal-access",
