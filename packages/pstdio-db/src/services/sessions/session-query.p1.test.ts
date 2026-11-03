@@ -152,3 +152,18 @@ test("pages by latest activity and scopes anchor identity to its owner", async (
   expect(second.nextCursor).toBeNull();
   expect((await service.query(projectId, { anchor })).rows.map((row) => row.id)).toEqual([newer.id, older.id]);
 });
+
+test("pages by update time independently of creation and run timestamps", async () => {
+  const older = await create("updated recently", "codex", "2026-10-01T00:00:00.000Z");
+  const newer = await create("created recently", "codex", "2026-10-02T00:00:00.000Z");
+  await conn.db.update(sessions).set({ updated_at: "2026-10-03T00:00:00.000Z" }).where(eq(sessions.id, older.id));
+  await conn.db
+    .update(sessions)
+    .set({ last_request_started: "2026-10-04T00:00:00.000Z" })
+    .where(eq(sessions.id, newer.id));
+  const first = await service.query(projectId, { orderBy: "updated", limit: 1 });
+  expect(first.rows.map((row) => row.id)).toEqual([older.id]);
+  const second = await service.query(projectId, { orderBy: "updated", limit: 1, cursor: first.nextCursor! });
+  expect(second.rows.map((row) => row.id)).toEqual([newer.id]);
+  expect(second.nextCursor).toBeNull();
+});

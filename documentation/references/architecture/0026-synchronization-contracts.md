@@ -11,7 +11,7 @@ using `storage.records`, the deprecated KV and collection methods, and the file 
 | Package | Responsibility |
 | --- | --- |
 | `pstdio-sync` | Record and text engines, transient presence, encryption and relay transport, separated by module APIs. |
-| `pstdio-db` | Durable document state, atomic current-record projections, query indexes, incremental updates, local retry identities, migration versions and the one-time journal import. |
+| `pstdio-db` | Durable document state, atomic current-record projections, query indexes, incremental updates, local retry identities, migration versions. |
 | `pstdio-api` | Public storage adapters, verified assets, file projection and notifications after local commits. |
 | `@pstdio/sdk/testing` | The same document engine with an in-memory store. |
 | Extensions | Domain data and validation, without merge rules or relay code. |
@@ -175,8 +175,7 @@ Foreign keys remove these rows when their project or document is removed.
 A database transaction locks the document row, checks its revision and loads the saved
 state plus its remaining updates when needed. A bounded cache reuses a matching loaded
 document. A save appends only its new update. Every 128 updates, the same transaction
-writes a new saved state and removes the folded updates. Normal saves and reads do not
-load the old grouped journal. Retry metadata stays outside the CRDT state, so folding
+writes a new saved state and removes the folded updates. Normal saves and reads load only current document state. Retry metadata stays outside the CRDT state, so folding
 does not copy every past save ID.
 
 The PGlite adapter uses native hex conversion for binary values. This avoids a
@@ -297,11 +296,9 @@ resumable downloads remain separate transport work.
 
 ## Upgrade and data migrations
 
-The first records-document open runs the existing projector once for that owner. It
-imports the accepted state and current local journal, and any older KV or collection
-rows. It also imports the existing per-scope data migration versions. The new document
-and removal of the older KV rows commit together. The grouped journal tables stay
-unchanged for PS-824; later opens use the document row as the import marker.
+Each current home stores documents and current-record projections directly.
+Older incompatible home formats are retired by the database ownership layer; the
+removed grouped journal is not read by storage opens.
 
 Equal projected data gets equal bootstrap identities. Data migrations assign stable
 Yjs authors to equal field changes from the same baseline. Two offline devices running
@@ -325,8 +322,7 @@ revision conflicts.
 
 The deprecated `conflicts` method returns an empty list. `inspect` and `resolve` report
 that records merge automatically. Their public declarations remain until the planned
-breaking API removal. The old projector and relay evaluator remain only for upgrade and
-legacy protocol ownership, not as a second writable extension store.
+breaking API removal. The replaced grouped projector, journal and relay evaluator have been removed.
 
 ## Verification
 

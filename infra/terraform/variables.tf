@@ -91,7 +91,6 @@ variable "relay_secrets" {
     S3_ACCESS_KEY_ID     = string
     S3_SECRET_ACCESS_KEY = string
     RELAY_ACCESS_TRUST   = string
-    RELAY_RECOVERY_KEY   = string
   })
   sensitive = true
 }

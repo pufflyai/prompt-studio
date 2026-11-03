@@ -15,7 +15,6 @@ import { attentionPanelTarget } from "./attention-panel";
 import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
-import { getTicketContent } from "./commands/get-ticket-content";
 import { moveTicketOnBoard } from "./commands/move-ticket-on-board";
 import { queryTickets } from "./commands/query-tickets";
 import { saveTicketContent } from "./commands/save-ticket-content";
@@ -29,6 +28,7 @@ import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ticketBoard, timelineBoard } from "./data/ticket-board";
 import { ticketActivationTarget } from "./data/ticket-page-target";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
+import { loadTicketText } from "./text-source";
 import { ticketCreateForm } from "./ticket-create-form";
 import { ticketNavigationStructure } from "./ticket-navigation-structure";
 import { createTicketPages } from "./ticket-pages";
@@ -155,8 +155,9 @@ export const createPlannerUi = (baseUrl: string) => {
     title: l10n("panels.ticketEditor.title", "Ticket"),
     body: {
       kind: "file",
-      load: (ctx, input) => getTicketContent(ctx, { resource: input.renderer.resource }),
+      load: (ctx, input) => loadTicketText(ctx, { resource: input.renderer.resource }),
       refreshEvents: [plannerTicketsChanged],
+      // Code files keep ordinary saves; public Markdown sessions own their own projection.
       save: (ctx, input) => saveTicketContent(ctx, { content: input.content, resource: input.renderer.resource }),
     },
   });

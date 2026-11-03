@@ -173,7 +173,9 @@ test("personal history is readable offline after restart, private to the account
     const read = await destination.app.request(`/v1/sessions/${session.id}/conversation`);
     expect(read.status).toBe(200);
     expect(await read.json()).toMatchObject({ session: { id: session.id, device }, messages });
-    const rows = await destination.app.request(`/v1/projects/${project.id}/sessions?workspaceId=${workspace.id}`);
+    const rows = await destination.app.request(
+      `/v1/projects/${project.id}/sessions?workspaceId=${workspace.id}&orderBy=updated`,
+    );
     expect(rows.status).toBe(200);
     expect(await rows.json()).toMatchObject({ items: [{ id: session.id, device, workspaceId: workspace.id }] });
     const secondRows = await destination.app.request(
