@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
+import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT, withPackagedCoreExtensions } from "./packaged-core-extensions.fixture";
 import { expectCoreRecordIds } from "./packaged-core-record-ids-smoke";
@@ -77,7 +79,12 @@ test(
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
           expect.objectContaining({ enabled: true, installName: "harness-open-code" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-base-themes" }),
-          expect.objectContaining({ enabled: true, installName: "pstdio-home" }),
+          expect.objectContaining({
+            enabled: true,
+            installName: "pstdio-home",
+            scope: "repo",
+            sourcePath: join(realpathSync(projectFolder), ".pstdio/extensions/pstdio-home"),
+          }),
           expect.objectContaining({ canUpgrade: false, enabled: true, installName: "pstdio-planner" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),

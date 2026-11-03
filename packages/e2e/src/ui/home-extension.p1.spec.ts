@@ -116,31 +116,23 @@ test("uninstalled Home leaves the project root on the existing empty panel", asy
   };
   const instance = listed.extensions.find((entry) => entry.installName === "pstdio-home")!;
   expect(instance).toBeTruthy();
-  try {
-    expect(
-      (await request.delete(`/v1/projects/${project.id}/extensions/${instance.id}?deleteUserData=true`)).ok(),
-    ).toBe(true);
-    await page.goto(`/projects/${project.id}`);
-    await expect(page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
-    await expect(emptyMain(page)).toBeVisible();
-    await expect(page.locator('iframe[title="Home"]')).toHaveCount(0);
-    await page.getByRole("option", { name: "Sessions", exact: true }).click();
-    await page.getByRole("button", { name: "Back to project", exact: true }).click();
-    await expect(emptyMain(page)).toBeVisible();
-    await expect(page.getByRole("option", { name: "Notes", exact: true })).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`/projects/${project.id}$`));
-    await page.goto(`/projects/${project.id}/workspaces`);
-    await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/workspaces$`));
-    await page.getByRole("option", { name: "Sessions", exact: true }).click();
-    await page.getByRole("button", { name: "Back to project", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/workspaces$`));
-  } finally {
-    // Home is user-scoped; restore the shared fixture for later projects and specs.
-    const restored = await request.post(`/v1/projects/${project.id}/extensions/install`, {
-      data: { source: { kind: "catalog", name: "pstdio-home" }, skipInstall: true },
-    });
-    expect(restored.status(), await restored.text()).toBe(201);
-  }
+  expect((await request.delete(`/v1/projects/${project.id}/extensions/${instance.id}?deleteUserData=true`)).ok()).toBe(
+    true,
+  );
+  await page.goto(`/projects/${project.id}`);
+  await expect(page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
+  await expect(emptyMain(page)).toBeVisible();
+  await expect(page.locator('iframe[title="Home"]')).toHaveCount(0);
+  await page.getByRole("option", { name: "Sessions", exact: true }).click();
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
+  await expect(emptyMain(page)).toBeVisible();
+  await expect(page.getByRole("option", { name: "Notes", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}$`));
+  await page.goto(`/projects/${project.id}/workspaces`);
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/workspaces$`));
+  await page.getByRole("option", { name: "Sessions", exact: true }).click();
+  await page.getByRole("button", { name: "Back to project", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/workspaces$`));
 });
 
 test("Home keeps setup recovery feedback beside the action", async ({ page, request }) => {

@@ -4,6 +4,10 @@ The default project home page is provided by `pstdio.pstdio-home`. It shows the 
 
 Home contributes an ordinary `home` page and webview with a Go → H action. Prompt Studio configures this page directly as its project default. The shell owns project-root URLs, saved destinations and tool search. If Home is disabled or uninstalled, the dashboard uses its existing empty-panel UI. Sessions and workspaces remain available.
 
+Home uses `repo` scope. Project setup copies its source into `<project>/.pstdio/extensions/pstdio-home/`. Users and agents can customize `src/view.tsx` or its components in that folder and commit the changes with the project. Normal extension source watching and reload apply those edits only to that project's Home. Repeating setup preserves the existing folder and its customizations.
+
+Existing projects can install Home through the ordinary Extensions panel. If a project already uses another Home source, select its project-local copy using the existing extension source controls.
+
 Recent uses the host’s project-scoped navigation history through `workbenchCommands.recentResources`. Opening a resource promotes it; edits alone do not. The host retains destinations in local project preferences and uses live built-in resource metadata and the last-seen presentation refreshed by extension views. Sessions use the shared status indicator; other resources use their own icons. Home appears first in the default navigation header; saved navigation customization takes precedence.
 
 The Canvas baseline is `src/components/home.canvas.tsx`: `Default`, `SetupDidNotFinish`, and `NoRecentResources`.
