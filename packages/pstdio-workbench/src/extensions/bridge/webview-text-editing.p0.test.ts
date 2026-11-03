@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { createClient } from "@pstdio/sdk/client";
 import type { PageParams } from "@pstdio/sdk/extensions";
-import type { TextEditingEvent } from "pstdio-api-contracts/extension-kernel";
+import type { TextEditingEvent, TextEditingOpened, TextEditingRequest } from "pstdio-api-contracts/extension-kernel";
 import { createHostCapabilityGate } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { harness, navigate, openFile } from "../../core/controllers/composition/placement-lifecycle-test-support";
@@ -12,6 +12,83 @@ const activityGate = () => ({ entered: Promise.withResolvers<void>(), release: P
 afterEach(async () => {
   for (const stop of fixtures.splice(0)) await stop();
 });
+const textEventStream = () => {
+  const streams = new Set<ReadableStreamDefaultController<Uint8Array>>();
+  const ready = Promise.withResolvers<void>();
+  const encoder = new TextEncoder();
+  return {
+    ready: ready.promise,
+    response() {
+      let current: ReadableStreamDefaultController<Uint8Array>;
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            current = controller;
+            streams.add(controller);
+            controller.enqueue(encoder.encode(": ready\n\n"));
+            ready.resolve();
+          },
+          cancel() {
+            streams.delete(current);
+          },
+        }),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    },
+    emit(event: TextEditingEvent) {
+      for (const controller of streams)
+        controller.enqueue(encoder.encode(`event: text\ndata: ${JSON.stringify(event)}\n\n`));
+    },
+  };
+};
+const openingReplies = () => {
+  let count = 0;
+  let next: ReturnType<typeof activityGate> | undefined;
+  let abandon: ReturnType<typeof activityGate> | undefined;
+  const handles = new Map<string, string>();
+  const gates = new Set<ReturnType<typeof activityGate>>();
+  return {
+    hold() {
+      next = activityGate();
+      gates.add(next);
+      return { ...next, handle: `handle-${count + 1}` };
+    },
+    holdAbandon() {
+      abandon = activityGate();
+      gates.add(abandon);
+      return abandon;
+    },
+    close(handle: string) {
+      for (const [id, current] of handles) if (current === handle) handles.delete(id);
+    },
+    async abandon(id: string) {
+      handles.delete(id);
+      const held = abandon;
+      abandon = undefined;
+      if (held) {
+        held.entered.resolve();
+        await held.release.promise;
+        gates.delete(held);
+      }
+    },
+    async open(memberId: string) {
+      const handle = handles.get(memberId) ?? `handle-${++count}`;
+      handles.set(memberId, handle);
+      const held = next;
+      next = undefined;
+      if (held) {
+        held.entered.resolve();
+        await held.release.promise;
+        gates.delete(held);
+      }
+      return { handle, grant: { token: "selected" }, sourceIdentity: "source" };
+    },
+    dispose() {
+      for (const gate of gates) gate.release.resolve();
+      gates.clear();
+    },
+  };
+};
 
 // The remote is controlled; transport, guest multiplexing, capability gate and Workbench are real.
 const fixture = async () => {
@@ -21,18 +98,18 @@ const fixture = async () => {
   const activeObservers = new Set<() => void>();
   const activityGates = new Map<boolean, ReturnType<typeof activityGate>>();
   let guests = 0;
+  const openings = openingReplies();
   const requests: string[] = [];
   const connectionStarted = Promise.withResolvers<void>();
   const closeStarted = Promise.withResolvers<void>();
-  const streamReady = Promise.withResolvers<void>();
+  const stream = textEventStream();
   const releaseConnection = Promise.withResolvers<void>();
   const releaseClose = Promise.withResolvers<void>();
   let holdConnection = false;
   let refuseConnection = false;
   let holdClose = false;
   let refuseDisconnect = false;
-  const streams = new Set<ReadableStreamDefaultController<Uint8Array>>();
-  const encoder = new TextEncoder();
+  let refuseOpen = false;
   const reply = (value?: unknown) => Response.json({ ok: true, value });
   const connect = async (input: unknown) => {
     scopes.push(input);
@@ -70,6 +147,22 @@ const fixture = async () => {
     for (const listener of activeObservers) listener();
     return reply();
   };
+  const applyRequest = async (input: TextEditingRequest) => {
+    requests.push(input.operation);
+    if (input.operation === "open") {
+      if (refuseOpen) {
+        refuseOpen = false;
+        return Response.json({
+          ok: false,
+          error: { code: "source_read_only", message: "Read only", retryable: false },
+        });
+      }
+      return reply(await openings.open(input.memberId));
+    }
+    if (input.operation === "close") openings.close(input.handle);
+    if (input.operation === "abandon") await openings.abandon(input.memberId);
+    return reply({ token: "selected" });
+  };
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -78,37 +171,18 @@ const fixture = async () => {
       const input = (await request.json()) as {
         token?: string;
         active?: boolean;
-        request?: { operation: string };
+        request?: TextEditingRequest;
       };
       if (path.endsWith("/text-editing")) return connect(input);
       if (path.endsWith("/active")) return applyParticipation(input.active!);
-      if (path.endsWith("/request")) {
-        requests.push(input.request!.operation);
-        return reply({ token: "selected" });
-      }
+      if (path.endsWith("/request")) return applyRequest(input.request!);
       if (path.endsWith("/prepare-close")) {
         closeStarted.resolve();
         if (holdClose) await releaseClose.promise;
         return reply();
       }
       if (path.endsWith("/disconnect")) return disconnect(input.token!);
-      if (path.endsWith("/stream")) {
-        let current: ReadableStreamDefaultController<Uint8Array>;
-        return new Response(
-          new ReadableStream<Uint8Array>({
-            start(controller) {
-              current = controller;
-              streams.add(controller);
-              controller.enqueue(encoder.encode(": ready\n\n"));
-              streamReady.resolve();
-            },
-            cancel() {
-              streams.delete(current);
-            },
-          }),
-          { headers: { "content-type": "text/event-stream" } },
-        );
-      }
+      if (path.endsWith("/stream")) return stream.response();
       return new Response(null, { status: 404 });
     },
   });
@@ -150,7 +224,8 @@ const fixture = async () => {
       hostEvents: publisher,
     });
     const gate = createHostCapabilityGate({ capabilities, declaredCapabilities: ["editing.text"] });
-    return () => gate.call({ method: "editing.text", params: { operation: "current" } });
+    return (request: TextEditingRequest = { operation: "current" }) =>
+      gate.call({ method: "editing.text", params: request });
   };
   const value = {
     workbench,
@@ -165,6 +240,11 @@ const fixture = async () => {
       const held = activityGate();
       activityGates.set(active, held);
       return held;
+    },
+    holdNextOpen: openings.hold,
+    holdNextAbandon: openings.holdAbandon,
+    refuseNextOpen() {
+      refuseOpen = true;
     },
     waitActive(next: boolean) {
       if (active.at(-1) === next) return Promise.resolve();
@@ -181,7 +261,7 @@ const fixture = async () => {
     requests,
     connectionStarted: connectionStarted.promise,
     closeStarted: closeStarted.promise,
-    streamReady: streamReady.promise,
+    streamReady: stream.ready,
     frame,
     holdConnection() {
       holdConnection = true;
@@ -203,11 +283,9 @@ const fixture = async () => {
       holdClose = false;
       releaseClose.resolve();
     },
-    emit(event: TextEditingEvent) {
-      for (const controller of streams)
-        controller.enqueue(encoder.encode(`event: text\ndata: ${JSON.stringify(event)}\n\n`));
-    },
+    emit: stream.emit,
     async stop() {
+      openings.dispose();
       for (const held of activityGates.values()) held.release.resolve();
       releaseConnection.resolve();
       releaseClose.resolve();
@@ -241,6 +319,179 @@ test("one webview uses its captured public scope and forwards events across adap
   f.emit(event);
   await received.promise;
   expect(f.delivered).toEqual([{ scope: "editing.text", payload: event }]);
+});
+
+test("installed text participants reach the shared chrome and a closed member cannot restore them", async () => {
+  const f = await fixture();
+  const request = f.frame();
+  const memberId = crypto.randomUUID();
+  await request({ operation: "register", memberId });
+  const opened = (await request({
+    operation: "open",
+    memberId,
+    input: { grant: { token: "selected" } },
+  })) as TextEditingOpened;
+  await f.streamReady;
+  const participant = { id: "peer", label: "Alex", deviceName: "Laptop", selection: null };
+  const deliver = async (event: TextEditingEvent) => {
+    const received = Promise.withResolvers<void>();
+    f.events.bind(() => received.resolve());
+    f.emit(event);
+    await received.promise;
+  };
+  const presence: TextEditingEvent = {
+    type: "presence",
+    memberId,
+    handle: opened.handle,
+    version: 1,
+    participants: [participant],
+  };
+  await deliver(presence);
+  expect(f.workbench.presence.store.getState().participants).toEqual([{ id: "peer", label: "Alex" }]);
+  await request({ operation: "close", handle: opened.handle });
+  expect(f.workbench.presence.store.getState().participants).toEqual([]);
+  await deliver({ ...presence, version: 2 });
+  expect(f.workbench.presence.store.getState().participants).toEqual([]);
+  await request({ operation: "register", memberId });
+  const next = (await request({
+    operation: "open",
+    memberId,
+    input: { grant: { token: "selected" } },
+  })) as TextEditingOpened;
+  await deliver({ ...presence, version: 3 });
+  expect(f.workbench.presence.store.getState().participants).toEqual([]);
+  await deliver({ ...presence, handle: next.handle, version: 1 });
+  expect(f.workbench.presence.store.getState().participants).toEqual([{ id: "peer", label: "Alex" }]);
+  f.events.unbind();
+  expect(f.workbench.presence.store.getState().participants).toEqual([]);
+});
+
+test.each([
+  "close",
+  "abandon",
+] as const)("a held %s receipt cannot restore or erase a successor's chrome presence", async (operation) => {
+  const f = await fixture();
+  const request = f.frame();
+  const memberId = crypto.randomUUID();
+  const open = async () => {
+    await request({ operation: "register", memberId });
+    return (await request({
+      operation: "open",
+      memberId,
+      input: { grant: { token: "selected" } },
+    })) as TextEditingOpened;
+  };
+  const presence = async (handle: string, version: number) => {
+    const delivered = Promise.withResolvers<void>();
+    f.events.bind(() => delivered.resolve());
+    f.emit({
+      type: "presence",
+      memberId,
+      handle,
+      version,
+      participants: [{ id: "peer", label: "Alex", deviceName: "Laptop", selection: null }],
+    });
+    await delivered.promise;
+  };
+  const original = await open();
+  await f.streamReady;
+  await presence(original.handle, 1);
+  const held = operation === "close" ? f.holdNextOpen() : f.holdNextAbandon();
+  const pending =
+    operation === "close"
+      ? request({ operation: "open", memberId, input: { grant: { token: "selected" } } })
+      : request({ operation: "abandon", memberId });
+  try {
+    await held.entered.promise;
+    if (operation === "close") {
+      await request({ operation: "close", handle: original.handle });
+      held.release.resolve();
+      await pending;
+      await presence(original.handle, 2);
+      expect(f.workbench.presence.store.getState().participants).toEqual([]);
+    } else {
+      const successor = await open();
+      expect(successor.handle).not.toBe(original.handle);
+      await presence(successor.handle, 1);
+      held.release.resolve();
+      await pending;
+      expect(f.workbench.presence.store.getState().participants).toEqual([{ id: "peer", label: "Alex" }]);
+    }
+  } finally {
+    held.release.resolve();
+    await pending;
+  }
+});
+
+test("confirmed abandonment clears old presence when a same-ID successor is refused", async () => {
+  const f = await fixture();
+  const request = f.frame();
+  const memberId = crypto.randomUUID();
+  const open = () => request({ operation: "open", memberId, input: { grant: { token: "selected" } } });
+  await request({ operation: "register", memberId });
+  const original = (await open()) as TextEditingOpened;
+  await f.streamReady;
+  const delivered = Promise.withResolvers<void>();
+  f.events.bind(() => delivered.resolve());
+  f.emit({
+    type: "presence",
+    memberId,
+    handle: original.handle,
+    version: 1,
+    participants: [{ id: "peer", label: "Alex", deviceName: "Laptop", selection: null }],
+  });
+  await delivered.promise;
+  expect(f.workbench.presence.store.getState().participants).toHaveLength(1);
+  const held = f.holdNextAbandon();
+  const abandoned = request({ operation: "abandon", memberId });
+  try {
+    await held.entered.promise;
+    await request({ operation: "register", memberId });
+    f.refuseNextOpen();
+    await expect(open()).rejects.toMatchObject({ code: "source_read_only" });
+    held.release.resolve();
+    await abandoned;
+    expect(f.workbench.presence.store.getState().participants).toEqual([]);
+  } finally {
+    held.release.resolve();
+    await abandoned;
+  }
+});
+
+test("custom presence received before admission waits for its handle and follows project activation", async () => {
+  const f = await fixture();
+  const request = f.frame();
+  const memberId = crypto.randomUUID();
+  await request({ operation: "register", memberId });
+  await f.streamReady;
+  const held = f.holdNextOpen();
+  const opening = request({ operation: "open", memberId, input: { grant: { token: "selected" } } });
+  try {
+    await held.entered.promise;
+    const delivered = Promise.withResolvers<void>();
+    f.events.bind(() => delivered.resolve());
+    f.emit({
+      type: "presence",
+      memberId,
+      handle: held.handle,
+      version: 1,
+      participants: [{ id: "peer", label: "Sam", deviceName: "Desktop", selection: null }],
+    });
+    await delivered.promise;
+    expect(f.workbench.presence.store.getState().participants).toEqual([]);
+    held.release.resolve();
+    await opening;
+    expect(f.workbench.presence.store.getState().participants).toEqual([{ id: "peer", label: "Sam" }]);
+    f.workbench.activation.setActive(false);
+    expect(f.workbench.presence.store.getState().participants).toEqual([]);
+    f.workbench.activation.setActive(true);
+    expect(f.workbench.presence.store.getState().participants).toEqual([{ id: "peer", label: "Sam" }]);
+    await request({ operation: "abandon", memberId });
+    expect(f.workbench.presence.store.getState().participants).toEqual([]);
+  } finally {
+    held.release.resolve();
+    await opening;
+  }
 });
 
 test("public text workbench participation follows project activation without closing its source", async () => {
