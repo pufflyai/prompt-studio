@@ -8,7 +8,7 @@ CLI and dashboard clients call the session API. Domain services coordinate datab
 
 ## Personal history across devices
 
-For a cloud project, each device publishes its workspace summaries, session records, and full harness-neutral conversations to the user's personal space. The index is one small CRDT document. Completed conversations use append-only encrypted message logs over the existing document protocol. Large messages use encrypted blobs. Live snapshots use the unstored channel and are fragmented within its wire limit. The relay cannot read their content. See [ADR 0130](../../adrs/0131-personal-session-message-logs.md).
+For a cloud project, each device publishes its workspace summaries, session records, and full harness-neutral conversations to the user's personal space. The index is one small CRDT document. Completed conversations use append-only encrypted message logs over the existing document protocol. Large messages use encrypted blobs. Live snapshots use the unstored channel and are fragmented within its wire limit. The relay cannot read their content. See [ADR 0131](../../adrs/0131-personal-session-message-logs.md).
 
 Local page files retain downloaded conversations and their read cursors. The local CRDT store retains the index. The session and workspace read APIs, extension read APIs, and dashboard sync snapshot include the user's other devices. A downloaded conversation stays readable after its source stops and after the reader restarts offline. Signing out hides cached personal records; another account uses a separate local namespace. Local publication records their first account owner so changing accounts does not republish already-owned local records to a different personal space.
 

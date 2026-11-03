@@ -2,6 +2,7 @@ import { type SessionMessage, sessionSchema, workspaceSchema } from "pstdio-api-
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { historyNamespace, type SessionLogFiles } from "./log-files";
+import { createPersonalMessageReader } from "./message-reader";
 import { sharedQueueRecordSchema, sharedQueueResponse } from "./queue-snapshot";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore, type HistoryDocuments } from "./store";
@@ -50,6 +51,7 @@ export const createPersonalHistoryService = (input: {
     return {
       login,
       identity,
+      namespace: historyNamespace({ ...login, projectId }),
       history: createPersonalHistoryStore({ ...login, projectId, documents: input.documents }),
     };
   };
@@ -183,12 +185,6 @@ export const createPersonalHistoryService = (input: {
       const matches = (await workspaces(projectId)).filter((row) => row.workspace_shorthand === shorthand);
       return matches.length === 1 ? matches[0]! : null;
     },
-    async messages(id: string, projectId: string) {
-      const current = await context(projectId);
-      if (!current || !(await sessions(projectId)).some((row) => row.id === id)) return null;
-      const messages = await input.logs.read(historyNamespace({ ...current.login, projectId }), id);
-      await refreshIdentity();
-      return current.identity === identity ? messages : null;
-    },
+    ...createPersonalMessageReader({ context, sessions, logs: input.logs, refreshIdentity, identity: () => identity }),
   };
 };

@@ -18,6 +18,7 @@ test("a live preview arriving before earlier completed messages is shown as soon
       queuedMessages: async () => null,
       getSession: async () => ({ id: "session", project_id: "project", status: "in_progress" }),
       messages: async () => [],
+      messagesReady: async () => false,
       watchMessages: (_id: string, callback: (update: Update) => void) => {
         listener = callback;
         return () => {
@@ -80,7 +81,9 @@ test.each([
     personalHistoryService: {
       queuedMessages: async () => null,
       getSession: async () => row,
-      messages: async () => [],
+      messages: async () =>
+        row.status === "completed" ? [message("earlier-completed"), message("newer-message")] : [],
+      messagesReady: async () => true,
       watchMessages: (_id: string, callback: (update: Update) => void) => {
         listener = callback;
         return () => {

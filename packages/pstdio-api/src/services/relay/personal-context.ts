@@ -1,10 +1,12 @@
 import { hostname } from "node:os";
 import { openLive, type SyncSpace } from "pstdio-sync/encryption";
+import type { DocumentRelay } from "pstdio-sync/relay";
 import type { LiveServerMessage } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { capturePersonalHistory } from "../personal-history/capture";
 import { createLiveReceiver, personalLiveTopic } from "../personal-history/live-messages";
 import { historyNamespace, type SessionLogFiles } from "../personal-history/log-files";
+import type { createLogProgress } from "../personal-history/log-progress";
 import { createLogReceiver } from "../personal-history/log-receiver";
 import { createHistoryReferences, historyReferenceName } from "../personal-history/references";
 import { createPersonalHistoryStore, type PersonalHistoryStore } from "../personal-history/store";
@@ -73,18 +75,40 @@ export const discardLegacyHistory = async (config: RelayWorkbench, deps: Extensi
   for (const name of names) await documents.discard(owner, name);
 };
 
-export const createPersonalReaders = (deps: ExtensionsRouteDeps, logs: SessionLogFiles, namespace: string) => {
+export const createPersonalReaders = (input: {
+  deps: ExtensionsRouteDeps;
+  logs: SessionLogFiles;
+  context: ReturnType<typeof createPersonalContext>;
+  config: RelayWorkbench;
+  progress: ReturnType<typeof createLogProgress>;
+  relayFor: (space: SyncSpace) => (id: string) => DocumentRelay;
+  statusChanged?: () => void;
+}) => {
+  const { deps, logs, context, config, progress } = input;
   const liveReceiver = createLiveReceiver((id, index, message) =>
     deps.personalHistoryService.messageReceived(id, { index, message, live: true }),
   );
   const receiver = createLogReceiver({
     files: logs,
-    namespace,
+    namespace: context.namespace,
     received: (sessionId, index, message) => {
       liveReceiver.completed(sessionId, index);
       deps.personalHistoryService.messageReceived(sessionId, { index, message, live: false });
     },
   });
 
-  return { liveReceiver, receiver };
+  return {
+    liveReceiver,
+    async readLogs(ownSessions: Set<string>, personal: SyncSpace) {
+      const remote = await remotePersonalSessions(context.history, config.environmentId);
+      const reading = new Set(await receiver.behind(remote, await context.history.readHeads()));
+      progress.receive(ownSessions, remote, reading);
+      input.statusChanged?.();
+      for (const id of reading) {
+        await receiver.read([id], personal, input.relayFor(personal));
+        progress.received(id);
+        input.statusChanged?.();
+      }
+    },
+  };
 };

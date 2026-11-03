@@ -9,12 +9,15 @@ export const createPersonalLive = (input: {
   owns: (documentId: string) => boolean;
   received: (message: Extract<LiveServerMessage, { type: "event" }>) => Promise<void>;
   changed: () => void;
+  ready: () => void;
 }) => {
   let closed = false;
-  let topic: string | undefined;
+  let topic: { spaceOwner: string | null; topic: string } | undefined;
   let release: (() => void) | undefined;
   const stop = input.live.listen((event) => {
     if (event.type === "event") void input.received(event).catch(() => {});
+    if (event.type === "subscribed" && event.topic === topic?.topic && event.spaceOwner === topic.spaceOwner)
+      input.ready();
     let documentId: string | undefined;
     if (event.type === "changed" || event.type === "discovered") documentId = event.documentId;
     if (event.type === "subscribed") documentId = event.topic;
@@ -23,10 +26,10 @@ export const createPersonalLive = (input: {
   return {
     async prepare(space: SyncSpace) {
       if (closed) return;
-      const next = await personalLiveTopic(space);
-      if (closed || next === topic) return;
+      const next = { spaceOwner: space.spaceOwner, topic: await personalLiveTopic(space) };
+      if (closed || (next.topic === topic?.topic && next.spaceOwner === topic.spaceOwner)) return;
       release?.();
-      release = input.live.subscribe({ spaceOwner: space.spaceOwner, topic: next });
+      release = input.live.subscribe(next);
       topic = next;
     },
     send: (message: { spaceOwner: string | null; topic: string; payload: string }) => {

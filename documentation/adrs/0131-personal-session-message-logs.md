@@ -21,6 +21,10 @@ Store log heads in the index in batches, at most once per ten seconds during con
 
 Use a new index identity and relay name. Each upgraded device publishes its own sessions once. Drop old local transcript documents and journals without reading their content. Devices that never upgrade do not contribute to the new index. Existing first-account ownership claims still prevent publication to another account.
 
+A terminal session carries a small publication acknowledgment in the same encrypted index: its status/update version and the acknowledged durable log position, including zero for an empty conversation. A follower sends its terminal event only when that version still matches and its local cursor has reached the position. It rechecks the version after disk reads and the final snapshot write. The index can arrive before the log without ending the stream early. This adds no document, subscription, or relay protocol version.
+
+Live publication uses the same captured account/project ownership as durable logs. Events received before ownership is known are retained as IDs; capture and private-topic admission catch up the current resident preview without another chunk. Key preparation exposes a space only after its identifiers and generation are committed.
+
 Queued follow-up messages that have not started are shared as a separate index record per session, only while the queue has requests. Saving messages rewrites the session record but not its queue. The record carries each request's position, revision, model and a 500-character preview, at most 50 requests. Other devices show the queue read-only; changing it is a remote command (PS-827).
 
 ## Consequences

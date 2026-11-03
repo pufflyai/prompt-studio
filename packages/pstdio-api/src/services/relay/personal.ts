@@ -1,4 +1,3 @@
-import type { SyncSpace } from "pstdio-sync/encryption";
 import { createDocumentRelayConnection, createLiveConnection, type LiveConnection } from "pstdio-sync/relay";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
@@ -11,10 +10,11 @@ import {
   createPersonalReaders,
   discardLegacyHistory,
   personalLiveReceiver,
-  remotePersonalSessions,
 } from "./personal-context";
 import { createPersonalDocuments } from "./personal-documents";
 import { createPersonalLive } from "./personal-live";
+import { createPersonalPreviews } from "./personal-previews";
+import { createPersonalPublications } from "./personal-publications";
 import type { RelayWorkbench } from "./runtime";
 
 const watchPersonalIndexChanges = (
@@ -30,6 +30,9 @@ const watchPersonalIndexChanges = (
     changed(event.table === "sessions" ? row.id : undefined);
   });
 
+const warnPersonalReconnecting = (workbenchId: string) =>
+  apiLogger.warn({ event: "relay.personal.reconnecting", workbenchId }, "Personal history sync will retry");
+
 /**
  * Publishes this device's session history to the user's private space and copies the user's other devices'
  * history here. The session index is a small CRDT document. Each conversation is an append-only log of
@@ -44,13 +47,16 @@ interface RelayPersonalInput {
   statusChanged?: () => void;
 }
 
+const personalConnection = (
+  { config, access, live }: Pick<RelayPersonalInput, "config" | "access" | "live">,
+  signal: AbortSignal,
+) => live ?? createLiveConnection({ origin: config.relayOrigin, projectId: config.workbenchId, access, signal });
+
 export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   const { config, deps } = input;
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
-  const live =
-    input.live ??
-    createLiveConnection({ origin: config.relayOrigin, projectId: config.workbenchId, access: input.access, signal });
+  const live = personalConnection(input, signal);
   const context = createPersonalContext(config, deps);
   const { history, references, namespace } = context;
   const documents = createPersonalDocuments({
@@ -64,23 +70,30 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   const progress = createLogProgress();
   const publishingSessions = new Set<string>();
   let firstDownloaded = false;
+  const publications = createPersonalPublications({
+    history,
+    wake: () => connection.wake(),
+    published: (sessionId) => {
+      publishingSessions.delete(sessionId);
+      input.statusChanged?.();
+    },
+  });
   const publisher = createLogPublisher({
     files: logs,
     namespace,
     deviceId: config.environmentId,
     deps,
-    published: (sessionId, head) => {
-      publishingSessions.delete(sessionId);
-      pendingHeads.set(sessionId, head);
-      input.statusChanged?.();
-      // An idle device still writes its heads.
-      headsTimer ??= setTimeout(() => {
-        headsTimer = undefined;
-        connection.wake();
-      }, 10_500);
-    },
+    published: publications.published,
   });
-  const { liveReceiver, receiver } = createPersonalReaders(deps, logs, namespace);
+  const { liveReceiver, readLogs } = createPersonalReaders({
+    deps,
+    logs,
+    context,
+    config,
+    progress,
+    relayFor: documents.relayFor,
+    statusChanged: input.statusChanged,
+  });
 
   // Sync state lasts as long as the key generation. An access renewal keeps it; only a lost connection makes the
   // next run check everything again.
@@ -94,12 +107,16 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   let lastRun = 0;
   // Durable index heads advertise completed log entries without subscribing to every historical log.
   // Batch heads while streaming; session metadata changes flush them immediately.
-  const pendingHeads = new Map<string, number>();
-  let headsWritten = 0;
-  let headsTimer: ReturnType<typeof setTimeout> | undefined;
   let legacyDiscarded = false;
   let ownSessions = new Set<string>();
   const changedSessions = new Set<string>();
+  const previews = createPersonalPreviews({
+    owned: () => ownSessions,
+    space: () => documents.space,
+    sessions: deps.sessionService.store,
+    publish: (id, space) => publisher.live(id, space, channel.send),
+    wake: () => connection.wake(),
+  });
 
   const announcements = createPersonalAnnouncements(deps, config.workbenchId, signal);
   const prepare = async (attemptSignal: AbortSignal) => {
@@ -120,12 +137,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     return prepared;
   };
   const synchronizeIndex = async (full: boolean, captured: boolean) => {
-    const writeHeads = pendingHeads.size > 0 && (full || captured || Date.now() - headsWritten > 10_000);
-    if (writeHeads) {
-      await history.writeHeads(new Map(pendingHeads));
-      pendingHeads.clear();
-      headsWritten = Date.now();
-    }
+    const writeHeads = await publications.flush(full, captured);
     const received = full || remoteIndexChanged;
     const wrote = captured || writeHeads;
     const pending = wrote && (await documents.status()).pending;
@@ -134,23 +146,20 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     await documents.synchronize();
     return true;
   };
-  const readLogs = async (personal: SyncSpace) => {
-    const remote = await remotePersonalSessions(history, config.environmentId);
-    const reading = new Set(await receiver.behind(remote, await history.readHeads()));
-    progress.receive(ownSessions, remote, reading);
-    input.statusChanged?.();
-    for (const id of reading) {
-      await receiver.read([id], personal, documents.relayFor(personal));
-      progress.received(id);
-      input.statusChanged?.();
-    }
-  };
   const interrupted = (publishing: { all: boolean; read: boolean }, own: string[]) => {
     publishAll ||= publishing.all;
     readAll ||= publishing.read;
     for (const id of own) changedSessions.add(id);
     localIndexChanged = true;
     remoteIndexChanged = true;
+  };
+  const capture = async (full: boolean) => {
+    if (!full && !localIndexChanged) return false;
+    localIndexChanged = false;
+    const previous = ownSessions;
+    ownSessions = await capturePersonalIndex(deps, config, history, references);
+    previews.admitted(previous);
+    return true;
   };
   const connection = createDocumentRelayConnection({
     live,
@@ -175,22 +184,20 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
       const publishing = { all: publishAll, read: readAll };
       publishAll = false;
       readAll = false;
-      const own = [...changedSessions];
-      changedSessions.clear();
+      const own: string[] = [];
       try {
-        const captured = full || localIndexChanged;
-        if (captured) {
-          localIndexChanged = false;
-          ownSessions = await capturePersonalIndex(deps, config, history, references);
-        }
+        const captured = await capture(full);
+        own.push(...changedSessions);
+        changedSessions.clear();
         attemptSignal.throwIfAborted();
         const sessions = publishing.all ? [...ownSessions] : own.filter((id) => ownSessions.has(id));
         for (const id of sessions) publishingSessions.add(id);
         await publisher.publish(sessions, personal, documents.relayFor(personal), { skipUnchanged: publishing.all });
         attemptSignal.throwIfAborted();
+        previews.flush();
         const indexSynced = await synchronizeIndex(full, captured);
         attemptSignal.throwIfAborted();
-        if (publishing.read || indexSynced || captured) await readLogs(personal);
+        if (publishing.read || indexSynced || captured) await readLogs(ownSessions, personal);
         if (indexSynced) await announcements.announce();
         firstDownloaded ||= progress.status(new Set()).downloaded && (await documents.status()).downloaded;
       } catch (error) {
@@ -201,16 +208,13 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
         input.statusChanged?.();
       }
     },
-    onError: () =>
-      apiLogger.warn(
-        { event: "relay.personal.reconnecting", workbenchId: config.workbenchId },
-        "Personal history sync will retry",
-      ),
+    onError: () => warnPersonalReconnecting(config.workbenchId),
   });
   const channel = createPersonalLive({
     live,
     received: personalLiveReceiver(liveReceiver, () => documents.space),
     owns: documents.owns,
+    ready: previews.ready,
     changed: () => {
       remoteIndexChanged = true;
       progress.invalidate();
@@ -233,7 +237,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   const stopConversations = deps.sessionService.store.watch((id) => {
     changedSessions.add(id);
     input.statusChanged?.();
-    if (documents.space) publisher.live(id, documents.space, channel.send);
+    previews.changed(id);
     connection.wake();
   });
   const stopStorage = deps.extensionStorageService.watch((owner) => {
@@ -243,7 +247,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   return {
     retry: connection.retry,
     async status() {
-      const index = await documents.status(pendingHeads.size > 0);
+      const index = await documents.status(publications.pending());
       const pending = new Set([...changedSessions, ...publishingSessions].filter((id) => ownSessions.has(id)));
       const logs = progress.status(pending);
       return personalHistoryProgress(index, logs, firstDownloaded, connection.status());
@@ -253,7 +257,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
       documents.close();
       publisher.close();
       liveReceiver.close();
-      clearTimeout(headsTimer);
+      publications.close();
     }),
     close() {
       stopEvents();

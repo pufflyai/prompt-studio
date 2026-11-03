@@ -56,7 +56,7 @@ export const createPersonalDocuments = (input: {
       keyRevision++;
     },
     get space() {
-      return spaces?.personal;
+      return preparedRevision === keyRevision ? spaces?.personal : undefined;
     },
     owns: (id: string) => ids.includes(id),
     async prepare(signal: AbortSignal) {
@@ -67,7 +67,6 @@ export const createPersonalDocuments = (input: {
         return { personal: spaces!.personal, renewed: false, recreated: false };
       const keys = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal });
       keysFor = signal;
-      preparedRevision = revision;
       const recreated =
         spaces?.personal.generation !== keys.personal.generation ||
         spaces?.project.generation !== keys.project.generation;
@@ -80,6 +79,7 @@ export const createPersonalDocuments = (input: {
         shared = syncFor(context.references.owner, context.references.store, keys.project, sharedId);
       }
       spaces = keys;
+      preparedRevision = revision;
       return { personal: keys.personal, renewed, recreated };
     },
     async status(pendingHeads = false) {
