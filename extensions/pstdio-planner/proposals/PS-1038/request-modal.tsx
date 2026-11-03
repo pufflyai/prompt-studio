@@ -15,6 +15,7 @@ export function RequestModal(props: RequestModalProps) {
   const { title, requests, open, onClose, finalFocusEl } = props;
   return (
     <Dialog.Root
+      unmountOnExit={false}
       open={open}
       onOpenChange={({ open }) => !open && onClose()}
       size="md"
