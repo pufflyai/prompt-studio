@@ -75,8 +75,8 @@ test("loads ticket content independently of editor downloads", async ({ page, re
   });
   page.on("response", async (response) => {
     if (response.url().includes(".view.ticket-editor.file.load/execute")) {
-      await response.finished();
-      contentLoaded = response.ok();
+      const error = await response.finished();
+      contentLoaded = error === null && response.ok();
     }
   });
   await page.route(/markdown-editor[^/]*\.(?:js|tsx?)(?:\?|$)/, async (route) => {
