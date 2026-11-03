@@ -53,7 +53,9 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
       onAnswerRequest={async () => {
         if (failSave) throw new Error("Unable to save. Try again.");
       }}
-      onOpenRequestChat={async () => {}}
+      onOpenRequestChat={async () => {
+        throw new Error("Session navigation is unavailable in this isolated preview.");
+      }}
     />
   );
 }
@@ -108,7 +110,9 @@ export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
             ),
           }));
         }}
-        onOpenChat={async () => {}}
+        onOpenChat={async () => {
+          throw new Error("Session navigation is unavailable in this isolated preview.");
+        }}
       />
     </>
   );

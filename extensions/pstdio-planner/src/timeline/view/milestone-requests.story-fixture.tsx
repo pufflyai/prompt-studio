@@ -68,7 +68,9 @@ export function MilestoneNeedsAttentionPreview(props: { rows: PlanRow[] }) {
             })),
           );
         }}
-        onOpenChat={async () => {}}
+        onOpenChat={async () => {
+          throw new Error("Session navigation is unavailable in this isolated preview.");
+        }}
         open={open}
         pendingOnly
         onClose={() => setOpen(false)}
