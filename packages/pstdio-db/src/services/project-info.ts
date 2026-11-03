@@ -1,4 +1,10 @@
-import { coreOwnerId, type ProjectInfo, projectInfoDocumentId, readProjectInfo, writeProjectInfo } from "pstdio-sync";
+import {
+  coreOwnerId,
+  type ProjectInfo,
+  projectInfoDocumentId,
+  readProjectInfo,
+  writeProjectInfo,
+} from "pstdio-sync/records";
 import * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import { createDocumentStorageDBService } from "./extension-storage/document-storage";

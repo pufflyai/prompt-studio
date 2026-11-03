@@ -55,7 +55,7 @@ test(
     await Bun.write(
       join(source, "extension.ts"),
       `export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker", capabilities: () => [], start(_ctx, input) {
-    for (let index = 0; index < 600; index++) input.events.push({ op: "add", path: "/messages/" + index, value: { id: "message-" + index, role: "assistant", parts: [{ type: "text", text: "packaged-secret transcript " + index }] } });
+    for (let index = 0; index < 600; index++) input.events.push({ op: "add", path: "/messages/" + index, value: { id: "message-" + index, role: "assistant", parts: [{ type: "text", text: "packaged-secret transcript ".repeat(index === 0 ? 50_000 : 1) + index }] } });
     return { agentSessionId: "native", done: Promise.resolve({ status: "completed" }), stop() {} };
   }, resume() { throw new Error("Read only"); }, getMessages() { return []; }, recoverMessages(_ctx, input) { return { kind: "recovered", messages: input.knownMessages }; } }] };`,
     );
@@ -125,6 +125,11 @@ test(
       clientB = createClient({ baseUrl: b.baseUrl, token: b.descriptor.token });
       const conversation = await clientB.sessions.getConversation(session.id);
       expect(conversation.messages).toHaveLength(600);
+      expect(conversation.messages[0]).toMatchObject({
+        parts: [{ type: "text", text: `${"packaged-secret transcript ".repeat(50_000)}0` }],
+      });
+      expect(peer.blobContents().length).toBeGreaterThan(0);
+      for (const bytes of peer.blobContents()) expect(new TextDecoder().decode(bytes)).not.toContain("packaged-secret");
       expect(conversation.messages.at(-1)).toMatchObject({
         parts: [{ type: "text", text: "packaged-secret transcript 599" }],
       });

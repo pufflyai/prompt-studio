@@ -117,7 +117,7 @@ function PlanContent(props: PlanContentProps) {
               rows: new Map(queryData.rows.map((row) => [row.id, row])),
             }}
             onOpenRequests={(row) => {
-              setSelectedId(undefined);
+              viewProps.onSelect(row.id);
               void host.call("navigation.open", { target: attentionPanelTarget(row.target.resource!, "timeline") });
             }}
           />

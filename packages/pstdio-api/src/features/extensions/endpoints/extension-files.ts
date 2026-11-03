@@ -118,7 +118,7 @@ export const getExtensionFileContentHandler = (
     if (!file) return c.json({ error: `Extension file not found: ${fileId}` }, 404);
 
     const headers = {
-      "cache-control": "public, max-age=31536000, immutable",
+      "cache-control": "private, no-cache",
       "content-type": file.mime_type ?? "application/octet-stream",
       ...(file.hash ? { etag: file.hash } : {}),
     };

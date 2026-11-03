@@ -90,6 +90,8 @@ const seedEnabledInstance = async (projectId: string) => {
     instanceId: result.instance.id,
     installedExtensionId: result.installedSource.id,
     installName,
+    name,
+    displayName,
     sourcePath,
   };
 };
@@ -235,7 +237,7 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
 
   test("preserves user data without listing the removed extension as installed", async () => {
     const project = await createProject("Uninstall Keep Data");
-    const { instanceId, installName, sourcePath } = await seedEnabledInstance(project.id);
+    const { instanceId, installName, sourcePath, name, displayName } = await seedEnabledInstance(project.id);
     await seedTicket(project.id, instanceId);
 
     const res = await app.request(`/v1/projects/${project.id}/extensions/${instanceId}`, { method: "DELETE" });
@@ -251,6 +253,29 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
     const listRes = await app.request(`/v1/projects/${project.id}/extensions`);
     const list = await listRes.json();
     expect(list.extensions.find((entry: { id: string }) => entry.id === instanceId)).toBeUndefined();
+
+    const restoredPath = createTestExtensionSource({
+      root: pstdioHome,
+      installName,
+      name,
+      displayName,
+      version: "1.0.0",
+    });
+    const restored = await handle.deps.extensionService.syncInstalledSourceForProject({
+      projectId: project.id,
+      sourcePath: restoredPath,
+      installName,
+      extensionId: record!.installedSource.extension_id,
+      name,
+      displayName,
+      manifest: record!.installedSource.manifest_json,
+      version: "1.0.0",
+    });
+    expect(restored?.instance.id).toBe(instanceId);
+    expect(restored?.instance.enabled).toBe(false);
+    expect(await listTickets(project.id, instanceId)).toHaveLength(1);
+    const restoredList = await (await app.request(`/v1/projects/${project.id}/extensions`)).json();
+    expect(restoredList.extensions).toContainEqual(expect.objectContaining({ id: instanceId, enabled: false }));
   });
 
   test("deletes user data and the instance when deleteUserData=true", async () => {

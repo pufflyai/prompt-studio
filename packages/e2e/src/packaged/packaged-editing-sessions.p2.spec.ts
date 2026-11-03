@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { writeEditingSessionExtension } from "../helpers/editing-session-extension";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyEditingSession } from "../helpers/verify-editing-session";
+import { browserLaunchOptions } from "../scripts/browser-launch-options";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, chromium, expect, firefox, test, webkit } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
@@ -45,7 +46,7 @@ for (const [type, launchOptions] of [
       });
       expect(response.status).toBe(201);
       const project = (await response.json()) as { id: string };
-      browser = await type.launch({ headless: true, ...launchOptions });
+      browser = await type.launch(browserLaunchOptions(type, root, { headless: true, ...launchOptions }));
       const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await page.addInitScript(() => {
         if (window.top === window) localStorage.setItem("onboarding-complete", "true");

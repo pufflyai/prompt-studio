@@ -31,6 +31,19 @@ export const createExtensionBlobsApi = (
     scopeId: string | null;
   },
 ): CommandRunnerEnvironment["storage"]["files"] => ({
+  async update(id, fileInput) {
+    const file = await deps.extensionFileService.update({
+      project_id: input.projectId,
+      extension_instance_id: input.extensionInstanceId,
+      file_id: id,
+      file_name: fileInput.name,
+      data: toBuffer(fileInput.data),
+      mime_type: fileInput.mimeType ?? null,
+      signal: input.signal,
+    });
+    if (!file) throw new Error(`Extension file not found: ${id}`);
+    return toExtensionBlobRef(input.projectId, input.extensionInstanceId, file);
+  },
   async put(fileInput) {
     const file = await deps.extensionFileService.upload({
       project_id: input.projectId,

@@ -6,13 +6,18 @@ import { resource_anchors, sessions, workspace_sessions } from "../../db/schemas
 import { sessionColumns } from "../legacy-resource-links";
 
 const activityTime = sql<string>`greatest(${sessions.last_request_ended}, ${sessions.last_request_started}, ${sessions.updated_at}, ${sessions.created_at})`;
-const queryOrder = (input: ExtensionSessionQuery) =>
-  input.orderBy === "lastActivity" ? activityTime : sql<string>`${sessions.created_at}`;
+const queryOrder = (input: ExtensionSessionQuery) => {
+  if (input.orderBy === "lastActivity") return activityTime;
+  if (input.orderBy === "updated") return sql<string>`${sessions.updated_at}`;
+  return sql<string>`${sessions.created_at}`;
+};
 
 const decodeCursor = (value: string, projectId: string, orderBy: ExtensionSessionQuery["orderBy"]) => {
   try {
     const cursor = JSON.parse(Buffer.from(value, "base64url").toString());
-    const timestamp = orderBy === "lastActivity" ? cursor.activityAt : cursor.createdAt;
+    const timestamp = { created: cursor.createdAt, lastActivity: cursor.activityAt, updated: cursor.updatedAt }[
+      orderBy ?? "created"
+    ];
     if (
       cursor?.projectId === projectId &&
       (cursor.orderBy ?? "created") === (orderBy ?? "created") &&
@@ -118,9 +123,12 @@ export const createSessionQuery =
             JSON.stringify({
               projectId,
               id: last.id,
-              ...(input.orderBy === "lastActivity"
-                ? { orderBy: "lastActivity", activityAt: last.activity_at }
-                : { createdAt: last.created_at }),
+              ...(input.orderBy ? { orderBy: input.orderBy } : {}),
+              ...{
+                created: { createdAt: last.created_at },
+                lastActivity: { activityAt: last.activity_at },
+                updated: { updatedAt: last.updated_at },
+              }[input.orderBy ?? "created"],
             }),
           ).toString("base64url")
         : null;

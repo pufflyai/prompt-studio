@@ -46,3 +46,17 @@ test("unchanged current placements stay stable while their views are not registe
   const previous = [current];
   expect(retainViewPlacements(previous, [{ ...current }], new Set(), new Set(["playlist"]))).toBe(previous);
 });
+
+test("returning to an unchanged page keeps its placement when navigation rebuilt the identity", () => {
+  const previous = [playlist];
+  const rebuilt = { ...playlist, placementIdentity: { ...playlist.placementIdentity! } } as WorkbenchWidgetPlacement;
+  expect(retainViewPlacements(previous, [rebuilt], new Set(["playlist-view"]), new Set(["playlist"]))).toBe(previous);
+});
+
+test("a placement that gains or loses its identity counts as changed", () => {
+  const withoutIdentity = { ...playlist, placementIdentity: undefined } as WorkbenchWidgetPlacement;
+  const registered = new Set(["playlist-view"]);
+  const open = new Set(["playlist"]);
+  expect(retainViewPlacements([withoutIdentity], [playlist], registered, open)).toEqual([playlist]);
+  expect(retainViewPlacements([playlist], [withoutIdentity], registered, open)).toEqual([withoutIdentity]);
+});

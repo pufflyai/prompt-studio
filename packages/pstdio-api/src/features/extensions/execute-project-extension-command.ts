@@ -1,4 +1,10 @@
-import type { CommandExecuteBody, CommandExecuteResponse, JsonObject, JsonValue } from "pstdio-api-contracts";
+import {
+  type CommandExecuteBody,
+  type CommandExecuteResponse,
+  type JsonObject,
+  type JsonValue,
+  resolveCommandResourceParams,
+} from "pstdio-api-contracts";
 import { createCommandRunner, createReadBoundary } from "pstdio-extensions";
 import { z } from "zod";
 import { withStorageObservation } from "../../services/shared-files/storage-observation";
@@ -67,13 +73,16 @@ export const executeProjectExtensionCommand = async (
   });
   const versions = body.metadata?.fileStorageVersions;
   const expected = versions === undefined ? undefined : z.record(z.string(), z.string()).parse(versions);
+  const params = command
+    ? { ...resolveCommandResourceParams(command.params, body.params, { resource: body.resource }), ...body.params }
+    : body.params;
   const execute = () =>
     runner.execute({
       commandId,
       projectId,
       workspaceId: workspace?.id,
       workspaceDir: workspace ? resolveCommandWorkspaceDir(workspace) : undefined,
-      params: body.params as JsonObject | undefined,
+      params: params as JsonObject | undefined,
       resource: body.resource as never,
       attachment: body.attachment as never,
       slot: body.slot as never,

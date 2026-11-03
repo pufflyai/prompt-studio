@@ -30,3 +30,6 @@ export const dashboardViews = {
   workspaces: { id: "workspaces", label: "Workspaces", icon: standardResourceIcons.workspace },
   sessions: { id: "sessions", label: "Sessions", icon: "messages-circle" },
 } as const;
+
+export const dashboardExtensionsPage = { kind: "page", extensionId: "pstdio", id: "extensions" } as const;
+export const dashboardExtensionDetailPage = { ...dashboardExtensionsPage, id: "extension-detail" } as const;

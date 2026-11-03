@@ -1,112 +1,132 @@
 import { strict as assert } from "node:assert";
 import {
-  assetSchema,
-  fingerprint,
-  type RelayOperation,
-  receiptSchema,
-  relayAssetStatusSchema,
-  relayPath,
-  relayReplayResultSchema,
-  sealMutation,
-  snapshotSchema,
+  blobStatusSchema,
+  liveProtocolHeader,
+  liveProtocolVersion,
+  liveServerMessageSchema,
+  readResultSchema,
+  type SyncRoute,
+  syncPath,
+  syncProtocolHeader,
+  syncProtocolVersion,
+  updateResultSchema,
 } from "pstdio-sync-contracts";
 
 assert.equal(process.env.DATABASE_URL, undefined);
 assert.equal(process.env.MANAGER_DATABASE_URL, undefined);
-assert.equal(process.env.MANAGER_SERVICE_SECRET, undefined);
-assert.equal(process.env.RELAY_RECOVERY_KEY_FILE, undefined);
-const scope = {
-  accountId: process.env.SMOKE_ACCOUNT_ID!,
-  workbenchId: process.env.SMOKE_WORKBENCH_ID!,
-  extensionId: "notes",
-};
+const projectId = process.env.SMOKE_WORKBENCH_ID!;
 const token = process.env.SMOKE_ENVIRONMENT_TOKEN!;
-const call = (operation: RelayOperation, body?: unknown) =>
-  fetch(new URL(relayPath(scope, operation), process.env.RELAY_URL), {
-    method: body === undefined ? "GET" : "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+const controller = new AbortController();
+// The built fixture uses an internal HTTP-only network. Production client HTTPS policy stays unchanged.
+const request = async (route: SyncRoute, body: unknown, method = "POST", headers: Record<string, string> = {}) => {
+  const response = await fetch(new URL(syncPath(route), process.env.RELAY_URL), {
+    method,
+    signal: controller.signal,
+    headers: { authorization: `Bearer ${token}`, [syncProtocolHeader]: String(syncProtocolVersion), ...headers },
+    body: body instanceof Uint8Array ? body : JSON.stringify(body),
   });
-const changes = new URL(relayPath(scope, "changes"), process.env.RELAY_URL);
+  return response;
+};
+const document = (operation: "read" | "updates") =>
+  ({
+    kind: "document",
+    projectId,
+    spaceOwner: null,
+    documentId: "built-network-document",
+    operation,
+  }) as const;
+const blob = (operation: "begin" | "finish" | "read") =>
+  ({
+    kind: "blob",
+    projectId,
+    spaceOwner: null,
+    blobId: "built-network-blob",
+    operation,
+  }) as const;
+const changes = new URL(syncPath({ kind: "live", projectId }), process.env.RELAY_URL);
 changes.protocol = "ws:";
-const ws = new WebSocket(changes, { headers: { authorization: `Bearer ${token}` } });
+const ws = new WebSocket(changes, {
+  headers: {
+    authorization: `Bearer ${token}`,
+    [syncProtocolHeader]: String(syncProtocolVersion),
+    [liveProtocolHeader]: String(liveProtocolVersion),
+  },
+});
+const failure = Promise.withResolvers<never>();
 const ready = Promise.withResolvers<void>();
 const changed = Promise.withResolvers<void>();
+const subscribed = Promise.withResolvers<void>();
 const closed = Promise.withResolvers<CloseEvent>();
-ws.addEventListener("error", () => {
-  ready.reject(new Error("Built socket failed"));
-  changed.reject(new Error("Built socket failed"));
-});
+ws.addEventListener("error", () => failure.reject(new Error("Built socket failed")));
 ws.addEventListener("message", (event) => {
-  const message = JSON.parse(String(event.data));
-  assert.deepEqual(Object.keys(message).sort(), ["protocolVersion", "type"]);
-  if (message.type === "ready") ready.resolve();
-  if (message.type === "changed") changed.resolve();
+  try {
+    const message = liveServerMessageSchema.parse(JSON.parse(String(event.data)));
+    if (message.type === "control-result" && message.requestId === "subscribe-network") {
+      assert.equal(message.retryAfterMs, 0);
+      subscribed.resolve();
+    }
+    if (message.type === "ready") ready.resolve();
+    if (message.type === "changed") changed.resolve();
+  } catch (error) {
+    failure.reject(error);
+  }
 });
 ws.addEventListener("close", (event) => closed.resolve(event));
-try {
+const check = async () => {
   await ready.promise;
-  const initial = snapshotSchema.parse(await (await call("snapshot")).json());
-  const bytes = new TextEncoder().encode("built network streamed bytes");
-  const asset = assetSchema.parse({
-    sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
-    byteLength: bytes.length,
-    mediaType: "application/octet-stream",
-  });
-  const begun = await call("assets/begin", { uploadId: "network", asset });
+  ws.send(
+    JSON.stringify({
+      type: "subscribe",
+      spaceOwner: null,
+      topic: "built-network-document",
+      requestId: "subscribe-network",
+    }),
+  );
+  await subscribed.promise;
+  const bytes = new TextEncoder().encode("built network encrypted bytes");
+  const sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+  const begun = await request(blob("begin"), { sha256, byteLength: bytes.length });
   assert.equal(begun.status, 200);
-  assert.equal(relayAssetStatusSchema.parse(await begun.json()).completed, false);
-  const part = await fetch(new URL(relayPath(scope, "assets/part"), process.env.RELAY_URL), {
-    method: "PUT",
-    headers: {
-      authorization: `Bearer ${token}`,
-      "x-pstdio-upload-id": "network",
-      "x-pstdio-part-number": "1",
-      "x-pstdio-sha256": asset.sha256,
-      "content-length": String(bytes.length),
-    },
-    body: new Blob([bytes]).stream(),
-  });
+  assert.equal(blobStatusSchema.parse(await begun.json()).completed, false);
+  const part = await request(
+    { kind: "part", projectId, spaceOwner: null, blobId: "built-network-blob", number: 1 },
+    bytes,
+    "PUT",
+    { "pstdio-sha256": sha256, "content-length": String(bytes.length) },
+  );
   assert.equal(part.status, 200);
   assert.deepEqual(await part.json(), {});
-  assert.deepEqual(await (await call("assets/finish", { uploadId: "network" })).json(), asset);
-  const mutation = await sealMutation({
-    protocolVersion: 1,
-    scope,
-    environmentId: process.env.SMOKE_ENVIRONMENT_ID!,
-    operationId: "network-group",
-    parents: [],
-    changes: [
-      {
-        recordId: "note",
-        expectedRevision: 0,
-        baseDeleted: false,
-        value: { expected: await fingerprint(null), next: "built network" },
-      },
-      { recordId: "image", expectedRevision: 0, baseDeleted: false, asset: { base: null, next: asset } },
-    ],
+  assert.equal((await request(blob("finish"), {})).status, 200);
+  const update = {
+    updateId: "built-network-update",
+    payload: Buffer.from(bytes).toString("base64"),
+    blobIds: ["built-network-blob"],
+  };
+  assert.deepEqual(updateResultSchema.parse(await (await request(document("updates"), update)).json()), {
+    sequence: 1,
+    duplicate: false,
   });
-  const receipt = receiptSchema.parse(await (await call("submit", mutation)).json());
-  assert.equal(receipt.status, "accepted");
-  assert.match(receipt.recoveryProof!, /^[0-9a-f]{64}$/);
-  assert.deepEqual(await (await call("submit", mutation)).json(), receipt);
+  assert.deepEqual(updateResultSchema.parse(await (await request(document("updates"), update)).json()), {
+    sequence: 1,
+    duplicate: true,
+  });
   await changed.promise;
-  const replay = relayReplayResultSchema.parse(await (await call("replay", initial.checkpoint)).json());
-  assert.equal(replay.status, "replay");
-  if (replay.status === "replay") assert.deepEqual(replay.batch.groups, [receipt]);
-  assert.equal(snapshotSchema.parse(await (await call("snapshot")).json()).records.note!.value, "built network");
-  const offset = 7;
-  const suffix = await call("assets/read", { asset, offset });
+  const read = readResultSchema.parse(await (await request(document("read"), { after: 0 })).json());
+  assert.equal(read.status, "updates");
+  if (read.status === "updates") assert.equal(read.updates[0]!.payload, update.payload);
+  const suffix = await request(blob("read"), { offset: 7 });
   assert.equal(suffix.status, 200);
-  assert.equal(suffix.headers.get("x-pstdio-offset"), String(offset));
-  assert.equal(suffix.headers.get("x-pstdio-byte-length"), String(bytes.length - offset));
-  const hash = new Bun.CryptoHasher("sha256").update(bytes.subarray(0, offset));
-  for await (const chunk of suffix.body!) hash.update(chunk);
-  assert.equal(hash.digest("hex"), asset.sha256);
+  assert.equal(suffix.headers.get("pstdio-offset"), "7");
+  assert.equal(suffix.headers.get("pstdio-byte-length"), String(bytes.length - 7));
+  assert.deepEqual(new Uint8Array(await suffix.arrayBuffer()), bytes.subarray(7));
   console.log("READY_FOR_REVOCATION");
   assert.equal((await closed.promise).code, 1008);
-  assert.equal((await call("snapshot")).status, 401);
-  console.log("Built credential-only HTTP, asset ranges, replay and expiring idle WebSocket passed");
+  assert.equal((await request(document("read"), { after: 0 })).status, 401);
+  console.log("Built credential-only blind HTTP, blob ranges, duplicate updates and expiring idle WebSocket passed");
+};
+try {
+  await Promise.race([check(), failure.promise]);
 } finally {
+  controller.abort();
   ws.close();
 }
