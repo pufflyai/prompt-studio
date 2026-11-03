@@ -86,9 +86,15 @@ export type ResourceAnchorValidationResult = { allowed: true } | { allowed: fals
 export type ResourceAnchorQueryPage = Page<ResourceAnchorPage["items"][number]>;
 
 export interface ExtensionResourcesApi {
+  /** Resolve up to 100 references through enabled owners. Missing resources are omitted. */
+  resolveMany(resources: ResourceRef[]): Promise<ResourceResolution[]>;
   addAnchors(resource: ResourceRef, anchors: ResourceAnchor[]): Promise<void>;
   removeAnchors(resource: ResourceRef, refs: ResourceRef[]): Promise<void>;
   queryAnchors(input: ResourceAnchorQuery): Promise<ResourceAnchorQueryPage>;
+  /** Query links for up to 100 resources in one indexed page. */
+  queryAnchorsMany(
+    input: Omit<ResourceAnchorQuery, "resource"> & { resources: ResourceRef[] },
+  ): Promise<ResourceAnchorQueryPage>;
   /** @deprecated Use queryAnchors for a required nullable cursor. */
   listAnchors(input: ResourceAnchorQuery): Promise<ResourceAnchorPage>;
   /** Publish a committed removal to clients displaying this project resource. */

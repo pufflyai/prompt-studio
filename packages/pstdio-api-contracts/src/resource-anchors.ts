@@ -30,4 +30,8 @@ export const resourceAnchorPageSchema = z.object({
   nextCursor: z.string().optional(),
 });
 
+export const resourceAnchorsQuerySchema = resourceAnchorQuerySchema.omit({ resource: true }).extend({
+  resources: z.array(resourceLinkRefSchema).max(100),
+});
+
 export const resourceAnchorQueryPageSchema = resourceAnchorPageSchema.extend({ nextCursor: z.string().nullable() });
