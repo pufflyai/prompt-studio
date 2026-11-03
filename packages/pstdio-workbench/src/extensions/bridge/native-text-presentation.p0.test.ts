@@ -218,3 +218,57 @@ test("a failed native Retry keeps the admitted public session and its unacknowle
     await f.stop();
   }
 });
+
+test("resource removal retains a public editor through its close finalizers", async () => {
+  const f = fixture();
+  const release = Promise.withResolvers<void>();
+  const removed = Promise.withResolvers<void>();
+  const removal = f.workbench.resources.onDidRemove(() => {
+    if (!f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)) removed.resolve();
+  });
+  try {
+    const session = await f.presentation.open();
+    const entered = Promise.withResolvers<void>();
+    const stop = session.beforeClose(async () => {
+      entered.resolve();
+      await release.promise;
+    });
+    f.workbench.resources.removed(f.placement.resource!);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    await entered.promise;
+    release.resolve();
+    await removed.promise;
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
+    stop();
+  } finally {
+    release.resolve();
+    removal.dispose();
+    await f.stop();
+  }
+});
+
+test("resource removal preserves an active public draft even without pending parent frames", async () => {
+  const f = fixture();
+  const session = await f.presentation.open();
+  const draft = session.createDraft();
+  const refused = Promise.withResolvers<void>();
+  const stop = session.subscribe(() => {
+    if (session.getSnapshot().error?.code === "draft_active") refused.resolve();
+  });
+  try {
+    draft.text.insert(draft.text.length, " tentative");
+    expect(session.getSnapshot().pending).toBe(false);
+    f.workbench.resources.removed(f.placement.resource!);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    await refused.promise;
+    expect(session.getSnapshot().error?.code).toBe("draft_active");
+    await expect(f.presentation.close()).rejects.toMatchObject({ code: "draft_active" });
+    expect(draft.text.toString()).toBe("source tentative");
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    draft.cancel();
+  } finally {
+    stop();
+    draft.cancel();
+    await f.stop();
+  }
+});

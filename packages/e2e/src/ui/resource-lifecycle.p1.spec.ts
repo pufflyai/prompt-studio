@@ -94,8 +94,8 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
       await dashboard.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
       await expect(dashboard.getByTestId("content-editable").first()).toContainText(ticket.title);
     }
-    await page.route("**/extensions/commands/*/execute", async (route) => {
-      if (typeof route.request().postDataJSON()?.params?.content === "string") {
+    await page.route("**/text-editing/request", async (route) => {
+      if (route.request().postDataJSON()?.request?.operation === "submit") {
         held.push(route);
         return;
       }
@@ -112,7 +112,10 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
     await expect(page.getByText("This resource was removed.", { exact: false })).toBeVisible();
     const saveResponse = page.waitForResponse((response) => response.request() === held[0].request());
     await held[0].continue();
-    await saveResponse;
+    expect(await (await saveResponse).json()).toMatchObject({
+      ok: false,
+      error: { code: expect.stringMatching(/^source_(retired|unavailable)$/) },
+    });
     held.length = 0;
     expect((await listPlannerTickets(request, apiBase, project.id)).map((item) => item.id)).not.toContain(ticket.id);
     await expect(editor).toContainText("Keep this unsaved draft.");

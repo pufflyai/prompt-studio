@@ -298,6 +298,56 @@ const fixture = async () => {
   return value;
 };
 
+test("resource removal waits for an installed editor's public close barrier", async () => {
+  const f = await fixture();
+  await f.frame()();
+  f.holdClose();
+  const removed = Promise.withResolvers<void>();
+  const subscription = f.workbench.resources.onDidRemove(() => {
+    if (!f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)) removed.resolve();
+  });
+  try {
+    f.workbench.resources.removed({ ...f.placement.resource!, id: "unrelated" });
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    f.workbench.resources.removed(f.placement.resource!);
+    await f.closeStarted;
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    expect(f.disconnected).toEqual([]);
+    f.resumeClose();
+    await removed.promise;
+    expect(f.disconnected).toEqual(["connection-1"]);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
+  } finally {
+    f.resumeClose();
+    subscription.dispose();
+  }
+});
+
+test("a removed guest's late close cannot remove a successor scope in the same viewer", async () => {
+  const f = await fixture();
+  await f.frame()();
+  f.holdClose();
+  const retired = Promise.withResolvers<void>();
+  const subscription = f.workbench.notifications.subscribe((event) => {
+    if (event.type === "show" && event.notification.title === "Close removed text editor failed") retired.resolve();
+  });
+  try {
+    f.workbench.resources.removed(f.placement.resource!);
+    await f.closeStarted;
+    const successor = f.frame(f.placement, "ink.public-text-editor.view.editor", f.events, { source: "replacement" });
+    expect(await successor()).toEqual({ token: "selected" });
+    const version = f.workbench.resources.getRemovalVersion();
+    f.resumeClose();
+    await retired.promise;
+    expect(f.workbench.resources.getRemovalVersion()).toBe(version);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    expect(await successor()).toEqual({ token: "selected" });
+  } finally {
+    f.resumeClose();
+    subscription.dispose();
+  }
+});
+
 test("one webview uses its captured public scope and forwards events across adapter rerenders", async () => {
   const f = await fixture();
   expect(await f.frame()()).toEqual({ token: "selected" });

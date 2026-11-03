@@ -6,6 +6,7 @@ import { registerPlacementCloseGuard } from "../controllers/composition/placemen
 import type { WorkbenchPanelInstance } from "../registries/layout/layout-model";
 import type { WorkbenchCore } from "../workbench-core-types";
 import { createPlacementTextPresence } from "./placement-text-presence";
+import { retainPlacementTextOnRemoval } from "./placement-text-removal";
 
 type Guest = ReturnType<TextEditingConnection["guest"]>;
 type Scope = Extract<TextEditingConnectionInput, { kind: "placement" }>;
@@ -120,6 +121,13 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
   };
   state.live.set(events, owner);
   cleanups.push(
+    retainPlacementTextOnRemoval({
+      workbench,
+      placement,
+      projectId,
+      current: () => owner.current(),
+      close: () => owner.close(),
+    }),
     workbench.activation.store.subscribe(() => {
       void connection
         .then((connection) => {
