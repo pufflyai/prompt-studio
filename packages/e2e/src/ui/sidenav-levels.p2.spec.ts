@@ -31,10 +31,10 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
 
   // Users pin a project row by dragging it into the header.
   const source = row("Tickets");
-  const target = row("Search");
+  const target = row("Home");
   const targetList = sidenav
     .getByRole("listbox")
-    .filter({ has: page.getByRole("option", { name: "Search", exact: true }) });
+    .filter({ has: page.getByRole("option", { name: "Home", exact: true }) });
   await source.hover();
   const from = (await source.boundingBox())!;
   const to = (await target.boundingBox())!;
