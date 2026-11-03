@@ -53,7 +53,7 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
                   type: status ? "session" : "example",
                   label: title,
                   icon,
-                  metadata: status ? { status } : {},
+                  ...(status ? { metadata: { status } } : {}),
                 },
                 target: { kind: "page", page: { kind: "page", extensionId: "example", id: "detail" } },
               })),

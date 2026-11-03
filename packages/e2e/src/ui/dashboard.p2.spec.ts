@@ -179,7 +179,10 @@ test("project picker stays open when the background is clicked", async ({ page, 
   await expect(picker).toBeVisible();
 });
 
-test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
+test("dashboard opens Home for a selected project and resumes a resource after its first visit", async ({
+  page,
+  request,
+}) => {
   test.setTimeout(20_000);
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Dashboard Start Test");
@@ -216,9 +219,11 @@ test("dashboard opens the start page for a selected project without a saved loca
           .__projectPickerAppearedDuringStartup,
     ),
   ).toBe(false);
-  await homePage(page)
-    .getByRole("button", { name: /Recent start session/ })
-    .click();
+  const sidenav = page.getByRole("region", { name: "Sidenav" }).first();
+  await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+  await sidenav.getByRole("option", { name: session.title, exact: true }).click();
+  await sidenav.getByRole("option", { name: "Home", exact: true }).click();
+  await homePage(page).getByRole("button", { name: session.title, exact: true }).click();
 
   await expect(
     page.getByLabel("Main").getByText(session.title, { exact: true }).filter({ visible: true }),
