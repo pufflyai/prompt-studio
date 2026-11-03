@@ -47,11 +47,13 @@ alone cannot establish a regression against it.
 ## Inspect the board in the isolated app
 
 ```sh
-bun run dev:playwright -- --desktop
 bun packages/e2e/src/perf/planner-linked-resources.diagnostic.ts
 ```
 
-Open the printed Board URL. Select the **200 linked tickets** view if it is not
+The launcher builds current host assets, prepares local SDK/UI packages and starts a fresh `dev:playwright`
+Docker stack with Planner and the Codex harness. Stop any previous `dev:playwright`
+stack first. Open the printed Board URL, which includes a single-use browser login.
+Select the **200 linked tickets** view if it is not
 already selected. Each ticket has workspace, PR and build badges. The PR and build
 pages are synthetic destinations; this fixture does not implement the GitHub
 integration. The seeder refuses a board that already contains tickets.

@@ -99,7 +99,7 @@ export const seedLinkedResources = async (api: Api, projectId: string) => {
     const workspace = await api.request<{ id: string; name: string; workspace_shorthand: string }>("/workspaces", {
       project_id: projectId,
       provider_id: "pstdio.worktree",
-      params: { base: "main" },
+      params: { base: "HEAD" },
       anchors: [{ type: "ticket", extensionId: "pstdio.pstdio-planner", id: ticket.id, label: ticket.shorthand }],
     });
     await api.execute(projectId, linkedResourceOwner, "link", { ticket: ticket.id, number: String(number) });
