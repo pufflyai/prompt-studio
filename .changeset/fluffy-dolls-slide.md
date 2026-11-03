@@ -1,5 +1,6 @@
 ---
 "pstdio": patch
+"@pstdio/sdk": patch
 ---
 
-Coalesce pending conversation updates so slow chat clients do not retain every streamed message revision.
+Bound tool results to 256 KiB and coalesce pending chat updates while preserving history recovery.

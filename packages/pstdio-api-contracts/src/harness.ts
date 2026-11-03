@@ -12,10 +12,12 @@ export type JsonPatch = {
   value?: unknown;
 };
 
+export type EventSubscriptionOptions = { conversationSnapshot?: () => JsonPatch; activityOnly?: boolean };
+
 export type EventStore = {
   push(patch: JsonPatch): void;
   getHistory(): JsonPatch[];
-  subscribe(options?: { conversationSnapshot: () => JsonPatch }): AsyncIterable<JsonPatch>;
+  subscribe(options?: EventSubscriptionOptions): AsyncIterable<JsonPatch>;
   historyPlusStream(): AsyncIterable<JsonPatch>;
   snapshotAndSubscribe(): { history: JsonPatch[]; stream: AsyncIterable<JsonPatch> };
 };

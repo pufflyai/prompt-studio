@@ -1,3 +1,4 @@
+import { normalizeMessageResults } from "pstdio-api-contracts";
 import type { SessionLogFiles } from "./log-files";
 import { sessionLogVersion } from "./log-publication";
 import type { PersonalHistoryStore } from "./store";
@@ -42,6 +43,6 @@ export const createPersonalMessageReader = (input: {
     if (!current || !(await input.sessions(projectId)).some((row) => row.id === id)) return null;
     const messages = await input.logs.read(current.namespace, id);
     await input.refreshIdentity();
-    return current.identity === input.identity() ? messages : null;
+    return current.identity === input.identity() ? messages?.map(normalizeMessageResults) : null;
   },
 });
