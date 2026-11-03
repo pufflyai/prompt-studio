@@ -1,5 +1,7 @@
 import type { WorkbenchCore, WorkbenchPanelInstance } from "@pstdio/workbench";
 import { createWorkbenchWebviewHostAdapters, type ExtensionWebviewHostAdapters } from "@pstdio/workbench/extensions";
+import type { NativeDocumentTarget } from "pstdio-api-contracts";
+import { getApiClient } from "@/lib/api";
 import { getPerformanceDiagnosticsAdapter } from "@/shared/app/performance-diagnostics";
 import { createAccountAdapter } from "./account-capability";
 import { createArtifactsReadAdapter } from "./artifact-read-capability";
@@ -12,6 +14,7 @@ interface CreateDashboardExtensionWebviewAdaptersInput {
   extensionInstanceId?: string;
   projectId?: string;
   webviewId: string;
+  textTarget?: NativeDocumentTarget;
   workbench?: WorkbenchCore;
   placement?: WorkbenchPanelInstance;
   ownedPreferences?: Parameters<typeof createWorkbenchWebviewHostAdapters>[0]["ownedPreferences"];
@@ -24,7 +27,12 @@ export const createDashboardExtensionWebviewAdapters = (input: CreateDashboardEx
       : undefined;
   return {
     ...(input.workbench
-      ? createWorkbenchWebviewHostAdapters({ ...input, workbench: input.workbench, hostEvents: input.base.hostEvents })
+      ? createWorkbenchWebviewHostAdapters({
+          ...input,
+          workbench: input.workbench,
+          hostEvents: input.base.hostEvents,
+          textEditing: getApiClient().textEditing,
+        })
       : {}),
     ...input.base,
     performance: input.workbench ? getPerformanceDiagnosticsAdapter(input.workbench.settings) : undefined,

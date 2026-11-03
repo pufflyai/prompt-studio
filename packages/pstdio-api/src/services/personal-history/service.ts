@@ -1,11 +1,17 @@
-import { sessionSchema, workspaceSchema } from "pstdio-api-contracts";
+import { type SessionMessage, sessionSchema, workspaceSchema } from "pstdio-api-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
+import { historyNamespace, type SessionLogFiles } from "./log-files";
+import { createPersonalMessageReader } from "./message-reader";
+import { sharedQueueRecordSchema, sharedQueueResponse } from "./queue-snapshot";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore, type HistoryDocuments } from "./store";
 
 const deviceSchema = z.object({ ownerId: z.string(), id: z.string(), name: z.string() });
-const personalSessionSchema = sessionSchema.extend({ device: deviceSchema, workspace_id: z.string().nullable() });
+const personalSessionSchema = sessionSchema.extend({
+  device: deviceSchema,
+  workspace_id: z.string().nullable(),
+});
 const personalWorkspaceSchema = workspaceSchema.extend({ device: deviceSchema });
 
 export const createPersonalHistoryService = (input: {
@@ -13,7 +19,10 @@ export const createPersonalHistoryService = (input: {
   account: Pick<RouteDeps["accountService"], "status">;
   projects: Pick<RouteDeps["projectService"], "list">;
   eventBus: RouteDeps["eventBus"];
+  logs: SessionLogFiles;
 }) => {
+  type MessageListener = (update: { index: number; message: SessionMessage; live: boolean }) => void;
+  const messageListeners = new Map<string, Set<MessageListener>>();
   let identity: string | undefined;
   const visible = new Map<string, { table: string; id: string; projectId: string }>();
   const remember = (table: string, id: string, projectId: string) =>
@@ -31,6 +40,7 @@ export const createPersonalHistoryService = (input: {
         });
       }
       visible.clear();
+      messageListeners.clear();
       identity = next;
     }
     return login;
@@ -41,10 +51,11 @@ export const createPersonalHistoryService = (input: {
     return {
       login,
       identity,
+      namespace: historyNamespace({ ...login, projectId }),
       history: createPersonalHistoryStore({ ...login, projectId, documents: input.documents }),
     };
   };
-  const sessions = async (projectId: string) => {
+  const sessionRecords = async (projectId: string) => {
     const current = await context(projectId);
     if (!current) return [];
     const rows = await current.history.readRecords("sessions");
@@ -57,12 +68,13 @@ export const createPersonalHistoryService = (input: {
           row.device.ownerId === current.login.accountId &&
           row.device.id !== current.login.deviceId &&
           row.project_id === projectId,
-      )
-      .map((row) => {
-        remember("sessions", row.id, projectId);
-        return { ...row, usage_json: row.usage_json ?? null };
-      });
+      );
   };
+  const sessions = async (projectId: string) =>
+    (await sessionRecords(projectId)).map((row) => {
+      remember("sessions", row.id, projectId);
+      return { ...row, usage_json: row.usage_json ?? null };
+    });
   const workspaces = async (projectId: string) => {
     const current = await context(projectId);
     if (!current) return [];
@@ -117,6 +129,20 @@ export const createPersonalHistoryService = (input: {
     return null;
   };
   return {
+    logs: input.logs,
+    /** Runs for each message another device completed or is streaming in this session. */
+    watchMessages(sessionId: string, listener: MessageListener) {
+      const listeners = messageListeners.get(sessionId) ?? new Set();
+      listeners.add(listener);
+      messageListeners.set(sessionId, listeners);
+      return () => {
+        listeners.delete(listener);
+        if (!listeners.size && messageListeners.get(sessionId) === listeners) messageListeners.delete(sessionId);
+      };
+    },
+    messageReceived(sessionId: string, update: { index: number; message: SessionMessage; live: boolean }) {
+      for (const listener of messageListeners.get(sessionId) ?? []) listener(update);
+    },
     refreshIdentity,
     links,
     async fullState(projectId?: string) {
@@ -139,17 +165,26 @@ export const createPersonalHistoryService = (input: {
     sessions,
     workspaces,
     getSession: (id: string, projectId?: string) => find(sessions, id, projectId),
+    /** The queued messages of another device's session, read-only. Null when it is not one. */
+    async queuedMessages(id: string, projectId?: string) {
+      const session = await find(sessionRecords, id, projectId);
+      if (!session?.project_id) return null;
+      const current = await context(session.project_id);
+      if (!current) return null;
+      const records = await current.history.readRecords("queues");
+      await refreshIdentity();
+      if (current.identity !== identity) return null;
+      const record = records.find(
+        (row) => row.id === id && JSON.stringify(row.device) === JSON.stringify(session.device),
+      );
+      const parsed = sharedQueueRecordSchema.safeParse(record);
+      return sharedQueueResponse(id, parsed.success ? parsed.data.requests : []);
+    },
     getWorkspace: (id: string, projectId?: string) => find(workspaces, id, projectId),
     async getWorkspaceByShorthand(projectId: string, shorthand: string) {
       const matches = (await workspaces(projectId)).filter((row) => row.workspace_shorthand === shorthand);
       return matches.length === 1 ? matches[0]! : null;
     },
-    async messages(id: string, projectId: string) {
-      const current = await context(projectId);
-      if (!current || !(await sessions(projectId)).some((row) => row.id === id)) return null;
-      const messages = await current.history.readTranscript(id);
-      await refreshIdentity();
-      return current.identity === identity ? messages : null;
-    },
+    ...createPersonalMessageReader({ context, sessions, logs: input.logs, refreshIdentity, identity: () => identity }),
   };
 };

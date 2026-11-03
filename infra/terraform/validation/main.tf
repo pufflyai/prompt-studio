@@ -21,7 +21,6 @@ module "cloud" {
     S3_ACCESS_KEY_ID     = "validation-only"
     S3_SECRET_ACCESS_KEY = "validation-only"
     RELAY_ACCESS_TRUST   = "{\"issuer\":\"https://base.example.com/accounts\",\"audience\":\"https://base.example.com/relay\",\"jwks\":{\"keys\":[]}}"
-    RELAY_RECOVERY_KEY   = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
   }
   manager_secrets = {
     BETTER_AUTH_SECRET   = "validation-only-never-use-in-a-deployment"

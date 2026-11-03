@@ -11,6 +11,7 @@ import type {
   TreeViewSection,
   WorkbenchModuleContext,
 } from "../../core";
+import { shareEqualValue } from "../../react/renderers/share-equal-value";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 
@@ -53,6 +54,7 @@ const toActionParams = (params: unknown, fallback: Record<string, unknown> | und
 };
 const toRecordParams = (params: object | undefined) =>
   params && !Array.isArray(params) ? (params as Record<string, unknown>) : undefined;
+const maxReusedTreeNodes = 5000;
 const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
   const runnerCommandId = `workbench.extensionTreeRenderer.${record.id}.command`;
@@ -133,7 +135,21 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
         : undefined,
     };
   };
+  // Each load maps fresh extension data, with new action functions. A node whose data equals its previous
+  // load keeps its previous mapping, so the tree shares it and does not render that row again. Mapped actions
+  // read only the node data, the bound resource, and the tree's own refresh.
+  // A new bound resource, including a new label or metadata, starts over. The map holds one entry per node id.
+  let previousMappings = {
+    resource: undefined as ResourceRef | undefined,
+    nodes: new Map<string, { node: ExtensionTreeNode; mapped: TreeNode }>(),
+  };
   const mapNode = (node: ExtensionTreeNode, ctx: TreeContext): TreeNode => {
+    const resource = shareEqualValue(previousMappings.resource, ctx.resource);
+    if (resource !== previousMappings.resource || previousMappings.nodes.size > maxReusedTreeNodes) {
+      previousMappings = { resource, nodes: new Map() };
+    }
+    const previous = previousMappings.nodes.get(node.id);
+    if (previous && shareEqualValue(previous.node, node) === previous.node) return previous.mapped;
     const mapped: TreeNode = {
       id: node.id,
       selected: node.selected,
@@ -159,6 +175,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       canDrop: node.canDrop,
     };
     originalNodes.set(mapped, node);
+    previousMappings.nodes.set(node.id, { node, mapped });
     return mapped;
   };
   const mapSections = (sections: ExtensionTreeSection[], ctx: TreeContext): TreeViewSection[] =>

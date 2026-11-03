@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, firefox } from "@playwright/test";
+import { browserLaunchOptions } from "../scripts/browser-launch-options";
 import { PSTDIO_CLI } from "./helpers";
 import { getFreePort, waitForReady } from "./start-api";
 import { TEST_TIMEOUT } from "./timeouts";
@@ -187,11 +188,7 @@ describe("pstdio close", () => {
       );
       await waitForReady(url, runtimeToCleanup);
 
-      browserToCleanup = await firefox.launch({
-        headless: true,
-        // The pinned Firefox still reads application data outside its profile on macOS (ADR 0116).
-        env: { ...process.env, CFFIXED_USER_HOME: homePath },
-      });
+      browserToCleanup = await firefox.launch(browserLaunchOptions(firefox, homePath, { headless: true }));
       const page = await browserToCleanup.newPage();
       const streamConnected = page.waitForResponse(
         (response) => new URL(response.url()).pathname === "/v1/sync/stream" && response.status() === 200,

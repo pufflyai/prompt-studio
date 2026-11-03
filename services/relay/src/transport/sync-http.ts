@@ -1,5 +1,7 @@
 import type { ReportFailure } from "pstdio-service-telemetry";
 import {
+  liveProtocolHeader,
+  liveProtocolVersion,
   type SyncError,
   type SyncRoute,
   syncProtocolHeader,
@@ -71,6 +73,16 @@ export const handleSyncRequest = async (
     return syncFailure(403, "forbidden");
   if (!owners.allow(identity.environmentId)) return syncFailure(429, "rate-limited", { "retry-after": "1" });
   if (route.kind === "live") {
+    if (request.headers.get(liveProtocolHeader) !== String(liveProtocolVersion))
+      return relayResponse(
+        {
+          error: "protocol-unsupported",
+          supported: [liveProtocolVersion],
+          message: "Update Prompt Studio or the relay to use the live channel.",
+        },
+        426,
+        { [liveProtocolHeader]: String(liveProtocolVersion) },
+      );
     const socket = owners.live.connect({
       projectKey: projectKey(identity.accountId, route.projectId),
       accountId: identity.accountId,

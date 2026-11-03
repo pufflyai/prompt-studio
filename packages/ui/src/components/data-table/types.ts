@@ -120,6 +120,18 @@ export interface DataTableEditModeCellEditorProps {
   onChange: (value: string) => void;
 }
 
+export type DataTableEditTarget =
+  | { kind: "cell"; rowId: string; columnId: string; value: string }
+  | { kind: "header"; columnId: string; value: string };
+
+export interface DataTableEditDraft {
+  update?(value: string): void;
+  /** Refuse dismissal when the draft has already entered a save owned by this editor. */
+  cancel?(): boolean;
+  commit(value: string): void;
+  dispose(): void;
+}
+
 export interface DataTableEditModeConfig {
   columns: DataTableEditModeColumn[];
   onDataChange: (data: RowData[]) => void;
@@ -128,6 +140,8 @@ export interface DataTableEditModeConfig {
   renderHeader?: (column: DataTableEditModeColumn) => ReactNode;
   renderCell?: (context: DataTableCellContext) => ReactNode;
   renderCellEditor?: (props: DataTableEditModeCellEditorProps) => ReactNode;
+  /** Capture the backing source when an edit opens, so Save can merge its original intent. */
+  createDraft?: (target: DataTableEditTarget) => DataTableEditDraft;
 }
 
 export interface DataTableProps {

@@ -1,6 +1,7 @@
 import { Box, Button } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
+import { ChatSkeleton } from "./chat-skeleton";
 import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
@@ -65,4 +66,9 @@ export const EmptyWidePane: Story = {
   id: "patterns-chat-chat-panel-width--empty-wide-pane",
   ...WidePane,
   args: { messages: [], queuedFollowUps: [] },
+};
+
+export const LoadingWidePane: Story = {
+  ...WidePane,
+  args: { messages: [], queuedFollowUps: [], loading: true, loaderComponent: <ChatSkeleton /> },
 };

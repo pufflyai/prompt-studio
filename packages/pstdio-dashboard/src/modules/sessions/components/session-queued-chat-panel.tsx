@@ -1,5 +1,6 @@
 import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
+import type { Session } from "pstdio-api-contracts";
 import type { ComponentProps } from "react";
 import { useApiFileParts } from "@/lib/api-file-url";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
@@ -10,6 +11,7 @@ import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionComposerActions } from "./session-composer-actions";
+import { SessionPersonalDevice } from "./session-personal-device";
 import { useQueuedRequestSelection } from "./use-queued-request-selection";
 import type { useSessionDraftAttachments } from "./use-session-draft-attachments";
 
@@ -23,6 +25,8 @@ interface SessionQueuedChatPanelProps extends ComponentProps<typeof ChatPanel> {
   draftAttachments: ReturnType<typeof useSessionDraftAttachments>;
   modelControls: ComponentProps<typeof SessionComposerActions>;
   messagesBlocked?: boolean;
+  /** Another device runs this session: its queue shows read-only above the device notice. */
+  device?: Session["device"];
 }
 
 export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
@@ -36,6 +40,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
     draftAttachments,
     modelControls,
     messagesBlocked,
+    device,
     ...panel
   } = props;
   const selection = useQueuedRequestSelection(projectId, draftKey, drafts);
@@ -74,6 +79,8 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
   return (
     <ChatPanel
       {...panel}
+      composerFallback={device ? <SessionPersonalDevice name={device.name} /> : panel.composerFallback}
+      readOnlyQueue={Boolean(device)}
       messages={messages}
       queuedFollowUps={display.queuedFollowUps}
       conversationNotices={

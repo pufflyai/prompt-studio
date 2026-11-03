@@ -4,6 +4,9 @@ import { tooltipAnatomy } from "@chakra-ui/react/anatomy";
 export const tooltipRecipe = defineSlotRecipe({
   slots: tooltipAnatomy.keys(),
   base: {
+    positioner: {
+      pointerEvents: "none",
+    },
     content: {
       bg: "bg.inverted",
       borderRadius: "xs",

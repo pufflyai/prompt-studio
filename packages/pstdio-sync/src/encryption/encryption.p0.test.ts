@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { type SpaceKey, syncIdSchema } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import { decodeBytes } from "../encoding";
+import { decodeBytes } from "../shared/encoding";
 import {
   createSyncSpace,
   openBlob,
@@ -102,12 +102,14 @@ test("latest states, summaries, blobs and live messages round-trip encrypted", a
   ).rejects.toBeInstanceOf(UnreadableSyncData);
   await expect(openBlob(project, blob.blobId, decodeBytes(state.payload))).rejects.toBeInstanceOf(UnreadableSyncData);
 
-  const live = await sealLive(project, "device-a", new TextEncoder().encode("cursor 12"));
-  expect(live).toMatchObject({ type: "live", spaceOwner: null });
-  expect(new TextDecoder().decode(await openLive(project, { deviceId: "device-a", payload: live.payload }))).toBe(
-    "cursor 12",
-  );
-  await expect(openLive(project, { deviceId: "device-b", payload: live.payload })).rejects.toBeInstanceOf(
-    UnreadableSyncData,
-  );
+  const live = await sealLive(project, "device-a", "opaque_topic_123456", new TextEncoder().encode("cursor 12"));
+  expect(live).toMatchObject({ type: "publish", spaceOwner: null });
+  expect(
+    new TextDecoder().decode(
+      await openLive(project, { deviceId: "device-a", topic: live.topic, payload: live.payload }),
+    ),
+  ).toBe("cursor 12");
+  await expect(
+    openLive(project, { deviceId: "device-b", topic: live.topic, payload: live.payload }),
+  ).rejects.toBeInstanceOf(UnreadableSyncData);
 });

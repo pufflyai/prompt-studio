@@ -688,5 +688,34 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41199524648/job/124533078715"
     ],
     "removeWhen": "PS-1002 makes a cold UI Canvas install finish well inside 30 seconds on Windows ARM; then pass ten independent Windows ARM runs within the existing 30 second allowance, without retries."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts",
+    "name": "loads packaged core defaults with usable assets and safe extension storage",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-75 / core extension installation",
+    "reason": "The unchanged cold-install fixture timed out at120001.65ms in PS-73 verification before project creation; the exact main fixture passed once at74263ms. Codex dependency installation varied from55.902s to91.686s, and Claude had not finished at the failed deadline. The changed mount watcher cannot execute in this setup phase. Preserve all eight real extensions, the fresh home/cache,100 assertions and120000ms allowance.",
+    "evidence": [
+      "Planner RP-146 files/packages.log: original cold core-defaults timeout after94cases/57files; PS-73 head8e2c5194a",
+      "Planner RP-154 packaged_core_install_diagnostic: exact unchanged mainfd35161d0, single cold baseline74263ms,100assertions and dependency spans",
+      "https://github.com/pufflyai/prompt-studio/pull/1697"
+    ],
+    "removeWhen": "Identify and fix the cold dependency-download stall on Apple Silicon, then use first-attempt normal native CI observations to show the complete fresh-cache fixture finishes within its unchanged120000ms allowance. Keep every core extension, asset/storage assertion and cleanup; do not retry, prewarm or run reliability loops."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/features/extensions/command-environment/resource-prefix-scenarios.p1.test.ts",
+    "name": "a project whose derived shorthand collides with a reserved prefix can still allocate",
+    "platforms": ["linux"],
+    "owner": "PS-1013 / resource-prefix fixture",
+    "reason": "The first case intermittently spins before completing on Linux, exhausting the existing 300-second API file watchdog with one CPU busy and about 3.8 GB RSS. This recurred after the promise-assertion fix in #1662 and reproduced on unchanged main d205fee75 locally; the same source passed the preceding main queue run. The blocked phase remains unidentified. Preserve the real app, extension install, allocation and cleanup assertions; the other two cases stay blocking.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41523837968/job/125547749573",
+      "https://github.com/pufflyai/prompt-studio/pull/1678",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/41525228031/job/125553052379"
+    ],
+    "removeWhen": "Identify and fix the Linux CPU spin, then restore this case to the stable lane after a complete first-attempt normal Linux execution with its unchanged 30000 ms case allowance and 300-second file watchdog. Preserve every setup, allocation and cleanup assertion; do not retry or run reliability loops."
   }
 ]

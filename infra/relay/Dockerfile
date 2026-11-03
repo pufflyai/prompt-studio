@@ -19,7 +19,7 @@ COPY packages/pstdio-sync/src ./packages/pstdio-sync/src
 COPY packages/pstdio-sync-contracts/src ./packages/pstdio-sync-contracts/src
 COPY services/account-manager/scripts/database-migration.ts ./services/relay/database-migration.ts
 RUN bun build services/relay/database-migration.ts --target bun --outfile dist/database-migration.js
-RUN bun build services/relay/src/server.ts services/relay/src/index.ts services/relay/scripts/smoke.ts services/relay/scripts/smoke-replacement.ts services/relay/scripts/enroll-local.fixture.ts services/relay/scripts/initialize.fixture.ts services/relay/scripts/transport-client-smoke.ts services/relay/scripts/recovery-key.fixture.ts --target bun --outdir dist
+RUN bun build services/relay/src/server.ts services/relay/src/index.ts services/relay/scripts/smoke.ts services/relay/scripts/smoke-replacement.ts services/relay/scripts/enroll-local.fixture.ts services/relay/scripts/initialize.fixture.ts services/relay/scripts/transport-client-smoke.ts --target bun --outdir dist
 
 RUN bun build services/account-manager/src/server.ts --target bun --outfile dist/manager.js
 
@@ -53,11 +53,10 @@ CMD ["bun", "smoke.js"]
 FROM base AS fixture
 COPY --from=build --chown=bun:bun /build/dist/scripts/initialize.fixture.js ./initialize.js
 COPY --from=build --chown=bun:bun /build/dist/scripts/enroll-local.fixture.js ./enroll-local.js
-COPY --from=build --chown=bun:bun /build/dist/scripts/recovery-key.fixture.js ./recovery-key.js
 COPY --from=build --chown=bun:bun /build/dist/manager.js ./manager.js
 COPY --chown=bun:bun services/account-manager/drizzle ./manager-drizzle
 USER root
-RUN mkdir /fixture /access-trust /recovery && chown bun:bun /fixture /access-trust /recovery
+RUN mkdir /fixture /access-trust && chown bun:bun /fixture /access-trust
 USER bun
 CMD ["bun", "initialize.js"]
 

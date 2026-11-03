@@ -68,7 +68,12 @@ export const splitQueuedFollowUps = (
     if (request?.steeringDelivery) {
       const id = request.steeringDelivery.id;
       handoffs.set(id, message);
-      if (!userIds.has(id)) transcriptMessages.push({ ...message, id });
+      if (!userIds.has(id)) {
+        const delivered = { ...message, id };
+        // This is its first transcript appearance. Use the native delivery identity, not the queue's alias.
+        delete delivered.animationKey;
+        transcriptMessages.push(delivered);
+      }
       continue;
     }
     queuedFollowUps.push({

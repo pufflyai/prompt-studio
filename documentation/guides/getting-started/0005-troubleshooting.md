@@ -72,7 +72,7 @@ Prompt Studio looks for the agent's command, such as `claude`, `codex`, or `open
 
 ## An extension does not load
 
-Open **Settings → Extensions** in the project. An extension that failed shows a status such as **Failed to load** or **Incompatible versions**. Choose **Copy error** to copy the error code and message.
+Open **Extensions** in the project. An extension that failed shows a status such as **Failed to load** or **Incompatible versions**. Choose **Copy error** to copy the error code and message.
 
 - For a core extension, choose **Upgrade** when it is offered. It installs the build that matches your Prompt Studio version.
 - For an extension from a local folder, fix its source, then choose **Reload**.

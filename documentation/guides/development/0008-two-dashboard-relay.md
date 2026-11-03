@@ -14,6 +14,27 @@ The local fixture uses its own account and operator enrollment. It needs no real
 
 The manager and relay use separate PostgreSQL roles. Native connections use HTTPS with fresh fixture certificates and separate server private keys. The relay receives public signing trust; it receives no manager database role, signing secret or device token. Dashboard and API ports bind to host loopback. The fixture's Docker network defaults to 10.254.239.0/24. Inspect existing networks before choosing another `RELAY_TEST_SUBNET`.
 
+## Native Markdown checks
+
+Open the same Notes document in both dashboards. Type different text in separate
+paragraphs, then place a selection in each editor. Both text changes must converge;
+the other connection's caret and selection should appear and follow scrolling.
+Close one tab and confirm its presence disappears.
+
+Check the complete artifact Markdown in each isolated project folder. Front matter
+must keep its original bytes when the body changes. Make an outside edit in a
+different paragraph while one dashboard has an editor change waiting; both changes
+must survive. Repeat with one relay connection offline and after restarting that
+app. Check the saved text independently of presence: no participant, caret or
+selection data belongs in its database journal or source files.
+
+Native collaboration requires an explicit full-source `documentSource` declaration
+from the view. For Notes and Planner checks, first install the source declarations
+from [PR #1508](https://github.com/pufflyai/prompt-studio/pull/1508): Notes uses its
+artifact; Planner uses its body field and stable file blobs. Other views retain
+their ordinary load/save behavior. See
+[shared Markdown sources](../../references/extensions/0012-renderer-edit-refresh-lifecycle.md#shared-markdown-sources).
+
 ## Offline and restart checks
 
 With the default name:
@@ -24,7 +45,7 @@ docker stop relay-local-relay-relay-1
 docker start relay-local-relay-relay-1
 ```
 
-After reconnect, the saved journal should reach the other app. The client uses bounded reconnect backoff and retains local operations while disconnected. Its access cache remains usable through the original token expiry. Only renewal needs the manager. The fixture issues five-second access tokens so normal use also exercises expiry and renewal.
+After reconnect, saved document updates should reach the other app. The client uses bounded reconnect backoff and retains local changes while disconnected. Its access cache remains usable through the original token expiry. Only renewal needs the manager. The fixture issues five-second access tokens so normal use also exercises expiry and renewal.
 
 Restart one app to verify that its environment and saved state survive:
 
@@ -32,13 +53,14 @@ Restart one app to verify that its environment and saved state survive:
 docker restart relay-local-a-prompt-studio-1
 ```
 
-Two concurrent replacements can produce a retained conflict. The public grouped storage API exposes inspection and resolution. A stale native file editor save keeps its draft and reports a conflict. The platform carries the editor's read baseline; extension handlers do not need relay code.
+Concurrent record edits merge through the record stream. Declared Markdown sources use
+the shared text engine. The deprecated collection and key/value APIs remain adapters over
+CRDT records; their callers do not use a separate journal.
 
-Ordinary key/value storage, collections, uploaded blobs, and files in declared artifact mounts share the owner journal. The host imports existing artifact files and captures direct filesystem edits in those mounts, including agent saves. Incoming verified assets materialize in the other environment's own project folder. Renames and deletes enter the journal as file edits and tombstones. A private per-folder checkpoint records the last materialized file hashes and revisions so restarting does not mistake an old disk copy for a new edit.
-
-Directory records carry stable identities. Children belong to that directory's lifetime, so a journaled deletion followed by recreation cannot revive its old files. Child writes claim their parent directories in the same operation. A competing file replacement or folder deletion becomes a retained conflict. Choosing a file or deletion replaces that whole directory lifetime; choosing the retained folder restores its children. Direct filesystem changes are captured as snapshots: removing and recreating a directory between observations counts as an edit to the existing folder. These are host storage rules, with no extension API changes.
-
-Read-only workspace providers keep receiving the extension's journal and blobs. The host waits for file write access before materializing artifact files or creating filesystem watchers.
+Files in declared artifact mounts keep stable identities and verified asset references.
+Incoming assets materialize in the other device’s project folder after verification.
+Read-only workspace providers keep receiving data; the host waits for file write access
+before materializing files or creating filesystem watchers.
 
 Harness sessions, messages, processes, terminals, workspace folders, credentials, caches, and unpublished extension source overrides stay local. `ctx.extensionFiles` contains an extension's local working files; files intended as shared outputs belong in declared artifact mounts. The launcher preinstalls the same published extension dependencies in both environments; it does not distribute unpublished source changes.
 
@@ -75,15 +97,22 @@ At startup, a logged-in host asks the manager for its account's cloud projects w
 
 The local fixture enrollment adds the shared workbench to the fixture account and registers the app's environment ID as a device. It does not go through Google login.
 
-The host discovers all enabled extensions and initializes their owner scopes through an authenticated request. Enabling another extension needs no configuration entry. Disabling it closes its connection. Source or workspace changes rebuild the host watchers. Scope initialization cannot overwrite an existing published revision. HTTPS is required except for owned loopback HTTP fixtures. The device token stays in the native process. It never enters browser requests, host API responses, extension storage or snapshots.
+The host discovers enabled extensions and syncs each owner’s records through an encrypted
+record stream. Owner metadata and text use encrypted documents. Disabling an extension
+closes its connection. Source or workspace changes rebuild the host watchers. HTTPS is
+required except for owned loopback fixtures. The device token stays in the native process.
+It never enters browser requests, host API responses, extension storage or snapshots.
 
-Each connection runs one synchronization at a time. Local committed journal entries wake it. Versioned WebSocket hints also wake it; hints contain no records. The journal, receipts and snapshots own the state. Incoming assets are verified before publication, multipart upload staging uses temporary disk files, and failed source opening removes its spool. Shutdown aborts requests and closes connections before closing the local database.
+Local commits and versioned WebSocket hints wake synchronization. Hints contain only
+routing metadata. Durable documents and stream cursors own the state. Incoming assets
+are verified before publication. Shutdown aborts requests and closes connections before
+closing the local database.
 
 The platform invalidates extension views after committed storage changes, local or downloaded. A sync round that changes nothing sends no refresh. Writes that land close together send one storage change per project, and only that project's views reload. Reconnecting still reloads every view. Views reload for any owner's change in their project, because a view can read another extension's data through its public commands. Native views and webview query subscriptions use the normal host refresh path. Extension builders need no synchronization event, refresh listener, relay configuration, or storage opt-in. The controls fixture deliberately uses only ordinary `ctx.storage.get/set` calls and declares no refresh events.
 
 ## Verification scope
 
-Real manager/relay tests cover finite access, account isolation, PostgreSQL/S3 persistence, streamed assets and shutdown. Native integration tests cover two journals, renewal, serial wakeups, multipart staging and source-failure cleanup. The compiled smoke uses an owned wire peer to prove that the packaged host applies incoming data through the public SDK and retains it across restart; it is not a second production relay implementation.
+Real manager/relay tests cover finite access, account isolation, PostgreSQL/S3 persistence, streamed assets and shutdown. Native integration tests cover document convergence, renewal, serial wakeups, multipart staging and source-failure cleanup. The compiled smoke uses an owned wire peer to prove that the packaged host applies incoming data through the public SDK and retains it across restart; it is not a second production relay implementation.
 
 The two live dashboards provide the end-to-end local check. This setup does not prove live Google configuration, provider hosting, backup operations, capacity or cost targets. Nothing is deployed or merged into main by this command.
 

@@ -8,6 +8,8 @@ import {
   type WebviewEditingSnapshot,
 } from "pstdio-api-contracts/extension-kernel";
 import type { GuestHost } from "./guest-host";
+import { createTextEditingClient } from "./text-editing-client";
+import type { TextEditingClient } from "./text-editing-types";
 
 export type EditingSnapshot<State extends object> = Omit<WebviewEditingSnapshot, "value"> & { value: State };
 export type EditingSessionOptions<State extends object> = Pick<
@@ -32,11 +34,13 @@ export interface WebviewEditingSession<State extends object> {
 }
 
 export interface WebviewEditingClient {
+  text: TextEditingClient;
   open<State extends object>(options: EditingSessionOptions<State>): Promise<WebviewEditingSession<State>>;
 }
 
 export const createWebviewEditingClient = (host: GuestHost) =>
   ({
+    text: createTextEditingClient(host),
     async open<State extends object>(options: EditingSessionOptions<State>) {
       const sessionId = crypto.randomUUID();
       const listeners = new Set<() => void>();

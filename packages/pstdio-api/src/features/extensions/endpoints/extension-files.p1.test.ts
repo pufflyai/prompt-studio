@@ -296,6 +296,7 @@ describe("extension file endpoints", () => {
     });
 
     expect(contentResponse.status).toBe(304);
+    expect(contentResponse.headers.get("cache-control")).toBe("private, no-cache");
     expect(await contentResponse.text()).toBe("");
   });
 

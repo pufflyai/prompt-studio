@@ -365,8 +365,7 @@ the `resourceEvents.renumbered` event, and the SDK's two-device test helper.
 - PRD 0010's rules for sync failures and relay retention are replaced by R19 to R23 and
   R30. Its local disk limits still apply.
 - The [synchronization reference](../../references/architecture/0026-synchronization-contracts.md)
-  and the [covered checkpoints reference](../../references/architecture/0027-covered-checkpoints.md)
-  describe the current code until it is replaced.
+  describes current CRDT storage. The replaced covered-checkpoint reference and implementation are removed.
 
 ## Acceptance
 

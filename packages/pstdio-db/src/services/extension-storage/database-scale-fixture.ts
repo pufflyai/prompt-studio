@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
-import { readDocumentRecord } from "pstdio-sync";
+import { readDocumentRecord } from "pstdio-sync/records";
 import { fingerprint } from "pstdio-sync-contracts";
 import { createRow, owners, scaleStorageIndexes, seedOwner, type Workload, workload } from "storage-scale-fixture";
 import * as Y from "yjs";

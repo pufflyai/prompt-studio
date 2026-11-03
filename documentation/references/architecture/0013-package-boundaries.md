@@ -6,15 +6,18 @@ app, runtime, or packaging concerns. The source of truth for mechanical rules is
 `scripts/verify/boundary-rules.ts`; update this document with any intentional
 layer-map change.
 
+Cross-package native editor integration tests live in `packages/e2e`. They may
+start the real `pstdio-api/app` host and use the public `@pstdio/workbench` session
+API. The workbench package itself does not depend on the API host.
+
 ## Layers
 
 1. **Contracts and utilities**
-   `pstdio-sync-contracts` defines private, versioned synchronization wire schemas,
-   fingerprint validation, compatibility checks, and proposed authoring inputs.
-   Its main export depends only on Zod and Web Crypto. Its separate `./conformance`
-   export is test-only and uses development dependencies for PGlite, PostgreSQL,
-   Yjs, and S3 test storage. It imports no host, SDK, UI, database implementation,
-   or provider code. Its consumers, such as `pstdio-sync`, `pstdio-db`,
+   `pstdio-sync-contracts` defines private blind synchronization wire schemas,
+   canonical JSON fingerprints and current storage authoring inputs. Its only
+   package export depends on Zod and Web Crypto. Its scripts retain a shared
+   isolated PostgreSQL/object-storage test runner; this is not a runtime export.
+   It imports no host, SDK, UI, database implementation or provider code. Its consumers, such as `pstdio-sync`, `pstdio-db`,
    `pstdio-api`, `pstdio-relay`, and `pstdio-account-manager`, declare their own
    dependency and layer-map edge. `pstdio-api-contracts`
    consumes its identity and exact-target schemas for local environment bindings;
@@ -30,17 +33,15 @@ layer-map change.
    `pstdio-theme` owns browser-free palette conversion for the extension runtime
    and UI importer. UI bundles its implementation and public types; it is not
    a published SDK contract.
-   `pstdio-db` also consumes synchronization contracts for the durable extension
-   journal and accepted state. It does not import the test-only conformance entry.
+   `pstdio-db` also consumes synchronization contracts for durable document state,
+   current-record projections and encrypted record-stream persistence.
    The private `pstdio-sync` package owns the production, runtime-neutral record
-   model and authoring operations. It depends on synchronization contracts and
-   Yjs, hides sequence documents behind record operations, and accepts a storage
-   adapter. `pstdio-db` supplies its durable local adapter.
-   Its real-file integration tests declare `pstdio-storage` as a development
-   dependency to verify immutable asset gates; database runtime code does not import it.
-   Its production-relay conformance tests also declare `pstdio-relay` as a development
-   dependency. That edge is confined to test fixtures; local database runtime code
-   does not open PostgreSQL relay storage.
+   and text engines. Its root entry owns shared storage ports; records, text,
+   transient presence, encryption and relay have separate entry points. Module
+   dependency checks keep text and presence independent of host and editor code.
+   The six exports are module contracts, not individual internal file exports.
+   It accepts storage adapters; `pstdio-db` supplies the durable local adapter.
+   [Sync modules](0026-synchronization-contracts.md#sync-modules) defines each owner.
 
    The private `pstdio-diagnostics` package owns the bounded performance capture,
    recording and evidence summaries shared by desktop and benchmark drivers. It
@@ -65,6 +66,8 @@ layer-map change.
    contracts shared with the API live below it in `pstdio-api-contracts`, not in
    API packages. The SDK and workbench declare `pstdio-sync-contracts` as a build
    dependency and inline its types and schemas into their public packages.
+   Workbench bundles `pstdio-sync/text` for its browser replica. It is a private
+   build dependency and is inlined into runtime and type output.
    The SDK's in-memory test storage also bundles `pstdio-sync`, so extension tests
    use the same grouped-write and conflict rules as the durable host.
 
@@ -181,12 +184,12 @@ installs. Service code does not belong in `infra/`.
 
 The private `pstdio-relay` workspace lives under `services/relay/`. It is a separate
 service, not part of the local API host or the CLI bundle. It consumes the shared diagnostic adapter, the private
-`pstdio-sync` record/branch rules and `pstdio-sync-contracts` wire schemas, including the
-blind sync protocol in `src/protocol/`. Its production
+`pstdio-sync-contracts` blind wire schemas in `src/protocol/`. Integration fixtures use
+private `pstdio-sync` encrypted document clients. Its production
 access verification uses only the database-free `pstdio-account-manager/access` entry;
 the relay receives public issuer/audience/JWKS trust, without the manager database role, signing secret or device credentials. Isolated integration fixtures may
 use the manager's operator exports to create disposable accounts and devices. Production
-modules never import the test-only conformance export. It must not import the API
+modules have no grouped conformance implementation. It must not import the API
 host, UI, clients, database implementation, or prototype. PostgreSQL persistence
 belongs to the relay; the real local adapter belongs to `pstdio-db`.
 See the [relay development guide](../../guides/development/0006-relay.md)

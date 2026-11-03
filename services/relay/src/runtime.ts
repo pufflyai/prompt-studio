@@ -2,10 +2,8 @@ import { createEnvironmentAccessVerifier } from "pstdio-account-manager/access";
 import type { ReportFailure } from "pstdio-service-telemetry";
 import { createRelayAssets } from "./assets/assets";
 import { readRelayLimits } from "./limits";
-import { createRecoveryProofs } from "./recovery-proofs";
 import { readRuntimeSecrets } from "./runtime-secrets";
 import { scheduleSyncCleanup } from "./storage/cleanup";
-import { createRelayStorage } from "./storage/storage";
 import { createSyncOwners } from "./transport/owners";
 
 // Cleanup only has to keep pace with the grace period, so an hourly run is enough.
@@ -28,9 +26,7 @@ export const createRelayRuntime = (env: Record<string, string | undefined>, repo
     };
     const secrets = readRuntimeSecrets(env);
     const verifyAccess = createEnvironmentAccessVerifier(secrets.trust);
-    const recovery = createRecoveryProofs(secrets.recoveryKey);
     const assets = createRelayAssets({ databaseUrl, bucket, s3 });
-    const storage = createRelayStorage(databaseUrl, assets);
     const sync = createSyncOwners({ databaseUrl, bucket, s3, assets, limits: readRelayLimits(env) });
     const stopCleanup = scheduleSyncCleanup(
       (signal) => sync.sync.cleanup(undefined, signal),
@@ -39,13 +35,11 @@ export const createRelayRuntime = (env: Record<string, string | undefined>, repo
     );
     return {
       verifyAccess,
-      recovery,
       assets,
-      storage,
       ...sync,
       async close() {
         await stopCleanup();
-        const results = await Promise.allSettled([storage.close(), sync.sync.close(), assets.close()]);
+        const results = await Promise.allSettled([sync.sync.close(), assets.close()]);
         if (results.some((result) => result.status === "rejected")) throw new Error("Relay storage shutdown failed");
       },
     };

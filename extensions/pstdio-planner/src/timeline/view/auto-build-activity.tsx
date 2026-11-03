@@ -1,19 +1,8 @@
-import {
-  Button,
-  CloseButton,
-  HStack,
-  Popover,
-  Portal,
-  Separator,
-  Stack,
-  Text,
-  useRecipe,
-  useSlotRecipe,
-} from "@chakra-ui/react";
-import { ScrollArea } from "@pstdio/ui";
+import { Button, HStack, Popover, Portal, Separator, Stack, Text, useRecipe, useSlotRecipe } from "@chakra-ui/react";
+import { PopoverHeader, ScrollArea } from "@pstdio/ui";
 import { psTheme } from "@pstdio/ui/theme";
 import { Pause, Play, Square } from "lucide-react";
-import { type RefObject, useRef } from "react";
+import { type ReactElement, useRef } from "react";
 import type { AutoBuildButtonProps } from "./auto-build-button";
 import { AutoBuildHelp } from "./auto-build-help";
 import { AutoBuildRequests } from "./auto-build-requests";
@@ -47,8 +36,8 @@ interface AutoBuildActivityProps
   > {
   open: boolean;
   failed: boolean;
-  anchor: RefObject<HTMLButtonElement | null>;
-  onClose: () => void;
+  trigger: ReactElement;
+  onOpenChange: (open: boolean) => void;
   onStop: () => void;
   onConfigure: () => void;
 }
@@ -56,11 +45,11 @@ interface AutoBuildActivityProps
 export function AutoBuildActivity(props: AutoBuildActivityProps) {
   const {
     open,
-    anchor,
+    trigger,
     disabled,
     enabled,
     paused,
-    onClose,
+    onOpenChange,
     onStop,
     onConfigure,
     onPause,
@@ -74,37 +63,39 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
   } = props;
   const content = useRef<HTMLDivElement>(null);
   const danger = useRecipe({ recipe: psTheme.getRecipe("button") })({ variant: "destructive" });
-  const styles = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "panel" });
+  const styles = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "widget" });
   return (
     <Popover.Root
       lazyMount
       unmountOnExit
       open={open}
       initialFocusEl={() => content.current}
-      positioning={{ placement: "bottom-end", getAnchorElement: () => anchor.current }}
-      onOpenChange={({ open }) => !open && onClose()}
+      positioning={{ placement: "bottom-end" }}
+      onOpenChange={({ open }) => onOpenChange(open)}
     >
+      <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Portal>
         <Popover.Positioner>
           <Popover.Content
             ref={content}
             css={styles.content}
+            width="popover-panel"
             display="flex"
             flexDirection="column"
             maxH="min({sizes.filter-picker-height}, var(--available-height))"
             aria-label="Auto Build activity"
           >
-            <Popover.Header flexShrink="0">
-              <HStack gap="xs">
+            <PopoverHeader
+              icon={<Play />}
+              title={
                 <Popover.Title>
                   {t("timeline.autoBuild.start", "Auto Build")}
                   {paused ? ` · ${t("timeline.autoBuild.paused", "Paused")}` : ""}
                 </Popover.Title>
-                <AutoBuildHelp t={t} />
-                <CloseButton size="sm" disabled={disabled} onClick={onClose} marginLeft="auto" />
-              </HStack>
-            </Popover.Header>
-            <Popover.Body display="flex" flexDirection="column" minH="0" flex="1">
+              }
+              actions={<AutoBuildHelp t={t} />}
+            />
+            <Popover.Body display="flex" flexDirection="column" minH="0" flex="1" px="md" pb="sm">
               <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
                 <Stack gap="md">
                   <AutoBuildRequests
@@ -117,7 +108,7 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
                 </Stack>
               </ScrollArea>
             </Popover.Body>
-            <Popover.Footer flexShrink="0">
+            <Popover.Footer flexShrink="0" px="md" pb="sm">
               <Stack w="full" alignItems="end">
                 <Separator w="full" />
                 {actionError ? (
