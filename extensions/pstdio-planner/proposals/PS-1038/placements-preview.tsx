@@ -1,11 +1,12 @@
 import { Box, Button } from "@chakra-ui/react";
+import { getIconComponent } from "@pstdio/ui";
 import { useRef, useState } from "react";
+import { REVIEW_REQUEST_ICON } from "../../src/data/review-request-summary";
 import type { ReviewRequestView } from "../../src/data/review-request-types";
 import type { PlanRow } from "../../src/timeline/contracts";
 import { AutoBuildIndicator } from "../../src/timeline/view/auto-build-indicator";
 import { GraphCard } from "../../src/timeline/view/graph-card";
 import { AutoBuildActivity } from "./auto-build-activity";
-import { NeedsAttentionPreview } from "./needs-attention-preview";
 import { RequestModal } from "./request-modal";
 import { previewAgentSessions } from "./review-requests.story-fixture";
 
@@ -21,6 +22,9 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
   const [open, setOpen] = useState(true);
   const [paused, setPaused] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+  const [answered, setAnswered] = useState<string[]>([]);
+  const AttentionIcon = getIconComponent(REVIEW_REQUEST_ICON);
   return (
     <>
       <Button ref={anchor} size="xs" variant="outline" onClick={() => setOpen(true)}>
@@ -56,7 +60,31 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
         }}
         onOpenSession={() => {}}
         t={(_key, fallback) => fallback ?? _key}
-        attention={<NeedsAttentionPreview requests={requests} failSave={failSave} />}
+        attention={
+          requests.some(({ id }) => !answered.includes(id)) ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setOpen(false);
+                setRequestsOpen(true);
+              }}
+            >
+              <AttentionIcon />
+              Needs attention
+            </Button>
+          ) : null
+        }
+      />
+      <RequestModal
+        title="Needs attention"
+        requests={requests}
+        answered={answered}
+        onAnswered={(id) => setAnswered((current) => [...current, id])}
+        failSave={failSave}
+        open={requestsOpen}
+        onClose={() => setRequestsOpen(false)}
+        finalFocusEl={() => anchor.current}
       />
     </>
   );

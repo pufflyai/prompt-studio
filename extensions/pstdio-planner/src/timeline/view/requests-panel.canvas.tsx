@@ -219,15 +219,15 @@ export const UnreadableRequest: Story = {
 };
 
 export const AutoBuildPopover: Story = {
-  name: "Auto Build — Needs attention inline",
+  name: "Auto Build — open Needs attention",
   render: () => <AutoBuildPreview requests={previewRequests} />,
 };
 export const AutoBuildSingleRequest: Story = {
-  name: "Auto Build — one request inline",
+  name: "Auto Build — one pending request",
   render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} />,
 };
 export const AutoBuildSaveError: Story = {
-  name: "Auto Build — answer save error",
+  name: "Auto Build — modal answer save error",
   render: () => <AutoBuildPreview requests={previewRequests.slice(0, 1)} failSave />,
 };
 export const AutoBuildEmptySessions: Story = {
