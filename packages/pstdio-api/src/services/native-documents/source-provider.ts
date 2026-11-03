@@ -1,8 +1,8 @@
 import { nativeDocumentSourceSchema, type TextSourceTarget } from "pstdio-api-contracts";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
-import { executeProjectExtensionCommand } from "../../features/extensions/execute-project-extension-command";
 import { resolveNativeLoadedSource } from "./source-binding";
+import { executeNativeDocumentCommand } from "./source-command";
 import { NativeDocumentSourceError } from "./source-error";
 
 export type ProviderTarget = TextSourceTarget & { projectId: string; signal?: AbortSignal };
@@ -30,7 +30,7 @@ const invoke = async (
       "native_document_source_unavailable",
       "The text source provider is unavailable",
     );
-  const result = await executeProjectExtensionCommand(deps, {
+  const result = await executeNativeDocumentCommand(deps, {
     projectId: input.projectId,
     commandId: handler.id,
     signal: input.signal,

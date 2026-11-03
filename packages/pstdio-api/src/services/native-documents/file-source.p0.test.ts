@@ -4,12 +4,16 @@ import { join } from "node:path";
 import { createNativeSourceKey } from "pstdio-api-contracts";
 import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
+import { EventBus } from "../../features/sync/event-bus";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
 import { resolveNativeLoadedSource } from "./source-binding";
 
 let fixture: Awaited<ReturnType<typeof createWorkspaceContextFixture>>;
+let eventBus: EventBus;
 beforeEach(async () => {
   fixture = await createWorkspaceContextFixture();
+  eventBus = new EventBus();
+  fixture.deps.eventBus = eventBus;
   await Bun.write(
     join(fixture.root, "extension.ts"),
     `export default { views: [{
@@ -17,6 +21,7 @@ beforeEach(async () => {
     body: { kind: "file",
       async load(ctx, params) {
         await ctx.storage.set("renderer", params.renderer);
+        await ctx.events.emit({ kind: "event", id: "loaded" }, {});
         const metadata = params.renderer.resource?.metadata ?? {};
         return { documentSource: metadata.unbound ? undefined : { kind: "workspace", path: "notes.txt" }, content: metadata.content ?? await ctx.workspaceFiles.readText("notes.txt"),
           fileName: metadata.fileName ?? "notes.md", editable: metadata.editable,
@@ -25,6 +30,7 @@ beforeEach(async () => {
       async save(ctx, params) {
         await ctx.storage.set("savedRenderer", params.renderer);
         await ctx.workspaceFiles.writeText("notes.txt", params.content);
+        await ctx.events.emit({ kind: "event", id: "saved" }, {});
         return { revision: "file-save-revision" };
       },
     },
@@ -37,19 +43,34 @@ afterEach(async () => {
   await fixture.cleanup();
 });
 
+const domainEvents = () =>
+  eventBus
+    .getSince(0)
+    .filter((event) => event.table === "extension_events")
+    .map((event) => event.data as { projectId: string; eventId: string })
+    .filter((event) => event.eventId.startsWith("example.context.event."));
+
 const target = {
   fileRendererId: "example.context.view.document",
   resource: { extensionId: "example.context", projectId: "project-1", type: "document", id: "one" },
   pageParams: { section: "body" },
 };
 
-test("a text source resolves and projects through its owner without a rendering view", async () => {
+test("a text source resolves and projects through its owner and refreshes subscribed views", async () => {
   await Bun.write(
     join(fixture.root, "extension.ts"),
     `export default { textSources: [{
     id: "body", ref: { kind: "text-source", id: "body" }, params: { name: { type: "text", required: true } },
-    resolve: async (ctx, { params }) => ({ source: { kind: "workspace", path: params.name }, content: await ctx.workspaceFiles.readText(params.name), editable: true }),
-    project: async (ctx, { params, content }) => { await ctx.workspaceFiles.writeText(params.name, content); await ctx.storage.set("domain-effect", content); },
+    resolve: async (ctx, { params }) => {
+      await ctx.events.emit({ kind: "event", id: "resolved" }, {});
+      return { source: { kind: "workspace", path: params.name }, content: await ctx.workspaceFiles.readText(params.name), editable: true };
+    },
+    project: async (ctx, { params, content }) => {
+      await ctx.workspaceFiles.writeText(params.name, content);
+      await ctx.storage.set("domain-effect", content);
+      await ctx.events.emit({ kind: "event", id: "changed" }, {});
+      await ctx.events.emit({ kind: "event", id: "changed" }, {});
+    },
   }] };`,
   );
   const input = {
@@ -67,6 +88,10 @@ test("a text source resolves and projects through its owner without a rendering 
   });
   expect(await readFile(join(fixture.root, "notes.txt"), "utf8")).toBe("provider edit");
   expect(fixture.values.get("domain-effect")).toBe("provider edit");
+  expect(domainEvents()).toMatchObject([
+    { projectId: "project-1", eventId: "example.context.event.resolved" },
+    { projectId: "project-1", eventId: "example.context.event.changed" },
+  ]);
   await expect(loadNativeMarkdownFile(fixture.deps, { ...input, extensionId: "foreign.owner" })).rejects.toMatchObject({
     code: "native_document_source_unavailable",
   });
@@ -122,6 +147,7 @@ test("native Markdown uses the declared load handler and the source identity sha
   expect(file.documentKey).toBe(createNativeSourceKey(["workspace", "notes.txt"]));
   expect(file.content.content).toBe("selected folder");
   expect(file.saveHandlerId).toBe("example.context.view.document.file.save");
+  expect(domainEvents()).toMatchObject([{ projectId: "project-1", eventId: "example.context.event.loaded" }]);
   expect(fixture.values.get("renderer")).toMatchObject({
     rendererId: target.fileRendererId,
     projectId: "project-1",
@@ -138,6 +164,7 @@ test("native Markdown saves through the declared handler with its original rende
     fileStorageVersions: {},
   });
   expect(await readFile(join(fixture.root, "notes.txt"), "utf8")).toBe("Saved shared source");
+  expect(domainEvents()).toMatchObject([{ projectId: "project-1", eventId: "example.context.event.saved" }]);
   expect(fixture.values.get("savedRenderer")).toMatchObject({
     rendererId: target.fileRendererId,
     projectId: "project-1",
