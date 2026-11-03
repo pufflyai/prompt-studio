@@ -144,12 +144,17 @@ test("reinstalling unchanged indexes leaves the shared table's statistics alone"
     { owner: { workbenchId: f.projectAId, extensionId: "ext.indexed" }, definitions: indexes },
     { owner: { workbenchId: f.projectAId, extensionId: "ext.plain" }, definitions: [] },
   ];
+  const before = await analyzeCount();
   await installRecordIndexes(f.db, owners, () => {});
-  const installed = await analyzeCount();
-  expect(installed).toBe(1);
+  expect(await analyzeCount()).toBe(before + 1);
   await installRecordIndexes(f.db, owners, () => {});
-  expect(await analyzeCount()).toBe(installed);
+  expect(await analyzeCount()).toBe(before + 1);
   const renamed = [{ ...owners[0], definitions: [{ ...indexes[0], name: "renamed" }] }, owners[1]];
   await installRecordIndexes(f.db, renamed, () => {});
-  expect(await analyzeCount()).toBe(installed + 1);
+  expect(await analyzeCount()).toBe(before + 2);
+  // Removing every index drops its statistics too, so nothing needs analyzing.
+  await installRecordIndexes(f.db, [{ ...owners[0], definitions: [] }, owners[1]], () => {});
+  expect(await analyzeCount()).toBe(before + 2);
+  const remaining = await f.db.execute(sql`SELECT 1 FROM pg_indexes WHERE indexname LIKE 'storage_query_%'`);
+  expect(remaining.rows).toHaveLength(0);
 });
