@@ -1,4 +1,5 @@
 ---
+"pstdio": patch
 "@pstdio/workbench": patch
 ---
 
