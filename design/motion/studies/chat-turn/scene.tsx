@@ -1,10 +1,10 @@
 import { Box, Flex, Stack } from "@chakra-ui/react";
-import type { SceneProps } from "motion-lab/kit";
-import { Composer, duration, Message, progress, reveal, SessionWindow, timings } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { Composer, duration, Message, progress, reveal, SessionWindow, timings } from "../../kit";
 import { ComposerEdge, TurnStatus } from "./turn-status";
 
 const answer =
-  "I’ll build the motion examples in design/motion and make them available in the Motion Lab extension. Each example will use the same visual language as Prompt Studio.";
+  "I’ll build the motion examples in design/motion and make them available in UI Canvas. Each example will use the same visual language as Prompt Studio.";
 const words = answer.match(/\S+\s*/g) ?? [];
 const send = 1;
 const wait = 1.3;
@@ -27,7 +27,7 @@ const StreamedReply = (props: SceneProps) => {
   });
 };
 
-export const ChatTurn = (props: SceneProps) => {
+const ChatTurn = (props: SceneProps) => {
   const { time, variant } = props;
   // Only the rise style moves messages; the others fade in place.
   const rise = variant.values.turn === "rise" ? 4 : 0;
