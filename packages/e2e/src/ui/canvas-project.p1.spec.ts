@@ -59,7 +59,7 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
     await page.goto(`/projects/${project.id}/extensions/pstdio.canvas/canvases`);
     await expect(page.getByText("UI Canvas", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Components", { exact: true })).toHaveCount(0);
-    const viewer = page.frameLocator('iframe[title="UI Canvas"]');
+    const viewer = page.frameLocator('iframe[title="UI Canvas"]:visible');
     await expect(viewer.locator("[data-ui-canvas-setup]")).toBeVisible();
     watcher = spawn("bun", [join(repoRoot, "packages/canvas/bin/pstdio-canvas.ts"), "watch", "--root", root], {
       stdio: "inherit",

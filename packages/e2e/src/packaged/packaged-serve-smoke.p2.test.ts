@@ -31,7 +31,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./packaged-native-markdown-smoke";
 // The Markdown fixture resolves/projects a registered source and uses the public SDK session through authenticated agent admission, preserving front matter and one Yjs runtime.
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
-// packaged-canvas-install.p2.test.ts checks optional Canvas landing selection, module assets, previews, themes, and skills without local build fingerprints.
+// packaged-canvas-install.p2.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
 // Catalog IDs and extension icons remain available through the compiled host.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.

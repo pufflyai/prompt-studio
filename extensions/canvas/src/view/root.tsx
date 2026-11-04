@@ -111,6 +111,7 @@ const useCanvasBuild = (host: GuestHost, id: string | undefined, selected: boole
           if (!current()) return;
           if (next.status === "ready" && next.canvas && next.canvas.id !== id) {
             if (selected) await client.navigation.open(canvasTarget(next.canvas.id, next.canvas.name));
+            else if (id) setRead({ status: "removed" });
             return;
           }
           setRead(next as CanvasRead);
@@ -135,7 +136,7 @@ export const CanvasRoot = (props: RootProps) => {
     const frame = requestAnimationFrame(() => setTheme(readCanvasTheme(current.themePreference ?? "pstdio-light")));
     return () => cancelAnimationFrame(frame);
   }, [current.themePreference]);
-  const id = current.resource?.id ?? current.pageLocation?.resource?.id;
+  const id = current.resource?.id;
   const location = current.pageLocation;
   const active =
     location?.page.extensionId === "pstdio.canvas" &&
