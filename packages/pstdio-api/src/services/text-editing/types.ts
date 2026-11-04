@@ -45,7 +45,7 @@ export interface TextConnection {
   active: boolean;
   disposed: boolean;
   listeners: Set<(event: TextEditingEvent) => void>;
-  buffered: Map<string, TextEditingEvent>;
+  buffered: Map<string | symbol, TextEditingEvent>;
   barrier?: {
     id: string;
     waiting: Set<TextMember>;
