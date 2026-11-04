@@ -118,8 +118,8 @@ test("an online owner's queue recovers by itself after its automatic refresh als
   });
   await page.goto(sessionUrl());
   await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
-  await expect.poll(() => failedReads).toBeGreaterThanOrEqual(2);
-  await page.waitForTimeout(3_000);
+  // The first read and the automatic refresh both fail; a third read proves the session keeps asking.
+  await expect.poll(() => failedReads).toBeGreaterThanOrEqual(3);
   renewing = false;
   await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
   await expect(page.getByTestId("send-message-button").filter({ visible: true }).last()).toBeVisible();
@@ -180,7 +180,7 @@ test("remote workspace files and diff open on their owner; offline history stays
   await expect(page.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
   await page.getByTestId("content-editable").filter({ visible: true }).last().fill("");
   await page.unroute(queueRoute);
-  await page.getByRole("button", { name: "Refresh queue", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
   await expect(page.getByTestId("content-editable").filter({ visible: true }).last()).toHaveAttribute(
     "contenteditable",
     "true",
