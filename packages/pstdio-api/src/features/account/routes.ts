@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { deviceCommandSchema } from "pstdio-api-contracts";
 import { managerOriginSchema } from "../../services/account/manager-client";
 import {
   AccountRequestError,
@@ -6,6 +7,7 @@ import {
   type createNativeAccount,
 } from "../../services/account/native-account";
 import type { AppBindings } from "../../types";
+import { enforceDeviceCommandBodyLimit } from "./device-command-body";
 
 const json = <T extends z.ZodType>(schema: T) => ({ content: { "application/json": { schema } } });
 const responses = {
@@ -17,9 +19,30 @@ const tags = ["Account"];
 
 export const createAccountRoutes = (service: ReturnType<typeof createNativeAccount>) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.use("/account/projects/:id/devices/:deviceId/commands", enforceDeviceCommandBodyLimit);
   // Account service errors never reach generic API error logging or extension event payloads.
   routes.onError((error, c) =>
     c.json({ error: error instanceof AccountRequestError ? error.message : accountUnavailableMessage }, 400),
+  );
+  routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/projects/{id}/devices/{deviceId}/commands",
+      tags,
+      request: {
+        params: params.extend({ deviceId: z.string().min(1) }),
+        body: { required: true, ...json(deviceCommandSchema) },
+      },
+      responses: {
+        ...responses,
+        413: { description: "The encoded remote command exceeds 64 MiB.", ...json(z.object({ error: z.string() })) },
+      },
+    }),
+    async (c) => {
+      const { id, deviceId } = c.req.valid("param");
+      const result: unknown = await service.sendDeviceCommand(id, deviceId, c.req.valid("json"), c.req.raw.signal);
+      return c.json(result, 200);
+    },
   );
   routes.openapi(
     createRoute({

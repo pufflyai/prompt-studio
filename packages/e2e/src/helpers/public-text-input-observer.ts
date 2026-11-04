@@ -58,7 +58,7 @@ export const observePublicTextInput = async (page: Page) => {
         .map((line) => line.slice(6))
         .join("\n");
       if (!data) return;
-      const event = JSON.parse(data);
+      const event = JSON.parse(data).data;
       if (event.type === "snapshot" && event.handle === activeHandle && event.memberId === activeMember)
         record({
           kind: "snapshot",
@@ -98,7 +98,7 @@ export const observePublicTextInput = async (page: Page) => {
           });
       }
       const body = response.body;
-      if (!url.endsWith("/text-editing/stream") || !body) return response;
+      if (!url.endsWith("/session-stream") || !body) return response;
       const getReader = body.getReader.bind(body);
       body.getReader = (() => {
         const reader = getReader();

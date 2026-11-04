@@ -24,7 +24,7 @@ export const registerDeviceInTransaction = async (transaction: ManagerTransactio
     .values({ accountId: input.accountId, id: input.deviceId, name: input.name, platform: input.platform, digest })
     .onConflictDoUpdate({
       target: [devices.accountId, devices.id],
-      set: { platform: input.platform, digest, removedAt: null, lastSeenAt: sql`clock_timestamp()` },
+      set: { platform: input.platform, digest, signingKey: null, removedAt: null, lastSeenAt: sql`clock_timestamp()` },
     });
   return { accountId: input.accountId, deviceId: input.deviceId, token };
 };
@@ -67,7 +67,7 @@ export const renameDeviceInTransaction = async (transaction: ManagerTransaction,
 export const removeDeviceInTransaction = async (transaction: ManagerTransaction, input: DeviceInput) => {
   const removed = await transaction
     .update(devices)
-    .set({ removedAt: sql`clock_timestamp()` })
+    .set({ removedAt: sql`clock_timestamp()`, signingKey: null })
     .where(activeDevice(input))
     .returning({ id: devices.id });
   if (removed.length) await rotateSpaceKeysInTransaction(transaction, input.accountId);

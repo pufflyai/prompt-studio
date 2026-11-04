@@ -1,6 +1,7 @@
 import { nativePresenceLimits } from "pstdio-api-contracts";
 import type { TextEditingEvent } from "pstdio-api-contracts/extension-kernel";
 import { textError, textFailure } from "../../services/text-editing/errors";
+import { textEventBufferKey } from "../../services/text-editing/events";
 import type { createTextEditingService } from "../../services/text-editing/service";
 import type { SessionEventSink } from "../sessions/session-stream-connections";
 
@@ -23,7 +24,7 @@ export const streamTextEditingEvents = async (
 ) => {
   if (sink.aborted) return;
   const finished = Promise.withResolvers<{ type: "closed" } | { type: "error"; error: unknown }>();
-  const pending = new Map<string, { event: TextEditingEvent; bytes: number }>();
+  const pending = new Map<string | symbol, { event: TextEditingEvent; bytes: number }>();
   let bytes = 0;
   let active = true;
   let stopListening = () => {};
@@ -53,12 +54,12 @@ export const streamTextEditingEvents = async (
     if (!active) return;
     stopListening = service.listen({ projectId: input.project_id, token: input.token }, (event) => {
       if (!active) return;
-      const key = event.type === "prepareClose" ? event.type : `${event.memberId}:${event.type}`;
+      const key = textEventBufferKey(event);
       const size = eventBytes(event);
       bytes -= pending.get(key)?.bytes ?? 0;
       pending.delete(key);
-      // These events contain complete current states, just like disconnected service buffering.
-      // Move a replacement to the tail to preserve member version order across event types.
+      // Move replaced full states to the tail to preserve their cross-type member version order.
+      // Failure occurrences retain their own positions even while the socket is blocked.
       pending.set(key, { event, bytes: size });
       bytes += size;
       // A previously supported large snapshot may travel alone; do not impose a new document limit.

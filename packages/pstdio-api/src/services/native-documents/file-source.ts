@@ -9,9 +9,9 @@ import { createReadBoundary } from "pstdio-extensions";
 import { StorageRevisionChangedError } from "pstdio-sync";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
-import { executeProjectExtensionCommand } from "../../features/extensions/execute-project-extension-command";
 import { withNativeFileWrite } from "./file-write-context";
 import { resolveNativeLoadedSource } from "./source-binding";
+import { executeNativeDocumentCommand } from "./source-command";
 import { NativeDocumentSourceError } from "./source-error";
 import { loadTextSource, projectTextSource } from "./source-provider";
 
@@ -56,7 +56,7 @@ export const resolveNativeFilePresentation = async (
   input: NativeDocumentTarget & { projectId: string; signal?: AbortSignal },
 ) => {
   const { view, load, save, renderer, slot } = await resolveFile(deps, input);
-  const result = await executeProjectExtensionCommand(deps, {
+  const result = await executeNativeDocumentCommand(deps, {
     projectId: input.projectId,
     commandId: load.id,
     signal: input.signal,
@@ -161,7 +161,7 @@ export const saveNativeMarkdownFile = async (
       "This file view does not use the shared Markdown editor",
     );
   const execute = () =>
-    executeProjectExtensionCommand(deps, {
+    executeNativeDocumentCommand(deps, {
       projectId: input.projectId,
       commandId: save.id,
       signal: input.signal,

@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
 import type { AppRouteHandler } from "../../../types";
+import { deviceCommandResponse, remoteCreationDevice } from "../../account/device-command-response";
 import { ProjectFolderMissingError } from "../../projects/project-folder-missing";
 import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
@@ -48,6 +49,26 @@ export const createWorkspaceRoute = createRoute({
 export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof createWorkspaceRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
+    const device = await remoteCreationDevice(deps.accountService, input.device_id);
+    if (device)
+      return deviceCommandResponse(
+        createWorkspaceRoute,
+        deps.accountService,
+        input.project_id,
+        device.id,
+        {
+          type: "workspace.create",
+          input: {
+            projectId: input.project_id,
+            providerId: input.provider_id,
+            shorthandBase: input.shorthand_base,
+            params: input.params,
+            anchors: input.anchors,
+          },
+        },
+        c.req.raw.signal,
+        device.identity,
+      );
     let workspace: Awaited<ReturnType<typeof createProviderBackedWorkspace>>;
     try {
       workspace = await createProviderBackedWorkspace(deps, {

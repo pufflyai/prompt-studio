@@ -94,8 +94,8 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
       await dashboard.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
       await expect(dashboard.getByTestId("content-editable").first()).toContainText(ticket.title);
     }
-    await page.route("**/extensions/commands/*/execute", async (route) => {
-      if (typeof route.request().postDataJSON()?.params?.content === "string") {
+    await page.route("**/text-editing/request", async (route) => {
+      if (route.request().postDataJSON()?.request?.operation === "submit") {
         held.push(route);
         return;
       }
@@ -112,12 +112,75 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
     await expect(page.getByText("This resource was removed.", { exact: false })).toBeVisible();
     const saveResponse = page.waitForResponse((response) => response.request() === held[0].request());
     await held[0].continue();
-    await saveResponse;
+    expect(await (await saveResponse).json()).toMatchObject({
+      ok: false,
+      error: { code: expect.stringMatching(/^source_(retired|unavailable)$/) },
+    });
     held.length = 0;
     expect((await listPlannerTickets(request, apiBase, project.id)).map((item) => item.id)).not.toContain(ticket.id);
     await expect(editor).toContainText("Keep this unsaved draft.");
+    await page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }).click();
+    await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
+    await expect(editor).not.toBeVisible();
   } finally {
     await Promise.all(held.map((route) => route.abort().catch(() => undefined)));
     await otherContext.close();
+  }
+});
+
+test("a removed note's pending draft stays recoverable until its tab is explicitly closed", async ({
+  page,
+  request,
+}) => {
+  const project = await createProject(request);
+  await waitForPlanner(request, project.id);
+  const noteCommand = async (command: string, params: Record<string, string>) => {
+    const response = await request.post(
+      `${apiBase}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-notes.command.notes.${command}/execute`,
+      { data: { params, source: "api" } },
+    );
+    expect(response.ok()).toBe(true);
+    const body = await response.json();
+    expect(body.outcome.status).toBe("success");
+    return body.outcome.value as { id: string; title: string };
+  };
+  const note = await noteCommand("create", { title: "Recover before closing" });
+  await prepareDashboard(page, project.id);
+  await page.goto(`${apiBase}/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.getByRole("option", { name: "Notes", exact: true }).click();
+  await page.getByRole("option", { name: note.title, exact: true }).click();
+  const tabId = await page
+    .getByRole("tab", { name: note.title, exact: true })
+    .locator("..")
+    .getAttribute("data-workbench-tab");
+  expect(tabId).toBeTruthy();
+  const tab = page.locator(`[data-workbench-tab="${tabId}"]`);
+  const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+  await expect(editor).toBeVisible();
+  const held: import("@playwright/test").Route[] = [];
+  await page.route("**/text-editing/request", async (route) => {
+    if (route.request().postDataJSON()?.request?.operation === "submit") {
+      held.push(route);
+      return;
+    }
+    await route.continue();
+  });
+  try {
+    await editor.fill("Recover this removed note.");
+    await expect.poll(() => held.length).toBe(1);
+    await noteCommand("delete", { noteId: note.id });
+    await expect(page.getByText("This resource was removed.", { exact: false })).toBeVisible();
+    const saveResponse = page.waitForResponse((response) => response.request() === held[0].request());
+    await held[0].continue();
+    const refused = await (await saveResponse).json();
+    expect(refused.ok).toBe(false);
+    held.length = 0;
+    await expect(editor).toContainText("Recover this removed note.");
+    await expect(tab).toBeVisible();
+    await tab.getByRole("button", { name: /^Close/ }).click();
+    await expect(tab).toHaveCount(0);
+    await expect(page.getByTestId("content-editable")).toHaveCount(0);
+  } finally {
+    await Promise.all(held.map((route) => route.abort().catch(() => undefined)));
   }
 });

@@ -23,10 +23,13 @@ export const createTextGuestMembers = (connection: TextEditingConnection, genera
   };
   const open = async (input: Extract<TextEditingRequest, { operation: "open" }>) => {
     const attempt = generation();
-    const member = members.get(input.memberId);
-    if (!member) return connection.request(input);
-    const origin = member.source ? { source: member.source, generation: member.generation } : sourceFor(input.input);
-    member.source ??= origin.source;
+    const previous = members.get(input.memberId);
+    if (!previous) return connection.request(input);
+    const origin = sourceFor(input.input);
+    // A successor owns its rejoin metadata even while an older abandonment receipt is pending.
+    const member = { ...previous };
+    members.set(input.memberId, member);
+    member.source = origin.source;
     if (member.generation !== generation())
       await connection.request({ operation: "register", memberId: input.memberId });
     if (origin.generation !== generation()) {
@@ -52,11 +55,14 @@ export const createTextGuestMembers = (connection: TextEditingConnection, genera
     if (input.operation !== "close")
       throw textEditingFailure("connection_reset", "The text session needs to rejoin its host", true);
     await connection.request({ operation: "abandon", memberId: entry[0] });
-    members.delete(entry[0]);
+    if (members.get(entry[0]) === entry[1]) members.delete(entry[0]);
     return true;
   };
   const forgetHandle = (handle: string) => {
     for (const [id, member] of members) if (member.handle === handle) members.delete(id);
+  };
+  const forgetMember = (input: TextEditingRequest, member: Member | undefined) => {
+    if (input.operation === "abandon" && members.get(input.memberId) === member) members.delete(input.memberId);
   };
   return {
     entries: () => members.entries(),
@@ -64,6 +70,7 @@ export const createTextGuestMembers = (connection: TextEditingConnection, genera
       Promise.all([...members.keys()].map((memberId) => connection.request({ operation: "register", memberId }))),
     async request(input: TextEditingRequest) {
       const attempt = generation();
+      const member = "memberId" in input ? members.get(input.memberId) : undefined;
       if (input.operation === "register") {
         if (!members.has(input.memberId)) members.set(input.memberId, { handle: "", generation: generation() });
       }
@@ -74,7 +81,7 @@ export const createTextGuestMembers = (connection: TextEditingConnection, genera
         throw textEditingFailure("connection_reset", "This reply belongs to an earlier text connection", true);
       if (input.operation === "current" && result)
         selected = { token: (result as TextSourceGrant).token, generation: attempt };
-      if (input.operation === "abandon") members.delete(input.memberId);
+      forgetMember(input, member);
       if (input.operation === "close") forgetHandle(input.handle);
       return result;
     },
