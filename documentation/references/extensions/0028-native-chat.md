@@ -84,6 +84,6 @@ navigation and preserve standard unavailable-target feedback.
 The PS-60 host prerequisite ships before separate Sessions extension adoption.
 Dashboard Sessions and their draft keys remain active until installed parity.
 Adoption owns their supported transition, default installation, navigation refs
-and consumer updates, using published supporting packages. Follow
-[independent releases](../../guides/development/0013-independent-extension-releases.md).
+and consumer updates, using published supporting packages. Use a published SDK
+containing this contract and a compatible host; see [API versioning](0014-api-versioning.md).
 The independent fixture is `packages/e2e/src/fixtures/native-chat/extension.ts`.
