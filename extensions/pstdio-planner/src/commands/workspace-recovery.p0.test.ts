@@ -363,3 +363,23 @@ test("a concurrent selection keeps its final choice after manual recovery launch
   expect((await attemptSelectionsCollection(f.storage).get(f.ticket.id))?.workspaceId).toBe("other");
   expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
 });
+
+test.each([
+  "automation",
+  "schedule",
+  "event",
+])("automatic run-attempt does not treat a stopped run as manual authority: %s", async (source) => {
+  const f = await lostWorkspace();
+  Object.assign(f.ctx, { source });
+  f.ctx.sessions.get = async (id) =>
+    sessionRecord({
+      ...f.old.session,
+      id,
+      status: "cancelled",
+      last_exit: { cause: "user_stop", startedAt: null, endedAt: "2026-10-22T10:00:00.000Z" },
+    });
+  await expect(runAttemptCommand.run(f.ctx, { ticket: f.ticket.id })).rejects.toThrow();
+  expect(f.created).toHaveLength(0);
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+  expect(await attemptSelectionsCollection(f.storage).get(f.ticket.id)).toBeUndefined();
+});

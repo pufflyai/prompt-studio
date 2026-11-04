@@ -280,6 +280,7 @@ export const runAttemptCommand = defineCommand({
   ],
   params: runAttemptParams,
   async run(ctx, commandParams) {
-    return withWriteGuard(ctx, "attempt-launch", () => startAttempt(ctx, commandParams, { manualResume: true }));
+    const manualResume = !["automation", "schedule", "event"].includes(ctx.source ?? "");
+    return withWriteGuard(ctx, "attempt-launch", () => startAttempt(ctx, commandParams, { manualResume }));
   },
 });
