@@ -11,11 +11,9 @@ import {
   dot,
   group,
   lineY,
-  link,
   rect,
   ruleY,
   stack,
-  text,
 } from "@tanstack/charts";
 import { decorative } from "@tanstack/charts/mark/decorative";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -26,8 +24,10 @@ import { ScrollArea } from "../primitives/scroll-area";
 import { SimpleCard, SimpleCardBody } from "../primitives/simple-card";
 import { Chart, chartColor } from "./chart";
 import { GanttDemo } from "./gantt-demo";
-import { activity, edges, matrix, nodes, observations, parts, series } from "./visualization-data";
+import { activity, matrix, observations, parts, series } from "./visualization-data";
 import { VisualizationExample as Example } from "./visualization-example";
+import { AdvancedLineExamples } from "./visualization-lines";
+import { NetworkExample } from "./visualization-network";
 import { PartsExamples } from "./visualization-parts";
 import { AreaExamples, LineExamples } from "./visualization-trends";
 
@@ -53,7 +53,7 @@ export function VisualizationGallery() {
                 ariaLabel="Columns"
                 definition={defineChart(
                   {
-                    marks: [barY(activity, { radius: chartGeometry.barRadius, x: "day", y: "value" })],
+                    marks: [barY(activity, { radius: { end: chartGeometry.barRadius }, x: "day", y: "value" })],
                     scales: columns,
                   },
                   options,
@@ -65,7 +65,9 @@ export function VisualizationGallery() {
                 ariaLabel="Horizontal bars"
                 definition={defineChart(
                   {
-                    marks: [barX(parts, { radius: chartGeometry.barRadius, x: "value", y: "name", color: "name" })],
+                    marks: [
+                      barX(parts, { radius: { end: chartGeometry.barRadius }, x: "value", y: "name", color: "name" }),
+                    ],
                     color: { legend: colorLegend({ placement: "bottom" }) },
                     scales: { x: { scale: scaleLinear, grid: true }, y: { scale: scaleBand } },
                   },
@@ -80,7 +82,7 @@ export function VisualizationGallery() {
                   {
                     marks: [
                       barY(series, {
-                        radius: chartGeometry.barRadius,
+                        radius: { end: chartGeometry.barRadius },
                         x: "day",
                         y: "value",
                         z: "team",
@@ -102,7 +104,7 @@ export function VisualizationGallery() {
                   {
                     marks: [
                       barY(series, {
-                        radius: chartGeometry.barRadius,
+                        radius: { end: chartGeometry.barRadius, stack: "outer" },
                         x: "day",
                         y: "value",
                         z: "team",
@@ -219,7 +221,7 @@ export function VisualizationGallery() {
                   {
                     marks: [
                       rect(bins, {
-                        radius: chartGeometry.barRadius,
+                        radius: [chartGeometry.barRadius, chartGeometry.barRadius, 0, 0],
                         x1: "x1",
                         x2: "x2",
                         y1: () => 0,
@@ -273,7 +275,7 @@ export function VisualizationGallery() {
                 definition={defineChart(
                   {
                     marks: [
-                      barY(activity, { radius: chartGeometry.barRadius, x: "day", y1: "low", y2: "high" }),
+                      barY(activity, { radius: { end: chartGeometry.barRadius }, x: "day", y1: "low", y2: "high" }),
                       decorative(ruleY([12], { stroke: chartColor("vis.text.secondary"), strokeDasharray: "4 4" })),
                     ],
                     scales: columns,
@@ -284,30 +286,9 @@ export function VisualizationGallery() {
             </Example>
             <PartsExamples />
             <AreaExamples />
+            <AdvancedLineExamples />
             <LineExamples />
-            <Example title="Network">
-              <Chart
-                ariaLabel="Network"
-                definition={defineChart(
-                  {
-                    marks: [
-                      decorative(
-                        link(edges, { x1: "x1", x2: "x2", y1: "y1", y2: "y2", stroke: chartColor("vis.grid") }),
-                      ),
-                      dot(nodes, { x: "x", y: "y", r: 8 }),
-                      decorative(
-                        text(nodes, { x: "x", y: "y", text: "id", dy: -18, fill: chartColor("vis.text.primary") }),
-                      ),
-                    ],
-                    scales: {
-                      x: { scale: scaleLinear().domain([-0.5, 2.5]), axis: false },
-                      y: { scale: scaleLinear().domain([0, 4]), axis: false },
-                    },
-                  },
-                  options,
-                )}
-              />
-            </Example>
+            <NetworkExample />
           </SimpleGrid>
           <SimpleCard>
             <SimpleCardBody>

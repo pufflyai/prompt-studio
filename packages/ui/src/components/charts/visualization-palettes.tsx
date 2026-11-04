@@ -44,7 +44,12 @@ export function PaletteExamples() {
           definition={defineChart(
             {
               marks: [
-                barY(categories, { radius: chartGeometry.barRadius, x: "category", y: "value", color: "category" }),
+                barY(categories, {
+                  radius: { end: chartGeometry.barRadius },
+                  x: "category",
+                  y: "value",
+                  color: "category",
+                }),
               ],
               scales: { x: { scale: () => scaleBand().padding(0.2) }, y: { scale: scaleLinear, axis: false } },
               color: { domain: categories.map(({ category }) => category), range: chartPalette },
@@ -81,7 +86,7 @@ export function PaletteExamples() {
                     { status: "Success", token: "success", value: 1 },
                   ],
                   {
-                    radius: chartGeometry.barRadius,
+                    radius: { end: chartGeometry.barRadius },
                     x: "status",
                     y: "value",
                     fill: (row) => chartColor(`vis.alert.${row.token}`),

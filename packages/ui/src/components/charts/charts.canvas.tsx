@@ -29,7 +29,7 @@ export const BarsAndLines = () => (
       height="xs"
       definition={defineChart(
         {
-          marks: [barY(values, { radius: chartGeometry.barRadius, x: "day", y: "count" })],
+          marks: [barY(values, { radius: { end: chartGeometry.barRadius }, x: "day", y: "count" })],
           scales: { x: { scale: scaleBand }, y: { scale: scaleLinear, grid: true } },
         },
         { tooltip: { use: tooltip } },

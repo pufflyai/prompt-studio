@@ -44,7 +44,7 @@ interface DailyBarsProps {
 export const DailyBars = (props: DailyBarsProps) => {
   const { days, label } = props;
   const definition = defineChart({
-    marks: [barY(days, { x: "day", y: "count", fill: countColor, inset: 4, radius: 2 })],
+    marks: [barY(days, { x: "day", y: "count", fill: countColor, inset: 4, radius: { end: 2 } })],
     scales: {
       x: {
         scale: () => scaleBand<string>().padding(0.2),
@@ -70,7 +70,7 @@ export const RankedBars = (props: RankedBarsProps) => {
   const { rows, label, fixedHeight = false } = props;
   const height = fixedHeight ? Math.max(rows.length * 24, 48) : undefined;
   const definition = defineChart({
-    marks: [barX(rows, { x: "count", y: "label", fill: countColor, maxThickness: 10, radius: 2 })],
+    marks: [barX(rows, { x: "count", y: "label", fill: countColor, maxThickness: 10, radius: { end: 2 } })],
     scales: {
       x: { scale: scaleLinear, nice: true, axis: false },
       y: {
@@ -101,6 +101,7 @@ export const SentimentBar = (props: SentimentBarProps) => {
   const definition = defineChart({
     marks: [
       barX(rows, {
+        radius: { end: 2, stack: "outer" },
         x: "count",
         y: "row",
         z: "sentiment",
