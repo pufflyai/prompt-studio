@@ -3,6 +3,7 @@ import { sealBlob, sealState, sealUpdate } from "../encryption";
 import { latestStateLimits } from "./document-sync";
 import { createRecordAssets } from "./record-assets";
 import { encodeRecordFrame, type RecordFrame, recordFrameCost } from "./record-frames";
+import { checkRecordStreamPage, createRecordStreamDownload } from "./record-stream-download";
 import { createRecordStreamReader } from "./record-stream-reader";
 import type { RecordBytes, RecordStreamCursor, RecordStreamInput } from "./record-stream-types";
 import { retainRecordSourceFrames, retainRecordSourceMap, withSourceRecovery } from "./source-recovery";
@@ -32,20 +33,6 @@ const addFrames = (remote: Map<string, Uint8Array[]>, frames: (RecordFrame | nul
   return remote;
 };
 
-const checkPage = (result: Extract<ReadResult, { status: "updates" }>, after: number) => {
-  let expected = after;
-  for (const update of result.updates) {
-    if (update.sequence <= expected) continue;
-    if (update.sequence !== expected + 1) throw new Error("Relay update sequence has a gap");
-    expected = update.sequence;
-  }
-  if (!result.more && expected < result.lastSequence) throw new Error("Relay did not return every update");
-  return result.updates.filter((update) => update.sequence > after);
-};
-// A founding state can hold records that no update carries; every device loads it once.
-const founding = (cursor: RecordStreamCursor, state: StateInfo | null) =>
-  !!state && state.baseStateId === null && state.stateId !== cursor.stateId;
-
 const withState = async (
   reader: ReturnType<typeof createRecordStreamReader>,
   cursor: RecordStreamCursor,
@@ -65,8 +52,8 @@ const updateBytes = (cursor: RecordStreamCursor, updates: StoredUpdate[], byteLe
 
 /**
  * Syncs every record of one owner through one encrypted relay document (ADR 0102). Each relay
- * update is one local save. The first latest state founds the stream; later ones only compact
- * updates the relay already holds, so a device that follows the updates never needs them.
+ * update is one local save. Every changed latest state is merged once, so retained local records
+ * repair missing edits even when the state claims to cover updates this device already read.
  */
 export const createRecordStreamSync = (input: RecordStreamInput) => {
   const { space, documentId, relay, store } = input;
@@ -82,32 +69,42 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     rejected.add(failure.id);
   };
   const reader = createRecordStreamReader({ space, documentId, relay, files, quarantine });
+  const download = createRecordStreamDownload(reader, relay);
   const skippedRecords = async (recordIds: string[]) => {
     for (const recordId of recordIds)
       await quarantine({ kind: "update", id: `record:${recordId}`, envelope: { recordId } });
   };
 
   /**
-   * Merges a latest state this device must load: a founding state, or one that replaced removed
-   * updates. Null when the state cannot be read, so the cursor stays and the next pass retries it.
+   * Merges a changed latest state and queues edits it lacks. Its summary counts records and bytes,
+   * which cannot prove edit coverage. Null when unreadable, leaving the cursor for the next pass.
    */
   const load = async (cursor: RecordStreamCursor, state: StateInfo) => {
     downloaded = false;
     const frames = await reader.openLatest(state);
     if (!frames) return null;
-    // The state covers every sequence this device skipped, or it founds a new stream.
-    const next = { ...(await withState(reader, cursor, state)), after: state.through, skipped: false };
-    const remote = addFrames(new Map(), frames);
-    const { rejected, cursor: saved } = await withSourceRecovery(
-      () => store.merge(remote, "repair", next),
+    const received = await download({ remote: addFrames(new Map(), frames), after: state.through, state });
+    if (!received) return null;
+    // Include the retained tail before comparing local edits, so a compaction behind this device's
+    // cursor does not queue repairs for edits that are still present in relay updates.
+    const { remote, snapshot, frames: tail, updates, after, state: latest, skipped, pendingBytes } = received;
+    const next = { ...(await withState(reader, cursor, latest)), after, skipped, pendingBytes };
+    const {
+      rejected,
+      rejectedFrames,
+      cursor: saved,
+    } = await withSourceRecovery(
+      () => store.merge(snapshot, "repair", next, tail),
       (error) => retainRecordSourceMap(input, remote, error, quarantine),
     );
     await skippedRecords(rejected);
+    for (const index of rejectedFrames)
+      await quarantine({ kind: "update", id: updates[index]!.updateId, envelope: updates[index] });
     return saved;
   };
 
   const applyPage = async (cursor: RecordStreamCursor, result: Extract<ReadResult, { status: "updates" }>) => {
-    const updates = checkPage(result, cursor.after);
+    const updates = checkRecordStreamPage(result, cursor.after);
     if (updates.length) downloaded = false;
     const next = await withState(reader, cursor, result.state);
     if (!updates.length && next === cursor) return cursor;
@@ -136,16 +133,10 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     while (true) {
       const result = await relay.read(cursor.after);
       if (lost(cursor, result)) return null;
-      if (result.status === "state-required" || founding(cursor, result.state)) {
+      if (result.status === "state-required" || (result.state && result.state.stateId !== cursor.stateId)) {
         const loaded = await load(cursor, result.state!);
         if (!loaded) return cursor;
         cursor = loaded;
-        continue;
-      }
-      if (result.state && result.state.stateId !== cursor.stateId && result.state.through < cursor.after) {
-        // A peer compacted only part of our known tail. Replay the remaining updates to rebuild
-        // their byte count from the new base; applying their Yjs data again is idempotent.
-        cursor = { ...(await withState(reader, cursor, result.state)), after: result.state.through };
         continue;
       }
       cursor = await applyPage(cursor, result);
@@ -216,38 +207,6 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     await relay.update(await sealUpdate(space, documentId, frame, blobIds));
     await store.sent(entries.at(-1)!.sequence);
     return true;
-  };
-
-  /** Collects every record the relay holds, for a device that has not joined yet. Null when its latest state is unreadable. */
-  const download = async () => {
-    let remote = new Map<string, Uint8Array[]>();
-    let after = 0;
-    let state: StateInfo | null = null;
-    let skipped = false;
-    let pendingBytes = 0;
-    while (true) {
-      const result = await relay.read(after);
-      if (result.state && result.state.stateId !== state?.stateId) {
-        state = result.state;
-        const frames = await reader.openLatest(state);
-        // Adopting without the stream's records would upload unrelated histories; wait instead.
-        if (!frames) return null;
-        remote = addFrames(new Map(), frames);
-        after = state.through;
-        // A newer latest state covers every update skipped before it.
-        skipped = false;
-        pendingBytes = 0;
-        continue;
-      }
-      if (result.status === "state-required") throw new Error("Relay is missing updates after its latest state");
-      const updates = checkPage(result, after);
-      const { frames, byteLengths } = await reader.openFrames(updates);
-      pendingBytes += byteLengths.reduce((sum, bytes) => sum + bytes, 0);
-      if (frames.includes(null)) skipped = true;
-      addFrames(remote, frames);
-      after = updates.at(-1)?.sequence ?? after;
-      if (!result.more) return { remote, after, state, skipped, pendingBytes };
-    }
   };
 
   /**
