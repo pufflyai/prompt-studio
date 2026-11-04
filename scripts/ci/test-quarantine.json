@@ -705,6 +705,21 @@
     "removeWhen": "Identify and fix the cold dependency-download stall on Apple Silicon, then use first-attempt normal native CI observations to show the complete fresh-cache fixture finishes within its unchanged120000ms allowance. Keep every core extension, asset/storage assertion and cleanup; do not retry, prewarm or run reliability loops."
   },
   {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-core-extension-features.p2.test.ts",
+    "name": "packaged core extension features preserve their settings, resources and templates",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-93 / core extension installation",
+    "reason": "The shared cold-install fixture exhausted 120000ms before project creation in PS-90 verification; the unchanged-main control passed in 95839ms with 260 assertions. Codex dependency installation varied from 61.0s to 106.6s, Claude 28.0s to 43.4s and OpenCode 14.5s to 25.2s. PS-75 already tracks the sibling smoke case on this setup path; the precise transfer stall remains unresolved. Preserve all nine extensions, fresh home/cache, feature assertions and cleanup.",
+    "evidence": [
+      "Planner PS-93 files/packages.log and branch-install.jsonl: original 120002ms timeout after 138 passes/79 files on settings 3ed354453",
+      "Planner PS-93 files/main-control.log and main-install.jsonl: unchanged main 5c1e728b8 single cold control 95839ms, 260 assertions",
+      "https://github.com/pufflyai/prompt-studio/pull/1699"
+    ],
+    "removeWhen": "Identify and fix the cold dependency-install stall on Apple Silicon, then use ordinary first-attempt native CI observations to show the complete fresh-cache fixture finishes within its unchanged120000ms allowance. Retain all nine real extensions, feature assertions and cleanup; do not retry, prewarm or run reliability loops."
+  },
+  {
     "runner": "bun",
     "file": "packages/pstdio-api/src/features/extensions/command-environment/resource-prefix-scenarios.p1.test.ts",
     "name": "a project whose derived shorthand collides with a reserved prefix can still allocate",
