@@ -15,6 +15,7 @@ interface WorkbenchPanelAddMenuProps {
 export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
   const { panels, region, resource, workbench } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const selectedPanel = useRef<WorkbenchCompositionAddablePanel | null>(null);
   const label = "Add panel";
   if (panels.length === 0) return null;
 
@@ -44,7 +45,17 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
   if (panels.length === 1) return <Tooltip content={label}>{trigger}</Tooltip>;
 
   return (
-    <Menu.Root positioning={{ placement: "bottom-start", getAnchorElement: () => triggerRef.current }}>
+    <Menu.Root
+      positioning={{ placement: "bottom-start", getAnchorElement: () => triggerRef.current }}
+      onSelect={({ value }) => {
+        selectedPanel.current = panels.find((panel) => `widget:${panel.contribution.id}` === value) ?? null;
+      }}
+      onExitComplete={() => {
+        const panel = selectedPanel.current;
+        selectedPanel.current = null;
+        if (panel) openPanel(panel);
+      }}
+    >
       <Tooltip content={label}>
         <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       </Tooltip>
@@ -60,7 +71,6 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
                   icon={
                     panel.contribution.icon ? <WorkbenchIcon name={panel.contribution.icon} size={14} /> : undefined
                   }
-                  onActivate={() => openPanel(panel)}
                 />
               </Menu.Item>
             ))}
