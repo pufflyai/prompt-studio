@@ -7,6 +7,7 @@ import {
   type createNativeAccount,
 } from "../../services/account/native-account";
 import type { AppBindings } from "../../types";
+import { enforceDeviceCommandBodyLimit } from "./device-command-body";
 
 const json = <T extends z.ZodType>(schema: T) => ({ content: { "application/json": { schema } } });
 const responses = {
@@ -18,6 +19,7 @@ const tags = ["Account"];
 
 export const createAccountRoutes = (service: ReturnType<typeof createNativeAccount>) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.use("/account/projects/:id/devices/:deviceId/commands", enforceDeviceCommandBodyLimit);
   // Account service errors never reach generic API error logging or extension event payloads.
   routes.onError((error, c) =>
     c.json({ error: error instanceof AccountRequestError ? error.message : accountUnavailableMessage }, 400),
