@@ -2,7 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 export const verifyPanelInsertionTargets = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
-  const mainHeader = page.getByLabel("Main panel header", { exact: true });
+  const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader).toBeVisible();
   await mainHeader.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
@@ -42,9 +42,10 @@ export const verifyPanelInsertionTargets = async (page: Page) => {
       })
       .toBe(true);
   }
-  await expect(main.locator('[data-workbench-panel-drag="main"]')).toBeVisible();
-  const source = (await mainHeader.boundingBox())!;
-  await expect(mainHeader).toHaveCSS("cursor", "grab");
+  const mainDragHeader = main.locator('[data-workbench-panel-drag="main"]');
+  await expect(mainDragHeader).toBeVisible();
+  const source = (await mainDragHeader.boundingBox())!;
+  await expect(mainDragHeader).toHaveCSS("cursor", "grab");
   await page.mouse.move(source.x + 3, source.y + source.height / 2);
   await page.mouse.down();
   await page.mouse.move(source.x + 23, source.y + source.height / 2, { steps: 4 });
@@ -94,7 +95,7 @@ const verifyNearbyTabTargets = async (page: Page) => {
   await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
   await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
   const main = page.locator('[data-workbench-panel="main"]');
-  await expect(page.getByLabel("Main panel header", { exact: true })).not.toHaveAttribute("data-panel-draggable");
+  await expect(page.locator('[data-workbench-region="nav"]')).not.toHaveAttribute("data-panel-draggable");
   const tab = main.getByRole("tab", { selected: true });
   await tab.hover();
   await main.hover();
