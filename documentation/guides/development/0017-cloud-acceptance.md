@@ -14,10 +14,9 @@ work, not the phase 1 baseline or a new dependency gate.
 Preparation may run before delivery. Full integrated and hosted acceptance may
 only run against the delivered, correctly deployed candidates. A green component
 test, a submitted prerequisite branch, or an old hosted run does not satisfy that
-condition. PS-735's platform delivery is now Done; keep PS-789 unfinished until its
-actual acceptance criteria are met. PS-877 still needs managed closure and broad
-qualification. Do not create a competing managed attempt or change dependencies
-to bypass unfinished acceptance.
+condition. PS-735's platform delivery and PS-877's hosted Relay are Done; keep
+PS-789 unfinished until its actual acceptance criteria are met. Do not create a
+competing managed attempt or change dependencies to bypass unfinished acceptance.
 
 For each run, save the following under the `filesPath` returned by
 `pst reports write --kind change_request --name <ticket-purpose-session> --template change-request`:
@@ -57,26 +56,43 @@ the report's evidence directory. `CLOUD_SESSION_ID` must identify the owning ses
 
 ```ts
 import { spawn } from "node:child_process";
-import { mkdir, open, readFile, readdir, rmdir, stat, unlink } from "node:fs/promises";
+import {
+  mkdir,
+  open,
+  readFile,
+  readdir,
+  rmdir,
+  stat,
+  unlink,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { constants } from "node:os";
 
 const lock = "/tmp/pstdio-cloud-heavy-validation.lock";
 const session = process.env.CLOUD_SESSION_ID;
 const command = process.argv.slice(2);
-if (!session || command.length === 0) throw new Error("Provide session and command");
+if (!session || command.length === 0)
+  throw new Error("Provide session and command");
 await mkdir(lock); // Outside finally: failed acquisition never owns a predecessor's lease.
 const directory = await stat(lock);
 const path = join(lock, "owner.json");
-const owner = { session, pid: process.pid, token: crypto.randomUUID(), purpose: command,
-  acquiredAt: new Date().toISOString() };
+const owner = {
+  session,
+  pid: process.pid,
+  token: crypto.randomUUID(),
+  purpose: command,
+  acquiredAt: new Date().toISOString(),
+};
 let ownerFile: Awaited<ReturnType<typeof stat>> | undefined;
 let group: number | undefined;
 let interrupted: NodeJS.Signals | undefined;
 const signalGroup = (signal: NodeJS.Signals) => {
   if (!group) return;
-  try { process.kill(-group, signal); }
-  catch (error) { if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error; }
+  try {
+    process.kill(-group, signal);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+  }
 };
 const interrupt = (signal: NodeJS.Signals) => {
   const force = interrupted !== undefined;
@@ -93,44 +109,68 @@ try {
   const file = await open(path, "wx");
   try {
     ownerFile = await file.stat();
-    await file.writeFile(JSON.stringify({ ...owner, inode: directory.ino, device: directory.dev }));
-  } finally { await file.close(); }
+    await file.writeFile(
+      JSON.stringify({ ...owner, inode: directory.ino, device: directory.dev }),
+    );
+  } finally {
+    await file.close();
+  }
   if (interrupted) throw new Error(`Interrupted before launch: ${interrupted}`);
-  const child = spawn(command[0]!, command.slice(1), { detached: true, stdio: "inherit" });
+  const child = spawn(command[0]!, command.slice(1), {
+    detached: true,
+    stdio: "inherit",
+  });
   group = child.pid;
-  const result = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve, reject) => {
+  const result = await new Promise<{
+    code: number | null;
+    signal: NodeJS.Signals | null;
+  }>((resolve, reject) => {
     child.on("error", reject);
     child.on("close", (code, signal) => resolve({ code, signal }));
   });
   console.log(JSON.stringify({ childResult: result, interrupted }));
-  process.exitCode = interrupted ? 128 + constants.signals[interrupted]
-    : result.code ?? 128 + constants.signals[result.signal!];
+  process.exitCode = interrupted
+    ? 128 + constants.signals[interrupted]
+    : (result.code ?? 128 + constants.signals[result.signal!]);
 } finally {
   // Drain this command's process group before releasing the shared resource.
   signalGroup("SIGTERM");
   while (group) {
-    try { process.kill(-group, 0); }
-    catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ESRCH") { group = undefined; break; }
+    try {
+      process.kill(-group, 0);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ESRCH") {
+        group = undefined;
+        break;
+      }
       throw error;
     }
     signalGroup("SIGKILL");
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   process.off("SIGINT", onInt);
   process.off("SIGTERM", onTerm);
   const currentDirectory = await stat(lock);
-  if (currentDirectory.ino !== directory.ino || currentDirectory.dev !== directory.dev)
+  if (
+    currentDirectory.ino !== directory.ino ||
+    currentDirectory.dev !== directory.dev
+  )
     throw new Error("Lease directory changed; refusing removal");
   if (ownerFile) {
     const currentFile = await stat(path);
     const current = JSON.parse(await readFile(path, "utf8"));
-    if (currentFile.ino !== ownerFile.ino || currentFile.dev !== ownerFile.dev ||
-        current.pid !== owner.pid || current.token !== owner.token)
+    if (
+      currentFile.ino !== ownerFile.ino ||
+      currentFile.dev !== ownerFile.dev ||
+      current.pid !== owner.pid ||
+      current.token !== owner.token
+    )
       throw new Error("Lease owner changed; refusing removal");
     await unlink(path);
   } else if ((await readdir(lock)).length) {
-    throw new Error("Unexpected file in acquisition directory; refusing removal");
+    throw new Error(
+      "Unexpected file in acquisition directory; refusing removal",
+    );
   }
   await rmdir(lock);
 }
@@ -155,22 +195,22 @@ Paths below are relative to the repository root. The new phase 1 scenario is
 `packages/e2e/src/packaged/packaged-cloud-acceptance.fixture.ts`. A fixture run
 against controlled account/relay peers proves packaged client behavior only.
 
-| Acceptance | Harness or existing coverage to inspect | Required evidence beyond a component pass |
-| --- | --- | --- |
-| One account/project, three devices, online and offline | New phase 1 scenario; `packaged-cloud-extension-set-smoke.p2.test.ts` already starts three hosts | Three independent homes, databases, runtime PIDs, environment IDs and enrolled device IDs; one account/project; exact Notes, Artifacts, Planner and unrelated-extension readback on all three |
-| Same-note edits and live native collaboration | New phase 1 scenario; `packaged-public-text-sync.p2.spec.ts`; `packaged-public-text-native-sync.p2.spec.ts` | Actual public editor sessions and independent offline edits both survive; settled note file and displayed text agree on every device |
-| Object, nested-key and identified-list edits | New phase 1 scenario; `packages/sdk/src/testing/memory-storage-devices.p0.test.ts` | Real packaged storage clients merge independent field/item edits, not only simulated two-device storage |
-| Atomic multi-record delivery | New phase 1 scenario; `packaged-document-sync-smoke.p1.test.ts` | Receiver observations show only complete before/after sets; final equality alone cannot prove absence of intermediate partial states |
-| Missed replacements and repair | New phase 1 scenario; relay fixture controls; `packages/pstdio-sync/src/relay/document-sync.p0.test.ts` | One device misses several actual replacements with covered history trimmed; its offline edits survive. A validly encrypted incomplete state is repaired from retained client edits |
-| Number uniqueness and old aliases | New phase 1 scenario; `packaged-grouped-storage-smoke.p2.test.ts` | Offline same-kind allocations collide, converge to unique current numbers, and old shared aliases resolve every affected resource; verify Planner and Reports adoption separately |
-| Deterministic migrations and order | New phase 1 scenario; `packaged-cloud-extension-set-smoke.p2.test.ts`; `packages/sdk/src/testing/storage-ordering.p0.test.ts` | Offline migration outputs use the same IDs without duplicates; concurrent card moves produce the same order with every card once; core-only checks do not prove Planner adoption |
-| Local then re-enabled | New phase 1 scenario; `packaged-two-device-sync-smoke.p2.test.ts` | Account-wide Local status, independent retained copies, two-device edits while local and identical merged content after re-enable |
-| Reset and new-device recovery | New phase 1 scenario; `packaged-two-device-sync-smoke.p2.test.ts`; `packaged-cloud-notes-onboarding.p2.test.ts` | Reset a disposable home and database; perform supervised Google login; discover every cloud project and recover content from stored data, without copying the source database |
-| Early access and Cloud UI ownership | `packaged-account-smoke.p2.test.ts`; deployed Cloud extension candidate | Denied account remains signed in, sees no cloud projects and Coming soon. Enabled account gets full Cloud extension status item, popover and settings; dashboard contains no independent Cloud UI |
-| Plaintext absence | `packaged-document-sync-smoke.p1.test.ts`; new phase 1 scenario | Scan relay metadata and decoded stored payload/blob bytes for all known titles, file names, record text and file bytes; also scan real hosted test database/object dump and service logs |
-| Blob grace and per-document bound | Relay reference workload and storage-bound benchmark | An offline referenced file remains readable within seven-day grace; after 10,000 edits, each document is below twice latest state plus grace copy, with all objects reconciled |
-| Full folder recovery | PRD R57–R59 and its delivered recovery candidate | `.pstignore` policy, hidden/Git-ignored files including `.env`, missing entries, private keys, interrupted transfer and non-overwriting restore all satisfy the PRD; declared-file recovery is narrower evidence |
-| Scale and hosting cost | PS-903 scale harness and PS-787 reference workload | Exact frozen workloads, raw timings, three-device correctness, concurrent second account and hosted cost/capacity evidence |
+| Acceptance                                             | Harness or existing coverage to inspect                                                                                       | Required evidence beyond a component pass                                                                                                                                                                        |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One account/project, three devices, online and offline | New phase 1 scenario; `packaged-cloud-extension-set-smoke.p2.test.ts` already starts three hosts                              | Three independent homes, databases, runtime PIDs, environment IDs and enrolled device IDs; one account/project; exact Notes, Artifacts, Planner and unrelated-extension readback on all three                    |
+| Same-note edits and live native collaboration          | New phase 1 scenario; `packaged-public-text-sync.p2.spec.ts`; `packaged-public-text-native-sync.p2.spec.ts`                   | Actual public editor sessions and independent offline edits both survive; settled note file and displayed text agree on every device                                                                             |
+| Object, nested-key and identified-list edits           | New phase 1 scenario; `packages/sdk/src/testing/memory-storage-devices.p0.test.ts`                                            | Real packaged storage clients merge independent field/item edits, not only simulated two-device storage                                                                                                          |
+| Atomic multi-record delivery                           | New phase 1 scenario; `packaged-document-sync-smoke.p1.test.ts`                                                               | Receiver observations show only complete before/after sets; final equality alone cannot prove absence of intermediate partial states                                                                             |
+| Missed replacements and repair                         | New phase 1 scenario; relay fixture controls; `packages/pstdio-sync/src/relay/document-sync.p0.test.ts`                       | One device misses several actual replacements with covered history trimmed; its offline edits survive. A validly encrypted incomplete state is repaired from retained client edits                               |
+| Number uniqueness and old aliases                      | New phase 1 scenario; `packaged-grouped-storage-smoke.p2.test.ts`                                                             | Offline same-kind allocations collide, converge to unique current numbers, and old shared aliases resolve every affected resource; verify Planner and Reports adoption separately                                |
+| Deterministic migrations and order                     | New phase 1 scenario; `packaged-cloud-extension-set-smoke.p2.test.ts`; `packages/sdk/src/testing/storage-ordering.p0.test.ts` | Offline migration outputs use the same IDs without duplicates; concurrent card moves produce the same order with every card once; core-only checks do not prove Planner adoption                                 |
+| Local then re-enabled                                  | New phase 1 scenario; `packaged-two-device-sync-smoke.p2.test.ts`                                                             | Account-wide Local status, independent retained copies, two-device edits while local and identical merged content after re-enable                                                                                |
+| Reset and new-device recovery                          | New phase 1 scenario; `packaged-two-device-sync-smoke.p2.test.ts`; `packaged-cloud-notes-onboarding.p2.test.ts`               | Reset a disposable home and database; perform supervised Google login; discover every cloud project and recover content from stored data, without copying the source database                                    |
+| Early access and Cloud UI ownership                    | `packaged-account-smoke.p2.test.ts`; deployed Cloud extension candidate                                                       | Denied account remains signed in, sees no cloud projects and Coming soon. Enabled account gets full Cloud extension status item, popover and settings; dashboard contains no independent Cloud UI                |
+| Plaintext absence                                      | `packaged-document-sync-smoke.p1.test.ts`; new phase 1 scenario                                                               | Scan relay metadata and decoded stored payload/blob bytes for all known titles, file names, record text and file bytes; also scan real hosted test database/object dump and service logs                         |
+| Blob grace and per-document bound                      | Relay reference workload and storage-bound benchmark                                                                          | An offline referenced file remains readable within seven-day grace; after 10,000 edits, each document is below twice latest state plus grace copy, with all objects reconciled                                   |
+| Full folder recovery                                   | PRD R57–R59 and its delivered recovery candidate                                                                              | `.pstignore` policy, hidden/Git-ignored files including `.env`, missing entries, private keys, interrupted transfer and non-overwriting restore all satisfy the PRD; declared-file recovery is narrower evidence |
+| Scale and hosting cost                                 | PS-903 scale harness and PS-787 reference workload                                                                            | Exact frozen workloads, raw timings, three-device correctness, concurrent second account and hosted cost/capacity evidence                                                                                       |
 
 The packaged replacement driver keeps all eight original grouped saves, each with
 8 values containing 200,000 payload bytes. It seeds those records plus a 100,000-byte
@@ -207,7 +247,7 @@ remain unproved; these are current acceptance gaps, not newly invented dependenc
 PS-877's accepted hosted login/project-recovery evidence is preserved in RP-109 and
 independently verified by RP-411. Do not repeat that two-isolated-setup OAuth workload
 as preparation. Its waiver does not waive PS-789's three-device content, scale,
-retention, UI or recovery requirements, nor PS-877's remaining closure/qualification.
+retention, UI or recovery requirements.
 
 Keep the original packaged failures visible. CI 41831764633 at `2246bf6bf` completed
 with 82 component passes and the record-stream repair failure, a pending Notes source
@@ -243,21 +283,17 @@ The original default `verify:packages` run at PS-1064's candidate fails its exis
 device-command scenario while waiting for private history. A focused baseline probe
 proves its manager wrapper substitutes a fake bearer rejected by the delivered
 strict identity fixture (HTTP 403). The existing correction belongs to
-[PR #1741](https://github.com/pufflyai/prompt-studio/pull/1741), head
-`43e9209e4`; this preparation imports only its `packaged-device-commands.fixture.ts`
-blob `fa9614ffdb020c7f976d68eb2350a659bd9aaf6b` and maintained identity regression.
-The focused integrated check passes 20 assertions. No PS-827 product code is imported.
+[PR #1741](https://github.com/pufflyai/prompt-studio/pull/1741), merged into main as
+`f61471648`. The preparation branch no longer carries its own copy of that fixture.
+The focused integrated check passed 20 assertions before the merge.
 Preserve the original package failure and RP-430's exact baseline RED; the focused
 GREEN is not a replacement for running the default package command on a qualified
 candidate. Keep separately owned enhanced remote-session failures visible as well.
 
-PR #1745 subsequently delivered the history authentication correction on main
-`c7ed8acad`. Rebase conflicts are resolved by preserving issued-token/live identity
-behavior and both the delivered private-history scope regression and the additional
-live identity regression (two cases, 27 assertions). Do not drop either test or
-reclassify the original 403/timeouts as passes. The separate production repair patch
-from `c723c17be` remains unchanged; its rebased integration SHA differs, so compare
-the production source blobs as well as recording the original PR #1748 identity.
+PR #1745 delivered the history authentication correction on main `c7ed8acad`.
+Keep issued-token/live identity behavior, the delivered private-history scope
+regression and the additional live identity regression (two cases, 27 assertions).
+Do not drop either test or reclassify the original 403/timeouts as passes.
 
 ## Focused preparation and final candidate commands
 
@@ -273,11 +309,10 @@ bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-cloud-reco
 
 The original record-stream repair check exposed an acceptance failure: a quiet joined
 client accepts an authenticated incomplete replacement at the same cursor without
-repairing the missing record. Preserve that red result. PS-1064 owns its production
-repair in separate WS-166 and [PR #1748](https://github.com/pufflyai/prompt-studio/pull/1748),
-commit `c723c17be60b7b0bdb10327bc283d5edacc60efb`. This preparation branch incorporates
-that exact independently reviewed prerequisite; it is not a merge/delivery claim.
-The unchanged focused regression now passes (one test, 77 assertions). A changed
+repairing the missing record. Preserve that red result. PS-1064 delivered the
+production repair in [PR #1748](https://github.com/pufflyai/prompt-studio/pull/1748),
+merged into main as `bba1008dd`. The unchanged focused regression now passes (one
+test, 77 assertions). A changed
 snapshot and its retained tail must preserve whole-group validation before repair;
 the original atomicity review failure and corrected probe remain in PS-1064's report.
 Final packaged and latest-head CI results must be recorded separately. Do not import
@@ -286,25 +321,26 @@ The green `createDocumentSync` checks exercise the text/document path and do not
 waive the record-stream failure. Cloud extension UI is also absent at this base; no
 UI selectors or passing production UI coverage are invented for its Canvas previews.
 
-Only after the delivery gate and candidate verification, run:
+Only after the delivery gate and candidate verification, run the block below. Its
+subshell stops at the first failed step, so a failed build is never followed by
+tests of an older `dist/pstdio`, and your own shell stays open:
 
 ```sh
-bun "$EVIDENCE/heavy-command.ts" bun run --cwd scripts build:host
-export E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
-bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts
-bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-document-sync-smoke.p1.test.ts src/packaged/packaged-two-device-sync-smoke.p2.test.ts src/packaged/packaged-cloud-extension-set-smoke.p2.test.ts src/packaged/packaged-account-smoke.p2.test.ts
-bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-public-text-sync.p2.spec.ts src/packaged/packaged-public-text-native-sync.p2.spec.ts
+(
+  set -eu
+  bun "$EVIDENCE/heavy-command.ts" bun run --cwd scripts build:host
+  export E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
+  bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts
+  bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-document-sync-smoke.p1.test.ts src/packaged/packaged-two-device-sync-smoke.p2.test.ts src/packaged/packaged-cloud-extension-set-smoke.p2.test.ts src/packaged/packaged-account-smoke.p2.test.ts
+  bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-public-text-sync.p2.spec.ts src/packaged/packaged-public-text-native-sync.p2.spec.ts
+)
 ```
 
-The preparation stack now also isolates the stable-writer storage prerequisite in
-[PR #1759](https://github.com/pufflyai/prompt-studio/pull/1759), PS-1066. Its five
-storage paths originate in commit `525e332` from PR #1754; unrelated UI, desktop and
-benchmark ancestors are excluded. Independent review requires same-handle concurrent
-saves, distinct handle/device writers, rollback and checkpoint/offline-merge coverage.
-Do not substitute a global writer identity. Production repair #1748, storage #1759
-and preparation #1739 remain separate PRs with bases matching their dependency order.
-After a prerequisite squash reaches main, rebase the next branch onto the actual
-main commit and retarget it; do not merge a child into a temporary parent branch.
+PS-1066 delivered the stable-writer storage prerequisite in
+[PR #1759](https://github.com/pufflyai/prompt-studio/pull/1759), merged into main as
+`422456968`. Its coverage includes same-handle concurrent saves, distinct handle and
+device writers, rollback and checkpoint/offline-merge cases. Do not substitute a
+global writer identity.
 
 Original Linux candidate `1e0aa33e` timed out during replacement 7/8 at the unchanged
 120-second allowance. Keep that failure. Corrected source candidate `459e47d4` passed
@@ -319,7 +355,7 @@ a same-head rerun; preserve source-equivalence evidence explicitly.
 
 These results qualify controlled-peer fixture behavior only. Current local full and
 default package qualification still need their own evidence. They do not establish
-hosted/deployed product acceptance, PS-877 closure or PS-789 completion.
+hosted/deployed product acceptance or PS-789 completion.
 
 The first two commands run focused fixture checks, not integrated acceptance. The
 record-stream check uses the maintained packaged runner’s existing platform allowance;
@@ -359,7 +395,8 @@ bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output "$
 bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output "$EVIDENCE/scale-rich-incoming-board" --home /absolute/disposable-rich-home --measure --profile native --operation board --background incoming --sync --timing-owner /absolute/owner.json
 ```
 
-The example is one shard, not full coverage. Run the remaining frozen matrix through
+Stop if the build fails; never measure an older build. The example is one shard,
+not full coverage. Run the remaining frozen matrix through
 the maintained supervisor with distinct evidence paths. Layer-only results and the
 current diagnostic controller's incomplete-coverage exit cannot become a passing
 full acceptance claim. Do not start a new hourly CPU experiment for this preparation.
@@ -371,8 +408,11 @@ transfer, not a wire-peer substitute. It needs about 30 GiB of free disk. Under 
 heavy lease, when ready to collect that separate evidence:
 
 ```sh
-bun "$EVIDENCE/heavy-command.ts" docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:acceptance .
-bun "$EVIDENCE/heavy-command.ts" bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts "$EVIDENCE/relay-reference" pstdio-relay:acceptance
+(
+  set -eu
+  bun "$EVIDENCE/heavy-command.ts" docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:acceptance .
+  bun "$EVIDENCE/heavy-command.ts" bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts "$EVIDENCE/relay-reference" pstdio-relay:acceptance
+)
 ```
 
 Do not select a smaller workload for a full claim. The reference is one user, two
