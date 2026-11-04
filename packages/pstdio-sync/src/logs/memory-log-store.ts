@@ -149,6 +149,7 @@ export const createMemoryLogStore = (input: {
                 index: row.index,
                 localSequence: row.localSequence,
                 local: row.local,
+                fingerprint: row.fingerprint,
               },
             ]
           : [];

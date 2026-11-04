@@ -1,6 +1,6 @@
 import { fingerprint, type Json, type StateInfo, type StoredUpdate } from "pstdio-sync-contracts";
 import { openUpdate, sealUpdate } from "../encryption";
-import { createEncryptedManifestNodes, type OrderedIndexBlobs } from "../records";
+import { createEncryptedManifestNodes, type OrderedIndexBlobs } from "../relay";
 import { encodeBytes } from "../shared";
 import type { LogIndexedEntry } from "./log-page-index";
 import type { LogDelivery, LogReceivedBatch, LogStreamStore, LogSyncInput } from "./log-types";
@@ -57,7 +57,7 @@ export const createLogTransfers = (input: LogSyncInput) => {
     const { nodes } = await connect();
     return Promise.all(
       metadata.map(async (entry, index) => {
-        if (!selected.has(index)) return null;
+        if (!selected.has(index) || Date.parse(entry.createdAt) < store.cutoff()) return null;
         const payload = await readLogPayload(await nodes.read(entry.reference), entry);
         await nodes.retain(entry.reference, []);
         return payload;

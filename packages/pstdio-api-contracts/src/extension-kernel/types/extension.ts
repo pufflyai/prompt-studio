@@ -28,8 +28,8 @@ import type { PageContribution } from "./pages";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
 import type { StatusBarItemContribution } from "./status-bar";
-import type { StorageRecordIndex } from "./storage-records";
 import type { ExtensionStorageDeclaration } from "./storage-logs";
+import type { StorageRecordIndex } from "./storage-records";
 import type {
   NavigationItemContribution,
   NavigationTreeContribution,

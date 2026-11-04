@@ -9,7 +9,7 @@
     "./relay": "./src/relay/index.ts",
     "./encryption": "./src/encryption/index.ts",
     "./presence": "./src/presence/index.ts",
-    "./logs": "./src/log-stream/index.ts"
+    "./logs": "./src/logs/index.ts"
   },
   "scripts": {
     "test": "bun ../../scripts/ci/run-bun-tests.ts",

@@ -4,6 +4,7 @@ import { ensureLogHistory, publishLogCheckpoint } from "./log-checkpoint";
 import { logPageLimit } from "./log-cursor";
 import { createLogReader } from "./log-reader";
 import { openLogState } from "./log-state";
+import { planLogStream } from "./log-stream-plan";
 import { createLogTransfers } from "./log-transfer";
 import type { LogSyncInput } from "./log-types";
 export const createLogStreamSync = (input: LogSyncInput) => {
@@ -12,6 +13,12 @@ export const createLogStreamSync = (input: LogSyncInput) => {
   const { connect, prepare, wireUpdate, materialize, retained } = transfers;
   const { readNewest, readAfter } = createLogReader(input, transfers);
   return {
+    async plan(options: StorageLogRead = {}) {
+      const owned = structuredClone(options);
+      const first = await ensureLogHistory(input, transfers);
+      const state = await openLogState(space, documentId, relay, first.state);
+      return planLogStream(input, transfers, first, state, owned);
+    },
     async publish() {
       const first = await ensureLogHistory(input, transfers);
       const state = await openLogState(space, documentId, relay, first.state);

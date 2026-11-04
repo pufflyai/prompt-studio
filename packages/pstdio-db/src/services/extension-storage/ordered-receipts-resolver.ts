@@ -1,10 +1,5 @@
-import type {
-  createOrderedReceiptIndex,
-  OrderedAdmission,
-  OrderedDecision,
-  OrderedOperation,
-} from "pstdio-sync/records";
-import type { OrderedReceipt } from "pstdio-sync/relay";
+import type { OrderedAdmission, OrderedDecision, OrderedOperation } from "pstdio-sync/records";
+import type { createOrderedReceiptIndex, OrderedReceipt } from "pstdio-sync/relay";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { operationDependencies } from "./ordered-rebase";

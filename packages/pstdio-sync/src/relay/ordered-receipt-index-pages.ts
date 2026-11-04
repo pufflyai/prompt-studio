@@ -1,6 +1,6 @@
 import { canonicalJson, fingerprint, fingerprintSchema, type Json } from "pstdio-sync-contracts";
-import type { OrderedReceipt } from "../relay/ordered-stream-entry";
 import { type OrderedIndexReference, readOrderedIndexReference } from "./ordered-receipt-index-blobs";
+import type { OrderedReceipt } from "./ordered-stream-entry";
 
 export type ReceiptIndexValue =
   | { type: "identity"; fingerprint: string; epoch: string }

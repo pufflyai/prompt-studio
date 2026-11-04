@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createSyncSpace } from "../encryption";
-import type { OrderedReceipt } from "../relay/ordered-stream-entry";
 import { createOrderedReceiptIndex, type OrderedIndexBlobs } from "./ordered-receipt-index";
+import type { OrderedReceipt } from "./ordered-stream-entry";
 
 const space = await createSyncSpace({
   projectId: "receipt-index",

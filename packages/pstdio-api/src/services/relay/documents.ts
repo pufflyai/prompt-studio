@@ -5,8 +5,8 @@ import { createRecordAssets } from "../../features/extensions/command-environmen
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createRelayDocumentJobs, RelayDocumentRetiredError } from "./document-jobs";
 import { documentProgress } from "./document-progress";
-import { createSyncQuarantine } from "./quarantine";
 import { createRelayLogs } from "./logs";
+import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
 
 export const createExtensionDocumentSync = (input: {
@@ -35,7 +35,15 @@ export const createExtensionDocumentSync = (input: {
       createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
     const ownerId = await space.documentId(JSON.stringify([owner.extensionId, "owner"]));
     const recordStreamId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream-v2"]));
-    const logs = createRelayLogs({ owner, space, service: deps.extensionStorageService.logs, relay, signal: workSignal, subscribe: input.subscribe, statusChanged: input.statusChanged });
+    const logs = createRelayLogs({
+      owner,
+      space,
+      service: deps.extensionStorageService.logs,
+      relay,
+      signal: workSignal,
+      subscribe: input.subscribe,
+      statusChanged: input.statusChanged,
+    });
     const jobs = createRelayDocumentJobs({
       signal: workSignal,
       create: async (name) => {

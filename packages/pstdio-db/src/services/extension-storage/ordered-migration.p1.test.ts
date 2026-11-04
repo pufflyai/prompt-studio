@@ -64,3 +64,17 @@ test("the first indexed query after upgrade returns an ordered revision usable b
   expect((await records.query({ index: "titles", fields: ["title"] })).records[0]!.fields).toEqual({ title: "new" });
   expect((await records.aggregate({ index: "titles" })).count).toBe(1);
 });
+
+test("reading an outcome before any record access cannot bypass the owner's upgrade", async () => {
+  const f = await fixture();
+  await f.legacy.commit({ operationId: "old-outcome", edits: [{ recordId: "card", replace: { title: "retained" } }] });
+  const records = createDocumentStorageDBService(f.db).open({ owner: f.owner }).records;
+  expect(await records.outcome("unknown")).toBeUndefined();
+  const record = await records.read("card");
+  expect(() => JSON.parse(record.revision)).not.toThrow();
+  await records.commit({
+    operationId: "after-outcome",
+    edits: [{ recordId: "card", expectedRevision: record.revision, set: { "/title": "saved" } }],
+  });
+  expect((await records.read("card")).value).toEqual({ title: "saved" });
+});

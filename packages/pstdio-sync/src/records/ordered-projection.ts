@@ -28,6 +28,10 @@ export const orderedProjection = async (record: OrderedRecord) => {
     shared: record.deleted ? null : body.shared,
     revision: await observeOrderedRecord(record),
     recordLifetime: record.lifetime,
-    nativeSources: record.deleted ? {} : Object.fromEntries(Object.entries(body.nativeSources).map(([key, source]) => [key, { ...source, lifetime: record.lifetime }])),
+    nativeSources: record.deleted
+      ? {}
+      : Object.fromEntries(
+          Object.entries(body.nativeSources).map(([key, source]) => [key, { ...source, lifetime: record.lifetime }]),
+        ),
   };
 };

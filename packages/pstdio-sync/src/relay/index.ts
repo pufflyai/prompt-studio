@@ -7,6 +7,8 @@ export type { DocumentRelay, DocumentSyncInput, SyncFailure } from "./document-s
 export { serviceAddress, serviceUrl } from "./http";
 export { fetchSyncSpaces } from "./keys";
 export * from "./live";
+export { createOrderedReceiptIndex, type OrderedIndexBlobs, type OrderedIndexReference } from "./ordered-receipt-index";
+export { createEncryptedManifestNodes, readOrderedIndexReference } from "./ordered-receipt-index-blobs";
 export {
   decodeOrderedEntry,
   encodeOrderedEntry,

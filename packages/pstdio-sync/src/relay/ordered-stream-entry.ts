@@ -1,8 +1,7 @@
 import { jsonSchema } from "pstdio-sync-contracts";
-import { validateOrderedNativeOperation } from "../records/ordered-native-operation";
-import type { OrderedAdmission, OrderedDecision, OrderedRecord } from "../records/ordered-operation";
-import { verifyOrderedAdmission, verifyOrderedRecord } from "../records/ordered-operation-wire";
-import { type OrderedIndexReference, readOrderedIndexReference } from "../records/ordered-receipt-index-blobs";
+import type { OrderedAdmission, OrderedDecision, OrderedRecord } from "../records";
+import { validateOrderedNativeOperation, verifyOrderedAdmission, verifyOrderedRecord } from "../records";
+import { type OrderedIndexReference, readOrderedIndexReference } from "./ordered-receipt-index-blobs";
 
 export type OrderedReceipt = { decision: OrderedDecision; admissionFingerprint: string };
 export type OrderedStreamEntry =

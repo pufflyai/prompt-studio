@@ -1,14 +1,13 @@
 import { expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { createTextEditingClient, type GuestHost } from "@pstdio/sdk/extensions";
 import type { TextEditingRequest, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
 import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import * as Y from "yjs";
-import { createRelay } from "../../../../pstdio-db/src/services/extension-storage/record-stream-relay.fixture";
-import type { GuestHost } from "../../../../sdk/src/extensions/guest-host";
-import { createTextEditingClient } from "../../../../sdk/src/extensions/text-editing-client";
+import { numberRelayFixture } from "../relay/resource-number-sync.fixture";
 import { selected, textEditingFixture } from "./text-editing.test-fixture";
 
 /** Real ordered relay + SQL authority; only network delivery of the SDK batch is held. */
@@ -47,7 +46,7 @@ test("a real refused field group fences SDK deltas and full-state reopen while p
       keys: [{ generation: 1, secret: "A".repeat(43) }],
     });
     const documentId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream"]));
-    const { relay } = createRelay();
+    const relay = numberRelayFixture().relay(documentId);
     const failures: unknown[] = [];
     const sync = (store: Parameters<typeof createRecordStreamSync>[0]["store"]) =>
       createRecordStreamSync({

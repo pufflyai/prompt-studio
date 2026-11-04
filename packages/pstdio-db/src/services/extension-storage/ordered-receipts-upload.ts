@@ -1,5 +1,6 @@
 import type { StorageOwner } from "pstdio-sync";
-import type { createOrderedReceiptIndex, OrderedOperation } from "pstdio-sync/records";
+import type { OrderedOperation } from "pstdio-sync/records";
+import type { createOrderedReceiptIndex } from "pstdio-sync/relay";
 import { encodeOrderedEntry } from "pstdio-sync/relay";
 import { assetSchema } from "pstdio-sync-contracts";
 import type { OrderedJournal } from "./ordered-journal";

@@ -1,7 +1,6 @@
 import type { StorageLogEntry, StorageLogPage, StorageLogRead, UpdateEnvelope } from "pstdio-sync-contracts";
 import type { SyncSpace } from "../encryption";
-import type { OrderedIndexBlobs } from "../records";
-import type { DocumentRelay } from "../relay";
+import type { DocumentRelay, OrderedIndexBlobs } from "../relay";
 
 export interface LogSyncInput {
   space: SyncSpace;
@@ -43,6 +42,7 @@ export interface LogKnownEntry {
   index: number | null;
   localSequence: number;
   local: boolean;
+  fingerprint: string;
 }
 export interface LogReadPlan {
   entries: LogEntryMetadata[];

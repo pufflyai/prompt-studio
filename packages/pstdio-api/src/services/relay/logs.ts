@@ -61,6 +61,7 @@ export const createRelayLogs = (input: {
     state.remote = {
       publish: () => run(sync.publish),
       read: (options) => run(() => sync.read(options)),
+      plan: (options) => run(() => sync.plan(options)),
       compact: () => run(sync.compact),
     };
     documents.add(documentId);

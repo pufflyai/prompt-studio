@@ -1,10 +1,6 @@
 import type { StorageOwner } from "pstdio-sync";
-import {
-  applyOrderedNativeOperation,
-  type createOrderedReceiptIndex,
-  type OrderedAdmission,
-  type OrderedIndexReference,
-} from "pstdio-sync/records";
+import { applyOrderedNativeOperation, type OrderedAdmission } from "pstdio-sync/records";
+import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sync/relay";
 import type { OrderedJournal } from "./ordered-journal";
 import { admissionDecisions } from "./ordered-rebase";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";

@@ -189,7 +189,14 @@ export const validateExtensionDefinition = (
   try {
     ext.definition = { ...ext.definition, storage: normalizeStorageDeclaration(source.definition.storage) };
   } catch (error) {
-    runtime.diagnostics.push(invalidCollectionDiagnostic(ext, source, "storage", error instanceof Error ? error.message : "Invalid storage declaration"));
+    runtime.diagnostics.push(
+      invalidCollectionDiagnostic(
+        ext,
+        source,
+        "storage",
+        error instanceof Error ? error.message : "Invalid storage declaration",
+      ),
+    );
     ext.definition = { ...ext.definition, storage: undefined };
     return false;
   }

@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { openBlob, type SyncSpace } from "pstdio-sync/encryption";
-import { type OrderedIndexBlobs, type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/records";
+import { type OrderedIndexBlobs, type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/relay";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_documents as documents } from "../../db/schemas.pg";
 import { decodeOrderedJson, encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";

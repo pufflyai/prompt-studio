@@ -1,5 +1,5 @@
 import { fingerprint, type Json, type StorageLogEntry } from "pstdio-sync-contracts";
-import { type OrderedIndexReference, readOrderedIndexReference } from "../records";
+import { type OrderedIndexReference, readOrderedIndexReference } from "../relay";
 
 export interface LogWireEntry {
   id: string;

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
-import { storage_document_operations, storage_document_updates } from "../../db/schemas.pg";
+import { storage_ordered_operations } from "../../db/schemas.pg";
 import { prepareDatabaseFixture, verifyDatabaseFixture } from "./database-scale-fixture";
 
 test("owner fixture verification survives reopen and rejects missing history or source", async () => {
@@ -15,19 +15,20 @@ test("owner fixture verification survives reopen and rejects missing history or 
     expect(await prepareDatabaseFixture("small", 101, root, false, () => {})).toEqual(expected);
     reopened = await createDb({ path: join(root, "database") });
     expect(await verifyDatabaseFixture(reopened.db, "small", 101, false)).toEqual(expected);
-    const [receipt] = await reopened.db.select().from(storage_document_operations);
+    const [receipt] = await reopened.db.select().from(storage_ordered_operations);
     await reopened.db
-      .update(storage_document_operations)
-      .set({ fingerprint: "incorrect" })
-      .where(eq(storage_document_operations.operation_id, receipt.operation_id));
+      .update(storage_ordered_operations)
+      .set({ request_fingerprint: "incorrect" })
+      .where(eq(storage_ordered_operations.operation_id, receipt.operation_id));
     await expect(verifyDatabaseFixture(reopened.db, "small", 101, false)).rejects.toThrow("history receipt");
     await reopened.db
-      .update(storage_document_operations)
-      .set({ fingerprint: receipt.fingerprint })
-      .where(eq(storage_document_operations.operation_id, receipt.operation_id));
-    const [tail] = await reopened.db.select().from(storage_document_updates);
-    expect(tail).toBeDefined();
-    await reopened.db.delete(storage_document_updates).where(eq(storage_document_updates.revision, tail.revision));
+      .update(storage_ordered_operations)
+      .set({ request_fingerprint: receipt.request_fingerprint })
+      .where(eq(storage_ordered_operations.operation_id, receipt.operation_id));
+    await reopened.db
+      .update(storage_ordered_operations)
+      .set({ envelope: null })
+      .where(eq(storage_ordered_operations.operation_id, receipt.operation_id));
     await expect(verifyDatabaseFixture(reopened.db, "small", 101, false)).rejects.toThrow();
   } finally {
     await reopened?.close();

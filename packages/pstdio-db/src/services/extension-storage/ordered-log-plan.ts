@@ -20,6 +20,7 @@ const metadata = {
   index: entries.relay_index,
   localSequence: entries.local_sequence,
   local: entries.local,
+  fingerprint: entries.fingerprint,
 };
 type Row = Omit<LogKnownEntry, "createdAt"> & { createdAt: number };
 const asMetadata = (row: Row): LogKnownEntry => ({ ...row, createdAt: new Date(row.createdAt).toISOString() });

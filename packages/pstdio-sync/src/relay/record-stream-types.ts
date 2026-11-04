@@ -1,8 +1,8 @@
 import type { Asset } from "pstdio-sync-contracts";
 import type { SyncSpace } from "../encryption";
-import type { OrderedIndexReference } from "../records/ordered-receipt-index-blobs";
 import type { AssetStore } from "../shared";
 import type { DocumentRelay, SyncFailure } from "./document-sync-types";
+import type { OrderedIndexReference } from "./ordered-receipt-index-blobs";
 import type { AssetReferences } from "./record-assets";
 import type { RecordFrame } from "./record-frames";
 

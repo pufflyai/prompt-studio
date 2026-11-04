@@ -27,10 +27,13 @@ export interface RecordEdit {
   /** Remove value paths named by JSON Pointer. */
   unset?: string[];
   /** Character edits to explicitly declared text fields, addressed by JSON Pointer. */
-  text?: Record<string, Extract<SharedEdit, { kind: "text.insert" | "text.delete" }>[] >;
+  text?: Record<string, Extract<SharedEdit, { kind: "text.insert" | "text.delete" }>[]>;
 }
 
-export interface StorageTextDeclaration { prefix: string; fields: string[] }
+export interface StorageTextDeclaration {
+  prefix: string;
+  fields: string[];
+}
 
 export interface StorageRecord {
   recordId: string;

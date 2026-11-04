@@ -1,7 +1,8 @@
 import type { StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
-import { createOrderedReceiptIndex, type OrderedAdmission, type OrderedIndexReference } from "pstdio-sync/records";
+import type { OrderedAdmission } from "pstdio-sync/records";
 import type { DocumentRelay, RecordFrame, RecordStreamCursor, RecordStreamStore } from "pstdio-sync/relay";
+import { createOrderedReceiptIndex, type OrderedIndexReference } from "pstdio-sync/relay";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";

@@ -52,8 +52,6 @@ export {
 } from "./ordered-operation-wire";
 export { applyBoundedOrderedOperation, projectBoundedOrderedOperation } from "./ordered-policy";
 export { type OrderedBody, orderedBody, orderedProjection } from "./ordered-projection";
-export { createOrderedReceiptIndex, type OrderedIndexBlobs, type OrderedIndexReference } from "./ordered-receipt-index";
-export { createEncryptedManifestNodes, readOrderedIndexReference } from "./ordered-receipt-index-blobs";
 export { compileOrderedGroup } from "./ordered-record-compiler";
 export { editOrderedShared } from "./ordered-shared";
 export {

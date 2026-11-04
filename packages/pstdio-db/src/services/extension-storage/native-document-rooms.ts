@@ -7,7 +7,12 @@ import type { DbClient } from "../../db/connection.pglite";
 import { native_document_room_updates, native_document_rooms, native_document_sources } from "../../db/schemas.pg";
 import { createDocumentCache } from "./document-cache";
 import { NativeDocumentRoomError } from "./native-document-errors";
-import { orderedRoomMarkerId, removeRoomGeneration, roomGeneration, saveOrderedMarker } from "./ordered-native-metadata";
+import {
+  orderedRoomMarkerId,
+  removeRoomGeneration,
+  roomGeneration,
+  saveOrderedMarker,
+} from "./ordered-native-metadata";
 
 interface RoomAddress {
   owner: StorageOwner;
@@ -102,7 +107,13 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
           document.off("update", capture);
         }
         const revision = await append(tx, input, row, document, updates);
-        return { value, document, revision, documentKey: row.document_key, generation: await roomGeneration(tx, input.owner, input.roomId) };
+        return {
+          value,
+          document,
+          revision,
+          documentKey: row.document_key,
+          generation: await roomGeneration(tx, input.owner, input.roomId),
+        };
       });
       cache.publish(key, result);
       return result;
@@ -187,13 +198,21 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
     },
     async read(input: RoomAddress) {
       const result = await access(input, async (document) => copy(document));
-      return { document: result.value, revision: result.revision, documentKey: result.documentKey, generation: result.generation };
+      return {
+        document: result.value,
+        revision: result.revision,
+        documentKey: result.documentKey,
+        generation: result.generation,
+      };
     },
     apply: (input: RoomAddress & { update: Uint8Array }) => apply(input, true),
     receive: (input: RoomAddress & { update: Uint8Array }) => apply(input, false),
     async remove(input: RoomAddress) {
       const removed = await db.transaction(async (tx) => {
-        const removed = await tx.delete(native_document_rooms).where(roomWhere(input)).returning({ id: native_document_rooms.id });
+        const removed = await tx
+          .delete(native_document_rooms)
+          .where(roomWhere(input))
+          .returning({ id: native_document_rooms.id });
         if (removed.length) await removeRoomGeneration(tx, input.owner, input.roomId);
         return removed;
       });
@@ -223,7 +242,12 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
           .limit(100);
         for (const { id, workbenchId, extensionId, documentKey } of rows) {
           const generation = await roomGeneration(db, { workbenchId, extensionId }, id);
-          yield { id, owner: { workbenchId, extensionId }, documentKey, ...(generation === undefined ? {} : { generation }) };
+          yield {
+            id,
+            owner: { workbenchId, extensionId },
+            documentKey,
+            ...(generation === undefined ? {} : { generation }),
+          };
         }
         if (rows.length < 100) return;
         cursor = rows.at(-1)!.id;

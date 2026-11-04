@@ -1,7 +1,7 @@
 import type { StateInfo } from "pstdio-sync-contracts";
 import { openState, type SyncSpace } from "../encryption";
-import { type OrderedIndexReference, readOrderedIndexReference } from "../records";
 import type { DocumentRelay } from "../relay";
+import { type OrderedIndexReference, readOrderedIndexReference } from "../relay";
 
 export interface LogState {
   root: OrderedIndexReference | null;

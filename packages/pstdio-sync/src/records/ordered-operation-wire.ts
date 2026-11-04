@@ -22,8 +22,10 @@ const stamp = (value: unknown) => {
   text(parts[1]);
   if (parts[0] === "pending") digest(parts[2]);
   else if (parts[0] === "canonical") text(parts[2]);
-  else if (parts[0] === "text") { digest(parts[1]); digest(parts[2]); }
-  else throw new Error("Unknown ordered stamp");
+  else if (parts[0] === "text") {
+    digest(parts[1]);
+    digest(parts[2]);
+  } else throw new Error("Unknown ordered stamp");
 };
 const observedValue = (input: unknown) => {
   const pending = [input];

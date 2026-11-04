@@ -3,7 +3,7 @@ import {
   type createEncryptedManifestNodes,
   type OrderedIndexReference,
   readOrderedIndexReference,
-} from "pstdio-sync/records";
+} from "pstdio-sync/relay";
 import type { Json } from "pstdio-sync-contracts";
 import type { RouteDeps } from "../../features/deps";
 import { readPersonalIndexDelta } from "./index-entry";

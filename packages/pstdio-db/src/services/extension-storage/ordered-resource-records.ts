@@ -202,9 +202,10 @@ export const createOrderedResourceRecords = (
       return records;
     },
     outcome: (id: string) =>
-      withOrderedOwner(db, owner, async (journal) =>
-        (await journal.localOperation(id)) ? savedOutcome(journal, id) : undefined,
-      ),
+      withOrderedOwner(db, owner, async (journal, tx, created) => {
+        await initializeOrderedOwner(journal, tx, owner, created);
+        return (await journal.localOperation(id)) ? savedOutcome(journal, id) : undefined;
+      }),
     transaction: async <T>(
       run: (
         records: {

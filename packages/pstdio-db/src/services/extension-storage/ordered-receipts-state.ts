@@ -1,5 +1,5 @@
 import type { StorageOwner } from "pstdio-sync";
-import { type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/records";
+import { type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/relay";
 import { storage_ordered_owners as owners } from "../../db/schemas.pg";
 import { decodeOrderedJson, encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 

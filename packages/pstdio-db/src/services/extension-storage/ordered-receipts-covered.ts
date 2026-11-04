@@ -1,6 +1,5 @@
 import type { StorageOwner } from "pstdio-sync";
-import type { createOrderedReceiptIndex } from "pstdio-sync/records";
-import type { OrderedReceipt, RecordStreamCursor } from "pstdio-sync/relay";
+import type { createOrderedReceiptIndex, OrderedReceipt, RecordStreamCursor } from "pstdio-sync/relay";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
 import { dirtyOrderedReceipts } from "./ordered-checkpoint";
 import type { OrderedJournal } from "./ordered-journal";

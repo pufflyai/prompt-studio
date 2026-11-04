@@ -1,6 +1,5 @@
 import { type Json, jsonSchema } from "pstdio-sync-contracts";
 import type { SyncSpace } from "../encryption";
-import type { OrderedReceipt } from "../relay/ordered-stream-entry";
 import {
   createEncryptedManifestNodes,
   type OrderedIndexBlobs,
@@ -20,6 +19,7 @@ import {
   validateReceiptPageAddresses,
 } from "./ordered-receipt-index-pages";
 import { createReceiptTreeWriter } from "./ordered-receipt-index-tree";
+import type { OrderedReceipt } from "./ordered-stream-entry";
 
 export type { OrderedIndexBlobs, OrderedIndexReference } from "./ordered-receipt-index-blobs";
 

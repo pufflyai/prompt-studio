@@ -1,7 +1,7 @@
 import type { DocumentStore, StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { createLogCollection, type LogDirectoryEntry, type LogRemote, type LogStreamStore } from "pstdio-sync/logs";
-import type { OrderedIndexBlobs } from "pstdio-sync/records";
+import type { OrderedIndexBlobs } from "pstdio-sync/relay";
 import type { StorageLogDefinition } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createEnvironmentDBService } from "../environment/environment";

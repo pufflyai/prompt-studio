@@ -1,10 +1,18 @@
-import type { Json, StorageLogEntry } from "pstdio-sync-contracts";
-import { type createEncryptedManifestNodes, type OrderedIndexReference, readOrderedIndexReference } from "../records";
+import { fingerprint, type Json, type StorageLogEntry } from "pstdio-sync-contracts";
+import { type createEncryptedManifestNodes, type OrderedIndexReference, readOrderedIndexReference } from "../relay";
+import { type LogEntryHeader, readLogEntryHeader } from "./log-entry-metadata";
+import { readLogPayload } from "./log-wire";
 
 export interface LogIndexedEntry {
   sequence: number;
   index: number;
   entry: StorageLogEntry;
+}
+export interface LogIndexedMetadata {
+  sequence: number;
+  index: number;
+  metadata: LogEntryHeader;
+  reference: OrderedIndexReference;
 }
 interface Position {
   sequence: number;
@@ -17,10 +25,11 @@ interface Child {
   maxTime: number;
   count: number;
   reference: OrderedIndexReference;
+  metadata?: LogEntryHeader;
 }
 interface Node {
   type: "append-log-index";
-  version: 1;
+  version: 2;
   level: number;
   children: Child[];
 }
@@ -42,7 +51,15 @@ const position = (input: unknown) => {
   return { sequence: integer(value.sequence, 1), index: integer(value.index) };
 };
 const readChild = (input: unknown): Child => {
-  const value = fields(input, ["first", "last", "minTime", "maxTime", "count", "reference"]);
+  const value = fields(input, [
+    "first",
+    "last",
+    "minTime",
+    "maxTime",
+    "count",
+    "reference",
+    ...(input && typeof input === "object" && Object.hasOwn(input, "metadata") ? ["metadata"] : []),
+  ]);
   const child = {
     first: position(value.first),
     last: position(value.last),
@@ -50,6 +67,7 @@ const readChild = (input: unknown): Child => {
     maxTime: integer(value.maxTime),
     count: integer(value.count, 1),
     reference: readOrderedIndexReference(value.reference),
+    ...(value.metadata === undefined ? {} : { metadata: readLogEntryHeader(value.metadata) }),
   };
   if (compare(child.first, child.last) > 0 || child.minTime > child.maxTime)
     throw new Error("Invalid log index extent");
@@ -58,9 +76,10 @@ const readChild = (input: unknown): Child => {
 const readNode = (input: unknown) => {
   const value = fields(input, ["type", "version", "level", "children"]);
   const level = integer(value.level);
+  if (value.type === "append-log-index" && value.version !== 2) throw new Error("Unsupported append-log index version");
   if (
     value.type !== "append-log-index" ||
-    value.version !== 1 ||
+    value.version !== 2 ||
     level > 32 ||
     !Array.isArray(value.children) ||
     !value.children.length ||
@@ -68,9 +87,21 @@ const readNode = (input: unknown) => {
   )
     throw new Error("Invalid log index page");
   const children = value.children.map(readChild);
+  for (const child of children) {
+    if (level && child.metadata) throw new Error("A log branch cannot contain entry metadata");
+    if (
+      !level &&
+      (!child.metadata ||
+        child.count !== 1 ||
+        compare(child.first, child.last) !== 0 ||
+        child.minTime !== child.maxTime ||
+        Date.parse(child.metadata.createdAt) !== child.minTime)
+    )
+      throw new Error("Invalid log leaf metadata");
+  }
   for (let index = 1; index < children.length; index++)
     if (compare(children[index - 1]!.last, children[index]!.first) >= 0) throw new Error("Log index pages overlap");
-  return { type: "append-log-index" as const, version: 1 as const, level, children };
+  return { type: "append-log-index" as const, version: 2 as const, level, children };
 };
 const readEntry = (input: unknown) => {
   const value = fields(input, ["sequence", "index", "entry"]);
@@ -126,7 +157,7 @@ export const createLogPageIndex = (nodes: Nodes) => {
     return node;
   };
   const saveNode = async (level: number, children: Child[]) => {
-    const node: Node = { type: "append-log-index", version: 1, level, children };
+    const node: Node = { type: "append-log-index", version: 2, level, children };
     const reference = await nodes.write(
       node as unknown as Json,
       children.map((child) => child.reference),
@@ -223,7 +254,33 @@ export const createLogPageIndex = (nodes: Nodes) => {
     }
     return count;
   };
+  const plan = async (
+    root: OrderedIndexReference | null,
+    options: { sequence: number; index: number; limit: number; newest?: boolean; cutoff: number },
+  ) => {
+    if (!root) return { rows: [] as LogIndexedMetadata[], more: false };
+    const selected = await select(root, options);
+    const rows = selected
+      .slice(0, options.limit)
+      .map((child) => ({ ...child.first, reference: child.reference, metadata: child.metadata! }));
+    if (options.newest) rows.reverse();
+    return { rows, more: selected.length > options.limit };
+  };
+  const materialize = async (selected: LogIndexedMetadata[], cutoff: () => number = () => 0) =>
+    Promise.all(
+      selected
+        .filter((row) => Date.parse(row.metadata.createdAt) >= cutoff())
+        .map(async (expected) => {
+          const row = readEntry(await nodes.read(expected.reference));
+          if (compare(row, expected) !== 0) throw new Error("Log payload differs from authenticated page position");
+          await readLogPayload(row.entry, { ...expected.metadata, reference: expected.reference });
+          await nodes.retain(expected.reference, []);
+          return row;
+        }),
+    );
   return {
+    plan,
+    materialize,
     count: (root: OrderedIndexReference, sequence: number, cutoff: number) => countSequence(root, sequence, cutoff),
     async append(root: OrderedIndexReference | null, input: LogIndexedEntry[]) {
       const rows = structuredClone(input).map(readEntry);
@@ -232,7 +289,7 @@ export const createLogPageIndex = (nodes: Nodes) => {
         if (compare(rows[index - 1]!, rows[index]!) >= 0) throw new Error("Log entries must be in relay order");
       const old = root
         ? await loadNode(root)
-        : { type: "append-log-index" as const, version: 1 as const, level: 0, children: [] };
+        : { type: "append-log-index" as const, version: 2 as const, level: 0, children: [] };
       if (old.children.length && compare(old.children.at(-1)!.last, rows[0]!) >= 0)
         throw new Error("Log append overlaps its retained prefix");
       const added = await Promise.all(
@@ -240,7 +297,20 @@ export const createLogPageIndex = (nodes: Nodes) => {
           const reference = await nodes.write(row as unknown as Json, []);
           const point = { sequence: row.sequence, index: row.index };
           const time = Date.parse(row.entry.createdAt);
-          return { reference, first: point, last: point, minTime: time, maxTime: time, count: 1 };
+          return {
+            reference,
+            first: point,
+            last: point,
+            minTime: time,
+            maxTime: time,
+            count: 1,
+            metadata: {
+              id: row.entry.id,
+              writerId: row.entry.writerId,
+              createdAt: row.entry.createdAt,
+              fingerprint: await fingerprint(row.entry as unknown as Json),
+            },
+          };
         }),
       );
       const expanded = await appendTo(old, added, root ?? undefined);
@@ -251,26 +321,8 @@ export const createLogPageIndex = (nodes: Nodes) => {
       root: OrderedIndexReference | null,
       options: { sequence: number; index: number; limit: number; newest?: boolean; cutoff: number },
     ) {
-      if (!root) return { rows: [], more: false };
-      const selected = await select(root, options);
-      const rows = await Promise.all(
-        selected.slice(0, options.limit).map(async (child) => {
-          const row = readEntry(await nodes.read(child.reference));
-          const time = Date.parse(row.entry.createdAt);
-          if (
-            compare(row, child.first) !== 0 ||
-            compare(row, child.last) !== 0 ||
-            time !== child.minTime ||
-            time !== child.maxTime ||
-            child.count !== 1
-          )
-            throw new Error("Log payload differs from authenticated page extent");
-          await nodes.retain(child.reference, []);
-          return row;
-        }),
-      );
-      if (options.newest) rows.reverse();
-      return { rows, more: selected.length > options.limit };
+      const page = await plan(root, options);
+      return { rows: await materialize(page.rows, () => options.cutoff), more: page.more };
     },
     async prune(root: OrderedIndexReference | null, cutoff: number) {
       return root ? ((await pruneNode(root, cutoff))?.reference ?? null) : null;

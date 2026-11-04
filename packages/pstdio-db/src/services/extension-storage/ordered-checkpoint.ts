@@ -1,12 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
-import type {
-  createOrderedReceiptIndex,
-  OrderedDecision,
-  OrderedIndexReference,
-  OrderedOperation,
-  OrderedRecord,
-} from "pstdio-sync/records";
+import type { OrderedDecision, OrderedOperation, OrderedRecord } from "pstdio-sync/records";
 import { applyOrderedNativeOperation } from "pstdio-sync/records";
+import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sync/relay";
 import { encodeOrderedEntry, type OrderedReceipt } from "pstdio-sync/relay";
 import { type Asset, fingerprint, type Json } from "pstdio-sync-contracts";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";

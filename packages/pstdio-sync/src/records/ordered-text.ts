@@ -1,8 +1,7 @@
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { decodeBytes, encodeBytes } from "../shared";
-import { readTextDocumentSeed, saveTextDocument, seedTextDocument } from "../text";
-import { textDocumentKeys } from "../text/text-document-keys";
+import { readTextDocumentSeed, saveTextDocument, seedTextDocument, textDocumentKeys } from "../text";
 import { applyJsonChanges, type JsonChange, jsonPointer, parseJsonPointer, pathsOverlap } from "./ordered-json";
 export class OrderedTextCausalityError extends Error {}
 

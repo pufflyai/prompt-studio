@@ -1,5 +1,6 @@
 import type { StorageOwner } from "pstdio-sync";
-import type { createOrderedReceiptIndex, OrderedAdmission, OrderedIndexReference } from "pstdio-sync/records";
+import type { OrderedAdmission } from "pstdio-sync/records";
+import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sync/relay";
 import { decodeOrderedEntry, type OrderedStreamEntry, type RecordStreamCursor } from "pstdio-sync/relay";
 import {
   storage_ordered_records as canonical,
