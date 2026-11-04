@@ -1,8 +1,32 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
+import { ganttGeometry } from "../primitives/gantt";
 
 export const chartRecipe = defineSlotRecipe({
-  slots: ["root", "tooltip"],
+  slots: ["root", "tooltip", "gantt", "tickets", "ticket", "ticketTitle", "plot"],
   base: {
+    gantt: { display: "flex", gap: "0", w: "full", minW: "0" },
+    tickets: { w: "xs", flexShrink: "0", pt: "var(--gantt-top)", pb: `${ganttGeometry.bottom}px` },
+    ticket: {
+      h: `${ganttGeometry.row}px`,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      gap: "2xs",
+      px: "sm",
+      borderBottomWidth: "1px",
+      borderColor: "border.subtle",
+      "&[data-selected=true]": { bg: "bg.active" },
+    },
+    ticketTitle: {
+      textStyle: "label/S/regular",
+      textAlign: "left",
+      color: "fg",
+      cursor: "pointer",
+      truncate: true,
+      _hover: { color: "fg.accent" },
+      _focusVisible: { outline: "2px solid", outlineColor: "border.accent", outlineOffset: "2px" },
+    },
+    plot: { flex: "1", minW: "0" },
     root: {
       minW: "0",
       minH: "0",
