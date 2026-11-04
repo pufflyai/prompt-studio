@@ -49,7 +49,7 @@ export const createExtensionRefreshQueue = <TValue>(input: CreateExtensionRefres
         if (activeRequest !== request) return;
         activeRequest = undefined;
         if (request.queued && input.getProjectId() === request.projectId) refresh(request.projectId);
-        else if (applied && isCurrentRequest(request)) input.onComplete?.(request.projectId);
+        else if ((applied || hasSuccessfulValue) && isCurrentRequest(request)) input.onComplete?.(request.projectId);
       });
   };
 

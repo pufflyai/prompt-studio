@@ -2,11 +2,12 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { canonicalJson } from "pstdio-sync-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 import { activatePublishedSet } from "./activate";
 import { openPublishedCatalog, publishedEntries, publishedOwner } from "./catalog";
-import { changePublishedCatalog } from "./change-catalog";
+import { changePublishedCatalog, synchronizePublishedExtensions } from "./change-catalog";
 import { packExtension } from "./package";
 import { PublicationChangedError } from "./types";
 
@@ -68,6 +69,43 @@ test("switching a published extension also applies the change on this device", a
     expectedRevision: (await selection(projectId)).revision,
   });
   expect((await installed(projectId)).installedSource.loaded_revision).toBe(first);
+});
+
+test("synchronization catches choices shared during activation before reporting completion", async () => {
+  const { projectId, source, first } = await publishedProject("activation-race");
+  await writeFile(join(source, "new.txt"), "new shared selection");
+  const second = await select(projectId, source);
+  await share(projectId, { revision: first, enabled: true });
+  const { extensionService } = app.deps;
+  let changed = false;
+  const attempts: string[] = [];
+  let completed = 0;
+  await synchronizePublishedExtensions(
+    {
+      ...app.deps,
+      extensionService: {
+        ...extensionService,
+        activatePublishedExtensions: async (plans) => {
+          const result = await extensionService.activatePublishedExtensions(plans);
+          if (!changed) {
+            changed = true;
+            await share(projectId, { revision: second, enabled: true });
+          }
+          return result;
+        },
+      },
+    },
+    projectId,
+    undefined,
+    () => {
+      completed++;
+    },
+    (key) => attempts.push(key),
+  );
+  expect((await installed(projectId)).installedSource.loaded_revision).toBe(second);
+  expect(completed).toBe(1);
+  expect(attempts).toHaveLength(2);
+  expect(attempts.at(-1)).toBe(canonicalJson(publishedEntries(await (await catalogOf(projectId)).list())));
 });
 
 test("a rollback that cannot run on this device is not shared", async () => {

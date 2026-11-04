@@ -33,8 +33,8 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createHarnessAuthenticationLifetime } from "./harness-authentication";
-import { detectHarness } from "./harness-detection";
 import { HarnessDisposedError } from "./harness-disposed-error";
+import { detectPreparedHarness } from "./harness-preparation-detection";
 import { adaptSession } from "./harness-session-adapter";
 import { createHarnessSessionResources, type HarnessSessionResources } from "./harness-session-resources";
 import { createRetainedHarnessCalls } from "./harness-session-retention";
@@ -137,7 +137,15 @@ const toHandle = (
     if (!pending) {
       pending = rawContext(options)
         .then(async (context) => {
-          await record.provider.prepare?.(context);
+          try {
+            await record.provider.prepare?.(context);
+          } catch (error) {
+            context.logger.warn(`Harness ${record.id} preparation failed.`, {
+              event: "harness.preparation.failed",
+              failure: "provider_error",
+            });
+            throw error;
+          }
           ensureActive();
           return context;
         })
@@ -182,18 +190,7 @@ const toHandle = (
     supportsHistory: typeof provider.getMessages === "function",
     supportsModels: typeof provider.listModels === "function",
     capabilities: async (options) => provider.capabilities(await rawContext(options)),
-    detect: async (options) => {
-      ensureActive();
-      try {
-        return await detectHarness(provider, await ctx(options));
-      } catch (error) {
-        if (error instanceof HarnessDisposedError) throw error;
-        return {
-          available: false,
-          reason: "Harness preparation failed. Inspect failed jobs with pst extensions installations.",
-        };
-      }
-    },
+    detect: (options) => detectPreparedHarness(provider, () => ctx(options), ensureActive),
     ...(provider.getAuthentication
       ? {
           getAuthentication: async (options?: HarnessCallOptions) =>

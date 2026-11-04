@@ -1,9 +1,11 @@
 import type { LiveConnection } from "pstdio-sync/relay";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
-import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { openPublishedCatalog, publishedOwner } from "../../features/extensions/publication/catalog";
-import { synchronizePublishedExtensions } from "../../features/extensions/publication/change-catalog";
+import {
+  publishedCatalogKey,
+  synchronizePublishedExtensions,
+} from "../../features/extensions/publication/change-catalog";
 import { apiLogger } from "../../lib/logger";
 import { createExtensionDocumentSync } from "./documents";
 import type { RelayWorkbench } from "./runtime";
@@ -59,14 +61,22 @@ export const startPublishedExtensions = (input: {
       await documents.synchronize(attemptSignal);
       const catalog = await openPublishedCatalog(deps, config.workbenchId, attemptSignal);
       const selected = await catalog.list();
-      const key = canonicalJson(selected.map(({ recordId, value, asset }) => ({ recordId, value, asset })));
+      let key = publishedCatalogKey(selected);
       if (failed?.key === key && failed.waiting) return;
       try {
-        await synchronizePublishedExtensions(deps, config.workbenchId, attemptSignal, () => {
-          failed = undefined;
-          clearTimeout(retry);
-          input.statusChanged?.();
-        });
+        await synchronizePublishedExtensions(
+          deps,
+          config.workbenchId,
+          attemptSignal,
+          () => {
+            failed = undefined;
+            clearTimeout(retry);
+            input.statusChanged?.();
+          },
+          (attemptedKey) => {
+            key = attemptedKey;
+          },
+        );
       } catch (error) {
         if (attemptSignal.aborted) throw error;
         const delay = failed?.key === key ? Math.min(failed.delay * 2, maxRetryDelay) : firstRetryDelay;

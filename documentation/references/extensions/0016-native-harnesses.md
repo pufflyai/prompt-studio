@@ -17,7 +17,7 @@ preparation remains retryable and does not hide healthy harnesses.
 `prepareHarnessPackage(ctx, { command, minimumVersion, name, version, env? })`
 probes a command array with `--version`. It returns `null` when that global CLI
 is usable. Otherwise it calls the optional `ctx.packages.ensure({ name, version })`
-capability and returns the acquired package's absolute path. The fallback package
+capability and returns `{ path: string }`, where `path` is the acquired package's absolute path. The fallback package
 `version` must be exact; `minimumVersion` is the lower bound for a usable global CLI.
 The host uses bundled Bun, skips install scripts, and keeps the package
 under the contributing harness's cache directory. Acquisitions report progress

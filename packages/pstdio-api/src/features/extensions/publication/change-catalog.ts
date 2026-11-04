@@ -10,6 +10,8 @@ type CatalogChange =
   | { kind: "enabled"; extensionId: string; expectedRevision: string; enabled: boolean }
   | { kind: "rollback"; extensionId: string; expectedRevision: string; revision: string };
 type Catalog = Awaited<ReturnType<typeof openPublishedCatalog>>;
+export const publishedCatalogKey = (records: Awaited<ReturnType<Catalog["list"]>>) =>
+  canonicalJson(records.map((record) => ({ publication: record.value, asset: record.asset })));
 
 class SharedSetChanged extends Error {}
 // Each retry starts after a newer shared choice; a few cover choices that land while this one waits.
@@ -25,16 +27,19 @@ const followSharedSet = async (
   catalog: Catalog,
   signal?: AbortSignal,
   include?: IncludePublicationEntries,
+  onAttempt?: (key: string) => void,
 ) => {
-  const current = async () =>
-    canonicalJson((await catalog.list()).map((record) => ({ publication: record.value, asset: record.asset })));
+  const current = async () => publishedCatalogKey(await catalog.list());
   for (let attempt = 0; attempt < sharedSetAttempts; attempt++) {
-    const entries = publishedEntries(await catalog.list());
+    const records = await catalog.list();
+    const entries = publishedEntries(records);
+    onAttempt?.(publishedCatalogKey(records));
     include?.(entries);
     try {
       await activatePublishedSet(deps, projectId, entries, signal, false, async () => {
         if ((await current()) !== canonicalJson(entries)) throw new SharedSetChanged();
       });
+      if ((await current()) !== canonicalJson(entries)) throw new SharedSetChanged();
       return;
     } catch (error) {
       if (!(error instanceof SharedSetChanged)) throw error;
@@ -126,6 +131,7 @@ export const synchronizePublishedExtensions = async (
   projectId: string,
   signal?: AbortSignal,
   onActivated?: () => void,
+  onAttempt?: (key: string) => void,
 ) => {
   const catalog = await openPublishedCatalog(deps, projectId);
   const entries = publishedEntries(await catalog.list());
@@ -140,6 +146,7 @@ export const synchronizePublishedExtensions = async (
         await openPublishedCatalog(deps, projectId, attemptSignal),
         attemptSignal,
         include,
+        onAttempt,
       );
       onActivated?.();
     },

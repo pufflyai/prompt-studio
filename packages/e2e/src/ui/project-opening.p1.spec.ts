@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 
 // Creation remains recoverable in the picker; optional setup cannot appear before eligibility is known.
 for (const ending of ["ready", "failed"] as const) {
@@ -26,7 +27,7 @@ for (const ending of ["ready", "failed"] as const) {
     });
     try {
       await page.goto(`/projects/${projects[0].id}`);
-      await expect(page.getByTestId("start-page")).toBeVisible();
+      await expect(homePage(page)).toBeVisible();
       const switcher = page.getByRole("button", { name: "Switch project", exact: true });
       if (await switcher.isVisible()) await switcher.click();
       await page.getByRole("button", { name: "Create project", exact: true }).click();

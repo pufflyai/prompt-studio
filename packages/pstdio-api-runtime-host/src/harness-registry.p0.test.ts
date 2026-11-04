@@ -59,6 +59,47 @@ const startInput: HarnessStartInput = {
 };
 
 describe("harness detection isolation", () => {
+  it("returns healthy harnesses while another harness is still preparing", async () => {
+    const gate = Promise.withResolvers<void>();
+    const registry = createHarnessRegistry(
+      [record({ prepare: () => gate.promise }, "pending"), record({ detect: () => ({ available: true }) }, "healthy")],
+      buildContext,
+    );
+    let result: unknown;
+    const query = Promise.all(registry.list().map((handle) => handle.detect())).then((value) => {
+      result = value;
+    });
+    try {
+      await query;
+      expect(result).toEqual([{ available: false, reason: expect.stringMatching(/prepar/i) }, { available: true }]);
+    } finally {
+      gate.resolve();
+      await query;
+      await registry.dispose();
+    }
+  });
+
+  it("reports a preparation error without claiming an installation job exists or exposing provider output", async () => {
+    const warn = mock(() => {});
+    const registry = createHarnessRegistry(
+      [
+        record({
+          prepare: () => {
+            throw new Error("secret-token");
+          },
+        }),
+      ],
+      (source) => ({ ...buildContext(source), logger: { info: () => {}, error: () => {}, warn } }),
+    );
+    const result = await registry.list()[0]!.detect();
+    expect(result.available).toBe(false);
+    expect(result.reason).not.toMatch(/installations|secret-token/);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/preparation failed/),
+      expect.objectContaining({ failure: "provider_error" }),
+    );
+    await registry.dispose();
+  });
   it("rejects a retired harness after preparation has already completed", async () => {
     const detect = mock(() => ({ available: true }));
     const registry = createHarnessRegistry([record({ prepare: async () => {}, detect })], buildContext);

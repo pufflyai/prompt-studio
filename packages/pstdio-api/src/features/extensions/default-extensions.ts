@@ -165,10 +165,13 @@ const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: Defa
   const env = { ...(deps.env ?? process.env) };
   return traceSetupPhase("default_extensions.request", {}, () =>
     traceSetupPhase("default_extensions.active", {}, async () => {
-      const catalog = deps.config ? undefined : await loadExtensionCatalog({ env });
       const config =
         deps.config ??
         (deps.installNames ? { defaultExtensions: deps.installNames } : await resolveDefaultExtensionsConfig(env));
+      const catalog =
+        !deps.config && config.defaultExtensions.some((entry) => typeof entry === "string")
+          ? await loadExtensionCatalog({ env })
+          : undefined;
       const entries = deps.config
         ? config.defaultExtensions
         : await Promise.all(

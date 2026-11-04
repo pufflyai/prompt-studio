@@ -63,6 +63,7 @@ test("project setup rejects an undeclared or foreign view", () => {
       source(defineExtension({ views: [setupView], projectSetup: { view } })),
     ]);
     expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "invalid_project_setup" }));
+    expect(createWorkbenchExtensionMetadata({ runtime }).projectSetups).toEqual([]);
   }
 });
 
@@ -82,5 +83,6 @@ test("project setup rejects an undeclared or nonboolean visibility preference", 
       ),
     ]);
     expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "invalid_project_setup" }));
+    expect(createWorkbenchExtensionMetadata({ runtime }).projectSetups).toEqual([]);
   }
 });
