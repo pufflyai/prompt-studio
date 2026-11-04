@@ -64,11 +64,13 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
             setStarted(true);
             if (running)
               setQueue((items) => [...items, { id: `queued-${items.length + 1}`, prompt, position: items.length + 1 }]);
-            else
+            else {
               setMessages((items) => [
                 ...items,
                 { id: `message-${items.length}`, role: "user", parts: [{ type: "text", text: prompt }] },
               ]);
+              setRunning(true);
+            }
             setText("");
           }}
           onInterrupt={() => setRunning(false)}

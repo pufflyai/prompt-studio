@@ -18,7 +18,7 @@ i18n
     },
     defaultNS: "common",
     fallbackNS: "common",
-    debug: import.meta.env.DEV,
+    debug: import.meta.env?.DEV ?? false,
     supportedLngs: [...SUPPORTED_I18N_CODES, "zh", "zh-TW", "zh-HK", "zh-MO"],
     nonExplicitSupportedLngs: true,
     load: "all",
