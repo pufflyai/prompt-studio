@@ -15,11 +15,23 @@ export const useSessionDevice = (owner: Session["device"], queueReadOnly?: boole
   const devices = query.data ?? [];
   const access = sessionDeviceAccess(owner, selectedDeviceId, query.data, queueReadOnly);
   const ownerOnline = access.remote && !access.connectionUnavailable;
-  const refreshOnlineQueue = useEffectEvent(() => {
-    refreshQueue?.();
-  });
+  const refreshOnlineQueue = useEffectEvent(() => refreshQueue?.());
   useEffect(() => {
-    if (ownerOnline && queueReadOnly) refreshOnlineQueue();
+    if (!ownerOnline || !queueReadOnly) return;
+    // A forwarded read fails while either device renews its relay access, and the retry can land in the same
+    // window. Ask the online owner again after each read settles, backing off so a lasting failure stays cheap.
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attempt = async (delay: number) => {
+      await refreshOnlineQueue();
+      if (stopped) return;
+      timer = setTimeout(() => void attempt(Math.min(delay * 2, 30_000)), delay);
+    };
+    void attempt(2_000);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
   }, [ownerOnline, queueReadOnly]);
   return {
     ...access,
