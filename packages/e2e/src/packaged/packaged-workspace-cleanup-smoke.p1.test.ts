@@ -38,7 +38,7 @@ export default {
 setupPackagedSmokeTests();
 
 test(
-  "packaged host limits concurrent workspace deletions and drains the queue",
+  "packaged host rejects unavailable providers and limits concurrent workspace deletions",
   async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-workspace-cleanup-"));
     let child: ChildProcess | undefined;
@@ -73,6 +73,16 @@ test(
         return value;
       };
       const project = await request("/projects", folderProjectInput({ name: "Cleanup" }, folder));
+      const workspaceList = `/workspaces?projectId=${project.id}`;
+      const before = await request(workspaceList);
+      const rejected = await fetch(`${runtime.baseUrl}/v1/workspaces`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ project_id: project.id, provider_id: "nope" }),
+      });
+      expect(rejected.status).toBe(400);
+      expect((await rejected.json()).error).toContain("nope");
+      expect(await request(workspaceList)).toEqual(before);
       await request(`/projects/${project.id}/extensions/installed/cleanup/enable`, {
         displayName: "Cleanup",
         extensionId: "test.cleanup",
