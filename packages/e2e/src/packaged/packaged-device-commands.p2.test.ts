@@ -4,27 +4,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createDeviceCommandPolling } from "./packaged-device-command-polling";
 import { createDeviceCommandPeer } from "./packaged-device-commands.fixture";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 setupPackagedSmokeTests();
-const createWaitFor =
-  (deadline: number, signal: AbortSignal) => async (label: string, read: () => Promise<boolean>) => {
-    while (true) {
-      signal.throwIfAborted();
-      if (Date.now() >= deadline) throw new Error(`Timed out waiting for ${label}`);
-      if (await read()) return;
-      await Bun.sleep(25);
-    }
-  };
 
 test(
   "compiled devices run remote sessions, send large follow-ups and files, and interrupt only the target turn",
   async () => {
-    const polling = new AbortController();
-    const waitFor = createWaitFor(Date.now() + PACKAGED_TEST_TIMEOUT - 5_000, polling.signal);
+    const polling = createDeviceCommandPolling(Date.now() + PACKAGED_TEST_TIMEOUT - 5_000);
+    const { waitFor } = polling;
     const root = await mkdtemp(join(tmpdir(), "packaged-device-commands-"));
     const key = join(root, "key.pem");
     const cert = join(root, "cert.pem");
@@ -85,7 +77,7 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
       const connect = async (host: typeof a, folder: string) => {
         process.stderr.write(`Device command fixture: bind ${folder}\n`);
         await mkdir(folder);
-        const client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
+        const client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token, fetch: polling.fetch });
         const identity = await client.runtime.environment();
         expect(
           (
@@ -174,7 +166,7 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
       expect(peer.frames.join("")).not.toContain("Remote file bytes");
       expect(peer.frames.join("")).not.toContain("Long prompt:");
     } finally {
-      polling.abort();
+      polling.close();
       await stopProcess(a.child);
       if (b) await stopProcess(b.child);
       await peer.close();
