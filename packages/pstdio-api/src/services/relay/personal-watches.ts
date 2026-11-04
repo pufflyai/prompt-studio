@@ -20,11 +20,20 @@ export const watchPersonalHistory = (input: {
     input.indexChanged(event.table === "sessions" ? row.id : undefined);
   });
   const stopConversations = deps.sessionService.store.watch((id, patch) => {
-    if (!input.ownsSession(id)) return;
     if (patch?.path === "/approval_requests") {
-      input.indexChanged(id);
+      if (input.ownsSession(id)) input.indexChanged(id);
+      else {
+        // First capture may have read the approval snapshot before admitting this session.
+        void deps.sessionService.get(id).then(
+          (session) => {
+            if (session?.project_id === owner.workbenchId) input.indexChanged(id);
+          },
+          () => input.indexChanged(),
+        );
+      }
       return;
     }
+    if (!input.ownsSession(id)) return;
     input.preview(id);
     const count = deps.sessionService.store.get(id)?.conversation?.messageCount ?? 0;
     if (patch?.op === "replace" && patch.path === `/messages/${count - 1}`) return;

@@ -29,8 +29,14 @@ test("personal session followers receive pending approvals and their resolution 
       status: "in_progress",
     });
     const entry = source.deps.sessionService.store.create(session.id, inertSessionChannelHooks);
+    const otherProject = await source.deps.projectService.create({ name: "Other private project" });
+    const otherSession = await source.deps.sessionService.create({
+      project_id: otherProject.id,
+      title: "Other approval",
+      agent: "fixture-agent",
+    });
+    const otherEntry = source.deps.sessionService.store.create(otherSession.id, inertSessionChannelHooks);
     const approval = { id: "approval", toolName: "shell", toolInput: { command: "pwd" }, toolUseId: "tool" };
-    const reply = entry.approvalService.requestApproval(approval);
     const login = {
       managerOrigin: "https://127.0.0.1:1",
       relayOrigin: "https://127.0.0.1:1",
@@ -70,20 +76,41 @@ test("personal session followers receive pending approvals and their resolution 
       await history.synchronizeIndex(device.id, true, space, relay.relay);
       await remoteHistory.synchronizeIndex(device.id, false, space, relay.relay);
     };
-    await capture();
-    expect(await destination.deps.personalHistoryService.getSession(session.id)).toMatchObject({
-      approval_requests: [approval],
-    });
     const changed = new Set<string | undefined>();
+    let admitted = false;
     stopWatching = watchPersonalHistory({
       deps: source.deps,
       owner: history.owner,
       announcing: () => false,
-      ownsSession: (id) => id === session.id,
+      ownsSession: (id) => admitted && id === session.id,
       preview: () => undefined,
       indexChanged: (id) => changed.add(id),
       conversationChanged: () => undefined,
     });
+    const captured = Promise.withResolvers<void>();
+    const released = Promise.withResolvers<void>();
+    const writeReferences = references.write;
+    references.write = async (...args) => {
+      captured.resolve();
+      await released.promise;
+      return writeReferences(...args);
+    };
+    // Hold first admission after the session row is captured, then request approval without a DB event.
+    const initial = capture();
+    await captured.promise;
+    const otherReply = otherEntry.approvalService.requestApproval({ ...approval, id: "other-approval" });
+    const reply = entry.approvalService.requestApproval(approval);
+    released.resolve();
+    await initial;
+    admitted = true;
+    expect([...changed]).toEqual([session.id]);
+    otherEntry.approvalService.handleResponse({ id: "other-approval", decision: "approve" });
+    await otherReply;
+    await capture(true);
+    expect(await destination.deps.personalHistoryService.getSession(session.id)).toMatchObject({
+      approval_requests: [approval],
+    });
+    changed.clear();
     const frames: unknown[] = [];
     const sink = {
       aborted: false,
