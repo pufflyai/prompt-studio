@@ -99,3 +99,39 @@ test("one native record transaction advances its own guards only when its writes
     await f.close();
   }
 });
+
+test("an observed missing record can be created without a false local revision conflict", async () => {
+  const f = await artifactFilesFixture();
+  try {
+    const loaded = await withStorageObservation({}, () => f.storage.records.read("new"));
+    expect(loaded.value.exists).toBe(false);
+    await withStorageObservation(loaded.versions, () =>
+      f.storage.records.commit({ operationId: "observed-create", edits: [replace("new", "created")] }),
+    );
+    expect((await f.storage.records.read("new")).value).toEqual({ text: "created" });
+  } finally {
+    await f.close();
+  }
+});
+
+test("rebasing an atomic pending closure does not bless another record's outside edit", async () => {
+  const f = await artifactFilesFixture();
+  try {
+    await f.storage.records.commit({
+      operationId: "closure-seed",
+      edits: [replace("own", "base"), replace("other", "base")],
+    });
+    const loaded = await withStorageObservation({}, () => f.storage.records.read("other"));
+    await f.storage.records.commit({ operationId: "closure-outside", edits: [replace("other", "outside")] });
+    await expect(
+      withStorageObservation(loaded.versions, async () => {
+        await f.storage.records.commit({ operationId: "closure-own", edits: [replace("own", "own change")] });
+        await f.storage.records.commit({ operationId: "closure-stale", edits: [replace("other", "stale")] });
+      }),
+    ).rejects.toThrow("changed since it was loaded");
+    expect((await f.storage.records.read("other")).value).toEqual({ text: "outside" });
+    expect((await f.storage.records.read("own")).value).toEqual({ text: "own change" });
+  } finally {
+    await f.close();
+  }
+});

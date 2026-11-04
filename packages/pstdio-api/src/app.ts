@@ -6,7 +6,7 @@ import { createStoragePositions } from "pstdio-api-contracts";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase, upgradeAppStorage } from "./app-database";
-import { createAppSettingsService, createCoreDomainServices } from "./app-domain-services";
+import { createAppPersonalHistory, createAppSettingsService, createCoreDomainServices } from "./app-domain-services";
 import { productionAppDependencies, wireAppExtensionServices } from "./app-extension-services";
 import { registerApi } from "./app-routing";
 import {
@@ -36,7 +36,6 @@ import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/nativ
 import { resolveNativeTextAccess } from "./services/native-documents/source-access";
 import { initializeNativeSource } from "./services/native-documents/source-binding";
 import { createSessionLogFiles } from "./services/personal-history/log-files";
-import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
@@ -259,9 +258,8 @@ const buildApp = async (
   );
 
   deps = {
-    personalHistoryService: createPersonalHistoryService({
+    personalHistoryService: createAppPersonalHistory(extensionStorageDBService, {
       eventBus,
-      documents: extensionStorageDBService.documents,
       account: account.accountService,
       projects: projectService,
       logs: createSessionLogFiles(storageRoot),

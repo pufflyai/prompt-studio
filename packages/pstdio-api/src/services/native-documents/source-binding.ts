@@ -75,11 +75,12 @@ export const resolveNativeSource = async (
   source: NativeDocumentSource,
 ) => {
   const address = await resolveNativeDeclaration(deps, owner, source);
-  if (address.recordId === undefined) return { ...address, lifetime: "initial" };
-  const resolved = await deps.extensionStorageService.resolveNativeRecordAddress(owner, {
-    recordId: address.recordId,
-    documentKey: address.documentKey,
-  });
+  if (address.recordId === undefined) return { ...address, lifetime: "initial", generation: undefined };
+  const resolved: { documentKey: string; lifetime: string; generation?: string } =
+    await deps.extensionStorageService.resolveNativeRecordAddress(owner, {
+      recordId: address.recordId,
+      documentKey: address.documentKey,
+    });
   return { ...address, ...resolved, sourceKey: address.documentKey };
 };
 
@@ -128,7 +129,13 @@ export const resolveNativeLoadedSource = async (
           content: input.content,
           versions: input.versions,
         });
-  return { documentKey: address.documentKey, lifetime: address.lifetime, copy, fileStorageVersions };
+  return {
+    documentKey: address.documentKey,
+    lifetime: address.lifetime,
+    generation: address.generation,
+    copy,
+    fileStorageVersions,
+  };
 };
 
 export const initializeNativeSource = async (

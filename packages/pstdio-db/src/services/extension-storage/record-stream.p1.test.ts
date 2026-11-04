@@ -1,10 +1,15 @@
 import { afterEach, expect, test } from "bun:test";
-import { NativeSourceRecoveryError } from "pstdio-sync";
-import { createSyncSpace, openUpdate, sealUpdate } from "pstdio-sync/encryption";
-import { editResourceDocument, readDocumentRecord, recordTextBindingUpdate } from "pstdio-sync/records";
+import { createSyncSpace, openUpdate, sealState, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
+import {
+  editResourceDocument,
+  prepareOrderedOperation,
+  readDocumentRecord,
+  recordTextBindingUpdate,
+} from "pstdio-sync/records";
 import {
   createRecordStreamSync,
   decodeRecordFrame,
+  encodeOrderedEntry,
   encodeRecordFrame,
   type RecordStreamStore,
   type SyncFailure,
@@ -12,7 +17,7 @@ import {
 import type { UpdateEnvelope } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
-import { projects, storage_record_sync } from "../../db/schemas.pg";
+import { projects, storage_ordered_owners } from "../../db/schemas.pg";
 import { dataMigrationContext } from "./data-migration-context";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";
@@ -59,7 +64,7 @@ const device = async (
   return { db, records, service, sync: start(), restart: start, assets, failures, value };
 };
 
-test("a saved pre-binding record keeps its outbox and a recoverable remote copy when adoption needs a decision", async () => {
+test("an ordered client retains local work and the encrypted legacy frame when its older format cannot be adopted", async () => {
   const { relay } = createRelay();
   const initial = await editResourceDocument(
     [],
@@ -89,20 +94,40 @@ test("a saved pre-binding record keeps its outbox and a recoverable remote copy 
     operationId: "second",
     edits: [{ recordId: "ticket", replace: { content: "Saved locally before binding" } }],
   });
-  await expect(second.sync.synchronize()).rejects.toBeInstanceOf(NativeSourceRecoveryError);
+  await second.sync.synchronize();
   expect(await second.value("ticket")).toEqual({ content: "Saved locally before binding" });
   expect(await stream.pending()).toBe(true);
   expect(await stream.open()).toMatchObject({ joined: false, after: 0 });
   expect(await second.sync.status()).toMatchObject({ pending: true, needsAttention: true });
   const failure = second.failures[0] as SyncFailure;
   expect(JSON.stringify(failure)).not.toContain("Saved remotely before binding");
-  const frame = decodeRecordFrame(
-    await openUpdate(space, documentId, (failure.envelope as { update: UpdateEnvelope }).update),
-  );
+  const frame = decodeRecordFrame(await openUpdate(space, documentId, failure.envelope as UpdateEnvelope));
   const document = new Y.Doc();
   for (const record of frame.records) if (record.recordId === "ticket") Y.applyUpdate(document, record.bytes);
   expect((await readDocumentRecord(document, "ticket")).value).toEqual({ content: "Saved remotely before binding" });
   document.destroy();
+});
+
+test("a joined device cannot advance its CAS base to an opposite-format compaction it need not load", async () => {
+  const remote = createRelay();
+  const first = await device(remote.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Saved" }] });
+  await first.sync.synchronize();
+  const stream = first.service.documents.recordStream(owner);
+  const before = await stream.open();
+  const foreign = await sealState(space, documentId, {
+    baseStateId: before.stateId,
+    through: before.after,
+    state: new TextEncoder().encode(JSON.stringify({ version: 1, chunks: [] })),
+    summary: new TextEncoder().encode(JSON.stringify({ records: 0, bytes: 0 })),
+    blobIds: [],
+  });
+  expect(await remote.relay.replace(foreign)).toBe(true);
+  await expect(first.sync.synchronize()).rejects.toBeInstanceOf(UnreadableSyncData);
+  expect(await stream.open()).toEqual(before);
+  expect(remote.latest()?.stateId).toBe(foreign.stateId);
+  expect(first.failures).toMatchObject([{ kind: "state", id: foreign.stateId }]);
+  expect(await first.sync.status()).toMatchObject({ needsAttention: true });
 });
 
 test("records saved offline on two devices reach both, and a multi-record save arrives whole", async () => {
@@ -351,13 +376,13 @@ test("a peer latest state preserves byte accounting for an already downloaded ne
   expect(raced).toBe(true);
   expect(fixture.latest()!.through).toBe(1);
   await first.sync.synchronize();
-  const [cursor] = await first.db.select().from(storage_record_sync);
+  const cursor = await first.service.documents.recordStream(owner).open();
   const actualTail = fixture
     .updates()
     .filter((update) => update.sequence > 1)
     .reduce((sum, update) => sum + Buffer.from(update.payload, "base64").length, 0);
   expect(actualTail).toBeGreaterThan(0);
-  expect(cursor!.pending_bytes).toBe(actualTail);
+  expect(cursor.pendingBytes).toBe(actualTail);
   for (const peer of [first, second]) expect(await peer.value("tail")).toBe("y".repeat(200_000));
 });
 
@@ -414,10 +439,15 @@ test("a frame with a record that cannot be merged is skipped whole", async () =>
   const first = await device(fixture.relay);
   await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
   await first.sync.synchronize();
-  const valid = await editResourceDocument([], { recordId: "a", replace: "half of a save" }, true);
+  const [row] = await first.db.select().from(storage_ordered_owners);
+  const valid = await prepareOrderedOperation(
+    { operationId: "malformed-pair", edits: [{ recordId: "a", replace: { value: "half of a save" } }] },
+    new Map(),
+  );
   const frame = encodeRecordFrame({
+    format: "ordered",
     records: [
-      { recordId: "a", bytes: valid.update! },
+      encodeOrderedEntry({ type: "admission", admission: { operation: valid, epoch: row!.epoch!, dependencies: [] } }),
       { recordId: "b", bytes: new Uint8Array([255, 1, 2, 3]) },
     ],
     assets: [],
@@ -448,7 +478,9 @@ test("a device that joins again with history it already shares merges instead of
     edits: [{ recordId: "note", replace: { title: "Y", body: "" } }],
   });
   // The second device lost its place in the stream, for example after its owner data was reset.
-  await second.db.delete(storage_record_sync);
+  await second.db
+    .update(storage_ordered_owners)
+    .set({ joined: false, after: 0, state_id: null, through: 0, pending_bytes: 0, state_bytes: 0 });
   await second.sync.synchronize();
   await first.sync.synchronize();
   for (const peer of [first, second]) expect(await peer.value("note")).toEqual({ title: "Y", body: "from first" });
@@ -526,7 +558,11 @@ test("a device that skipped an update does not replace the latest state after a 
   const second = await device(fixture.relay);
   await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
   for (const peer of [first, second]) await peer.sync.synchronize();
-  const frame = encodeRecordFrame({ records: [{ recordId: "b", bytes: new Uint8Array([255, 1, 2, 3]) }], assets: [] });
+  const frame = encodeRecordFrame({
+    format: "ordered",
+    records: [{ recordId: "b", bytes: new Uint8Array([255, 1, 2, 3]) }],
+    assets: [],
+  });
   await fixture.relay.update(await sealUpdate(space, documentId, frame, []));
   await second.sync.synchronize();
   const latest = fixture.latest();
@@ -638,4 +674,96 @@ test("a device that skipped an update while joining does not replace the latest 
   // A latest state from this device would claim to cover the update it could not read.
   expect(fixture.latest()).toBe(latest);
   expect((await restarted.status()).needsAttention).toBe(true);
+});
+
+test("an immutable asset intent remains downloadable when a peer restores its tombstone before relay admission", async () => {
+  const fixture = createRelay();
+  let restoreBeforeUpdate: (() => Promise<void>) | undefined;
+  const first = await device({
+    ...fixture.relay,
+    update: async (envelope) => {
+      const restore = restoreBeforeUpdate;
+      restoreBeforeUpdate = undefined;
+      if (restore) await restore();
+      return fixture.relay.update(envelope);
+    },
+  });
+  const second = await device(fixture.relay);
+  const restorer = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed-asset-race", edits: [{ recordId: "file", replace: "cover" }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  await restorer.sync.synchronize();
+  const { bytes, asset } = file("immutable replacement bytes");
+  first.assets.files.set(asset.sha256, bytes);
+  await first.records.commit({ operationId: "asset-before-delete", edits: [{ recordId: "file", asset }] });
+  await second.records.commit({ operationId: "delete-before-upload", edits: [{ recordId: "file", deleted: true }] });
+  await second.sync.synchronize();
+  await restorer.sync.synchronize();
+  restoreBeforeUpdate = async () => {
+    await restorer.records.commit({
+      operationId: "restore-before-admission",
+      edits: [{ recordId: "file", deleted: false }],
+    });
+    await restorer.sync.synchronize();
+  };
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect((await second.records.read("file")).asset).toEqual(asset);
+  expect(second.assets.files.get(asset.sha256)).toEqual(bytes);
+});
+
+test("a tombstone checkpoint retains the file required by a later explicit restore", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay, compactEveryPass);
+  const { bytes, asset } = file("restorable asset bytes");
+  first.assets.files.set(asset.sha256, bytes);
+  await first.records.commit({
+    operationId: "restorable-file",
+    edits: [{ recordId: "file", replace: "cover", asset }],
+  });
+  await first.sync.synchronize();
+  await first.records.commit({ operationId: "tombstone-file", edits: [{ recordId: "file", deleted: true }] });
+  await first.sync.synchronize();
+  fixture.trim();
+  const second = await device(fixture.relay);
+  await second.sync.synchronize();
+  expect((await second.records.read("file")).deleted).toBe(true);
+  await first.records.commit({ operationId: "restore-file", edits: [{ recordId: "file", deleted: false }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect((await second.records.read("file")).asset).toEqual(asset);
+  expect(second.assets.files.get(asset.sha256)).toEqual(bytes);
+});
+
+test("an offline file binding cannot replace an earlier peer asset authority", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  const original = file("original file");
+  const replacement = file("peer replacement");
+  first.assets.files.set(original.asset.sha256, original.bytes);
+  await first.records.commit({
+    operationId: "bind-file-base",
+    edits: [{ recordId: "file", replace: { path: "note.md" }, asset: original.asset }],
+  });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  const key = "5".repeat(64);
+  await second.records.bindText({ recordId: "file", documentKey: key, content: "original file" });
+  first.assets.files.set(replacement.asset.sha256, replacement.bytes);
+  await first.records.commit({
+    operationId: "bind-file-peer",
+    edits: [{ recordId: "file", asset: replacement.asset }],
+  });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  await first.sync.synchronize();
+  for (const peer of [first, second]) {
+    const record = await peer.records.read("file");
+    expect(record.asset).toEqual(replacement.asset);
+    const sources = "nativeSources" in record ? record.nativeSources : undefined;
+    expect(Object.keys(sources ?? {})).toHaveLength(0);
+    expect(peer.failures).toEqual([]);
+  }
 });

@@ -4,6 +4,7 @@ import type { ExtensionsRouteDeps } from "../deps";
 import { createPublicationStorageAccess, guardPublicationStorage } from "../publication/storage-access";
 import { createExtensionAssetsApi } from "./assets";
 import { createExtensionBlobsApi } from "./blobs";
+import { createExtensionLogApi } from "./logs";
 import { createExtensionRecordsApi } from "./records";
 
 type StorageApiInput = {
@@ -55,6 +56,12 @@ export const createStorageApi = (
     positions: deps.storagePositions,
     readLegacy: async () => undefined,
     records: createExtensionRecordsApi(deps, { ...input, scopeType: scope.scope_type, scopeId: scope.scope_id }),
+    text: (recordId, field) => ({
+      edit: (edits) =>
+        api.records.commit({ operationId: createStorageId(), edits: [{ recordId, text: { [field]: edits } }] }),
+    }),
+    log: (name, options) =>
+      createExtensionLogApi(deps, { ...input, scopeType: scope.scope_type, scopeId: scope.scope_id }, name, options),
     assets: createExtensionAssetsApi(deps, input),
     files: createExtensionBlobsApi(deps, {
       extensionInstanceId: input.extensionInstanceId,

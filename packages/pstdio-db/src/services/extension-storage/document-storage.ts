@@ -1,42 +1,22 @@
 import { and, eq } from "drizzle-orm";
-import {
-  type AssetStore,
-  type DocumentStore,
-  hasDocumentUserData,
-  isEmptyDocument,
-  NativeSourcePendingError,
-  type StorageObserver,
-  type StorageOwner,
-} from "pstdio-sync";
+import { type AssetStore, hasDocumentUserData, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
-import {
-  createTextDocumentStorage,
-  mergeTextDocuments,
-  prepareTextDocumentAdoption,
-  readTextDocumentSeed,
-  saveTextDocument,
-  seedTextDocument,
-} from "pstdio-sync/text";
-import * as Y from "yjs";
+import { createTextDocumentStorage } from "pstdio-sync/text";
+import type { StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records, storage_documents } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
-import { runDocumentTransaction } from "./document-persistence";
-import { lockStorageProject, refreshNativeRecordText } from "./native-record-projection";
-import { readNativeTextSnapshot } from "./native-text-snapshot";
+import { createDocumentDirectory } from "./document-directory";
+import { createDocumentTransactions } from "./document-transactions";
+import { createNativeDocumentStore, openNativeDocument } from "./native-document-storage";
+import { createOrderedLogs } from "./ordered-logs";
+import { createOrderedResourceRecords } from "./ordered-resource-records";
+import { createOrderedStreamStore } from "./ordered-stream-store";
 import { createProjectionStatistics } from "./projection-statistics";
-import { createRecordStreamStore } from "./record-stream-store";
 import { resourceDocumentId } from "./resource-document-persistence";
 import type { NumberChange } from "./resource-number-repair";
-import { createResourceRecords } from "./resource-records";
 import type { StorageDiagnostics } from "./storage-diagnostics";
-
-const readNativeText = async (document: Y.Doc) => {
-  if (isEmptyDocument(document)) throw new NativeSourcePendingError();
-  await readTextDocumentSeed(document);
-  return document.getText("content").toString();
-};
 
 const notifyNativeRecords = (listeners: Map<string, Set<() => void>>, owner: StorageOwner, keys: string[]) => {
   for (const documentKey of keys) {
@@ -115,82 +95,62 @@ export const createDocumentStorageDBService = (
   const listeners = new Set<(owner: StorageChange) => void>();
   const documentListeners = new Map<string, Set<() => void>>();
   const numberListeners = new Set<(event: NumberChange) => void>();
+  const notifyOwnerNative = (owner: StorageOwner) => {
+    for (const [key, callbacks] of documentListeners) {
+      const address = JSON.parse(key) as { workbench_id: string; extension_id: string; document_id: string };
+      if (
+        address.workbench_id === owner.workbenchId &&
+        address.extension_id === owner.extensionId &&
+        address.document_id.startsWith('["native-markdown",')
+      )
+        for (const listener of callbacks) listener();
+    }
+  };
   const numbersChanged = (events: NumberChange[]) => notifyNumbers(numberListeners, events);
   const statistics = createProjectionStatistics(db);
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
-  const transactionFor = (documentId: string, prepare?: (document: Y.Doc) => Promise<Y.Doc>) => {
-    const transaction: DocumentStore["transaction"] = async (owner, action) => {
-      const address = addressFor(owner, documentId);
-      const key = JSON.stringify(address);
-      try {
-        const nativeKey = documentId.startsWith('["native-markdown",')
-          ? (JSON.parse(documentId) as string[])[1]
-          : undefined;
-        const result = await db.transaction(async (tx) => {
-          if (nativeKey) await lockStorageProject(tx, owner.workbenchId);
-          const result = await runDocumentTransaction(
-            tx,
-            { address, owner, cached: cache.get(key), diagnostics, prepare },
-            action,
-          );
-          if (nativeKey && result.changed)
-            await refreshNativeRecordText(tx, owner, nativeKey, result.document.getText("content").toString());
-          return result;
-        });
-        cache.publish(key, result);
-        if (result.changed) {
-          for (const listener of listeners) listener({ ...owner, documentId });
-          for (const listener of documentListeners.get(key) ?? []) listener();
-        }
-        return result.value;
-      } catch (error) {
-        cache.discard(key);
-        throw error;
-      }
-    };
-    return transaction;
-  };
-  const transaction = transactionFor("records");
-  const nativeStore = (documentId: string) => ({
-    transaction: transactionFor(documentId),
-    revision: documentRevision(db, documentId),
-    initialHistory: {
-      validate: readTextDocumentSeed,
-      prepare: (owner: StorageOwner, remote: Y.Doc) =>
-        transactionFor(documentId)(owner, async ({ document }) => prepareTextDocumentAdoption(document, remote)),
-      merge: (owner: StorageOwner, remote: Y.Doc) => {
-        let waiting = false;
-        return transactionFor(documentId, async (local) => {
-          if (isEmptyDocument(local)) return mergeTextDocuments(local, remote);
-          const candidate = await prepareTextDocumentAdoption(local, remote);
-          if (candidate) {
-            candidate.destroy();
-            waiting = true;
-            return local;
-          }
-          const localSeed = await readTextDocumentSeed(local);
-          const remoteSeed = await readTextDocumentSeed(remote);
-          if (localSeed.id !== remoteSeed.id) {
-            return mergeTextDocuments(local, remote);
-          }
-          Y.applyUpdate(local, Y.encodeStateAsUpdate(remote));
-          return local;
-        })(owner, async ({ document }) => {
-          if (waiting) return null;
-          const snapshot = new Y.Doc();
-          Y.applyUpdate(snapshot, Y.encodeStateAsUpdate(document));
-          return snapshot;
-        });
-      },
+  let directory: ReturnType<typeof createDocumentDirectory>;
+  const transactionFor = createDocumentTransactions(db, {
+    cache,
+    diagnostics,
+    directory: () => directory,
+    projected: statistics.record,
+    published: (owner, documentId) => {
+      for (const listener of listeners) listener({ ...owner, documentId });
+      for (const listener of documentListeners.get(JSON.stringify(addressFor(owner, documentId))) ?? []) listener();
     },
   });
-  const isResourceDocument = (id: string) => id.startsWith(resourceDocumentId("").slice(0, -2));
+  const transaction = transactionFor("records");
+  const nativeStore = (id: string) => createNativeDocumentStore(db, id, transactionFor, documentRevision(db, id));
+  const isResourceDocument = (id: string) =>
+    id.startsWith(resourceDocumentId("").slice(0, -2)) ||
+    id.startsWith('["ordered-index-blob",') ||
+    id.startsWith('["ordered-native-field",') ||
+    id.startsWith('["ordered-native-room",') ||
+    id.startsWith('["ordered-native-authored",') ||
+    id.startsWith('["ordered-dependency",') ||
+    id === '["ordered-directory"]';
+  directory = createDocumentDirectory(db, {
+    metadata: transaction,
+    private: isResourceDocument,
+    invalidate: (owner) => cache.discard(JSON.stringify(addressFor(owner, "records"))),
+  });
+  const logs = createOrderedLogs(db, {
+    metadata: transaction,
+    changed: (owner) => {
+      for (const listener of listeners) listener(owner);
+    },
+  });
   return {
     transaction,
+    logs,
     observer,
     getEnvironment,
-    flushStatistics: statistics.flush,
+    flushStatistics: async () => {
+      await statistics.flush();
+      await logs.flushStatistics();
+    },
     watchNumbers(listener: (event: NumberChange) => void) {
       numberListeners.add(listener);
       return () => {
@@ -204,33 +164,16 @@ export const createDocumentStorageDBService = (
           ? nativeStore(documentId)
           : { transaction: transactionFor(documentId), revision: documentRevision(db, documentId) },
       recordStream: (owner: StorageOwner) =>
-        createRecordStreamStore(db, owner, {
+        createOrderedStreamStore(db, owner, {
           statistics,
           numbersChanged,
           metadata: transaction,
           changed: () => {
+            notifyOwnerNative(owner);
             for (const listener of listeners) listener(owner);
           },
         }),
-      list: async (owner: StorageOwner) => {
-        const local = await db
-          .select({ id: storage_documents.document_id })
-          .from(storage_documents)
-          .where(
-            and(
-              eq(storage_documents.workbench_id, owner.workbenchId),
-              eq(storage_documents.extension_id, owner.extensionId),
-            ),
-          );
-        return transaction(owner, async ({ document }) => {
-          // This directory is encrypted with the records document. A new device discovers text
-          // documents without revealing filenames or requiring a relay listing API.
-          const directory = document.getMap<boolean>("sync-documents");
-          for (const { id } of local)
-            if (id !== "records" && !isResourceDocument(id) && !directory.has(id)) directory.set(id, true);
-          return ["records", ...[...directory.keys()].filter((id) => id !== "records").sort()];
-        });
-      },
+      list: (owner: StorageOwner) => directory.list(owner),
     },
     async hasData(owner: StorageOwner) {
       if (await hasProjectedRecords(db, owner)) return true;
@@ -255,17 +198,18 @@ export const createDocumentStorageDBService = (
         listeners.delete(listener);
       };
     },
-    open(input: { owner: StorageOwner; assets?: AssetStore }) {
+    open(input: { owner: StorageOwner; assets?: AssetStore; textFields?: StorageTextDeclaration[] }) {
       // The owner document keeps owner metadata such as data migration versions; records have their own documents.
       const metadata = createDocumentStorage({ owner: input.owner, store: { transaction, observer } });
       return {
         dataVersion: metadata.dataVersion,
         setDataVersion: metadata.setDataVersion,
-        records: createResourceRecords(db, input.owner, {
+        records: createOrderedResourceRecords(db, input.owner, {
           statistics,
           numbersChanged,
           observer,
           assets: input.assets,
+          textFields: input.textFields,
           diagnostics,
           nativeChanged: (keys) => {
             notifyNativeRecords(documentListeners, input.owner, keys);
@@ -274,6 +218,7 @@ export const createDocumentStorageDBService = (
                 listener({ ...input.owner, documentId: JSON.stringify(["native-markdown", key]) });
           },
           changed: () => {
+            notifyOwnerNative(input.owner);
             for (const listener of listeners) listener(input.owner);
           },
         }),
@@ -286,43 +231,12 @@ export const createDocumentStorageDBService = (
       });
     },
     openNativeTextDocument(input: { owner: StorageOwner; fileId: string }) {
-      const documentId = JSON.stringify(["native-markdown", input.fileId]);
-      const store = nativeStore(documentId);
-      const text = createTextDocumentStorage({ owner: input.owner, store });
-      return {
-        read: () => store.transaction(input.owner, ({ document }) => readNativeText(document)),
-        exportUpdate: text.exportUpdate,
-        snapshot: () => readNativeTextSnapshot(db, input.owner, documentId),
-        store,
-        save: (source: string) =>
-          store.transaction(input.owner, async ({ document }) => saveTextDocument(document, source)),
-        seed: (source: string) =>
-          store.transaction(input.owner, async ({ document }) => seedTextDocument(document, source)),
-        async applySource(source: Y.Doc) {
-          const snapshot = new Y.Doc();
-          try {
-            Y.applyUpdate(snapshot, Y.encodeStateAsUpdate(source));
-            if (snapshot.store.pendingStructs || snapshot.store.pendingDs)
-              throw new Error("The editor source is missing causal history");
-            await readTextDocumentSeed(snapshot);
-            await transactionFor(documentId, async (canonical) => {
-              if (isEmptyDocument(canonical)) return mergeTextDocuments(canonical, snapshot);
-              // The host accepts this room's edits into its current root. Relay publication
-              // still uses initialHistory's CAS to serialize adoption across hosts.
-              const candidate = await prepareTextDocumentAdoption(snapshot, canonical);
-              if (candidate) return candidate;
-              const sourceSeed = await readTextDocumentSeed(snapshot);
-              const canonicalSeed = await readTextDocumentSeed(canonical);
-              if (sourceSeed.id === canonicalSeed.id)
-                Y.applyUpdate(canonical, Y.encodeStateAsUpdate(snapshot, Y.encodeStateVector(canonical)));
-              return canonical;
-            })(input.owner, async () => {});
-          } finally {
-            snapshot.destroy();
-          }
-        },
-        watch(listener: () => void) {
-          const key = JSON.stringify(addressFor(input.owner, documentId));
+      return openNativeDocument(input, {
+        db,
+        transactionFor,
+        nativeStore,
+        watch: (owner, id, listener) => {
+          const key = JSON.stringify(addressFor(owner, id));
           let callbacks = documentListeners.get(key);
           if (!callbacks) {
             callbacks = new Set();
@@ -334,7 +248,7 @@ export const createDocumentStorageDBService = (
             if (!callbacks.size) documentListeners.delete(key);
           };
         },
-      };
+      });
     },
   };
 };

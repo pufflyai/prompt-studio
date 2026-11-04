@@ -43,7 +43,7 @@ anything.
 | Device | A client that a user has logged into the cloud from. The client's environment ID becomes its device ID. Each device belongs to one user. |
 | Cloud project | A project (workbench) that syncs through the relay. Local projects never leave the device. |
 | CRDT | A data type that merges edits made at the same time on different machines automatically, without a server. [Yjs](https://docs.yjs.dev/) is the CRDT library this PRD assumes. |
-| Document | One CRDT unit, for example one extension record or one session transcript. The records of one extension in a project travel together through one encrypted relay document, the record stream ([ADR 0102](../../adrs/0102-record-stream-sync.md)). |
+| Document | One encrypted relay stream or native text owner. An extension's ordered record groups share its record stream; only declared collaborative text and real editable files retain Yjs history ([ADR 0134](../../adrs/0134-order-record-saves-and-declare-collaborative-text.md)). |
 | Update | An encrypted change to one document, produced by a client. |
 | Latest state | An encrypted copy of one document's full current state, uploaded by a client. |
 | Blob | An encrypted file stored by the relay, such as an image or an extension package. |
@@ -55,26 +55,33 @@ anything.
 
 - R1. Every device keeps a full local copy of every cloud project it can access and of
   its user's private project data, including file contents. It works fully offline.
-- R2. Clients merge changes with the CRDT, following the shape of the data. Extensions
-  do not declare merge rules, and a save does not need to say what changed: the client
-  compares the saved value with the current one.
-  - Objects merge key by key, at every depth.
-  - Lists merge item by item. Items that a device adds or removes stay added or
-    removed. A list of distinct values never gains a duplicate, and a moved item ends in
-    one place. List items that are objects with an `id` are matched by that ID, and
-    their fields merge like any object.
-  - A string merges character by character once it contains a line break. Declared
-    shared editable files merge the same way. Whole-folder captures follow R57–R59.
-  - Any other value, such as a number, a boolean or a single-line string, is replaced
-    as a whole.
-
-  When two edits to the same value happen without either seeing the other, a fixed rule
-  picks one. The rule does not use clocks, so it gives the same result on every device.
-  If an edit was made after seeing another, the later edit wins. The relay never picks a
-  winner. The only shape rule for authors: a setting that holds one value, such as a
-  single-select tag, is its own field, not an item in a list.
-- R3. The relay is never the source of truth. If the relay loses its data, any device
-  with a full copy can upload it again.
+  Append-only logs load bounded pages on demand under R60; a partial reader cannot
+  publish a replacement that claims to contain history it has not downloaded.
+- R2. Plain record fields apply in relay order. The later ordered write wins at each
+  changed JSON path. Objects contribute changed fields at every depth; arrays and
+  undeclared strings, including multiline strings, are whole values. A replacement
+  uses the caller's observed baseline to identify changed paths. Explicit set/unset
+  paths state the author's intent directly. Neither clocks nor the relay interpret
+  values.
+  - A save is unconditional unless it supplies an expected revision. An earlier
+    overlapping write, deletion/recreation, or change back to the original bytes
+    refuses that entire conditional group on every device. Unrelated sibling changes
+    do not refuse it. The originating extension can read the exact refused outcome.
+  - Authors declare collaborative text by record prefix and JSON Pointer. Those
+    fields merge typing with Yjs in the record stream. Real editable files retain
+    their native text owner. A line break never declares text.
+  - Plain sets use maps keyed by member; hand-arranged items use stable records and
+    positions. Legacy shared maps/lists are deprecated, with maintained callers
+    migrated to ordinary fields. The compatibility shared-text API remains explicit
+    text until its coordinated removal.
+  - Immutable pending saves overlay canonical records locally and survive restarts,
+    adoption and uncertain acknowledgments. Exact per-epoch receipts settle them.
+    Receipt roots use bounded encrypted index pages; a writer frontier is not proof
+    that a save was accepted. See [ADR 0134](../../adrs/0134-order-record-saves-and-declare-collaborative-text.md).
+- R3. The relay is never the source of truth. If the relay loses its data, a device
+  with a full copy can upload it again. Its founding state establishes the new order;
+  other devices adopt that base and replay their unsettled immutable saves. Exact
+  known old outcomes settle a restored save before replay.
 - R4. A change that writes several records or files together is delivered and applied
   as one unit on every client. A client never shows half of it. One save of an extension's
   records is one update in its record stream.
@@ -86,6 +93,15 @@ anything.
 - R7. The product shows the sync state of a cloud project: saved locally, waiting to
   sync, synced, offline, or a problem that needs attention. Offline means the device has
   lost its connection. A project that does not sync is called Local, not Offline.
+
+- R60. Authors declare append-only project or device logs. Project entries follow relay
+  order; a device log has one writer and a logical read merges device streams. Reads
+  and follow use bounded opaque cursors. Retention metadata excludes expired payloads
+  before download. Appending one entry or reading the newest page at 100,000 entries
+  must cost about the same as at 10 entries. New devices fetch only displayed pages.
+  Personal-history indexes and completed transcript files use this generic transport;
+  live/private session ownership, account isolation and terminal publication fences
+  remain unchanged. Logs do not create local execution records on a receiving device.
 
 ### Core provides what merging cannot
 
@@ -293,7 +309,7 @@ anything.
 
 | Phase | Includes | Requirements |
 | --- | --- | --- |
-| 1. One user, many devices | Encrypted CRDT sync of project data and files, full folder recovery, latest state backup, Google login connects everything, early access, device list, sync state, Cloud UI as an extension, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R59 |
+| 1. One user, many devices | Encrypted ordered records, declared text, logs and files, full folder recovery, latest state backup, Google login connects everything, early access, device list, sync state, Cloud UI as an extension, extension and automation sync, reset recovery | R1 to R31, R34, R35, R37 (devices), R43 to R59 |
 | 2. Sessions follow you | Private project data (workspace, session and transcript sync), remote commands, cloud devices | R32, R33, R38 to R42 |
 | 3. Teams | Team accounts, members, per-project membership, member removal | R36, R37 (members) |
 
@@ -325,8 +341,8 @@ Phase 1 builds the split between project keys and private-data keys (R13) from t
 | Relay blobs (`services/relay/src/assets`) | S3 asset storage with integrity checks | Keep and simplify. Content is encrypted and IDs are random. |
 | Relay transport | Authenticated HTTP and WebSocket subscriptions | Keep and simplify for encrypted updates and live messages. |
 | Protocol (`packages/pstdio-sync-contracts`) | Versioned groups, parents, receipts, covered checkpoints (PS-808) | Replace with a small protocol for encrypted updates, latest states, blobs and live messages. |
-| Client sync (`packages/pstdio-sync`) | Journal of grouped changes, recovery proofs, snapshot fetch | Replace with a CRDT document store plus encryption and relay transport. |
-| Local storage (`packages/pstdio-db/src/services/extension-storage/`) | Grouped record journal, accepted state, conflict branches and data migrations | Replace the journal and conflict branches with CRDT documents that merge by shape (R2). Keep data migrations and make them repeatable (R44). |
+| Client sync (`packages/pstdio-sync`) | Journal of grouped changes, recovery proofs, snapshot fetch | Use canonical records and immutable pending groups, declared Yjs text, paged append-only logs, encryption and existing relay transport (R2). |
+| Local storage (`packages/pstdio-db/src/services/extension-storage/`) | Grouped record journal, accepted state, conflict branches and data migrations | Keep canonical and pending records separate, with exact ordered outcomes (R2). Retain legacy source for one-time conversion and repeatable migrations (R44). |
 | Resource numbers (`resources.allocate`, `extension_resource_sequences`) | A local counter per project and resource kind. Planner and Reports store their own copy of each number. | Keep the API. Repair duplicate numbers after merges, keep old numbers as aliases, and make core the only owner of the current number (R49). |
 | Record IDs | Planner, Reports, Notes and Artifacts call `crypto.randomUUID()` themselves | Add a core ID function that is deterministic inside data migrations (R50). |
 | Hand-arranged order | Planner stores numeric positions and rebalances them when gaps run out | Add core order positions (R51). |
@@ -344,7 +360,7 @@ documented runtime behavior is a breaking change. Plan it as one breaking step:
 | Member | Change |
 | --- | --- |
 | `records.read`, `records.list`, `records.id` | Keep. `read` loses its `branch` argument. |
-| `records.commit` | Keep as the write call. `expectedRevision` is no longer required; edits merge (R2). |
+| `records.commit` | Keep as the write call. Optional `expectedRevision` makes the group conditional; plain changes otherwise apply in relay order (R2). |
 | `StorageSaveOutcome` | Report the R7 states. Remove `conflict` and the relay checkpoint. |
 | `records.outcome` | Keep. It returns the R7 save states, so a caller can wait until a save has synced. |
 | `records.conflicts`, `records.inspect`, `records.resolve` | Deprecate, then remove. There are no conflicts to inspect. |

@@ -5,6 +5,7 @@ import { createRecordAssets } from "../../features/extensions/command-environmen
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createRelayDocumentJobs, RelayDocumentRetiredError } from "./document-jobs";
 import { documentProgress } from "./document-progress";
+import { createRelayLogs } from "./logs";
 import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
 
@@ -33,7 +34,16 @@ export const createExtensionDocumentSync = (input: {
     const quarantine = (documentId: string) =>
       createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
     const ownerId = await space.documentId(JSON.stringify([owner.extensionId, "owner"]));
-    const recordStreamId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream"]));
+    const recordStreamId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream-v2"]));
+    const logs = createRelayLogs({
+      owner,
+      space,
+      service: deps.extensionStorageService.logs,
+      relay,
+      signal: workSignal,
+      subscribe: input.subscribe,
+      statusChanged: input.statusChanged,
+    });
     const jobs = createRelayDocumentJobs({
       signal: workSignal,
       create: async (name) => {
@@ -75,6 +85,7 @@ export const createExtensionDocumentSync = (input: {
           input.statusChanged?.();
           workSignal.throwIfAborted();
           await records.synchronize();
+          await logs.publish();
           workSignal.throwIfAborted();
           directory = await deps.extensionStorageService.documents.list(owner);
           input.statusChanged?.();
@@ -98,6 +109,7 @@ export const createExtensionDocumentSync = (input: {
       signal,
       generation: space.generation,
       jobs,
+      logs,
       ownerId,
       recordStreamId,
       invalidate(name: string) {
@@ -105,7 +117,7 @@ export const createExtensionDocumentSync = (input: {
       },
       status: async () => {
         const names = [...new Set(["records", ...jobs.names(), ...(directory ?? [])])];
-        const statuses = [...(await jobs.statuses(names)), await records.status()];
+        const statuses = [...(await jobs.statuses(names)), await records.status(), await logs.status()];
         return documentProgress(statuses, directory !== undefined);
       },
       synchronize,
@@ -113,6 +125,7 @@ export const createExtensionDocumentSync = (input: {
         controller.abort(new RelayDocumentRetiredError("Document key generation retired"));
         await running?.catch(() => {});
         await jobs.close();
+        await logs.close();
       },
     };
   };
@@ -195,6 +208,7 @@ export const createExtensionDocumentSync = (input: {
         !!active &&
         (change.documentId === active.ownerId ||
           change.documentId === active.recordStreamId ||
+          active.logs.has(change.documentId) ||
           active.jobs.nameFor(change.documentId) !== undefined)
       );
     },
@@ -204,6 +218,7 @@ export const createExtensionDocumentSync = (input: {
       if (!active || active.signal !== signal) return Promise.resolve(false);
       if (change.documentId === active.ownerId || change.documentId === active.recordStreamId)
         return Promise.resolve(false);
+      if (active.logs.changed(change.documentId)) return Promise.resolve(true);
       const name = active.jobs.nameFor(change.documentId);
       // Owner directory publication announces new names. Reconnect also reads that directory.
       // An opaque hint belonging to another owner must not sweep this owner.

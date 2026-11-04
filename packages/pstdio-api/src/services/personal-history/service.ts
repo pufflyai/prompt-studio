@@ -26,6 +26,8 @@ export const createPersonalHistoryService = (input: {
   projects: Pick<RouteDeps["projectService"], "list">;
   eventBus: RouteDeps["eventBus"];
   logs: SessionLogFiles;
+  index: RouteDeps["extensionStorageService"]["personalHistoryIndex"];
+  logStreams: RouteDeps["extensionStorageService"]["logs"];
 }) => {
   type MessageListener = (update: { index: number; message: SessionMessage; live: boolean }) => void;
   const messageListeners = new Map<string, Set<MessageListener>>();
@@ -51,7 +53,14 @@ export const createPersonalHistoryService = (input: {
       login,
       identity: account.version,
       namespace: historyNamespace({ ...login, projectId }),
-      history: createPersonalHistoryStore({ ...login, projectId, documents: input.documents, files: input.logs }),
+      history: createPersonalHistoryStore({
+        ...login,
+        projectId,
+        documents: input.documents,
+        index: input.index,
+        logs: input.logStreams,
+        files: input.logs,
+      }),
     };
   };
   const parsedSessions = new WeakMap<object, z.infer<typeof personalSessionSchema>>();
@@ -213,9 +222,11 @@ export const createPersonalHistoryService = (input: {
       const record = await current.history.getRecord("queues", id);
       await account.read();
       if (current.identity !== account.version) return null;
-      const sameDevice = JSON.stringify(record?.device) === JSON.stringify(session.device);
-      const parsed = sharedQueueRecordSchema.safeParse(sameDevice ? record : null);
-      return sharedQueueResponse(id, parsed.success ? parsed.data.requests : []);
+      const parsed = sharedQueueRecordSchema.safeParse(record);
+      const device = deviceSchema.safeParse(record?.device);
+      const sameDevice =
+        device.success && device.data.ownerId === session.device.ownerId && device.data.id === session.device.id;
+      return sharedQueueResponse(id, sameDevice && parsed.success ? parsed.data.requests : []);
     },
     getWorkspace: (id: string, projectId?: string) => find(workspaces, id, projectId),
     async getWorkspaceByShorthand(projectId: string, shorthand: string) {

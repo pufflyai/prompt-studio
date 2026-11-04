@@ -233,3 +233,21 @@ test("repository examples may use Canvas authoring types without a published run
     expect.stringContaining('runtime.ts: imports undeclared workspace package "@pstdio/canvas"'),
   );
 });
+
+test("database SDK conformance dependency stays development-only", () => {
+  const root = createWorkspace({
+    "packages/db/package.json": { name: "pstdio-db", devDependencies: { "@pstdio/sdk": "workspace:*" } },
+    "packages/db/src/query.p1.test.ts": 'import { createMemoryStorage } from "@pstdio/sdk/testing";',
+  });
+  expect(
+    verifyBoundaries(root).filter((error) => error.startsWith("packages/db") && error.includes("@pstdio/sdk")),
+  ).toEqual([]);
+  write(root, "packages/db/src/runtime.ts", 'import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";');
+  expect(verifyBoundaries(root)).toContainEqual(expect.stringContaining("development-only package"));
+  write(root, "packages/db/package.json", {
+    name: "pstdio-db",
+    dependencies: { "@pstdio/sdk": "workspace:*" },
+    devDependencies: { "@pstdio/sdk": "workspace:*" },
+  });
+  expect(verifyBoundaries(root)).toContainEqual(expect.stringContaining("only in devDependencies"));
+});

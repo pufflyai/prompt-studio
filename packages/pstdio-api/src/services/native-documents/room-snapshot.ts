@@ -4,11 +4,15 @@ import { readTextDocumentSeed } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import type { createNativeProjectionQueue } from "./projection-queue";
+import { NativeDocumentSourceError } from "./source-error";
 export interface Room {
   target: NativeTextTarget;
   editable: boolean;
   owner: StorageOwner;
   documentKey: string;
+  generation?: string;
+  syncDocument?: string;
+  recordField?: boolean;
   queue: Promise<unknown>;
   closeWatchers: Set<() => void>;
 }
@@ -23,9 +27,15 @@ export const createNativeRoomSnapshot = (
   files: ReturnType<typeof createNativeProjectionQueue>,
 ) => {
   const snapshot = async (room: Room, roomId: string) => {
-    const { state, revision } = await storage
+    const { state, revision, generation } = await storage
       .openNativeTextDocument({ owner: room.owner, fileId: room.documentKey })
       .snapshot();
+    if (generation !== room.generation)
+      throw new NativeDocumentSourceError(
+        409,
+        "source_retired",
+        "This local text replica has been retired; its edits remain recoverable",
+      );
     const document = new Y.Doc();
     try {
       Y.applyUpdate(document, state);
@@ -42,10 +52,11 @@ export const createNativeRoomSnapshot = (
             update: Y.encodeStateAsUpdate(document, Y.encodeStateVector(source.document)),
           });
         }
-        if (room.editable) void files.request(room).catch(() => {});
+        if (room.editable && !room.recordField) void files.request(room).catch(() => {});
         return {
           state,
           revision,
+          generation,
           seedId,
           sourceSeedId,
           ...(sourceSeedId !== seedId && { sourceState: Y.encodeStateAsUpdate(source.document) }),

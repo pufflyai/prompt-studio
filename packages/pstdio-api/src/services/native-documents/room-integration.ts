@@ -8,7 +8,9 @@ export const integrateNativeRoom = async (
 ) => {
   const source = await storage.nativeRooms.read({ owner, roomId });
   try {
-    await storage.openNativeTextDocument({ owner, fileId: source.documentKey }).applySource(source.document);
+    await storage
+      .openNativeTextDocument({ owner, fileId: source.documentKey })
+      .applySource(source.document, { generation: source.generation });
   } finally {
     source.document.destroy();
   }

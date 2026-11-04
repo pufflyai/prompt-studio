@@ -133,6 +133,8 @@ test("the normal session API sends follow-ups, question answers, approvals and i
       projectId: project.id,
       documents: source.deps.extensionStorageService.documents,
       files: source.deps.personalHistoryService.logs,
+      index: source.deps.extensionStorageService.personalHistoryIndex,
+      logs: source.deps.extensionStorageService.logs,
     });
     await history.writeRecords("sessions", { id: targetId, ownerId: login.accountId, name: "Desktop" }, [
       { ...session, workspace_id: null },

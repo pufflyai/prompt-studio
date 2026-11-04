@@ -132,13 +132,17 @@ test("a failed move rolls every batch back and the same service can retry the or
       },
     };
     const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
+    const originalDocuments = await connection.db
+      .select()
+      .from(storage_documents)
+      .orderBy(storage_documents.document_id);
     const failed = createExtensionResourceSequencesDBService(connection.db, failingDocuments);
     const error = await failed.identity({ ...input, id: "item-0" }).catch((error: unknown) => error);
     expect(error).toMatchObject({ message: "Interrupted move" });
     expect(await connection.db.select().from(storage_current_records)).toEqual([]);
-    expect((await connection.db.select().from(storage_documents)).map((row) => row.document_id)).toEqual([
-      resourceNumbersDocumentId,
-    ]);
+    expect(await connection.db.select().from(storage_documents).orderBy(storage_documents.document_id)).toEqual(
+      originalDocuments,
+    );
     await failed.flush();
     const retried = failed;
     expect((await retried.identity({ ...input, id: "item-100" }))?.shorthand).toBe("IT-101");

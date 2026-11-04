@@ -87,7 +87,7 @@ const setup = () => {
     }),
   };
 };
-const target = { fileRendererId: "example.context.view.document", resource: undefined };
+const target = { fileRendererId: "example.context.view.document", resource: undefined, pageParams: undefined };
 const open = (service: ReturnType<typeof createNativeDocumentService>) =>
   service.open({ ...target, projectId: storage.projectAId });
 
@@ -1208,5 +1208,62 @@ test("the browser client uses the local API for binary edits and document stream
     await watching;
     await client.close({ projectId: storage.projectAId, documentKey: room.documentKey, roomId: room.roomId });
     author.destroy();
+  }
+});
+
+test("a record field editor materializes its ordered owner without a second native relay or provider save", async () => {
+  const owner = { workbenchId: storage.projectAId, extensionId: "example.context" };
+  const records = (await storage.svc.open({ owner })).records;
+  await records.commit({
+    operationId: "field-owner",
+    edits: [{ recordId: "body-field", replace: { content: "canonical" } }],
+  });
+  const source = { kind: "record" as const, recordId: "body-field", field: "/content" };
+  const load = async () => {
+    const content = ((await records.read(source.recordId)).value as { content: string }).content;
+    const binding = await resolveNativeLoadedSource(
+      { ...extension.deps, extensionStorageService: storage.svc },
+      {
+        owner,
+        source,
+        content,
+        versions: {},
+      },
+    );
+    return {
+      ...binding,
+      owner,
+      content: { content, documentSource: source },
+      fileStorageVersions: binding.fileStorageVersions,
+      saveHandlerId: "field-provider",
+      projectionTarget: target,
+    };
+  };
+  let saves = 0;
+  const service = createService({
+    storage: storage.svc,
+    load,
+    save: async () => {
+      saves++;
+      throw new Error("A record field already belongs to the ordered owner");
+    },
+  });
+  const opened = await open(service);
+  const document = new Y.Doc();
+  try {
+    Y.applyUpdate(document, opened.state);
+    const before = Y.encodeStateVector(document);
+    document.getText("content").insert(document.getText("content").length, " typed");
+    const request = { projectId: storage.projectAId, roomId: opened.roomId, documentKey: opened.documentKey };
+    const submitted = await service.submit({ ...request, update: Y.encodeStateAsUpdate(document, before) });
+    await service.project({ ...request, revision: submitted.revision });
+    await service.flush(request);
+    expect((await records.read(source.recordId)).value).toEqual({ content: "canonical typed" });
+    expect(service.sources.current(owner)).toEqual([]);
+    expect(saves).toBe(0);
+    expect(submitted.seedId).toBe(opened.seedId);
+    await service.close(request);
+  } finally {
+    document.destroy();
   }
 });
