@@ -169,7 +169,7 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
   }
   const metadata = createWorkbenchExtensionMetadata({ resolveWebview: input.resolveWebview, runtime });
   const inventory = createBenchContributionInventory(runtime);
-  const environment = createBenchEnvironment(
+  const environment = await createBenchEnvironment(
     input.storage,
     Object.fromEntries(
       runtime.resourceKinds.flatMap((record) => {

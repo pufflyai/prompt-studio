@@ -23,7 +23,7 @@ The renderer already coalesces refresh events and allows only one running query 
 - The host owns a FIFO queue with **two active workspace deletions** per workspace service. HTTP, CLI calls through HTTP, and extension deletions share it across projects and overlapping archive batches.
 - A slot covers session cancellation, provider/Git cleanup, session archival, and workspace deletion. Duplicate requests for the same workspace share a promise. Success and failure both release the slot; a failed request can be retried.
 - Session archive writes run sequentially within each workspace. Normal queued deletion therefore contributes at most two in-flight archive writes. This does not limit unrelated session operations elsewhere in the app.
-- Planner badge lookups share **four active lookups** per loaded module. Each asks for the newest ongoing session with `limit: 1`, then the newest session with `limit: 1` if none is ongoing. Archived sessions remain eligible, preserving the existing badge behavior.
+- Planner reads linked-resource anchors in batches of at most 100 tickets, follows every result page, and resolves deduplicated resources in batches of at most 100 references.
 - Column archival still returns after saving the tickets. Cleanup failures retain the existing persistent notification, and workspaces linked to an active ticket remain protected.
 
 Two deletion slots retain overlap between filesystem and database waits without starting a Git process for every workspace. A per-command limit would allow overlapping commands to multiply the work again. Moving promises to a worker thread would not reduce Git's CPU or filesystem work. Arbitrary sleeps would slow completion without removing the avoidable queries.
