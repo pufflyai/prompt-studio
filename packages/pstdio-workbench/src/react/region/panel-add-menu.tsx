@@ -50,6 +50,7 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
       onSelect={({ value }) => {
         selectedPanel.current = panels.find((panel) => `widget:${panel.contribution.id}` === value) ?? null;
       }}
+      // The new view can claim focus once the menu has restored its trigger's focus.
       onExitComplete={() => {
         const panel = selectedPanel.current;
         selectedPanel.current = null;
