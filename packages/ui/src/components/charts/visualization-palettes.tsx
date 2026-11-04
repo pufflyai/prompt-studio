@@ -2,6 +2,7 @@ import { barY, cell, defineChart } from "@tanstack/charts";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
+import { chartGeometry } from "@/theme/primitives/chart";
 import { Chart, chartColor, chartPalette } from "./chart";
 import { VisualizationExample as Example } from "./visualization-example";
 
@@ -42,7 +43,9 @@ export function PaletteExamples() {
           ariaLabel="Carbon categorical palette"
           definition={defineChart(
             {
-              marks: [barY(categories, { x: "category", y: "value", color: "category" })],
+              marks: [
+                barY(categories, { radius: chartGeometry.barRadius, x: "category", y: "value", color: "category" }),
+              ],
               scales: { x: { scale: () => scaleBand().padding(0.2) }, y: { scale: scaleLinear, axis: false } },
               color: { domain: categories.map(({ category }) => category), range: chartPalette },
             },
@@ -77,7 +80,12 @@ export function PaletteExamples() {
                     { status: "Warning", token: "warning", value: 2 },
                     { status: "Success", token: "success", value: 1 },
                   ],
-                  { x: "status", y: "value", fill: (row) => chartColor(`vis.alert.${row.token}`) },
+                  {
+                    radius: chartGeometry.barRadius,
+                    x: "status",
+                    y: "value",
+                    fill: (row) => chartColor(`vis.alert.${row.token}`),
+                  },
                 ),
               ],
               scales: { x: { scale: () => scaleBand().padding(0.2) }, y: { scale: scaleLinear, axis: false } },
