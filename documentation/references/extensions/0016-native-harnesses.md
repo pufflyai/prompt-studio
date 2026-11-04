@@ -22,6 +22,10 @@ Codex reports a status dot with native state: active is green, paused/blocked/us
 
 The session composer shows the model menu only for harnesses that implement `listModels()`. An empty list still shows the menu, because model discovery can fail for a while. A harness without `listModels()`, such as a remote machine whose template picks the model, shows only the agent picker and runs without a model. When the agent cannot change either, as in an existing session, the composer shows neither.
 
+OpenCode 1 model discovery uses `models --verbose`. OpenCode 2 uses `api GET /api/model --standalone`, because its `models` command no longer accepts `--verbose`. Standalone discovery uses the runtime's environment and credentials without leaving a background service running. Both paths preserve provider-qualified model IDs and native thinking choices. OpenCode 2 models use their catalog ID, which can differ from the upstream provider's model ID. Disabled models are omitted. Failed discovery is logged without native output and can recover on the next request.
+
+OpenCode 2 model discovery does not establish session compatibility: the session, command, question, and account adapters still use OpenCode 1's server API. Use OpenCode 1 for those operations until the adapters support the v2 API.
+
 `/v1/agents/info` returns each harness's `capabilities` and `supportsModels`. The `Attachments` capability marks a harness that accepts files. The host does not act on it yet; the composer and server will use it once the built-in harnesses declare it.
 
 ## Installation and sign-in
