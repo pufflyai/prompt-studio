@@ -226,7 +226,7 @@ test("dashboard opens Home for a selected project and resumes a resource after i
   await homePage(page).getByRole("button", { name: session.title, exact: true }).click();
 
   await expect(
-    page.getByLabel("Main").getByText(session.title, { exact: true }).filter({ visible: true }),
+    page.getByLabel("Main", { exact: true }).getByText(session.title, { exact: true }).filter({ visible: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Breadcrumb").getByText(session.title, { exact: true })).toBeVisible();
 });
