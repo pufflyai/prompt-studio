@@ -22,6 +22,23 @@ const apiProxy = apiToken
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      preserveEntrySignatures: "allow-extension",
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              // Preserve the UI library's lazy component boundary when bundling the app.
+              name: "markdown-editor",
+              test: /[\\/]ui[\\/]dist[\\/]markdown-editor-[^/\\]+\.js$/,
+              includeDependenciesRecursively: false,
+            },
+          ],
+        },
+      },
+    },
+  },
   // Preview test artifacts contain HTML too; only the app is a development entry.
   optimizeDeps: { entries: ["index.html"] },
   server: {
