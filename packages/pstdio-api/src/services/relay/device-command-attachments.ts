@@ -11,6 +11,12 @@ import type { RelayDeps } from "./deps";
 
 const submissions = new WeakMap<RelayDeps["fileService"], Map<string, Promise<void>>>();
 
+export class DeviceCommandAttachmentError extends Error {
+  constructor() {
+    super("Session attachment not found on this device");
+  }
+}
+
 const withAttachmentReservations = async <T>(deps: RelayDeps, fileIds: Set<string>, execute: () => Promise<T>) => {
   const reservations = submissions.get(deps.fileService) ?? new Map<string, Promise<void>>();
   submissions.set(deps.fileService, reservations);
@@ -57,7 +63,7 @@ export const withDeviceCommandAttachments = async (
   const attachmentContents: DeviceCommandAttachment[] = [];
   for (const fileId of new Set(command.input.attachments?.map(({ fileId }) => fileId))) {
     const file = await getProjectSessionAttachment(deps, projectId, fileId);
-    if (!file) throw new Error("Session attachment not found on this device");
+    if (!file) throw new DeviceCommandAttachmentError();
     attachmentContents.push({
       fileId,
       name: file.file_name,

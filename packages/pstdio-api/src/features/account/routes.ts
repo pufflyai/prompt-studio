@@ -27,7 +27,10 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
       method: "post",
       path: "/account/projects/{id}/devices/{deviceId}/commands",
       tags,
-      request: { params: params.extend({ deviceId: z.string().min(1) }), body: json(deviceCommandSchema) },
+      request: {
+        params: params.extend({ deviceId: z.string().min(1) }),
+        body: { required: true, ...json(deviceCommandSchema) },
+      },
       responses,
     }),
     async (c) => {
