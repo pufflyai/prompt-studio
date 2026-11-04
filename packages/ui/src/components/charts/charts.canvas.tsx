@@ -3,29 +3,15 @@ import { barY, defineChart, dot, lineY } from "@tanstack/charts";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
-import { useState } from "react";
 import { DataTableStatChart } from "../data-table/data-table-stat-chart";
 import { Chart } from "./chart";
 import { GanttChart } from "./gantt-chart";
+import { GanttDemo } from "./gantt-demo";
 
 const values = [
   { day: "Mon", count: 8 },
   { day: "Tue", count: 12 },
   { day: "Wed", count: 5 },
-];
-const tasks = [
-  { id: "schema", label: "Define project structure", group: "Foundation · ETA ~7h", start: 0, end: 4, progress: 1 },
-  {
-    id: "nav",
-    label: "Build project navigation",
-    group: "Foundation · ETA ~7h",
-    start: 4,
-    end: 7,
-    progress: 0.3,
-    dependsOn: ["schema"],
-  },
-  { id: "preview", label: "Review working preview", group: "Preview · ETA ~9h", start: 7, end: 9, dependsOn: ["nav"] },
-  { id: "release", label: "Release milestone", group: "Preview · ETA ~9h", start: 9, end: 9, dependsOn: ["preview"] },
 ];
 
 export default {
@@ -61,24 +47,7 @@ export const BarsAndLines = () => (
     />
   </Stack>
 );
-export const GanttDependencies = () => {
-  const [selectedId, setSelectedId] = useState<string>();
-  return (
-    <Stack w="full">
-      <GanttChart
-        tasks={tasks}
-        ariaLabel="Project forecast with dependencies"
-        formatValue={(value) => `${value}h`}
-        now={0}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-      />
-      <Text role="status" textStyle="label/XS/regular">
-        {selectedId ? `Selected ${selectedId}` : "Select a task"}
-      </Text>
-    </Stack>
-  );
-};
+export const GanttDependencies = () => <GanttDemo />;
 export const Statistics = () => (
   <Stack w="md" gap="md">
     {[25, 75].map((value) => (
