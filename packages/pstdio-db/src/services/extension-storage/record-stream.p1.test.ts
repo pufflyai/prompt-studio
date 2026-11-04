@@ -1,5 +1,13 @@
 import { afterEach, expect, test } from "bun:test";
-import { createSyncSpace, openUpdate, sealState, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
+import {
+  createSyncSpace,
+  openState,
+  openSummary,
+  openUpdate,
+  sealState,
+  sealUpdate,
+  UnreadableSyncData,
+} from "pstdio-sync/encryption";
 import {
   editResourceDocument,
   prepareOrderedOperation,
@@ -63,6 +71,51 @@ const device = async (
   // `restart` starts a new sync over the same database, as after an app restart or a reconnect.
   return { db, records, service, sync: start(), restart: start, assets, failures, value };
 };
+
+test("quiet holders republish a complete state before a reset device downloads a same-through state that omits an accepted save", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { title: "Seeded" } }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  const earlier = fixture.latest()!;
+  await first.records.commit({
+    operationId: "later",
+    edits: [{ recordId: "later", replace: { title: "Retained quiet edit" } }],
+  });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect(await second.value("later")).toEqual({ title: "Retained quiet edit" });
+
+  // The ciphertext authenticates these headers, but the earlier manifest and receipt root omit an
+  // accepted save both holders already applied.
+  const incomplete = await sealState(space, documentId, {
+    baseStateId: fixture.latest()!.stateId,
+    through: fixture.updates().at(-1)!.sequence,
+    state: await openState(space, documentId, earlier, Buffer.from(earlier.payload, "base64")),
+    summary: await openSummary(space, documentId, earlier),
+    blobIds: earlier.blobIds,
+  });
+  expect(await fixture.relay.replace(incomplete)).toBe(true);
+  fixture.trim();
+  for (const holder of [first, second]) {
+    await holder.sync.synchronize();
+    expect(await holder.value("later")).toEqual({ title: "Retained quiet edit" });
+    expect(holder.failures).toEqual([]);
+  }
+  expect(fixture.latest()!.stateId).not.toBe(incomplete.stateId);
+  const reset = await device(fixture.relay);
+  await reset.sync.synchronize();
+  expect(await reset.value("later")).toEqual({ title: "Retained quiet edit" });
+  expect(await reset.sync.status()).toEqual({ downloaded: true, pending: false, needsAttention: false });
+
+  const before = { ...fixture.requests };
+  for (const holder of [first, second, reset]) await holder.sync.synchronize();
+  expect(fixture.requests.updates).toBe(before.updates);
+  expect(fixture.requests.states).toBe(before.states);
+  expect(fixture.requests.blobs).toBe(before.blobs);
+});
 
 test("an ordered client retains local work and the encrypted legacy frame when its older format cannot be adopted", async () => {
   const { relay } = createRelay();
@@ -375,7 +428,9 @@ test("a peer latest state preserves byte accounting for an already downloaded ne
   await second.sync.synchronize();
   expect(raced).toBe(true);
   expect(fixture.latest()!.through).toBe(1);
+  const uploaded = fixture.requests.updates;
   await first.sync.synchronize();
+  expect(fixture.requests.updates).toBe(uploaded);
   const cursor = await first.service.documents.recordStream(owner).open();
   const actualTail = fixture
     .updates()
@@ -459,6 +514,57 @@ test("a frame with a record that cannot be merged is skipped whole", async () =>
   expect((await second.records.read("a")).exists).toBe(false);
   expect(second.failures).toContainEqual(expect.objectContaining({ id: update.updateId }));
   expect((await second.sync.status()).needsAttention).toBe(true);
+});
+
+test("loading a checkpoint applies its retained tail and sets an unreadable tail save aside whole", async () => {
+  const fixture = createRelay();
+  // Compacts after every upload, so the receiver must load the checkpoint before the tail.
+  const first = await device(fixture.relay, { bytes: 1_000_000, updates: 0 });
+  const receiver = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  await first.sync.synchronize();
+  await receiver.sync.synchronize();
+  await first.records.commit({ operationId: "kept", edits: [{ recordId: "kept", replace: { title: "Kept" } }] });
+  await first.sync.synchronize();
+  fixture.trim();
+  const [row] = await first.db.select().from(storage_ordered_owners);
+  const admission = async (operationId: string, recordId: string) =>
+    encodeOrderedEntry({
+      type: "admission",
+      admission: {
+        operation: await prepareOrderedOperation(
+          { operationId, edits: [{ recordId, replace: { value: operationId } }] },
+          new Map(),
+        ),
+        epoch: row!.epoch!,
+        dependencies: [],
+      },
+    });
+  const unreadable = await sealUpdate(
+    space,
+    documentId,
+    encodeRecordFrame({
+      format: "ordered",
+      records: [await admission("half", "half"), { recordId: "broken", bytes: new Uint8Array([255, 1, 2, 3]) }],
+      assets: [],
+    }),
+    [],
+  );
+  await fixture.relay.update(unreadable);
+  await fixture.relay.update(
+    await sealUpdate(
+      space,
+      documentId,
+      encodeRecordFrame({ format: "ordered", records: [await admission("tail", "tail")], assets: [] }),
+      [],
+    ),
+  );
+  await receiver.sync.synchronize();
+  expect(await receiver.value("kept")).toEqual({ title: "Kept" });
+  expect(await receiver.value("tail")).toBe("tail");
+  expect((await receiver.records.read("half")).exists).toBe(false);
+  expect(receiver.failures).toContainEqual(expect.objectContaining({ id: unreadable.updateId }));
+  expect((await receiver.sync.status()).needsAttention).toBe(true);
 });
 
 test("a device that joins again with history it already shares merges instead of overwriting", async () => {

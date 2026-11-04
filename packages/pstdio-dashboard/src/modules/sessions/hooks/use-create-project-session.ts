@@ -12,6 +12,7 @@ interface CreateProjectSessionInput {
   model?: string;
   params?: HarnessParamValues;
   workspaceId?: string;
+  deviceId?: string;
 }
 
 const buildCreateProjectSessionBody = (input: CreateProjectSessionInput) => ({
@@ -23,6 +24,7 @@ const buildCreateProjectSessionBody = (input: CreateProjectSessionInput) => ({
   model: input.model?.trim() || undefined,
   params: input.params,
   workspace_id: input.workspaceId,
+  device_id: input.deviceId,
 });
 
 // `onFolderMissing` runs when the harness works on files and the project's folder is not on this device yet.

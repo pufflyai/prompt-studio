@@ -12,6 +12,7 @@ import {
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_operations } from "../../db/schemas.pg";
 import { bindNativeRecordSource } from "./bind-native-source";
+import { createCommitQueue } from "./commit-queue";
 import { dataMigrationContext } from "./data-migration-context";
 import { prepareNativeRecordWrite } from "./native-record-write";
 import type { createProjectionStatistics } from "./projection-statistics";
@@ -48,6 +49,9 @@ export const createResourceRecords = (
     diagnostics?: StorageDiagnostics;
   },
 ) => {
+  // Owner-locked transactions load the latest state, so this handle can continue its
+  // causal clock instead of adding a new Yjs writer to every record on every save.
+  const writer = crypto.getRandomValues(new Uint32Array(1))[0]!;
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: "records" };
   const queries = createRecordQueries(db, owner, deps.diagnostics);
   const receipt = (tx: Pick<DbClient, "select">, operationId: string) =>
@@ -101,6 +105,7 @@ export const createResourceRecords = (
           native.edit,
           checkpoint,
           migration && { ...migration, document: JSON.stringify([owner.workbenchId, owner.extensionId, id]) },
+          writer,
         );
         return { id, revision: next, foldedRevision, ...result, nativeKeys: native.changed };
       }),
@@ -191,9 +196,7 @@ export const createResourceRecords = (
         group.operationId,
       );
     },
-    readMany: async (ids: string[]) => {
-      return queries.readMany(ids);
-    },
+    readMany: queries.readMany,
     read: async (id: string, _branch?: { operationId: string }) => {
       return read(db, id);
     },
@@ -223,25 +226,32 @@ export const createResourceRecords = (
     ) => {
       const committed: { result: Awaited<ReturnType<typeof commitIn>>; operationId: string }[] = [];
       const ownRevisions = new Map<string, string>();
+      const enqueueCommit = createCommitQueue();
       const value = await db.transaction(async (tx) => {
         await lockRecordOwner(tx, owner);
-        return run(
-          {
-            read: (id) => read(tx, id),
-            readMany: async (ids) => {
-              const records = await readProjectedRecords(tx, owner, ids);
-              for (const record of records) deps.observer?.read(owner, record);
-              return records;
+        try {
+          return await run(
+            {
+              read: (id) => read(tx, id),
+              readMany: async (ids) => {
+                const records = await readProjectedRecords(tx, owner, ids);
+                for (const record of records) deps.observer?.read(owner, record);
+                return records;
+              },
+              commit: (group) =>
+                enqueueCommit.run(async () => {
+                  const result = await commitIn(tx, group, await prepare(group), ownRevisions);
+                  for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
+                  committed.push({ result, operationId: group.operationId });
+                  return outcome(group.operationId);
+                }),
             },
-            commit: async (group) => {
-              const result = await commitIn(tx, group, await prepare(group), ownRevisions);
-              for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
-              committed.push({ result, operationId: group.operationId });
-              return outcome(group.operationId);
-            },
-          },
-          tx,
-        );
+            tx,
+          );
+        } finally {
+          // Promise.all can reject before another admitted save finishes. Drain before rollback.
+          await enqueueCommit.settled();
+        }
       });
       for (const { result, operationId } of committed) published(result, operationId);
       return value;

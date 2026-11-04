@@ -126,17 +126,28 @@ export const createRecordStreamStore = (
       });
       return result;
     },
-    async merge(remote: Map<string, Uint8Array[]>, mode: "adopt" | "repair", cursor: RecordStreamCursor) {
+    async merge(
+      remote: Map<string, Uint8Array[]>,
+      mode: "adopt" | "repair",
+      cursor: RecordStreamCursor,
+      tail: (RecordFrame | null)[] = [],
+    ) {
       let saved = cursor;
+      let rejectedFrames: number[] = [];
       const rejected = await write(async (tx, revision) => {
+        const checked = await acceptFrames(tx, owner, tail, remote);
+        rejectedFrames = checked.rejected;
+        const incoming = new Map(remote);
+        for (const [recordId, bytes] of checked.accepted)
+          incoming.set(recordId, [...(incoming.get(recordId) ?? []), ...bytes]);
         // Adopting replaces this device's record histories, so saves queued against them are folded in.
         if (mode === "adopt") await dropRecordOutbox(tx, owner);
         const merged =
           mode === "adopt"
-            ? await adoptRecords(tx, owner, remote)
-            : await mergeRecords(tx, owner, remote, true).then((result) => ({ ...result, uploads: result.missing }));
+            ? await adoptRecords(tx, owner, incoming)
+            : await mergeRecords(tx, owner, incoming, true).then((result) => ({ ...result, uploads: result.missing }));
         const savedRecords = await save(tx, revision, merged.changes);
-        const localOnly = (await localRecordIds(tx, owner)).filter((id) => !remote.has(id));
+        const localOnly = (await localRecordIds(tx, owner)).filter((id) => !incoming.has(id));
         const uploads = new Map(
           [...merged.uploads, ...(await recordStates(tx, owner, localOnly))].map((upload) => [upload.recordId, upload]),
         );
@@ -149,11 +160,14 @@ export const createRecordStreamStore = (
           });
         const assets = await currentAssets(tx, [...uploads.keys()]);
         await queueRecordBytes(tx, owner, [...uploads.values()], assets, recordFrameLimit);
-        saved = { ...cursor, skipped: cursor.skipped || merged.rejected.length > 0 };
+        saved = {
+          ...cursor,
+          skipped: cursor.skipped || merged.rejected.length > 0 || rejectedFrames.length > 0 || tail.includes(null),
+        };
         await saveCursor(tx, saved);
         return { ...savedRecords, changed: merged.changes.length > 0, rejected: merged.rejected };
       });
-      return { rejected, cursor: saved };
+      return { rejected, rejectedFrames, cursor: saved };
     },
     outbox: (limit: number) => readRecordOutbox(db, owner, limit),
     async sent(sequence: number) {

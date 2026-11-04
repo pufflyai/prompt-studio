@@ -7,6 +7,7 @@ import { borderWidths, radii, sizes, spacing } from "./primitives/sizes";
 import { alertSlotRecipe } from "./recipes/alert";
 import { badgeRecipe } from "./recipes/badge";
 import { buttonRecipe } from "./recipes/button";
+import { chartRecipe } from "./recipes/chart";
 import { chatQuestionBubbleRecipe } from "./recipes/chat-question-bubble";
 import { checkboxSlotRecipe } from "./recipes/checkbox";
 import { colorPickerSlotRecipe } from "./recipes/color-picker";
@@ -105,6 +106,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      chart: chartRecipe,
       documentPresence: documentPresenceSlotRecipe,
       kanbanBoardColumn: kanbanBoardColumnSlotRecipe,
       stickyUserMessage: stickyUserMessageRecipe,

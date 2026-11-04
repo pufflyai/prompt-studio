@@ -2,7 +2,7 @@ import type { StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import type { OrderedAdmission } from "pstdio-sync/records";
 import type { DocumentRelay, RecordFrame, RecordStreamCursor, RecordStreamStore } from "pstdio-sync/relay";
-import { createOrderedReceiptIndex, type OrderedIndexReference } from "pstdio-sync/relay";
+import { createOrderedReceiptIndex, decodeOrderedEntry, type OrderedIndexReference } from "pstdio-sync/relay";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
@@ -132,10 +132,29 @@ export const createOrderedStreamStore = (
       notify(result.events);
       return { rejected: result.rejected, cursor: result.cursor };
     },
-    async merge(remote: Map<string, Uint8Array[]>, _mode: "adopt" | "repair", cursor: RecordStreamCursor) {
-      const result = await run((journal, tx) => mergeIn(journal, tx, remote, cursor));
+    async merge(
+      remote: Map<string, Uint8Array[]>,
+      _mode: "adopt" | "repair",
+      cursor: RecordStreamCursor,
+      tail: (RecordFrame | null)[] = [],
+    ) {
+      // Tail admissions follow the checkpoint in relay order; unreadable frames stay set aside whole.
+      const incoming = new Map(remote);
+      const rejectedFrames: number[] = [];
+      for (const [position, frame] of tail.entries()) {
+        const entries = await Promise.all((frame?.records ?? []).map((record) => decodeOrderedEntry(record.bytes)));
+        if (!frame || entries.some((entry) => entry.type !== "admission" && entry.type !== "text")) {
+          rejectedFrames.push(position);
+          continue;
+        }
+        for (const record of frame.records)
+          incoming.set(record.recordId, [...(incoming.get(record.recordId) ?? []), record.bytes]);
+      }
+      const result = await run((journal, tx) =>
+        mergeIn(journal, tx, incoming, { ...cursor, skipped: cursor.skipped || rejectedFrames.length > 0 }),
+      );
       notify(result.events);
-      return { rejected: result.rejected, cursor: result.cursor };
+      return { rejected: result.rejected, rejectedFrames, cursor: result.cursor };
     },
     outbox: (_limit: number) => run((journal, tx) => nextOrderedUpload(journal, tx, owner, receiptIndex())),
     sent: (sequence: number) =>

@@ -12,6 +12,7 @@ import {
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { createCommitQueue } from "./commit-queue";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { bindOrderedNativeSource, type OrderedSourceInput } from "./ordered-native-source";
@@ -218,21 +219,28 @@ export const createOrderedResourceRecords = (
     ) => {
       const results: Awaited<ReturnType<typeof commitIn>>[] = [];
       const ownRevisions = new Map<string, string>();
+      const queue = createCommitQueue();
       const value = await withOrderedOwner(db, owner, async (journal, tx, created) => {
         await initializeOrderedOwner(journal, tx, owner, created);
-        return run(
-          {
-            read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
-            readMany: (ids) => readIn(tx, ids, deps.observer),
-            commit: async (group) => {
-              const result = await commitIn(journal, tx, group, ownRevisions);
-              for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
-              results.push(result);
-              return result.outcome;
+        try {
+          return await run(
+            {
+              read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
+              readMany: (ids) => readIn(tx, ids, deps.observer),
+              commit: (group) =>
+                queue.run(async () => {
+                  const result = await commitIn(journal, tx, group, ownRevisions);
+                  for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
+                  results.push(result);
+                  return result.outcome;
+                }),
             },
-          },
-          tx,
-        );
+            tx,
+          );
+        } finally {
+          // Promise.all can reject before another admitted save finishes. Drain before rollback.
+          await queue.settled();
+        }
       });
       for (const result of results) notify(result);
       return value;
