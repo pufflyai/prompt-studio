@@ -102,6 +102,7 @@ const reuseAttempt = async (
 };
 interface StartAttemptOptions {
   beforeDispatch?: (baseHeadSha?: string) => Promise<void>;
+  beforeSessionStart?: (workspaceId: string) => Promise<void>;
   requireMergedDependencies?: boolean;
   workspaceId?: string;
   recovery?: WorkspaceRecovery;
@@ -177,7 +178,7 @@ async function launchAttempt(
       headSha: null,
     },
   };
-  const session = await ctx.sessions.create({
+  const sessionInput = {
     title: `Implement ticket: ${anchor.label}`,
     workspaceId: workspace.id,
     anchors: [anchor, attemptAnchor],
@@ -200,7 +201,9 @@ async function launchAttempt(
         : []),
     ].join("\n\n"),
     ...(await recoverySessionInput(ctx, options.recovery, beforeDispatch)),
-  });
+  };
+  await options.beforeSessionStart?.(workspace.id);
+  const session = await ctx.sessions.create(sessionInput);
   const timestamp = new Date().toISOString();
   const attempt: AttemptRecord = {
     schemaVersion: 2,
