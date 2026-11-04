@@ -62,6 +62,10 @@ import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-n
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import {
+  expectPackagedWorkspacePresentation,
+  writeWorkspacePresentationExtension,
+} from "./packaged-workspace-presentation-smoke";
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -141,6 +145,7 @@ test(
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
+          { source: writeWorkspacePresentationExtension(tempRoot), installName: "workspace-presentation" },
           { source: nativeActions, installName: "native-actions" },
           { source: writeNativeMarkdownExtension(tempRoot), installName: "native-markdown" },
           { source: otherNativeActions, installName: "other-native-actions" },
@@ -220,6 +225,11 @@ test(
       });
       await expectPackagedNativeMarkdown({
         projectFolder,
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      await expectPackagedWorkspacePresentation({
         baseUrl: started.baseUrl,
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),

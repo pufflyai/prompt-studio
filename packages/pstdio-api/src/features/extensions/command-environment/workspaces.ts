@@ -21,6 +21,7 @@ import { fireExtensionEventAsync } from "../extension-event-runtime";
 import { validateLegacyAnchors } from "./resource-link-policy";
 import { createResourceLinksApi } from "./resource-links";
 import type { CommandEnvironmentRuntimeDeps } from "./types";
+import { createWorkspacePresentationApi } from "./workspace-presentation";
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["workspaceService"]["get"]>>>;
 type LocalExecutionTarget = Awaited<ReturnType<typeof resolveWorkspaceExecutionTarget>>;
@@ -107,6 +108,7 @@ export const createWorkspacesApi = (
     workspace ? projectWorkspace(workspace) : null;
 
   return {
+    ...createWorkspacePresentationApi(deps, input),
     getCapacity: () => read(() => deps.workspaceCapacityService.get()),
     updateCapacity: async (value) => {
       input.signal?.throwIfAborted();

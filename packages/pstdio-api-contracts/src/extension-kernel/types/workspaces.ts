@@ -1,3 +1,12 @@
+import type { WorkspaceDiffFile, WorkspaceDiffFiles, WorkspaceDiffSummary } from "../../workspace-diffs";
+import type {
+  ListWorkspaceFilesInput,
+  RenameWorkspaceInput,
+  WorkspaceFileContent,
+  WorkspaceFileEntry,
+  WorkspaceFilesResponse,
+  WriteWorkspaceFileInput,
+} from "../../workspaces";
 import type { Localizable } from "../l10n";
 import type { WorkspaceCapabilities, WorkspaceProviderResult, WorkspaceProviderState } from "./extension";
 import type { JsonObject } from "./json";
@@ -94,6 +103,22 @@ export interface WorkspaceCapacity {
 }
 
 export interface ExtensionWorkspacesApi {
+  /** Rename a local record in this project, preserving its ID, shorthand and execution target. */
+  rename(id: string, input: RenameWorkspaceInput): Promise<ExtensionWorkspace>;
+  /** Browse a ready local workspace using its provider's file permissions. */
+  listFiles(id: string, input?: ListWorkspaceFilesInput): Promise<WorkspaceFilesResponse>;
+  readFile(id: string, path: string): Promise<WorkspaceFileContent>;
+  createDirectory(id: string, path: string): Promise<WorkspaceFileEntry>;
+  createFile(id: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
+  /** Save an existing text file. Never recreates a missing file. */
+  writeFile(id: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
+  moveEntry(id: string, path: string, destinationPath: string): Promise<void>;
+  deleteEntry(id: string, path: string): Promise<void>;
+  /** Lightweight changed-file metadata; bodies are loaded with diffFile. Requires a ready local diff-capable provider. */
+  diffFiles(id: string, mode: "current" | "fork_point"): Promise<WorkspaceDiffFiles>;
+  /** Returns null when the requested file has no change in this comparison. */
+  diffFile(id: string, mode: "current" | "fork_point", path: string): Promise<WorkspaceDiffFile | null>;
+  diffSummary(id: string, mode: "current" | "fork_point"): Promise<WorkspaceDiffSummary>;
   /** Counts distinct workspaces running sessions, across all projects on this device. */
   getCapacity(): Promise<WorkspaceCapacity>;
   /** Sets this device's limit and starts waiting sessions when capacity opens. */
