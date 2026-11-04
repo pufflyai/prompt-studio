@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { resolveLocalDevelopmentEnv } from "./dev-local";
 
 describe("local development environment", () => {
-  test("refreshes first-party extensions from the working tree", () => {
+  test("refreshes default extensions without preinstalling optional tools", () => {
     const env = resolveLocalDevelopmentEnv("/repo", {});
     const config = JSON.parse(env.PSTDIO_DEFAULT_EXTENSIONS) as {
       defaultExtensions: Array<Record<string, unknown>>;
@@ -11,11 +11,13 @@ describe("local development environment", () => {
 
     expect(config.defaultExtensions).toContainEqual({
       force: true,
-      installName: "extension-lab",
+      installName: "pstdio-base-themes",
       skipInstall: true,
-      source: resolve("/repo/extensions/extension-lab"),
+      source: resolve("/repo/extensions/pstdio-base-themes"),
     });
     expect(config.defaultExtensions.every((extension) => extension.force === true)).toBe(true);
+    expect(config.defaultExtensions.map((extension) => extension.installName)).not.toContain("harness-codex");
+    expect(config.defaultExtensions.map((extension) => extension.installName)).not.toContain("pstdio-planner");
   });
 
   test("keeps explicit environment overrides", () => {

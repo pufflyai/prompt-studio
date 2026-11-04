@@ -1,23 +1,13 @@
 import { resolve } from "node:path";
-
-const WORKING_TREE_EXTENSIONS = [
-  ["harness-claude-code", "extensions/harness-claude-code"],
-  ["harness-codex", "extensions/harness-codex"],
-  ["harness-open-code", "extensions/harness-open-code"],
-  ["pstdio-base-themes", "extensions/pstdio-base-themes"],
-  ["pstdio-notes", "extensions/pstdio-notes"],
-  ["pstdio-performance", "extensions/pstdio-performance"],
-  ["pstdio-planner", "extensions/pstdio-planner"],
-  ["pstdio-skills", "extensions/pstdio-skills"],
-  ["extension-lab", "extensions/extension-lab"],
-  ["local-example", "infra/local/extensions/local-example"],
-] as const;
+import catalog from "../../packages/pstdio-api/files/extension-catalog.json";
 
 export const resolveWorkingTreeDefaultExtensions = (repoRoot: string, resolvePath = resolve) => ({
-  defaultExtensions: WORKING_TREE_EXTENSIONS.map(([installName, source]) => ({
-    force: true,
-    installName,
-    skipInstall: true,
-    source: resolvePath(repoRoot, source),
-  })),
+  defaultExtensions: catalog.extensions
+    .filter((entry) => entry.default || ("alwaysEnabled" in entry && entry.alwaysEnabled))
+    .map(({ installName, origin }) => ({
+      force: true,
+      installName,
+      skipInstall: true,
+      source: resolvePath(repoRoot, origin.path),
+    })),
 });

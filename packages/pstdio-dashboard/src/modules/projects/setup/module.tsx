@@ -16,7 +16,7 @@ const overlayConfig = {
   placement: "center" as const,
   scrollBehavior: "inside" as const,
   closeOnInteractOutside: false,
-  contentWidth: "4xl",
+  contentWidth: "2xl",
   contentHeight: "xl",
   contentMaxWidth: "calc(100vw - {spacing.xl})",
   contentMaxHeight: "calc(100dvh - {spacing.xl})",

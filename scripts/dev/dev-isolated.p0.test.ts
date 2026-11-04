@@ -31,23 +31,16 @@ describe("isolated development paths", () => {
     expect(resolveIsolatedDashboardUrl(43001)).toBe("http://127.0.0.1:43001/");
   });
 
-  test("seeds every first-party extension from the working tree", () => {
+  test("seeds default extensions without installing optional onboarding tools", () => {
     const config = JSON.parse(resolveIsolatedDefaultExtensions("/repo", {}, "linux")) as {
       defaultExtensions: Array<string | { installName: string; skipInstall: boolean; source: string }>;
     };
 
     expect(config.defaultExtensions).toEqual(
       [
-        ["harness-claude-code", "extensions/harness-claude-code"],
-        ["harness-codex", "extensions/harness-codex"],
-        ["harness-open-code", "extensions/harness-open-code"],
         ["pstdio-base-themes", "extensions/pstdio-base-themes"],
-        ["pstdio-notes", "extensions/pstdio-notes"],
-        ["pstdio-performance", "extensions/pstdio-performance"],
-        ["pstdio-planner", "extensions/pstdio-planner"],
         ["pstdio-skills", "extensions/pstdio-skills"],
-        ["extension-lab", "extensions/extension-lab"],
-        ["local-example", "infra/local/extensions/local-example"],
+        ["pstdio-performance", "extensions/pstdio-performance"],
       ].map(([installName, source]) => ({
         force: true,
         installName,
@@ -65,8 +58,10 @@ describe("isolated development paths", () => {
     const config = JSON.parse(resolveIsolatedDefaultExtensions("C:\\repo", {}, "win32"));
 
     expect(
-      config.defaultExtensions.find((extension: { installName: string }) => extension.installName === "extension-lab"),
-    ).toMatchObject({ source: "/workspace/prompt-studio/extensions/extension-lab" });
+      config.defaultExtensions.find(
+        (extension: { installName: string }) => extension.installName === "pstdio-base-themes",
+      ),
+    ).toMatchObject({ source: "/workspace/prompt-studio/extensions/pstdio-base-themes" });
   });
 
   test("uses the Prompt Studio package release for marketplace installs", () => {
