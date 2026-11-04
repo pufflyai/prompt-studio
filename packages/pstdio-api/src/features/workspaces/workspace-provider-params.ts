@@ -39,8 +39,7 @@ export const resolveWorkspaceParams = async (
     }
   } else {
     const handle = await findWorkspaceProvider(deps, { projectId, providerId });
-    // Missing providers retain their recoverable operation. Validate when they become available.
-    if (!handle) return input;
+    if (!handle) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
     schema = handle.provider.params ?? {};
   }
   return validateWorkspaceParams(providerId, schema, input);

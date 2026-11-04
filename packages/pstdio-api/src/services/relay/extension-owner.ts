@@ -6,6 +6,7 @@ import { resolveWorkspaceFilesPath } from "../../features/extensions/command-env
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createPublicationStorageAccess } from "../../features/extensions/publication/storage-access";
 import { apiLogger } from "../../lib/logger";
+import { createNativeProjectionQueue } from "../native-documents/projection-queue";
 import { createSharedArtifactMount } from "../shared-files/artifact-mount";
 import type { RelayDeps } from "./deps";
 import { createExtensionDocumentSync } from "./documents";
@@ -76,6 +77,27 @@ export const startRelayExtension = async (input: {
     );
     if (writableRoot === repoRoot) await Promise.all(mounts.map((mount) => mount.refresh()));
   };
+  // Physical copies follow canonical commits without blocking durable document transport.
+  const projections = createNativeProjectionQueue({
+    reconcile: async ({ documentKey }) => {
+      const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
+        () => null,
+      );
+      if (writableRoot === repoRoot) await Promise.all(mounts.map((mount) => mount.refreshText(documentKey)));
+    },
+    failed: (_address, error) =>
+      apiLogger.warn({ error, workbenchId: owner.workbenchId, extensionId }, "Artifact text projection failed"),
+  });
+  const stopProjection = deps.extensionStorageService.watch(({ documentId, ...changed }) => {
+    if (
+      changed.workbenchId !== owner.workbenchId ||
+      changed.extensionId !== extensionId ||
+      !documentId?.startsWith('["native-markdown",')
+    )
+      return;
+    const [, documentKey] = JSON.parse(documentId) as [string, string];
+    void projections.request({ owner, documentKey }).catch(() => {});
+  });
   try {
     const writableRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "write").catch(
       () => null,
@@ -122,16 +144,23 @@ export const startRelayExtension = async (input: {
       wake: connection.wake,
       wakeDocument,
       retry: connection.retry,
-      done: connection.done.finally(documents.close),
+      done: connection.done.finally(async () => {
+        stopProjection();
+        await projections.drain();
+        await documents.close();
+      }),
       status: async () => ({ ...(await documents.status()), ...active.status() }),
       close: () => {
+        stopProjection();
         for (const watch of watches) watch.close();
         controller.abort();
       },
     };
   } catch (error) {
+    stopProjection();
     for (const watch of watches) watch.close();
     controller.abort();
+    await projections.drain();
     await documents.close();
     throw error;
   }

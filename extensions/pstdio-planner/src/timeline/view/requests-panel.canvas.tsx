@@ -3,7 +3,9 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReviewRequestView } from "../../data/review-request-types";
 import type { PlanRow } from "../contracts";
 import { ticketTarget } from "../planner";
+import { MilestoneNeedsAttentionPreview } from "./milestone-requests.story-fixture";
 import { RequestsPanel } from "./requests-panel";
+import { AutoBuildPreview, CardNeedsAttentionPreview } from "./requests-panel.story-fixture";
 
 const person = { type: "human" as const, id: "person", displayName: "Human" };
 const agent = { type: "agent" as const, id: "agent", displayName: "Agent" };
@@ -57,22 +59,22 @@ const decision: ReviewRequestView = {
     ],
   },
 };
-// The shape the create-proposal skill asks for: decisions, assumptions, and risks as readable options.
+// A concise decision uses the existing Needs attention form and Chat UI question controls.
 const proposalReview: ReviewRequestView = {
   ...task,
   id: "proposal-review",
-  title: "Review the note tags proposal",
+  title: "PS-32 · Choose how tag filtering works",
   instructions: [
-    "- **D1.** The sidebar can filter by one tag or by several tags at once.",
-    "- **C1.** A note can have several tags, and tag names ignore case and surrounding spaces.",
-    "- **R1.** Tag edits change a note's modified time, which can reorder recent notes.",
-  ].join("\n"),
+    "**Problem:** People need to narrow down a long list of notes by tag.",
+    "**Solutions:** Filter by one tag (recommended), or combine several tags.",
+    "**Downsides:** One tag cannot narrow the list as much. Combining tags adds controls to learn.",
+  ].join("\n\n"),
   request: {
     kind: "decision",
     questions: [
       {
         id: "d1-filter",
-        label: "D1. How many tags can the sidebar filter by?",
+        label: "How many tags can the sidebar filter by?",
         required: true,
         input: {
           kind: "single-choice",
@@ -82,25 +84,6 @@ const proposalReview: ReviewRequestView = {
           ],
         },
       },
-      {
-        id: "confirm",
-        label: "Tick each assumption you accept",
-        required: false,
-        input: {
-          kind: "multiple-choice",
-          options: [{ id: "c1", label: "C1. A note can have several tags, and names ignore case and spaces" }],
-        },
-      },
-      {
-        id: "risks",
-        label: "Tick each risk you accept",
-        required: false,
-        input: {
-          kind: "multiple-choice",
-          options: [{ id: "r1", label: "R1. Tag edits can reorder recent notes" }],
-        },
-      },
-      { id: "notes", label: "Corrections or other answers", required: false, input: { kind: "text" } },
     ],
   },
 };
@@ -232,4 +215,52 @@ export const CompleteTicket: Story = {
 export const UnreadableRequest: Story = {
   id: "extensions-planner-needs-attention--unreadable-request",
   args: { row: { ...row, requestErrors: ["Request broken: Request title is required."] } },
+};
+
+export const AutoBuildPopover: Story = {
+  name: "Auto Build — open Needs attention",
+  render: () => <AutoBuildPreview requests={[proposalReview, decision]} />,
+};
+export const AutoBuildSingleRequest: Story = {
+  name: "Auto Build — one pending request",
+  render: () => <AutoBuildPreview requests={[proposalReview]} />,
+};
+export const AutoBuildSaveError: Story = {
+  name: "Auto Build — modal answer save error",
+  render: () => <AutoBuildPreview requests={[proposalReview]} failSave />,
+};
+export const CardModal: Story = {
+  name: "Card — open Needs attention",
+  render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [proposalReview, decision] }} />,
+};
+
+export const ResolvedCard: Story = {
+  name: "Card — inspect a saved decision",
+  render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [answeredDecision] }} />,
+};
+
+export const AutoBuildEmptySessions: Story = {
+  name: "Auto Build — no supervisor or agents",
+  render: () => <AutoBuildPreview requests={[proposalReview]} empty />,
+};
+export const AutoBuildWarning: Story = {
+  name: "Auto Build — warning above requests",
+  render: () => <AutoBuildPreview requests={[proposalReview, decision]} warning />,
+};
+export const MilestoneModal: Story = {
+  name: "Milestone — open Needs attention",
+  render: () => (
+    <MilestoneNeedsAttentionPreview
+      rows={[
+        { ...row, requests: [proposalReview] },
+        {
+          ...row,
+          id: "importer",
+          shorthand: "PS-33",
+          title: "Import notes",
+          requests: [{ ...decision, ticketId: "importer" }],
+        },
+      ]}
+    />
+  ),
 };

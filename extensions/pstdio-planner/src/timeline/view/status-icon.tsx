@@ -33,12 +33,19 @@ export function ReviewStatusIcon(props: { row: PlanRow; onOpen?: () => void }) {
   const summary = reviewRequestSummary({ requests: row.requests, errors: row.requestErrors });
   if (!summary) return null;
   return (
-    <CollectionBadge
-      label={String(summary.count)}
-      icon={REVIEW_REQUEST_ICON}
-      color={summary.color}
-      tooltip={summary.tooltip}
-      onClick={onOpen}
-    />
+    <span
+      onClickCapture={(event) => {
+        // Mouse activation does not focus buttons in every browser; restore this trigger on dismissal.
+        if (onOpen) event.currentTarget.querySelector("button")?.focus({ preventScroll: true });
+      }}
+    >
+      <CollectionBadge
+        label={String(summary.count)}
+        icon={REVIEW_REQUEST_ICON}
+        color={summary.color}
+        tooltip={summary.tooltip}
+        onClick={onOpen}
+      />
+    </span>
   );
 }

@@ -31,3 +31,24 @@ pst tickets save --id PS-43
 ## Reference
 
 `pst tickets list --parent PS-12` lists a ticket's children. See the [Planner CLI](https://prompt.studio/docs/extensions/planner/cli/) and [how attempts use dependencies](https://prompt.studio/docs/extensions/planner/attempts/#dependencies).
+
+## Decision requests
+
+Create a review request only for a genuine unresolved decision that the existing instructions and your authority cannot settle. Do not ask for routine assumptions, blanket risk acceptance, handoff acknowledgement, missing credentials, access, resources, reproduction details, or a non-decision action.
+
+For an independent non-decision blocker, discover the configured Blocked status with `pst statuses list`, then use `pst tickets update --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
+
+A decision must stand alone without logs or conversation history. Include the ticket identity and brief **Problem**, **Solutions**, and **Downsides** in plain language. Explain each choice and its cost, and clearly mark the recommended choice. Use a required choice question for the decision; optional notes are useful when they help explain the choice. Do not add confirmation or risk checklists that contain no decision.
+
+```bash
+pst pstdio-planner request-human --ticket PS-12 \
+  --title "PS-12 · Choose the release scope" \
+  --instructions "**Problem:** People need to try the new export before a wider release.
+
+**Solutions:** Release to the internal project first (recommended), or release to everyone now.
+
+**Downsides:** The internal release delays wider access. Releasing to everyone exposes more people to faults." \
+  --request '{"kind":"decision","questions":[{"id":"scope","label":"Who should receive the export?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
+```
+
+Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.

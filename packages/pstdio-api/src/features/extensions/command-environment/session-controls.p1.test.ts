@@ -51,21 +51,36 @@ test("extensions read conversation snapshots and stream live messages without ow
   expect(await api.getConversationSources(session.id)).toMatchObject({ checkpoint: null, native: null });
   const controller = new AbortController();
   const snapshot = Promise.withResolvers<void>();
-  const patch = Promise.withResolvers<void>();
+  const releaseSnapshot = Promise.withResolvers<void>();
+  const update = Promise.withResolvers<unknown>();
   const streaming = api.stream(
     session.id,
     async (event) => {
       if (event.event !== "patch") return;
-      if (event.data.path === "/messages") snapshot.resolve();
-      if (event.data.path === "/messages/1") patch.resolve();
+      if (event.data.path !== "/messages") return;
+      if (!Array.isArray(event.data.value) || event.data.value.length !== 1) {
+        update.resolve(event.data.value);
+        return;
+      }
+      expect(event.data.value).toEqual([message]);
+      snapshot.resolve();
+      await releaseSnapshot.promise;
     },
     { signal: controller.signal },
   );
-  await snapshot.promise;
-  conversation.push({ op: "add", path: "/messages/1", value: { ...message, id: "next" } });
-  await patch.promise;
-  controller.abort();
-  await streaming;
+  try {
+    await snapshot.promise;
+    const edited = { ...message, parts: [{ type: "text" as const, text: "Updated" }] };
+    const next = { ...message, id: "next" };
+    conversation.push({ op: "replace", path: "/messages/0", value: edited });
+    conversation.push({ op: "add", path: "/messages/1", value: next });
+    releaseSnapshot.resolve();
+    expect(await update.promise).toEqual([edited, next]);
+  } finally {
+    releaseSnapshot.resolve();
+    controller.abort();
+    await streaming;
+  }
   expect(handle.deps.sessionService.store.get(session.id)).toBe(entry);
   expect(entry.cancellationRequested).toBe(false);
   handle.deps.sessionService.store.remove(session.id);

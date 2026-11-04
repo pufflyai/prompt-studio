@@ -25,6 +25,14 @@ export const createNativeProjectionQueue = (input: {
   failed: (address: Address, error: unknown) => void;
 }) => {
   const jobs = new Map<string, Job>();
+  const reconcile = async (job: Job, address: Address) => {
+    try {
+      job.completed = (await input.reconcile(address)) ?? 0;
+      completeProjectionFences(job);
+    } catch (error) {
+      return { error };
+    }
+  };
   const request = (address: Address) => {
     const key = JSON.stringify([address.owner, address.documentKey]);
     const current = jobs.get(key);
@@ -37,8 +45,9 @@ export const createNativeProjectionQueue = (input: {
       try {
         while (job.dirty) {
           job.dirty = false;
-          job.completed = (await input.reconcile(address)) ?? 0;
-          completeProjectionFences(job);
+          const failed = await reconcile(job, address);
+          // Decide before cleanup, so work queued during this pass is never discarded.
+          if (failed && !job.dirty) throw failed.error;
         }
         if (job.fences.size) throw new Error("The requested projection revision is unavailable");
       } catch (error) {

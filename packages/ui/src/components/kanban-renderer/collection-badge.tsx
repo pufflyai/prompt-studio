@@ -1,6 +1,7 @@
 import { Badge, Icon, Text } from "@chakra-ui/react";
 import type { LucideIcon } from "lucide-react";
 import * as lucideIcons from "lucide-react";
+import { preventRowAccessoryDrag } from "../list-row/list-row-accessory-events";
 import { Tooltip } from "../primitives/tooltip";
 
 export interface CollectionBadgeProps {
@@ -54,6 +55,9 @@ export const CollectionBadge = (props: CollectionBadgeProps) => {
     size: "sm",
     textStyle: "label/XS/medium",
     "data-testid": "collection-badge",
+    onMouseDown: preventRowAccessoryDrag,
+    onPointerDown: (event: { stopPropagation(): void }) => event.stopPropagation(),
+    onKeyDown: (event: { stopPropagation(): void }) => event.stopPropagation(),
   } as const;
 
   const badge = onClick ? (
@@ -70,7 +74,7 @@ export const CollectionBadge = (props: CollectionBadgeProps) => {
       </button>
     </Badge>
   ) : (
-    <Badge as="span" {...sharedProps} cursor="default">
+    <Badge as="span" {...sharedProps} cursor="default" onClick={(event) => event.stopPropagation()}>
       {content}
     </Badge>
   );

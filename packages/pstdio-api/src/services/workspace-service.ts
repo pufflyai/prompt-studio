@@ -97,14 +97,15 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     return updated;
   };
 
-  const softDelete = async (id: string) => {
-    const deleted = await raw.softDelete(id);
-    if (!deleted) return;
+  const softDelete = async (id: string, options?: Parameters<typeof raw.softDelete>[1]) => {
+    const deleted = options ? await raw.softDelete(id, options) : await raw.softDelete(id);
+    if (!deleted) return false;
     const { changes, workspace } = deleted;
     publishResourceAnchorChanges(deps.eventBus, changes, "remove");
     await refreshResourceAnchorSources(deps.eventBus, changes, { workspace: raw.get, session: deps.sessionsDb.get });
     deps.eventBus.emit("workspaces", "delete", { id });
     deps.onDeleted?.(workspace);
+    return true;
   };
 
   const rename = async (id: string, name: string) => {

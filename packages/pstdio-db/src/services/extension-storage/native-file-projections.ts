@@ -25,6 +25,19 @@ const where = (input: Address) => {
 };
 
 export const createNativeFileProjectionsDBService = (db: DbClient) => ({
+  async copies({ owner, documentKey }: Address) {
+    const rows = await db
+      .select({ key: projections.projection_key })
+      .from(projections)
+      .where(
+        and(
+          eq(projections.workbench_id, owner.workbenchId),
+          eq(projections.extension_id, owner.extensionId),
+          eq(projections.document_key, documentKey),
+        ),
+      );
+    return rows.map(({ key }) => key);
+  },
   async initialize(input: Address & { state: Uint8Array | null }) {
     await db
       .insert(projections)

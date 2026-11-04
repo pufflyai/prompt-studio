@@ -156,8 +156,6 @@ export async function readNextTickets(
       assigned: assignments.assigned.has(row.id),
       attempts: attempts.filter(({ ticketId, workspaceId }) => ticketId === row.id && !retired.has(workspaceId)),
       resumable: resumptions.has(row.id),
-      answeredInput: Boolean(resumptions.get(row.id)?.requests.length),
-      blockedStatusIds: workflow.blockedStatusIds,
       capacity,
     });
     if (
