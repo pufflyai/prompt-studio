@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { NativeSourceRecoveryError } from "pstdio-sync";
-import { createSyncSpace, openUpdate, sealUpdate } from "pstdio-sync/encryption";
+import { createSyncSpace, openUpdate, sealState, sealUpdate, UnreadableSyncData } from "pstdio-sync/encryption";
 import { editResourceDocument, readDocumentRecord, recordTextBindingUpdate } from "pstdio-sync/records";
 import {
   createRecordStreamSync,
@@ -103,6 +103,28 @@ test("a saved pre-binding record keeps its outbox and a recoverable remote copy 
   for (const record of frame.records) if (record.recordId === "ticket") Y.applyUpdate(document, record.bytes);
   expect((await readDocumentRecord(document, "ticket")).value).toEqual({ content: "Saved remotely before binding" });
   document.destroy();
+});
+
+test("a joined device cannot advance its CAS base to an opposite-format compaction it need not load", async () => {
+  const remote = createRelay();
+  const first = await device(remote.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Saved" }] });
+  await first.sync.synchronize();
+  const stream = first.service.documents.recordStream(owner);
+  const before = await stream.open();
+  const foreign = await sealState(space, documentId, {
+    baseStateId: before.stateId,
+    through: before.after,
+    state: new TextEncoder().encode(JSON.stringify({ version: 1, format: "ordered", chunks: [] })),
+    summary: new TextEncoder().encode(JSON.stringify({ format: "ordered", records: 0, bytes: 0 })),
+    blobIds: [],
+  });
+  expect(await remote.relay.replace(foreign)).toBe(true);
+  await expect(first.sync.synchronize()).rejects.toBeInstanceOf(UnreadableSyncData);
+  expect(await stream.open()).toEqual(before);
+  expect(remote.latest()?.stateId).toBe(foreign.stateId);
+  expect(first.failures).toMatchObject([{ kind: "state", id: foreign.stateId }]);
+  expect(await first.sync.status()).toMatchObject({ needsAttention: true });
 });
 
 test("records saved offline on two devices reach both, and a multi-record save arrives whole", async () => {

@@ -1,8 +1,14 @@
-import { recordStreamStateSchema, type StateInfo, type StoredUpdate } from "pstdio-sync-contracts";
+import {
+  recordStreamStateSchema,
+  recordStreamSummarySchema,
+  type StateInfo,
+  type StoredUpdate,
+} from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { openBlob, openState, openSummary, openUpdate, type SyncSpace, UnreadableSyncData } from "../encryption";
 import { decodeBytes } from "../shared";
 import type { DocumentRelay, SyncFailure } from "./document-sync-types";
+import { decodeOrderedEntry, orderedEntryId } from "./ordered-stream-entry";
 import type { createRecordAssets } from "./record-assets";
 import { decodeRecordFrame as decodeFrame, type RecordFrame } from "./record-frames";
 
@@ -22,10 +28,16 @@ const mapLimited = async <T, R>(items: T[], action: (item: T) => Promise<R>) => 
   return results;
 };
 
-/** A frame whose every record holds well-formed Yjs bytes; a frame applies whole or not at all (R4). */
-const decodeRecordFrame = (bytes: Uint8Array) => {
+/** Validate every entry in the expected client format before applying any part of a frame (R4). */
+const decodeRecordFrame = async (bytes: Uint8Array, format?: "ordered", allowPointer = false) => {
   const frame = decodeFrame(bytes);
-  for (const record of frame.records) Y.decodeUpdate(record.bytes);
+  if (format !== frame.format) throw new Error("Incompatible record stream format");
+  if (frame.blob && !allowPointer) throw new Error("Nested record pointers are not supported");
+  for (const record of frame.records) {
+    if (!format) Y.decodeUpdate(record.bytes);
+    else if (orderedEntryId(await decodeOrderedEntry(record.bytes)) !== record.recordId)
+      throw new Error("Ordered entry address does not match its payload");
+  }
   return frame;
 };
 
@@ -59,6 +71,7 @@ export const createRecordStreamReader = (input: {
   relay: DocumentRelay;
   files: ReturnType<typeof createRecordAssets>;
   quarantine(failure: SyncFailure): Promise<void>;
+  recordFormat?: "ordered";
 }) => {
   const { space, documentId, relay, files } = input;
   const openFrame = async (update: StoredUpdate) => {
@@ -67,13 +80,15 @@ export const createRecordStreamReader = (input: {
       await input.quarantine({ kind: "update", id: update.updateId, envelope: update });
       return { frame: null, byteLength };
     };
-    let frame = await readable(async () => decodeRecordFrame(await openUpdate(space, documentId, update)));
+    let frame = await readable(async () =>
+      decodeRecordFrame(await openUpdate(space, documentId, update), input.recordFormat, true),
+    );
     if (!frame) return unreadable();
     if (frame.blob) {
       const { blobId } = frame.blob;
       const bytes = await relay.blobs!.get(blobId);
       byteLength += bytes.length;
-      frame = await readable(async () => decodeRecordFrame(await openBlob(space, blobId, bytes)));
+      frame = await readable(async () => decodeRecordFrame(await openBlob(space, blobId, bytes), input.recordFormat));
       if (!frame) return unreadable();
     }
     return (await downloaded(files, [frame])) ? { frame, byteLength } : unreadable();
@@ -90,26 +105,34 @@ export const createRecordStreamReader = (input: {
         return null;
       };
       const bytes = await relay.state(state);
-      const index = await readable(async () =>
-        recordStreamStateSchema.parse(
+      const index = await readable(async () => {
+        const index = recordStreamStateSchema.parse(
           JSON.parse(new TextDecoder().decode(await openState(space, documentId, state, bytes))),
-        ),
-      );
+        );
+        if (index.format !== input.recordFormat) throw new Error("Incompatible record stream format");
+        return index;
+      });
       if (!index) return unreadable();
       const chunks = await mapLimited(index.chunks, async (chunk) => {
         const sealed = await relay.blobs!.get(chunk.blobId);
-        return readable(async () => decodeRecordFrame(await openBlob(space, chunk.blobId, sealed)));
+        return readable(async () => decodeRecordFrame(await openBlob(space, chunk.blobId, sealed), input.recordFormat));
       });
       if (chunks.some((chunk) => !chunk)) return unreadable();
       const frames = chunks as RecordFrame[];
       return (await downloaded(files, frames)) ? frames : unreadable();
     },
-    /** What a latest state's summary says about it; an unreadable summary counts as empty. */
+    /** Verify the format before even a caught-up device uses this state as its next CAS base. */
     async summary(state: StateInfo) {
       const summary = await readable(async () =>
-        JSON.parse(new TextDecoder().decode(await openSummary(space, documentId, state))),
+        recordStreamSummarySchema.parse(
+          JSON.parse(new TextDecoder().decode(await openSummary(space, documentId, state))),
+        ),
       );
-      return { bytes: Number(summary?.bytes) || 0 };
+      if (!summary || summary.format !== input.recordFormat) {
+        await input.quarantine({ kind: "state", id: state.stateId, envelope: state });
+        throw new UnreadableSyncData();
+      }
+      return { bytes: summary.bytes };
     },
   };
 };

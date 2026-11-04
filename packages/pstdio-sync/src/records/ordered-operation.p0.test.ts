@@ -267,3 +267,30 @@ test("exact refusal receipts override a restored pending view and dependency rec
     );
   }
 });
+
+test("explicit channel paths preserve unedited asset changes while guarding only the requested value", async () => {
+  const records = await create({ value: { title: "seed" }, asset: "first" });
+  const expectedRevision = await observeOrderedRecord(records.get("card"));
+  const rename = await prepareOrderedOperation(
+    {
+      operationId: "rename",
+      edits: [{ recordId: "card", expectedRevision, changes: [{ path: ["value", "title"], set: "renamed" }] }],
+    },
+    records,
+  );
+  apply(
+    records,
+    await prepareOrderedOperation(
+      { operationId: "asset", edits: [{ recordId: "card", changes: [{ path: ["asset"], set: "new file" }] }] },
+      records,
+    ),
+  );
+  expect(apply(records, rename).decision.state).toBe("accepted");
+  expect(records.get("card")!.value).toEqual({ value: { title: "renamed" }, asset: "new file" });
+  await expect(
+    prepareOrderedOperation(
+      { operationId: "ambiguous", edits: [{ recordId: "card", replace: true, changes: [{ path: [], set: false }] }] },
+      records,
+    ),
+  ).rejects.toThrow("replacement or explicit paths");
+});

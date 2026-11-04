@@ -1,6 +1,12 @@
 import { and, eq, gt, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import type { OrderedAdmission, OrderedDecision, OrderedOperation } from "pstdio-sync/records";
+import {
+  type OrderedAdmission,
+  type OrderedDecision,
+  type OrderedOperation,
+  verifyOrderedAdmission,
+  verifyOrderedOperation,
+} from "pstdio-sync/records";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import {
@@ -19,10 +25,6 @@ import {
 import { lockRecordOwner } from "./record-changes";
 
 const identityError = () => new Error("Operation identity reused with changed payload");
-const verifyOperation = async (operation: OrderedOperation) => {
-  const { fingerprint: identity, ...envelope } = operation;
-  if ((await fingerprint(envelope as unknown as Json)) !== identity) throw identityError();
-};
 
 const local = (row: typeof operations.$inferSelect) =>
   row.envelope
@@ -81,7 +83,7 @@ const createJournal = (tx: Transaction, owner: StorageOwner) => {
       return row ? local(row) : undefined;
     },
     async queue(input: OrderedOperation, requestFingerprint: string) {
-      await verifyOperation(input);
+      input = await verifyOrderedOperation(input);
       const row = await bind(input.operationId, input.fingerprint);
       if (row.envelope) {
         if (row.request_fingerprint !== requestFingerprint) throw identityError();
@@ -148,7 +150,7 @@ const createJournal = (tx: Transaction, owner: StorageOwner) => {
       return rows.map((row) => local(row)!);
     },
     async admit(admission: OrderedAdmission) {
-      await verifyOperation(admission.operation);
+      admission = await verifyOrderedAdmission(admission);
       const row = await operation(admission.operation.operationId);
       if (!row?.envelope || row.fingerprint !== admission.operation.fingerprint) throw identityError();
       if (row.settled_epoch) throw new Error("A settled save cannot enter another order");

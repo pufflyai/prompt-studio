@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type OrderedDecision, prepareOrderedOperation } from "pstdio-sync/records";
+import { type OrderedAdmission, type OrderedDecision, prepareOrderedOperation } from "pstdio-sync/records";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
@@ -61,6 +61,20 @@ test("a pre-open save survives restart and delivery acknowledgement retains its 
     await journal.delivered([input.operationId], "first");
     expect(await journal.pending()).toMatchObject([{ operation: input, delivered: true, admission }]);
     expect(await journal.outcome(input.operationId)).toBeUndefined();
+  });
+});
+
+test("admission captures its dependency wrapper before asynchronous verification", async () => {
+  const f = await fixture();
+  const input = await operation();
+  await f.run(async (journal) => {
+    await journal.queue(input, input.fingerprint);
+    const admission: OrderedAdmission = { epoch: "first", operation: input, dependencies: [] };
+    const expected = structuredClone(admission);
+    const saving = journal.admit(admission);
+    admission.dependencies.push({ operationId: "late", fingerprint: input.fingerprint, epoch: "first" });
+    await saving;
+    expect((await journal.localOperation(input.operationId))?.admission).toEqual(expected);
   });
 });
 

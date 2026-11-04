@@ -70,6 +70,7 @@ const updateBytes = (cursor: RecordStreamCursor, updates: StoredUpdate[], byteLe
  */
 export const createRecordStreamSync = (input: RecordStreamInput) => {
   const { space, documentId, relay, store } = input;
+  const format = store.recordFormat;
   const limits = input.limits ?? latestStateLimits;
   const files = createRecordAssets({ space, assets: input.assets, blobs: relay.blobs, references: store.references });
   let incomplete = false;
@@ -81,7 +82,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     await input.quarantine(failure);
     rejected.add(failure.id);
   };
-  const reader = createRecordStreamReader({ space, documentId, relay, files, quarantine });
+  const reader = createRecordStreamReader({ ...input, files, quarantine, recordFormat: format });
   const skippedRecords = async (recordIds: string[]) => {
     for (const recordId of recordIds)
       await quarantine({ kind: "update", id: `record:${recordId}`, envelope: { recordId } });
@@ -167,7 +168,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       // A compaction only lists files that earlier updates already uploaded.
       const assets = await files.upload(current, !found);
       for (const reference of assets) assetBlobs.add(reference.blobId);
-      const sealed = await sealBlob(space, encodeRecordFrame({ records, assets }));
+      const sealed = await sealBlob(space, encodeRecordFrame({ records, assets, format }));
       await relay.blobs!.put(sealed.blobId, sealed.bytes);
       chunks.push({ blobId: sealed.blobId, byteLength: sealed.bytes.length });
     }
@@ -177,8 +178,8 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     const state = await sealState(space, documentId, {
       baseStateId: found ? null : cursor.stateId,
       through,
-      state: encoder.encode(JSON.stringify({ version: 1, chunks })),
-      summary: encoder.encode(JSON.stringify({ records: snapshot.records.length, bytes })),
+      state: encoder.encode(JSON.stringify({ version: 1, ...(format && { format }), chunks })),
+      summary: encoder.encode(JSON.stringify({ records: snapshot.records.length, bytes, ...(format && { format }) })),
       blobIds: [...chunks.map((chunk) => chunk.blobId), ...assetBlobs],
     });
     if (!(await relay.replace(state))) return null;
@@ -202,7 +203,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     if (!entries.length) return false;
     const records = entries.flatMap((entry) => entry.records);
     const assets = await files.upload(entries.flatMap((entry) => entry.assets));
-    let frame = encodeRecordFrame({ records, assets });
+    let frame = encodeRecordFrame({ records, assets, format });
     const blobIds = assets.map((reference) => reference.blobId);
     // One save larger than an update travels as a blob, so it still arrives as one unit (R4). The
     // blob keeps the file references too: thousands of them would not fit in the update either.
@@ -210,7 +211,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       const sealed = await sealBlob(space, frame);
       await relay.blobs!.put(sealed.blobId, sealed.bytes);
       const pointer = { blobId: sealed.blobId, byteLength: sealed.bytes.length };
-      frame = encodeRecordFrame({ records: [], assets: [], blob: pointer });
+      frame = encodeRecordFrame({ records: [], assets: [], blob: pointer, format });
       blobIds.push(sealed.blobId);
     }
     await relay.update(await sealUpdate(space, documentId, frame, blobIds));

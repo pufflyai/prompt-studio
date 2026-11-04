@@ -25,7 +25,7 @@ export interface RecordStreamCursor {
   skipped: boolean;
 }
 
-/** One record's Yjs bytes, as stored in an outbox entry or a snapshot. */
+/** One encoded record entry, as stored in an outbox entry or a snapshot. */
 export interface RecordBytes {
   recordId: string;
   bytes: Uint8Array;
@@ -33,6 +33,8 @@ export interface RecordBytes {
 
 /** A device's durable record storage, as the record stream needs it. Every method is atomic. */
 export interface RecordStreamStore {
+  /** Ordered client payloads are incompatible with legacy Yjs record frames. */
+  recordFormat?: "ordered";
   /** Starts keeping local saves for upload and returns the saved cursor. */
   open(): Promise<RecordStreamCursor>;
   /**
@@ -56,7 +58,7 @@ export interface RecordStreamStore {
   ): Promise<{ rejected: string[]; cursor: RecordStreamCursor }>;
   /** Saved local changes not on the relay yet, oldest first, within `limit` bytes but at least one entry. */
   outbox(limit: number): Promise<{ sequence: number; records: RecordBytes[]; assets: Asset[] }[]>;
-  /** Drops outbox entries up to `sequence` once the relay holds them. */
+  /** Marks entries through `sequence` delivered. Ordered saves stay durable until their exact decision. */
   sent(sequence: number): Promise<void>;
   /**
    * Every record's full state and current file at one moment, and the newest outbox entry those

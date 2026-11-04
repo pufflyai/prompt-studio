@@ -8,7 +8,9 @@ import {
   replacementChanges,
   stampJsonChanges,
   unchangedJsonPaths,
+  validateJsonChanges,
 } from "./ordered-json";
+import { readOrderedObservation } from "./ordered-operation-wire";
 
 /** Canonical plain data. A query projection can overlay unresolved local operations on this state. */
 export interface OrderedRecord {
@@ -18,7 +20,7 @@ export interface OrderedRecord {
   lifetime: string;
   stamps: Record<string, string>;
 }
-interface Observation {
+export interface OrderedObservation {
   version: 1;
   exists: boolean;
   deleted: boolean;
@@ -29,6 +31,8 @@ interface Observation {
 export interface OrderedEdit {
   recordId: string;
   replace?: Json;
+  /** Prepared host edits name only channels the author requested. */
+  changes?: JsonChange[];
   deleted?: boolean;
   /** Replacement baseline only; passing an observation does not make a save conditional. */
   observedRevision?: string;
@@ -43,7 +47,7 @@ export interface OrderedOperation {
     recordId: string;
     changes: JsonChange[];
     deleted?: boolean;
-    condition?: Observation;
+    condition?: OrderedObservation;
   }[];
 }
 /** Delivery coordinates can change after true relay loss; authored conditions remain immutable. */
@@ -68,13 +72,19 @@ export const observeOrderedRecord = async (record: OrderedRecord | undefined) =>
     lifetime: record?.lifetime ?? null,
     value: await observeJson(record?.value ?? null),
     stamps: record?.stamps ?? {},
-  } satisfies Observation);
+  } satisfies OrderedObservation);
 
-const observation = (revision: string) => {
-  const value = JSON.parse(revision) as Observation;
-  if (value.version !== 1 || typeof value.exists !== "boolean" || typeof value.deleted !== "boolean")
-    throw new Error("Invalid ordered record observation");
-  return value;
+const preparedChanges = async (edit: OrderedEdit, current: OrderedRecord | undefined) => {
+  if (edit.replace !== undefined && edit.changes !== undefined)
+    throw new Error("Choose a replacement or explicit paths");
+  if (edit.changes !== undefined) {
+    validateJsonChanges(edit.changes);
+    return structuredClone(edit.changes);
+  }
+  if (edit.replace === undefined) return [];
+  const revision = edit.observedRevision ?? edit.expectedRevision ?? (await observeOrderedRecord(current));
+  const before = readOrderedObservation(revision);
+  return replacementChanges(before.exists && !before.deleted ? before.value : undefined, edit.replace);
 };
 
 /** Prepare once and persist this immutable envelope before opening transport. */
@@ -87,18 +97,13 @@ export const prepareOrderedOperation = async (
   if (ids.some((id) => !id) || new Set(ids).size !== ids.length) throw new Error("A commit must name each record once");
   const edits: OrderedOperation["edits"] = [];
   for (const edit of group.edits) {
-    if (edit.replace === undefined && edit.deleted === undefined) throw new Error("Empty record edit");
-    const revision =
-      edit.observedRevision ?? edit.expectedRevision ?? (await observeOrderedRecord(records.get(edit.recordId)));
-    const before = observation(revision);
+    if (edit.replace === undefined && edit.changes === undefined && edit.deleted === undefined)
+      throw new Error("Empty record edit");
     edits.push({
       recordId: edit.recordId,
-      changes:
-        edit.replace === undefined
-          ? []
-          : await replacementChanges(before.exists && !before.deleted ? before.value : undefined, edit.replace),
+      changes: await preparedChanges(edit, records.get(edit.recordId)),
       ...(edit.deleted === undefined ? {} : { deleted: edit.deleted }),
-      ...(edit.expectedRevision === undefined ? {} : { condition: observation(edit.expectedRevision) }),
+      ...(edit.expectedRevision === undefined ? {} : { condition: readOrderedObservation(edit.expectedRevision) }),
     });
   }
   const envelope = { version: 1 as const, operationId: group.operationId, edits };

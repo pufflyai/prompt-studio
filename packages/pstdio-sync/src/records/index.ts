@@ -28,6 +28,12 @@ export {
   projectOrderedOperation,
 } from "./ordered-operation";
 export {
+  readOrderedObservation,
+  verifyOrderedAdmission,
+  verifyOrderedOperation,
+  verifyOrderedRecord,
+} from "./ordered-operation-wire";
+export {
   type ProjectInfo,
   projectInfoDocumentId,
   projectInfoState,
