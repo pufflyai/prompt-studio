@@ -20,6 +20,8 @@ import { WorkbenchIcon } from "../../shared/icon";
 
 export interface TreeActionParamsRequest {
   request: CommandParamsRequest;
+  sectionId?: string;
+  inlineInput?: TreeAction["inlineInput"];
   run: (args: unknown) => Promise<void>;
 }
 
@@ -65,6 +67,10 @@ const executeTreeAction = async (input: {
   context?: WorkbenchCommandExecutionContext;
 }) => {
   const { action, args, context, workbench } = input;
+  if (action.copyText !== undefined) {
+    await navigator.clipboard.writeText(action.copyText);
+    return;
+  }
   const record = action.commandId ? workbench.commands.getCommand(action.commandId) : undefined;
   const resolvedArgs = args ?? action.args;
   await (record
@@ -144,6 +150,7 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
       hasCommandParameters(action.params) && onRequestParams
         ? () =>
             onRequestParams({
+              inlineInput: action.inlineInput,
               request: {
                 record: {
                   command: {
@@ -215,6 +222,7 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
       hasCommandParameters(action.params) && onRequestParams
         ? () =>
             onRequestParams({
+              inlineInput: action.inlineInput,
               request: {
                 record: {
                   command: {

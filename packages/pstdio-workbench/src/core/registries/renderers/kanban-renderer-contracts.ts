@@ -18,6 +18,7 @@ export interface EnumOption {
   color?: string;
   icon?: string | null;
   note?: string;
+  onNoteClick?: () => void;
   canCreate?: boolean;
 }
 

@@ -120,7 +120,8 @@ export interface ExtensionWorkspacesApi {
   diffFile(id: string, mode: "current" | "fork_point", path: string): Promise<WorkspaceDiffFile | null>;
   diffSummary(id: string, mode: "current" | "fork_point"): Promise<WorkspaceDiffSummary>;
   /** Counts distinct workspaces running sessions, across all projects on this device. */
-  getCapacity(): Promise<WorkspaceCapacity>;
+  /** Read this device by default, or an online account device over its authenticated project channel. */
+  getCapacity(input?: { deviceId?: string }): Promise<WorkspaceCapacity>;
   /** Sets this device's limit and starts waiting sessions when capacity opens. */
   updateCapacity(input: { limit: number | null }): Promise<WorkspaceCapacity>;
   listProviders(): Promise<ExtensionWorkspaceProvider[]>;

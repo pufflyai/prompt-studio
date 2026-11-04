@@ -37,6 +37,11 @@ export const extensionTreeRendererRecordSchema = extensionRendererRecordBaseSche
 });
 
 export const extensionFileRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
+  saveMode: z.enum(["auto", "manual"]).optional(),
+  document: z
+    .object({ metadataKey: z.string().min(1) })
+    .strict()
+    .optional(),
   loadHandlerId: z.string(),
   saveHandlerId: z.string().optional(),
 });

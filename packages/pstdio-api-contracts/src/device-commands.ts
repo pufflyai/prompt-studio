@@ -56,6 +56,7 @@ const commandSchema = z.discriminatedUnion("type", [
   }),
   z.strictObject({ type: z.literal("session.approve"), id, input: approvalInputSchema.strict() }),
   z.strictObject({ type: z.literal("session.interrupt"), id }),
+  z.strictObject({ type: z.literal("workspace.capacity") }),
   z.strictObject({
     type: z.literal("workspace.create"),
     input: extensionWorkspaceCreateInputSchema.omit({ deviceId: true }).strict(),

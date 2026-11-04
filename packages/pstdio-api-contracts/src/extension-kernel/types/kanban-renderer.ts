@@ -20,6 +20,8 @@ export interface KanbanRendererEnumOption {
   icon?: string | null;
   /** Resource-list group header metadata. */
   note?: Localizable<string>;
+  /** Open details from the group note without expanding or creating a resource. */
+  noteAction?: NavigationTarget;
   canCreate?: boolean;
 }
 

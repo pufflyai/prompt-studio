@@ -2,6 +2,7 @@ import { z } from "zod";
 import { viewFilterGroupSchema, viewSortsSchema } from "./collection-view";
 import { extensionParamObjectSchema } from "./commands";
 import { localizableStringSchema } from "./common";
+import { navigationTargetSchema } from "./navigation-target-metadata";
 import { extensionRendererRecordBaseSchema } from "./renderers";
 import { viewToolbarActionRecordSchema } from "./view-toolbar-action";
 
@@ -11,6 +12,7 @@ const kanbanRendererEnumOptionSchema = z.object({
   color: z.string().optional(),
   icon: z.string().nullable().optional(),
   note: localizableStringSchema.optional(),
+  noteAction: navigationTargetSchema.optional(),
   canCreate: z.boolean().optional(),
 });
 

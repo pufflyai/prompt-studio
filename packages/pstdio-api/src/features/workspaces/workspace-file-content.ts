@@ -43,7 +43,7 @@ const isImageMimeType = (mimeType: string) => mimeType.startsWith("image/");
 const decodeText = (bytes: Uint8Array, path: string) => {
   if (bytes.includes(0)) throw new UnsupportedWorkspaceFileError(`Workspace file is not supported text: ${path}`);
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch {
     throw new UnsupportedWorkspaceFileError(`Workspace file is not supported text: ${path}`);
   }

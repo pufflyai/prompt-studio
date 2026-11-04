@@ -603,3 +603,13 @@ Without a workspace filter, `workspace_id` is the earliest linked workspace, wit
 `get()` and `create()` also expose the typed harness ID as `agent`. Use `query()` or `query({ workspaceId })` to list sessions. Read every `nextCursor` page when a command needs the full history. Results are newest first and exclude archived sessions unless `includeArchived: true` is set.
 
 Views can refresh on `viewDataEvents.sessionsChanged` (`view.sessions.changed`). Query with `updatedFrom` and merge by session ID. Webviews read sessions through an extension command using `commands.execute`.
+
+### Workspace presentation and device capacity
+
+`ctx.workspaces.getCapacity()` reads this device's live count and limit. Pass `{ deviceId }` to read another online account device through the existing authenticated project-device channel. Offline or unavailable devices reject the read; do not present their last synced history as a live count. `updateCapacity({ limit })` always updates the current device only.
+
+Native file views can declare `saveMode: "manual"` to retain drafts until an explicit save. Declare `document: { metadataKey: "path" }` when a resource contains several documents; this keeps editor identity stable when unrelated metadata changes. Match the page's document declaration. Workspace text sources accept `{ kind: "workspace", workspaceId, path }` for a selected local workspace; omitting `workspaceId` keeps the default project-folder behavior. Source validation enforces the current project, local execution, readiness and file capabilities. Resolve and project such a source through `ctx.workspaces.readFile(workspaceId, path)` and `writeFile(workspaceId, path, { content })`; these APIs observe the source bytes and reject stale writes. `ctx.workspaceFiles` continues to address the invocation workspace.
+
+Native tree nodes support `rowVariant: "file"`, a `fileName` icon hint and `showContextMenuTrigger`. An action with a single text input can declare `inputPresentation: { kind: "inline", field: "name", placement: "child" }` to create under the row, or `placement: "replace"` to rename it. The host owns pending input, Escape, validation errors and command submission. `copyText` copies a declared string during the user gesture.
+
+Use `workbenchCommands.openWorkspaceTerminal` with a workspace resource to open the persistent platform terminal. `workbenchCommands.revealWorkspaceEntry` takes `{ path }`, relative to that resource's authorized local workspace, and appears only when desktop reveal is available. Extensions must not call desktop globals. Resource-list enum options can declare `noteAction` to open details from a group note independently of expanding the group or Add.

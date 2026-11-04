@@ -9,7 +9,7 @@ export const nativeDocumentSourceSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("collection"), collection: name, id: name, field }),
   z.strictObject({ kind: z.literal("blob"), id: name, identity: name }),
   z.strictObject({ kind: z.literal("artifact"), mount: name, path: name, identity: name }),
-  z.strictObject({ kind: z.literal("workspace"), path: name }),
+  z.strictObject({ kind: z.literal("workspace"), path: name, workspaceId: name.optional() }),
 ]);
 export type NativeDocumentSource = z.infer<typeof nativeDocumentSourceSchema>;
 

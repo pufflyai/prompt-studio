@@ -1,8 +1,14 @@
 import { listWorkspaceFilesInputSchema, renameWorkspaceInputSchema } from "pstdio-api-contracts";
 import type { ExtensionWorkspacesApi } from "pstdio-api-contracts/extension-kernel";
-import { createReadBoundary, createWorkspaceFilesMount, normalizeMountRelativePath } from "pstdio-extensions";
+import {
+  createFileMount,
+  createReadBoundary,
+  createWorkspaceFilesMount,
+  normalizeMountRelativePath,
+} from "pstdio-extensions";
 import { getWorktreeDiffFile, getWorktreeDiffSummary, getWorktreeDiffSummaryFiles, git } from "pstdio-wt";
 import { z } from "zod";
+import { createObservedFileMount, observeWorkspaceFileBytes } from "../../../services/shared-files/observed-file-mount";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { resolveBase, resolveHeadLabel } from "../../workspaces/resolve-base";
 import {
@@ -49,7 +55,28 @@ export const createWorkspacePresentationApi = (
   };
   const files = async (id: string, access: "files:read" | "files:write") => {
     const context = await target(id, access);
-    return { ...context, mount: createWorkspaceFilesMount(context.root, { signal: input.signal }) };
+    const mount = createWorkspaceFilesMount(context.root, { signal: input.signal });
+    return {
+      ...context,
+      mount: {
+        ...mount,
+        readFile: async (path: string, maxBytes: number) => {
+          const file = await mount.readFile(path, maxBytes);
+          observeWorkspaceFileBytes(context.root, path, file.bytes);
+          return file;
+        },
+        writeTextFile: async (path: string, content: string, maxBytes: number) => {
+          const observed = createObservedFileMount(context.root, {
+            ...createFileMount(context.root, input.signal),
+            // Keep the protected existing-file writer; the observation layer only guards its revision.
+            writeText: async (path, value) => {
+              await mount.writeTextFile(path, value, maxBytes);
+            },
+          });
+          await observed.writeText(path, content);
+        },
+      },
+    };
   };
   const diff = async (id: string, mode: "current" | "fork_point") => {
     const context = await target(id, "diff");

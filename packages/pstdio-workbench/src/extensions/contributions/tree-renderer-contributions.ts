@@ -116,6 +116,8 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       args: toRecordParams(action.params),
       params: localizeParamSchema(action.input, text, record.extensionId),
       submitLabel: action.submitLabel,
+      copyText: action.copyText,
+      inlineInput: action.inputPresentation ? { ...action.inputPresentation, nodeId: node?.id } : undefined,
       when: action.when,
       disabled: action.disabled,
       // Actions mutate tree data (create/delete/...), so refresh afterwards. Plain
@@ -156,6 +158,8 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       label: text(node.label),
       icon: node.icon,
       iconColor: node.iconColor,
+      fileName: node.fileName,
+      showContextMenuTrigger: node.showContextMenuTrigger,
       badge: node.badge,
       iconTooltip: node.iconTooltip,
       tooltip: node.tooltip,

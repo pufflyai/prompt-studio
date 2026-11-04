@@ -22,7 +22,7 @@ describe("registerWorkspaceResourceActions", () => {
     workbench.registerModule({
       id: "test.workspace-actions",
       activate: (ctx) => {
-        registerWorkspaceResourceActions(ctx);
+        registerWorkspaceResourceActions(ctx, async (_ctx, resource) => resource);
         return undefined;
       },
     });
@@ -57,7 +57,7 @@ describe("registerWorkspaceResourceActions", () => {
     workbench.registerModule({
       id: "test.workspace-actions",
       activate: (ctx) => {
-        registerWorkspaceResourceActions(ctx);
+        registerWorkspaceResourceActions(ctx, async (_ctx, resource) => resource);
         return undefined;
       },
     });
@@ -100,7 +100,7 @@ describe("registerWorkspaceResourceActions", () => {
     workbench.registerModule({
       id: "test.workspace-actions",
       activate: (ctx) => {
-        registerWorkspaceResourceActions(ctx);
+        registerWorkspaceResourceActions(ctx, async (_ctx, resource) => resource);
         return undefined;
       },
     });
@@ -135,7 +135,7 @@ describe("registerWorkspaceResourceActions", () => {
     workbench.registerModule({
       id: "test.workspace-actions",
       activate: (ctx) => {
-        registerWorkspaceResourceActions(ctx);
+        registerWorkspaceResourceActions(ctx, async (_ctx, resource) => resource);
         return undefined;
       },
     });
@@ -159,7 +159,7 @@ test("a target-owned workspace does not offer local terminal or workspace mutati
   workbench.registerModule({
     id: "test.remote-actions",
     activate: (ctx) => {
-      registerWorkspaceResourceActions(ctx);
+      registerWorkspaceResourceActions(ctx, async (_ctx, resource) => resource);
       return undefined;
     },
   });

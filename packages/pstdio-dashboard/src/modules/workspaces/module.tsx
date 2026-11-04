@@ -20,6 +20,7 @@ import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceSummary } from "./components/workspace-summary";
 import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
+import { registerWorkspaceHostActions } from "./workspace-host-actions";
 import { registerWorkspaceSidenavContributions } from "./workspace-navigation";
 import { workspaceRelatedOpenings } from "./workspace-related-openings";
 import { registerWorkspaceResourceActions } from "./workspace-resource-actions";
@@ -258,6 +259,7 @@ export const createWorkspacesModule = () =>
         },
       });
       registerWorkspaceResourceActions(ctx);
+      registerWorkspaceHostActions(ctx);
       registerWorkspaceDataTableView(ctx);
       registerWorkspaceDetailWidgets(ctx);
       registerWorkspacesPage(ctx);

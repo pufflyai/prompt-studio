@@ -6,6 +6,7 @@ import type {
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { readableWorkspaces } from "../../../services/personal-history/queries";
+import { readDeviceWorkspaceCapacity } from "../../workspaces/device-capacity";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
 import { deleteWorkspace } from "../../workspaces/workspace-deletion";
@@ -109,7 +110,7 @@ export const createWorkspacesApi = (
 
   return {
     ...createWorkspacePresentationApi(deps, input),
-    getCapacity: () => read(() => deps.workspaceCapacityService.get()),
+    getCapacity: (options) => read(() => readDeviceWorkspaceCapacity(deps, input, options)),
     updateCapacity: async (value) => {
       input.signal?.throwIfAborted();
       return deps.workspaceCapacityService.update(value);

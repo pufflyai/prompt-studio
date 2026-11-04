@@ -128,6 +128,16 @@ export const workbenchSlots = {
 
 /** Dashboard commands available through a webview's commands.execute capability. */
 export const workbenchCommands = {
+  /** Open the platform terminal for the invocation's authorized local workspace. */
+  openWorkspaceTerminal: commandRef<Record<string, never>, void>({
+    extensionId: "pstdio",
+    id: "dashboard.openWorkspaceTerminal",
+  }),
+  /** Reveal a workspace-relative entry through the desktop host when available. */
+  revealWorkspaceEntry: commandRef<{ path: string }, void>({
+    extensionId: "pstdio",
+    id: "workbench.workspace.revealEntry",
+  }),
   recentResources: commandRef<
     Record<string, never>,
     Array<{ resource: ResourceRef; target: Extract<NavigationTarget, { kind: "page" | "compound" }> }>
