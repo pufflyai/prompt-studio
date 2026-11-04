@@ -29,3 +29,7 @@ Use the `psTheme` Chakra system and package tokens instead of hard-coded visual 
 ## Visual states
 
 Document meaningful states in canvas examples: default, empty, loading, error, disabled, selected, long content, and dense data. Avoid canvas examples that only demonstrate implementation details.
+
+## Visualization colors
+
+Use the shared chart components and `vis.text.primary`, `vis.text.secondary`, `vis.axis`, `vis.grid`, and `vis.categorical.1` through `.7`. These semantic tokens follow the active theme. Use `chartColor` from `@pstdio/ui/charts` when a TanStack mark needs a CSS color value.
