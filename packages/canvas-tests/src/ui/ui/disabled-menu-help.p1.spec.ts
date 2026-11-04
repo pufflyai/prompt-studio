@@ -44,6 +44,20 @@ test("composer readiness keeps a chosen menu explanation focused", async ({ page
   await expect(preview.getByRole("menu")).toHaveCount(0);
 });
 
+test("selecting a menu action hands focus to the composer when it becomes ready", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/rich-text/prompt-input/prompt-input-focus.canvas.tsx#SelectedMenuAction",
+  );
+  await page.frameLocator("[data-verification-host]").locator("[data-canvas-viewport]").press("0");
+  await preview.getByRole("option", { name: "Waiting for input", exact: true }).click({ button: "right" });
+  await preview.getByRole("menuitem", { name: "Rename session", exact: true }).click();
+  const composer = preview.locator('[contenteditable="true"]');
+  await expect(composer).toBeFocused();
+  await page.keyboard.type("Ready to type");
+  await expect(composer).toHaveText("Ready to type");
+});
+
 // A normal pending request must still focus the composer after Unlock; another chosen field keeps focus.
 test("an unlocked composer still receives its pending focus request", async ({ page }) => {
   const preview = await openCanvasPreview(
