@@ -41,6 +41,14 @@ test("ticket resource badges keep keyboard navigation after a linked session is 
       attempt.workspace.workspace_shorthand,
     );
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(ticket.shorthand);
+    const sidenav = page.locator('[data-workbench-region="sidenav"]');
+    await expect(sidenav.getByRole("option", { name: attempt.workspace.workspace_shorthand })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(
+      sidenav.getByRole("option", { name: `${ticket.shorthand} Linked resource navigation`, exact: true }),
+    ).toHaveAttribute("aria-selected", "false");
   } finally {
     if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);
     rmSync(folder, { recursive: true, force: true });
