@@ -10,6 +10,20 @@ const topicKey = (spaceOwner: string | null, topic: string) => JSON.stringify([s
 /** Subscription peer for the publication integration fixture; production routing has separate coverage. */
 export const createDocumentPeerLive = () => {
   const sockets = new Set<Bun.ServerWebSocket<PeerLiveData>>();
+  const following = new Map<Bun.ServerWebSocket<PeerLiveData>, Set<string>>();
+  const presence = (key: string) => {
+    const [spaceOwner, topic] = JSON.parse(key);
+    for (const [socket, topics] of following)
+      if (topics.has(key))
+        socket.send(
+          JSON.stringify({
+            type: "subscribers",
+            spaceOwner,
+            topic,
+            active: [...sockets].some((reader) => reader !== socket && reader.data.topics.has(key)),
+          }),
+        );
+  };
   const topicMessage = (
     socket: Bun.ServerWebSocket<PeerLiveData>,
     message: Extract<LiveClientMessage, { topic: string }>,
@@ -23,10 +37,13 @@ export const createDocumentPeerLive = () => {
       socket.unsubscribe(key);
       socket.data.topics.delete(key);
     }
-    if (message.type === "follow")
-      socket.send(
-        JSON.stringify({ type: "subscribers", spaceOwner: message.spaceOwner, topic: message.topic, active: false }),
-      );
+    if (message.type === "follow") {
+      const topics = following.get(socket) ?? new Set<string>();
+      topics.add(key);
+      following.set(socket, topics);
+    }
+    if (message.type === "unfollow") following.get(socket)?.delete(key);
+    presence(key);
   };
   return {
     subscriptions: () =>
@@ -68,6 +85,8 @@ export const createDocumentPeerLive = () => {
       },
       close(socket: Bun.ServerWebSocket<PeerLiveData>) {
         sockets.delete(socket);
+        following.delete(socket);
+        for (const key of socket.data.topics) presence(key);
       },
     },
   };

@@ -17,10 +17,14 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
   type Update = { index: number; message: SessionMessage; live: boolean };
   const arrived = new Map<number, Update>();
   let wake: (() => void) | undefined;
-  const stop = deps.personalHistoryService.watchMessages(id, (update) => {
-    arrived.set(update.index, update);
-    wake?.();
-  });
+  const stop = deps.personalHistoryService.watchMessages(
+    id,
+    (update) => {
+      arrived.set(update.index, update);
+      wake?.();
+    },
+    projectId,
+  );
   // The session row changes whenever its device changes the queue, so a row event marks the queue
   // for another read. The flag also covers events that arrive while the reader is busy.
   let queueChanged = true;
@@ -46,7 +50,7 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
     await sendQueue();
     let pendingLive: Update | undefined;
     const apply = async ({ index, message, live }: Update) => {
-      if (sink.aborted || !(await deps.personalHistoryService.getSession(id))) return;
+      if (sink.aborted || !(await deps.personalHistoryService.getSession(id, projectId))) return;
       // A streaming preview can be ahead of the last saved message; the saved messages arrive in order.
       if (live && index > messages.length) {
         pendingLive = { index, message, live };
@@ -89,7 +93,7 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
       return await deps.personalHistoryService.messagesReady(id, projectId, version);
     };
     while (!sink.aborted) {
-      if (!(await deps.personalHistoryService.getSession(id))) break;
+      if (!(await deps.personalHistoryService.getSession(id, projectId))) break;
       await flush();
       await sendQueue();
       if (sink.aborted) break;
@@ -103,7 +107,7 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
         if (timedOut) queueChanged = true;
       }
       wake = undefined;
-      session = await deps.personalHistoryService.getSession(id);
+      session = await deps.personalHistoryService.getSession(id, projectId);
     }
   } finally {
     stop();
