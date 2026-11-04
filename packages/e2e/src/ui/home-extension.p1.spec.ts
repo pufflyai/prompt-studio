@@ -9,11 +9,6 @@ const emptyMain = (page: Page) => {
     .or(main.getByText("No tabs available", { exact: true }));
 };
 
-// Finish public-HTTP response injections before Playwright closes their context.
-test.afterEach(async ({ page }) => {
-  await page.unrouteAll({ behavior: "wait" });
-});
-
 test("Home resumes opened resources and public actions without prematurely creating a session", async ({
   page,
   request,
@@ -154,12 +149,17 @@ test("Home keeps setup recovery feedback beside the action", async ({ page, requ
     setupBlocked = false;
     await route.continue();
   });
-  await page.goto(`/projects/${project.id}`);
-  const home = homeFrame(page);
-  await expect(home.getByText("Setup needs recovery", { exact: true })).toBeVisible();
-  await home.getByRole("button", { name: "Retry setup", exact: true }).click();
-  await expect(home.getByText(/Setup temporarily unavailable/)).toBeVisible();
-  await home.getByRole("button", { name: "Retry setup", exact: true }).click();
-  await expect(home.getByRole("button", { name: "Retry setup", exact: true })).toHaveCount(0);
-  expect(retries).toBe(2);
+  try {
+    await page.goto(`/projects/${project.id}`);
+    const home = homeFrame(page);
+    await expect(home.getByText("Setup needs recovery", { exact: true })).toBeVisible();
+    await home.getByRole("button", { name: "Retry setup", exact: true }).click();
+    await expect(home.getByText(/Setup temporarily unavailable/)).toBeVisible();
+    await home.getByRole("button", { name: "Retry setup", exact: true }).click();
+    await expect(home.getByRole("button", { name: "Retry setup", exact: true })).toHaveCount(0);
+    expect(retries).toBe(2);
+  } finally {
+    // Finish response injections before test completion cancels in-flight routes.
+    await page.unrouteAll({ behavior: "wait" });
+  }
 });

@@ -301,7 +301,8 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
     ["K", "Tickets", /\/tickets$/],
     ["A", "Artifacts", /\/artifacts$/],
   ] as const) {
-    await page.goto(`/projects/${project.id}/tickets`);
+    await page.getByRole("option", { name: "Home", exact: true }).click();
+    await (await showSidenavEntry(page, "Tickets")).click();
     await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
