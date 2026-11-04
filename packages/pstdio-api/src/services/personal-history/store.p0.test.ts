@@ -1,7 +1,14 @@
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createMemoryDocumentStore } from "pstdio-sync";
+import { createSessionLogFiles } from "./log-files";
 import { createPersonalHistoryStore } from "./store";
 
+const root = await mkdtemp(join(tmpdir(), "history-store-"));
+afterAll(() => rm(root, { recursive: true, force: true }));
+const files = createSessionLogFiles(root);
 const documents = () => {
   const stores = new Map<string, ReturnType<typeof createMemoryDocumentStore>>();
   return {
@@ -19,7 +26,7 @@ const identity = { projectId: "project", accountId: "alice", managerOrigin: "htt
 const device = { ownerId: "alice", id: "device-a", name: "Laptop" };
 
 test("personal history retains each device's records", async () => {
-  const store = createPersonalHistoryStore({ ...identity, documents: documents() });
+  const store = createPersonalHistoryStore({ ...identity, files, documents: documents() });
   await store.writeRecords("sessions", device, [{ id: "session-a", title: "Private session" }]);
   await store.writeRecords("sessions", { ...device, id: "device-b" }, [{ id: "session-b", title: "Other device" }]);
   await store.writeRecords("sessions", device, []);
@@ -30,10 +37,11 @@ test("personal history retains each device's records", async () => {
 
 test("local personal history is partitioned by account and manager, including after logout", () => {
   const local = documents();
-  const alice = createPersonalHistoryStore({ ...identity, documents: local });
-  const bob = createPersonalHistoryStore({ ...identity, accountId: "bob", documents: local });
+  const alice = createPersonalHistoryStore({ ...identity, files, documents: local });
+  const bob = createPersonalHistoryStore({ ...identity, files, accountId: "bob", documents: local });
   const otherManager = createPersonalHistoryStore({
     ...identity,
+    files,
     managerOrigin: "https://other.example",
     documents: local,
   });

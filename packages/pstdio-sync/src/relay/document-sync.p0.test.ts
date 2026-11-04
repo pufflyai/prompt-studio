@@ -374,6 +374,59 @@ test("sync status counts a changed document without opening its content, includi
   }
 });
 
+test("an unchanged sync pass reads its revision without reopening document content", async () => {
+  const relay = relayFixture();
+  const store = createMemoryDocumentStore();
+  let contentReads = 0;
+  let relayReads = 0;
+  const sync = createDocumentSync({
+    owner,
+    space,
+    documentId,
+    relay: {
+      ...relay.relay,
+      read: async (after) => {
+        relayReads++;
+        return relay.relay.read(after);
+      },
+    },
+    store: {
+      ...store,
+      transaction: async (owner, action) => {
+        contentReads++;
+        return store.transaction(owner, action);
+      },
+    },
+    quarantine: async () => {},
+  });
+  const peer = device(relay.relay);
+  try {
+    await store.transaction(owner, async ({ document }) => document.getMap("values").set("title", "Saved"));
+    await sync.synchronize();
+    contentReads = 0;
+    const before = relayReads;
+    await sync.synchronize();
+    expect(relayReads).toBe(before + 1);
+    expect(contentReads).toBe(0);
+    await store.transaction(owner, async ({ document }) => document.getMap("values").delete("title"));
+    await sync.synchronize();
+    expect(contentReads).toBeGreaterThan(0);
+    await peer.sync.synchronize();
+    await peer.set("remote", "Updated");
+    await peer.sync.synchronize();
+    contentReads = 0;
+    await sync.synchronize();
+    expect(contentReads).toBeGreaterThan(0);
+    expect(await store.transaction(owner, async ({ document }) => document.getMap("values").toJSON())).toEqual({
+      remote: "Updated",
+    });
+    expect(await sync.status()).toMatchObject({ downloaded: true, pending: false });
+  } finally {
+    sync.close();
+    peer.sync.close();
+  }
+});
+
 test("a one-time document download reads encrypted latest state and updates without publishing local edits", async () => {
   const f = relayFixture();
   const online = device(f.relay, { bytes: 1_048_576, updates: 1 });
@@ -683,6 +736,7 @@ test("missing asset bytes keep the first download incomplete and a local draft s
   });
   const files = new Map<string, Uint8Array>();
   let interrupted = true;
+  let downloads = 0;
   const sync = createDocumentSync({
     owner,
     store,
@@ -694,6 +748,7 @@ test("missing asset bytes keep the first download incomplete and a local draft s
       blobs: {
         get: async () => {
           if (interrupted) throw new Error("Asset download interrupted");
+          downloads++;
           return sealed.bytes;
         },
         put: async () => {},
@@ -722,6 +777,12 @@ test("missing asset bytes keep the first download incomplete and a local draft s
     expect(await store.transaction(owner, async ({ document }) => document.getMap("values").get("draft"))).toBe(
       "offline edit",
     );
+    const revision = await store.revision();
+    files.clear();
+    await sync.synchronize();
+    expect(files.get(asset.sha256)).toEqual(bytes);
+    expect(downloads).toBe(2);
+    expect(await store.revision()).toBe(revision);
   } finally {
     sync.close();
     remote.destroy();

@@ -51,13 +51,18 @@ export const createLogPublisher = (input: {
     "sessionService" | "fileService" | "harnessRegistry" | "workspaceSessionService" | "personalHistoryService"
   >;
   /** Reports a log's relay position. It is also saved with the publish, so a restart reports it again. */
+  interested?: (id: string) => boolean;
   published: (sessionId: string, head: number, completedVersion?: string) => void;
 }) => {
   const { files, namespace, deps } = input;
   // The message objects last compared. A live conversation keeps unchanged messages as the same objects.
   const compared = new WeakMap<SessionMessage, string>();
   const published = new Map<string, Awaited<ReturnType<SessionLogFiles["readPublished"]>>>();
-  const live = createLivePublisher({ deviceId: input.deviceId, sessions: deps.sessionService.store });
+  const live = createLivePublisher({
+    deviceId: input.deviceId,
+    sessions: deps.sessionService.store,
+    interested: input.interested,
+  });
 
   const reportHead = (sessionId: string, session: Parameters<typeof sessionLogVersion>[0], head = 0) => {
     const version = session.status === "in_progress" ? undefined : sessionLogVersion(session);
@@ -73,7 +78,7 @@ export const createLogPublisher = (input: {
     const session = await deps.sessionService.get(sessionId);
     if (!session) return;
     const saved = published.get(sessionId) ?? (await files.readPublished(namespace, sessionId));
-    // A status transition can share the previous timestamp and make the final message durable.
+    // Saving a conversation changes `updated_at`, so an equal value means nothing new to load.
     if (skipUnchanged && saved.status === session.status && saved.updatedAt === session.updated_at) {
       reportHead(sessionId, session, saved.head);
       return false;
@@ -88,6 +93,10 @@ export const createLogPublisher = (input: {
       const target = relay(documentId);
       for (const batch of batchLines(lines)) head = (await publishLogUpdate(space, documentId, target, batch)).sequence;
     }
+    if (!lines.length && saved.status === session.status && saved.updatedAt === session.updated_at) {
+      published.set(sessionId, saved);
+      return;
+    }
     const record = {
       updatedAt: session.updated_at,
       status: session.status,
@@ -99,6 +108,18 @@ export const createLogPublisher = (input: {
     published.set(sessionId, record);
   };
 
+  const publishing = new Map<string, Promise<unknown>>();
+  const publish = (id: string, space: SyncSpace, relay: (id: string) => DocumentRelay, skip: boolean) => {
+    const previous = publishing.get(id) ?? Promise.resolve();
+    const work = previous.catch(() => {}).then(() => publishOne(id, space, relay, skip));
+    publishing.set(id, work);
+    void work
+      .finally(() => {
+        if (publishing.get(id) === work) publishing.delete(id);
+      })
+      .catch(() => {});
+    return work;
+  };
   return {
     /**
      * Publishes the messages of these sessions that are complete and not published yet. With `skipUnchanged`,
@@ -110,10 +131,11 @@ export const createLogPublisher = (input: {
       relay: (documentId: string) => DocumentRelay,
       options: { skipUnchanged?: boolean } = {},
     ) {
-      for (const sessionId of sessionIds) await publishOne(sessionId, space, relay, options.skipUnchanged ?? false);
+      for (const sessionId of sessionIds) await publish(sessionId, space, relay, options.skipUnchanged ?? false);
     },
     prepare: live.prepare,
     live: live.live,
+    finishLive: live.finish,
     close: live.close,
   };
 };

@@ -35,6 +35,7 @@ test("rebinding to Bob does not send Alice-owned local previews into Bob's priva
         accountId,
         managerOrigin: peer.origin,
         documents: source.deps.extensionStorageService.documents,
+        files: source.deps.personalHistoryService.logs,
       });
     const aliceHistory = history("alice");
     await capturePersonalHistory({
@@ -57,7 +58,7 @@ test("rebinding to Bob does not send Alice-owned local previews into Bob's priva
       spaceOwner: "bob",
       keys: [{ generation: 1, secret: "B".repeat(43) }],
     });
-    const topic = await personalLiveTopic(bobSpace);
+    const topic = await personalLiveTopic(bobSpace, bobSession.id);
     const frames: { sessionId: string; text: string; end: boolean }[] = [];
     observer = createLiveConnection({
       origin: peer.origin,
@@ -72,6 +73,7 @@ test("rebinding to Bob does not send Alice-owned local previews into Bob's priva
         });
     });
     observer.subscribe({ spaceOwner: "bob", topic });
+    observer.subscribe({ spaceOwner: "bob", topic: await personalLiveTopic(bobSpace, aliceSession.id) });
     await until(() =>
       peer
         .subscriptions()
