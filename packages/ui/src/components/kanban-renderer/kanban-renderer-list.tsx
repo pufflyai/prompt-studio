@@ -15,6 +15,9 @@ export interface KanbanRendererListItem {
   /** Search text to mark in the title and eyebrow. */
   highlight?: string;
   isGroup?: boolean;
+  note?: string;
+  onCreate?: () => void;
+  expandOnClick?: boolean;
   countBadge?: number;
   countColorPalette?: string;
   statusIcon?: ComponentType<{ size?: number | string }>;
