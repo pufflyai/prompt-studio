@@ -178,6 +178,23 @@ drains the final witness before reconnecting the third device. Independent recei
 enrollment runs concurrently. Every admitted error is retained; no workload or
 allowance is removed. Local and Linux results for this revision remain separate.
 
+At `5bd9127ed0f0698af99eb8338a17906ef846e4fe`, both affected packaged scenarios pass
+locally (1.3 minutes for the file) and Linux CI 41845110124 completes successfully.
+The original record-stream regression also passes with the exact PS-1064 prerequisite.
+These are controlled-peer results, not deployed/hosted or full phase 1 acceptance.
+
+The original default `verify:packages` run at PS-1064's candidate fails its existing
+device-command scenario while waiting for private history. A focused baseline probe
+proves its manager wrapper substitutes a fake bearer rejected by the delivered
+strict identity fixture (HTTP 403). The existing correction belongs to
+[PR #1741](https://github.com/pufflyai/prompt-studio/pull/1741), head
+`43e9209e4`; this preparation imports only its `packaged-device-commands.fixture.ts`
+blob `fa9614ffdb020c7f976d68eb2350a659bd9aaf6b` and maintained identity regression.
+The focused integrated check passes 20 assertions. No PS-827 product code is imported.
+Preserve the original package failure and RP-430's exact baseline RED; the focused
+GREEN is not a replacement for running the default package command on a qualified
+candidate. Keep separately owned enhanced remote-session failures visible as well.
+
 ## Focused preparation and final candidate commands
 
 Run from the repository root, except where a subshell changes to the owning package.
