@@ -35,8 +35,9 @@ For each run, save the following under the `filesPath` returned by
 The historical initial preparation workspace contained submitted PS-776
 `d4da8b532dc39b0c073cd8a6246650fbd02f9fb3`. This makes its public text APIs available;
 its presence alone did not establish delivery or deployment. PS-776 PRs #1718 and
-#1736 have since merged. The resumed preparation branch incorporates current main
-`0f5974665734db4a88bfea12e73ec93b6030c696`; record the final harness HEAD separately.
+#1736 have since merged. The initial resumed candidate incorporated main
+`0f5974665734db4a88bfea12e73ec93b6030c696`; the later rebase incorporates
+`c7ed8acad`, including delivered PRs #1735 and #1745. Record the final harness HEAD separately.
 Inspect current branches again before final acceptance. Leave other workspaces,
 tickets and managed attempts alone.
 
@@ -194,6 +195,14 @@ The focused integrated check passes 20 assertions. No PS-827 product code is imp
 Preserve the original package failure and RP-430's exact baseline RED; the focused
 GREEN is not a replacement for running the default package command on a qualified
 candidate. Keep separately owned enhanced remote-session failures visible as well.
+
+PR #1745 subsequently delivered the history authentication correction on main
+`c7ed8acad`. Rebase conflicts are resolved by preserving issued-token/live identity
+behavior and both the delivered private-history scope regression and the additional
+live identity regression (two cases, 27 assertions). Do not drop either test or
+reclassify the original 403/timeouts as passes. The separate production repair patch
+from `c723c17be` remains unchanged; its rebased integration SHA differs, so compare
+the production source blobs as well as recording the original PR #1748 identity.
 
 ## Focused preparation and final candidate commands
 
