@@ -36,8 +36,8 @@ export const SettingsActions = (props: SettingsChanges) => {
   };
   if (!props.dirty) return null;
   return (
-    <Stack gap="xs" align="end">
-      <HStack gap="sm">
+    <Stack gap="xs" align="end" minW="0" maxW="full">
+      <HStack gap="sm" flexShrink="0">
         <Button
           size="sm"
           variant="ghost"
@@ -59,7 +59,7 @@ export const SettingsActions = (props: SettingsChanges) => {
         </Button>
       </HStack>
       {error ? (
-        <Text role="alert" color="fg.error" textStyle="paragraph/S/regular">
+        <Text role="alert" color="fg.error" textStyle="paragraph/S/regular" w="full" maxW="sm" overflowWrap="anywhere">
           {error}
         </Text>
       ) : null}
@@ -70,6 +70,7 @@ export const SettingsPage = (props: SettingsPageProps) => (
   <Stack h="full" minH="0" gap="0" minW="0" w="full">
     <Stack
       as="header"
+      flexShrink="0"
       gap="sm"
       p="lg"
       pb="md"
@@ -77,12 +78,14 @@ export const SettingsPage = (props: SettingsPageProps) => (
       w="full"
       mx="auto"
     >
-      <HStack justify="space-between" gap="sm" flexWrap="wrap">
-        <HStack as="h1" gap="sm" textStyle="heading/S">
+      <HStack justify="space-between" gap="sm" minH="8" minW="0">
+        <HStack as="h1" gap="sm" textStyle="heading/S" flex="1" minW="0">
           {props.icon}
-          <Text as="span">{props.title}</Text>
+          <Text as="span" truncate>
+            {props.title}
+          </Text>
         </HStack>
-        <HStack gap="sm">
+        <HStack gap="sm" flexShrink="0" minW="0" maxW="full">
           {props.changes ? <SettingsActions {...props.changes} /> : null}
           {props.headerActions}
         </HStack>
