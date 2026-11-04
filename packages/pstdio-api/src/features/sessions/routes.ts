@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
+import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import type { SessionsRouteDeps } from "./deps";
 import { approveSessionHandler, approveSessionRoute } from "./endpoints/approve-session";
@@ -57,7 +58,7 @@ import { steerSessionHandler, steerSessionRoute } from "./endpoints/steer-sessio
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
 import { createSessionStreamConnections } from "./session-stream-connections";
 
-export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDeps) => {
+export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDeps & Pick<RouteDeps, "textEditing">) => {
   const routes = new OpenAPIHono<AppBindings>();
   routes.openapi(querySessionsRoute, querySessionsHandler(deps));
   const streamConnections = createSessionStreamConnections();

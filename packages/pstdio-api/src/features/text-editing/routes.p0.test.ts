@@ -1,9 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
-import { OpenAPIHono } from "@hono/zod-openapi";
 import { createClient } from "@pstdio/sdk/client";
 import { createTextEditingClient } from "@pstdio/sdk/extensions";
 import { selected, textEditingFixture } from "../../services/text-editing/text-editing.test-fixture";
-import { createTextEditingRoutes } from "./routes";
+import { createTextStreamTestApp } from "./stream.test-utils";
 
 const fixtures: Awaited<ReturnType<typeof textEditingFixture>>[] = [];
 afterEach(async () => {
@@ -12,8 +11,7 @@ afterEach(async () => {
 test("the authenticated client edits through the same selected source admission and durable session", async () => {
   const fixture = await textEditingFixture();
   fixtures.push(fixture);
-  const app = new OpenAPIHono();
-  app.route("/v1", createTextEditingRoutes(fixture.text));
+  const app = createTextStreamTestApp(fixture.text);
   const client = createClient({
     baseUrl: "http://localhost",
     fetch: ((url, options) => app.request(new Request(url, options))) as typeof fetch,
@@ -44,8 +42,7 @@ test("the authenticated client edits through the same selected source admission 
 test("an authenticated agent can resolve a provider without a file presentation", async () => {
   const fixture = await textEditingFixture();
   fixtures.push(fixture);
-  const app = new OpenAPIHono();
-  app.route("/v1", createTextEditingRoutes(fixture.text));
+  const app = createTextStreamTestApp(fixture.text);
   const client = createClient({
     baseUrl: "http://localhost",
     fetch: ((url, options) => app.request(new Request(url, options))) as typeof fetch,

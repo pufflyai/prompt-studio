@@ -115,11 +115,13 @@ test.each([
     if (pendingPreview) listener!({ index: 1, message: message("older-preview"), live: true });
     listener!({ index: 0, message: message("earlier-completed"), live: false });
     await blocked.promise;
+    for (let index = 0; index < 100; index++) listener!({ index: 1, message: message(`intermediate-${index}`), live });
     listener!({ index: 1, message: message("newer-message"), live });
     row.status = "completed";
     release.resolve();
     await running;
     expect(finalWrites.at(-1)).toEqual(message("newer-message"));
+    expect(finalWrites).toHaveLength(1);
   } finally {
     controller.abort();
     release.resolve();

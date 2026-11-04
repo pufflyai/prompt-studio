@@ -60,7 +60,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     automation: createAutomationClient(request),
     notifications: createNotificationsClient(request),
     nativeDocuments: createNativeDocumentsClient(request),
-    textEditing: createTextTransportClient(request),
+    textEditing: createTextTransportClient(request, streams),
     extensions: createExtensionClient(request, streams),
     settings: createSettingsClient(request),
     linkIcons: createLinkIconsClient(request),

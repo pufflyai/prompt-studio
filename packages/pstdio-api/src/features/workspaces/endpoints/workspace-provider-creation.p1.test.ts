@@ -84,7 +84,12 @@ beforeAll(async () => {
           };
         },
       },
-      workspaceProviderRuntime: { find: async () => ({ context: {} as never, provider: cloudProvider }) },
+      workspaceProviderRuntime: {
+        find: async (_deps, input) =>
+          cloudAvailable && input.providerId === "example.cloud"
+            ? { context: {} as never, provider: cloudProvider }
+            : undefined,
+      },
     }),
   );
 });
@@ -190,6 +195,19 @@ const postWorkspace = (projectId: string, providerId: string, params = {}) =>
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ project_id: projectId, provider_id: providerId, params }),
   });
+
+test.each([
+  "nope",
+  "git-worktree",
+])("rejects unavailable provider %s without saving a workspace", async (providerId) => {
+  const project = await createProject();
+  const before = await handle.deps.workspaceService.list(project.id);
+  const response = await postWorkspace(project.id, providerId);
+
+  expect(response.status).toBe(400);
+  expect((await response.json()).error).toContain(providerId);
+  expect(await handle.deps.workspaceService.list(project.id)).toEqual(before);
+});
 
 const gitProject = async () => {
   const folder = await mkdtemp(join(root, "params-"));

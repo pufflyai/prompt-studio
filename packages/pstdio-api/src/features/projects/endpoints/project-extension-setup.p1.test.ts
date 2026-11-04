@@ -192,12 +192,28 @@ test("retries failed default extension setup without replacing the project or en
 });
 
 test("remote project creation retains extension setup failures on its initial workspace", async () => {
-  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([await extension("broken-fixture", true)]);
-  const response = await open({ provider_id: "example.remote", params: {} });
+  const remote = await extension("remote-fixture");
+  await writeFile(
+    join(remote.source, "extension.ts"),
+    `const ready = (providerRef) => ({
+      state: "ready", executionKind: "remote", providerRef,
+      capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true },
+    });
+    export default { workspaceTypes: [{
+      id: "remote", ref: { kind: "workspace-type", id: "remote" }, label: "Remote",
+      create: (_ctx, input) => ready({ version: 1, data: { remoteId: input.workspaceId } }),
+      resolve: (_ctx, input) => ready(input.providerRef),
+    }] };`,
+  );
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([remote, await extension("broken-fixture", true)]);
+  const providerId = "example.remote-fixture.workspace-type.remote";
+  const response = await open({ provider_id: providerId, params: {} });
   expect(response.status).toBe(201);
   const project = await response.json();
   expect(project.extension_warnings).toHaveLength(1);
-  expect((await handle.deps.workspaceService.getDefault(project.id))?.setup_error).toContain("missing-dependency");
+  const workspace = await handle.deps.workspaceService.getDefault(project.id);
+  expect(workspace).toMatchObject({ provider_id: providerId, provider_state: "ready", execution_kind: "remote" });
+  expect(workspace?.setup_error).toContain("missing-dependency");
   expect(await handle.deps.projectService.get(project.id)).not.toBeNull();
 });
 

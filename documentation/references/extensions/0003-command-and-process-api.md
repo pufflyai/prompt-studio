@@ -420,6 +420,35 @@ Native-history harnesses must implement `recoverMessages(ctx, { knownMessages, n
 
 Every harness event sink now provides `getMessages()`. Full-snapshot providers must read it after asynchronous polling and compose any harness-generated metadata before synchronously publishing the replacement. Root replacements remain authoritative. When a snapshot cannot be composed safely, a provider must leave the readable messages unchanged.
 
+### Bounded tool results on main
+
+The host limits each tool result to 256 KiB of serialized UTF-8, including output,
+error details, returned metadata, and shortening metadata. Inputs, ordinary text,
+and reasoning are unchanged. Oversized results retain their start and end with an
+omitted-byte note. Structured results become text summaries. Saved and synced
+conversations retain this bounded view; the host does not archive the discarded middle.
+
+Use `normalizeToolResult` or `normalizeMessageResults` before retaining native
+results in a harness. `createToolOutputBuffer()` keeps bounded streaming text;
+call `append(delta)` and read `result()` for the current `output` and optional
+`resultSummary`. `appendJson(value)` retains the serialized view without allocating
+a complete second JSON string. Small values keep their original type when normalized.
+
+`ToolResultSummary` is versioned and carries original byte counts and fingerprints.
+Keep it with the result. Never infer shortening from the visible omission text.
+`toolOutputFingerprint(part)` compares the original output even after shortening;
+for results with `returnDisplay`, it compares that display view. The host applies
+`projectToolResultRecovery` to checkpoints and native history before calling recovery,
+preserving saved summaries across allowance changes and recovering native-only tails.
+
+`publishConversationChanges(sink, messages)` publishes indexed additions,
+replacements, and deletions from an authoritative normalized snapshot. Compose
+host metadata first and then call it synchronously. Unchanged messages are not
+republished. It does not remove a provider's full-history polling or normalization cost.
+
+These additive helpers and metadata share the planned extension API 0.3.1 release.
+Publish the SDK and matching host before extensions adopt them.
+
 Renderer read callbacks receive an AbortSignal. Forward it through command execution and all child I/O, and do not resolve a load before its children settle. Native renderers declare their refresh dependencies explicitly with extension events and the public `viewDataEvents` references. The host no longer reloads every extension view on unrelated sync changes.
 
 ### Changes in 1.0.0-alpha.14
@@ -497,6 +526,8 @@ The dashboard previews the change in navigation, tabs, and breadcrumbs while the
 | `ctx.sessions.uploadAttachment({ name, data, mimeType? })` | Uploads supported attachment bytes. Returns the canonical attachment fields, including `fileId`. The same type and size limits apply as in the app. |
 | `ctx.sessions.readAttachment(fileId)` | Reads attachment bytes from this project. |
 | `ctx.sessions.deleteAttachment(fileId)` | Deletes an unsubmitted attachment; submitted or in-flight files are kept. |
+
+Conversation patches may replace all `/messages` or update an individual `/messages/<index>`. While a stream callback is busy, pending conversation changes are coalesced into a current `/messages` snapshot. Apply each patch to the conversation instead of waiting for a particular indexed patch.
 
 Streams and resource retention are released when the invoking command ends or is cancelled. Closing a stream or retention handle does not stop the agent session. A webview can forward stream events through a command declared with `streamOf`, using `await ctx.stream.write(event)` in the callback. See [command streams](#stream-command-output).
 
