@@ -19,6 +19,13 @@ test("open parent and child resources, collapse groups and hide children", async
     "packages/ui/src/components/kanban-renderer/resource-list-renderer.canvas.tsx#GroupedAndNested",
   );
   const parent = preview.getByRole("option", { name: "Improve search", exact: true });
+  const add = preview.getByRole("button", { name: "Add to This device", exact: true });
+  await add.focus();
+  await page.keyboard.press("Enter");
+  await expect(preview.getByRole("dialog", { name: "New resource" })).toBeVisible();
+  await preview.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(preview.getByRole("dialog", { name: "New resource" })).toBeHidden();
+  await expect(parent).toHaveAttribute("aria-selected", "true");
   await parent.focus();
   await page.keyboard.press("Enter");
   await expect(preview.getByText("Opened Improve search", { exact: false })).toBeVisible();
@@ -26,6 +33,11 @@ test("open parent and child resources, collapse groups and hide children", async
   await child.focus();
   await page.keyboard.press("Enter");
   await expect(preview.getByText("Opened Check search results", { exact: false })).toBeVisible();
+  await parent.getByRole("button", { name: "Collapse group" }).click();
+  await expect(child).toBeHidden();
+  await expect(parent).toBeVisible();
+  await parent.getByRole("button", { name: "Expand group" }).click();
+  await expect(child).toBeVisible();
   await preview.getByRole("option").filter({ hasText: "This device" }).first().click();
   await expect(child).toBeHidden();
   await preview.getByRole("option").filter({ hasText: "This device" }).first().click();

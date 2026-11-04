@@ -14,6 +14,7 @@ export const GroupedAndNested = () => {
       </Text>
       <ResourceListRenderer
         storageKey="resource-list-grouped-preview"
+        selectedRowId="group::local"
         attributes={[
           {
             id: "device",
@@ -38,7 +39,7 @@ export const GroupedAndNested = () => {
         }}
         rows={[
           {
-            id: "workspace",
+            id: "group::local",
             title: "Improve search",
             icon: "folder-git-2",
             attributes: { id: "WS-12", device: "local", date: "2026-10-12" },

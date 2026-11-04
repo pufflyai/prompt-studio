@@ -59,8 +59,10 @@ test("children nest once and collapse independently from their group", () => {
     ["Build box", 0],
     ["Beta", 1],
   ]);
-  expect(flattenKanbanRendererListItems(items, { a: false }).map((row) => row.item.title)).not.toContain("Session");
-  expect(flattenKanbanRendererListItems(items, { "group::local": false }).map((row) => row.item.title)).not.toContain(
+  expect(
+    flattenKanbanRendererListItems(items, { [items[0].children![0].id]: false }).map((row) => row.item.title),
+  ).not.toContain("Session");
+  expect(flattenKanbanRendererListItems(items, { [items[0].id]: false }).map((row) => row.item.title)).not.toContain(
     "Alpha",
   );
 });
@@ -136,4 +138,43 @@ test("group headers do not count as search results", () => {
   expect(items).toHaveLength(2);
   expect(countResourceListRows(items)).toBe(0);
   expect(countResourceListRows(build())).toBe(2);
+});
+
+test("resource IDs that resemble generated groups collapse independently and retain callback IDs", () => {
+  const opened: string[] = [];
+  const changed: string[] = [];
+  const items = buildResourceListItems({
+    rows: [
+      {
+        id: "group::local",
+        title: "Parent",
+        attributes: { device: "local" },
+        children: [{ id: '["group","local"]', title: "Child", attributes: {} }],
+      },
+    ],
+    attributes,
+    settings: resourceListSettings({ columnGrouping: "device" }),
+    filter: { conjunction: "and", rules: [] },
+    sorts: [],
+    search: "",
+    onRowClick: (row) => {
+      opened.push(row.id);
+    },
+    onAttributeChange: (id) => {
+      changed.push(id);
+    },
+  });
+  const parent = items[0].children![0];
+  expect(flattenKanbanRendererListItems(items, { [parent.id]: false }).map((row) => row.item.title)).toEqual([
+    "This device",
+    "Parent",
+  ]);
+  expect(flattenKanbanRendererListItems(items, { [items[0].id]: false }).map((row) => row.item.title)).toEqual([
+    "This device",
+  ]);
+  expect(new Set(flattenKanbanRendererListItems(items, {}).map((row) => row.id)).size).toBe(3);
+  parent.onClick?.();
+  parent.onBadgeChange?.("device", "remote");
+  expect(opened).toEqual(["group::local"]);
+  expect(changed).toEqual(["group::local"]);
 });
