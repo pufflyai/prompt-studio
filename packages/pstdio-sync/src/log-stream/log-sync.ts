@@ -17,8 +17,9 @@ export const createLogStreamSync = (input: LogSyncInput) => {
       const state = await openLogState(space, documentId, relay, first.state);
       const { blobs } = await connect();
       let published = false;
+      const through = await store.pendingThrough();
       while (true) {
-        const pending = await store.pending(100);
+        const pending = await store.pending(100, through);
         if (!pending.length) break;
         const delivery = await prepare(pending);
         for (const blob of delivery.blobs) await blobs.put(blob.blobId, decodeBytes(blob.bytes), blob.children);

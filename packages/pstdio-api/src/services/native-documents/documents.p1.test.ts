@@ -87,7 +87,7 @@ const setup = () => {
     }),
   };
 };
-const target = { fileRendererId: "example.context.view.document", resource: undefined };
+const target = { fileRendererId: "example.context.view.document", resource: undefined, pageParams: undefined };
 const open = (service: ReturnType<typeof createNativeDocumentService>) =>
   service.open({ ...target, projectId: storage.projectAId });
 

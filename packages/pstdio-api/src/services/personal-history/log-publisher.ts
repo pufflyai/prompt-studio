@@ -47,6 +47,7 @@ export const createLogPublisher = (input: {
   namespace: string;
   deviceId: string;
   streams: PersonalLogStreams;
+  interested?: (id: string) => boolean;
   deps: Pick<
     ExtensionsRouteDeps,
     "sessionService" | "fileService" | "harnessRegistry" | "workspaceSessionService" | "personalHistoryService"
@@ -58,7 +59,11 @@ export const createLogPublisher = (input: {
   // The message objects last compared. A live conversation keeps unchanged messages as the same objects.
   const compared = new WeakMap<SessionMessage, string>();
   const published = new Map<string, Awaited<ReturnType<SessionLogFiles["readPublished"]>>>();
-  const live = createLivePublisher({ deviceId: input.deviceId, sessions: deps.sessionService.store });
+  const live = createLivePublisher({
+    deviceId: input.deviceId,
+    sessions: deps.sessionService.store,
+    interested: input.interested,
+  });
 
   const reportHead = (
     sessionId: string,
@@ -115,6 +120,10 @@ export const createLogPublisher = (input: {
     );
     let head = saved.format ? saved.head : 0;
     if (lines.length) head = await publishLines(sessionId, space, relay, lines, saved);
+    if (!lines.length && !saved.pending && saved.status === session.status && saved.updatedAt === session.updated_at) {
+      published.set(sessionId, saved);
+      return;
+    }
     const record = {
       updatedAt: session.updated_at,
       status: session.status,
@@ -127,6 +136,18 @@ export const createLogPublisher = (input: {
     published.set(sessionId, record);
   };
 
+  const publishing = new Map<string, Promise<unknown>>();
+  const publish = (id: string, space: SyncSpace, relay: (id: string) => DocumentRelay, skip: boolean) => {
+    const previous = publishing.get(id) ?? Promise.resolve();
+    const work = previous.catch(() => {}).then(() => publishOne(id, space, relay, skip));
+    publishing.set(id, work);
+    void work
+      .finally(() => {
+        if (publishing.get(id) === work) publishing.delete(id);
+      })
+      .catch(() => {});
+    return work;
+  };
   return {
     /**
      * Publishes the messages of these sessions that are complete and not published yet. With `skipUnchanged`,
@@ -138,10 +159,11 @@ export const createLogPublisher = (input: {
       relay: (documentId: string) => DocumentRelay,
       options: { skipUnchanged?: boolean } = {},
     ) {
-      for (const sessionId of sessionIds) await publishOne(sessionId, space, relay, options.skipUnchanged ?? false);
+      for (const sessionId of sessionIds) await publish(sessionId, space, relay, options.skipUnchanged ?? false);
     },
     prepare: live.prepare,
     live: live.live,
+    finishLive: live.finish,
     close: live.close,
   };
 };

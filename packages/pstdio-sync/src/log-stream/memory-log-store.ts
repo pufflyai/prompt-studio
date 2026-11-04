@@ -5,8 +5,8 @@ import {
   type StorageLogEntry,
   type StorageLogRead,
 } from "pstdio-sync-contracts";
-import { decodeLogCursor, encodeLogCursor, logBatchEnd, logPageLimit } from "./log-cursor";
 import type { LogDelivery, LogReceivedBatch, LogStreamStore } from "./log-types";
+import { planMemoryLog } from "./memory-log-plan";
 
 interface Row {
   entry: StorageLogEntry;
@@ -131,41 +131,45 @@ export const createMemoryLogStore = (input: {
         return structuredClone(entry);
       });
     },
-    async read(options: StorageLogRead = {}) {
+    async plan(options: StorageLogRead = {}) {
       await writing;
-      const cursor = decodeLogCursor(input.address, options.after);
-      const limit = logPageLimit(options.limit);
-      const pending = live()
-        .filter((row) => row.local && row.sequence === null && (options.newest || row.localSequence > cursor.local))
-        .sort((a, b) => a.localSequence - b.localSequence);
-      const ordered = canonical()
-        .filter(
-          (row) =>
-            options.newest ||
-            row.sequence! > cursor.relay ||
-            (row.sequence === cursor.relay && row.index > cursor.index),
-        )
-        .filter((row) => options.newest || !row.local || row.localSequence > cursor.local);
-      const all = [...ordered, ...pending];
-      const selected = options.newest ? all.slice(-limit) : all.slice(0, limit);
-      const next = { ...cursor };
-      for (const row of selected) {
-        if (row.sequence !== null) {
-          next.relay = row.sequence;
-          next.index = row.index;
-        } else next.local = row.localSequence;
-      }
-      const more = !options.newest && all.length > limit;
-      if (!more && (options.newest || completeThrough >= head)) {
-        next.relay = head;
-        next.index = logBatchEnd;
-      }
-      return { entries: selected.map((row) => structuredClone(row.entry)), cursor: encodeLogCursor(next), more };
+      return planMemoryLog({ address: input.address, rows: live(), head, completeThrough, cutoff }, options);
     },
-    async pending(limit) {
+    async lookupMetadata(ids) {
+      await writing;
+      return ids.flatMap((id) => {
+        const row = rows.get(id);
+        return row
+          ? [
+              {
+                id,
+                writerId: row.entry.writerId,
+                createdAt: row.entry.createdAt,
+                sequence: row.sequence,
+                index: row.index,
+                localSequence: row.localSequence,
+                local: row.local,
+              },
+            ]
+          : [];
+      });
+    },
+    async read(options: StorageLogRead = {}) {
+      const page = await store.plan!(options);
+      return {
+        entries: await page.materialize(page.entries.map((entry) => entry.id)),
+        cursor: page.cursor,
+        more: page.more,
+      };
+    },
+    async pendingThrough() {
+      await writing;
+      return local;
+    },
+    async pending(limit, through = Number.MAX_SAFE_INTEGER) {
       await writing;
       return live()
-        .filter((row) => row.local && row.sequence === null)
+        .filter((row) => row.local && row.sequence === null && row.localSequence <= through)
         .sort((a, b) => a.localSequence - b.localSequence)
         .slice(0, limit)
         .map((row) => ({ entry: structuredClone(row.entry), delivery: structuredClone(row.delivery) }));

@@ -507,6 +507,7 @@
         "pstdio-notes": "workspace:*",
         "pstdio-performance": "workspace:*",
         "pstdio-planner": "workspace:*",
+        "pstdio-relay": "workspace:*",
         "pstdio-reports": "workspace:*",
         "pstdio-scripts": "workspace:*",
         "pstdio-skills": "workspace:*",
@@ -669,6 +670,7 @@
         "zod": "^4.3.6",
       },
       "devDependencies": {
+        "@pstdio/sdk": "workspace:*",
         "@types/bun": "1.4.4",
         "@types/pg": "^8.18.0",
         "drizzle-kit": "^0.31.9",

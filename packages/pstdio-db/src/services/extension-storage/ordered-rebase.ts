@@ -1,5 +1,6 @@
 import type { StorageOwner } from "pstdio-sync";
 import {
+  coreOwnerId,
   type OrderedAdmission,
   type OrderedDecision,
   type OrderedOperation,
@@ -8,7 +9,9 @@ import {
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { canProjectOrderedNumbers } from "./ordered-number-canonical";
+import type { OrderedNumberRepair } from "./ordered-number-limits";
 import { projectWithOrderedNumberPolicy } from "./ordered-number-overlay";
+import { createOrderedNumberAccounting } from "./ordered-number-overlay-limits";
 import { markOrderedNumberProjectionCurrent, projectPendingNumberRecords } from "./ordered-number-projection";
 import { pendingOrderedOperations } from "./ordered-pending";
 import { projectBoundedOrderedOperation } from "./ordered-policy";
@@ -84,6 +87,7 @@ const projectPending = async (
 ) => {
   const ids = await pendingClosure(journal, changed);
   const views = await journal.canonical(ids);
+  const numberAccounting = owner.extensionId === coreOwnerId ? createOrderedNumberAccounting(views) : undefined;
   const suppressed = new Set(blocked);
   for await (const { operation, requestFingerprint } of pendingOrderedOperations(journal, ids)) {
     if (suppressed.has(operation.operationId)) continue;
@@ -101,9 +105,15 @@ const projectPending = async (
     if (!records.length) suppressed.add(operation.operationId);
     const projected = await projectPendingNumberRecords(tx, owner, views, records, operation);
     if (!projected.matches) suppressed.add(operation.operationId);
+    numberAccounting?.add(projected.records);
     for (const record of projected.records) views.set(record.recordId, record);
   }
-  return { ids, views };
+  return {
+    ids,
+    views,
+    suppressed,
+    validateNumbers: (repairs: OrderedNumberRepair[]) => numberAccounting?.validate(repairs),
+  };
 };
 
 /** Expand atomic-group membership before replaying bounded pending pages in authored order. */
@@ -113,8 +123,12 @@ export const rebaseOrderedProjection = async (
   owner: StorageOwner,
   changed: string[],
 ) => {
-  const { ids, views, events } = await projectWithOrderedNumberPolicy(journal, tx, owner, changed, (ids, blocked) =>
-    projectPending(journal, tx, owner, ids, blocked),
+  const { ids, views, events, suppressed } = await projectWithOrderedNumberPolicy(
+    journal,
+    tx,
+    owner,
+    changed,
+    (ids, blocked) => projectPending(journal, tx, owner, ids, blocked),
   );
   const removed = await removeOrderedProjection(
     tx,
@@ -123,5 +137,5 @@ export const rebaseOrderedProjection = async (
   );
   const saved = await publishOrderedProjection(tx, owner, [...views.values()]);
   await markOrderedNumberProjectionCurrent(tx, owner);
-  return { ...saved, projected: saved.projected + removed, views, events };
+  return { ...saved, projected: saved.projected + removed, views, events, suppressed };
 };

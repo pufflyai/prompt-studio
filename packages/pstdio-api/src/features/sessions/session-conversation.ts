@@ -30,7 +30,7 @@ const applyMessagePatch = (messages: SessionMessage[], patch: JsonPatch) => {
 export const createSessionConversation = (
   events: EventStore & { close(): void },
   initialMessages: SessionMessage[] = [],
-  changed?: () => void,
+  changed?: (patch: JsonPatch) => void,
 ) => {
   let messages = initialMessages.map(normalizeMessageResults);
   let closed = false;
@@ -43,7 +43,7 @@ export const createSessionConversation = (
       patch = normalizePatch(patch);
       messages = applyMessagePatch(messages, patch);
       events.push(patch);
-      changed?.();
+      changed?.(patch);
     },
     getMessages: () => [...messages],
     get messageCount() {

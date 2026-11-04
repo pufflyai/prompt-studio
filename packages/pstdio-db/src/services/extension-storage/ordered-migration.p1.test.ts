@@ -43,3 +43,24 @@ test("legacy migration retains deleted values and explicit native field history 
   expect((await records.read("ticket")).value).toEqual({ title: "plain\ntitle", content: "EDIT first\nlast AGAIN" });
   expect(await service.documents.list(f.owner)).not.toContain(JSON.stringify(["native-markdown", key]));
 });
+
+test("the first indexed query after upgrade returns an ordered revision usable by a conditional save", async () => {
+  const f = await fixture();
+  await f.legacy.defineIndexes([
+    {
+      name: "titles",
+      fields: { title: { path: ["title"], type: "string" } },
+      orderBy: [{ field: "title", direction: "asc" }],
+    },
+  ]);
+  await f.legacy.commit({ operationId: "old-query", edits: [{ recordId: "card", replace: { title: "old" } }] });
+  const records = createDocumentStorageDBService(f.db).open({ owner: f.owner }).records;
+  const page = await records.query({ index: "titles", fields: ["title"] });
+  expect(() => JSON.parse(page.records[0]!.revision)).not.toThrow();
+  await records.commit({
+    operationId: "query-save",
+    edits: [{ recordId: "card", expectedRevision: page.records[0]!.revision, set: { "/title": "new" } }],
+  });
+  expect((await records.query({ index: "titles", fields: ["title"] })).records[0]!.fields).toEqual({ title: "new" });
+  expect((await records.aggregate({ index: "titles" })).count).toBe(1);
+});

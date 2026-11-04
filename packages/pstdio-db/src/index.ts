@@ -22,7 +22,7 @@ export {
   type ExtensionSettingOwnerType,
 } from "./services/extension-settings/extension-settings";
 export { createExtensionStorageDBService } from "./services/extension-storage/extension-storage";
-export { createPersonalHistoryIndex, type PersonalIndexDelta } from "./services/extension-storage/personal-history-index";
+export { createPersonalHistoryIndex, type PersonalIndexDelta, type PersonalIndexAccepted } from "./services/extension-storage/personal-history-index";
 export { NativeDocumentRoomError } from "./services/extension-storage/native-document-errors";
 export { RecoveryPointError } from "./services/extension-storage/recovery-points";
 export { createExtensionUserDataDBService } from "./services/extension-user-data/extension-user-data";

@@ -32,6 +32,7 @@ let outside: string;
 const workspaces = new Map<string, { id: string; project_id: string; root_path: string | null }>();
 
 const deps = {
+  personalHistoryService: { getWorkspace: async () => null },
   workspaceService: {
     get: async (id: string) => {
       const row = workspaces.get(id);

@@ -1,17 +1,11 @@
 import type { DocumentRelay } from "pstdio-sync/relay";
-import type { StateEnvelope, StoredUpdate } from "pstdio-sync-contracts";
+import type { StateEnvelope, StateInfo, StoredUpdate } from "pstdio-sync-contracts";
 
 export const logRelayFixture = () => {
   const updates = new Map<string, StoredUpdate[]>();
+  const states = new Map<string, StateEnvelope>();
   const blobs = new Map<string, Uint8Array>();
   const reads: number[] = [];
-  const states = new Map<string, StateEnvelope>();
-  const info = (state: StateEnvelope) => ({
-    ...state,
-    byteLength: Buffer.from(state.payload, "base64").byteLength,
-    deviceId: "source",
-    createdAt: new Date().toISOString(),
-  });
   const relay = (documentId: string): DocumentRelay => ({
     async update(update) {
       const entries = updates.get(documentId) ?? [];
@@ -24,9 +18,19 @@ export const logRelayFixture = () => {
       reads.push(after);
       const entries = updates.get(documentId) ?? [];
       const page = entries.filter((entry) => entry.sequence > after).slice(0, 1);
+      const saved = states.get(documentId);
+      const state: StateInfo | null = saved
+        ? {
+            ...saved,
+            byteLength: Buffer.byteLength(saved.payload, "base64"),
+            deviceId: "source",
+            createdAt: new Date().toISOString(),
+          }
+        : null;
+      if (state && after < state.through) return { status: "state-required", state, lastSequence: entries.length };
       return {
         status: "updates",
-        state: states.has(documentId) ? info(states.get(documentId)!) : null,
+        state,
         lastSequence: entries.length,
         updates: page,
         more: (page.at(-1)?.sequence ?? after) < entries.length,
@@ -66,5 +70,5 @@ export const logRelayFixture = () => {
       },
     },
   });
-  return { relay, updates, blobs, reads };
+  return { relay, updates, states, blobs, reads };
 };

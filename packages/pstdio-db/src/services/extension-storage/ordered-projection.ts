@@ -1,14 +1,17 @@
 import { and, gt, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { coreOwnerId, type OrderedRecord, readOrderedObservation } from "pstdio-sync/records";
+import { coreOwnerId, type OrderedRecord } from "pstdio-sync/records";
 import { assertStorageLimits } from "pstdio-sync-contracts";
 import { storage_current_records as current, storage_record_projections as projections } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
+import { migrateLegacyNativeFields } from "./ordered-legacy-native";
+import { migrateLegacyPending } from "./ordered-legacy-pending";
 import { convertLegacyOrderedRecord } from "./ordered-legacy-record";
 import { projectOrderedNativeAssets } from "./ordered-native-assets";
 import { refreshOrderedNativeVersions } from "./ordered-native-versions";
 import { indexInitialCanonicalNumbers } from "./ordered-number-canonical";
 import { retainNumberHistory } from "./ordered-number-values";
+import { rebaseOrderedProjection } from "./ordered-rebase";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { writeProjectedRecords } from "./record-projection-rows";
 import { readProjectedRecords } from "./record-queries";
@@ -16,23 +19,6 @@ import { readProjectedRecords } from "./record-queries";
 export { orderedBody, orderedProjection } from "pstdio-sync/records";
 
 import { orderedProjection } from "pstdio-sync/records";
-
-/** Decode the optimistic projection, including unresolved authored stamps in its portable revision. */
-export const orderedViews = async (tx: Pick<OrderedTransaction, "select">, owner: StorageOwner, ids: string[]) => {
-  const found = new Map<string, OrderedRecord>();
-  for (const record of await readProjectedRecords(tx, owner, ids)) {
-    if (!record.exists) continue;
-    const observation = readOrderedObservation(record.revision);
-    found.set(record.recordId, {
-      recordId: record.recordId,
-      value: { value: record.value, asset: record.asset, shared: record.shared },
-      deleted: record.deleted,
-      lifetime: observation.lifetime!,
-      stamps: observation.stamps,
-    });
-  }
-  return found;
-};
 
 /** One-time local conversion; keep legacy source bytes until new-format adoption is durable. */
 export const initializeOrderedOwner = async (
@@ -42,6 +28,7 @@ export const initializeOrderedOwner = async (
   created: boolean,
 ) => {
   if (!created) return;
+  const native: string[] = [];
   let after: string | undefined;
   while (true) {
     const rows = await tx
@@ -60,12 +47,16 @@ export const initializeOrderedOwner = async (
     for (const record of records) {
       const value = await convertLegacyOrderedRecord(tx, owner, record);
       converted.push(owner.extensionId === coreOwnerId ? retainNumberHistory(undefined, value) : value);
+      if (Object.keys(value.texts ?? {}).length) native.push(value.recordId);
     }
     await journal.saveCanonical(converted);
     await indexInitialCanonicalNumbers(tx, owner, converted);
     await publishOrderedProjection(tx, owner, converted);
     after = rows.at(-1)!.id;
   }
+  const pending = await migrateLegacyPending(journal, tx, owner);
+  if (pending.length) await rebaseOrderedProjection(journal, tx, owner, pending);
+  await migrateLegacyNativeFields(journal, tx, owner, native);
 };
 
 export const publishOrderedProjection = async (

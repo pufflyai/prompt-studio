@@ -1,41 +1,36 @@
 import type { PersonalIndexDelta } from "pstdio-db";
 import type { DocumentStore, StorageOwner } from "pstdio-sync";
+import type { SyncSpace } from "pstdio-sync/encryption";
+import type { DocumentRelay } from "pstdio-sync/relay";
 import type { Json } from "pstdio-sync-contracts";
+import { personalIndexKinds as kinds, readPersonalIndexDelta } from "./index-entry";
+import { personalIndexLogName, synchronizeIndexProjection } from "./index-projection-sync";
+import { indexEntrySchema } from "./index-state";
+import { historyNamespace } from "./log-files";
 import { legacyPersonalHistoryOwner, type PersonalHistoryInput } from "./store";
 
-const kinds = ["sessions", "workspaces", "workspace_sessions", "queues"] as const;
-const parseDelta = (value: Json, writerId: string, accountId: string) => {
-  const delta = value as unknown as PersonalIndexDelta;
-  if (
-    !delta ||
-    typeof delta !== "object" ||
-    typeof delta.deviceId !== "string" ||
-    typeof delta.id !== "string" ||
-    ![...kinds, "heads", "publications"].includes(delta.kind as (typeof kinds)[number]) ||
-    (delta.value !== null && (typeof delta.value !== "object" || Array.isArray(delta.value))) ||
-    (delta.seedId !== undefined && (typeof delta.seedId !== "string" || !delta.seedId))
-  )
-    throw new Error("Invalid private history index entry");
-  if (delta.seedId ? delta.seedId !== writerId : delta.deviceId !== writerId)
-    throw new Error("Private index writer does not own its delta");
-  if (delta.value !== null) {
-    const row = delta.value as Record<string, unknown>;
-    if (row.id !== delta.id) throw new Error("Private index entry identity changed");
-    if (kinds.includes(delta.kind as (typeof kinds)[number])) {
-      const device = row.device as { id?: string; ownerId?: string } | undefined;
-      if (device?.id !== delta.deviceId || device.ownerId !== accountId)
-        throw new Error("Private index device ownership changed");
+const importIndexPages = async (input: PersonalHistoryInput, latest: Map<string, PersonalIndexDelta>) => {
+  if (!input.files) return;
+  const namespace = historyNamespace(input);
+  for (const file of await input.files.indexDevices(namespace)) {
+    const origin = file.slice("index-".length);
+    for await (const page of input.files.iterateIndexPages(namespace, file)) {
+      for (const line of page.lines) {
+        const entry = indexEntrySchema.parse(JSON.parse(line));
+        const value = entry.value ? ({ ...entry.value, id: entry.id } as Json) : null;
+        const delta = { deviceId: origin, kind: entry.kind, id: entry.id, value };
+        latest.set(JSON.stringify([origin, entry.kind, entry.id]), delta);
+      }
     }
   }
-  return delta;
 };
 
 /** A bounded delta page and its materialized SQL cursor commit together. Legacy input is kept intact. */
 export const createPersonalIndexLog = (input: PersonalHistoryInput, owner: StorageOwner, records: DocumentStore) => {
   const log = input.logs.open(owner, { name: "index", writer: "device" }, "project");
   const write = async (delta: PersonalIndexDelta) => {
-    await log.append(delta as unknown as Json);
-    await input.index.apply(owner, null, [delta]);
+    const entry = await log.append(delta as unknown as Json);
+    await input.index.apply(owner, null, [delta], entry.id);
   };
   let preparing: Promise<void> | undefined;
   const migrate = async () => {
@@ -77,33 +72,68 @@ export const createPersonalIndexLog = (input: PersonalHistoryInput, owner: Stora
         value: { id, ...JSON.parse(value) },
       })),
     );
-    for (const delta of deltas) await write({ ...delta, seedId: deviceId });
+    const latest = new Map(deltas.map((delta) => [JSON.stringify([delta.deviceId, delta.kind, delta.id]), delta]));
+    await importIndexPages(input, latest);
+    for (const delta of latest.values()) await write({ ...delta, seedId: deviceId });
     await input.index.markMigrated(owner);
   };
-  const ready = () =>
-    (preparing ??= migrate().catch((error) => {
-      preparing = undefined;
-      throw error;
-    }));
-  return {
-    ready,
-    write,
-    async synchronize() {
-      await ready();
-      const deviceId = await input.logs.writerId();
-      let after: string | 0 = (await input.index.cursor(owner)) ?? 0;
-      while (true) {
-        const page = await log.read({ after, limit: 100 });
-        await input.index.apply(
-          owner,
-          page.cursor,
-          page.entries
-            .filter((entry) => entry.writerId !== deviceId)
-            .map((entry) => parseDelta(entry.value, entry.writerId, input.accountId)),
-        );
-        after = page.cursor;
-        if (!page.more) return;
+  const recoverPending = async () => {
+    const writer = await input.logs.writerId();
+    let after = 0;
+    while (true) {
+      const page = await input.index.pendingPage(owner, writer, after);
+      if (!page.length) return;
+      for (const { entry, sequence } of page) {
+        await input.index.apply(owner, null, [readPersonalIndexDelta(entry.value, writer, input.accountId)], entry.id);
+        after = sequence;
       }
-    },
+    }
   };
+  const ready = () =>
+    (preparing ??= migrate()
+      .then(recoverPending)
+      .catch((error) => {
+        preparing = undefined;
+        throw error;
+      }));
+  const syncing = new Map<string, Promise<unknown>>();
+  const synchronizeIndex = (writerId: string, own: boolean, space: SyncSpace, relay: (id: string) => DocumentRelay) => {
+    const run = async () => {
+      await ready();
+      const documentId = await space.documentId(personalIndexLogName(writerId));
+      const target = relay(documentId);
+      const store = await input.logs.stream(owner, {
+        name: "index",
+        writer: "device",
+        scope: "project",
+        stream: writerId,
+      });
+      await synchronizeIndexProjection(
+        {
+          owner,
+          sourceId: writerId,
+          accountId: input.accountId,
+          index: input.index,
+          store,
+          space,
+          documentId,
+          relay: target,
+          manifestBlobs: async () => {
+            if (!target.manifestBlobs) throw new Error("Private index manifest transport unavailable");
+            return input.logs.manifests(owner, space, await target.manifestBlobs());
+          },
+        },
+        own,
+      );
+    };
+    const work = (syncing.get(writerId) ?? Promise.resolve()).catch(() => {}).then(run);
+    syncing.set(writerId, work);
+    void work
+      .finally(() => {
+        if (syncing.get(writerId) === work) syncing.delete(writerId);
+      })
+      .catch(() => {});
+    return work;
+  };
+  return { ready, write, synchronizeIndex };
 };

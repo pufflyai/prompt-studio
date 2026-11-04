@@ -8,10 +8,12 @@ export const describe = "Create a provider-backed workspace";
 export const builder = (yargs: Argv) =>
   yargs
     .option("provider", { type: "string", demandOption: true, describe: "Workspace provider ID" })
+    .option("device", { type: "string", describe: "Create on this online Cloud device ID" })
     .option("params", { type: "string", describe: "Provider parameters as a JSON object" });
 
 type CreateArgs = {
   provider: string;
+  device?: string;
   params?: string;
 };
 
@@ -51,6 +53,7 @@ export const createHandler =
 
     await deps.createStandaloneWorkspace({
       projectId: config.project_id,
+      ...(argv.device ? { deviceId: argv.device } : {}),
       providerId: argv.provider,
       params: parseParams(argv.params),
     });

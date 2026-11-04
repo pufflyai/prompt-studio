@@ -735,3 +735,35 @@ test("a tombstone checkpoint retains the file required by a later explicit resto
   expect((await second.records.read("file")).asset).toEqual(asset);
   expect(second.assets.files.get(asset.sha256)).toEqual(bytes);
 });
+
+test("an offline file binding cannot replace an earlier peer asset authority", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  const original = file("original file");
+  const replacement = file("peer replacement");
+  first.assets.files.set(original.asset.sha256, original.bytes);
+  await first.records.commit({
+    operationId: "bind-file-base",
+    edits: [{ recordId: "file", replace: { path: "note.md" }, asset: original.asset }],
+  });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  const key = "5".repeat(64);
+  await second.records.bindText({ recordId: "file", documentKey: key, content: "original file" });
+  first.assets.files.set(replacement.asset.sha256, replacement.bytes);
+  await first.records.commit({
+    operationId: "bind-file-peer",
+    edits: [{ recordId: "file", asset: replacement.asset }],
+  });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  await first.sync.synchronize();
+  for (const peer of [first, second]) {
+    const record = await peer.records.read("file");
+    expect(record.asset).toEqual(replacement.asset);
+    const sources = "nativeSources" in record ? record.nativeSources : undefined;
+    expect(Object.keys(sources ?? {})).toHaveLength(0);
+    expect(peer.failures).toEqual([]);
+  }
+});

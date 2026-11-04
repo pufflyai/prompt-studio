@@ -3,6 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
+import { remoteSessionCancellation } from "../remote-session-action";
 import { toSessionResponse } from "../session-response";
 
 export const updateSessionStatusRoute = createRoute({
@@ -30,6 +31,10 @@ export const updateSessionStatusRoute = createRoute({
     },
   },
   responses: {
+    400: {
+      description: "The remote device is unavailable.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
     200: {
       description: "Session status updated.",
       content: { "application/json": { schema: sessionResponseSchema } },
@@ -49,6 +54,8 @@ export const updateSessionStatusHandler = (
     const { status } = c.req.valid("json");
     const existing = await deps.sessionService.get(id);
     if (!existing) {
+      const forwarded = await remoteSessionCancellation(updateSessionStatusRoute, deps, id, status, c.req.raw.signal);
+      if (forwarded) return forwarded;
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
     if (existing.status === status) {

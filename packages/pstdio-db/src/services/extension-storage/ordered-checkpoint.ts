@@ -12,6 +12,7 @@ import { type Asset, fingerprint, type Json } from "pstdio-sync-contracts";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
+import { OrderedNumberLimitError } from "./ordered-number-limits";
 import { OrderedNumberRangeError } from "./ordered-number-repair";
 import { createStagedNumberRepair } from "./ordered-number-stage";
 import { pendingOrderedOperations } from "./ordered-pending";
@@ -70,7 +71,7 @@ const repairStagedAdmission = async (
       ),
     };
   } catch (error) {
-    if (!(error instanceof OrderedNumberRangeError)) throw error;
+    if (!(error instanceof OrderedNumberRangeError || error instanceof OrderedNumberLimitError)) throw error;
     return { decision: { ...result.decision, state: "refused" as const }, records: [] };
   }
 };

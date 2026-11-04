@@ -1,14 +1,24 @@
 import type { OrderedTextDependency } from "pstdio-sync/records";
+import { textDocumentKeys } from "pstdio-sync/text";
 import type { Doc } from "yjs";
 
-const frontier = "ordered-text-frontier";
+const frontier = textDocumentKeys.orderedFrontier;
 
 /** The editor may forward an optimistic root before its record group reaches the relay. */
 export const exposeOrderedTextFrontier = (document: Doc, dependencies: OrderedTextDependency[]) => {
   const map = document.getMap<boolean>(frontier);
   for (const dependency of dependencies) {
     const key = JSON.stringify([dependency.operationId, dependency.fingerprint]);
-    if (!map.has(key)) map.set(key, true);
+    if (map.has(key)) continue;
+    // The same inherited proof must have the same structs on every snapshot.
+    // Keep this host author above the ordinary editor's uint32 client space.
+    const author = document.clientID;
+    document.clientID = Number.parseInt(dependency.fingerprint.slice(0, 13), 16) + 0x1_0000_0000;
+    try {
+      map.set(key, true);
+    } finally {
+      document.clientID = author;
+    }
   }
 };
 

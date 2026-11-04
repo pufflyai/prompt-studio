@@ -16,6 +16,7 @@ import {
   storage_record_projections as projections,
 } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
+import type { OrderedNumberRepair } from "./ordered-number-limits";
 import { type OrderedNumberIndex, repairOrderedNumbers } from "./ordered-number-repair";
 import {
   numberAlias,
@@ -83,6 +84,7 @@ export const repairOptimisticNumbers = async (
   owner: StorageOwner,
   views: Map<string, OrderedRecord>,
   touched: string[],
+  validateNumbers: (repairs: OrderedNumberRepair[]) => void,
 ) => {
   const events: NumberChange[] = [];
   if (owner.extensionId !== coreOwnerId) return { views, events };
@@ -109,6 +111,7 @@ export const repairOptimisticNumbers = async (
     touched.filter((id) => !views.has(id)),
   );
   const index: OrderedNumberIndex = {
+    validate: async (_records, repairs) => validateNumbers(repairs),
     read: async (ids) => {
       await capture(ids);
       const found = await projectedViews(

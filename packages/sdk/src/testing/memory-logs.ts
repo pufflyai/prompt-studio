@@ -2,7 +2,7 @@ import type { ExtensionLogApi, StorageLogDefinition } from "pstdio-api-contracts
 import type { LogReceivedBatch } from "pstdio-sync/logs";
 import { createLogCollection, createMemoryLogStore, type LogDirectoryEntry } from "pstdio-sync/logs";
 
-interface MemoryLogPeer {
+export interface MemoryLogPeer {
   directory(): LogDirectoryEntry[];
   catalog(entries: LogDirectoryEntry[]): void;
   ensure(entry: LogDirectoryEntry): ReturnType<typeof createMemoryLogStore>;

@@ -187,10 +187,10 @@ installation can retry it. Normal reads never perform this backfill.
 A record can hold JSON in `value`, one shared primitive, an immutable asset
 reference, and deletion state. A group contains at most one edit per record.
 
-Accepted string values and object keys use well-formed UTF-16. An unpaired
-surrogate is replaced with U+FFFD before saving, matching the existing CRDT wire
-encoding. NUL and valid surrogate pairs are preserved. Memory, indexed and
-reopened reads therefore return the same values and content revisions.
+Plain JSON preserves string values and object keys, including NUL and lone
+UTF-16 surrogates, across memory, indexed and reopened reads. Declared collaborative
+text uses Yjs character history and its UTF-8 serialization; keep valid Unicode
+text when editing those fields. Revisions remain opaque.
 
 | Edit field | Behavior |
 | --- | --- |

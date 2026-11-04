@@ -57,6 +57,42 @@ test("cancelling a text watch detaches and settles while its shared socket ready
   }
 });
 
+test("a blocked watch retains observation failure before a later close-barrier failure", async () => {
+  const ready = Promise.withResolvers<void>();
+  const delivered = Promise.withResolvers<void>();
+  const events: TextEditingEvent[] = [];
+  const f = fixture(async (type, data) => {
+    if (type === "text_ready") await ready.promise;
+    if (type === "text") {
+      const event = data as TextEditingEvent;
+      events.push(event);
+      if (event.type === "error" && event.barrierId) delivered.resolve();
+    }
+  });
+  const observation: TextEditingEvent = {
+    type: "error",
+    memberId: "member",
+    handle: "handle",
+    error: { code: "connection_reset", message: "Observation failed", retryable: true },
+  };
+  const barrier: TextEditingEvent = {
+    ...observation,
+    barrierId: "closing",
+    error: { code: "source_unavailable", message: "Close failed", retryable: false },
+  };
+  try {
+    f.emit(observation);
+    f.emit(barrier);
+    ready.resolve();
+    await delivered.promise;
+    expect(events).toEqual([observation, barrier]);
+  } finally {
+    ready.resolve();
+    f.abort();
+    await f.work;
+  }
+});
+
 test("a slow text watcher receives the latest queued member state instead of every superseded presence frame", async () => {
   const blocked = Promise.withResolvers<void>();
   const first = Promise.withResolvers<void>();

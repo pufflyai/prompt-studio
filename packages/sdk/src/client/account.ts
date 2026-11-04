@@ -3,6 +3,7 @@ import type {
   AccountLogin,
   AccountLoginStatus,
   AccountStatus,
+  DeviceCommand,
   ProjectSyncStatus,
 } from "pstdio-api-contracts";
 import type { RequestFn } from "./request";
@@ -16,6 +17,12 @@ export const createAccountClient = (request: RequestFn) => {
   const project = (id: string) => `/v1/account/projects/${encodeURIComponent(id)}`;
   const login = (id: string) => `/v1/account/login/${encodeURIComponent(id)}`;
   return {
+    /** Sends an online-only action to one of your devices. Commands are never saved for later delivery. */
+    sendDeviceCommand: (projectId: string, deviceId: string, command: DeviceCommand, signal?: AbortSignal) =>
+      request<{ status: number; body: unknown }>(
+        `${project(projectId)}/devices/${encodeURIComponent(deviceId)}/commands`,
+        { method: "POST", body: command, signal },
+      ),
     /** Uses the host's account service when no address is supplied. */
     login: (managerOrigin?: string) =>
       request<AccountLogin>("/v1/account/login", { method: "POST", body: { managerOrigin } }),

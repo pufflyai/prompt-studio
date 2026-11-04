@@ -2,6 +2,7 @@ import type { RouteDeps } from "../deps";
 
 export type SessionsRouteDeps = Pick<
   RouteDeps,
+  | "accountService"
   | "activityEventsService"
   | "personalHistoryService"
   | "harnessRegistry"

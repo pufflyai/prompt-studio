@@ -43,7 +43,7 @@ anything.
 | Device | A client that a user has logged into the cloud from. The client's environment ID becomes its device ID. Each device belongs to one user. |
 | Cloud project | A project (workbench) that syncs through the relay. Local projects never leave the device. |
 | CRDT | A data type that merges edits made at the same time on different machines automatically, without a server. [Yjs](https://docs.yjs.dev/) is the CRDT library this PRD assumes. |
-| Document | One CRDT unit, for example one extension record or one session transcript. The records of one extension in a project travel together through one encrypted relay document, the record stream ([ADR 0102](../../adrs/0102-record-stream-sync.md)). |
+| Document | One encrypted relay stream or native text owner. An extension's ordered record groups share its record stream; only declared collaborative text and real editable files retain Yjs history ([ADR 0134](../../adrs/0134-order-record-saves-and-declare-collaborative-text.md)). |
 | Update | An encrypted change to one document, produced by a client. |
 | Latest state | An encrypted copy of one document's full current state, uploaded by a client. |
 | Blob | An encrypted file stored by the relay, such as an image or an extension package. |

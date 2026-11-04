@@ -34,7 +34,7 @@ export const TreeModeReturn = (props: { workbench: WorkbenchCore }) => {
   const label = modeReturnLabel(workbench);
 
   return (
-    <Box pb="1px">
+    <Box role="group" aria-label="Return navigation" p="xs" flexShrink={0}>
       <ListRow
         id="workbench.navigation.root"
         role="button"

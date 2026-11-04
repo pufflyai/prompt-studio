@@ -4,13 +4,12 @@ import { NativeSourceRecoveryError, type StorageOwner } from "pstdio-sync";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { type loadNativeMarkdownFile, NativeDocumentSourceError } from "./file-source";
 import { validateReplaySource } from "./replay-source";
-import type { resolveNativeTextAccess } from "./source-access";
+import type { NativeSourceAccess, resolveNativeTextAccess } from "./source-access";
 import { checkpointInitialState } from "./text-checkpoint";
 import { validateNativeSourceAuthority } from "./validate-writable-source";
 
 type Loaded = Awaited<ReturnType<typeof loadNativeMarkdownFile>>;
-type Access = Awaited<ReturnType<typeof resolveNativeTextAccess>>;
-type RoomSource = Pick<Access, "owner" | "documentKey" | "lifetime" | "generation" | "content" | "projectionTarget">;
+type RoomSource = NativeSourceAccess;
 export type NativeRoomOpenInput = NativeTextTarget & {
   projectId: string;
   signal?: AbortSignal;
@@ -24,7 +23,7 @@ export type NativeRoomOpenInput = NativeTextTarget & {
 interface SourceDeps {
   load: (input: Parameters<typeof loadNativeMarkdownFile>[1]) => ReturnType<typeof loadNativeMarkdownFile>;
   initialize: (loaded: Loaded) => Promise<void>;
-  access: (input: Parameters<typeof resolveNativeTextAccess>[1]) => Promise<Access>;
+  access: (input: Parameters<typeof resolveNativeTextAccess>[1]) => Promise<RoomSource>;
   storage: ExtensionsRouteDeps["extensionStorageService"];
 }
 export const loadNativeRoomSource = async (deps: Pick<SourceDeps, "load">, input: NativeRoomOpenInput) => {

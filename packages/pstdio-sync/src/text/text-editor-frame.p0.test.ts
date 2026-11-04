@@ -38,3 +38,25 @@ test("plain text transactions including undo and deletions keep valid causal fra
     document.destroy();
   }
 });
+
+test("ordered editor histories admit their host roots while text frames cannot mutate them", async () => {
+  const document = new Y.Doc();
+  try {
+    await seedTextDocument(document, "source", 77, "field-incarnation");
+    const frontier = document.getMap<boolean>("ordered-text-frontier");
+    frontier.set(JSON.stringify(["conditional", "a".repeat(64)]), true);
+    const state = Y.encodeStateAsUpdate(document);
+    const vector = Y.encodeStateVector(document);
+    await validateTextEditorState(state);
+    document.getText("content").insert(0, "typed ");
+    await validateTextEditorFrame(state, Y.encodeStateAsUpdate(document, vector));
+    const valid = Y.encodeStateAsUpdate(document);
+    const beforeTamper = Y.encodeStateVector(document);
+    frontier.clear();
+    await expect(validateTextEditorFrame(valid, Y.encodeStateAsUpdate(document, beforeTamper))).rejects.toMatchObject({
+      code: "invalid_frame",
+    });
+  } finally {
+    document.destroy();
+  }
+});

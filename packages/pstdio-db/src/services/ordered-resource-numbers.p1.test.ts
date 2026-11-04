@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId } from "pstdio-sync/records";
 import { createRecordStreamSync } from "pstdio-sync/relay";
+import { type Json, type RecordEdit, storageLimits, storageRecordBytes } from "pstdio-sync-contracts";
 import { createDb } from "../db/connection.pglite";
 import { projects } from "../db/schemas.pg";
 import { createExtensionResourceSequencesDBService } from "./extension-resource-sequences";
@@ -348,6 +349,173 @@ test("an exhausted pending floor cannot block an earlier incoming canonical numb
       });
       expect((await device.records.read("audit-local")).value).toBe("child");
     }
+  } finally {
+    await f.close();
+  }
+});
+
+const paddedNumberValue = (value: Record<string, Json>, bytes: number) => {
+  const padded = { ...value, padding: "" };
+  padded.padding = "x".repeat(bytes - storageRecordBytes({ value: padded, shared: null }));
+  return padded;
+};
+
+const numberBoundary = (limit: "record" | "group") => {
+  const large = paddedNumberValue(numbered("z", 1), storageLimits.recordBytes - (limit === "group" ? 13 : 0));
+  const edits: (RecordEdit & { replace: Json })[] = [
+    { recordId: "a", replace: numbered("a", 1) },
+    { recordId: "audit-boundary", replace: { message: "atomic" } },
+  ];
+  if (limit === "group") {
+    let remaining = storageLimits.commitBytes - storageRecordBytes({ value: large, shared: null });
+    for (const edit of edits) remaining -= storageRecordBytes({ value: edit.replace, shared: null });
+    for (let index = 0; index < 15; index++) {
+      const bytes = Math.min(storageLimits.recordBytes, remaining - (14 - index) * 30);
+      edits.push({ recordId: `padding-${index}`, replace: paddedNumberValue({}, bytes) });
+      remaining -= bytes;
+    }
+    expect(remaining).toBe(0);
+  }
+  return { large, edits };
+};
+
+for (const limit of ["record", "group"] as const) {
+  test(`number repair crossing the ${limit} limit suppresses pending optimism and refuses the atomic group`, async () => {
+    const f = await pair();
+    try {
+      const [first, second] = f.devices;
+      const { large, edits } = numberBoundary(limit);
+      await first!.records.commit({ operationId: "canonical-large", edits: [{ recordId: "z", replace: large }] });
+      await second!.records.commit({ operationId: "bounded-competitor", edits });
+      const audit = await second!.records.read("audit-boundary");
+      await second!.records.commit({
+        operationId: "bounded-child",
+        edits: [{ recordId: "audit-boundary", expectedRevision: audit.revision, replace: { message: "child" } }],
+      });
+      await first!.sync.synchronize();
+      const paused = createRecordStreamSync({
+        space: f.space,
+        documentId: f.documentId,
+        relay: {
+          ...f.relay,
+          update: async () => {
+            throw new Error("Pause boundary admission");
+          },
+        },
+        store: second!.numbers.recordStream(f.input.projectId),
+        quarantine: async (failure) => {
+          second!.failures.push(failure);
+        },
+      });
+      await expect(paused.synchronize()).rejects.toThrow("Pause boundary admission");
+      expect((await second!.records.read("z")).value).toEqual(large);
+      expect((await second!.records.read("a")).exists).toBe(false);
+      expect((await second!.records.read("audit-boundary")).exists).toBe(false);
+      expect((await second!.records.outcome("bounded-competitor"))?.state).toBe("saved-locally");
+      expect((await second!.records.outcome("bounded-child"))?.state).toBe("saved-locally");
+      await second!.sync.synchronize();
+      await first!.sync.synchronize();
+      expect((await second!.records.outcome("bounded-competitor"))?.state).toBe("refused");
+      expect((await second!.records.outcome("bounded-child"))?.state).toBe("refused");
+      for (const device of f.devices) {
+        expect((await device.records.read("z")).value).toEqual(large);
+        expect((await device.records.read("a")).exists).toBe(false);
+        expect((await device.records.read("audit-boundary")).exists).toBe(false);
+        if (limit === "group") expect((await device.records.read("padding-0")).exists).toBe(false);
+        expect(device.failures).toEqual([]);
+      }
+      await second!.records.commit({
+        operationId: "boundary-progress",
+        edits: [{ recordId: "settings", replace: true }],
+      });
+      await second!.sync.synchronize();
+      await first!.sync.synchronize();
+      expect((await first!.records.read("settings")).value).toBe(true);
+      expect((await second!.numbers.allocate(f.input)).shorthand).toBe("PS-2");
+    } finally {
+      await f.close();
+    }
+  });
+}
+
+for (const limit of ["record", "group"] as const) {
+  test(`founding refuses a number repair crossing the ${limit} limit without poisoning its snapshot`, async () => {
+    const f = await pair();
+    try {
+      const [first, second] = f.devices;
+      const { large, edits } = numberBoundary(limit);
+      await first!.records.commit({ operationId: "founding-large", edits: [{ recordId: "z", replace: large }] });
+      await first!.records.commit({ operationId: "founding-competitor", edits });
+      await first!.sync.synchronize();
+      await second!.sync.synchronize();
+      expect((await first!.records.outcome("founding-competitor"))?.state).toBe("refused");
+      for (const device of f.devices) {
+        expect((await device.records.read("z")).value).toEqual(large);
+        expect((await device.records.read("a")).exists).toBe(false);
+        expect((await device.records.read("audit-boundary")).exists).toBe(false);
+        expect(device.failures).toEqual([]);
+      }
+      await second!.records.commit({
+        operationId: "founding-progress",
+        edits: [{ recordId: "settings", replace: true }],
+      });
+      await second!.sync.synchronize();
+      await first!.sync.synchronize();
+      expect((await first!.records.read("settings")).value).toBe(true);
+      expect((await second!.numbers.allocate(f.input)).shorthand).toBe("PS-2");
+    } finally {
+      await f.close();
+    }
+  });
+}
+
+test("independent number groups may together exceed one commit budget", async () => {
+  const f = await pair();
+  try {
+    const [first, second] = f.devices;
+    for (let group = 0; group < 2; group++) {
+      const edits = Array.from({ length: 9 }, (_, index) => ({
+        recordId: `large-${group}-${index}`,
+        replace: paddedNumberValue(
+          numbered(`large-${group}-${index}`, group * 9 + index + 1),
+          storageLimits.recordBytes,
+        ),
+      }));
+      await first!.records.commit({ operationId: `independent-${group}`, edits });
+    }
+    await first!.sync.synchronize();
+    await second!.sync.synchronize();
+    expect((await first!.records.outcome("independent-0"))?.state).toBe("synced");
+    expect((await first!.records.outcome("independent-1"))?.state).toBe("synced");
+    expect((await second!.records.read("large-1-8")).exists).toBe(true);
+    expect((await second!.numbers.allocate(f.input)).shorthand).toBe("PS-19");
+    expect(second!.failures).toEqual([]);
+  } finally {
+    await f.close();
+  }
+});
+
+test("a later independent enlargement does not spend an earlier group's byte budget", async () => {
+  const f = await pair();
+  try {
+    const [first, second] = f.devices;
+    const edits = Array.from({ length: 17 }, (_, index) => ({
+      recordId: `shared-budget-${index}`,
+      replace: paddedNumberValue({}, index < 15 ? storageLimits.recordBytes : 100),
+    }));
+    await first!.records.commit({ operationId: "earlier-budget", edits });
+    await first!.records.commit({
+      operationId: "later-budget",
+      edits: [{ recordId: "shared-budget-15", replace: paddedNumberValue({}, storageLimits.recordBytes) }],
+    });
+    expect((await first!.records.read("shared-budget-0")).exists).toBe(true);
+    expect((await first!.records.read("shared-budget-16")).exists).toBe(true);
+    await first!.sync.synchronize();
+    await second!.sync.synchronize();
+    expect((await first!.records.outcome("earlier-budget"))?.state).toBe("synced");
+    expect((await first!.records.outcome("later-budget"))?.state).toBe("synced");
+    expect((await second!.records.read("shared-budget-0")).exists).toBe(true);
+    expect((await second!.records.read("shared-budget-16")).exists).toBe(true);
   } finally {
     await f.close();
   }

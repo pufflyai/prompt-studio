@@ -1,12 +1,19 @@
 import type { TextEditingError, TextEditingEvent } from "pstdio-api-contracts/extension-kernel";
 import { textFailure } from "./errors";
 import type { TextConnection, TextMember } from "./types";
-export const emitTextEvent = (connection: TextConnection, event: TextEditingEvent) => {
+/** Full states can replace one another; failure occurrences and distinct close barriers cannot. */
+export const textEventBufferKey = (event: TextEditingEvent) => {
+  if (event.type === "snapshot" || event.type === "presence") return JSON.stringify([event.memberId, event.type]);
+  if (event.type === "prepareClose") return JSON.stringify([event.type, event.barrierId]);
+  return Symbol();
+};
+export const emitTextEvent = (connection: Pick<TextConnection, "listeners" | "buffered">, event: TextEditingEvent) => {
   if (connection.listeners.size) {
     for (const listener of connection.listeners) listener(event);
     return;
   }
-  const key = event.type === "prepareClose" ? event.type : `${event.memberId}:${event.type}`;
+  const key = textEventBufferKey(event);
+  connection.buffered.delete(key);
   connection.buffered.set(key, event);
 };
 export const prepareTextClose = (connection: TextConnection) => {
@@ -27,7 +34,7 @@ export const failTextClose = (connection: TextConnection, error: TextEditingErro
   const barrier = connection.barrier;
   if (!barrier) return;
   connection.barrier = undefined;
-  connection.buffered.delete("prepareClose");
+  connection.buffered.delete(textEventBufferKey({ type: "prepareClose", barrierId: barrier.id }));
   for (const member of connection.members.values()) {
     member.ready = undefined;
     emitTextEvent(connection, {

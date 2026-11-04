@@ -17,6 +17,19 @@ export default defineConfig({
     },
     rolldownOptions: {
       external: isExternal,
+      preserveEntrySignatures: "allow-extension",
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              // Shared prompt/message helpers must not pull the editor component into eager chunks.
+              name: "markdown-editor",
+              test: /[\\/]rich-text[\\/]markdown-editor[\\/]markdown-editor\.tsx$/,
+              includeDependenciesRecursively: false,
+            },
+          ],
+        },
+      },
     },
     sourcemap: true,
     emptyOutDir: true,

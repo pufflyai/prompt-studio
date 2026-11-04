@@ -1,7 +1,7 @@
 # Personal session history as message logs
 
 Proposed: 2026-11-01
-Status: Accepted
+Status: Accepted. Index and preview routing decisions superseded by [ADR 0133](0133-sync-session-index-changes-by-device.md).
 
 ## Context
 

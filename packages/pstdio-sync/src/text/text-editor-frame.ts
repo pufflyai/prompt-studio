@@ -31,6 +31,9 @@ const open = async (state: Uint8Array) => {
   const document = new Y.Doc({ gc: false });
   try {
     Y.applyUpdate(document, state);
+    // Root types decoded without an accessor remain AbstractType. Materialize host
+    // maps so deletion-only frames also report their changed parent to the guard.
+    for (const key of roots) if (key !== textDocumentKeys.content) document.getMap(key);
     await history(document);
     return document;
   } catch (error) {

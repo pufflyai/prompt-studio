@@ -10,7 +10,7 @@ import {
   retainedResourceBody,
 } from "pstdio-sync/records";
 import { readTextDocumentSeed } from "pstdio-sync/text";
-import type { Json } from "pstdio-sync-contracts";
+import { fingerprint, type Json } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { NativeProjectedRecord } from "./native-record-projection";
 import { nativeDocumentId } from "./native-record-projection";
@@ -84,7 +84,14 @@ export const convertLegacyOrderedRecord = async (
     value,
     deleted: record.deleted,
     lifetime,
-    stamps: {},
+    stamps: Object.fromEntries(
+      await Promise.all(
+        Object.entries(texts).map(async ([path, text]) => [
+          path,
+          JSON.stringify(["text", text.seed, await fingerprint(text.state)]),
+        ]),
+      ),
+    ),
     ...(Object.keys(texts).length ? { texts } : {}),
   } satisfies OrderedRecord;
 };

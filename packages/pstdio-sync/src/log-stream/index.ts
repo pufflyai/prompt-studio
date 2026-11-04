@@ -3,5 +3,14 @@ export { decodeLogCursor, encodeLogCursor, type LogCursor, logBatchEnd, logPageL
 export { followLogPages } from "./log-follow";
 export { createLogPageIndex, type LogIndexedEntry } from "./log-page-index";
 export { createLogStreamSync } from "./log-sync";
-export type { LogDelivery, LogReceivedBatch, LogStreamStore } from "./log-types";
+export { createLogTransfers } from "./log-transfer";
+export type {
+  LogDelivery,
+  LogEntryMetadata,
+  LogKnownEntry,
+  LogReadPlan,
+  LogReceivedBatch,
+  LogStreamStore,
+  LogSyncInput,
+} from "./log-types";
 export { createMemoryLogStore } from "./memory-log-store";

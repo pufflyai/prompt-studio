@@ -89,3 +89,4 @@ test("log index parents cannot misdescribe a child level or retained extent", as
     await expect(f.index.read(parent, { sequence: 0, index: 0, limit: 50, cutoff: 0 })).rejects.toThrow();
   }
 });
+

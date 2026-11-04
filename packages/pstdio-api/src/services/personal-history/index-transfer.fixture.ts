@@ -1,7 +1,6 @@
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentStorage } from "pstdio-sync/records";
 import type { RouteDeps } from "../../features/deps";
-import { createRelayLogs } from "../relay/logs";
 import { numberRelayFixture } from "../relay/resource-number-sync.fixture";
 import { createPersonalHistoryStore, type PersonalHistoryInput } from "./store";
 
@@ -32,23 +31,12 @@ export const transferPersonalIndex = async (
     });
   const from = history(source);
   const to = history(destination);
-  const connect = (storage: typeof source) =>
-    createRelayLogs({
-      owner: from.owner,
-      space,
-      service: storage.logs,
-      relay: relay!.relay,
-      signal: new AbortController().signal,
-    });
-  const writer = connect(source);
-  const reader = connect(destination);
-  try {
-    await writer.publish();
-    await createDocumentStorage({ owner: from.owner, store: to.records }).applyUpdate(
-      await createDocumentStorage({ owner: from.owner, store: from.records }).exportUpdate(),
-    );
-    await to.synchronize();
-  } finally {
-    await Promise.all([writer.close(), reader.close()]);
-  }
+  const writerId = await source.logs.writerId();
+  await from.synchronizeIndex(writerId, true, space, relay.relay);
+  await createDocumentStorage({ owner: from.owner, store: to.records }).applyUpdate(
+    await createDocumentStorage({ owner: from.owner, store: from.records }).exportUpdate(),
+  );
+  for (const entry of await destination.logs.directory(to.owner))
+    if (entry.name === "index")
+      await to.synchronizeIndex(entry.stream, entry.stream === (await destination.logs.writerId()), space, relay.relay);
 };

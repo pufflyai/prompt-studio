@@ -33,7 +33,7 @@ export const homePage = definePage({
   icon: canvasResource.icon,
   path: "canvases",
   mode: workbenchModes.project,
-  main: { kind: "panels" },
+  main: { kind: "view", view: canvasView.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
 export const canvasPage = definePage({

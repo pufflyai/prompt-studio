@@ -164,4 +164,31 @@ test("binding a real editable file after discovery registers its native owner fo
   expect(await createDocumentStorageDBService(f.db).documents.list(owner)).toContain(
     JSON.stringify(["native-markdown", key]),
   );
+  await service.openNativeTextDocument({ owner, fileId: key }).save("current complete file");
+  await expect(records.bindText({ recordId: "file", documentKey: key, content: "fragment" })).rejects.toThrow(
+    "full source bytes",
+  );
+  expect(
+    (await records.bindText({ recordId: "file", documentKey: key, content: "current complete file" })).changed,
+  ).toBe(false);
+  expect((await records.bindText({ recordId: "file", documentKey: key })).changed).toBe(false);
+});
+
+test("repeated native snapshots preserve the same pending causal history without authoring new metadata", async () => {
+  const f = await createExtensionStorageFixture();
+  cleanup.push(f.close);
+  const owner = { workbenchId: f.projectAId, extensionId: "example.notes" };
+  const service = createDocumentStorageDBService(f.db);
+  const records = service.open({ owner }).records;
+  await records.commit({
+    operationId: "snapshot-base",
+    edits: [{ recordId: "note", replace: { content: "pending source" } }],
+  });
+  const key = "4".repeat(64);
+  await records.bindText({ recordId: "note", field: "/content", documentKey: key });
+  const native = service.openNativeTextDocument({ owner, fileId: key });
+  const first = await native.snapshot();
+  const next = await native.snapshot();
+  expect(next.revision).toBe(first.revision);
+  expect(next.state).toEqual(first.state);
 });

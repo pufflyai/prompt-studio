@@ -28,12 +28,38 @@ export interface LogDelivery {
   /** Exact encrypted leaves survive a failed upload or lost ACK. */
   blobs: { blobId: string; bytes: string; children: string[] }[];
 }
+/** Payload-free identity and the exact per-stream position after displaying this entry. */
+export interface LogEntryMetadata {
+  id: string;
+  writerId: string;
+  createdAt: string;
+  cursor: string;
+}
+export interface LogKnownEntry {
+  id: string;
+  writerId: string;
+  createdAt: string;
+  sequence: number | null;
+  index: number | null;
+  localSequence: number;
+  local: boolean;
+}
+export interface LogReadPlan {
+  entries: LogEntryMetadata[];
+  cursor: string;
+  more: boolean;
+  /** Only identities selected from this authenticated metadata plan can open their payloads. */
+  materialize(ids: readonly string[]): Promise<StorageLogEntry[]>;
+}
 export interface LogStreamStore {
   address: string;
   cutoff(): number;
   append(value: StorageLogEntry["value"], options?: { id?: string }): Promise<StorageLogEntry>;
   read(options?: StorageLogRead): Promise<StorageLogPage>;
-  pending(limit: number): Promise<{ entry: StorageLogEntry; delivery?: LogDelivery }[]>;
+  plan?(options?: StorageLogRead): Promise<LogReadPlan>;
+  lookupMetadata?(ids: readonly string[]): Promise<LogKnownEntry[]>;
+  pending(limit: number, through?: number): Promise<{ entry: StorageLogEntry; delivery?: LogDelivery }[]>;
+  pendingThrough(): Promise<number>;
   prepare(id: string, delivery: LogDelivery): Promise<LogDelivery>;
   receive(
     batches: LogReceivedBatch[],

@@ -3,7 +3,7 @@ import type { TextEditingRequest, TextEditingResult } from "pstdio-api-contracts
 import { z } from "zod";
 import { grantTextSource, validateTextGrant, validateTextPresentation } from "./admission";
 import { textFailure, throwTextError } from "./errors";
-import { emitTextEvent, failTextClose, prepareTextClose } from "./events";
+import { emitTextEvent, failTextClose, prepareTextClose, textEventBufferKey } from "./events";
 import { textHandleMember } from "./handles";
 import { openTextMember } from "./member-open";
 import { roomAddress } from "./members";
@@ -137,7 +137,9 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
     ) {
       const connection = connectionFor(address);
       connection.listeners.add(listener);
-      const bufferedBarrier = connection.buffered.has("prepareClose");
+      const barrier = connection.barrier;
+      const bufferedBarrier =
+        barrier && connection.buffered.has(textEventBufferKey({ type: "prepareClose", barrierId: barrier.id }));
       for (const event of connection.buffered.values()) listener(event);
       if (connection.barrier && !bufferedBarrier) listener({ type: "prepareClose", barrierId: connection.barrier.id });
       connection.buffered.clear();

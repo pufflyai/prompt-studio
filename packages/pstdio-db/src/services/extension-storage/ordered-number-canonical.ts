@@ -121,6 +121,12 @@ export const indexInitialCanonicalNumbers = async (
   if (owner.extensionId === coreOwnerId) await saveNumbers(tx, owner, records);
 };
 
+/** Legacy pending creations belong to the queue, not the imported canonical claim set. */
+export const removeInitialCanonicalNumbers = async (tx: OrderedTransaction, owner: StorageOwner, ids: string[]) => {
+  if (owner.extensionId !== coreOwnerId || !ids.length) return;
+  await tx.delete(numbers).where(and(eq(numbers.workbench_id, owner.workbenchId), inArray(numbers.resource_id, ids)));
+};
+
 /** An impossible pending repair cannot block receiving its earlier canonical competitor. */
 export const canProjectOrderedNumbers = async (
   tx: OrderedTransaction,

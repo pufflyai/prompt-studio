@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorageDevices } from "../../../packages/sdk/src/testing/memory-storage-devices";
+import { createMemoryStorageDevices } from "@pstdio/sdk/testing";
 import { readExampleState, writeExampleState } from "./example-state";
 import { scribblePageEdit } from "./scribble-page-record";
 import { readScribblePageEntries } from "./scribble-pages-storage";

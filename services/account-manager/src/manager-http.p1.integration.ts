@@ -98,6 +98,25 @@ test("Google login connects each device to every cloud project, and devices mana
     };
     expect(strangerList.devices).toHaveLength(1);
 
+    // The manager binds signing keys to authenticated device identities, never to a caller's payload.
+    const key = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+    const publicKey = Buffer.from(await crypto.subtle.exportKey("raw", key.publicKey)).toString("base64url");
+    const registerKey = (value: string, token = laptop.token) =>
+      request("/v1/devices/signing-key", { publicKey: value }, device(token));
+    const readKey = (id: string, token = desktop.token) =>
+      request(`/v1/devices/${id}/signing-key`, undefined, device(token));
+    expect((await readKey(laptop.deviceId)).status).toBe(404);
+    expect((await registerKey("invalid")).status).toBe(400);
+    expect((await registerKey(publicKey)).status).toBe(200);
+    expect((await registerKey(publicKey)).status).toBe(200);
+    expect(await (await readKey(laptop.deviceId)).json()).toEqual({ publicKey });
+    expect((await readKey(laptop.deviceId, other.token)).status).toBe(404);
+    const replacement = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+    const replacementKey = Buffer.from(await crypto.subtle.exportKey("raw", replacement.publicKey)).toString(
+      "base64url",
+    );
+    expect((await registerKey(replacementKey)).status).toBe(401);
+
     const rename = (id: string, name: unknown, token = desktop.token) =>
       request(`/v1/devices/${id}/rename`, { name }, device(token));
     expect((await rename(laptop.deviceId, "Work laptop")).status).toBe(200);
@@ -108,6 +127,8 @@ test("Google login connects each device to every cloud project, and devices mana
     expect((await request(`/v1/devices/${laptop.deviceId}/remove`, {}, device(desktop.token))).status).toBe(200);
     expect((await renew(laptop.token, workbenchId)).status).toBe(401);
     expect((await request("/v1/devices", undefined, device(laptop.token))).status).toBe(401);
+    expect((await readKey(laptop.deviceId)).status).toBe(404);
+    expect((await registerKey(publicKey)).status).toBe(401);
     const remaining = (await (await request("/v1/devices", undefined, device(desktop.token))).json()) as {
       devices: { id: string }[];
     };

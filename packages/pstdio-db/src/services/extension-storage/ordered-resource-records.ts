@@ -51,7 +51,10 @@ export const createOrderedResourceRecords = (
         await withOrderedOwner(db, owner, (journal, tx, created) =>
           initializeOrderedOwner(journal, tx, owner, created),
         );
-    })());
+    })().catch((error) => {
+      initialized = undefined;
+      throw error;
+    }));
   const readIn = async (tx: Pick<DbClient, "select">, ids: string[], observer?: StorageObserver) => {
     const records = await readProjectedRecords(tx, owner, ids);
     for (const record of records) {
@@ -75,11 +78,16 @@ export const createOrderedResourceRecords = (
       return { records: [], projected: 0, events: [], outcome: await savedOutcome(journal, group.operationId) };
     }
     const ids = group.edits.map((edit) => edit.recordId);
+    const authored = new Set(ids);
     const prepared = await rebaseOrderedProjection(journal, tx, owner, ids);
-    for (const record of await readProjectedRecords(tx, owner, ids)) {
-      const expected = deps.observer?.expected?.(owner, record.recordId);
-      if (expected !== undefined && (ownRevisions?.get(record.recordId) ?? expected) !== record.revision)
-        throw new StorageRevisionChangedError();
+    const expected = new Map(
+      ids.flatMap((id) => {
+        const revision = deps.observer?.expected?.(owner, id);
+        return revision === undefined ? [] : [[id, ownRevisions?.get(id) ?? revision] as const];
+      }),
+    );
+    for (const record of expected.size ? await readIn(tx, [...expected.keys()]) : []) {
+      if (expected.get(record.recordId) !== record.revision) throw new StorageRevisionChangedError();
     }
     const { views } = prepared;
     const operation = await compileOrderedGroup(group, views, deps.textFields);
@@ -97,6 +105,11 @@ export const createOrderedResourceRecords = (
     const saved = await rebaseOrderedProjection(journal, tx, owner, ids);
     return {
       ...saved,
+      // Projection maintenance can include other pending groups. Only this
+      // command's applied writes may advance its native load observations.
+      records: saved.suppressed.has(operation.operationId)
+        ? []
+        : saved.records.filter((record) => authored.has(record.recordId)),
       events: combineNumberEvents([...prepared.events, ...saved.events]),
       outcome: await savedOutcome(journal, group.operationId),
     };
@@ -120,6 +133,18 @@ export const createOrderedResourceRecords = (
   };
   return {
     ...queries,
+    defineIndexes: async (...input: Parameters<typeof queries.defineIndexes>) => {
+      await ready();
+      return queries.defineIndexes(...input);
+    },
+    query: async (...input: Parameters<typeof queries.query>) => {
+      await ready();
+      return queries.query(...input);
+    },
+    aggregate: async (...input: Parameters<typeof queries.aggregate>) => {
+      await ready();
+      return queries.aggregate(...input);
+    },
     conflicts: async () => [] as StorageConflict[],
     inspect: (_id: string) =>
       Promise.reject<StorageConflictInspection>(

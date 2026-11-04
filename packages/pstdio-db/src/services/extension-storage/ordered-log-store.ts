@@ -1,8 +1,10 @@
-import { and, count, eq, gte, inArray, isNull, lt } from "drizzle-orm";
+import { and, count, eq, gte, inArray, lt } from "drizzle-orm";
 import type { LogDelivery, LogReceivedBatch, LogStreamStore } from "pstdio-sync/logs";
 import { canonicalJson, fingerprint, type Json, type StorageLogEntry } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_log_entries as entries, storage_log_streams as streams } from "../../db/schemas.pg";
+import { orderedLogPendingThrough, readOrderedLogPending } from "./ordered-log-pending";
+import { lookupOrderedLogMetadata, planOrderedLog } from "./ordered-log-plan";
 import { readOrderedLog } from "./ordered-log-read";
 import { orderedLogSnapshotPage } from "./ordered-log-snapshot";
 import {
@@ -175,27 +177,10 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
         accessMode: "read only",
       });
     },
-    async pending(limit: number) {
-      const rows = await db
-        .select()
-        .from(entries)
-        .where(
-          and(
-            logWhere(entries, input),
-            eq(entries.local, true),
-            isNull(entries.relay_sequence),
-            input.keep && gte(entries.created_at, logCutoff(input)),
-          ),
-        )
-        .orderBy(entries.local_sequence)
-        .limit(limit);
-      return Promise.all(
-        rows.map(async (row) => ({
-          entry: await decodeLogPayload<StorageLogEntry>(input, row.entry),
-          delivery: row.envelope ? await decodeLogPayload<LogDelivery>(input, row.envelope) : undefined,
-        })),
-      );
-    },
+    pendingThrough: () => orderedLogPendingThrough(db, input),
+    pending: (limit: number, through?: number) => readOrderedLogPending(db, input, limit, through),
+    plan: (options = {}) => planOrderedLog(db, input, options),
+    lookupMetadata: (ids: readonly string[]) => lookupOrderedLogMetadata(db, input, ids),
     async prepare(id: string, delivery: LogDelivery) {
       const owned = structuredClone(delivery);
       return db.transaction(async (tx) => {

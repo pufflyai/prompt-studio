@@ -1,5 +1,6 @@
 export * from "./blob-manifests";
 export * from "./blob-references";
+export * from "./device-commands";
 export * from "./envelopes";
 export * from "./keys";
 export * from "./live";

@@ -140,6 +140,10 @@ API. The workbench package itself does not depend on the API host.
    on `main`, or on a pull request labeled `ci:full`; see
    [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
 
+   Its compiled device-command test declares `pstdio-relay` as a development
+   dependency and starts the exported live hub. This exercises the deployed
+   relay's frame limits and encrypted routing with two packaged runtimes.
+
    Its manual relay reference workload also composes the public `pstdio-db` and
    `pstdio-sync-contracts` exports. These are development dependencies for isolated
    fixture databases and transport measurements. It never opens the user's database.

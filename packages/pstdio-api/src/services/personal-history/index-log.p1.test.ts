@@ -1,9 +1,5 @@
 import { expect, test } from "bun:test";
 import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
-import { createSyncSpace } from "pstdio-sync/encryption";
-import { createDocumentStorage } from "pstdio-sync/records";
-import { createRelayLogs } from "../relay/logs";
-import { numberRelayFixture } from "../relay/resource-number-sync.fixture";
 import { transferPersonalIndex } from "./index-transfer.fixture";
 import { createPersonalHistoryStore, legacyPersonalHistoryOwner } from "./store";
 
@@ -49,16 +45,9 @@ test("personal index rows are durable device-log deltas rather than CRDT index c
 
 test("private index delta pages preserve remote rows, queue deletion and saved cursors after restart", async () => {
   const connections: Awaited<ReturnType<typeof createDb>>[] = [];
-  const transports: ReturnType<typeof createRelayLogs>[] = [];
   try {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const relay = numberRelayFixture();
-    const space = await createSyncSpace({
-      projectId: id,
-      spaceOwner: "alice",
-      keys: [{ generation: 1, secret: "B".repeat(43) }],
-    });
     const peer = async () => {
       const connection = await createDb({ path: ":memory:" });
       connections.push(connection);
@@ -75,28 +64,19 @@ test("private index delta pages preserve remote rows, queue deletion and saved c
         logs: storage.logs,
       };
       const history = createPersonalHistoryStore(input);
-      const transport = createRelayLogs({
-        owner: history.owner,
-        space,
-        service: storage.logs,
-        relay: relay.relay,
-        signal: new AbortController().signal,
-      });
-      transports.push(transport);
-      return { storage, history, transport, input };
+      return { storage, history, input };
     };
     const source = await peer();
     const destination = await peer();
     const device = { ownerId: "alice", id: await source.storage.logs.writerId(), name: "Laptop" };
     await source.history.writeRecords("sessions", device, [{ id: "one", title: "Private one" }]);
     await source.history.writeRecords("queues", device, [{ id: "one", requests: [{ id: "queued" }] }]);
-    const synchronize = async () => {
-      await source.transport.publish();
-      await createDocumentStorage({ owner: source.history.owner, store: destination.history.records }).applyUpdate(
-        await createDocumentStorage({ owner: source.history.owner, store: source.history.records }).exportUpdate(),
-      );
-      await destination.history.synchronize();
-    };
+    const synchronize = () =>
+      transferPersonalIndex(source.storage, destination.storage, {
+        projectId: id,
+        accountId: "alice",
+        managerOrigin: "https://manager.example",
+      });
     await synchronize();
     expect((await destination.history.readRecords("sessions"))[0]?.title).toBe("Private one");
     expect((await destination.history.readRecords("queues"))[0]?.id).toBe("one");
@@ -107,12 +87,11 @@ test("private index delta pages preserve remote rows, queue deletion and saved c
     expect((await restarted.readRecords("sessions")).map((row) => row.id)).toEqual(["two"]);
     expect(await restarted.readRecords("queues")).toEqual([]);
     const cursor = await destination.storage.personalHistoryIndex.cursor(restarted.owner);
-    await restarted.synchronize();
+    await synchronize();
     expect(await destination.storage.personalHistoryIndex.cursor(restarted.owner)).toBe(cursor);
     const other = createPersonalHistoryStore({ ...destination.input, accountId: "bob" });
     expect(await other.readRecords("sessions")).toEqual([]);
   } finally {
-    await Promise.allSettled(transports.map((transport) => transport.close()));
     await Promise.all(connections.map((connection) => connection.close()));
   }
 });

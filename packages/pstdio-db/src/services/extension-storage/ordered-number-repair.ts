@@ -1,4 +1,5 @@
 import type { OrderedOperation, OrderedRecord } from "pstdio-sync/records";
+import { assertOrderedNumberLimits, type OrderedNumberRepair } from "./ordered-number-limits";
 import {
   orderedNumber,
   renumberOrderedRecord,
@@ -23,6 +24,7 @@ export interface OrderedNumberIndex {
   next(prefix: string): Promise<number>;
   preferred?(record: OrderedRecord): Promise<number | undefined>;
   repairStamp?(record: OrderedRecord, value: number): Promise<string>;
+  validate?(records: OrderedRecord[], repairs: OrderedNumberRepair[]): Promise<void>;
 }
 
 /** The same repair policy runs against SQL canonical claims, staged claims, or local optimistic claims. */
@@ -44,6 +46,7 @@ export const repairOrderedNumbers = async (
   );
   await index.save([...final.values()]);
   const collisions = await index.collisions([...final.values()]);
+  const repairs: OrderedNumberRepair[] = [];
   for (const id of collisions) {
     const record = final.get(id) ?? (await index.read([id])).get(id);
     if (!record || !orderedNumber(record)) continue;
@@ -51,8 +54,12 @@ export const repairOrderedNumbers = async (
     const value = (await index.preferred?.(record)) ?? (await index.next(number.prefix));
     if (!Number.isSafeInteger(value)) throw new OrderedNumberRangeError(number.prefix, collisions);
     const repaired = renumberOrderedRecord(record, value, (await index.repairStamp?.(record, value)) ?? stamp);
+    repairs.push({ before: record, after: repaired });
     final.set(id, repaired);
     await index.save([repaired]);
   }
-  return [...final.values()];
+  const result = [...final.values()];
+  assertOrderedNumberLimits(result, records, repairs, !!operation);
+  await index.validate?.(result, repairs);
+  return result;
 };

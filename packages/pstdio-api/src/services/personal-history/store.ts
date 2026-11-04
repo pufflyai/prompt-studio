@@ -2,6 +2,7 @@ import type { DocumentStore } from "pstdio-sync";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
 import type { RouteDeps } from "../../features/deps";
 import { createPersonalIndexLog } from "./index-log";
+import type { SessionLogFiles } from "./log-files";
 import { type SessionLogPublication, sessionLogPublicationSchema } from "./log-publication";
 
 export interface PersonalDevice {
@@ -19,6 +20,7 @@ export interface PersonalHistoryInput {
   documents: HistoryDocuments;
   index: RouteDeps["extensionStorageService"]["personalHistoryIndex"];
   logs: RouteDeps["extensionStorageService"]["logs"];
+  files?: SessionLogFiles;
 }
 export const personalHistoryOwner = (
   input: Pick<PersonalHistoryInput, "projectId" | "accountId" | "managerOrigin">,
@@ -34,10 +36,11 @@ export const legacyPersonalHistoryOwner = (
 });
 
 /** The public read contract stays stable; only device logs own synchronized index data. */
-export const createPersonalHistoryStore = (input: PersonalHistoryInput) => {
+const createStore = (input: PersonalHistoryInput) => {
   const owner = personalHistoryOwner(input);
   const records = input.documents.open("records");
   const index = createPersonalIndexLog(input, owner, records);
+  const claims = new Map<string, boolean>();
   const readRecords = async (kind: "sessions" | "workspaces" | "workspace_sessions" | "queues") => {
     await index.ready();
     return input.index.read(owner, kind);
@@ -46,15 +49,29 @@ export const createPersonalHistoryStore = (input: PersonalHistoryInput) => {
     owner,
     records,
     readRecords,
-    synchronize: index.synchronize,
+    synchronizeIndex: index.synchronizeIndex,
+    indexPending: () => input.logs.pending(owner),
+    visibleRevision: async () => {
+      await index.ready();
+      return input.index.visibleRevision(owner);
+    },
+    getRecord: async (kind: Parameters<typeof readRecords>[0], id: string) => {
+      await index.ready();
+      return (await input.index.get(owner, kind, id)) ?? null;
+    },
     async claimLocalRecords(kind: "sessions" | "workspaces", ids: string[]) {
       const localOwner = { workbenchId: input.projectId, extensionId: "pstdio.local-history-owners" };
       const identity = JSON.stringify([input.managerOrigin, input.accountId]);
-      return input.documents.open("records").transaction(localOwner, async ({ document }) => {
-        const owners = document.getMap<string>(kind);
-        for (const id of ids) if (!owners.has(id)) owners.set(id, identity);
-        return new Set(ids.filter((id) => owners.get(id) === identity));
-      });
+      const unknown = ids.filter((id) => !claims.has(JSON.stringify([kind, id])));
+      if (unknown.length) {
+        const found = await input.documents.open("records").transaction(localOwner, async ({ document }) => {
+          const owners = document.getMap<string>(kind);
+          for (const id of unknown) if (!owners.has(id)) owners.set(id, identity);
+          return unknown.map((id) => [JSON.stringify([kind, id]), owners.get(id) === identity] as const);
+        });
+        for (const [key, own] of found) claims.set(key, own);
+      }
+      return new Set(ids.filter((id) => claims.get(JSON.stringify([kind, id]))));
     },
     async readHeads() {
       await index.ready();
@@ -101,23 +118,52 @@ export const createPersonalHistoryStore = (input: PersonalHistoryInput) => {
           await index.write({ deviceId, kind: "publications", id, value });
       }
     },
-    async writeRecords<T extends { id: string }>(
+    async patchRecords<T extends { id: string }>(
       kind: "sessions" | "workspaces" | "workspace_sessions" | "queues",
+      device: PersonalDevice,
+      rows: T[],
+      removed: string[] = [],
+    ) {
+      await index.ready();
+      for (const row of rows) {
+        const value = JSON.parse(JSON.stringify({ ...row, device })) as Json;
+        const old = await input.index.get(owner, kind, row.id);
+        if (
+          !old ||
+          (await input.index.isSeeded(owner, kind, device.id, row.id)) ||
+          canonicalJson(old as Json) !== canonicalJson(value)
+        )
+          await index.write({ deviceId: device.id, kind, id: row.id, value });
+      }
+      for (const id of removed) await index.write({ deviceId: device.id, kind, id, value: null });
+    },
+    async writeRecords<T extends { id: string }>(
+      kind: Parameters<typeof readRecords>[0],
       device: PersonalDevice,
       rows: T[],
     ) {
       await index.ready();
-      const previous = new Map((await input.index.device(owner, kind, device.id)).map((row) => [String(row.id), row]));
-      const seeded = await input.index.seeded(owner, kind, device.id);
-      for (const row of rows) {
-        const value = JSON.parse(JSON.stringify({ ...row, device })) as Json;
-        const old = previous.get(row.id);
-        if (!old || seeded.has(row.id) || canonicalJson(old as Json) !== canonicalJson(value))
-          await index.write({ deviceId: device.id, kind, id: row.id, value });
-        previous.delete(row.id);
-      }
-      for (const id of previous.keys()) await index.write({ deviceId: device.id, kind, id, value: null });
+      const next = new Set(rows.map((row) => row.id));
+      const removed = (await input.index.device(owner, kind, device.id))
+        .map((row) => String(row.id))
+        .filter((id) => !next.has(id));
+      await this.patchRecords(kind, device, rows, removed);
     },
   };
+};
+const stores = new WeakMap<PersonalHistoryInput["index"], Map<string, ReturnType<typeof createStore>>>();
+export const createPersonalHistoryStore = (input: PersonalHistoryInput) => {
+  let owners = stores.get(input.index);
+  if (!owners) {
+    owners = new Map();
+    stores.set(input.index, owners);
+  }
+  const key = JSON.stringify(personalHistoryOwner(input));
+  let store = owners.get(key);
+  if (!store) {
+    store = createStore(input);
+    owners.set(key, store);
+  }
+  return store;
 };
 export type PersonalHistoryStore = ReturnType<typeof createPersonalHistoryStore>;

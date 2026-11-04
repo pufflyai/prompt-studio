@@ -8,6 +8,48 @@ afterEach(async () => {
   for (const close of cleanup.splice(0)) await close();
 });
 
+test("head-only index updates preserve visible revisions and unchanged row identity", async () => {
+  const { db, close } = await createDb({ path: ":memory:" });
+  cleanup.push(close);
+  const now = new Date().toISOString();
+  await db
+    .insert(projects)
+    .values({ id: "visible-project", name: "Visible", shorthand: "V", created_at: now, updated_at: now });
+  const index = createPersonalHistoryIndex(db);
+  const owner = { workbenchId: "visible-project", extensionId: "private" };
+  await index.apply(owner, null, [{ deviceId: "laptop", kind: "sessions", id: "one", value: { id: "one" } }]);
+  const row = await index.get(owner, "sessions", "one");
+  const revision = await index.visibleRevision(owner);
+  await index.apply(owner, null, [
+    { deviceId: "laptop", kind: "heads", id: "one", value: { id: "one", sequence: 1 } },
+    { deviceId: "laptop", kind: "publications", id: "one", value: { id: "one", head: 1, version: "complete" } },
+  ]);
+  expect(await index.visibleRevision(owner)).toBe(revision);
+  expect(await index.get(owner, "sessions", "one")).toBe(row);
+  await index.apply(owner, null, [{ deviceId: "laptop", kind: "sessions", id: "two", value: { id: "two" } }]);
+  expect(await index.visibleRevision(owner)).not.toBe(revision);
+  expect(await index.get(owner, "sessions", "one")).toBe(row);
+});
+
+test("canonical device snapshots exclude a newer durable optimistic index edit", async () => {
+  const { db, close } = await createDb({ path: ":memory:" });
+  cleanup.push(close);
+  const now = new Date().toISOString();
+  await db
+    .insert(projects)
+    .values({ id: "overlay-project", name: "Overlay", shorthand: "O", created_at: now, updated_at: now });
+  const index = createPersonalHistoryIndex(db);
+  const owner = { workbenchId: "overlay-project", extensionId: "private" };
+  const delta = (title: string) => ({ deviceId: "laptop", kind: "sessions", id: "one", value: { id: "one", title } });
+  await index.apply(owner, null, [delta("first")], "first-id");
+  await index.apply(owner, null, [delta("newer")], "newer-id");
+  await index.accept(owner, "laptop", 1, [{ entryId: "first-id", sequence: 1, index: 0, delta: delta("first") }]);
+  expect((await index.get(owner, "sessions", "one"))?.title).toBe("newer");
+  expect((await index.sourcePage(owner, "laptop"))[0]?.delta.value).toEqual({ id: "one", title: "first" });
+  await index.accept(owner, "laptop", 2, [{ entryId: "newer-id", sequence: 2, index: 0, delta: delta("newer") }]);
+  expect(await index.sourcePosition(owner, "laptop")).toBe(2);
+});
+
 test("a migrated full copy seeds missing device history without resurrecting normal deletions", async () => {
   const { db, close } = await createDb({ path: ":memory:" });
   cleanup.push(close);

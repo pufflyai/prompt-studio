@@ -71,7 +71,7 @@ export const seedTextDocument = async (document: Y.Doc, source: string, author?:
   try {
     if (author !== undefined) genesis.clientID = author;
     // Empty ordered fields still need distinct original histories across lifetimes.
-    if (identity !== undefined) genesis.getMap("text-genesis-context").set("identity", identity);
+    if (identity !== undefined) genesis.getMap(textDocumentKeys.genesisContext).set("identity", identity);
     genesis.getText("content").insert(0, source);
     const state = Y.encodeStateAsUpdate(genesis);
     const id = await seedId(state);

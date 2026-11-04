@@ -25,7 +25,7 @@ export const createExtensionRecordsApi = (
       .storage?.records?.text;
     const storage = await deps.extensionStorageService.open({
       owner,
-      textFields,
+      textFields: textFields?.map(({ prefix, fields }) => ({ prefix, fields: [...fields] })),
       assets: createRecordAssets(deps.assetTransferService, owner, input.signal),
     });
     return storage.scopedRecords(input.scopeType, input.scopeId);

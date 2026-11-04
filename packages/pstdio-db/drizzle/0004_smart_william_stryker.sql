@@ -97,6 +97,7 @@ CREATE TABLE "storage_personal_history" (
 	"record_id" text NOT NULL,
 	"value" jsonb,
 	"seed_id" text,
+	"pending_id" text,
 	CONSTRAINT "storage_personal_history_pk" PRIMARY KEY("workbench_id","extension_id","kind","device_id","record_id")
 );
 --> statement-breakpoint
@@ -106,6 +107,21 @@ CREATE TABLE "storage_personal_history_positions" (
 	"cursor" text,
 	"migrated" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "storage_personal_history_positions_pk" PRIMARY KEY("workbench_id","extension_id")
+);
+--> statement-breakpoint
+CREATE TABLE "storage_personal_history_sources" (
+	"workbench_id" text NOT NULL,
+	"extension_id" text NOT NULL,
+	"source_id" text NOT NULL,
+	"kind" text NOT NULL,
+	"device_id" text NOT NULL,
+	"record_id" text NOT NULL,
+	"value" jsonb,
+	"seed_id" text,
+	"entry_id" text NOT NULL,
+	"sequence" bigint NOT NULL,
+	"entry_index" integer NOT NULL,
+	CONSTRAINT "storage_personal_history_sources_pk" PRIMARY KEY("workbench_id","extension_id","source_id","kind","device_id","record_id")
 );
 --> statement-breakpoint
 CREATE TABLE "storage_ordered_resource_numbers" (
@@ -129,6 +145,7 @@ ALTER TABLE "storage_log_entries" ADD CONSTRAINT "storage_log_entries_stream_fk"
 ALTER TABLE "storage_log_streams" ADD CONSTRAINT "storage_log_streams_project_fk" FOREIGN KEY ("workbench_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_personal_history" ADD CONSTRAINT "storage_personal_history_workbench_id_projects_id_fk" FOREIGN KEY ("workbench_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_personal_history_positions" ADD CONSTRAINT "storage_personal_history_positions_workbench_id_projects_id_fk" FOREIGN KEY ("workbench_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "storage_personal_history_sources" ADD CONSTRAINT "storage_personal_history_sources_workbench_id_projects_id_fk" FOREIGN KEY ("workbench_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_ordered_resource_numbers" ADD CONSTRAINT "storage_ordered_resource_numbers_workbench_id_projects_id_fk" FOREIGN KEY ("workbench_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "storage_ordered_operations_pending_idx" ON "storage_ordered_operations" USING btree ("workbench_id","extension_id","local_sequence") WHERE "storage_ordered_operations"."envelope" IS NOT NULL AND "storage_ordered_operations"."settled_epoch" IS NULL;--> statement-breakpoint
 CREATE INDEX "storage_ordered_receipts_unindexed_idx" ON "storage_ordered_receipts" USING btree ("workbench_id","extension_id","epoch","operation_id") WHERE "storage_ordered_receipts"."indexed" = false;--> statement-breakpoint

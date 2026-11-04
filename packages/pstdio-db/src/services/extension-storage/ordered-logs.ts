@@ -92,14 +92,23 @@ export const createOrderedLogs = (
         if ((await (await stream(owner, entry)).pending(1)).length) return true;
       return false;
     },
-    open(owner: StorageOwner, definition: StorageLogDefinition, scope: string) {
+    open(
+      owner: StorageOwner,
+      definition: StorageLogDefinition,
+      scope: string,
+      selected?: () => ReadonlySet<string> | undefined,
+    ) {
       const owned = structuredClone({ ...definition, writer: definition.writer ?? "project" });
       return createLogCollection({
         address: JSON.stringify([owner.workbenchId, owner.extensionId, definition.name, scope]),
         definition: owned,
         scope,
         writerId: async () => (await environment.get()).environmentId,
-        directory: () => directory(owner),
+        directory: async () => {
+          const allowed = selected?.();
+          const entries = await directory(owner);
+          return allowed ? entries.filter((entry) => allowed.has(entry.stream)) : entries;
+        },
         register: (entry) =>
           deps.metadata(owner, async ({ document }) => {
             const map = document.getMap<LogDirectoryEntry>("append-logs");

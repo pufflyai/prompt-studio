@@ -1,9 +1,9 @@
 import type { DocumentStore, StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { createDocumentRelay, createDocumentSync, fetchSyncSpaces, type SubscribeDocument } from "pstdio-sync/relay";
+import { personalIndexLogName } from "../personal-history/index-projection-sync";
 import { historyReferenceName } from "../personal-history/references";
 import { documentProgress } from "./document-progress";
-import { createRelayLogs } from "./logs";
 import type { createPersonalContext } from "./personal-context";
 import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
@@ -24,8 +24,11 @@ export const createPersonalDocuments = (input: {
   let spaces: Awaited<ReturnType<typeof fetchSyncSpaces>> | undefined;
   let records: ReturnType<typeof createDocumentSync> | undefined;
   let shared: ReturnType<typeof createDocumentSync> | undefined;
-  let logs: ReturnType<typeof createRelayLogs> | undefined;
   let ids: string[] = [];
+  const changed = new Set<string>();
+  let allIndexes = true;
+  let downloaded = false;
+  const knownIndexes = new Set<string>();
   const relayFor = (space: SyncSpace, subscribe?: SubscribeDocument) => (documentId: string) => {
     return createDocumentRelay({
       subscribe,
@@ -50,7 +53,6 @@ export const createPersonalDocuments = (input: {
   const close = () => {
     records?.close();
     shared?.close();
-    void logs?.close();
   };
   return {
     relayFor,
@@ -61,8 +63,15 @@ export const createPersonalDocuments = (input: {
     get space() {
       return preparedRevision === keyRevision ? spaces?.personal : undefined;
     },
-    owns: (id: string) => ids.includes(id) || Boolean(logs?.has(id)),
+    owns: (id: string) => ids.includes(id),
+    changed(id: string) {
+      changed.add(id);
+    },
+    invalidateIndexes() {
+      allIndexes = true;
+    },
     async prepare(signal: AbortSignal) {
+      await context.discardLegacy();
       requestSignal = signal;
       const renewed = keysFor !== signal;
       const revision = keyRevision;
@@ -75,19 +84,14 @@ export const createPersonalDocuments = (input: {
         spaces?.project.generation !== keys.project.generation;
       if (recreated) {
         close();
+        allIndexes = true;
+        downloaded = false;
+        knownIndexes.clear();
         const recordsId = await keys.personal.documentId(JSON.stringify(["pstdio.personal-history", "records-v3"]));
         const sharedId = await keys.project.documentId(historyReferenceName);
         ids = [recordsId, sharedId];
         records = syncFor(context.history.owner, context.history.records, keys.personal, recordsId);
         shared = syncFor(context.references.owner, context.references.store, keys.project, sharedId);
-        logs = createRelayLogs({
-          owner: context.history.owner,
-          space: keys.personal,
-          service: context.logs,
-          relay: relayFor(keys.personal),
-          signal: input.signal,
-          subscribe: input.subscribe,
-        });
       }
       spaces = keys;
       preparedRevision = revision;
@@ -95,14 +99,50 @@ export const createPersonalDocuments = (input: {
     },
     async status(pendingHeads = false) {
       const record = await records?.status();
-      const index = record && { ...record, pending: record.pending || pendingHeads };
-      return documentProgress([index, await shared?.status(), await logs?.status()], true);
+      const index = record && {
+        ...record,
+        pending: record.pending || pendingHeads || (await context.history.indexPending()),
+      };
+      return documentProgress(
+        [index && { ...index, downloaded: index.downloaded && downloaded }, await shared?.status()],
+        true,
+      );
     },
     async synchronize() {
-      await logs!.publish();
       await records!.synchronize();
-      await context.history.synchronize();
-      await shared!.synchronize();
+      const pending = new Set(changed);
+      changed.clear();
+      const full = allIndexes;
+      allIndexes = false;
+      try {
+        const localPending = await context.history.indexPending();
+        for (const entry of await context.logs.directory(context.history.owner)) {
+          if (entry.name !== "index" || entry.writer !== "device") continue;
+          const id = await spaces!.personal.documentId(personalIndexLogName(entry.stream));
+          const added = !knownIndexes.has(id);
+          knownIndexes.add(id);
+          if (!ids.includes(id)) ids.push(id);
+          input.subscribe(spaces!.personal.spaceOwner, id);
+          if (
+            full ||
+            added ||
+            pending.has(id) ||
+            !downloaded ||
+            (entry.stream === config.environmentId && localPending)
+          )
+            await context.history.synchronizeIndex(
+              entry.stream,
+              entry.stream === config.environmentId,
+              spaces!.personal,
+              relayFor(spaces!.personal),
+            );
+        }
+        await shared!.synchronize();
+        downloaded = true;
+      } catch (error) {
+        allIndexes = true;
+        throw error;
+      }
     },
   };
 };

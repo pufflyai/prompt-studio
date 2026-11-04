@@ -61,6 +61,7 @@
     "pstdio-performance": "workspace:*",
     "pstdio-planner": "workspace:*",
     "pstdio-reports": "workspace:*",
+    "pstdio-relay": "workspace:*",
     "pstdio-scripts": "workspace:*",
     "pstdio-skills": "workspace:*",
     "pstdio-sync": "workspace:*",

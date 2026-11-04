@@ -12,6 +12,15 @@ export const createPersonalPublications = (input: {
   const formats = new Map<string, "append-log-v1">();
   let writtenAt = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const settle = (
+    writingHeads: Map<string, number>,
+    writingCompleted: Map<string, SessionLogPublication>,
+    writingFormats: Map<string, "append-log-v1">,
+  ) => {
+    for (const [id, head] of writingHeads) if (heads.get(id) === head) heads.delete(id);
+    for (const [id, proof] of writingCompleted) if (completed.get(id) === proof) completed.delete(id);
+    for (const id of writingFormats.keys()) if (!heads.has(id) && !completed.has(id)) formats.delete(id);
+  };
   return {
     pending: () => heads.size > 0 || completed.size > 0,
     published(sessionId: string, head: number, version?: string, format?: "append-log-v1") {
@@ -19,19 +28,25 @@ export const createPersonalPublications = (input: {
       if (format) formats.set(sessionId, format);
       if (version) completed.set(sessionId, { head, version, ...(format ? { format } : {}) });
       input.published(sessionId);
+      if (version) input.wake();
       timer ??= setTimeout(() => {
         timer = undefined;
         input.wake();
-      }, 10_500);
+      }, 60_000);
     },
     async flush(full: boolean, captured: boolean) {
-      const ordinary = heads.size > 0 && (full || captured || Date.now() - writtenAt > 10_000);
+      const ordinary = heads.size > 0 && (full || captured || Date.now() - writtenAt >= 60_000);
       if (!completed.size && !ordinary) return false;
-      await input.history.writeHeads(new Map(heads), new Map(completed), new Map(formats));
-      heads.clear();
-      completed.clear();
-      formats.clear();
+      const writingHeads = new Map(heads);
+      const writingCompleted = new Map(completed);
+      const writingFormats = new Map(formats);
+      await input.history.writeHeads(writingHeads, writingCompleted, writingFormats);
+      settle(writingHeads, writingCompleted, writingFormats);
       writtenAt = Date.now();
+      if (!heads.size && !completed.size) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
       return true;
     },
     close() {
