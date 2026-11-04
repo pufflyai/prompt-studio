@@ -123,7 +123,6 @@ jobs:
         include:
           - { os: windows-2025, platform_pkg: cli-win-x64 }
           - { os: windows-11-arm, platform_pkg: cli-win-arm64 }
-          - { os: macos-15-intel, platform_pkg: cli-darwin-x64 }
     env:
       PSTDIO_BUILD_PLATFORM_PKG: ${{ matrix.platform_pkg }}
       CI_PRIORITY: P2
@@ -143,41 +142,12 @@ jobs:
       - name: Build native diagnostic runtime and source fixtures
         shell: bash
         run: bun run --cwd scripts build:all > native-build.log 2>&1
-      - name: Prepare browser outside the tests
+      - name: Diagnose Windows CLI project provisioning
         env:
-          BINARY_PATH: packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/${{ runner.os == 'Windows' && 'pstdio.exe' || 'pstdio' }}
-        shell: bash
-        run: bun -e 'import { resolve } from "node:path"; import { preparePackagedSmokeBrowser } from "./scripts/verify/packaged-runtime-smoke"; preparePackagedSmokeBrowser(resolve(process.env.BINARY_PATH!));' > native-browser-setup.log 2>&1
-      - name: Diagnose the unchanged native workloads once
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/${{ runner.os == 'Windows' && 'pstdio.exe' || 'pstdio' }}
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
         working-directory: packages/e2e
         shell: bash
-        run: >-
-          bun run test:packaged:cli
-          src/packaged/packaged-cloud-peer.fixture.p0.test.ts
-          src/packaged/packaged.p1.test.ts
-          src/packaged/packaged-core-extensions-smoke.p1.test.ts
-          src/packaged/packaged-cloud-notes-onboarding.p2.test.ts
-          src/packaged/packaged-board-panning-smoke.p2.test.ts
-          > ../../native-fixtures.log 2>&1
-      - name: Diagnose unsigned Intel desktop build
-        if: ${{ !cancelled() && matrix.platform_pkg == 'cli-darwin-x64' }}
-        shell: bash
-        run: |
-          status=0
-          bun run --cwd clients/desktop package -- --arch=x64 > native-desktop-build.log 2>&1 || status=$?
-          if [[ "$status" != 0 ]]; then
-            python3 - <<'PYTHON'
-          import pathlib, re
-          text = pathlib.Path("native-desktop-build.log").read_text(errors="replace")[-12000:]
-          text = re.sub(r"https?://\S+", "[URL]", text)
-          text = re.sub(r"Bearer\s+\S+", "Bearer [REDACTED]", text)
-          text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-          print("::error title=Unsigned Intel desktop build::" + text)
-          PYTHON
-          fi
-          exit "$status"
+        run: bun test src/packaged/packaged.p1.test.ts > ../../native-fixtures.log 2>&1
       - name: Preserve native diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4

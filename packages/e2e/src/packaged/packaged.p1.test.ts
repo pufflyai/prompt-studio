@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,13 +18,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await api?.stop();
+  // The shared API owns each created project's watchers until it stops. Removing
+  // a live workspace between cases can strand its Windows filesystem work.
+  cleanupDirs(dirs);
 });
 
 const dirs: string[] = [];
-
-afterEach(() => {
-  cleanupDirs(dirs);
-});
 
 // Keep the event loop available to drain the API pipes while it handles the CLI request.
 const run = (args: string[], cwd: string) => runPackagedAsync(args, cwd, { PSTDIO_API_URL: api.url });
