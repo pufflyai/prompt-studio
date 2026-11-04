@@ -1,4 +1,4 @@
-import { type SessionMessage, sessionSchema, workspaceSchema } from "pstdio-api-contracts";
+import { normalizeMessageResults, type SessionMessage, sessionSchema, workspaceSchema } from "pstdio-api-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { historyNamespace, type SessionLogFiles } from "./log-files";
@@ -141,7 +141,8 @@ export const createPersonalHistoryService = (input: {
       };
     },
     messageReceived(sessionId: string, update: { index: number; message: SessionMessage; live: boolean }) {
-      for (const listener of messageListeners.get(sessionId) ?? []) listener(update);
+      const normalized = { ...update, message: normalizeMessageResults(update.message) };
+      for (const listener of messageListeners.get(sessionId) ?? []) listener(normalized);
     },
     refreshIdentity,
     links,

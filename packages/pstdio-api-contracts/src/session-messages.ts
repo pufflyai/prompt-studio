@@ -10,6 +10,18 @@ export type ToolPartActionType = "read" | "write" | "execute" | "network" | "oth
 
 export type ToolPartStatus = "pending" | "running" | "completed" | "failed" | "denied";
 
+export type ToolResultSummary = {
+  version: 1;
+  originalBytes: number;
+  omittedBytes: number;
+  fingerprint: string;
+  outputFingerprint: string;
+  errorFingerprint: string;
+  metadataFingerprint: string;
+  headChars: number;
+  tailChars: number;
+};
+
 export type ToolPart = {
   type: "tool";
   tool: string;
@@ -22,6 +34,7 @@ export type ToolPart = {
     output?: unknown;
     errorText?: string;
     metadata?: unknown;
+    resultSummary?: ToolResultSummary;
   };
 };
 
@@ -117,6 +130,19 @@ const toolPartSchema = z.object({
       output: z.unknown().optional(),
       errorText: z.string().optional(),
       metadata: z.unknown().optional(),
+      resultSummary: z
+        .object({
+          version: z.literal(1),
+          originalBytes: z.number(),
+          omittedBytes: z.number(),
+          fingerprint: z.string(),
+          outputFingerprint: z.string(),
+          errorFingerprint: z.string(),
+          metadataFingerprint: z.string(),
+          headChars: z.number(),
+          tailChars: z.number(),
+        })
+        .optional(),
     })
     .optional(),
 });
