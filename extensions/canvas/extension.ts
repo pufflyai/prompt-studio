@@ -49,7 +49,7 @@ export default defineExtension({
       icon: canvasResource.icon,
       owner: workbenchModes.project,
       slot: "content",
-      action: { kind: "page", page: homePage.ref },
+      action: { kind: "page", page: homePage.ref, intent: "restore" },
     }),
   ],
   navigationTrees: [

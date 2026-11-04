@@ -105,6 +105,7 @@ test("the normal session API sends follow-ups, question answers, approvals and i
       relayOrigin: "https://127.0.0.1:1",
     };
     await createNativeStore(nativeAccountFile(":memory:", join(root, "source"))).save(login);
+    await source.deps.personalHistoryService.refreshIdentity();
     const session = await target.deps.sessionService.create({
       project_id: project.id,
       title: "Remote",
@@ -131,6 +132,7 @@ test("the normal session API sends follow-ups, question answers, approvals and i
       ...login,
       projectId: project.id,
       documents: source.deps.extensionStorageService.documents,
+      files: source.deps.personalHistoryService.logs,
     });
     await history.writeRecords("sessions", { id: targetId, ownerId: login.accountId, name: "Desktop" }, [
       { ...session, workspace_id: null },

@@ -114,16 +114,23 @@ test(
         const documents = peer.personalDocuments();
         return documents.length >= 2 && documents.every((document) => document.state || document.updates.length > 0);
       });
+      await clientA.sessions.rename(session.id, "Renamed private conversation");
+      await waitFor(async () => (await clientA.account.projectSyncStatus(projectId)).state === "synced");
       await stopProcess(a.child);
       b = await startPackagedServe(roots[1]!, env);
       let clientB = await connect(b, join(roots[1]!, "project"));
       await waitFor(async () => (await clientB.sessions.query(projectId)).items.some((row) => row.id === session.id));
       await waitFor(async () => (await clientB.sessions.getConversation(session.id)).messages.length === 600);
+      await waitFor(
+        async () =>
+          (await clientB.sessions.getConversation(session.id)).session.title === "Renamed private conversation",
+      );
       await stopProcess(b.child);
       await peer.stop();
       b = await startPackagedServe(roots[1]!, env);
       clientB = createClient({ baseUrl: b.baseUrl, token: b.descriptor.token });
       const conversation = await clientB.sessions.getConversation(session.id);
+      expect(conversation.session.title).toBe("Renamed private conversation");
       expect(conversation.messages).toHaveLength(600);
       expect(conversation.messages[0]).toMatchObject({
         parts: [{ type: "text", text: `${"packaged-secret transcript ".repeat(50_000)}0` }],

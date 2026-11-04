@@ -1,8 +1,9 @@
 import type { DocumentRelay } from "pstdio-sync/relay";
-import type { StoredUpdate } from "pstdio-sync-contracts";
+import type { StateEnvelope, StateInfo, StoredUpdate } from "pstdio-sync-contracts";
 
 export const logRelayFixture = () => {
   const updates = new Map<string, StoredUpdate[]>();
+  const states = new Map<string, StateEnvelope>();
   const blobs = new Map<string, Uint8Array>();
   const reads: number[] = [];
   const relay = (documentId: string): DocumentRelay => ({
@@ -17,19 +18,31 @@ export const logRelayFixture = () => {
       reads.push(after);
       const entries = updates.get(documentId) ?? [];
       const page = entries.filter((entry) => entry.sequence > after).slice(0, 1);
+      const saved = states.get(documentId);
+      const state: StateInfo | null = saved
+        ? {
+            ...saved,
+            byteLength: Buffer.byteLength(saved.payload, "base64"),
+            deviceId: "source",
+            createdAt: new Date().toISOString(),
+          }
+        : null;
+      if (state && after < state.through) return { status: "state-required", state, lastSequence: entries.length };
       return {
         status: "updates",
-        state: null,
+        state,
         lastSequence: entries.length,
         updates: page,
         more: (page.at(-1)?.sequence ?? after) < entries.length,
       };
     },
     async state() {
-      throw new Error("Session logs never have a state");
+      return new Uint8Array(Buffer.from(states.get(documentId)!.payload, "base64"));
     },
-    async replace() {
-      throw new Error("Session logs never replace a state");
+    async replace(state) {
+      if ((states.get(documentId)?.stateId ?? null) !== state.baseStateId) return false;
+      states.set(documentId, state);
+      return true;
     },
     blobs: {
       async put(id, bytes) {
@@ -42,5 +55,5 @@ export const logRelayFixture = () => {
       },
     },
   });
-  return { relay, updates, blobs, reads };
+  return { relay, updates, states, blobs, reads };
 };

@@ -15,13 +15,14 @@ const framesSchema = frameSchema.array();
 type Frame = z.infer<typeof frameSchema>;
 type LivePublication = Awaited<ReturnType<typeof sealLive>>;
 
-export const personalLiveTopic = (space: SyncSpace) =>
-  space.documentId(JSON.stringify(["pstdio.personal-history", "live-v2"]));
+export const personalLiveTopic = (space: SyncSpace, sessionId: string) =>
+  space.documentId(JSON.stringify(["pstdio.personal-history", "preview-v1", sessionId]));
 
 /** Full live snapshots are fragmented within the relay's 64 KiB wire limit; no text is truncated or stored. */
 export const createLivePublisher = (input: {
   deviceId: string;
   sessions: ExtensionsRouteDeps["sessionService"]["store"];
+  interested?: (id: string) => boolean;
 }) => {
   let context: { space: SyncSpace; send: (message: LivePublication) => void } | undefined;
   const prepare = (space: SyncSpace, send: (message: LivePublication) => void) => {
@@ -36,6 +37,7 @@ export const createLivePublisher = (input: {
       context.space = space;
       return;
     }
+    if (context) restart(snapshots.keys());
     context = { space, send };
   };
   const dirty = new Set<string>();
@@ -43,6 +45,11 @@ export const createLivePublisher = (input: {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   const take = (id: string) => {
+    if (input.interested && !input.interested(id)) {
+      dirty.delete(id);
+      snapshots.delete(id);
+      return;
+    }
     let snapshot = snapshots.get(id);
     if (snapshot) return snapshot;
     const messages = input.sessions.get(id)?.conversation?.getMessages();
@@ -84,23 +91,36 @@ export const createLivePublisher = (input: {
     }
     return frames;
   };
+  const interested = (id: string) => !input.interested || input.interested(id);
+  const restart = (ids: Iterable<string>) => {
+    for (const id of ids) {
+      snapshots.delete(id);
+      dirty.add(id);
+    }
+  };
   const sendFrames = async (frames: Frame[]) => {
     const current = context;
     if (!frames.length || !current) return;
-    const sealed = await sealLive(
-      current.space,
-      input.deviceId,
-      await personalLiveTopic(current.space),
-      new TextEncoder().encode(JSON.stringify(frames)),
-    );
-    if (closed) return;
-    if (context === current) current.send(sealed);
-    else
-      for (const frame of frames) {
-        // A rotation invalidates in-flight bytes; restart the full preview with the current key.
-        snapshots.delete(frame.sessionId);
-        dirty.add(frame.sessionId);
+    for (const sessionId of new Set(frames.map((frame) => frame.sessionId))) {
+      if (!interested(sessionId)) continue;
+      const sealed = await sealLive(
+        current.space,
+        input.deviceId,
+        await personalLiveTopic(current.space, sessionId),
+        new TextEncoder().encode(JSON.stringify(frames.filter((frame) => frame.sessionId === sessionId))),
+      );
+      if (closed) return;
+      if (context !== current) {
+        // Renewed readers discard old-key assemblies, including previews already sent in this batch.
+        restart(new Set(frames.map((frame) => frame.sessionId)));
+        return;
       }
+      if (interested(sessionId)) current.send(sealed);
+      else {
+        // Closing one reader does not invalidate another session's already-sent fragments.
+        restart([sessionId]);
+      }
+    }
   };
   const schedule = () => {
     if (timer || closed) return;
@@ -118,7 +138,7 @@ export const createLivePublisher = (input: {
   return {
     prepare,
     live(sessionId: string, space: SyncSpace, send: (message: LivePublication) => void) {
-      if (closed) return;
+      if (closed || (input.interested && !input.interested(sessionId))) return;
       prepare(space, send);
       dirty.add(sessionId);
       schedule();

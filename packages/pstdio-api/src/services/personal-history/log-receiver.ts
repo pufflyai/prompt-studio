@@ -68,6 +68,18 @@ export const createLogReceiver = (input: {
     }
   };
 
+  const reading = new Map<string, Promise<void>>();
+  const read = (id: string, space: SyncSpace, relay: (id: string) => DocumentRelay) => {
+    const previous = reading.get(id) ?? Promise.resolve();
+    const work = previous.catch(() => {}).then(() => readOne(id, space, relay));
+    reading.set(id, work);
+    void work
+      .finally(() => {
+        if (reading.get(id) === work) reading.delete(id);
+      })
+      .catch(() => {});
+    return work;
+  };
   return {
     /** Sessions whose published log is ahead of what this device has read. */
     async behind(sessionIds: string[], heads: Map<string, number>) {
@@ -88,7 +100,7 @@ export const createLogReceiver = (input: {
       return found;
     },
     async read(sessionIds: Iterable<string>, space: SyncSpace, relay: (documentId: string) => DocumentRelay) {
-      for (const sessionId of sessionIds) await readOne(sessionId, space, relay);
+      for (const sessionId of sessionIds) await read(sessionId, space, relay);
     },
   };
 };

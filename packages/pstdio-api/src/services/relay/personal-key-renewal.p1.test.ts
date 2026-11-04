@@ -57,7 +57,7 @@ test("planned access renewal refreshes personal keys while retaining the small i
     await until(async () => ready === 1 && !(await sync.status()).busy);
     expect(keyReads).toBe(1);
     const documentIds = [...peer.documents.keys()].sort();
-    expect(documentIds).toHaveLength(2);
+    expect(documentIds).toHaveLength(3);
     await until(async () => ready === 2 && !(await sync.status()).busy);
     expect(keyReads).toBe(2);
     expect([...peer.documents.keys()].sort()).toEqual(documentIds);

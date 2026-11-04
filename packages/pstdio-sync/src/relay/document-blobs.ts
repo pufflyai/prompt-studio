@@ -20,6 +20,10 @@ const assetsOf = (document: Y.Doc) => {
   }
   return assets;
 };
+export const hasDocumentAssets = (document: Y.Doc) => {
+  for (const name of document.getMap<string>("records").values()) if (document.getMap(name).get("asset")) return true;
+  return false;
+};
 const sha256 = async (bytes: Uint8Array) => {
   const hash = await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>);
   return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");

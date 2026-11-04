@@ -2,6 +2,7 @@ import { beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentStorage } from "pstdio-sync/records";
 import { createResourceLinksApi } from "../../features/extensions/command-environment/resource-links";
 import { streamPersonalSession } from "../../features/sessions/endpoints/stream-personal-session";
@@ -11,6 +12,7 @@ import { createNativeStore } from "../account/native-store";
 import { capturePersonalHistory } from "./capture";
 import { messageEntries } from "./log-entries";
 import { historyNamespace } from "./log-files";
+import { logRelayFixture } from "./log-transport.fixture";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore } from "./store";
 
@@ -57,7 +59,10 @@ const verifyMetadataOwnership = async (
     pending.then((response) => ({ response })),
     started.promise.then(() => ({ response: null })),
   ]);
-  if (!first.response) await native.save({ ...login, accountId: "bob" });
+  if (!first.response) {
+    await native.save({ ...login, accountId: "bob" });
+    await destination.deps.personalHistoryService.refreshIdentity();
+  }
   released.resolve();
   const response = await pending;
   workspaceReads.getWorkspaceBySessionId = lookup;
@@ -78,6 +83,23 @@ const verifyOfflineInterrupt = async (sessionId: string) => {
   expect(await cancel.json()).toMatchObject({ error: expect.any(String) });
   expect(await destination.deps.sessionService.get(sessionId)).toBeNull();
   expect((await destination.deps.personalHistoryService.getSession(sessionId))?.status).toBe("completed");
+};
+
+const copyIndex = async (
+  source: ReturnType<typeof createPersonalHistoryStore>,
+  destination: ReturnType<typeof createPersonalHistoryStore>,
+  deviceId: string,
+  projectId: string,
+  accountId: string,
+) => {
+  const space = await createSyncSpace({
+    projectId,
+    spaceOwner: accountId,
+    keys: [{ generation: 1, secret: "A".repeat(43) }],
+  });
+  const relay = logRelayFixture();
+  await source.synchronizeIndex(deviceId, true, space, relay.relay);
+  await destination.synchronizeIndex(deviceId, false, space, relay.relay);
 };
 
 test("personal history is readable offline after restart, private to the account, and never a local execution record", async () => {
@@ -119,6 +141,7 @@ test("personal history is readable offline after restart, private to the account
         managerOrigin,
         accountId: owner,
         documents: host.deps.extensionStorageService.documents,
+        files: host.deps.personalHistoryService.logs,
       });
     const refs = (host: typeof source) =>
       createHistoryReferences(host.deps.extensionStorageService.documents.open(historyReferenceName), project.id);
@@ -144,17 +167,7 @@ test("personal history is readable offline after restart, private to the account
       1,
       messages.flatMap((message, index) => messageEntries(index, message)),
     );
-    for (const name of ["records"]) {
-      const from = createDocumentStorage({
-        owner: history.owner,
-        store: source.deps.extensionStorageService.documents.open(name),
-      });
-      const to = createDocumentStorage({
-        owner: history.owner,
-        store: destination.deps.extensionStorageService.documents.open(name),
-      });
-      await to.applyUpdate(await from.exportUpdate());
-    }
+    await copyIndex(history, store(destination), device.id, project.id, accountId);
     const sharedFrom = refs(source);
     const sharedTo = refs(destination);
     await createDocumentStorage(sharedTo).applyUpdate(await createDocumentStorage(sharedFrom).exportUpdate());
@@ -178,6 +191,7 @@ test("personal history is readable offline after restart, private to the account
       token: "offline-credential",
     };
     await native.save(login);
+    await destination.deps.personalHistoryService.refreshIdentity();
     await destination.close();
     destination = await createTestApp({ databasePath, storageRoot });
     expect(await destination.deps.sessionService.get(session.id)).toBeNull();
@@ -250,6 +264,7 @@ test("personal history is readable offline after restart, private to the account
       }),
     );
     await native.save(login);
+    await destination.deps.personalHistoryService.refreshIdentity();
     const startedRead = Promise.withResolvers<void>();
     const releaseRead = Promise.withResolvers<void>();
     const logs = destination.deps.personalHistoryService.logs;
@@ -262,6 +277,7 @@ test("personal history is readable offline after restart, private to the account
     const pendingRead = destination.app.request(`/v1/sessions/${session.id}/conversation`);
     await startedRead.promise;
     await native.save({ ...login, accountId: "bob" });
+    await destination.deps.personalHistoryService.refreshIdentity();
     releaseRead.resolve();
     const switched = await pendingRead;
     logs.read = readLog;

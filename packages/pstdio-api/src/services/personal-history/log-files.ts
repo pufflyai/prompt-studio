@@ -45,6 +45,25 @@ export const createSessionLogFiles = (root: string) => {
   };
   return {
     savePage,
+    async indexDevices(namespace: string) {
+      try {
+        return (await readdir(folder(namespace)))
+          .filter((name) => name.startsWith("index-") && name.endsWith(".pages"))
+          .map((name) => decodeURIComponent(name.slice(0, -6)));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+        throw error;
+      }
+    },
+    async indexPages(namespace: string, id: string) {
+      const result: { after: number; lines: string[] }[] = [];
+      for (const page of await pages(namespace, id))
+        result.push({
+          after: Number(page.slice(0, 16)),
+          lines: await readJson<string[]>(join(path(namespace, id, "pages"), page), []),
+        });
+      return result;
+    },
     append: (namespace: string, sessionId: string, lines: string[]) => savePage(namespace, sessionId, 0, lines),
     async read(namespace: string, sessionId: string) {
       const messages = new Map<

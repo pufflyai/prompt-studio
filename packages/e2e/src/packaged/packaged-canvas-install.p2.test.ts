@@ -178,9 +178,10 @@ test(
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
       await signInBrowser(page, started.descriptor);
       phase("browser signed in");
-      await page.goto(new URL(button.href, started.baseUrl).href);
+      // The resource-free entry must open the first built canvas in a packaged install too.
+      await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.canvas/canvases`);
       phase("dashboard loaded");
-      const viewer = page.frameLocator('iframe[title="UI Canvas"]');
+      const viewer = page.frameLocator('iframe[title="UI Canvas"]:visible');
       await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
       expect(await viewer.locator("[data-ui-canvas-error]").count()).toBe(0);
       phase("project preview ready");
