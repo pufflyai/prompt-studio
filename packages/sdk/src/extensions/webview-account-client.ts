@@ -12,6 +12,12 @@ export const createWebviewAccountClient = (host: GuestHost) =>
     status: () => host.call("account.read", { op: "status" }),
     loginStatus: (id) => host.call("account.read", { op: "loginStatus", id }),
     devices: () => host.call("account.read", { op: "devices" }),
+    cloudDeviceProvider: () => host.call("account.read", { op: "cloudDeviceProvider" }),
+    prepareCloudDeviceBootstrap: (input) => host.call("account.manage", { op: "prepareCloudDeviceBootstrap", input }),
+    cloudDevices: () => host.call("account.read", { op: "cloudDevices" }),
+    configureCloudDeviceProvider: (input) => host.call("account.manage", { op: "configureCloudDeviceProvider", input }),
+    startCloudDevice: (input) => host.call("account.manage", { op: "startCloudDevice", input }),
+    stopCloudDevice: (id) => host.call("account.manage", { op: "stopCloudDevice", id }),
     projectSyncStatus: (projectId) =>
       host.call("account.read", { op: "projectSyncStatus", ...(projectId ? { projectId } : {}) }),
     login: (managerOrigin) => host.call("account.manage", { op: "login", managerOrigin }),

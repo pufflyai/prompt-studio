@@ -1,5 +1,11 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { deviceCommandSchema } from "pstdio-api-contracts";
+import {
+  cloudDeviceProviderSchema,
+  deviceCommandSchema,
+  prepareCloudDeviceBootstrapSchema,
+  startCloudDeviceSchema,
+} from "pstdio-api-contracts";
+import { CloudDeviceRequestError } from "../../services/account/cloud-device-provider";
 import { managerOriginSchema } from "../../services/account/manager-client";
 import {
   AccountRequestError,
@@ -22,7 +28,15 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
   routes.use("/account/projects/:id/devices/:deviceId/commands", enforceDeviceCommandBodyLimit);
   // Account service errors never reach generic API error logging or extension event payloads.
   routes.onError((error, c) =>
-    c.json({ error: error instanceof AccountRequestError ? error.message : accountUnavailableMessage }, 400),
+    c.json(
+      {
+        error:
+          error instanceof AccountRequestError || error instanceof CloudDeviceRequestError
+            ? error.message
+            : accountUnavailableMessage,
+      },
+      400,
+    ),
   );
   routes.openapi(
     createRoute({
@@ -107,6 +121,46 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
   routes.openapi(
     createRoute({ method: "delete", path: "/account/projects/{id}", tags, request: { params }, responses }),
     async (c) => c.json(await service.stopProjectSync(c.req.valid("param").id), 200),
+  );
+  routes.openapi(createRoute({ method: "get", path: "/account/cloud/provider", tags, responses }), async (c) =>
+    c.json(await service.cloudDeviceProvider(), 200),
+  );
+  routes.openapi(
+    createRoute({
+      method: "put",
+      path: "/account/cloud/provider",
+      tags,
+      request: { body: { required: true, ...json(cloudDeviceProviderSchema) } },
+      responses,
+    }),
+    async (c) => c.json(await service.configureCloudDeviceProvider(c.req.valid("json")), 200),
+  );
+  routes.openapi(createRoute({ method: "get", path: "/account/cloud/devices", tags, responses }), async (c) =>
+    c.json(await service.cloudDevices(), 200),
+  );
+  routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/cloud/devices/start",
+      tags,
+      request: { body: { required: true, ...json(startCloudDeviceSchema) } },
+      responses,
+    }),
+    async (c) => c.json(await service.startCloudDevice(c.req.valid("json")), 200),
+  );
+  routes.openapi(
+    createRoute({ method: "post", path: "/account/cloud/devices/{id}/stop", tags, request: { params }, responses }),
+    async (c) => c.json(await service.stopCloudDevice(c.req.valid("param").id), 200),
+  );
+  routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/cloud/bootstrap",
+      tags,
+      request: { body: { required: true, ...json(prepareCloudDeviceBootstrapSchema) } },
+      responses,
+    }),
+    async (c) => c.json(await service.prepareCloudDeviceBootstrap(c.req.valid("json")), 200),
   );
   return routes;
 };

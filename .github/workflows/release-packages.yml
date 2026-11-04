@@ -311,6 +311,16 @@ jobs:
       version: ${{ needs.plan.outputs.version }}
       original_source_sha: ${{ needs.plan.outputs.source_sha }}
 
+  device_container:
+    needs: [plan, release_build]
+    if: ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.release_build.result == 'success' }}
+    uses: ./.github/workflows/device-container.yml
+    with:
+      ref: ${{ needs.plan.outputs.commit }}
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      version: ${{ needs.plan.outputs.version }}
+      artifact_attempt: ${{ needs.release_build.outputs.artifact_attempt }}
+
   desktop:
     needs: plan
     if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true' }}
@@ -348,7 +358,7 @@ jobs:
   # A daily nightly and every stable candidate get the same deep diagnostics.
   # Publication below waits for this job only for stable releases.
   production:
-    needs: [plan, release_build, containers, desktop]
+    needs: [plan, release_build, containers, device_container, desktop]
     if: ${{ !cancelled() && needs.plan.outputs.release == 'true' }}
     permissions:
       contents: read
@@ -381,7 +391,7 @@ jobs:
   # so re-running this job completes a release that stopped halfway. The GitHub release is
   # published last: a published release means npm and every desktop asset shipped.
   publish:
-    needs: [plan, release_build, containers, desktop, windows_update, production]
+    needs: [plan, release_build, containers, device_container, desktop, windows_update, production]
     if: >-
       ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'stable' &&
       inputs.channel != 'verify' &&
@@ -389,6 +399,7 @@ jobs:
       needs.release_build.result == 'success' &&
       (needs.plan.outputs.channel == 'nightly' || needs.production.result == 'success') &&
       needs.containers.result == 'success' &&
+      needs.device_container.result == 'success' &&
       needs.desktop.result == 'success' &&
       (needs.windows_update.result == 'success' || (needs.plan.outputs.channel == 'nightly' && needs.windows_update.result == 'skipped')) }}
     # Temporary: Playwright's Chromium does not install on Ubuntu 26.04 yet (ADR 0105).
@@ -427,13 +438,14 @@ jobs:
           patch: ${{ inputs.channel == 'patch' }}
 
   publish_nightly:
-    needs: [plan, release_build, containers, desktop]
+    needs: [plan, release_build, containers, device_container, desktop]
     if: >-
       ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' &&
       inputs.channel != 'verify' &&
       (inputs.channel != 'patch' || inputs.publish_patch) &&
       needs.release_build.result == 'success' &&
       needs.containers.result == 'success' &&
+      needs.device_container.result == 'success' &&
       needs.desktop.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30

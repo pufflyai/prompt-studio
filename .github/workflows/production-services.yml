@@ -37,7 +37,7 @@ jobs:
       - name: Select immutable certified service artifact IDs
         id: inputs
         run: |
-          bun -e 'const c=await Bun.file("production-candidate.json").json(); const a=c.artifacts.filter(a=>["service-container-relay","service-container-account-manager"].includes(a.name)); if(a.length!==2)throw new Error("Both exact service artifacts are required"); console.log("ids="+a.map(a=>a.id).join(","))' >> "$GITHUB_OUTPUT"
+          bun -e 'const c=await Bun.file("production-candidate.json").json(); const a=c.artifacts.filter(a=>["service-container-relay","service-container-account-manager","service-container-device"].includes(a.name)); if(a.length!==3)throw new Error("All exact service artifacts are required"); console.log("ids="+a.map(a=>a.id).join(","))' >> "$GITHUB_OUTPUT"
       - name: Download those exact service archives
         uses: actions/download-artifact@v4
         with:

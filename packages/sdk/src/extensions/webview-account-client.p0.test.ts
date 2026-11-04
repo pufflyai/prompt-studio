@@ -89,3 +89,18 @@ describe("webview account client", () => {
     ]);
   });
 });
+
+test("cloud device controls use public account permissions without returning provider credentials", async () => {
+  const { host, calls } = createAccountHost();
+  const client = createWebviewClient<Record<never, never>>(host);
+  await client.account.cloudDeviceProvider();
+  await client.account.cloudDevices();
+  await client.account.startCloudDevice({ name: "Remote" });
+  await client.account.stopCloudDevice("device-2");
+  expect(calls.map(({ method, params }) => [method, params])).toEqual([
+    ["account.read", { op: "cloudDeviceProvider" }],
+    ["account.read", { op: "cloudDevices" }],
+    ["account.manage", { op: "startCloudDevice", input: { name: "Remote" } }],
+    ["account.manage", { op: "stopCloudDevice", id: "device-2" }],
+  ]);
+});

@@ -97,3 +97,33 @@ On `main`, `account.cancelLogin(id)` cancels a pending native login. `account.pr
 ## Extensions
 
 Extensions use the same account through `ctx.account` and, in webviews, `client.account` with the `account.read` and `account.manage` capabilities. They receive `accountEvents.projectSyncChanged` when a project's sync status changes. See [Cloud account and sync status](../../references/extensions/0003-command-and-process-api.md#cloud-account-and-sync-status) for the methods and the meaning of each sync state.
+
+
+## User-owned cloud devices (unreleased)
+
+Cloud devices run in your provider account and are billed directly to you. The
+released execution-device container keeps its own device identity, login and keys.
+It uses outbound encrypted relay traffic and keeps its native API private.
+
+Configure the controlling device with `pst devices configure-cloud --file <private.json>`.
+The JSON contains your DigitalOcean token, region, size and a released immutable
+`ghcr.io/pufflyai/prompt-studio/device@sha256:...` image. The native host stores the
+token privately; account and extension responses never return it.
+
+Use `pst devices start --name "Cloud device"` to create one, `pst devices cloud`
+to inspect it, and `pst devices stop <id>` / `pst devices start <id>` to stop and
+resume it. Provider power and account presence are separate: an accepted start is
+not proof that enrollment or sync finished. Stopping retains your data and identity;
+the provider continues charging for retained resources. Removing a device from your
+account revokes access and does not delete provider infrastructure.
+
+For an externally managed container, `pst devices export-bootstrap --name "Cloud device"`
+creates a one-use enrollment envelope in a private native file and prints only its
+path, target device ID and expiry. Transfer it privately to that runtime before
+expiry, then remove the spent source file. An unenrolled native-managed target can
+receive a new file with `pst devices export-bootstrap <id> --name "Cloud device"`.
+An already enrolled identity cannot be replaced through this path.
+
+The pending host/SDK and runtime-image releases must be delivered before supported
+installation. Remote Workspaces remains available until replacement start-and-drive
+session acceptance has been proved.

@@ -1,4 +1,22 @@
 import type {
+  CloudDevice,
+  CloudDeviceBootstrapFile,
+  CloudDeviceProvider,
+  CloudDeviceProviderInput,
+  PrepareCloudDeviceBootstrapInput,
+  StartCloudDeviceInput,
+} from "pstdio-api-contracts";
+
+export type {
+  CloudDevice,
+  CloudDeviceBootstrapFile,
+  CloudDeviceProvider,
+  CloudDeviceProviderInput,
+  PrepareCloudDeviceBootstrapInput,
+  StartCloudDeviceInput,
+} from "pstdio-api-contracts";
+
+import type {
   AccountDevice,
   AccountLogin,
   AccountLoginStatus,
@@ -38,6 +56,16 @@ export const createAccountClient = (request: RequestFn) => {
     /** `removed` is false when the account service could not be reached; remove the device from another one. */
     logout: () => request<Ok & { removed: boolean }>("/v1/account/logout", { method: "POST" }),
     devices: () => request<AccountDevice[]>("/v1/account/devices"),
+    cloudDeviceProvider: () => request<CloudDeviceProvider>("/v1/account/cloud/provider"),
+    configureCloudDeviceProvider: (input: CloudDeviceProviderInput) =>
+      request<Ok>("/v1/account/cloud/provider", { method: "PUT", body: input }),
+    prepareCloudDeviceBootstrap: (input: PrepareCloudDeviceBootstrapInput) =>
+      request<CloudDeviceBootstrapFile>("/v1/account/cloud/bootstrap", { method: "POST", body: input }),
+    cloudDevices: () => request<CloudDevice[]>("/v1/account/cloud/devices"),
+    startCloudDevice: (input: StartCloudDeviceInput) =>
+      request<CloudDevice>("/v1/account/cloud/devices/start", { method: "POST", body: input }),
+    stopCloudDevice: (id: string) =>
+      request<CloudDevice>(`/v1/account/cloud/devices/${encodeURIComponent(id)}/stop`, { method: "POST" }),
     renameDevice: (id: string, name: string) => request<Ok>(`${device(id)}/rename`, { method: "POST", body: { name } }),
     removeDevice: (id: string) => request<Ok>(`${device(id)}/remove`, { method: "POST" }),
     /** Makes a local project a cloud project of the logged-in account. */

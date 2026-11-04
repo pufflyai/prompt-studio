@@ -30,6 +30,8 @@ import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
+import { bootstrapCloudDevice, readCloudBootstrap } from "./services/account/cloud-bootstrap";
+import { nativeAccountFile } from "./services/account/native-account";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
 import { createNativeDocumentService } from "./services/native-documents/documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
@@ -124,6 +126,27 @@ const createAppNativeDocuments = (
   };
 };
 
+const initializeAppEnvironment = async (
+  input: CreateAppInput,
+  database: Awaited<ReturnType<typeof openAppDatabase>>,
+) => {
+  const storageRoot = input.config.storage.root;
+  const { db } = database;
+  const bootstrap = await readCloudBootstrap(process.env.PSTDIO_CLOUD_BOOTSTRAP_FILE);
+  const dbs = createAppDatabaseServices(
+    db,
+    database.path === ":memory:" ? storageRoot : database.path,
+    bootstrap?.deviceId,
+  );
+  const { environmentId } = await dbs.environmentDBService.get();
+  if (bootstrap)
+    await bootstrapCloudDevice(
+      bootstrap,
+      nativeAccountFile(input.config.database.path, storageRoot, input.config.accountFile),
+    );
+  return { dbs, environmentId };
+};
+
 const buildApp = async (
   input: CreateAppInput,
   dependencies: AppDependencies,
@@ -136,8 +159,7 @@ const buildApp = async (
   const storageRoot = input.config.storage.root;
   ensureStorageRoot(storageRoot);
 
-  const dbs = createAppDatabaseServices(db, database.path === ":memory:" ? storageRoot : database.path);
-  const { environmentId } = await dbs.environmentDBService.get();
+  const { dbs, environmentId } = await initializeAppEnvironment(input, database);
   const storagePositions = createStoragePositions(environmentId);
   const {
     activityEventsDBService,

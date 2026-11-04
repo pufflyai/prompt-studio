@@ -32,3 +32,8 @@ infra/psx/.env*
 infra/terraform
 infra/relay/compose.yaml
 infra/relay/Caddyfile
+
+# Execution-device deployment state and private inputs are never image build inputs.
+infra/device/terraform
+infra/device/.env*
+infra/device/*bootstrap*.json

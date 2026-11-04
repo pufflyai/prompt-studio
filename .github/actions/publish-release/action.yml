@@ -171,7 +171,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        for service in relay account-manager; do
+        for service in relay account-manager device; do
           docker load --input "service-images/$service.tar"
           docker push "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION"
         done
@@ -185,7 +185,7 @@ runs:
       run: |
         set -euo pipefail
         docker logout ghcr.io
-        for service in relay account-manager; do
+        for service in relay account-manager device; do
           if ! docker manifest inspect "ghcr.io/$GITHUB_REPOSITORY/$service:$VERSION" > /dev/null; then
             echo "::error::ghcr.io/$GITHUB_REPOSITORY/$service is private. In its package settings, choose Danger Zone > Change visibility > Public, then re-run this job."
             exit 1

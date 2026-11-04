@@ -353,3 +353,14 @@ project/global settings, extension detail panels, and published custom global
 slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
+
+
+## Cloud device lifecycle in API 0.3.1
+
+The additive account API exposes native user-owned cloud provider configuration,
+cloud devices, start/stop and private bootstrap export. Provider tokens are write-only,
+device-local and account-scoped. Bootstrap export returns a native private file path,
+never its grant or a device credential. Power state and account presence have separate
+owners; unknown presence is null. These additions share the pending compatible release
+step. Publish the matching host and SDK before extension adoption. See
+[device login](../../guides/sdk/0004-device-login.md).

@@ -1,3 +1,21 @@
+import type {
+  CloudDevice,
+  CloudDeviceBootstrapFile,
+  CloudDeviceProvider,
+  CloudDeviceProviderInput,
+  PrepareCloudDeviceBootstrapInput,
+  StartCloudDeviceInput,
+} from "../../cloud-devices";
+
+export type {
+  CloudDevice,
+  CloudDeviceBootstrapFile,
+  CloudDeviceProvider,
+  CloudDeviceProviderInput,
+  PrepareCloudDeviceBootstrapInput,
+  StartCloudDeviceInput,
+} from "../../cloud-devices";
+
 import type { AccountDevice, AccountLogin, AccountLoginStatus, AccountStatus } from "../../account";
 import type { ProjectSyncStatus } from "../../project-sync";
 
@@ -27,6 +45,16 @@ export interface ExtensionAccountApi {
   logout(): Promise<{ removed: boolean }>;
   /** The account's devices with their presence. `current` marks this device. */
   devices(): Promise<AccountDevice[]>;
+  /** Native, device-local provider configuration. The credential is write-only and never synced. */
+  cloudDeviceProvider(): Promise<CloudDeviceProvider>;
+  configureCloudDeviceProvider(input: CloudDeviceProviderInput): Promise<void>;
+  cloudDevices(): Promise<CloudDevice[]>;
+  /** Writes a one-use enrollment envelope to a private native file; returns only its location. */
+  prepareCloudDeviceBootstrap(input: PrepareCloudDeviceBootstrapInput): Promise<CloudDeviceBootstrapFile>;
+  /** Creates a user-paid device, or powers on an existing device by ID. */
+  startCloudDevice(input: StartCloudDeviceInput): Promise<CloudDevice>;
+  /** Requests graceful shutdown; the provider continues billing for retained resources. */
+  stopCloudDevice(id: string): Promise<CloudDevice>;
   renameDevice(id: string, name: string): Promise<void>;
   /** Stops the device from renewing Cloud access. Removing the current device signs it out. */
   removeDevice(id: string): Promise<void>;

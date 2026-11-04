@@ -8,6 +8,7 @@ test("nightly requires only its published Linux and Apple Silicon desktop artifa
     ...["linux-x64", "darwin-arm64"].flatMap((target) => [`desktop-${target}`, `validation-app-${target}`]),
     "service-container-relay",
     "service-container-account-manager",
+    "service-container-device",
   ];
   expect(selectProductionArtifacts(names.map(artifact), 1, "nightly").map((entry) => entry.name)).toEqual(names);
 });
@@ -20,6 +21,7 @@ test("selects exact attempt artifacts and requires every production target", () 
     ]),
     "service-container-relay",
     "service-container-account-manager",
+    "service-container-device",
   ];
   expect(
     selectProductionArtifacts(
@@ -55,5 +57,7 @@ test("names policy files the same way on every platform so Windows evidence matc
   expect(files).toContain("scripts/ci/production-artifacts.ts");
   expect(files).toContain("scripts/verify/packaged-runtime-tests.ts");
   expect(files).toContain(".github/workflows/production-validation.yml");
+  expect(files).toContain(".github/workflows/device-container.yml");
+  expect(files).toContain("infra/device/Dockerfile");
   expect(files).not.toContain("scripts/ci/production-artifacts.p0.test.ts");
 });

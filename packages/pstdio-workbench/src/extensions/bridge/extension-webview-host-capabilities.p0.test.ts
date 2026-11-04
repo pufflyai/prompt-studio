@@ -346,6 +346,12 @@ test("account capabilities route reads and changes to the host account and valid
       cancelLogin: record("cancelLogin"),
       logout: record("logout"),
       devices: record("devices"),
+      cloudDeviceProvider: record("cloudDeviceProvider", { configured: false }),
+      configureCloudDeviceProvider: record("configureCloudDeviceProvider"),
+      cloudDevices: record("cloudDevices", []),
+      prepareCloudDeviceBootstrap: record("prepareCloudDeviceBootstrap"),
+      startCloudDevice: record("startCloudDevice"),
+      stopCloudDevice: record("stopCloudDevice"),
       renameDevice: record("renameDevice"),
       removeDevice: record("removeDevice"),
       projectSyncStatus: record("projectSyncStatus", { state: "synced", offlineReady: true }),
@@ -376,6 +382,11 @@ test("account capabilities route reads and changes to the host account and valid
   await expect(Promise.resolve().then(() => capabilities["account.manage"]({ op: "devices" }))).rejects.toMatchObject({
     code: "invalid_params",
   });
+  for (const op of ["configureCloudDeviceProvider", "startCloudDevice", "stopCloudDevice"]) {
+    await expect(Promise.resolve().then(() => capabilities["account.read"]({ op }))).rejects.toMatchObject({
+      code: "invalid_params",
+    });
+  }
   expect(calls).toHaveLength(5);
 });
 

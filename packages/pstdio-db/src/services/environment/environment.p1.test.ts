@@ -83,3 +83,16 @@ test(
   },
   process.platform === "win32" ? 30_000 : undefined,
 );
+
+test("bootstrap initializes only an empty environment and refuses to replace an existing identity", async () => {
+  const database = await createDb({ path: ":memory:" });
+  const expected = crypto.randomUUID();
+  try {
+    expect(await createEnvironmentDBService(database.db, expected).get()).toEqual({ environmentId: expected });
+    expect(await createEnvironmentDBService(database.db, expected).get()).toEqual({ environmentId: expected });
+    await expect(createEnvironmentDBService(database.db, crypto.randomUUID()).get()).rejects.toThrow("another device");
+    expect(await createEnvironmentDBService(database.db).get()).toEqual({ environmentId: expected });
+  } finally {
+    await database.close();
+  }
+});

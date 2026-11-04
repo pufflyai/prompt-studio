@@ -7,7 +7,18 @@ export type {
   ProjectSyncStatus,
   TextEditingConnectionInput,
 } from "pstdio-api-contracts";
-export type { AccountClient, AccountDevice, AccountStatus, DeviceLogin } from "./account";
+export type {
+  AccountClient,
+  AccountDevice,
+  AccountStatus,
+  CloudDevice,
+  CloudDeviceBootstrapFile,
+  CloudDeviceProvider,
+  CloudDeviceProviderInput,
+  DeviceLogin,
+  PrepareCloudDeviceBootstrapInput,
+  StartCloudDeviceInput,
+} from "./account";
 export type { AgentAuthenticationOptions } from "./agent-authentication";
 export type { AgentClient } from "./agents";
 export type { AssetClientOwner, AssetsClient, AssetUploadInput } from "./assets";

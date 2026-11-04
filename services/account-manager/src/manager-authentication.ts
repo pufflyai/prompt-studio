@@ -9,6 +9,7 @@ import { type ManagerAuthConfig, parseManagerAuthConfig } from "./auth-config";
 import * as authSchema from "./auth-schema";
 import { connectManager } from "./database";
 import { createDeviceAccess, createDeviceLogin } from "./device-access";
+import { createDeviceEnrollment } from "./device-enrollment";
 import { findDeviceAccess } from "./devices";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { devices } from "./schema";
@@ -47,6 +48,13 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       relayOrigin: config.audience,
     }),
     devices: createDeviceAccess(connection.db),
+    enrollment: {
+      issue: createDeviceEnrollment(connection.db).issue,
+      consume: async (grant: string, input: unknown) => ({
+        ...(await createDeviceEnrollment(connection.db).consume(grant, input)),
+        relayOrigin: config.audience,
+      }),
+    },
     nativeLogin: (callbackURL: string) =>
       auth.api.signInSocial({ body: { provider: "google", callbackURL }, asResponse: true }),
     nativeCode: (headers: Headers) => auth.api.generateOneTimeToken({ headers }),

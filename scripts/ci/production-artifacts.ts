@@ -17,6 +17,7 @@ export const selectProductionArtifacts = (artifacts: Artifact[], attempt: number
     ...targets.flatMap((target) => [`desktop-${target}`, `validation-app-${target}`]),
     "service-container-relay",
     "service-container-account-manager",
+    "service-container-device",
   ];
   const missing = required.filter((name) => !artifacts.some((artifact) => artifact.name === name));
   if (missing.length) throw new Error(`Missing production artifacts: ${missing.join(", ")}`);
@@ -57,6 +58,12 @@ export const productionPolicyFiles = () =>
     "scripts/verify/packaged-runtime-tests.ts",
     ".github/workflows/test-and-build.yml",
     ".github/workflows/release-packages.yml",
+    ".github/workflows/device-container.yml",
+    "infra/device/Dockerfile",
+    "infra/device/device-home.ts",
+    "infra/device/entrypoint.ts",
+    "infra/device/seed-defaults.ts",
+    "infra/device/smoke.ts",
     ".github/workflows/release-desktop.yml",
     ".github/workflows/verify-packaged-toolchain.yml",
     ".github/actions/build-release/action.yml",

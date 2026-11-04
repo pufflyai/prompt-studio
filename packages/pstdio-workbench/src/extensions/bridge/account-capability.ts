@@ -14,6 +14,18 @@ const runAccountOperation = (
       return account.status();
     case "loginStatus":
       return account.loginStatus(request.id);
+    case "cloudDeviceProvider":
+      return account.cloudDeviceProvider();
+    case "prepareCloudDeviceBootstrap":
+      return account.prepareCloudDeviceBootstrap(request.input);
+    case "cloudDevices":
+      return account.cloudDevices();
+    case "configureCloudDeviceProvider":
+      return account.configureCloudDeviceProvider(request.input);
+    case "startCloudDevice":
+      return account.startCloudDevice(request.input);
+    case "stopCloudDevice":
+      return account.stopCloudDevice(request.id);
     case "devices":
       return account.devices();
     case "projectSyncStatus":

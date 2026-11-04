@@ -316,6 +316,12 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | `ctx.account.loginStatus(id)` | Returns `pending`, `complete`, or `failed`. |
 | `ctx.account.cancelLogin(id)` | Cancels a pending sign-in and returns `failed`. A sign-in that already finished returns `complete`. |
 | `ctx.account.logout()` | Signs this device out and keeps local data. Returns `{ removed }`; `removed` is `false` when the account service could not be reached. |
+| `ctx.account.cloudDeviceProvider()` | Reads native provider configuration without its token. |
+| `ctx.account.configureCloudDeviceProvider(input)` | Saves `{ token, region, size, image }` privately on this device for this account. The image is a released device-container digest. |
+| `ctx.account.cloudDevices()` | Lists native-managed cloud devices with separate provider power and account presence; presence is `null` when unknown. |
+| `ctx.account.startCloudDevice(input)` | Starts a new user-paid device with `{ name }`, or powers on an existing one with `{ id }`. An accepted provider action does not mean enrollment or sync finished. |
+| `ctx.account.stopCloudDevice(id)` | Requests graceful shutdown and keeps data and identity. Retained provider resources remain billable. |
+| `ctx.account.prepareCloudDeviceBootstrap(input)` | Writes a private one-use enrollment envelope and returns `{ deviceId, path, expiresAt }`. Omit `id` for a fresh Compose/Terraform device; supply a native-managed unenrolled ID for recovery. The grant never enters the response. |
 | `ctx.account.devices()` | Lists the account's devices with `name`, `platform`, `lastSeenAt`, `online`, and `current` for this device. |
 | `ctx.account.renameDevice(id, name)` | Renames a device. |
 | `ctx.account.removeDevice(id)` | Stops a device from renewing Cloud access. Removing the current device signs it out. |

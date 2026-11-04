@@ -26,6 +26,7 @@ The [design rules](../guidance/0002-design.md) guide interactions. The [nonfunct
 - [Build and smoke-test the relay](development/0006-relay.md)
 - [Develop private account authority](development/0007-account-manager.md)
 - [Device login development](development/0011-device-login.md)
+- [User-owned cloud execution devices](development/0017-cloud-devices.md)
 - [Test the relay with two dashboards](development/0008-two-dashboard-relay.md)
 - [Publish SDK and UI previews](development/0014-sdk-ui-previews.md)
 - [Configure private service diagnostics](development/0010-service-diagnostics.md)
@@ -207,6 +208,7 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
 - [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
 - [0012 — Portable relay and account manager deployment](development/0012-portable-cloud-deployment.md)
+- [0017 — User-owned cloud execution devices](development/0017-cloud-devices.md)
 - [0013 — Independent core extension releases](development/0013-independent-extension-releases.md)
 
 ### Build extensions

@@ -1,0 +1,16 @@
+services:
+  device:
+    image: ${PSTDIO_DEVICE_IMAGE:?Set a released ghcr.io/pufflyai/prompt-studio/device@sha256 digest}
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    environment:
+      PSTDIO_CLOUD_BOOTSTRAP_SOURCE: /run/secrets/device-bootstrap
+    secrets: [device-bootstrap]
+    volumes: [device-home:/home/bun]
+secrets:
+  device-bootstrap:
+    file: ${PSTDIO_DEVICE_BOOTSTRAP_FILE:?Set the private enrollment envelope path}
+volumes:
+  device-home:

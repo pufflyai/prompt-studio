@@ -3,6 +3,7 @@ import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { requireProductionBuild } from "./production-artifacts";
 import { assertProductionPayload } from "./production-payload";
+import { productionServiceImages } from "./production-service-images";
 
 const run = (command: string[]) => {
   const result = spawnSync(command[0]!, command.slice(1), { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] });
@@ -10,8 +11,8 @@ const run = (command: string[]) => {
   return result.stdout.trim();
 };
 const candidate = await Bun.file("production-candidate.json").json();
-const images: Record<string, string> = {};
-for (const service of ["relay", "account-manager"]) {
+const loaded: Array<{ service: string; image: string }> = [];
+for (const service of ["relay", "account-manager", "device"]) {
   const path = `service-images/${service}.tar`;
   const identity = await Bun.file(`service-images/${service}-identity.json`).json();
   requireProductionBuild(identity, candidate);
@@ -23,13 +24,15 @@ for (const service of ["relay", "account-manager"]) {
   const tag = manifest[0]?.RepoTags?.[0] as string | undefined;
   if (!tag || !/^ghcr\.io\/[a-z0-9._/-]+:[a-z0-9._-]+$/.test(tag))
     throw new Error(`Invalid production image identity for ${service}`);
-  images[service === "relay" ? "relay" : "manager"] = run(["docker", "image", "inspect", tag, "--format", "{{.Id}}"]);
+  loaded.push({ service, image: run(["docker", "image", "inspect", tag, "--format", "{{.Id}}"]) });
 }
+const images = productionServiceImages(loaded);
 for (const image of Object.values(images)) {
-  const version = run(["docker", "run", "--rm", image, "bun", "--version"]);
+  const version = run(["docker", "run", "--rm", "--entrypoint", "bun", image, "--version"]);
   if (`bun-${version}` !== candidate.toolchain)
     throw new Error("The published service runtime uses a different Bun toolchain");
 }
+run(["bun", resolve(import.meta.dirname, "../../infra/device/smoke.ts"), images.device!]);
 await Bun.write("production-service-images.json", JSON.stringify(images, null, 2));
 if (process.env.GITHUB_STEP_SUMMARY)
   appendFileSync(

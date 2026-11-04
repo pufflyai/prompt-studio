@@ -1,7 +1,10 @@
 import {
+  cloudDeviceProviderSchema,
   extensionResourceRefSchema,
   jsonObjectSchema,
   pageParamValueSchema,
+  prepareCloudDeviceBootstrapSchema,
+  startCloudDeviceSchema,
   textEditingRequestSchema,
 } from "pstdio-api-contracts";
 import type { WebviewHostCapability, WebviewHostCapabilityParams } from "pstdio-api-contracts/extension-kernel";
@@ -144,12 +147,18 @@ const schemas = {
     z.object({ op: z.literal("status") }),
     z.object({ op: z.literal("loginStatus"), id: identifier }),
     z.object({ op: z.literal("devices") }),
+    z.object({ op: z.literal("cloudDeviceProvider") }),
+    z.object({ op: z.literal("cloudDevices") }),
     z.object({ op: z.literal("projectSyncStatus"), ...projectId }),
   ]),
   "account.manage": z.discriminatedUnion("op", [
     z.object({ op: z.literal("login"), managerOrigin: identifier.optional() }),
     z.object({ op: z.literal("cancelLogin"), id: identifier }),
     z.object({ op: z.literal("logout") }),
+    z.object({ op: z.literal("prepareCloudDeviceBootstrap"), input: prepareCloudDeviceBootstrapSchema }),
+    z.object({ op: z.literal("configureCloudDeviceProvider"), input: cloudDeviceProviderSchema }),
+    z.object({ op: z.literal("startCloudDevice"), input: startCloudDeviceSchema }),
+    z.object({ op: z.literal("stopCloudDevice"), id: identifier }),
     z.object({ op: z.literal("renameDevice"), id: identifier, name: z.string() }),
     z.object({ op: z.literal("removeDevice"), id: identifier }),
     z.object({ op: z.literal("syncProject"), ...projectId }),

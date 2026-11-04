@@ -1,4 +1,9 @@
 import type { AgentInfo, AgentModel, HarnessParamsInfo } from "../../agents";
+import type {
+  CloudDeviceProviderInput,
+  PrepareCloudDeviceBootstrapInput,
+  StartCloudDeviceInput,
+} from "../../cloud-devices";
 import type { TerminalSessionOperation, TerminalSessionResult } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type {
@@ -178,6 +183,8 @@ export type WebviewAccountReadParams =
   | { op: "status" }
   | { op: "loginStatus"; id: string }
   | { op: "devices" }
+  | { op: "cloudDeviceProvider" }
+  | { op: "cloudDevices" }
   | { op: "projectSyncStatus"; projectId?: string };
 
 /** Changes mirror `ctx.account`. A missing project id means the webview's project. */
@@ -185,6 +192,10 @@ export type WebviewAccountManageParams =
   | { op: "login"; managerOrigin?: string }
   | { op: "cancelLogin"; id: string }
   | { op: "logout" }
+  | { op: "configureCloudDeviceProvider"; input: CloudDeviceProviderInput }
+  | { op: "prepareCloudDeviceBootstrap"; input: PrepareCloudDeviceBootstrapInput }
+  | { op: "startCloudDevice"; input: StartCloudDeviceInput }
+  | { op: "stopCloudDevice"; id: string }
   | { op: "renameDevice"; id: string; name: string }
   | { op: "removeDevice"; id: string }
   | { op: "syncProject"; projectId?: string }

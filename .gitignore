@@ -214,3 +214,12 @@ infra/terraform/**/*.tfplan
 infra/terraform/**/crash*.log
 
 # UI Canvas builds its preview catalog from source; it is never committed (AGENTS.md "Generated files").
+
+# Execution-device plan caches and private deployment inputs remain local.
+infra/device/terraform/**/.terraform/
+infra/device/terraform/**/.terraform.lock.hcl
+infra/device/terraform/**/*.tfstate*
+infra/device/terraform/**/*.tfvars
+infra/device/terraform/**/*.tfvars.json
+infra/device/terraform/**/*.tfplan
+infra/device/terraform/**/crash*.log

@@ -66,9 +66,9 @@ const freeBytes = (path: string) => async () => {
   return disk.bavail * disk.bsize;
 };
 
-export const createAppDatabaseServices = (db: DbClient, databasePath: string) => ({
+export const createAppDatabaseServices = (db: DbClient, databasePath: string, expectedEnvironmentId?: string) => ({
   assetTransfersDBService: createAssetTransfersDBService(db),
-  environmentDBService: createEnvironmentDBService(db),
+  environmentDBService: createEnvironmentDBService(db, expectedEnvironmentId),
   boardViewsDBService: createBoardViewsDBService(db),
   projectsDBService: createProjectsDBService(db),
   automationDBService: createAutomationDBService(db),

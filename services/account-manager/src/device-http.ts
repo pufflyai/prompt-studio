@@ -45,6 +45,15 @@ const signingKeyRoute = async (devices: Authentication["devices"], request: Requ
   return null;
 };
 
+const credentialRoute = async (auth: Authentication, request: Request, path: string) => {
+  const { method } = request;
+  if (path === "/v1/devices/enrollment" && method === "POST")
+    return json(await auth.enrollment.issue(bearer(request), await request.json()), 201);
+  if (path === "/v1/devices/enrollment/consume" && method === "POST")
+    return json(await auth.enrollment.consume(bearer(request), await request.json()), 201);
+  return signingKeyRoute(auth.devices, request, path);
+};
+
 const route = async (auth: Authentication, origin: string, request: Request, path: string) => {
   const { method } = request;
   if (path === "/v1/device-login" && method === "POST") {
@@ -53,7 +62,7 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
     return json(await auth.loginDevice(request.headers, await request.json()), 201);
   }
   const devices = auth.devices;
-  const signingKey = await signingKeyRoute(devices, request, path);
+  const signingKey = await credentialRoute(auth, request, path);
   if (signingKey) return signingKey;
   if (path === "/v1/account" && method === "GET") return json(await devices.account(bearer(request)));
   if (path === "/v1/devices/presence" && method === "POST") return ok(devices.heartbeat(bearer(request)));

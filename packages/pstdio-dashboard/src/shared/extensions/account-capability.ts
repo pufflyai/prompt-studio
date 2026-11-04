@@ -11,6 +11,14 @@ export const createAccountAdapter = (projectId: string, client: Pick<PstdioClien
     cancelLogin: async (id) => (await client.account.cancelLogin(id)).status,
     logout: async () => ({ removed: (await client.account.logout()).removed }),
     devices: () => client.account.devices(),
+    cloudDeviceProvider: () => client.account.cloudDeviceProvider(),
+    configureCloudDeviceProvider: async (input) => {
+      await client.account.configureCloudDeviceProvider(input);
+    },
+    cloudDevices: () => client.account.cloudDevices(),
+    prepareCloudDeviceBootstrap: (input) => client.account.prepareCloudDeviceBootstrap(input),
+    startCloudDevice: (input) => client.account.startCloudDevice(input),
+    stopCloudDevice: (id) => client.account.stopCloudDevice(id),
     renameDevice: async (id, name) => {
       await client.account.renameDevice(id, name);
     },

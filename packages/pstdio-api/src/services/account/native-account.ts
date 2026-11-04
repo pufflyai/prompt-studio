@@ -8,6 +8,7 @@ import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { RelayWorkbench } from "../relay/runtime";
 import { readAccountStatus } from "./account-status";
+import { createNativeCloudDevices } from "./cloud-devices";
 import { createDeviceIdentity } from "./device-identity";
 import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
@@ -254,6 +255,7 @@ export const createNativeAccount = (input: {
   };
 
   return {
+    ...createNativeCloudDevices(input.file, current, call),
     ...createDeviceIdentity({ current, store, call }),
     sendDeviceCommand: commands.send,
     start(

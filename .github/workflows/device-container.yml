@@ -1,0 +1,82 @@
+name: Cloud device container
+on:
+  pull_request:
+    paths: ["infra/device/**", "scripts/ci/production-*.ts", ".github/workflows/device-container.yml"]
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      source_sha:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      artifact_attempt:
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun test infra/device
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.7"
+      - run: terraform -chdir=infra/device/terraform fmt -check -recursive
+      - run: terraform -chdir=infra/device/terraform/validation init -input=false
+      - run: terraform -chdir=infra/device/terraform/validation validate
+      - run: terraform -chdir=infra/device/terraform/validation plan -refresh=false -input=false
+        env:
+          DIGITALOCEAN_TOKEN: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  build:
+    if: inputs.version != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build-attempt-${{ inputs.artifact_attempt }}
+      - name: Verify and restore the exact compiled release payload
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          VERSION_SHA: ${{ inputs.ref }}
+        run: |
+          bun -e 'const i=await Bun.file("production-build-identity.json").json(); if(i.sourceSha!==process.env.SOURCE_SHA||i.versionSha!==process.env.VERSION_SHA||i.toolchain!=="bun-"+Bun.version) throw new Error("Device runtime build identity mismatch")'
+          bun scripts/ci/production-payload.ts check
+          tar -xzf release-build.tar.gz
+          mkdir -p /tmp/device-release
+          cp packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio /tmp/device-release/pstdio
+      - name: Package and exercise the execution device without network access
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          docker build --platform linux/amd64 --build-context release=/tmp/device-release -f infra/device/Dockerfile -t "ghcr.io/$GITHUB_REPOSITORY/device:$VERSION" .
+          image=$(docker image inspect "ghcr.io/$GITHUB_REPOSITORY/device:$VERSION" --format '{{.Id}}')
+          bun infra/device/smoke.ts "$image"
+          docker save "ghcr.io/$GITHUB_REPOSITORY/device:$VERSION" -o /tmp/device.tar
+      - name: Record image bytes and immutable source identity
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: bun scripts/ci/production-service-identity.ts /tmp/device.tar /tmp/device-identity.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: service-container-device
+          path: |
+            /tmp/device.tar
+            /tmp/device-identity.json
+          if-no-files-found: error
