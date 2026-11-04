@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
-const canvas = "packages/pstdio-dashboard/proposals/PS-827/remote-devices.canvas.tsx";
+const canvas = "packages/pstdio-dashboard/src/modules/sessions/components/remote-devices.canvas.tsx";
 
-// Critical: the proposed primary submit/interrupt flow must enter running state and queue follow-ups.
-test("remote device proposal starts and restarts a session before queuing follow-ups", async ({ page }) => {
+// Critical: the primary submit/interrupt flow must enter running state and queue follow-ups.
+test("remote device example starts and restarts a session before queuing follow-ups", async ({ page }) => {
   const preview = await openCanvasPreview(page, `${canvas}#NewSessionDevicePicker`);
   const input = preview.locator('[contenteditable="true"]').first();
   await input.fill("Start the checks");

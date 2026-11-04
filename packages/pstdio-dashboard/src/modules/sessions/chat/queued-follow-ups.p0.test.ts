@@ -1,12 +1,25 @@
 import { describe, expect, test } from "bun:test";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import { splitQueuedFollowUps } from "./queued-follow-ups";
+import { queuedFollowUpSteeringReason, splitQueuedFollowUps } from "./queued-follow-ups";
 import { createPendingFollowUpState, mergeMessagesWithPendingFollowUp } from "./session-chat-state";
 
 const userMessage = (id: string, text: string): SessionMessage => ({
   id,
   role: "user",
   parts: [{ type: "text", text }],
+});
+
+test("a complete local queue retains its live steering support while remote steering stays unavailable", () => {
+  const queue = { requests: [], activeRunStartedAt: "turn", steeringAvailable: true, steeringUnavailableReason: null };
+  expect(queuedFollowUpSteeringReason(false, queue)).toBeNull();
+  const unsupported = {
+    ...queue,
+    steeringAvailable: false,
+    steeringUnavailableReason: "Harness cannot accept live input",
+  };
+  expect(queuedFollowUpSteeringReason(false, unsupported)).toBe(unsupported.steeringUnavailableReason);
+  expect(queuedFollowUpSteeringReason(true, queue)).toBeString();
+  expect(queuedFollowUpSteeringReason(false, undefined)).toBeString();
 });
 
 describe("splitQueuedFollowUps", () => {
