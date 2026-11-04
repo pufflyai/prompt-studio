@@ -14,6 +14,7 @@
 "pstdio-planner": patch
 "pstdio-reports": patch
 "pstdio-skills": patch
+"pstdio-home": patch
 "remote-workspaces": patch
 ---
 
