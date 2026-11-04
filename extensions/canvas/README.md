@@ -40,7 +40,7 @@ The title's part before the last `/` is the navigation group. A `.canvas/preview
 
 ## Work with a design
 
-Open **UI Canvas** in the project navigation. Canvases are grouped by their titles. Selecting one opens an unpinned preview tab; the next unpinned selection replaces it. Pin a tab to keep it. A canvas whose build failed shows its error; the others still work.
+Open **UI Canvas** in the project navigation to return to the last opened canvas, or the first available canvas if none was opened or the previous one was removed. If no build is available, setup guidance appears. Canvases are grouped by their titles. Selecting one opens an unpinned preview tab; the next unpinned selection replaces it. Pin a tab to keep it. A canvas whose build failed shows its error; the others still work.
 
 Select a frame before using its contents: the first click selects it without activating a control. Clicking another frame or empty canvas space changes or clears selection; Escape clears it when the canvas has focus. Changing selection keeps mounted frames and their input.
 
