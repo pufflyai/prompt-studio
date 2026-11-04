@@ -88,7 +88,8 @@ test("host and browser results preserve standard SHA-256 identity across streami
   const build = await Bun.build({
     entrypoints: [resolve(import.meta.dir, "tool-result.ts")],
     target: "browser",
-    define: { Bun: "undefined" },
+    define: { globalThis: "browserGlobal" },
+    banner: "const browserGlobal = { TextEncoder, TextDecoder };",
   });
   expect(build.success).toBe(true);
   const browser: typeof import("./tool-result") = await import(
