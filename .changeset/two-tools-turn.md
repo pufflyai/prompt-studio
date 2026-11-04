@@ -1,4 +1,5 @@
 ---
+"pstdio": patch
 "pstdio-planner": patch
 "pstdio-artifacts": patch
 ---

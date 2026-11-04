@@ -108,7 +108,7 @@ test("workspace navigation owns selection while keeping ticket document context"
     await expect(file).toHaveAttribute("aria-selected", "false");
     expect(await finishObservingRows()).toEqual([]);
     await page.goto(board);
-    await card.getByTestId("workspace-badge-trigger").click();
+    await card.getByRole("button", { name: `pstdio · ${linkedWorkspace.workspace_shorthand}`, exact: true }).click();
     await expect(linkedRow).toHaveAttribute("aria-selected", "true");
     await expect(body).toHaveAttribute("aria-selected", "false");
   } finally {

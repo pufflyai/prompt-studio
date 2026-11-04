@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { CollectionBadgeItem } from "@pstdio/sdk/extensions";
 import { createTicketParentLookup, TICKET_RESOURCE_KIND, ticketToRow } from "./mappers";
 import type { StoredTag, Ticket } from "./types";
 
@@ -117,4 +118,31 @@ describe("ticketToRow", () => {
 
     expect((row.attributes as Record<string, unknown>).type).toBe("default-type-bug");
   });
+});
+
+test("linked workspace navigation retains its ticket context without changing another owner's target", () => {
+  const workspace: CollectionBadgeItem = {
+    id: "workspace",
+    label: "Workspace",
+    resource: { type: "workspace", id: "ws-1", extensionId: "pstdio", projectId: "proj-1" },
+    action: { kind: "page", page: { kind: "page", id: "workspace", extensionId: "pstdio" } },
+  };
+  const artifact: CollectionBadgeItem = {
+    id: "artifact",
+    label: "Artifact",
+    resource: { type: "artifact", id: "a-1", extensionId: "example.artifacts" },
+    action: { kind: "page", page: { kind: "page", id: "artifact", extensionId: "example.artifacts" } },
+  };
+  const row = ticketToRow(ticket, "proj-1", [], new Map([[ticket.id, [workspace, artifact]]]));
+  expect(row.attributes.linkedResourceItems[0]?.action).toMatchObject({
+    kind: "page",
+    page: { kind: "page", id: "workspace", extensionId: "pstdio" },
+    parent: {
+      kind: "page",
+      page: { id: "ticket", extensionId: "pstdio.pstdio-planner" },
+      resource: { type: "ticket", id: ticket.id, projectId: "proj-1", extensionId: "pstdio.pstdio-planner" },
+    },
+  });
+  expect(row.attributes.linkedResourceItems[1]?.action).toEqual(artifact.action);
+  expect(workspace.action).not.toHaveProperty("parent");
 });

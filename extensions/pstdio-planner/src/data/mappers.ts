@@ -11,6 +11,7 @@ import {
   TICKET_LINKED_RESOURCES_ATTRIBUTE,
   type TicketLinkedResourceLookup,
 } from "./ticket-linked-resources";
+import { ticketPageTarget } from "./ticket-page-target";
 import { resolveTicketHierarchy, type TicketParentLookup, ticketDisplayTitle } from "./ticket-resource-hierarchy";
 import type { TicketSummary } from "./ticket-summary";
 import { isSingleSelectTicketTag, tagValueIds } from "./ticket-tags";
@@ -67,6 +68,18 @@ const ticketToRowWithTags = (
   parentLookup: TicketParentLookup,
 ) => {
   const hierarchy = resolveTicketHierarchy(ticket, parentLookup);
+  const linkedResourceItems = (linkedResources.get(ticket.id) ?? []).map((item) => {
+    if (item.resource?.type !== "workspace" || item.resource.extensionId !== "pstdio" || item.action?.kind !== "page")
+      return item;
+    // Keep workspace navigation inside the ticket whose badge was activated.
+    return {
+      ...item,
+      action: {
+        ...item.action,
+        parent: ticketPageTarget({ ...hierarchy.identity, projectId, extensionId: "pstdio.pstdio-planner" }),
+      },
+    };
+  });
 
   return {
     id: ticket.id,
@@ -91,8 +104,8 @@ const ticketToRowWithTags = (
       updated: ticket.updatedAt,
       id: hierarchy.breadcrumb,
       parent: hierarchy.parent?.shorthand ?? "",
-      [TICKET_LINKED_RESOURCES_ATTRIBUTE]: linkedResources.get(ticket.id)?.[0]?.id ?? "",
-      [TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE]: linkedResources.get(ticket.id) ?? [],
+      [TICKET_LINKED_RESOURCES_ATTRIBUTE]: linkedResourceItems[0]?.id ?? "",
+      [TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE]: linkedResourceItems,
       ...ticketTagValues(ticket, tagOptions),
     },
   };
