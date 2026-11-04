@@ -4,7 +4,7 @@ import { Chart as TanStackChart, type ChartProps as TanStackChartProps } from "@
 import psTheme from "@/theme/theme";
 
 export const chartColor = (token: string) => psTheme.token.var(`colors.${token}`);
-export const chartPalette = Array.from({ length: 7 }, (_, index) => chartColor(`vis.categorical.${index + 1}`));
+export const chartPalette = Array.from({ length: 14 }, (_, index) => chartColor(`vis.categorical.${index + 1}`));
 const theme = {
   foreground: chartColor("vis.axis"),
   muted: chartColor("vis.text.secondary"),

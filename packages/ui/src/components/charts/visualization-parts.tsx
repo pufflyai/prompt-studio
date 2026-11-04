@@ -7,25 +7,57 @@ import { parts } from "./visualization-data";
 import { VisualizationExample as Example } from "./visualization-example";
 
 const options = { keyboard: true, tooltip: { use: tooltip } };
-function PartsChart({ donut = false }: { donut?: boolean }) {
+function PartsChart({ variant = "pie" }: { variant?: "pie" | "donut" | "labeled" | "total" }) {
+  const slices = pie(parts, { value: "value" });
+  const donut = variant === "donut" || variant === "total";
+  const labels = variant === "labeled";
+  const center = variant === "total";
+  const ariaLabel = { pie: "Pie", donut: "Donut", labeled: "Labeled pie", total: "Donut total" }[variant];
+  const arcs = radialArc(slices, {
+    innerRadius: ({ radius }) => (donut ? radius * 0.6 : 0),
+    color: "name",
+    key: "name",
+  });
+  const composition =
+    labels || center
+      ? polar({
+          radiusRatio: labels ? 0.6 : 0.8,
+          marks: [
+            arcs,
+            ...(labels
+              ? [
+                  radialText(slices, {
+                    angle: "angle",
+                    radius: 1.15,
+                    text: (row) => `${row.name} ${Math.round(row.fraction * 100)}%`,
+                    anchor: "outside",
+                    fill: chartColor("vis.text.primary"),
+                  }),
+                ]
+              : []),
+            ...(center
+              ? [
+                  radialText([{ total: 100 }], {
+                    angle: 0,
+                    radius: 0,
+                    text: "total",
+                    fill: chartColor("vis.text.primary"),
+                  }),
+                ]
+              : []),
+          ],
+          scales: {
+            angle: { scale: scaleLinear().domain([0, Math.PI * 2]) },
+            radius: { scale: scaleLinear().domain([0, 1]) },
+          },
+        })
+      : polar({ radiusRatio: 0.8, marks: [arcs], scales: { angle: null, radius: null } });
   return (
     <Chart
-      ariaLabel={donut ? "Donut" : "Pie"}
+      ariaLabel={ariaLabel}
       definition={defineChart(
         {
-          marks: [
-            polar({
-              radiusRatio: 0.8,
-              marks: [
-                radialArc(pie(parts, { value: "value" }), {
-                  innerRadius: ({ radius }) => (donut ? radius * 0.6 : 0),
-                  color: "name",
-                  key: "name",
-                }),
-              ],
-              scales: { angle: null, radius: null },
-            }),
-          ],
+          marks: [composition],
           scales: { x: null, y: null },
           color: {
             domain: parts.map(({ name }) => name),
@@ -38,15 +70,28 @@ function PartsChart({ donut = false }: { donut?: boolean }) {
     />
   );
 }
-export function PartsExamples() {
+export function PieExamples() {
   return (
     <>
       <Example title="Pie">
         <PartsChart />
       </Example>
       <Example title="Donut">
-        <PartsChart donut />
+        <PartsChart variant="donut" />
       </Example>
+      <Example title="Labeled pie">
+        <PartsChart variant="labeled" />
+      </Example>
+      <Example title="Donut total">
+        <PartsChart variant="total" />
+      </Example>
+    </>
+  );
+}
+export function PartsExamples() {
+  return (
+    <>
+      <PieExamples />
       <Example title="Gauge">
         <Chart
           ariaLabel="Gauge"
