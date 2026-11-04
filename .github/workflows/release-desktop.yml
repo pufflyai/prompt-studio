@@ -206,17 +206,17 @@ jobs:
         run: |
           set -o pipefail
           bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }} 2>&1 |
-            bun -e '
+            bun --cwd clients/desktop -e '
               import { appendFileSync, mkdirSync } from "node:fs";
               import { createInterface } from "node:readline";
               import { redactSensitiveText } from "pstdio-logging";
               const secrets = Object.entries(process.env)
                 .filter(([name, value]) => /TOKEN|SECRET|PASSWORD|KEY|ISSUER|IDENTITY/.test(name) && value)
                 .map(([, value]) => value);
-              mkdirSync("clients/desktop/test-results", { recursive: true });
+              mkdirSync("test-results", { recursive: true });
               for await (const line of createInterface({ input: process.stdin })) {
                 const safe = redactSensitiveText(line, secrets);
-                appendFileSync("clients/desktop/test-results/release-build.log", safe + "\n");
+                appendFileSync("test-results/release-build.log", safe + "\n");
                 console.log(safe);
               }
             '
