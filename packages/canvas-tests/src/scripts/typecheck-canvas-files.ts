@@ -16,7 +16,7 @@ for (const source of sources) {
 }
 for (const owner of [...owners].sort()) {
   const name = owner.slice(repoRoot.length + 1);
-  const config = name === "packages/ui" ? "tsconfig.examples.json" : "tsconfig.canvas.json";
+  const config = owner === resolve(repoRoot, "packages/ui") ? "tsconfig.examples.json" : "tsconfig.canvas.json";
   if (!existsSync(resolve(owner, config))) throw new Error(`Missing Canvas type configuration: ${name}/${config}`);
   console.log(`Check canvas files: ${name}`);
   const check = Bun.spawn(["bun", "check", "-p", config], { cwd: owner, stdout: "inherit", stderr: "inherit" });
