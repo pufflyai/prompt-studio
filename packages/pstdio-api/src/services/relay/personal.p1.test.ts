@@ -11,7 +11,7 @@ const until = async (condition: () => boolean | Promise<boolean>) => {
   expect(await condition()).toBe(true);
 };
 
-test("protocol 2 streams private previews and catches up completed history with three subscriptions per device", async () => {
+test("protocol 2 streams private previews and catches up completed history with reader subscriptions per session", async () => {
   const source = await createTestApp();
   const destination = await createTestApp();
   const peer = documentPeer();
@@ -39,7 +39,11 @@ test("protocol 2 streams private previews and catches up completed history with 
       .conversationReady;
     await destination.deps.personalHistoryService.refreshIdentity();
     const received: { live: boolean; message: unknown }[] = [];
-    const stop = destination.deps.personalHistoryService.watchMessages(session.id, (update) => received.push(update));
+    const stop = destination.deps.personalHistoryService.watchMessages(
+      session.id,
+      (update) => received.push(update),
+      project.id,
+    );
     for (const [app, device] of [
       [source, "source-device"],
       [destination, "destination-device"],
@@ -53,7 +57,7 @@ test("protocol 2 streams private previews and catches up completed history with 
         }),
       );
     await until(
-      () => peer.subscriptions().length === 2 && peer.subscriptions().every((entry) => entry.topics.length === 3),
+      () => peer.subscriptions().length === 2 && peer.subscriptions().every((entry) => entry.topics.length >= 3),
     );
     const message = {
       id: "message",
@@ -89,7 +93,7 @@ test("protocol 2 streams private previews and catches up completed history with 
         (messages) => messages.length === 1,
       ),
     );
-    expect(peer.subscriptions().map((entry) => entry.topics.length)).toEqual([3, 3]);
+    expect(peer.subscriptions().map((entry) => entry.topics.length)).toEqual([4, 6]);
     stop();
   } finally {
     for (const sync of syncs) sync.close();

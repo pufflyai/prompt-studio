@@ -14,12 +14,14 @@ export const FocusRequestPlugin = (props: { requested: boolean; isEditable: bool
     if (!requested || !isEditable || !rendered) return;
     const root = editor.getRootElement();
     const active = document.activeElement;
-    // A request can wait while the editor is locked. Keep focus in a field or embedded view the person chose.
-    const typingElsewhere =
+    // A request can wait while the editor is locked. Keep focus in a field, embedded view, menu or navigation row the person chose.
+    const focusElsewhere =
       active instanceof HTMLElement &&
       !root?.contains(active) &&
-      (active.isContentEditable || active.matches("input, textarea, select, iframe"));
-    if (!typingElsewhere) root?.focus();
+      (active.isContentEditable ||
+        active.matches("input, textarea, select, iframe") ||
+        active.closest('[role="menu"], [role="option"], [role="treeitem"]'));
+    if (!focusElsewhere) root?.focus();
     onComplete?.();
   }, [requested, isEditable, rendered, editor, onComplete]);
 

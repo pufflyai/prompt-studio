@@ -4,6 +4,7 @@ import { openState, openSummary, openUpdate, sealState, sealUpdate } from "../en
 import { checkSummary, cloneDocument, decodeBytes, encodeBytes, isEmptyDocument, missingUpdate } from "../shared";
 import {
   downloadDocumentBlobs,
+  hasDocumentAssets,
   prepareDocumentBlobs,
   uploadDocumentBlobs,
   validateDocumentBlobs,
@@ -184,29 +185,41 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     if (await publishAdoption()) return "retry";
     return "ready";
   };
+  const unchanged = async () =>
+    downloaded &&
+    store.revision &&
+    (await store.revision(owner)) === acknowledgedRevision &&
+    !hasDocumentAssets(remote);
+  const synchronizeLocal = async () => {
+    const initialHistory = await prepareLocalHistory();
+    if (initialHistory === "waiting") return true;
+    if (initialHistory === "retry") return false;
+    const local = await mergeLocal();
+    if (!local) return false;
+    try {
+      await prepareDocumentBlobs(input, local);
+      const update = missingUpdate(local, remote);
+      if (update) {
+        await sendUpdate(local, update);
+        // Do not jump to our receipt's sequence: another device may have written just before it.
+        return false;
+      }
+      if (!(await compact())) return false;
+      downloaded = !incomplete;
+      await acknowledge();
+      return true;
+    } finally {
+      local.destroy();
+    }
+  };
   const synchronize = async () => {
     while (true) {
       await read();
-      const initialHistory = await prepareLocalHistory();
-      if (initialHistory === "waiting") return;
-      if (initialHistory === "retry") continue;
-      const local = await mergeLocal();
-      if (!local) continue;
-      try {
-        await prepareDocumentBlobs(input, local);
-        const update = missingUpdate(local, remote);
-        if (update) {
-          await sendUpdate(local, update);
-          // Do not jump to our receipt's sequence: another device may have written just before it.
-          continue;
-        }
-        if (!(await compact())) continue;
-        downloaded = !incomplete;
-        await acknowledge();
-        return;
-      } finally {
-        local.destroy();
-      }
+      // Reading invalidates downloaded whenever the relay changed. An acknowledged local
+      // revision proves an unchanged pass needs neither a document clone nor another diff.
+      // Asset files can disappear independently of that revision and still need normal repair.
+      if (await unchanged()) return;
+      if (await synchronizeLocal()) return;
     }
   };
   const acknowledge = async () => {

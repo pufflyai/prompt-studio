@@ -186,6 +186,8 @@
         "src/index.ts",
         "src/server.ts",
         "src/features/workspaces/worktree-cleanup.p3.bench.ts",
+        // The Cloud CPU coordinator launches this device process by path.
+        "src/services/personal-history/sync-cpu-worker.diagnostic.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner launches these by path.
         "src/**/*.integration.ts",

@@ -53,3 +53,32 @@ export const capturePersonalHistory = async (input: {
   // The sessions this account owns here. Their conversations are published as logs.
   return sessionIds;
 };
+
+/** Session events carry IDs: read and append only those rows, independent of saved project size. */
+export const captureSessionChanges = async (input: Parameters<typeof capturePersonalHistory>[0], ids: string[]) => {
+  const { history, device, deps, projectId, references } = input;
+  const claimed = await history.claimLocalRecords("sessions", ids);
+  const present = new Set<string>();
+  for (const id of claimed) {
+    const row = await deps.sessionService.get(id);
+    if (!row || row.project_id !== projectId) {
+      await history.patchRecords("sessions", device, [], [id]);
+      await history.patchRecords("queues", device, [], [id]);
+      await references.remove("session", id);
+      continue;
+    }
+    present.add(id);
+    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
+    const workspaceId = workspace?.project_id === row.project_id ? workspace.id : null;
+    await history.patchRecords("sessions", device, [{ ...row, workspace_id: workspaceId }]);
+    const requests = sharedQueue(await deps.sessionQueueEntriesService.listUndispatchedBySession(id));
+    await history.patchRecords(
+      "queues",
+      device,
+      requests.length ? [{ id, requests }] : [],
+      requests.length ? [] : [id],
+    );
+    await references.set({ type: "session", id, device });
+  }
+  return present;
+};

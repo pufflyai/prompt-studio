@@ -8,6 +8,12 @@ import { testContext, testManifest } from "./test-build";
 const leaves = (nodes: TreeNode[]): TreeNode[] =>
   nodes.flatMap((node) => (node.children ? leaves(node.children) : [node]));
 
+test("opening UI Canvas restores the last design and has a visible landing view", () => {
+  const item = extension.navigationItems.find((entry) => entry.id === "canvases")!;
+  expect(item.action).toMatchObject({ kind: "page", page: homePage.ref, intent: "restore" });
+  expect(homePage.main).toMatchObject({ kind: "view", view: { id: "canvas" }, cardinality: "one" });
+});
+
 test("the canvas navigation panel exposes each grouped resource on overview and detail pages", async () => {
   const { ctx } = await testContext();
   for (const page of [homePage, canvasPage]) {
@@ -30,7 +36,7 @@ test("the canvas navigation panel exposes each grouped resource on overview and 
         resource: {
           type: "canvas",
           id: node.resource!.id,
-          icon: "diamond",
+          icon: "gallery-thumbnails",
           projectId: ctx.projectId,
           extensionId: "pstdio.canvas",
         },
@@ -40,6 +46,9 @@ test("the canvas navigation panel exposes each grouped resource on overview and 
 
 test("resolving a restored canvas replaces its stale resource icon", async () => {
   const { ctx } = await testContext();
-  ctx.resource = { type: "canvas", id: "src/foundations.canvas.tsx", icon: "table-properties" };
-  expect(await resolveCanvasCommand.run(ctx, {})).toMatchObject({ id: "src/foundations.canvas.tsx", icon: "diamond" });
+  ctx.resource = { type: "canvas", id: "src/foundations.canvas.tsx", icon: "diamond" };
+  expect(await resolveCanvasCommand.run(ctx, {})).toMatchObject({
+    id: "src/foundations.canvas.tsx",
+    icon: "gallery-thumbnails",
+  });
 });

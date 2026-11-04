@@ -2,11 +2,12 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createDocumentStorage } from "pstdio-sync/records";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { streamPersonalSession } from "../../features/sessions/endpoints/stream-personal-session";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createNativeStore } from "../account/native-store";
 import { capturePersonalHistory } from "./capture";
+import { logRelayFixture } from "./log-transport.fixture";
 import { maxSharedQueuePrompt } from "./queue-snapshot";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore } from "./store";
@@ -62,6 +63,7 @@ test("another device's queued messages are readable in order, kept out of sessio
       managerOrigin,
       accountId,
       documents: source.deps.extensionStorageService.documents,
+      files: source.deps.personalHistoryService.logs,
     });
     const references = createHistoryReferences(
       source.deps.extensionStorageService.documents.open(historyReferenceName),
@@ -70,13 +72,22 @@ test("another device's queued messages are readable in order, kept out of sessio
     const device = { ownerId: accountId, id: "source-device", name: "Laptop" };
     const capture = () =>
       capturePersonalHistory({ projectId: project.id, device, history, references, deps: source.deps });
+    const space = await createSyncSpace({
+      projectId: project.id,
+      spaceOwner: accountId,
+      keys: [{ generation: 1, secret: "A".repeat(43) }],
+    });
+    const relay = logRelayFixture();
     const copyRecords = async () => {
-      const store = (host: typeof source) =>
-        createDocumentStorage({
-          owner: history.owner,
-          store: host.deps.extensionStorageService.documents.open("records"),
-        });
-      await store(destination).applyUpdate(await store(source).exportUpdate());
+      await history.synchronizeIndex(device.id, true, space, relay.relay);
+      const target = createPersonalHistoryStore({
+        projectId: project.id,
+        managerOrigin,
+        accountId,
+        documents: destination.deps.extensionStorageService.documents,
+        files: destination.deps.personalHistoryService.logs,
+      });
+      await target.synchronizeIndex(device.id, false, space, relay.relay);
     };
     await capture();
 

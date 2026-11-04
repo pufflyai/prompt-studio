@@ -20,7 +20,7 @@ test("every synced history reader receives bounded legacy results", async () => 
     await logs.append("namespace", "session", messageEntries(0, message));
     const reader = createPersonalMessageReader({
       context: async () => ({ identity: "account", namespace: "namespace", history: {} as never }),
-      sessions: async () => [{ id: "session", status: "completed" }],
+      session: async (id) => (id === "session" ? { id, status: "completed" } : null),
       logs,
       refreshIdentity: async () => {},
       identity: () => "account",

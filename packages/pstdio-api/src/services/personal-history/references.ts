@@ -15,6 +15,7 @@ export interface HistoryReference {
 /** Shared pointers contain only opaque IDs and the owner/device, never private summaries. */
 export const createHistoryReferences = (store: DocumentStore, projectId: string) => {
   const owner = historyReferenceOwner(projectId);
+  const written = new Map<string, string>();
   return {
     owner,
     store,
@@ -32,6 +33,23 @@ export const createHistoryReferences = (store: DocumentStore, projectId: string)
           for (const [id, value] of next) if (map.get(id) !== value) map.set(id, value);
         });
       }),
+    async set(ref: HistoryReference) {
+      const key = JSON.stringify([ref.type, ref.id]);
+      const value = JSON.stringify(ref);
+      if (written.get(key) === value) return;
+      await store.transaction(owner, async ({ document }) => {
+        const map = document.getMap<string>("references");
+        if (map.get(key) !== value) map.set(key, value);
+      });
+      written.set(key, value);
+    },
+    async remove(type: string, id: string) {
+      const key = JSON.stringify([type, id]);
+      await store.transaction(owner, async ({ document }) => {
+        document.getMap<string>("references").delete(key);
+      });
+      written.delete(key);
+    },
     get: (type: string, id: string) =>
       store.transaction(owner, async ({ document }) => {
         const value = document.getMap<string>("references").get(JSON.stringify([type, id]));

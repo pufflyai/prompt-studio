@@ -46,6 +46,7 @@ const expectCanonicalFrame = async (
 ) => {
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const navChrome = page.locator('[data-workbench-region="nav"]');
+  const locationPanel = page.locator('[data-workbench-panel="main"]');
   const sidePanel = page.locator('[data-workbench-region="side"]');
   const statusBar = page.locator('[data-workbench-region="status"]');
 
@@ -63,13 +64,15 @@ const expectCanonicalFrame = async (
   }
   await expect(page.locator('[data-workbench-region="activity"]')).toBeHidden();
 
-  const [sidenavBox, navBox, sideBox] = await Promise.all([
+  const [sidenavBox, navBox, sideBox, locationBox] = await Promise.all([
     options.sidenav === "visible" ? sidenav.boundingBox() : Promise.resolve(null),
     navChrome.boundingBox(),
     sidePanel.boundingBox(),
+    locationPanel.boundingBox(),
   ]);
   expect(navBox).not.toBeNull();
   expect(sideBox).not.toBeNull();
+  expect(locationBox).not.toBeNull();
 
   const contentHeight = options.statusBar === "visible" ? 688 : 720;
   const panelHeight = contentHeight - (options.statusBar === "visible" ? PANEL_GAP_PX : 2 * PANEL_GAP_PX);
@@ -84,9 +87,14 @@ const expectCanonicalFrame = async (
     expectNear(sidenavBox.height, panelHeight);
   }
 
-  expectNear(navBox!.x, mainColumnX);
-  expectNear(navBox!.y, PANEL_GAP_PX);
-  expectNear(navBox!.width, sideX - PANEL_GAP_PX - mainColumnX);
+  expectNear(locationBox!.x, mainColumnX);
+  expectNear(locationBox!.y, PANEL_GAP_PX);
+  expectNear(locationBox!.width, sideX - PANEL_GAP_PX - mainColumnX);
+  expectNear(locationBox!.height, panelHeight);
+  // Navigation lives inside the Location Panel's one-pixel border on each edge.
+  expectNear(navBox!.x, mainColumnX + 1);
+  expectNear(navBox!.y, PANEL_GAP_PX + 1);
+  expectNear(navBox!.width, sideX - PANEL_GAP_PX - mainColumnX - 2);
   expectNear(navBox!.height, 40);
 
   expectNear(sideBox!.x, sideX);

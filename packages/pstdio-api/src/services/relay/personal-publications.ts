@@ -17,18 +17,25 @@ export const createPersonalPublications = (input: {
       if (head) heads.set(sessionId, head);
       if (version) completed.set(sessionId, { head, version });
       input.published(sessionId);
+      if (version) input.wake();
       timer ??= setTimeout(() => {
         timer = undefined;
         input.wake();
-      }, 10_500);
+      }, 60_000);
     },
     async flush(full: boolean, captured: boolean) {
-      const ordinary = heads.size > 0 && (full || captured || Date.now() - writtenAt > 10_000);
+      const ordinary = heads.size > 0 && (full || captured || Date.now() - writtenAt >= 60_000);
       if (!completed.size && !ordinary) return false;
-      await input.history.writeHeads(new Map(heads), new Map(completed));
-      heads.clear();
-      completed.clear();
+      const writingHeads = new Map(heads);
+      const writingCompleted = new Map(completed);
+      await input.history.writeHeads(writingHeads, writingCompleted);
+      for (const [id, head] of writingHeads) if (heads.get(id) === head) heads.delete(id);
+      for (const [id, proof] of writingCompleted) if (completed.get(id) === proof) completed.delete(id);
       writtenAt = Date.now();
+      if (!heads.size && !completed.size) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
       return true;
     },
     close() {

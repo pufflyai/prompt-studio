@@ -3,11 +3,13 @@ import { syncPath, syncRoute } from "pstdio-sync-contracts";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
 
 /** Disposable manager identities with the production relay call router and frame limits. */
-export const createDeviceCommandPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFile }) => {
+export const createDeviceCommandPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFile } | undefined) => {
   const durable = createPackagedSyncPeer(undefined);
   const devices = new Map<string, { name: string; publicKey?: string }>();
   const hub = createLiveHub(defaultRelayLimits, () => true);
   const frames: string[] = [];
+  const credentials = new Map<string, string>();
+  const accessTokens = new Map<string, { deviceId: string; projectId: string }>();
   const signingKeyRequest = async (request: Request, path: string, deviceId?: string) => {
     if (path === "/v1/devices/signing-key") {
       const device = deviceId && devices.get(deviceId);
@@ -27,18 +29,18 @@ export const createDeviceCommandPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFi
       const profile = await request.clone().json();
       devices.set(profile.deviceId, { name: profile.name });
       const response = await fetch(`${durable.origin}${url.pathname}`, request);
-      return Response.json({
-        ...(await response.json()),
-        token: `device-credential:${profile.deviceId}`,
-        relayOrigin: url.origin,
-      });
+      const value = await response.json();
+      credentials.set(value.token, profile.deviceId);
+      return Response.json({ ...value, relayOrigin: url.origin });
     }
     if (url.pathname === "/v1/environment-access") {
       if (!deviceId || !devices.has(deviceId)) return new Response(null, { status: 401 });
-      return Response.json({
-        token: `relay-access:${deviceId}`,
-        expiresAt: new Date(Date.now() + 60_000).toISOString(),
-      });
+      const input = await request.clone().json();
+      const response = await fetch(`${durable.origin}${url.pathname}`, request);
+      if (!response.ok) return response;
+      const value = await response.json();
+      accessTokens.set(value.token, { deviceId, projectId: String(input.workbenchId) });
+      return Response.json(value);
     }
     if (url.pathname === "/v1/devices/presence") return Response.json({ ok: true });
     if (url.pathname === "/v1/devices")
@@ -58,7 +60,6 @@ export const createDeviceCommandPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFi
   };
   const forward = async (request: Request, url: URL) => {
     const headers = new Headers(request.headers);
-    if (url.pathname.startsWith("/sync/")) headers.set("authorization", "Bearer relay-access");
     const response = await fetch(`${durable.origin}${url.pathname}${url.search}`, {
       method: request.method,
       headers,
@@ -84,9 +85,13 @@ export const createDeviceCommandPeer = (tls: { key: Bun.BunFile; cert: Bun.BunFi
     tls,
     async fetch(request, server) {
       const url = new URL(request.url);
-      const deviceId = request.headers.get("authorization")?.replace(/^Bearer (?:device-credential|relay-access):/, "");
+      const token = request.headers.get("authorization")?.replace(/^Bearer /, "") ?? "";
+      const access = accessTokens.get(token);
+      const deviceId = credentials.get(token) ?? access?.deviceId;
       if (url.pathname.endsWith("/live")) {
-        if (!deviceId || !devices.has(deviceId)) return new Response(null, { status: 401 });
+        const route = syncRoute(url.pathname);
+        if (!deviceId || !devices.has(deviceId) || !access || route?.projectId !== access.projectId)
+          return new Response(null, { status: 401 });
         const handler = hub.connect({
           projectKey: url.pathname,
           accountId: "owner",
