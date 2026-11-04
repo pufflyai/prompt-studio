@@ -62,7 +62,13 @@ export const DataTableStatChart = <T extends object>(props: DataTableStatChartPr
         definition={defineChart(
           {
             marks: [
-              barX(points, { radius: chartGeometry.barRadius, x: "value", y: "id", fill, maxThickness: barSize }),
+              barX(points, {
+                radius: { end: chartGeometry.barRadius },
+                x: "value",
+                y: "id",
+                fill,
+                maxThickness: barSize,
+              }),
             ],
             guides: false,
             margin: 0,
@@ -82,7 +88,7 @@ export const DataTableStatChart = <T extends object>(props: DataTableStatChartPr
         {
           marks: [
             barY(points, {
-              radius: chartGeometry.barRadius,
+              radius: { end: chartGeometry.barRadius },
               x: "id",
               y: "value",
               fill,
