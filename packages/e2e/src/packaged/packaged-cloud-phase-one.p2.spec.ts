@@ -123,7 +123,8 @@ const openNote = async (resources: Resources, device: CloudAcceptanceDevice, pro
   expect(grant).toBeDefined();
   const session = await editing.open({ grant: grant! });
   resources.closeEditors.unshift(() => session.close());
-  const bodyStart = session.getSnapshot().text.length;
+  // Empty Notes headers end at the closing delimiter; this scenario first inserts two body-separating newlines.
+  const bodyStart = session.getSnapshot().text.length + 2;
   return {
     text: () => session.getSnapshot().text.toString(),
     async insert(value: string, prepend = false) {
@@ -169,8 +170,8 @@ test("three independent packaged devices keep extension content, offline collabo
   for (const device of devices) await synced(device, projectId);
   const editors = [];
   for (const device of devices) editors.push(await openNote(resources, device, projectId, note.id));
-  const initial = editors[0]!.text();
-  await editors[0]!.insert("first\nlast");
+  const initial = `${editors[0]!.text()}\n\n`;
+  await editors[0]!.insert("\n\nfirst\nlast");
   for (const editor of editors) await expect.poll(editor.text).toBe(`${initial}first\nlast`);
 
   await fixture.peer.stop();
@@ -322,6 +323,10 @@ test("three independent packaged devices keep extension content, offline collabo
     "phase-one-secret-ticket",
     "phase-one-secret-asset-name",
     "phase-one-secret-asset-bytes",
+    "local first: offline left: first\nlast: offline right: local second",
+    "Left title",
+    "Edited A",
+    "FIRST\nLAST",
   ]);
 });
 
@@ -331,27 +336,95 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
   const { fixture, first, second, third, devices, projectId } = await setup(resources);
   const space = await createSyncSpace({ projectId, spaceOwner: null, keys: [packagedProjectKey] });
   const documentId = await space.documentId(JSON.stringify([acceptanceOwner, "record-stream"]));
+  const group = (round: string) =>
+    Array.from({ length: 8 }, (_, index) => ({
+      recordId: `large-${index}`,
+      replace: `phase-one-secret-${round}${"x".repeat(200_000)}`,
+    }));
+  // A real initial latest state, shared by all three devices before the third loses connectivity.
+  await first.command(projectId, acceptanceOwner, "commit", {
+    group: {
+      operationId: "replacement-seed",
+      edits: [{ recordId: "baseline", replace: "b".repeat(100_000) }, ...group("seed")],
+    },
+  });
+  for (const device of devices) await synced(device, projectId);
+  await expect
+    .poll(async () => {
+      const snapshot = await fixture.peer.captureSnapshot(documentId);
+      return snapshot.lastSequence > 0 && snapshot.state.through === snapshot.lastSequence;
+    })
+    .toBe(true);
   const old = await fixture.peer.captureSnapshot(documentId);
   await fixture.peer.blockDevice(third.environmentId, true);
   await third.command(projectId, acceptanceOwner, "commit", {
     group: { operationId: "third-offline", edits: [{ recordId: "offline-kept", replace: "phase-one-secret-offline" }] },
   });
   let priorState = old.state.stateId;
+  const replacements = new Set<string>();
+  const began = Date.now();
   for (let index = 0; index < 8; index++) {
-    // Preserve the existing packaged compaction workload: eight records of 200,000 bytes, under 256 KiB each.
-    await first.command(projectId, acceptanceOwner, "commit", {
-      group: {
-        operationId: `replacement-${index}`,
-        edits: Array.from({ length: 8 }, (_, record) => ({
-          recordId: `large-${record}`,
-          replace: `phase-one-secret-${index}${"x".repeat(200_000)}`,
-        })),
-      },
+    await test.step(`latest-state replacement ${index + 1}/8`, async () => {
+      await synced(first, projectId);
+      // Stage a complete local batch before transport resumes. Normal 128-edit checkpoints fold
+      // historical payloads; the distinct prelude makes pending bytes exceed the current state.
+      await fixture.peer.blockDevice(first.environmentId, true);
+      await fixture.peer.blockDevice(second.environmentId, true);
+      const markers = await first.command<{ operationIds: string[] }>(
+        projectId,
+        acceptanceOwner,
+        "advance-acceptance-revisions",
+        { round: index },
+      );
+      expect(markers.operationIds).toHaveLength(126);
+      expect(new Set(markers.operationIds).size).toBe(126);
+      console.log(
+        JSON.stringify({
+          phase: "replacement-markers-complete",
+          round: index,
+          groups: markers.operationIds.length,
+          elapsedMs: Date.now() - began,
+        }),
+      );
+      await first.command(projectId, acceptanceOwner, "commit", {
+        group: { operationId: `replacement-prelude-${index}`, edits: group(`prelude-${index}`) },
+      });
+      // Preserve every original eight-record, 200000-byte-value grouped save.
+      await first.command(projectId, acceptanceOwner, "commit", {
+        group: { operationId: `replacement-${index}`, edits: group(String(index)) },
+      });
+      await fixture.peer.blockDevice(first.environmentId, false);
+      await first.client.account.retryProjectSync(projectId);
+      await expect
+        .poll(async () => {
+          const snapshot = await fixture.peer.captureSnapshot(documentId);
+          return snapshot.state.stateId !== priorState && snapshot.state.through === snapshot.lastSequence;
+        })
+        .toBe(true);
+      const state = await fixture.peer.captureSnapshot(documentId);
+      priorState = state.state.stateId;
+      replacements.add(priorState);
+      console.log(
+        JSON.stringify({
+          phase: "latest-state-replacement",
+          round: index,
+          stateId: priorState,
+          through: state.state.through,
+          elapsedMs: Date.now() - began,
+        }),
+      );
+      await fixture.peer.trim(documentId);
+      await fixture.peer.blockDevice(second.environmentId, false);
+      await second.client.account.retryProjectSync(projectId);
+      await synced(second, projectId);
+      await expect
+        .poll(() =>
+          second.command<StorageRecord[]>(projectId, acceptanceOwner, "read-acceptance-records", { ids: ["large-7"] }),
+        )
+        .toMatchObject([{ value: group(String(index))[7]!.replace }]);
     });
-    await expect.poll(async () => (await fixture.peer.captureSnapshot(documentId)).state.stateId).not.toBe(priorState);
-    priorState = (await fixture.peer.captureSnapshot(documentId)).state.stateId;
-    await fixture.peer.trim(documentId);
   }
+  expect(replacements.size).toBe(8);
   await fixture.peer.blockDevice(third.environmentId, false);
   await third.client.account.retryProjectSync(projectId);
   for (const device of devices) await synced(device, projectId);
@@ -394,5 +467,9 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
     .poll(() => offlineValue(reset))
     .toMatchObject([{ value: "phase-one-secret-offline" }, { value: `phase-one-secret-7${"x".repeat(200_000)}` }]);
   expect(await read(reset, projectId)).toEqual(await read(second, projectId));
-  await assertBlind(fixture, ["phase-one-secret-project", "phase-one-secret-offline"]);
+  await assertBlind(fixture, [
+    "phase-one-secret-project",
+    "phase-one-secret-offline",
+    ...Array.from({ length: 8 }, (_, index) => `phase-one-secret-${index}`),
+  ]);
 });

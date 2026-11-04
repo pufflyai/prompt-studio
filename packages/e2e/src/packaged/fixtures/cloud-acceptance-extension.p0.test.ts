@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorageDevices, makeCommandContext } from "@pstdio/sdk/testing";
+import { createMemoryStorage, createMemoryStorageDevices, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "./grouped-storage-extension";
 
 const command = (id: string) => {
@@ -44,4 +44,27 @@ test("acceptance fixture drives offline shape edits, deterministic migration and
   expect(result.migrated).toHaveLength(2);
   expect(result.cards.map((row) => row.recordId).sort()).toEqual(["card-a", "card-b", "card-c"]);
   expect(new Set(result.cards.map((row) => row.value.position)).size).toBe(3);
+});
+
+// Verifies the fixture supplies the fixed public-edit workload without changing large values.
+test("record revision preparation durably commits 126 distinct groups while preserving eight large values", async () => {
+  const storage = createMemoryStorage();
+  const context = makeCommandContext({ storage, params: {} });
+  const edits = Array.from({ length: 8 }, (_, index) => ({
+    recordId: `large-${index}`,
+    replace: `value-${index}${"x".repeat(200_000)}`,
+  }));
+  await storage.records.commit({ operationId: "large-seed", edits });
+  const result = (await command("advance-acceptance-revisions").run(context, { round: 2 } as never)) as unknown as {
+    operationIds: string[];
+  };
+  expect(result).toBeDefined();
+  expect(result.operationIds).toHaveLength(126);
+  expect(new Set(result.operationIds).size).toBe(126);
+  for (const id of result.operationIds) expect(await storage.records.outcome(id)).toMatchObject({ operationId: id });
+  for (const edit of edits)
+    expect(await storage.records.read(edit.recordId)).toMatchObject({
+      value: edit.replace,
+      shared: { kind: "map", value: { compactionTick: 377 } },
+    });
 });

@@ -2,6 +2,11 @@ import { expect } from "bun:test";
 import type { StateEnvelope, StateInfo, StoredUpdate } from "pstdio-sync-contracts";
 import type { createPeerLive } from "./packaged-live.fixture";
 
+const retainedSnapshots = (payloads: Map<string, Map<string, string>>) =>
+  [...payloads].flatMap(([documentId, states]) =>
+    [...states].map(([stateId, payload]) => ({ documentId, stateId, payload })),
+  );
+
 /** Blind document storage and explicit fault controls for the packaged wire peer. */
 export const createPackagedDocumentStore = (
   blobs: { complete: (id: string) => boolean },
@@ -29,7 +34,6 @@ export const createPackagedDocumentStore = (
     }
     return value;
   };
-  const json = (body: unknown) => Response.json(body);
   const lastSequence = (id: string) => {
     const doc = document(id);
     const sequence = Math.max(
@@ -86,8 +90,8 @@ export const createPackagedDocumentStore = (
     const sequence = lastSequence(id);
     const updates = doc.updates.filter((update) => update.sequence > Number(after));
     if (Number(after) > sequence || updates.length !== sequence - Number(after))
-      return json({ status: "state-required", state: doc.state, lastSequence: sequence });
-    return json({
+      return Response.json({ status: "state-required", state: doc.state, lastSequence: sequence });
+    return Response.json({
       status: "updates",
       state: doc.state,
       lastSequence: sequence,
@@ -109,7 +113,7 @@ export const createPackagedDocumentStore = (
       updateSequences.set(id, receipts);
     }
     const duplicate = receipts.get(String(body.updateId));
-    if (duplicate !== undefined) return json({ sequence: duplicate, duplicate: true });
+    if (duplicate !== undefined) return Response.json({ sequence: duplicate, duplicate: true });
     const sequence = lastSequence(id) + 1;
     sequences.set(id, sequence);
     receipts.set(String(body.updateId), sequence);
@@ -121,7 +125,7 @@ export const createPackagedDocumentStore = (
       createdAt: new Date().toISOString(),
     });
     publishChange(id, spaceOwner, created);
-    return json({ sequence, duplicate: false });
+    return Response.json({ sequence, duplicate: false });
   };
   const replaceState = (
     id: string,
@@ -132,7 +136,7 @@ export const createPackagedDocumentStore = (
   ) => {
     const doc = document(id);
     expect(body.summary).toBeString();
-    if (body.stateId === doc.state?.stateId) return json({ state: doc.state });
+    if (body.stateId === doc.state?.stateId) return Response.json({ state: doc.state });
     if (body.baseStateId !== (doc.state?.stateId ?? null))
       return Response.json({ error: "stale-state", state: doc.state }, { status: 409 });
     if (
@@ -143,7 +147,7 @@ export const createPackagedDocumentStore = (
       return Response.json({ error: "invalid-request" }, { status: 400 });
     saveState(id, body as unknown as StateEnvelope, deviceId);
     publishChange(id, spaceOwner, created);
-    return json({ state: doc.state });
+    return Response.json({ state: doc.state });
   };
   const documentRequest = async (
     request: Request,
@@ -171,10 +175,7 @@ export const createPackagedDocumentStore = (
     request: documentRequest,
     documents,
     states: () => storedStates,
-    retainedStates: () =>
-      [...statePayloads].flatMap(([documentId, states]) =>
-        [...states].map(([stateId, payload]) => ({ documentId, stateId, payload })),
-      ),
+    retainedStates: () => retainedSnapshots(statePayloads),
     reads: () => completedReads,
     announceUnchanged() {
       for (const id of documents.keys()) publishChange(id, personalDocumentIds.has(id) ? "owner" : null);
@@ -190,7 +191,12 @@ export const createPackagedDocumentStore = (
       const id = documentId.startsWith("~") ? documentId : `~${documentId}`;
       const doc = documents.get(id);
       if (!doc?.state || !doc.payload) throw new Error(`Document ${documentId} has no latest state`);
-      return structuredClone({ state: doc.state, payload: doc.payload, blobIds: doc.blobIds ?? [] });
+      return structuredClone({
+        state: doc.state,
+        payload: doc.payload,
+        blobIds: doc.blobIds ?? [],
+        lastSequence: lastSequence(id),
+      });
     },
     /**
      * Installs a client-sealed faulty latest state and removes its covered tail. The harness must reseal

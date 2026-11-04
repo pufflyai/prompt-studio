@@ -139,4 +139,36 @@ const readAsset = defineCommand({
     return new Response(await ctx.storage.assets.read(record.asset)).text();
   },
 });
-export const cloudAcceptanceCommands = [seed, edit, migrate, move, read, atomic, readRecords, readAsset];
+const advanceRevisions = defineCommand({
+  id: "advance-acceptance-revisions",
+  title: "Advance local record revisions",
+  mutating: true,
+  params: { round: params.number({ required: true }) },
+  async run(ctx, { round }) {
+    // These are ordinary small edits, using the unchanged production checkpoint cadence.
+    const operationIds: string[] = [];
+    for (let tick = 0; tick < 126; tick++) {
+      const operationId = ctx.storage.ids.create();
+      await ctx.storage.records.commit({
+        operationId,
+        edits: Array.from({ length: 8 }, (_, index) => ({
+          recordId: `large-${index}`,
+          shared: [{ kind: "map.set" as const, key: "compactionTick", value: round * 126 + tick }],
+        })),
+      });
+      operationIds.push(operationId);
+    }
+    return { operationIds };
+  },
+});
+export const cloudAcceptanceCommands = [
+  advanceRevisions,
+  seed,
+  edit,
+  migrate,
+  move,
+  read,
+  atomic,
+  readRecords,
+  readAsset,
+];

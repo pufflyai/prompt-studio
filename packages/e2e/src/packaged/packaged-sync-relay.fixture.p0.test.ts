@@ -238,6 +238,7 @@ test("pruned snapshot coverage requires the latest state and never reuses update
     expect((await document.state("second_state_0123456789", "first_state_0123456789", 2)).status).toBe(200);
     peer.trim(document.documentId);
     expect(await (await document.update("third_update_0123456789")).json()).toEqual({ sequence: 3, duplicate: false });
+    expect(peer.captureSnapshot(document.documentId)).toMatchObject({ lastSequence: 3, state: { through: 2 } });
   } finally {
     await stopPeer(peer);
   }

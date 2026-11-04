@@ -111,6 +111,24 @@ against controlled account/relay peers proves packaged client behavior only.
 | Full folder recovery | PRD R57–R59 and its delivered recovery candidate | `.pstignore` policy, hidden/Git-ignored files including `.env`, missing entries, private keys, interrupted transfer and non-overwriting restore all satisfy the PRD; declared-file recovery is narrower evidence |
 | Scale and hosting cost | PS-903 scale harness and PS-787 reference workload | Exact frozen workloads, raw timings, three-device correctness, concurrent second account and hosted cost/capacity evidence |
 
+The packaged replacement driver keeps all eight original grouped saves, each with
+8 values containing 200,000 payload bytes. It seeds those records plus a 100,000-byte
+baseline, then adds exactly 126 small shared-map grouped edits and one distinct
+large prelude before each original save: 1,008 marker groups, 8 preludes and 8
+original groups. These exercise the unchanged 128-edit local checkpoint and default
+relay thresholds. The first device queues the complete local batch while durable
+access is blocked; the second resumes after the snapshot covers the complete tail.
+The third remains disconnected until all eight distinct state IDs have been
+observed and covered updates trimmed. Both snapshot ID and through/last-sequence
+coverage are checked. The existing 5-second polls and 120-second Playwright allowance
+remain unchanged. Phase timings and committed marker operation IDs aid diagnosis.
+
+An exploratory real-DB version reached five replacements before its unchanged
+30-second allowance expired during marker preparation. Its complete source/patch,
+original single-save and prelude failures, and all timings are retained in RP-412.
+That duplicate experiment does not establish the eight-state packaged outcome;
+the maintained packaged case still requires execution on its delivered candidate.
+
 Keep semantic gaps visible. Early-access API fixture coverage already exists, but
 production early-access UI coverage remains unproved until its actual extension is
 available. At the preparation base,

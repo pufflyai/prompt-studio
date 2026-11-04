@@ -86,7 +86,12 @@ export const startPublicTextPeer = async (root: string, binaryPath = PACKAGED_BI
     blockDevice: (deviceId: string, blocked: boolean) => call("block-device", { deviceId, blocked }),
     trim: (documentId: string) => call("trim", { documentId }),
     captureSnapshot: (documentId: string) =>
-      call("capture-snapshot", { documentId }) as Promise<{ state: StateInfo; payload: string; blobIds: string[] }>,
+      call("capture-snapshot", { documentId }) as Promise<{
+        state: StateInfo;
+        payload: string;
+        blobIds: string[];
+        lastSequence: number;
+      }>,
     installSnapshot: (documentId: string, state: StateEnvelope) => call("install-snapshot", { documentId, state }),
     inspect: (signal?: AbortSignal) => call("inspect", {}, signal) as Promise<RelayContents>,
     close: () => stopChildProcess(child),
