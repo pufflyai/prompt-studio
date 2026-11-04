@@ -1,7 +1,7 @@
 import { Center, CloseButton } from "@chakra-ui/react";
 import { ScopedDialog as Dialog, Portal } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
 import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
 import { WorkbenchIcon } from "../shared/icon";
@@ -121,13 +121,29 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const renderers = useWorkbenchStore(getWorkbenchRenderers(workbench).store, (state) => state.renderers);
   useWorkbenchStore(getWorkbenchRenderers(workbench).store, (state) => state.refreshKeys);
   const [exitingPlacement, setExitingPlacement] = useState<WorkbenchWidgetPlacement | undefined>();
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const activePlacement = resolveActivePlacement(overlayRegion.widgets, overlayRegion.activeWidgetId);
   const renderState = resolveOverlayDialogRenderState(activePlacement, exitingPlacement);
+  const exitingWidgetId = activePlacement ? undefined : exitingPlacement?.widgetId;
 
   useEffect(() => {
     if (activePlacement) setExitingPlacement(undefined);
   }, [activePlacement]);
+
+  useLayoutEffect(() => {
+    if (!exitingWidgetId) return;
+    let active = true;
+    // A finished CSS animation can precede a presence listener in WebKit. Its
+    // completion promise also handles cancellation and already-finished exits.
+    const animations = contentRef.current?.getAnimations() ?? [];
+    void Promise.all(animations.map((animation) => animation.finished.catch(() => undefined))).then(() => {
+      if (active) setExitingPlacement((current) => (current?.widgetId === exitingWidgetId ? undefined : current));
+    });
+    return () => {
+      active = false;
+    };
+  }, [exitingWidgetId]);
 
   if (!renderState) return null;
 
@@ -163,10 +179,6 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
     }
   };
 
-  const handleExitComplete = () => {
-    setExitingPlacement((current) => (current?.widgetId === placement.widgetId ? undefined : current));
-  };
-
   // Nested overlays (confirmation dialogs, popovers, menus) portal outside this
   // dialog's content, so their clicks register as outside interactions here. If
   // the interaction landed inside any overlay content, it cannot mean "dismiss
@@ -182,7 +194,6 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
     <Dialog.Root
       {...dialogRootConfig}
       open={open}
-      onExitComplete={handleExitComplete}
       onOpenChange={handleOpenChange}
       onInteractOutside={handleInteractOutside}
     >
@@ -195,6 +206,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
           pointerEvents="auto"
         >
           <Dialog.Content
+            ref={contentRef}
             position="relative"
             overflow="hidden"
             borderWidth="1px"
