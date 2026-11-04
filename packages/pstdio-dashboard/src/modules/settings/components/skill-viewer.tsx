@@ -1,12 +1,11 @@
-import { Badge, Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea, TreeList, type TreeListNavigateEvent, useFileIconThemePreference } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import { SettingsHeaderContent } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
 import { useProjectSkill } from "../data/use-skills";
 import { buildSkillFileTree, collectFolderIds } from "../utils/build-skill-file-tree";
-import { parseSkillVersion } from "../utils/parse-skill-version";
+import { parseSkillMetadata } from "../utils/parse-skill-metadata";
 
 interface SkillViewerProps {
   projectId: string | undefined;
@@ -41,7 +40,7 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
 
   const selectedFile = skill.files.find((file) => file.path === selectedPath) ?? skill.files[0];
 
-  const currentVersion = parseSkillVersion(skill.files.find((file) => file.path === "SKILL.md")?.content ?? "");
+  const metadata = parseSkillMetadata(skill.files.find((file) => file.path === "SKILL.md")?.content ?? "");
 
   const handleNavigate = (event: TreeListNavigateEvent) => {
     setSelectedPath(event.nodeId);
@@ -53,19 +52,22 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
 
   return (
     <Flex h="full" minH="0" minW="0" overflow="hidden" data-testid="project-skill-content">
-      <SettingsHeaderContent
-        description={
-          <Flex gap="sm" align="center" wrap="wrap">
-            <Text>{skill.description}</Text>
-            {currentVersion ? (
-              <Badge size="sm" data-testid="project-skill-version">
-                v{currentVersion}
-              </Badge>
-            ) : null}
-          </Flex>
-        }
-      />
       <Flex h="full" minH="0" width="64" minW="48" flexShrink="0" borderRightWidth="1px" direction="column">
+        <ScrollArea maxH="1/2" flexShrink="0" minH="0" contentProps={{ p: "md" }}>
+          <Stack gap="sm" textStyle="paragraph/S/regular" overflowWrap="anywhere" data-testid="project-skill-metadata">
+            <Text>Name: {metadata.name || skill.name}</Text>
+            <Text>Version: {metadata.version || "Unknown"}</Text>
+            <Stack gap="xs">
+              <Text>Description:</Text>
+              <Text color="fg.muted" whiteSpace="pre-wrap" data-testid="project-skill-description">
+                {metadata.description || skill.description || "No description."}
+              </Text>
+            </Stack>
+          </Stack>
+        </ScrollArea>
+        <Box borderTopWidth="1px" borderBottomWidth="1px" p="sm">
+          <Text textStyle="label/S/medium">Files</Text>
+        </Box>
         <ScrollArea
           flex="1"
           minH="0"

@@ -20,11 +20,7 @@ export const PreviewAsset = (props: { kind: "skill" | "template" }) => {
   );
   return (
     <Stack flex="1" minH="0" gap="0">
-      <SettingsHeaderContent
-        description={
-          editable ? "A template for reporting and fixing bugs." : "Create planner tickets from a short request."
-        }
-      >
+      <SettingsHeaderContent description={editable ? "A template for reporting and fixing bugs." : undefined}>
         {editable ? (
           <IconButton
             size="sm"
@@ -45,9 +41,27 @@ export const PreviewAsset = (props: { kind: "skill" | "template" }) => {
         </ScrollArea>
       ) : (
         <HStack flex="1" minH="0" gap="0" align="stretch">
-          <Box w="64" flexShrink="0" borderRightWidth="1px" p="sm">
-            <Text>SKILL.md</Text>
-          </Box>
+          <Stack w="64" minH="0" flexShrink="0" borderRightWidth="1px" gap="0">
+            <ScrollArea maxH="1/2" flexShrink="0" contentProps={{ p: "md" }}>
+              <Stack gap="sm">
+                <Text>Name: create-ticket</Text>
+                <Text>Version: 1.2.0</Text>
+                <Stack gap="xs">
+                  <Text>Description:</Text>
+                  <Text color="fg.muted">
+                    Create planner tickets from a short request, with a clear problem, expected behavior and validation
+                    steps.
+                  </Text>
+                </Stack>
+              </Stack>
+            </ScrollArea>
+            <Stack borderTopWidth="1px" borderBottomWidth="1px" p="sm" gap="0">
+              <Text>Files</Text>
+            </Stack>
+            <ScrollArea flex="1" minH="0" contentProps={{ p: "sm" }}>
+              <Text>SKILL.md</Text>
+            </ScrollArea>
+          </Stack>
           <ScrollArea flex="1" minW="0" contentProps={{ p: "lg" }}>
             <Stack gap="md">
               <Text textStyle="heading/S">Create ticket</Text>
