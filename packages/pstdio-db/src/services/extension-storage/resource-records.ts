@@ -48,6 +48,9 @@ export const createResourceRecords = (
     diagnostics?: StorageDiagnostics;
   },
 ) => {
+  // Owner-locked transactions load the latest state, so this handle can continue its
+  // causal clock instead of adding a new Yjs writer to every record on every save.
+  const writer = crypto.getRandomValues(new Uint32Array(1))[0]!;
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: "records" };
   const queries = createRecordQueries(db, owner, deps.diagnostics);
   const receipt = (tx: Pick<DbClient, "select">, operationId: string) =>
@@ -101,6 +104,7 @@ export const createResourceRecords = (
           native.edit,
           checkpoint,
           migration && { ...migration, document: JSON.stringify([owner.workbenchId, owner.extensionId, id]) },
+          writer,
         );
         return { id, revision: next, foldedRevision, ...result, nativeKeys: native.changed };
       }),

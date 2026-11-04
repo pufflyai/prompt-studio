@@ -26,15 +26,20 @@ export interface ResourceMigration {
   document: string;
 }
 
-/** Each record is its own Yjs document. This applies one record's edit to its saved state. */
+/**
+ * Applies one record's edit to its saved state. A writer may reuse its identity only when
+ * its caller serializes writes and supplies the latest committed state on every call.
+ */
 export const editResourceDocument = async (
   states: Uint8Array[],
   edit: GroupCommit["edits"][number],
   checkpoint: boolean,
   migration?: ResourceMigration,
+  writer?: number,
 ) => {
   const document = loadResourceDocument(states);
   try {
+    if (writer !== undefined) document.clientID = writer;
     validateDocumentGroup(document, { operationId: "validate", edits: [edit] });
     if (migration && !migration.histories.has(migration.document))
       migration.histories.set(migration.document, documentHistory(document));

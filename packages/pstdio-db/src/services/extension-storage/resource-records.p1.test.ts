@@ -95,6 +95,37 @@ test("transactions read and commit under one owner lock and notify watchers afte
   expect((await f.storage.records.read("job")).value).toEqual({ state: "new" });
 });
 
+test("a rolled-back writer can save again alongside another open handle without leaking its aborted edits", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({
+    operationId: "seed",
+    edits: [{ recordId: "note", replace: { title: "Draft", body: "" } }],
+  });
+  await expect(
+    f.storage.records.transaction(async (records) => {
+      await records.commit({
+        operationId: "aborted",
+        edits: [{ recordId: "note", replace: { title: "Must roll back", body: "" } }],
+      });
+      throw new Error("Cancel transaction");
+    }),
+  ).rejects.toThrow("Cancel transaction");
+  const other = f.service.open({ owner: f.owner }).records;
+  await other.commit({
+    operationId: "other",
+    edits: [{ recordId: "note", replace: { title: "Draft", body: "Saved by another handle" } }],
+  });
+  await f.storage.records.commit({
+    operationId: "continued",
+    edits: [{ recordId: "note", replace: { title: "Saved after rollback", body: "Saved by another handle" } }],
+  });
+  expect((await other.read("note")).value).toEqual({
+    title: "Saved after rollback",
+    body: "Saved by another handle",
+  });
+  expect(await f.storage.records.outcome("aborted")).toBeUndefined();
+});
+
 test("unfiltered totals follow live records without reading them", async () => {
   const f = await fixture();
   const statements: string[] = [];
