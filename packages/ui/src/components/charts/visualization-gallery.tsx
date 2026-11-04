@@ -21,6 +21,7 @@ import { decorative } from "@tanstack/charts/mark/decorative";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
+import { chartGeometry } from "@/theme/primitives/chart";
 import { ScrollArea } from "../primitives/scroll-area";
 import { SimpleCard, SimpleCardBody } from "../primitives/simple-card";
 import { Chart, chartColor } from "./chart";
@@ -51,7 +52,10 @@ export function VisualizationGallery() {
               <Chart
                 ariaLabel="Columns"
                 definition={defineChart(
-                  { marks: [barY(activity, { x: "day", y: "value" })], scales: columns },
+                  {
+                    marks: [barY(activity, { radius: chartGeometry.barRadius, x: "day", y: "value" })],
+                    scales: columns,
+                  },
                   options,
                 )}
               />
@@ -61,7 +65,7 @@ export function VisualizationGallery() {
                 ariaLabel="Horizontal bars"
                 definition={defineChart(
                   {
-                    marks: [barX(parts, { x: "value", y: "name", color: "name" })],
+                    marks: [barX(parts, { radius: chartGeometry.barRadius, x: "value", y: "name", color: "name" })],
                     color: { legend: colorLegend({ placement: "bottom" }) },
                     scales: { x: { scale: scaleLinear, grid: true }, y: { scale: scaleBand } },
                   },
@@ -74,7 +78,16 @@ export function VisualizationGallery() {
                 ariaLabel="Grouped bars"
                 definition={defineChart(
                   {
-                    marks: [barY(series, { x: "day", y: "value", z: "team", color: "team", layout: group() })],
+                    marks: [
+                      barY(series, {
+                        radius: chartGeometry.barRadius,
+                        x: "day",
+                        y: "value",
+                        z: "team",
+                        color: "team",
+                        layout: group(),
+                      }),
+                    ],
                     color: { legend: colorLegend({ placement: "bottom" }) },
                     scales: columns,
                   },
@@ -87,7 +100,16 @@ export function VisualizationGallery() {
                 ariaLabel="Stacked bars"
                 definition={defineChart(
                   {
-                    marks: [barY(series, { x: "day", y: "value", z: "team", color: "team", layout: stack() })],
+                    marks: [
+                      barY(series, {
+                        radius: chartGeometry.barRadius,
+                        x: "day",
+                        y: "value",
+                        z: "team",
+                        color: "team",
+                        layout: stack(),
+                      }),
+                    ],
                     color: { legend: colorLegend({ placement: "bottom" }) },
                     scales: columns,
                   },
@@ -194,7 +216,19 @@ export function VisualizationGallery() {
               <Chart
                 ariaLabel="Histogram"
                 definition={defineChart(
-                  { marks: [rect(bins, { x1: "x1", x2: "x2", y1: () => 0, y2: "value", inset: 1 })], scales: xy },
+                  {
+                    marks: [
+                      rect(bins, {
+                        radius: chartGeometry.barRadius,
+                        x1: "x1",
+                        x2: "x2",
+                        y1: () => 0,
+                        y2: "value",
+                        inset: 1,
+                      }),
+                    ],
+                    scales: xy,
+                  },
                   options,
                 )}
               />
@@ -239,7 +273,7 @@ export function VisualizationGallery() {
                 definition={defineChart(
                   {
                     marks: [
-                      barY(activity, { x: "day", y1: "low", y2: "high" }),
+                      barY(activity, { radius: chartGeometry.barRadius, x: "day", y1: "low", y2: "high" }),
                       decorative(ruleY([12], { stroke: chartColor("vis.text.secondary"), strokeDasharray: "4 4" })),
                     ],
                     scales: columns,
