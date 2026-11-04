@@ -1,0 +1,36 @@
+{
+  "name": "pstdio-cloud",
+  "version": "0.0.0",
+  "displayName": "Prompt Studio Cloud",
+  "description": "Manage your devices and run work in your own cloud account.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^0.3.1"
+  },
+  "pstdio": {
+    "scope": "user"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "bun check",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^3.0.0",
+    "@emotion/react": "^11.0.0",
+    "@pstdio/sdk": "0.47.0-nightly.20261102222512",
+    "@pstdio/ui": "0.47.0-nightly.20261102222512",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "6.0.2"
+  },
+  "icon": "Cloud"
+}

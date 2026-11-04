@@ -19,6 +19,7 @@ const CORE_DEFAULT_EXTENSION_NAMES = [
   "harness-codex",
   "harness-open-code",
   "pstdio-base-themes",
+  "pstdio-cloud",
   "pstdio-planner",
   "pstdio-notes",
   "pstdio-reports",

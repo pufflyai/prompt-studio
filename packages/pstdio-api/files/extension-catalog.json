@@ -213,6 +213,21 @@
       "default": false,
       "icon": "Cloud",
       "listed": false
+    },
+    {
+      "installName": "pstdio-cloud",
+      "displayName": "Prompt Studio Cloud",
+      "description": "Manage your devices and run work in your own cloud account.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-cloud",
+        "ref": "{hostRelease}"
+      },
+      "default": true,
+      "alwaysEnabled": true,
+      "extensionId": "pstdio.pstdio-cloud",
+      "icon": "Cloud"
     }
   ]
 }

@@ -1,12 +1,14 @@
-import { Button, Heading, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Button, Field, Heading, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { AccountDevice, CloudDevice, CloudDeviceProvider, CloudDeviceProviderInput } from "@pstdio/sdk/extensions";
 import { AlertMessage, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useState } from "react";
+import { providerFormDefaults } from "./provider-form";
 
 interface DevicesPanelProps {
   provider: CloudDeviceProvider;
   devices: CloudDevice[];
   accountDevices: AccountDevice[];
+  accountDevicesUnavailable?: boolean;
   busy?: string;
   error?: string;
   elapsed?: number;
@@ -18,11 +20,12 @@ interface DevicesPanelProps {
   onStop: (id: string) => void;
 }
 
-const ProviderForm = (props: Pick<DevicesPanelProps, "onConfigure" | "busy">) => {
-  const [token, setToken] = useState("");
-  const [region, setRegion] = useState("ams3");
-  const [size, setSize] = useState("s-2vcpu-4gb");
-  const [image, setImage] = useState("");
+const ProviderForm = (props: Pick<DevicesPanelProps, "provider" | "onConfigure" | "busy">) => {
+  const defaults = providerFormDefaults(props.provider);
+  const [token, setToken] = useState(defaults.token);
+  const [region, setRegion] = useState(defaults.region);
+  const [size, setSize] = useState(defaults.size);
+  const [image, setImage] = useState(defaults.image);
   return (
     <SimpleCard>
       <SimpleCardBody>
@@ -37,23 +40,35 @@ const ProviderForm = (props: Pick<DevicesPanelProps, "onConfigure" | "busy">) =>
         >
           <Heading size="sm">Your DigitalOcean account</Heading>
           <Text>Devices are billed directly by your provider.</Text>
-          <Input
-            aria-label="Provider token"
-            type="password"
-            autoComplete="off"
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-            required
-          />
-          <Input aria-label="Region" value={region} onChange={(event) => setRegion(event.target.value)} required />
-          <Input aria-label="Device size" value={size} onChange={(event) => setSize(event.target.value)} required />
-          <Input
-            aria-label="Released runtime image digest"
-            placeholder="ghcr.io/pufflyai/prompt-studio/device@sha256:…"
-            value={image}
-            onChange={(event) => setImage(event.target.value)}
-            required
-          />
+          <Field.Root required>
+            <Field.Label>Provider token</Field.Label>
+            <Input
+              aria-label="Provider token"
+              type="password"
+              autoComplete="off"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+              required
+            />
+          </Field.Root>
+          <Field.Root required>
+            <Field.Label>Region</Field.Label>
+            <Input aria-label="Region" value={region} onChange={(event) => setRegion(event.target.value)} required />
+          </Field.Root>
+          <Field.Root required>
+            <Field.Label>Device size</Field.Label>
+            <Input aria-label="Device size" value={size} onChange={(event) => setSize(event.target.value)} required />
+          </Field.Root>
+          <Field.Root required>
+            <Field.Label>Released runtime image digest</Field.Label>
+            <Input
+              aria-label="Released runtime image digest"
+              placeholder="ghcr.io/pufflyai/prompt-studio/device@sha256:…"
+              value={image}
+              onChange={(event) => setImage(event.target.value)}
+              required
+            />
+          </Field.Root>
           <Button type="submit" disabled={Boolean(props.busy)}>
             Save provider
           </Button>
@@ -73,6 +88,7 @@ export const DevicesPanel = (props: DevicesPanelProps) => {
     provider,
     devices,
     accountDevices,
+    accountDevicesUnavailable,
     busy,
     error,
     elapsed,
@@ -113,6 +129,7 @@ export const DevicesPanel = (props: DevicesPanelProps) => {
         <Stack gap="md">
           {!provider.configured || editingProvider ? (
             <ProviderForm
+              provider={provider}
               busy={busy}
               onConfigure={(input) => {
                 onConfigure(input);
@@ -176,6 +193,9 @@ export const DevicesPanel = (props: DevicesPanelProps) => {
             </SimpleCard>
           ))}
           <Heading size="sm">Your devices</Heading>
+          {accountDevicesUnavailable ? (
+            <Text>Device presence is unavailable. Provider controls remain available.</Text>
+          ) : null}
           {accountDevices.map((device) => (
             <HStack key={device.id} justify="space-between">
               <Text>

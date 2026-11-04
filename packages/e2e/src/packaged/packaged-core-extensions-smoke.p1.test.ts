@@ -92,6 +92,7 @@ test(
             scope: "repo",
             sourcePath: join(realpathSync(projectFolder), ".pstdio/extensions/pstdio-home"),
           }),
+          expect.objectContaining({ enabled: true, installName: "pstdio-cloud" }),
           expect.objectContaining({ canUpgrade: false, enabled: true, installName: "pstdio-planner" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
@@ -101,6 +102,24 @@ test(
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),
       );
+      const devicesView = metadata.views.find((view) => view.id === "pstdio.pstdio-cloud.view.devices");
+      expect(devicesView?.body.kind).toBe("webview");
+      expect(metadata.pages).toContainEqual(
+        expect.objectContaining({
+          extensionId: "pstdio.pstdio-cloud",
+          localId: "devices",
+          main: expect.objectContaining({ presentation: "page" }),
+        }),
+      );
+      expect(metadata.settingsPanels).toContainEqual(
+        expect.objectContaining({ view: { extensionId: "pstdio.pstdio-cloud", kind: "view", id: "devices" } }),
+      );
+      if (devicesView?.body.kind !== "webview") throw new Error("Devices view did not load");
+      const devicesRuntime = await fetch(`${started.baseUrl}${devicesView.body.webview.runtimeUrl}`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(devicesRuntime.status).toBe(200);
+
       const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
       expect(planner).toBeDefined();
       await expectPlannerIdentities({

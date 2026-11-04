@@ -4,7 +4,7 @@ import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { useState } from "react";
 import { DevicesPanel } from "./devices-panel";
 
-export default { title: "Proposals/PS-828 Cloud devices", fullscreen: true };
+export default { title: "Cloud/Devices", fullscreen: true };
 export const StartStopAndRecover = () => {
   const [devices, setDevices] = useState<CloudDevice[]>([]);
   const [error, setError] = useState<string>();
