@@ -46,7 +46,7 @@ test("the personal space remains unavailable until rotated document identifiers 
     // Only pause completion of real HMAC signing; neither its input nor its result is substituted.
     crypto.subtle.sign = async function (...args: Parameters<SubtleCrypto["sign"]>) {
       const name = new TextDecoder().decode(args[2] as Uint8Array);
-      if (name === JSON.stringify(["pstdio.personal-history", "records-v2"])) {
+      if (name === JSON.stringify(["pstdio.personal-history", "records-v3"])) {
         entered.resolve();
         await release.promise;
       }

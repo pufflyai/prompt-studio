@@ -3,6 +3,7 @@ import type { NormalizedExtension } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import type { Accumulator } from "./accumulator";
+import { normalizeStorageDeclaration } from "./storage";
 
 const contributionKeys = new Set(
   Object.keys({
@@ -30,6 +31,7 @@ const contributionKeys = new Set(
     settingsSections: true,
     statusBarItems: true,
     storageIndexes: true,
+    storage: true,
     skills: true,
     templateTypes: true,
     templates: true,
@@ -184,6 +186,13 @@ export const validateExtensionDefinition = (
   source: LoadedExtensionSource,
   runtime: Accumulator,
 ) => {
+  try {
+    ext.definition = { ...ext.definition, storage: normalizeStorageDeclaration(source.definition.storage) };
+  } catch (error) {
+    runtime.diagnostics.push(invalidCollectionDiagnostic(ext, source, "storage", error instanceof Error ? error.message : "Invalid storage declaration"));
+    ext.definition = { ...ext.definition, storage: undefined };
+    return false;
+  }
   for (const key of Object.keys(source.definition).sort()) {
     if (contributionKeys.has(key)) continue;
     runtime.diagnostics.push(

@@ -66,7 +66,7 @@ const sharedEdits = (current: StorageRecord["shared"], target: StorageRecord["sh
  * Edits that turn the current live records into the saved ones. A revived record keeps the old
  * shared state of its document, so its shared edits wait until it is live again (`revived`).
  */
-export const recoveryEdits = (current: RecoveryRecord[], saved: RecoveryRecord[]) => {
+export const recoveryEdits = (current: (RecoveryRecord & { revision?: string })[], saved: RecoveryRecord[]) => {
   const now = new Map(current.map((record) => [record.recordId, record]));
   const target = new Map(saved.map((record) => [record.recordId, record]));
   const ids = [...new Set([...now.keys(), ...target.keys()])].sort();
@@ -85,7 +85,10 @@ export const recoveryEdits = (current: RecoveryRecord[], saved: RecoveryRecord[]
       continue;
     }
     const edit: Edit = { recordId };
-    if (!same(from.value, to.value)) edit.replace = to.value;
+    if (!same(from.value, to.value)) {
+      edit.replace = to.value;
+      if (from.revision) edit.observedRevision = from.revision;
+    }
     if (!same(from.asset, to.asset)) edit.asset = to.asset;
     const shared = sharedEdits(from.shared, to.shared);
     if (shared.length) edit.shared = shared;

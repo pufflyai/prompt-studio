@@ -47,3 +47,41 @@ export const textEditingError = (error: unknown): TextEditingError => {
     retryable: value?.retryable ?? value?.data?.retryable ?? !known.has(code as TextEditingErrorCode),
   };
 };
+
+/** A local refusal can retire a replica while canonical Yjs history keeps the same seed. */
+export const assertTextGeneration = (generation: string | undefined, expected: string | undefined) => {
+  if (generation !== expected)
+    throw textEditingFailure(
+      "source_retired",
+      "This local text replica has been retired; its edits remain recoverable",
+    );
+};
+
+export const createTextGenerationFence = (expected: string | undefined) => {
+  let retired = false;
+  return {
+    retire() {
+      retired = true;
+    },
+    accept(snapshot: TextWireSnapshot, failed: (error: unknown) => void) {
+      if (retired) return false;
+      try {
+        assertTextGeneration(snapshot.generation, expected);
+        return true;
+      } catch (error) {
+        retired = true;
+        failed(error);
+        return false;
+      }
+    },
+  };
+};
+
+export const textEditingBlocked = (error: TextEditingError | undefined) =>
+  error && !error.retryable && error.code !== "draft_active" && error.code !== "projection_failed";
+
+export const assertTextEditingWrite = (state: { editable: boolean; error?: TextEditingError }, closing: boolean) => {
+  if (closing) throw textEditingFailure("session_closed", "This text session is closing");
+  if (!state.editable) throw textEditingFailure("source_read_only", "The text source is read only");
+  if (textEditingBlocked(state.error)) throw state.error;
+};

@@ -1,6 +1,8 @@
+import type { SharedEdit, StorageSaveOutcome } from "pstdio-sync-contracts";
 import type { ExtensionAssetsApi } from "./assets";
 import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
+import type { ExtensionLogApi, ExtensionLogOptions } from "./storage-logs";
 import type { ExtensionRecordsApi } from "./storage-records";
 
 /** @deprecated Use storage.records with stable record IDs and grouped commits. */
@@ -35,6 +37,11 @@ export interface ExtensionStoragePositionsApi {
   between(before?: string, after?: string): string;
 }
 
+export interface ExtensionStorageTextApi {
+  /** Save these text insertions/deletions as one atomic record group. */
+  edit(edits: Extract<SharedEdit, { kind: "text.insert" | "text.delete" }>[]): Promise<StorageSaveOutcome>;
+}
+
 export interface ExtensionStorageApi {
   /** Upgrade this storage scope once. Saves the version after success; failed work must be safe to retry. */
   migrate(
@@ -47,6 +54,10 @@ export interface ExtensionStorageApi {
   /** Read retained records from a removed schema, restricted to this project and instance. */
   readLegacy(source: string): Promise<{ version: string; records: JsonObject[] } | undefined>;
   records: ExtensionRecordsApi;
+  /** Edit an explicitly declared text field, addressed by a JSON Pointer in the record value. */
+  text(recordId: string, field: string): ExtensionStorageTextApi;
+  /** Open a declared append-only log in this scope, or an explicit project/resource scope. */
+  log(name: string, options?: ExtensionLogOptions): ExtensionLogApi;
   assets: ExtensionAssetsApi;
   scope(scope: StorageScope): ExtensionStorageApi;
   files: ExtensionBlobsApi;

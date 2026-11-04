@@ -1,10 +1,11 @@
 import type { ExtensionStorageApi, JsonValue } from "pstdio-api-contracts/extension-kernel";
 import { findDocumentReplacements } from "pstdio-sync/records";
 import { createMemoryStorageDevice, type MemoryStorageOptions } from "./memory-storage";
+import { admitMemoryOperations } from "./ordered-memory-records";
 
 export interface MemoryStorageReplacement {
   recordId: string;
-  /** Starts with value, asset or shared. List positions follow the merged list, then removed items. */
+  /** Starts with value, asset or shared. Arrays and strings are reported as whole values. */
   path: (string | number)[];
   /** Undefined means the value was removed. */
   kept: JsonValue | undefined;
@@ -17,10 +18,15 @@ export const createMemoryStorageDevices = async (options: MemoryStorageOptions =
   const first = createMemoryStorageDevice(options);
   const second = createMemoryStorageDevice({
     legacyData: options.legacyData,
+    indexes: options.indexes,
+    textFields: options.textFields,
+    logs: options.logs,
     workbenchId: first.workbenchId,
     extensionId: options.extensionId,
   });
   await second.applyUpdate(await first.exportUpdate());
+  await second.installOrdered(await first.exportOrdered());
+  const epoch = crypto.randomUUID();
   const devices: [ExtensionStorageApi, ExtensionStorageApi] = [first.storage, second.storage];
   let base = await first.snapshot();
   return {
@@ -33,8 +39,25 @@ export const createMemoryStorageDevices = async (options: MemoryStorageOptions =
       // Capture both updates before applying either, so each device receives the opposite order.
       await first.applyUpdate(secondUpdate);
       await second.applyUpdate(firstUpdate);
+      const state = await first.exportOrdered();
+      for (const [id, identity] of (await second.exportOrdered()).identities) {
+        const previous = state.identities.get(id);
+        if (previous !== undefined && previous !== identity)
+          throw new Error("Operation identity reused with changed payload");
+        state.identities.set(id, identity);
+      }
+      await admitMemoryOperations(
+        state,
+        [...(await first.pendingOrdered()), ...(await second.pendingOrdered())],
+        epoch,
+      );
+      await first.installOrdered(state);
+      await second.installOrdered(state);
+      await first.logs.merge(second.logs);
       const merged = await first.snapshot();
-      const replacements: MemoryStorageReplacement[] = findDocumentReplacements(base, left, right, merged);
+      const replacements: MemoryStorageReplacement[] = findDocumentReplacements(base, left, right, merged, {
+        wholeArrays: true,
+      });
       base = merged;
       return replacements;
     },

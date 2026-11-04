@@ -6,3 +6,5 @@ export * from "./protocol";
 export type * from "./record-query";
 export * from "./storage-limits";
 export * from "./wire";
+export type { StorageLogDefinition, StorageLogEntry, StorageLogRead, StorageLogPage } from "./storage-logs";
+export type { StorageLogApi } from "./storage-logs";

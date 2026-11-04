@@ -10,13 +10,14 @@ import { validateNativeSourceAuthority } from "./validate-writable-source";
 
 type Loaded = Awaited<ReturnType<typeof loadNativeMarkdownFile>>;
 type Access = Awaited<ReturnType<typeof resolveNativeTextAccess>>;
-type RoomSource = Pick<Access, "owner" | "documentKey" | "lifetime" | "content" | "projectionTarget">;
+type RoomSource = Pick<Access, "owner" | "documentKey" | "lifetime" | "generation" | "content" | "projectionTarget">;
 export type NativeRoomOpenInput = NativeTextTarget & {
   projectId: string;
   signal?: AbortSignal;
   sourceState?: Uint8Array;
+  generation?: string;
   pendingUpdate?: Uint8Array;
-  expectedSource?: { owner: StorageOwner; documentKey: string };
+  expectedSource?: { owner: StorageOwner; documentKey: string; generation?: string };
   validateLoaded?: (loaded: RoomSource) => void;
   access?: "read" | "write";
 };
@@ -40,7 +41,7 @@ const validateRoomSource = (input: NativeRoomOpenInput, loaded: RoomSource) => {
     throw new NativeDocumentRoomError("invalid_frame", "Pending editor frames need their original history");
   if (input.sourceState && !editable)
     throw new NativeDocumentSourceError(403, "source_read_only", "A read-only session cannot supply recovery history");
-  validateReplaySource(input.sourceState, loaded.documentKey, loaded.lifetime);
+  validateReplaySource(input.sourceState, loaded.documentKey, loaded.lifetime, loaded.generation, input.generation);
   return editable;
 };
 export const initializeNativeRoomSource = async (deps: SourceDeps, input: NativeRoomOpenInput) => {

@@ -265,6 +265,8 @@ const buildApp = async (
       account: account.accountService,
       projects: projectService,
       logs: createSessionLogFiles(storageRoot),
+      index: extensionStorageDBService.personalHistoryIndex,
+      logStreams: extensionStorageDBService.logs,
     }),
     accountService: account.accountService,
     assetTransferService,

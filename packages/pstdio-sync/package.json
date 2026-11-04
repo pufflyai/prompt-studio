@@ -8,7 +8,8 @@
     "./text": "./src/text/index.ts",
     "./relay": "./src/relay/index.ts",
     "./encryption": "./src/encryption/index.ts",
-    "./presence": "./src/presence/index.ts"
+    "./presence": "./src/presence/index.ts",
+    "./logs": "./src/log-stream/index.ts"
   },
   "scripts": {
     "test": "bun ../../scripts/ci/run-bun-tests.ts",

@@ -44,7 +44,7 @@ test("planned access renewal refreshes personal keys while retaining the small i
     config: {
       accountId: "alice",
       workbenchId: project.id,
-      environmentId: "device",
+      environmentId: (await app.deps.environmentService.get()).environmentId,
       managerOrigin: manager.url.origin,
       relayOrigin: peer.origin,
       renewalGrant: "grant",
@@ -69,8 +69,10 @@ test("planned access renewal refreshes personal keys while retaining the small i
     await until(() =>
       [...peer.documents.values()].flat().some((update) => Buffer.from(update.payload, "base64").readUInt32BE(1) === 2),
     );
-    expect([...peer.documents.keys()].sort()).toEqual(documentIds);
-    expect(peer.subscriptions().map((entry) => entry.topics.length)).toEqual([3]);
+    await until(async () => !(await sync.status()).busy);
+    expect([...peer.documents.keys()]).toHaveLength(3);
+    expect(documentIds.every((id) => peer.documents.has(id))).toBe(true);
+    expect(peer.subscriptions().map((entry) => entry.topics.length)).toEqual([4]);
   } finally {
     stop();
     sync.close();

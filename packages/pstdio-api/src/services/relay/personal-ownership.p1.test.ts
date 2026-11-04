@@ -35,6 +35,8 @@ test("rebinding to Bob does not send Alice-owned local previews into Bob's priva
         accountId,
         managerOrigin: peer.origin,
         documents: source.deps.extensionStorageService.documents,
+        index: source.deps.extensionStorageService.personalHistoryIndex,
+        logs: source.deps.extensionStorageService.logs,
       });
     const aliceHistory = history("alice");
     await capturePersonalHistory({
@@ -93,7 +95,7 @@ test("rebinding to Bob does not send Alice-owned local previews into Bob's priva
     await until(
       async () =>
         !(await sync!.status()).busy &&
-        peer.subscriptions().some((entry) => entry.deviceId === "bob-source" && entry.topics.length === 3),
+        peer.subscriptions().some((entry) => entry.deviceId === "bob-source" && entry.topics.length === 4),
     );
     const bobIndexed = await history("bob").readRecords("sessions");
     expect(bobIndexed.map((row) => row.id)).toEqual([bobSession.id]);

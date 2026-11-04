@@ -51,15 +51,14 @@ test.each([
       ...login,
       projectId: project.id,
       documents: destination.deps.extensionStorageService.documents,
+      index: destination.deps.extensionStorageService.personalHistoryIndex,
+      logs: destination.deps.extensionStorageService.logs,
     });
     const device = { ownerId: login.accountId, id: "other-device", name: "Laptop" };
     await history.writeRecords("sessions", device, [row]);
     const version = () => JSON.stringify([row.status, row.updated_at]);
     const publish = (head: number, publishedVersion = version()) =>
-      history.records.transaction(history.owner, async ({ document }) => {
-        document.getMap<number>("heads").set(session.id, head);
-        document.getMap<string>("publications").set(session.id, JSON.stringify({ head, version: publishedVersion }));
-      });
+      history.writeHeads(new Map([[session.id, head]]), new Map([[session.id, { head, version: publishedVersion }]]));
     const namespace = historyNamespace({ ...login, projectId: project.id });
     const logs = destination.deps.personalHistoryService.logs;
     const messages: SessionMessage[] = [

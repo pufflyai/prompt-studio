@@ -34,8 +34,17 @@ export const recordStreamStateSchema = z.strictObject({
 export type RecordStreamState = z.infer<typeof recordStreamStateSchema>;
 
 /** Authenticated even when a caught-up device does not need to download checkpoint chunks. */
-export const recordStreamSummarySchema = z.strictObject({
-  format: z.literal("ordered").optional(),
-  records: z.number().int().nonnegative(),
-  bytes: z.number().int().nonnegative(),
-});
+export const recordStreamSummarySchema = z
+  .strictObject({
+    format: z.literal("ordered").optional(),
+    records: z.number().int().nonnegative(),
+    bytes: z.number().int().nonnegative(),
+    receiptRoot: z
+      .strictObject({ blobId: syncIdSchema, byteLength: z.number().int().positive() })
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (summary) => (summary.format === "ordered") === (summary.receiptRoot !== undefined),
+    "Ordered summaries require their receipt root",
+  );

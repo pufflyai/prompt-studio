@@ -29,6 +29,7 @@ import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
 import type { StatusBarItemContribution } from "./status-bar";
 import type { StorageRecordIndex } from "./storage-records";
+import type { ExtensionStorageDeclaration } from "./storage-logs";
 import type {
   NavigationItemContribution,
   NavigationTreeContribution,
@@ -40,7 +41,7 @@ import type {
 /** Current host extension API version. `engines.pstdio` declares caret ranges, such as `^0.1.0`. */
 // Stays on 0.x until the API is settled, so a breaking change moves the minor. The version moves at
 // most one step per release; the manifest reference has the change levels.
-export const EXTENSION_API_VERSION = "0.3.1";
+export const EXTENSION_API_VERSION = "0.4.0";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -302,6 +303,8 @@ export interface ExtensionDefinition
   settings?: ExtensionSettingsContribution;
   /** Local query indexes. The host installs these before publishing this extension's runtime. */
   storageIndexes?: StorageRecordIndex[];
+  /** Explicit collaborative text and append-only log declarations. Other record fields are plain values. */
+  storage?: ExtensionStorageDeclaration;
 }
 
 export type ExtensionSourceKind = "local_path" | "git" | "registry";

@@ -29,6 +29,8 @@ export interface TextWireSnapshot {
   state: string;
   seedId: string;
   sourceSeedId: string;
+  /** Local replica proof; canonical history and presence identity remain unchanged. */
+  generation?: string;
   sourceState?: string;
   revision: number;
   editable: boolean;
@@ -50,6 +52,7 @@ export type TextEditingRequest =
       sourceState?: string;
       pendingUpdate?: string;
       sourceIdentity?: string;
+      generation?: string;
     }
   | { operation: "submit"; handle: string; sequence: number; update: string }
   | { operation: "snapshot" | "close"; handle: string }
@@ -61,7 +64,7 @@ export type TextEditingRequest =
       | { memberId: string }
     ));
 export interface TextEditingOpened {
-  /** Stable opaque identity of the authorized source lifetime, independent of the host connection. */
+  /** Opaque source lifetime and local replica admission, independent of the host connection. */
   sourceIdentity: string;
   handle: string;
   grant: TextSourceGrant;

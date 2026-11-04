@@ -132,7 +132,7 @@ export const createRecordStreamReader = (input: {
         await input.quarantine({ kind: "state", id: state.stateId, envelope: state });
         throw new UnreadableSyncData();
       }
-      return { bytes: summary.bytes };
+      return { bytes: summary.bytes, receiptRoot: summary.receiptRoot };
     },
   };
 };

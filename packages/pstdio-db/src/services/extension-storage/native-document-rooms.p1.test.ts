@@ -5,6 +5,7 @@ import * as Y from "yjs";
 import { native_document_room_updates } from "../../db/schemas.pg";
 import { createExtensionStorageDBService } from "./extension-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { createDocumentStorageDBService } from "./document-storage";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -107,4 +108,21 @@ test("long-lived rooms fold their update journal and reopen with every edit", as
   expect(saved.document.getText("content").toString()).toBe(f.author.getText("content").toString());
   expect(saved.revision).toBe(130);
   saved.document.destroy();
+});
+
+test("a private room retains its captured source generation through restart and recovery enumeration", async () => {
+  const f = await fixture();
+  const state = Y.encodeStateAsUpdate(f.author);
+  const room = await f.rooms.create({ ...f, state, generation: "captured-before-refusal" });
+  const reopened = createExtensionStorageDBService(f.db).nativeRooms;
+  const saved = await reopened.read({ owner: f.owner, roomId: room.id });
+  expect(saved).toMatchObject({ generation: "captured-before-refusal" });
+  expect(Y.encodeStateAsUpdate(saved.document)).toEqual(state);
+  saved.document.destroy();
+  const pending = [];
+  for await (const value of reopened.pending()) pending.push(value);
+  expect(pending.find((value) => value.id === room.id)).toMatchObject({ generation: "captured-before-refusal" });
+  expect((await f.svc.documents.list(f.owner)).some((id) => id.includes("ordered-native-room"))).toBe(false);
+  await reopened.remove({ owner: f.owner, roomId: room.id });
+  expect(await createDocumentStorageDBService(f.db).hasData(f.owner)).toBe(false);
 });

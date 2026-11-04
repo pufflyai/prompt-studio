@@ -114,9 +114,14 @@ export const storage_ordered_receipts = pgTable(
     operation_id: text("operation_id").notNull(),
     admission_fingerprint: text("admission_fingerprint").notNull(),
     state: text("state").$type<"accepted" | "refused">().notNull(),
+    /** This exact receipt is included in the owner's retained encrypted root. */
+    indexed: boolean("indexed").notNull().default(false),
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id, table.extension_id, table.epoch, table.operation_id] }),
+    index("storage_ordered_receipts_unindexed_idx")
+      .on(table.workbench_id, table.extension_id, table.epoch, table.operation_id)
+      .where(sql`${table.indexed} = false`),
     foreignKey({
       columns: [table.workbench_id, table.extension_id, table.operation_id],
       foreignColumns: [

@@ -13,6 +13,7 @@ export interface TextGrant {
   token: string;
   target: NativeTextTarget;
   documentKey: string;
+  generation?: string;
   ownerId: string;
   editable: boolean;
 }

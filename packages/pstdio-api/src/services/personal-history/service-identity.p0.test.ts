@@ -2,14 +2,15 @@ import { expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { createMemoryDocumentStore } from "pstdio-sync";
 import { EventBus } from "../../features/sync/event-bus";
+import { memoryPersonalIndexFixture } from "./index.fixture";
 import { createSessionLogFiles } from "./log-files";
 import { createPersonalHistoryService } from "./service";
-import { personalHistoryOwner } from "./store";
+import { legacyPersonalHistoryOwner } from "./store";
 
 test("a document read held across an account switch cannot return or republish the earlier account's records", async () => {
   const store = createMemoryDocumentStore();
   await store.transaction(
-    personalHistoryOwner({ projectId: "project", accountId: "alice", managerOrigin: "https://manager.example" }),
+    legacyPersonalHistoryOwner({ projectId: "project", accountId: "alice", managerOrigin: "https://manager.example" }),
     async ({ document }) => {
       document.getMap("sessions").set(
         "private-session",
@@ -42,6 +43,7 @@ test("a document read held across an account switch cannot return or republish t
   const released = Promise.withResolvers<void>();
   let accountId = "alice";
   const events = new EventBus();
+  const index = memoryPersonalIndexFixture();
   const service = createPersonalHistoryService({
     documents: {
       open: () => ({
@@ -68,6 +70,8 @@ test("a document read held across an account switch cannot return or republish t
     projects: { list: async () => [] },
     eventBus: events,
     logs: createSessionLogFiles(tmpdir()),
+    index: index.index,
+    logStreams: index.logs,
   });
   const delivered: unknown[] = [];
   const stop = service.watchMessages("private-session", (message) => delivered.push(message));

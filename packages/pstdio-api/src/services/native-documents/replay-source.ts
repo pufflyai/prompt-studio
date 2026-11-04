@@ -4,8 +4,20 @@ import * as Y from "yjs";
 import { NativeDocumentSourceError } from "./source-error";
 
 /** Old-lifetime recovery frames may be retained, but cannot become the recreated source's initial history. */
-export const validateReplaySource = (state: Uint8Array | undefined, documentKey: string, lifetime: string) => {
+export const validateReplaySource = (
+  state: Uint8Array | undefined,
+  documentKey: string,
+  lifetime: string,
+  generation?: string,
+  proof?: string,
+) => {
   if (!state) return;
+  if (generation !== proof)
+    throw new NativeDocumentSourceError(
+      409,
+      "source_retired",
+      "These saved edits belong to another local text replica",
+    );
   const document = new Y.Doc();
   try {
     Y.applyUpdate(document, state);

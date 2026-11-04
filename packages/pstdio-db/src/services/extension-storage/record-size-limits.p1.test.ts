@@ -123,7 +123,9 @@ test("a commit up to 4 MiB saves, and a larger commit is refused without writing
     expect((await records.read("over-0")).exists).toBe(false);
 
     const inTransaction = await refusal(
-      records.transaction((locked) => locked.commit(group(`${name}-locked`, fitting + 1, "locked"))),
+      records.transaction(async (locked) => {
+        await locked.commit(group(`${name}-locked`, fitting + 1, "locked"));
+      }),
     );
     expect(inTransaction.data.limit).toBe("commit");
     expect((await records.read("locked-0")).exists).toBe(false);

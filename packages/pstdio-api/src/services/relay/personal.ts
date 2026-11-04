@@ -82,6 +82,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     files: logs,
     namespace,
     deviceId: config.environmentId,
+    streams: context.streams,
     deps,
     published: publications.published,
   });

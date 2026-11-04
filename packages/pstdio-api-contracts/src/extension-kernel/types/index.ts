@@ -38,3 +38,4 @@ export * from "./webview-capabilities";
 export type * from "./webview-editing";
 export type * from "./webview-host-props";
 export type * from "./workspaces";
+export type * from "./storage-logs";

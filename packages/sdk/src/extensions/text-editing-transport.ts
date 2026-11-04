@@ -1,7 +1,7 @@
 import type { TextOpenInput, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
 import type { createTextReplica } from "pstdio-sync/text";
 import type { GuestHost } from "./guest-host";
-import { decodeTextSnapshot, encodeTextBytes, textEditingError } from "./text-editing-codec";
+import { assertTextGeneration, decodeTextSnapshot, encodeTextBytes, textEditingError } from "./text-editing-codec";
 import type { TextEditingSnapshot, TextSelection } from "./text-editing-types";
 
 export const createTextEditingOperations = (input: {
@@ -59,6 +59,7 @@ interface TextPumpInput {
   memberId: string;
   source: TextOpenInput;
   sourceIdentity: string;
+  generation?: string;
   replica: () => ReturnType<typeof createTextReplica>;
   fences: ReturnType<typeof createTextEditingFences>;
   tickets: number[];
@@ -79,8 +80,10 @@ export const createTextEditingPump = (input: TextPumpInput) => {
       memberId: input.memberId,
       input: input.source,
       sourceIdentity: input.sourceIdentity,
+      generation: input.generation,
       ...recovery,
     });
+    assertTextGeneration(joined.snapshot.generation, input.generation);
     // The lifecycle and future draft children share this SDK-owned source selection.
     if ("grant" in input.source) input.source.grant = joined.grant;
     return joined;
@@ -139,6 +142,7 @@ export const createTextEditingPump = (input: TextPumpInput) => {
         const snapshot = await submitTextBatch({
           host: input.host,
           handle: input.handle(),
+          generation: input.generation,
           replica,
           fences: input.fences,
           tickets: input.tickets,

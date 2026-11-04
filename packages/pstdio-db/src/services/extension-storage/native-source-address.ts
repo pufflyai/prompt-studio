@@ -3,6 +3,9 @@ import { NativeSourcePendingError, NativeSourceRetiredError, type StorageOwner }
 import { hasEarlierRecordLifetime, recordLifetime } from "pstdio-sync/records";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
+import { storage_ordered_owners } from "../../db/schemas.pg";
+import { orderedNativeAddress } from "./ordered-native-source";
+import { orderedOwnerWhere } from "./ordered-sql";
 import { lockRecordOwner } from "./record-changes";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
 
@@ -14,6 +17,11 @@ export const nativeSourceAddressIn = async (
   owner: StorageOwner,
   input: { recordId: string; documentKey: string },
 ) => {
+  const [ordered] = await tx
+    .select({ id: storage_ordered_owners.workbench_id })
+    .from(storage_ordered_owners)
+    .where(orderedOwnerWhere(storage_ordered_owners, owner));
+  if (ordered) return orderedNativeAddress(tx, owner, input);
   const id = resourceDocumentId(input.recordId);
   const { sources } = await loadResourceDocuments(tx, owner, [id]);
   const saved = sources.get(id);
@@ -29,6 +37,7 @@ export const nativeSourceAddressIn = async (
     return {
       lifetime,
       documentKey: lifetime === "initial" ? input.documentKey : createNativeSourceKey([input.documentKey, lifetime]),
+      generation: undefined as string | undefined,
     };
   } finally {
     document.destroy();

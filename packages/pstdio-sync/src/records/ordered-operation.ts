@@ -11,6 +11,7 @@ import {
   validateJsonChanges,
 } from "./ordered-json";
 import { readOrderedObservation } from "./ordered-operation-wire";
+import { mergeOrderedText, type OrderedTextChange, type OrderedTextState, retainOrderedTexts } from "./ordered-text";
 
 /** Canonical plain data. A query projection can overlay unresolved local operations on this state. */
 export interface OrderedRecord {
@@ -19,6 +20,7 @@ export interface OrderedRecord {
   deleted: boolean;
   lifetime: string;
   stamps: Record<string, string>;
+  texts?: Record<string, OrderedTextState>;
 }
 export interface OrderedObservation {
   version: 1;
@@ -33,6 +35,7 @@ export interface OrderedEdit {
   replace?: Json;
   /** Prepared host edits name only channels the author requested. */
   changes?: JsonChange[];
+  texts?: OrderedTextChange[];
   deleted?: boolean;
   /** Replacement baseline only; passing an observation does not make a save conditional. */
   observedRevision?: string;
@@ -46,6 +49,7 @@ export interface OrderedOperation {
   edits: {
     recordId: string;
     changes: JsonChange[];
+    texts?: OrderedTextChange[];
     deleted?: boolean;
     condition?: OrderedObservation;
   }[];
@@ -84,6 +88,7 @@ const preparedChanges = async (edit: OrderedEdit, current: OrderedRecord | undef
   if (edit.replace === undefined) return [];
   const revision = edit.observedRevision ?? edit.expectedRevision ?? (await observeOrderedRecord(current));
   const before = readOrderedObservation(revision);
+  if (before.deleted) return [{ path: [], set: structuredClone(edit.replace) }];
   return replacementChanges(before.exists && !before.deleted ? before.value : undefined, edit.replace);
 };
 
@@ -102,6 +107,7 @@ export const prepareOrderedOperation = async (
     edits.push({
       recordId: edit.recordId,
       changes: await preparedChanges(edit, records.get(edit.recordId)),
+      ...(edit.texts?.length ? { texts: structuredClone(edit.texts) } : {}),
       ...(edit.deleted === undefined ? {} : { deleted: edit.deleted }),
       ...(edit.expectedRevision === undefined ? {} : { condition: readOrderedObservation(edit.expectedRevision) }),
     });
@@ -151,7 +157,9 @@ const accepts = (
     return false;
   // Deletion writes the whole record, including paths added after its observation.
   const lifecycle = edit.deleted === true || (edit.deleted === false && observed.deleted);
-  const paths = lifecycle ? [{ path: [], remove: true as const }] : edit.changes;
+  const paths = lifecycle
+    ? [{ path: [], remove: true as const }]
+    : [...edit.changes, ...(edit.texts ?? []).map((text) => ({ path: text.path, remove: true as const }))];
   const stamps = Object.fromEntries(
     Object.entries(overlappingJsonStamps(observed.stamps, paths)).map(([pointer, stamp]) => [
       pointer,
@@ -176,6 +184,43 @@ const conditionAccepted = (...args: Parameters<typeof accepts>) => {
   }
 };
 
+const textDependenciesAccepted = (
+  record: OrderedRecord | undefined,
+  edit: OrderedOperation["edits"][number],
+  decisions: ReadonlyMap<string, OrderedDecision>,
+  optimistic: boolean,
+) => {
+  for (const text of edit.texts ?? [])
+    for (const dependency of text.dependencies) {
+      const decision = decisions.get(dependency.operationId);
+      if (!decision) {
+        if (
+          optimistic &&
+          Object.values(record?.texts ?? {}).some((state) =>
+            state.pending.some(
+              (item) => item.operationId === dependency.operationId && item.fingerprint === dependency.fingerprint,
+            ),
+          )
+        )
+          continue;
+        throw new Error("Ordered text requires its exact dependency receipt");
+      }
+      if (decision.operationId !== dependency.operationId || decision.fingerprint !== dependency.fingerprint)
+        throw new Error("Ordered text dependency identity changed");
+      if (decision.state === "refused") return false;
+    }
+  return true;
+};
+
+const acceptsEdit = (
+  record: OrderedRecord | undefined,
+  edit: OrderedOperation["edits"][number],
+  decisions: ReadonlyMap<string, OrderedDecision>,
+  optimistic: boolean,
+) =>
+  conditionAccepted(record, edit, decisions, optimistic) &&
+  textDependenciesAccepted(record, edit, decisions, optimistic);
+
 const applyRecord = (before: OrderedRecord | undefined, edit: OrderedOperation["edits"][number], stamp: string) => {
   // Ordinary stale writes never resurrect a deleted record. Recreating it is explicit.
   if (before?.deleted && edit.deleted === undefined) return;
@@ -183,15 +228,34 @@ const applyRecord = (before: OrderedRecord | undefined, edit: OrderedOperation["
   const deleted = edit.deleted ?? before?.deleted ?? false;
   const lifecycle = !before || recreating || before.deleted !== deleted;
   const changes = edit.changes;
-  const stamps = stampJsonChanges(before?.stamps ?? {}, changes, stamp);
+  const textChanges = edit.texts ?? [];
+  const stamps = stampJsonChanges(
+    before?.stamps ?? {},
+    [...changes, ...textChanges.map((text) => ({ path: text.path, remove: true as const }))],
+    stamp,
+  );
   if (lifecycle) stamps[""] = stamp;
+  const [kind, operationId, fingerprint] = JSON.parse(stamp) as string[];
+  const retained = retainOrderedTexts(
+    applyJsonChanges(before?.value ?? null, changes),
+    recreating ? {} : (before?.texts ?? {}),
+    changes,
+    textChanges,
+  );
+  const merged = mergeOrderedText(
+    retained.value,
+    retained.texts,
+    textChanges,
+    kind === "pending" ? { operationId: operationId!, fingerprint: fingerprint! } : undefined,
+  );
   return {
     recordId: edit.recordId,
     // A tombstone hides its value but retains it for an explicit restore without replacement.
-    value: applyJsonChanges(recreating && changes.length ? null : (before?.value ?? null), changes),
+    value: merged.value,
     deleted,
     lifetime: lifecycle && (before || deleted) ? stamp : (before?.lifetime ?? "initial"),
     stamps,
+    ...(Object.keys(merged.texts).length ? { texts: merged.texts } : {}),
   };
 };
 
@@ -213,7 +277,7 @@ export const applyOrderedOperation = (
     epoch,
     operationId: operation.operationId,
     fingerprint: operation.fingerprint,
-    state: operation.edits.every((edit) => conditionAccepted(current.get(edit.recordId), edit, dependencies, false))
+    state: operation.edits.every((edit) => acceptsEdit(current.get(edit.recordId), edit, dependencies, false))
       ? "accepted"
       : "refused",
   };
@@ -232,8 +296,7 @@ export const projectOrderedOperation = (
   operation: OrderedOperation,
   dependencies: ReadonlyMap<string, OrderedDecision> = new Map(),
 ) => {
-  if (!operation.edits.every((edit) => conditionAccepted(current.get(edit.recordId), edit, dependencies, true)))
-    return [];
+  if (!operation.edits.every((edit) => acceptsEdit(current.get(edit.recordId), edit, dependencies, true))) return [];
   return operation.edits.flatMap((edit) => {
     const record = applyRecord(current.get(edit.recordId), edit, pendingStamp(operation));
     return record ? [record] : [];

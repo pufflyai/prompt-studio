@@ -1,5 +1,6 @@
 import type { Asset } from "pstdio-sync-contracts";
 import type { SyncSpace } from "../encryption";
+import type { OrderedIndexReference } from "../records/ordered-receipt-index-blobs";
 import type { AssetStore } from "../shared";
 import type { DocumentRelay, SyncFailure } from "./document-sync-types";
 import type { AssetReferences } from "./record-assets";
@@ -7,6 +8,9 @@ import type { RecordFrame } from "./record-frames";
 
 /** What a device has read from its owner's record stream. Saved with the records it describes. */
 export interface RecordStreamCursor {
+  /** Ordered summary roots advance atomically only after their covered history is applied. */
+  receiptRoot?: OrderedIndexReference | null;
+  receiptStateId?: string | null;
   /** False until this device's records share one history with the stream (it published or adopted). */
   joined: boolean;
   /** The last relay sequence applied here. */
@@ -35,6 +39,8 @@ export interface RecordBytes {
 export interface RecordStreamStore {
   /** Ordered client payloads are incompatible with legacy Yjs record frames. */
   recordFormat?: "ordered";
+  connect?(space: SyncSpace, relay: DocumentRelay): Promise<void>;
+  checkpointPending?(): Promise<boolean>;
   /** Starts keeping local saves for upload and returns the saved cursor. */
   open(): Promise<RecordStreamCursor>;
   /**
@@ -64,9 +70,19 @@ export interface RecordStreamStore {
    * Every record's full state and current file at one moment, and the newest outbox entry those
    * states include. Read together, so a latest state never lists a file its records do not use.
    */
-  snapshot(): Promise<{ records: RecordBytes[]; assets: Map<string, Asset>; outbox: number }>;
+  snapshot(options?: {
+    found: boolean;
+    /** Set only after Sync observes an actually empty or lost relay stream. */
+    relayEmpty?: boolean;
+  }): Promise<{
+    records: RecordBytes[];
+    assets: Map<string, Asset>;
+    outbox: number;
+    blobIds?: string[];
+    receiptRoot?: OrderedIndexReference | null;
+  }>;
   /** Saves the cursor after a latest-state upload and drops the outbox entries it covered. */
-  published(cursor: RecordStreamCursor, outbox: number): Promise<void>;
+  published(cursor: RecordStreamCursor, outbox: number): Promise<RecordStreamCursor> | Promise<void>;
   hasRecords(): Promise<boolean>;
   /** True while saved local changes wait for upload. */
   pending(): Promise<boolean>;

@@ -20,6 +20,8 @@ export const createPersonalHistoryService = (input: {
   projects: Pick<RouteDeps["projectService"], "list">;
   eventBus: RouteDeps["eventBus"];
   logs: SessionLogFiles;
+  index: RouteDeps["extensionStorageService"]["personalHistoryIndex"];
+  logStreams: RouteDeps["extensionStorageService"]["logs"];
 }) => {
   type MessageListener = (update: { index: number; message: SessionMessage; live: boolean }) => void;
   const messageListeners = new Map<string, Set<MessageListener>>();
@@ -52,7 +54,13 @@ export const createPersonalHistoryService = (input: {
       login,
       identity,
       namespace: historyNamespace({ ...login, projectId }),
-      history: createPersonalHistoryStore({ ...login, projectId, documents: input.documents }),
+      history: createPersonalHistoryStore({
+        ...login,
+        projectId,
+        documents: input.documents,
+        index: input.index,
+        logs: input.logStreams,
+      }),
     };
   };
   const sessionRecords = async (projectId: string) => {
@@ -176,7 +184,11 @@ export const createPersonalHistoryService = (input: {
       await refreshIdentity();
       if (current.identity !== identity) return null;
       const record = records.find(
-        (row) => row.id === id && JSON.stringify(row.device) === JSON.stringify(session.device),
+        (row) =>
+          row.id === id &&
+          deviceSchema.safeParse(row.device).success &&
+          (row.device as z.infer<typeof deviceSchema>).ownerId === session.device.ownerId &&
+          (row.device as z.infer<typeof deviceSchema>).id === session.device.id,
       );
       const parsed = sharedQueueRecordSchema.safeParse(record);
       return sharedQueueResponse(id, parsed.success ? parsed.data.requests : []);

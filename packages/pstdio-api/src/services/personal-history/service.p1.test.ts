@@ -9,6 +9,7 @@ import { inertSessionChannelHooks } from "../../features/sessions/session-store.
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createNativeStore } from "../account/native-store";
 import { capturePersonalHistory } from "./capture";
+import { transferPersonalIndex } from "./index-transfer.fixture";
 import { messageEntries } from "./log-entries";
 import { historyNamespace } from "./log-files";
 import { createHistoryReferences, historyReferenceName } from "./references";
@@ -68,9 +69,9 @@ const verifyMetadataOwnership = async (
   await destination.deps.personalHistoryService.refreshIdentity();
 };
 
+const managerOrigin = "https://127.0.0.1:1";
+const accountId = "alice";
 test("personal history is readable offline after restart, private to the account, and never a local execution record", async () => {
-  const managerOrigin = "https://127.0.0.1:1";
-  const accountId = "alice";
   try {
     const project = await source.deps.projectService.create({ name: "Personal history" });
     await destination.deps.projectService.create({ id: project.id, name: project.name });
@@ -107,11 +108,17 @@ test("personal history is readable offline after restart, private to the account
         managerOrigin,
         accountId: owner,
         documents: host.deps.extensionStorageService.documents,
+        index: host.deps.extensionStorageService.personalHistoryIndex,
+        logs: host.deps.extensionStorageService.logs,
       });
     const refs = (host: typeof source) =>
       createHistoryReferences(host.deps.extensionStorageService.documents.open(historyReferenceName), project.id);
     const history = store(source);
-    const device = { ownerId: accountId, id: "source-device", name: "Laptop" };
+    const device = {
+      ownerId: accountId,
+      id: (await source.deps.environmentService.get()).environmentId,
+      name: "Laptop",
+    };
     await capturePersonalHistory({
       projectId: project.id,
       device,
@@ -132,17 +139,11 @@ test("personal history is readable offline after restart, private to the account
       1,
       messages.flatMap((message, index) => messageEntries(index, message)),
     );
-    for (const name of ["records"]) {
-      const from = createDocumentStorage({
-        owner: history.owner,
-        store: source.deps.extensionStorageService.documents.open(name),
-      });
-      const to = createDocumentStorage({
-        owner: history.owner,
-        store: destination.deps.extensionStorageService.documents.open(name),
-      });
-      await to.applyUpdate(await from.exportUpdate());
-    }
+    await transferPersonalIndex(source.deps.extensionStorageService, destination.deps.extensionStorageService, {
+      projectId: project.id,
+      accountId,
+      managerOrigin,
+    });
     const sharedFrom = refs(source);
     const sharedTo = refs(destination);
     await createDocumentStorage(sharedTo).applyUpdate(await createDocumentStorage(sharedFrom).exportUpdate());

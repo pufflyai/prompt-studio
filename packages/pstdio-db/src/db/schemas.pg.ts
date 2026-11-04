@@ -26,3 +26,6 @@ export * from "./schemas/storage-resource-identities";
 export type { JsonObject, ResourceRef } from "./schemas/types";
 export * from "./schemas/webview-preferences";
 export * from "./schemas/workspaces";
+export * from "./schemas/storage-logs";
+export * from "./schemas/storage-personal-history";
+export * from "./schemas/storage-ordered-resource-numbers";

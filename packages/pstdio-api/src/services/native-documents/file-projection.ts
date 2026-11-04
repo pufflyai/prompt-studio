@@ -4,6 +4,7 @@ import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { createNativeFileCopy } from "./file-copy";
 import type { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
 import { NativeDocumentSourceError } from "./source-error";
+import { isRecordFieldSource } from "./source-kind";
 import { checkpointInitialState, checkpointText } from "./text-checkpoint";
 
 interface Address {
@@ -68,6 +69,9 @@ export const createNativeFileProjector = (deps: {
             "native_document_source_changed",
             "Native document source changed its owner",
           );
+        // Record fields are already materialized by their ordered owner; a provider save
+        // would create a second route for optimistic or refused text.
+        if (isRecordFieldSource(loaded.content.documentSource)) return;
         await observe(address, loaded);
         await initialize(address);
         const saved = (await projections.read(address))!;

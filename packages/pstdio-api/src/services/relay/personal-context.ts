@@ -8,6 +8,7 @@ import { createLiveReceiver, personalLiveTopic } from "../personal-history/live-
 import { historyNamespace, type SessionLogFiles } from "../personal-history/log-files";
 import type { createLogProgress } from "../personal-history/log-progress";
 import { createLogReceiver } from "../personal-history/log-receiver";
+import { createPersonalLogStreams } from "../personal-history/log-stream";
 import { createHistoryReferences, historyReferenceName } from "../personal-history/references";
 import { createPersonalHistoryStore, type PersonalHistoryStore } from "../personal-history/store";
 import type { RelayWorkbench } from "./runtime";
@@ -51,6 +52,8 @@ export const createPersonalContext = (config: RelayWorkbench, deps: ExtensionsRo
     accountId: config.accountId,
     managerOrigin: config.managerOrigin,
     documents: deps.extensionStorageService.documents,
+    index: deps.extensionStorageService.personalHistoryIndex,
+    logs: deps.extensionStorageService.logs,
   });
   const references = createHistoryReferences(
     deps.extensionStorageService.documents.open(historyReferenceName),
@@ -61,7 +64,13 @@ export const createPersonalContext = (config: RelayWorkbench, deps: ExtensionsRo
     accountId: config.accountId,
     projectId: config.workbenchId,
   });
-  return { history, references, namespace };
+  const streams = createPersonalLogStreams({
+    owner: history.owner,
+    service: deps.extensionStorageService.logs,
+    files: deps.personalHistoryService.logs,
+    namespace,
+  });
+  return { history, references, namespace, logs: deps.extensionStorageService.logs, streams };
 };
 
 /** The old index is small. Never open a legacy transcript or replay its journal during upgrade. */
@@ -91,6 +100,8 @@ export const createPersonalReaders = (input: {
   const receiver = createLogReceiver({
     files: logs,
     namespace: context.namespace,
+    streams: context.streams,
+    source: context.history.logSource,
     received: (sessionId, index, message) => {
       liveReceiver.completed(sessionId, index);
       deps.personalHistoryService.messageReceived(sessionId, { index, message, live: false });

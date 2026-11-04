@@ -3,6 +3,7 @@ import type { SyncSpace } from "pstdio-sync/encryption";
 import { createDocumentRelay, createDocumentSync, fetchSyncSpaces, type SubscribeDocument } from "pstdio-sync/relay";
 import { historyReferenceName } from "../personal-history/references";
 import { documentProgress } from "./document-progress";
+import { createRelayLogs } from "./logs";
 import type { createPersonalContext } from "./personal-context";
 import { createSyncQuarantine } from "./quarantine";
 import type { RelayWorkbench } from "./runtime";
@@ -23,6 +24,7 @@ export const createPersonalDocuments = (input: {
   let spaces: Awaited<ReturnType<typeof fetchSyncSpaces>> | undefined;
   let records: ReturnType<typeof createDocumentSync> | undefined;
   let shared: ReturnType<typeof createDocumentSync> | undefined;
+  let logs: ReturnType<typeof createRelayLogs> | undefined;
   let ids: string[] = [];
   const relayFor = (space: SyncSpace, subscribe?: SubscribeDocument) => (documentId: string) => {
     return createDocumentRelay({
@@ -48,6 +50,7 @@ export const createPersonalDocuments = (input: {
   const close = () => {
     records?.close();
     shared?.close();
+    void logs?.close();
   };
   return {
     relayFor,
@@ -58,7 +61,7 @@ export const createPersonalDocuments = (input: {
     get space() {
       return preparedRevision === keyRevision ? spaces?.personal : undefined;
     },
-    owns: (id: string) => ids.includes(id),
+    owns: (id: string) => ids.includes(id) || Boolean(logs?.has(id)),
     async prepare(signal: AbortSignal) {
       requestSignal = signal;
       const renewed = keysFor !== signal;
@@ -72,11 +75,19 @@ export const createPersonalDocuments = (input: {
         spaces?.project.generation !== keys.project.generation;
       if (recreated) {
         close();
-        const recordsId = await keys.personal.documentId(JSON.stringify(["pstdio.personal-history", "records-v2"]));
+        const recordsId = await keys.personal.documentId(JSON.stringify(["pstdio.personal-history", "records-v3"]));
         const sharedId = await keys.project.documentId(historyReferenceName);
         ids = [recordsId, sharedId];
         records = syncFor(context.history.owner, context.history.records, keys.personal, recordsId);
         shared = syncFor(context.references.owner, context.references.store, keys.project, sharedId);
+        logs = createRelayLogs({
+          owner: context.history.owner,
+          space: keys.personal,
+          service: context.logs,
+          relay: relayFor(keys.personal),
+          signal: input.signal,
+          subscribe: input.subscribe,
+        });
       }
       spaces = keys;
       preparedRevision = revision;
@@ -85,10 +96,12 @@ export const createPersonalDocuments = (input: {
     async status(pendingHeads = false) {
       const record = await records?.status();
       const index = record && { ...record, pending: record.pending || pendingHeads };
-      return documentProgress([index, await shared?.status()], true);
+      return documentProgress([index, await shared?.status(), await logs?.status()], true);
     },
     async synchronize() {
+      await logs!.publish();
       await records!.synchronize();
+      await context.history.synchronize();
       await shared!.synchronize();
     },
   };

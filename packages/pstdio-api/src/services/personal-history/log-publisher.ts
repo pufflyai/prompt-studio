@@ -9,7 +9,7 @@ import { createLivePublisher } from "./live-messages";
 import { batchLines, messageEntries } from "./log-entries";
 import type { SessionLogFiles } from "./log-files";
 import { sessionLogVersion } from "./log-publication";
-import { publishLogUpdate } from "./log-updates";
+import type { PersonalLogStreams } from "./log-stream";
 
 export const sessionLogName = (sessionId: string) => JSON.stringify(["pstdio.personal-history", "log", sessionId]);
 
@@ -46,12 +46,13 @@ export const createLogPublisher = (input: {
   files: SessionLogFiles;
   namespace: string;
   deviceId: string;
+  streams: PersonalLogStreams;
   deps: Pick<
     ExtensionsRouteDeps,
     "sessionService" | "fileService" | "harnessRegistry" | "workspaceSessionService" | "personalHistoryService"
   >;
   /** Reports a log's relay position. It is also saved with the publish, so a restart reports it again. */
-  published: (sessionId: string, head: number, completedVersion?: string) => void;
+  published: (sessionId: string, head: number, completedVersion?: string, format?: "append-log-v1") => void;
 }) => {
   const { files, namespace, deps } = input;
   // The message objects last compared. A live conversation keeps unchanged messages as the same objects.
@@ -59,9 +60,35 @@ export const createLogPublisher = (input: {
   const published = new Map<string, Awaited<ReturnType<SessionLogFiles["readPublished"]>>>();
   const live = createLivePublisher({ deviceId: input.deviceId, sessions: deps.sessionService.store });
 
-  const reportHead = (sessionId: string, session: Parameters<typeof sessionLogVersion>[0], head = 0) => {
+  const reportHead = (
+    sessionId: string,
+    session: Parameters<typeof sessionLogVersion>[0],
+    head = 0,
+    format?: "append-log-v1",
+  ) => {
     const version = session.status === "in_progress" ? undefined : sessionLogVersion(session);
-    if (head || version) input.published(sessionId, head, version);
+    if (head || version) input.published(sessionId, head, version, format);
+  };
+
+  const publishLines = async (
+    sessionId: string,
+    space: SyncSpace,
+    relay: (id: string) => DocumentRelay,
+    lines: string[],
+    saved: Awaited<ReturnType<SessionLogFiles["readPublished"]>>,
+  ) => {
+    const stream = await input.streams.open(sessionId, await input.streams.writerId(), space, relay);
+    const digest = createHash("sha256").update(lines.join("\n")).digest("hex");
+    const pending =
+      saved.pending?.fingerprint === digest ? saved.pending : { fingerprint: digest, id: crypto.randomUUID() };
+    // The identity is durable before any append/upload, including a lost response on the final batch.
+    await files.writePublished(namespace, sessionId, { ...saved, pending });
+    published.set(sessionId, { ...saved, pending });
+    let index = 0;
+    for (const batch of batchLines(lines))
+      await stream.store.append({ lines: batch }, { id: `${pending.id}:${index++}` });
+    await stream.sync.publish();
+    return (await stream.store.status()).head;
   };
 
   const publishOne = async (
@@ -74,27 +101,28 @@ export const createLogPublisher = (input: {
     if (!session) return;
     const saved = published.get(sessionId) ?? (await files.readPublished(namespace, sessionId));
     // A status transition can share the previous timestamp and make the final message durable.
-    if (skipUnchanged && saved.status === session.status && saved.updatedAt === session.updated_at) {
-      reportHead(sessionId, session, saved.head);
+    if (skipUnchanged && !saved.pending && saved.status === session.status && saved.updatedAt === session.updated_at) {
+      reportHead(sessionId, session, saved.head, saved.format);
       return false;
     }
     const messages = await getSessionHistory(sessionId, deps);
     if (session.status !== "in_progress") live.finish(sessionId);
     const complete = session.status === "in_progress" ? Math.max(0, messages.length - 1) : messages.length;
-    const { lines, next } = changedEntries(messages.slice(0, complete), saved.fingerprints, compared);
-    let head: number | undefined;
-    if (lines.length) {
-      const documentId = await space.documentId(sessionLogName(sessionId));
-      const target = relay(documentId);
-      for (const batch of batchLines(lines)) head = (await publishLogUpdate(space, documentId, target, batch)).sequence;
-    }
+    const { lines, next } = changedEntries(
+      messages.slice(0, complete),
+      saved.format ? saved.fingerprints : [],
+      compared,
+    );
+    let head = saved.format ? saved.head : 0;
+    if (lines.length) head = await publishLines(sessionId, space, relay, lines, saved);
     const record = {
       updatedAt: session.updated_at,
       status: session.status,
       fingerprints: next,
-      head: head ?? saved.head,
+      head,
+      format: "append-log-v1" as const,
     };
-    reportHead(sessionId, session, record.head);
+    reportHead(sessionId, session, record.head, record.format);
     await files.writePublished(namespace, sessionId, record);
     published.set(sessionId, record);
   };

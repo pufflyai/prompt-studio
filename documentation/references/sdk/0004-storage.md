@@ -19,9 +19,9 @@ scope. All record methods use complete addresses and cover the entire owner.
 One group can include records from several scopes.
 
 A local save persists the complete operation in the database before returning.
-Current query rows are derived from the owner's merged CRDT state. A durable
-transaction publishes document changes, affected current rows, indexes and the
-projection revision together. Text and list documents stay internal to the host.
+Current query rows overlay immutable pending saves on canonical ordered records.
+A durable transaction publishes affected rows, indexes, outcomes and the cursor
+together. Declared text history and encrypted receipt pages stay internal to the host.
 
 These methods support local-only workbenches. They do not configure a production
 relay or create an account. The internal relay adapter is for host integration;
@@ -85,8 +85,10 @@ define the exact types exported by `@pstdio/sdk/extensions`.
 
 Keep complete record addresses from reads unchanged. Do not strip them to local keys.
 Keep revisions opaque. A revision belongs to one record and owner. An edit without
-`expectedRevision` applies to the record's current value on this device. An edit with
-one applies to the value the caller read. Do not replace an earlier caller's revision
+`expectedRevision` applies its changed paths in relay order. Pass `observedRevision`
+to derive a replacement from an earlier read without making it conditional. An edit
+with `expectedRevision` refuses the whole group if an overlapping path or lifetime
+changed before admission, including ABA. Independent siblings remain compatible. Do not replace an earlier caller's revision
 with a later read. A missing record has
 `exists: false`; deletion retains a tombstone with `exists: true` and
 `deleted: true`.
@@ -192,15 +194,21 @@ reopened reads therefore return the same values and content revisions.
 
 | Edit field | Behavior |
 | --- | --- |
-| `replace` | Replace the whole JSON value. |
-| `shared` | Ordered text/list/map operations on the record's shared content. |
+| `replace` | Derive changed JSON paths from `observedRevision`, `expectedRevision`, or the current local baseline. Arrays and undeclared strings are whole leaves. |
+| `set`, `unset` | Set a JSON Pointer to a value, or remove the named pointers. |
+| `observedRevision` | Replacement baseline; does not make the save conditional. |
+| `expectedRevision` | Conditional baseline for the entire atomic group. |
+| `text` | Insert/delete edits by JSON Pointer for declared text fields. |
+| `shared` | Deprecated explicit shared primitive compatibility; use ordinary fields or declared text. |
 | `asset` | Select a complete immutable asset reference, or `null` to clear it. |
 | `deleted` | Save a tombstone, or restore a deleted record. |
 
 Shared operations are `text.insert`, `text.delete`, `list.insert`, `list.delete`,
 `map.set`, and `map.delete`. Text and list positions refer to the content the edit
 applies to; later operations in one edit see earlier operations from that edit.
-Sequence edits merge, and independent map keys merge. An established shared
+Explicit shared text still merges typing. Shared maps compile to ordinary changed
+keys; a shared list is a whole ordered value. Migrate sets to object keys and
+hand-arranged lists to stable records with positions. An established shared
 primitive does not silently change kind.
 
 Every outcome has the `operationId` and a sync `state`:
@@ -209,7 +217,8 @@ Every outcome has the `operationId` and a sync `state`:
 | --- | --- |
 | `saved-locally` | The complete group is durable on this device. In a project that does not sync, this is final. |
 | `waiting-to-sync` | The group is durable on this device and waits to reach the relay. `reason` says why. |
-| `synced` | The relay stored the group. |
+| `synced` | The exact ordered outcome accepted the group. |
+| `refused` | An earlier overlapping write or rejected dependency prevented the whole group from applying. |
 | `offline` | The group is durable on this device, and the device cannot reach the relay. |
 | `needs-attention` | The group is kept on this device but not applied. It needs attention before it can apply or sync. |
 
@@ -220,6 +229,46 @@ complete before a group can sync any member. Use
 
 Today no save reports `offline`. Cloud projects report it once they sync through the
 relay.
+
+## Declared text and append-only logs
+
+These APIs require API 0.4 and a matching SDK and host. Declare only fields people
+edit together; ordinary titles, settings and arrays remain ordered values:
+
+```ts
+export default defineExtension({
+  storage: {
+    records: { text: [{ prefix: "note:", fields: ["/description"] }] },
+    logs: [{ name: "runs", writer: "project", keep: { days: 30 } }],
+  },
+});
+
+await ctx.storage.records.commit({
+  operationId: ctx.storage.ids.create(),
+  edits: [{ recordId: "note:one", set: { "/title": "Release checklist" } }],
+});
+await ctx.storage.text("note:one", "/description").edit([
+  { kind: "text.insert", index: 0, text: "A shared observation. " },
+]);
+await ctx.storage.log("runs").append({ result: "passed" }, { id: runId });
+const newest = await ctx.storage.log("runs").read({ newest: true, limit: 50 });
+```
+
+Prefixes match complete record addresses, across scopes. JSON Pointers escape
+`/` as `~1` and `~` as `~0`. A text-only facade needs a declared field; record
+commits may group text with plain values and one condition. A rejected group's
+text cannot return through a native editor delta or full snapshot: affected editor
+work stays in private recovery, and a fresh admission starts at canonical history.
+Removing a field retires its text history; adding it again starts fresh history.
+
+Logs accept project or device mode. Each device writes only its own device stream;
+the logical device log merges streams for reading. Append IDs are immutable: an
+identical retry is idempotent and changed content under the same ID is refused.
+Reads return entries and opaque cursors. Follow releases subscriptions when its
+signal is cancelled. The optional keep.days retention removes expired
+payloads through page metadata before fetching their encrypted bodies. A new device loads
+only requested pages. Log values do not change the 256 KiB record or 4 MiB record
+group limits; keep structured records small and use files for file content.
 
 ## Size limits
 
@@ -265,32 +314,12 @@ breaking release:
 | Outcome `status`, with `checkpoint`, `conflictId` and `conflictRevision` | Outcome `state`. |
 | `StorageConflict`, `StorageConflictInspection`, `StorageResolution` | None. |
 
-Until then they keep working. A stale `expectedRevision` still keeps the whole group as
-an alternative instead of applying it when the edit replaces a JSON value that changed,
-deletes or restores the record, changes an asset that changed, or sets a map key that
-changed. Its outcome has
-`status: "conflict"` and `state: "needs-attention"`. Stale text and list edits, and edits
-to other map keys, still merge. The old `status`
-values map to `state` like this: `saved-locally` to `saved-locally`, `pending` to
-`waiting-to-sync`, `synchronized` to `synced`, and `conflict` to `needs-attention`.
-
-Until removal, resolution works as before. Use `inspect` when a person or command is
-ready to choose a complete branch. Pass
-its `expectedConflicts`, `capturedOperationIds`, and `expectedInputs` back unchanged.
-The inspection includes valid pending local saves and their current conflict
-revisions, even when the relay first reported the conflict. A fresh choice uses
-the same local view as its validation.
-Revision guards also retain resolved ancestors required by the captured branch.
-Those historical guards do not appear as active conflicts.
-Choose `local` for the captured alternative or `remote` for current values.
-Text/list changes from the captured branch still merge when choosing current JSON
-and assets. A primitive-kind collision must keep the established primitive.
-
-A stale input, conflict revision, or published handler revision keeps the proposal
-as an alternative. It does not overwrite current work. A later edit outside the
-explicit capture remains available for another resolution. Previous branches stay
-retained until the replacement is accepted. Local-only resolution remains usable
-and returns `saved-locally`, never a relay acknowledgment.
+The signatures remain available for compatibility: conflicts is empty, inspection
+and resolution have no retained branch to select, and the deprecated branch input
+does not create another record view. A refused conditional save is reported through
+`outcome(operationId).state`, and its exact decision survives compaction and restore.
+Save a new operation to express a new choice. Do not reuse an old ID with changed
+content or revisions.
 
 ## Deprecated structured storage
 

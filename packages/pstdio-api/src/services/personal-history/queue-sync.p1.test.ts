@@ -2,11 +2,11 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createDocumentStorage } from "pstdio-sync/records";
 import { streamPersonalSession } from "../../features/sessions/endpoints/stream-personal-session";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createNativeStore } from "../account/native-store";
 import { capturePersonalHistory } from "./capture";
+import { transferPersonalIndex } from "./index-transfer.fixture";
 import { maxSharedQueuePrompt } from "./queue-snapshot";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore } from "./store";
@@ -62,22 +62,26 @@ test("another device's queued messages are readable in order, kept out of sessio
       managerOrigin,
       accountId,
       documents: source.deps.extensionStorageService.documents,
+      index: source.deps.extensionStorageService.personalHistoryIndex,
+      logs: source.deps.extensionStorageService.logs,
     });
     const references = createHistoryReferences(
       source.deps.extensionStorageService.documents.open(historyReferenceName),
       project.id,
     );
-    const device = { ownerId: accountId, id: "source-device", name: "Laptop" };
+    const device = {
+      ownerId: accountId,
+      id: (await source.deps.environmentService.get()).environmentId,
+      name: "Laptop",
+    };
     const capture = () =>
       capturePersonalHistory({ projectId: project.id, device, history, references, deps: source.deps });
-    const copyRecords = async () => {
-      const store = (host: typeof source) =>
-        createDocumentStorage({
-          owner: history.owner,
-          store: host.deps.extensionStorageService.documents.open("records"),
-        });
-      await store(destination).applyUpdate(await store(source).exportUpdate());
-    };
+    const copyRecords = () =>
+      transferPersonalIndex(source.deps.extensionStorageService, destination.deps.extensionStorageService, {
+        projectId: project.id,
+        accountId,
+        managerOrigin,
+      });
     await capture();
 
     // Saving messages rewrites session records; the queue lives in its own record, only while it has requests.

@@ -61,7 +61,7 @@ export const readTextDocumentSeed = async (document: Y.Doc) => {
 };
 
 /** Called under the host's durable document transaction, including for an empty source. */
-export const seedTextDocument = async (document: Y.Doc, source: string) => {
+export const seedTextDocument = async (document: Y.Doc, source: string, author?: number, identity?: string) => {
   if (document.getMap(seedMap).size) {
     await readTextDocumentSeed(document);
     return false;
@@ -69,6 +69,9 @@ export const seedTextDocument = async (document: Y.Doc, source: string) => {
   if (!isEmptyDocument(document)) throw new Error("Cannot seed over existing unseeded text");
   const genesis = new Y.Doc();
   try {
+    if (author !== undefined) genesis.clientID = author;
+    // Empty ordered fields still need distinct original histories across lifetimes.
+    if (identity !== undefined) genesis.getMap("text-genesis-context").set("identity", identity);
     genesis.getText("content").insert(0, source);
     const state = Y.encodeStateAsUpdate(genesis);
     const id = await seedId(state);

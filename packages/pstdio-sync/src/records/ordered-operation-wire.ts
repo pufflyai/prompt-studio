@@ -1,6 +1,7 @@
 import { fingerprint, type Json, jsonSchema } from "pstdio-sync-contracts";
 import { type ObservedJson, parseJsonPointer, validateJsonChanges } from "./ordered-json";
 import type { OrderedAdmission, OrderedObservation, OrderedOperation, OrderedRecord } from "./ordered-operation";
+import { validateOrderedTextChanges, validateOrderedTexts } from "./ordered-text";
 
 const shape = (value: unknown, fields?: string[]) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid ordered object");
@@ -21,6 +22,7 @@ const stamp = (value: unknown) => {
   text(parts[1]);
   if (parts[0] === "pending") digest(parts[2]);
   else if (parts[0] === "canonical") text(parts[2]);
+  else if (parts[0] === "text") { digest(parts[1]); digest(parts[2]); }
   else throw new Error("Unknown ordered stamp");
 };
 const observedValue = (input: unknown) => {
@@ -79,11 +81,12 @@ export const verifyOrderedOperation = async (input: unknown) => {
   digest(value.fingerprint);
   const ids = new Set<string>();
   for (const input of value.edits) {
-    const edit = shape(input, ["recordId", "changes", "deleted", "condition"]);
+    const edit = shape(input, ["recordId", "changes", "texts", "deleted", "condition"]);
     const id = text(edit.recordId);
     if (ids.has(id)) throw new Error("A save must name each record once");
     ids.add(id);
     changes(edit.changes);
+    if (edit.texts !== undefined) validateOrderedTextChanges(edit.texts);
     if (edit.deleted !== undefined && typeof edit.deleted !== "boolean") throw new Error("Invalid deletion");
     if (edit.condition !== undefined) observation(edit.condition);
   }
@@ -93,8 +96,8 @@ export const verifyOrderedOperation = async (input: unknown) => {
   return value as unknown as OrderedOperation;
 };
 
-export const verifyOrderedRecord = (input: unknown) => {
-  const value = shape(jsonSchema.parse(input), ["recordId", "value", "deleted", "lifetime", "stamps"]);
+export const verifyOrderedRecord = async (input: unknown) => {
+  const value = shape(jsonSchema.parse(input), ["recordId", "value", "deleted", "lifetime", "stamps", "texts"]);
   text(value.recordId);
   if (!Object.hasOwn(value, "value") || typeof value.deleted !== "boolean") throw new Error("Invalid ordered record");
   if (value.lifetime !== "initial") stamp(value.lifetime);
@@ -102,6 +105,7 @@ export const verifyOrderedRecord = (input: unknown) => {
     parseJsonPointer(pointer);
     stamp(write);
   }
+  if (value.texts !== undefined) await validateOrderedTexts(value.texts, value.value as Json);
   return input as OrderedRecord;
 };
 

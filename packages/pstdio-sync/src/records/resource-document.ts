@@ -8,6 +8,7 @@ import { readValue } from "./document-values";
 import { adoptNativeRecordSources, resetRecreatedNativeSource } from "./native-record-source";
 import { adoptionEdit } from "./record-adoption";
 import type { GroupCommit } from "./types";
+import type { StorageRecord } from "pstdio-sync-contracts";
 
 const loadResourceDocument = (states: Uint8Array[]) => {
   const document = new Y.Doc();
@@ -116,6 +117,20 @@ export const retainedResourceValue = (recordId: string, states: Uint8Array[]) =>
   } finally {
     document.destroy();
   }
+};
+
+/** One-time new-format conversion also needs retained asset/shared channels behind a tombstone. */
+export const retainedResourceBody = (recordId: string, states: Uint8Array[]) => {
+  const document = loadResourceDocument(states);
+  try {
+    const record = document.getMap(recordTypeName(recordId));
+    const kind = record.get("sharedKind") as "map" | "list" | "text" | undefined;
+    return {
+      value: readValue(record.get("value"), document),
+      asset: structuredClone((record.get("asset") ?? null) as StorageRecord["asset"]),
+      shared: kind ? { kind, value: readValue(record.get("shared"), document) } as StorageRecord["shared"] : null,
+    };
+  } finally { document.destroy(); }
 };
 
 /** The full state of one saved record document, for a latest-state chunk. */

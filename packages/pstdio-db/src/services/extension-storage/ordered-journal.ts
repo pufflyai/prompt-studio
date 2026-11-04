@@ -4,6 +4,7 @@ import {
   type OrderedAdmission,
   type OrderedDecision,
   type OrderedOperation,
+  validateOrderedNativeOperation,
   verifyOrderedAdmission,
   verifyOrderedOperation,
 } from "pstdio-sync/records";
@@ -16,6 +17,10 @@ import {
   storage_ordered_touches as touches,
 } from "../../db/schemas.pg";
 import { createOrderedCanonical } from "./ordered-canonical";
+import { createOrderedDependencyCache } from "./ordered-dependency-cache";
+import { isOrderedNativeRequest } from "./ordered-native-identity";
+import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-native-recovery";
+import { createOrderedReceiptCache } from "./ordered-receipts-cache";
 import {
   decodeOrderedJson as decode,
   encodeOrderedJson as encode,
@@ -38,7 +43,7 @@ const local = (row: typeof operations.$inferSelect) =>
     : undefined;
 
 /** All calls run inside the same project/owner lock as their projection and relay cursor. */
-const createJournal = (tx: Transaction, owner: StorageOwner) => {
+export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
   const operationWhere = (id: string) => and(ownerWhere(operations, owner), eq(operations.operation_id, id));
   const operation = async (id: string) => {
@@ -76,14 +81,26 @@ const createJournal = (tx: Transaction, owner: StorageOwner) => {
   };
   const pendingWhere = () =>
     and(ownerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch));
+  const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision);
   return {
+    knownDependency: dependencies.known,
     cachedDecision,
+    bindIdentity: bind,
+    async operationCoordinates(id: string) {
+      const row = await operation(id);
+      return row && { admission: row.admission_epoch, settled: row.settled_epoch };
+    },
     async localOperation(id: string) {
       const row = await operation(id);
       return row ? local(row) : undefined;
     },
     async queue(input: OrderedOperation, requestFingerprint: string) {
       input = await verifyOrderedOperation(input);
+      if (isOrderedNativeRequest(requestFingerprint)) {
+        validateOrderedNativeOperation(input);
+        const previous = await operation(input.operationId);
+        if (previous && !isOrderedNativeRequest(previous.request_fingerprint)) throw identityError();
+      }
       const row = await bind(input.operationId, input.fingerprint);
       if (row.envelope) {
         if (row.request_fingerprint !== requestFingerprint) throw identityError();
@@ -181,8 +198,9 @@ const createJournal = (tx: Transaction, owner: StorageOwner) => {
             ),
           );
     },
-    async recordDecision(decision: OrderedDecision, admissionFingerprint: string) {
+    async recordDecision(decision: OrderedDecision, admissionFingerprint: string, options: { indexed?: boolean } = {}) {
       const row = await bind(decision.operationId, decision.fingerprint);
+      if (isOrderedNativeRequest(row.request_fingerprint)) throw identityError();
       const where = and(
         ownerWhere(receipts, owner),
         eq(receipts.epoch, decision.epoch),
@@ -201,19 +219,47 @@ const createJournal = (tx: Transaction, owner: StorageOwner) => {
           operation_id: decision.operationId,
           state: decision.state,
           admission_fingerprint: admissionFingerprint,
+          indexed: options.indexed ?? false,
         })
         .onConflictDoNothing();
+      if (options.indexed) await tx.update(receipts).set({ indexed: true }).where(where);
+      await dependencies.remember(decision);
       // Historical decisions remain queryable but never settle a wrapper admitted in another epoch.
-      if (row.envelope && row.admission_epoch === decision.epoch) {
+      if (row.envelope && row.admission_epoch === decision.epoch && !row.settled_epoch) {
+        if (decision.state === "refused")
+          await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
         await tx.update(operations).set({ settled_epoch: decision.epoch }).where(operationWhere(decision.operationId));
         await tx.delete(touches).where(and(ownerWhere(touches, owner), eq(touches.operation_id, decision.operationId)));
+        await forgetOrderedTextGeneration(tx, owner, decision.operationId);
       }
     },
     async outcome(id: string) {
       const row = await operation(id);
       return row?.settled_epoch ? cachedDecision(id, row.settled_epoch) : undefined;
     },
+    /** Native text structs are idempotent; only local delivery bookkeeping is retained until ordering. */
+    async completeNative(input: OrderedOperation, state: "accepted" | "refused") {
+      const row = await operation(input.operationId);
+      if (!row?.envelope || !isOrderedNativeRequest(row.request_fingerprint)) return;
+      if (row.fingerprint !== input.fingerprint) throw identityError();
+      if (state === "refused") await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
+      await forgetOrderedTextGeneration(tx, owner, input.operationId);
+      await tx.delete(operations).where(operationWhere(input.operationId));
+    },
+    /** Checkpoint reconciliation explicitly selects a known exact receipt before any readmission. */
+    async settleKnown(decision: OrderedDecision) {
+      const row = await operation(decision.operationId);
+      const known = await cachedDecision(decision.operationId, decision.epoch);
+      if (!row?.envelope || row.settled_epoch) return;
+      if (!known || known.fingerprint !== decision.fingerprint || known.state !== decision.state)
+        throw new Error("Settlement requires the exact saved receipt");
+      if (decision.state === "refused") await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
+      await tx.update(operations).set({ settled_epoch: decision.epoch }).where(operationWhere(decision.operationId));
+      await tx.delete(touches).where(and(ownerWhere(touches, owner), eq(touches.operation_id, decision.operationId)));
+      await forgetOrderedTextGeneration(tx, owner, decision.operationId);
+    },
     ...createOrderedCanonical(tx, owner),
+    ...createOrderedReceiptCache(tx, owner),
   };
 };
 
@@ -221,7 +267,7 @@ const createJournal = (tx: Transaction, owner: StorageOwner) => {
 export const withOrderedOwner = <T>(
   db: DbClient,
   owner: StorageOwner,
-  run: (journal: ReturnType<typeof createJournal>, tx: Transaction, created: boolean) => Promise<T>,
+  run: (journal: OrderedJournal, tx: Transaction, created: boolean) => Promise<T>,
 ) =>
   db.transaction(async (tx) => {
     await lockRecordOwner(tx, owner);
@@ -230,5 +276,7 @@ export const withOrderedOwner = <T>(
       .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId })
       .onConflictDoNothing()
       .returning({ id: owners.workbench_id });
-    return run(createJournal(tx, owner), tx, created.length > 0);
+    return run(createOrderedJournal(tx, owner), tx, created.length > 0);
   });
+
+export type OrderedJournal = ReturnType<typeof createOrderedJournal>;

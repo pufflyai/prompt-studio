@@ -9,13 +9,15 @@ export const createPersonalPublications = (input: {
 }) => {
   const heads = new Map<string, number>();
   const completed = new Map<string, SessionLogPublication>();
+  const formats = new Map<string, "append-log-v1">();
   let writtenAt = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   return {
     pending: () => heads.size > 0 || completed.size > 0,
-    published(sessionId: string, head: number, version?: string) {
+    published(sessionId: string, head: number, version?: string, format?: "append-log-v1") {
       if (head) heads.set(sessionId, head);
-      if (version) completed.set(sessionId, { head, version });
+      if (format) formats.set(sessionId, format);
+      if (version) completed.set(sessionId, { head, version, ...(format ? { format } : {}) });
       input.published(sessionId);
       timer ??= setTimeout(() => {
         timer = undefined;
@@ -25,9 +27,10 @@ export const createPersonalPublications = (input: {
     async flush(full: boolean, captured: boolean) {
       const ordinary = heads.size > 0 && (full || captured || Date.now() - writtenAt > 10_000);
       if (!completed.size && !ordinary) return false;
-      await input.history.writeHeads(new Map(heads), new Map(completed));
+      await input.history.writeHeads(new Map(heads), new Map(completed), new Map(formats));
       heads.clear();
       completed.clear();
+      formats.clear();
       writtenAt = Date.now();
       return true;
     },
