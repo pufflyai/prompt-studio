@@ -39,7 +39,7 @@ test("remote primary controls keep commands, queues, questions and approvals on 
     await expect(page.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
   } finally {
     presence.resolve();
-    await page.unroute(presenceRoute, { behavior: "wait" });
+    await page.unrouteAll({ behavior: "wait" });
   }
   const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
   const send = page.getByTestId("send-message-button").filter({ visible: true }).last();

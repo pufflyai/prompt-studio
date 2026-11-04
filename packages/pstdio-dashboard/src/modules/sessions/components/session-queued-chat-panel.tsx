@@ -5,6 +5,7 @@ import type { ComponentProps } from "react";
 import { useApiFileParts } from "@/lib/api-file-url";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { projectSteeringSubmission } from "../chat/optimistic-steering";
+import { queuedFollowUpSteeringReason } from "../chat/queued-follow-ups";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { SessionAttachmentControls } from "./session-attachment-controls";
@@ -37,11 +38,6 @@ const queueIsReadOnly = (device: Session["device"], queue: PendingQueuedFollowUp
 
 const requireEditableQueue = (queue: PendingQueuedFollowUpsResponse | undefined) => {
   if (queue?.readOnly) throw new Error("Refresh the queue before editing this request.");
-};
-
-const steeringReason = (remote: boolean | undefined, queue: PendingQueuedFollowUpsResponse | undefined) => {
-  if (remote) return "Live steering is unavailable on another device.";
-  return queue?.steeringUnavailableReason ?? "Refresh the queue to check live input support.";
 };
 
 export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
@@ -152,7 +148,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
       onQueuedFollowUpDiscard={selection.discard}
       onQueuedFollowUpCombine={actions.handleQueuedFollowUpCombine}
       onQueuedFollowUpSteer={messagesBlocked || remote ? undefined : actions.handleQueuedFollowUpSteer}
-      queueSteeringUnavailableReason={steeringReason(remote, queue)}
+      queueSteeringUnavailableReason={queuedFollowUpSteeringReason(remote, queue)}
       unsavedQueueItemIds={selection.dirtyItemIds}
       onQueuedFollowUpRemove={sessionId ? actions.handleQueuedFollowUpRemove : undefined}
       onQueuedFollowUpMove={sessionId ? actions.handleQueuedFollowUpMove : undefined}
