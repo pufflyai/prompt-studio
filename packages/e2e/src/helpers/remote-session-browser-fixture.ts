@@ -14,7 +14,7 @@ export interface RemoteSessionBrowserFixture {
 export const startRemoteSessionBrowserFixture = () => {
   const script = join(import.meta.dirname, "../../../pstdio-api/src/test-utils/remote-session-browser.fixture.ts");
   const child = spawn("bun", ["--conditions=source", script], {
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ["pipe", "pipe", "pipe"],
     env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("PSTDIO_"))),
   });
   let output = "";
@@ -39,8 +39,8 @@ export const startRemoteSessionBrowserFixture = () => {
         throw new Error(`Remote fixture stopped unexpectedly: ${child.exitCode ?? child.signalCode}: ${output}`);
       return output;
     }
-    const exited = once(child, "exit");
-    child.kill("SIGTERM");
+    const exited = once(child, "close");
+    child.stdin.end("shutdown\n");
     const [code, signal] = await exited;
     if (code !== 0) throw new Error(`Remote fixture cleanup failed: ${code ?? signal}: ${output}`);
     return output;
