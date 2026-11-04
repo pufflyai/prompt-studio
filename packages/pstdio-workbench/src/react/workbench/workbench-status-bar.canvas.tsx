@@ -147,9 +147,9 @@ const ActivityDetails = () => {
   }, []);
   return (
     <Box data-activity-ticks={ticks}>
-    <Button size="sm" onClick={() => setCount((value) => value + 1)}>
-      Activity checked {count} times
-    </Button>
+      <Button size="sm" onClick={() => setCount((value) => value + 1)}>
+        Activity checked {count} times
+      </Button>
     </Box>
   );
 };
@@ -188,7 +188,8 @@ const StatusDetailsExample = (props: ComponentProps<typeof WorkbenchStatusBar>) 
 export const DetailPopover: Story = {
   id: "pstdio-workbench-reference-core-api-status-bar--detail-popover",
   ...SeveralOwnersInOrder,
-  description: "Details are prepared before opening. Open Activity, check it, and close with Escape. Hidden details pause their timer and keep their count when reopened.",
+  description:
+    "Details are prepared before opening. Open Activity, check it, and close with Escape. Hidden details pause their timer and keep their count when reopened.",
   args: { workbench: detailWorkbench },
   render: (args) => <StatusDetailsExample {...args} />,
   decorators: [

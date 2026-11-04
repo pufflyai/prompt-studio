@@ -3,6 +3,7 @@ import { ScopedPopover as Popover, Portal } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchWidgetHost } from "../region/widget-host";
+import { ViewActivityContext } from "../shared/view-activity-context";
 
 export const StatusItemContent = (props: {
   workbench: WorkbenchCore;
@@ -29,7 +30,8 @@ export const StatusItemContent = (props: {
       open={visible && open}
       onOpenChange={(event) => setOpen(event.open)}
       variant="widget"
-      lazyMount
+      lazyMount={false}
+      unmountOnExit={false}
       positioning={{ placement: item.slot === "trailing" ? "top-end" : "top-start", offset: { mainAxis: 4 } }}
     >
       <Popover.Trigger asChild>
@@ -59,7 +61,9 @@ export const StatusItemContent = (props: {
           >
             {/* The webview scrolls itself, so it can keep its own header in place and its scrollbar at the edge. */}
             <Popover.Body minH="0" display="flex" flexDirection="column" css={{ "& iframe": { maxHeight: "70dvh" } }}>
-              <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="content-height" />
+              <ViewActivityContext value={visible && open}>
+                <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="content-height" />
+              </ViewActivityContext>
             </Popover.Body>
           </Popover.Content>
         </Popover.Positioner>

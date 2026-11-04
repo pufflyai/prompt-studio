@@ -232,6 +232,7 @@ export type {
   WorkbenchViewMenuRegistry,
   WorkbenchViewRegistry,
   WorkbenchViewRegistryStoreState,
+  WorkbenchWebviewBody,
   WorkbenchWidgetPlacement,
   WorkbenchWidgetTab,
   WorkflowStatus,

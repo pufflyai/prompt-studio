@@ -70,6 +70,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
         h={contentHeight ? "auto" : "full"}
       >
         <ExtensionWebviewFrame
+          visible={input.visible}
           sizing={sizing}
           extensionId={view.extensionId}
           extensionInstanceId={extensionInstanceId}

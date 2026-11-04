@@ -25,6 +25,8 @@ import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 import { useFrameTheme } from "./use-frame-theme";
 
 export interface ExtensionFrameProps {
+  /** Whether the owning presentation is visible. Hidden views retain their document. */
+  visible?: boolean;
   keyboardShortcuts?: readonly WebviewKeyboardShortcut[];
   onShortcut?: (request: WebviewKeyboardShortcutRequest) => void | Promise<void>;
   sizing?: "content-width" | "content-height";
@@ -46,6 +48,7 @@ export interface ExtensionFrameProps {
 }
 
 type GuestRemote = Pick<HostApi, "init" | "themeUpdate" | "propsUpdate"> & {
+  visibilityUpdate?: HostApi["visibilityUpdate"];
   hostEvent?: HostApi["hostEvent"];
   keyboardUpdate?: HostApi["keyboardUpdate"];
   restoreFocus?: HostApi["restoreFocus"];
@@ -86,10 +89,13 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     onDiagnostics,
     title,
     sizing,
+    visible = true,
   } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const remoteRef = useRef<GuestRemote | null>(null);
   const initializedRef = useRef(false);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
   // The connection belongs to one browsing context. Navigation keeps the iframe's
   // WindowProxy, so a different contentWindow means the runtime document is gone.
   const connectedWindowRef = useRef<Window | null>(null);
@@ -232,6 +238,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
 
           await remote.init({
+            visible: visibleRef.current,
             keyboardShortcuts: keyboardRef.current.shortcuts,
             sizing,
             moduleUrl: moduleUrlAtConnect,
@@ -243,6 +250,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           });
           if (iframeRef.current !== iframe) return;
           initializedRef.current = true;
+          await remote.visibilityUpdate?.(visibleRef.current);
           await remote.keyboardUpdate?.(keyboardRef.current.shortcuts);
           onReadyRef.current?.();
         })
@@ -288,6 +296,10 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     if (!initializedRef.current) return;
     remoteRef.current?.propsUpdate({ props: createWebviewHostProps(extensionProps) });
   }, [extensionProps]);
+
+  useEffect(() => {
+    void remoteRef.current?.visibilityUpdate?.(visible);
+  }, [visible]);
 
   useFrameTheme({ theme, themeRoot: themeRootRef, initialized: initializedRef, remote: remoteRef });
 

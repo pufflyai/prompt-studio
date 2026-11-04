@@ -44,7 +44,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
         title: text(panel.title, panel.id),
         icon: panel.icon,
         body: {
-          kind: "react",
+          kind: "webview",
           render: (renderInput) => {
             const embedded = input.metadata.settingsPanels.some(
               (settingsPanel) => settingsPanel.id === renderInput.instance.panelId && settingsPanel.parentPanelId,
@@ -60,6 +60,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
             return (
               input.renderWebview?.(renderInput) ??
               renderBridgeWebviewFrame({
+                visible: renderInput.visible,
                 sizing,
                 context: {
                   workbench: renderInput.workbench,

@@ -80,6 +80,7 @@ export const StaticWebviewSurface = (props: {
 };
 
 export const BridgedWebviewSurface = (props: {
+  visible?: boolean;
   workbench?: WorkbenchCore;
   sizing?: ExtensionFrameProps["sizing"];
   capabilities: ExtensionFrameProps["capabilities"];
@@ -112,6 +113,7 @@ export const BridgedWebviewSurface = (props: {
         </Center>
       ) : null}
       <ExtensionFrame
+        visible={props.visible}
         {...keyboard}
         themeRoot={() => surface?.root.current ?? null}
         onKeyboardEvent={(event) => {
