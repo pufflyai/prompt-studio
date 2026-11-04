@@ -45,6 +45,8 @@ export const normalizeViewBody = (input: {
       actionHandlerId: handler({ ...input, kind: "chat", operation: "onAction", value: body.onAction }),
       loadDraftHandlerId: handler({ ...input, kind: "chat", operation: "loadDraft", value: body.loadDraft }),
       saveDraftHandlerId: handler({ ...input, kind: "chat", operation: "saveDraft", value: body.saveDraft }),
+      resolveLinkHandlerId: handler({ ...input, kind: "chat", operation: "resolveLink", value: body.resolveLink }),
+      resolveImageHandlerId: handler({ ...input, kind: "chat", operation: "resolveImage", value: body.resolveImage }),
     };
   }
   if (body.kind === "tree") {

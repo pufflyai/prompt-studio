@@ -1,5 +1,8 @@
 # Write an extension
 
+For session tools, [native chat](../../references/extensions/0028-native-chat.md)
+provides the shared conversation and composer through serializable bindings.
+
 Build a Bookmarks tool with a native table, saved filters, and matching `pst` commands, then install it in a project.
 
 The finished tool saves links, marks them read, filters unread links, and deletes links. People use it from a table in the workbench. Agents use the same commands through `pst`. Each project keeps its own bookmarks.

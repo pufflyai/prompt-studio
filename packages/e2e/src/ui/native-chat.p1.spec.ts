@@ -58,6 +58,19 @@ test("independent native chat paints and accepts input before history, then reta
       },
     });
     expect(installed.ok()).toBe(true);
+    const seededDraft = await request.post(
+      `/v1/projects/${projectId}/extensions/commands/acme.native-chat.view.conversation.chat.saveDraft/execute`,
+      {
+        data: {
+          params: {
+            draftKey: "compose",
+            renderer: { rendererId: "acme.native-chat.view.conversation", projectId },
+            draft: { text: "Earlier saved work", attachments: [], values: {} },
+          },
+        },
+      },
+    );
+    expect(seededDraft.ok()).toBe(true);
     await page.addInitScript((id) => {
       if (window.top !== window) return;
       localStorage.setItem("onboarding-complete", "true");
@@ -67,6 +80,13 @@ test("independent native chat paints and accepts input before history, then reta
       await delayed;
       await route.continue();
     });
+    await page.route(
+      "**/extensions/commands/acme.native-chat.view.conversation.chat.loadDraft/execute",
+      async (route) => {
+        await delayed;
+        await route.continue();
+      },
+    );
     await page.goto(`/projects/${projectId}/extensions/acme.native-chat/chat`);
     const main = page.locator('[data-workbench-region="main"]');
     const composer = main.locator('[data-testid="content-editable"][contenteditable="true"]');
@@ -76,11 +96,20 @@ test("independent native chat paints and accepts input before history, then reta
     release();
     await expect(main.getByText("Native transcript", { exact: true })).toBeVisible();
     await expect(composer).toContainText("Unsent native draft");
+    await expect(main.getByText("Earlier saved work", { exact: true })).toBeVisible();
     const side = page.locator('[data-workbench-region="side"]');
     await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
     await expect(side.locator('[data-testid="content-editable"][contenteditable="true"]')).toBeVisible();
     await main.getByRole("button", { name: "Allow operation", exact: true }).click();
     await expect(main.getByText("Operation approved", { exact: true })).toBeVisible();
+    const chooser = page.waitForEvent("filechooser");
+    await main.getByRole("button", { name: "Attach files", exact: true }).click();
+    await (await chooser).setFiles({
+      name: "draft.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("Retained attachment"),
+    });
+    await expect(main.getByRole("button", { name: "Remove draft.txt" })).toBeVisible();
     // Wait for the actual extension-owned save, rather than making reload race its durability.
     await expect
       .poll(async () => {
@@ -101,11 +130,16 @@ test("independent native chat paints and accepts input before history, then reta
             },
           },
         );
-        return (await response.json()).outcome?.value?.text;
+        return (await response.json()).outcome?.value;
       })
-      .toBe("Unsent native draft");
+      .toMatchObject({
+        text: "Unsent native draft",
+        attachments: [{ name: "draft.txt" }],
+        recovered: [{ text: "Earlier saved work" }],
+      });
     await page.reload();
     await expect(composer).toContainText("Unsent native draft");
+    await expect(main.getByRole("button", { name: "Remove draft.txt" })).toBeVisible();
   } finally {
     release();
     await page.unrouteAll({ behavior: "wait" });

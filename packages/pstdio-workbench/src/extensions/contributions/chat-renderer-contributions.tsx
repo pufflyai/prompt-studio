@@ -1,7 +1,10 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { commandRefId, resourceKey } from "@pstdio/sdk/extensions";
+import { type ChatLinkHandler, parseChatLink } from "@pstdio/ui/chat-ui";
+import { chatLinkPresentationSchema } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
+import { z } from "zod";
 import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchPanelRenderInput } from "../../core";
 import type { CommandParamFieldRenderer } from "../../react/command-palette/command-param-field";
 import { NativeChatView } from "../../react/renderers/chat/native-chat-view";
@@ -10,7 +13,11 @@ import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workb
 import { type ChatSession, createChatSession } from "./chat-session";
 
 export interface ChatCommandTransport {
-  streamChatCommand?(commandId: string, body: CommandExecuteRequest, signal: AbortSignal): AsyncIterable<unknown>;
+  streamChatCommand?(
+    commandId: string,
+    body: CommandExecuteRequest,
+    signal: AbortSignal,
+  ): AsyncIterable<unknown> & { result?: Promise<unknown> };
   createChatParamField?: (workbench: WorkbenchCore) => CommandParamFieldRenderer;
 }
 type ChatRecord = WorkbenchExtensionMetadata["views"][number] & {
@@ -76,9 +83,29 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
       });
       sessions.set(key, session);
     }
+    const linkHandler: ChatLinkHandler = {
+      resolveHref: (candidate) => {
+        const link = parseChatLink(candidate, typeof window === "undefined" ? undefined : window.location.origin);
+        return link?.kind === "external" || link?.kind === "page" ? link.href : null;
+      },
+      resolveResource: body.resolveLinkHandlerId
+        ? async (candidate) => chatLinkPresentationSchema.parse(await run(body.resolveLinkHandlerId!, { candidate }))
+        : undefined,
+      resolveImageSource: body.resolveImageHandlerId
+        ? async (source) =>
+            z
+              .string()
+              .nullable()
+              .parse(await run(body.resolveImageHandlerId!, { source }))
+        : undefined,
+      open: async (candidate) => {
+        await session!.run({ type: "openLink", candidate }, (action) => run(body.actionHandlerId, { action }));
+      },
+    };
     return {
       session,
       key,
+      linkHandler,
       action: (action: Parameters<ChatSession["run"]>[0]) => run(body.actionHandlerId, { action }),
     };
   };
@@ -90,11 +117,12 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
       body: {
         kind: "react",
         render: (render) => {
-          const { session, key, action } = sessionFor(render);
+          const { session, key, action, linkHandler } = sessionFor(render);
           return createElement(NativeChatView, {
             key,
             session,
             action,
+            linkHandler,
             conversationKey: key,
             refreshKey: getWorkbenchRenderers(render.workbench).store.getState().refreshKeys[view.id],
             emptyTitle: text(body.emptyTitle),

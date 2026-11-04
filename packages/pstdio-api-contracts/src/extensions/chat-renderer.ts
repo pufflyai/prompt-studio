@@ -4,6 +4,20 @@ import { sessionMessageSchema } from "../session-messages";
 import { questionResponseSchema } from "../sessions";
 import { controlParamSchema, controlValuesSchema } from "./control-declarations";
 
+export const chatLinkCandidateSchema = z.strictObject({
+  source: z.string(),
+  origin: z.enum(["markdown", "inline-code", "reference", "tool", "text"]),
+});
+export const chatLinkPresentationSchema = z
+  .strictObject({
+    href: z.string().nullable(),
+    label: z.string().optional(),
+    icon: z.string().optional(),
+  })
+  .nullable();
+export type ChatLinkCandidate = z.infer<typeof chatLinkCandidateSchema>;
+export type ChatLinkPresentation = z.infer<typeof chatLinkPresentationSchema>;
+
 export const chatAttachmentSchema = z.strictObject({
   id: z.string().min(1),
   name: z.string(),
@@ -23,10 +37,14 @@ export const chatQueuedRequestSchema = z.strictObject({
   steeringDelivery: z.object({ id: z.string(), runStartedAt: z.string() }).nullable().optional(),
   sending: z.boolean().optional(),
 });
-export const chatDraftSchema = z.strictObject({
+const chatDraftContentSchema = z.strictObject({
   text: z.string(),
   attachments: z.array(chatAttachmentSchema),
   values: controlValuesSchema,
+});
+export const chatDraftSchema = chatDraftContentSchema.extend({
+  /** Unsent drafts recovered after editing raced an asynchronous read. */
+  recovered: z.array(chatDraftContentSchema).optional(),
 });
 /** Public wire messages retain the existing session protocol; no second transcript format. */
 export const chatRendererSnapshotSchema = z.strictObject({
@@ -90,6 +108,7 @@ export const chatRendererActionSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("confirmation"), modeId: z.string() }),
   z.strictObject({ type: z.literal("decision"), id: z.string(), actionId: z.string() }),
   z.strictObject({ type: z.literal("openResource"), id: z.string() }),
+  z.strictObject({ type: z.literal("openLink"), candidate: chatLinkCandidateSchema }),
   z.strictObject({ type: z.literal("control"), id: z.string(), values: controlValuesSchema }),
   z.strictObject({ type: z.literal("approve"), id: z.string(), choice: z.string() }),
   z.strictObject({ type: z.literal("operation"), id: z.string(), values: controlValuesSchema }),

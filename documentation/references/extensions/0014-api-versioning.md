@@ -44,6 +44,10 @@ The page and panel additions share the planned API 0.3.0 release: page-owned emp
 
 Hosts on `main`, after 0.46.0, read the optional manifest `icon` field and show it in Extensions. This additive metadata shares API 0.3.1. Existing manifests remain valid without it. Older hosts ignore the field, so declaring an icon does not require a higher minimum API version.
 
+The [native chat view body](0028-native-chat.md) also shares the planned API 0.3.1
+step. Released extensions must use a published SDK containing that declaration
+and a host that supports it before adopting it.
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |

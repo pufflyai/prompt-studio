@@ -19,6 +19,8 @@ test("an independent extension declares native chat with normal private callback
       onAction: async () => undefined,
       loadDraft: async () => ({ text: "unsent", attachments: [], values: {} }),
       saveDraft: async () => undefined,
+      resolveLink: async () => ({ href: null }),
+      resolveImage: async () => null,
     },
   });
   const runtime = normalizeExtensionSources([
@@ -47,7 +49,9 @@ test("an independent extension declares native chat with normal private callback
     actionHandlerId: "acme.chat.view.conversation.chat.onAction",
     loadDraftHandlerId: "acme.chat.view.conversation.chat.loadDraft",
     saveDraftHandlerId: "acme.chat.view.conversation.chat.saveDraft",
+    resolveLinkHandlerId: "acme.chat.view.conversation.chat.resolveLink",
+    resolveImageHandlerId: "acme.chat.view.conversation.chat.resolveImage",
     stream: { ...watch.ref, extensionId: "acme.chat" },
   });
-  expect(runtime.privateHandlers.filter((handler) => handler.rendererKind === "chat")).toHaveLength(4);
+  expect(runtime.privateHandlers.filter((handler) => handler.rendererKind === "chat")).toHaveLength(6);
 });

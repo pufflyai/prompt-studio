@@ -1,5 +1,7 @@
 import type {
   ChatDraft,
+  ChatLinkCandidate,
+  ChatLinkPresentation,
   ChatRendererAction,
   ChatRendererActionResult,
   ChatRendererSnapshot,
@@ -27,6 +29,8 @@ export interface ChatRendererContribution extends RendererContributionBase {
   initial?: ChatRendererSnapshot;
   query: RendererCallback<JsonObject, ChatRendererSnapshot>;
   onAction: RendererCallback<{ action: ChatRendererAction; draftKey: string }, ChatRendererActionResult | undefined>;
+  resolveLink?: RendererCallback<{ candidate: ChatLinkCandidate }, ChatLinkPresentation>;
+  resolveImage?: RendererCallback<{ source: string }, string | null>;
   /** A normal cancellable command that writes ChatRendererEvent chunks; abort must release holds, never stop work. */
   stream?: CommandRef;
   loadDraft?: RendererCallback<{ draftKey: string }, ChatDraft>;

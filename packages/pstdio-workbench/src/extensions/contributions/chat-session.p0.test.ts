@@ -51,6 +51,32 @@ test("late draft hydration cannot replace typing; save order preserves the lates
   release();
 });
 
+test("typing before hydration preserves the older saved text and files for recovery", async () => {
+  const previous = { text: "Saved work", attachments: [{ id: "old-file", name: "old.txt" }], values: {} };
+  const hydration = deferred<typeof previous>();
+  const saved: unknown[] = [];
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    loadDraft: () => hydration.promise,
+    saveDraft: async (draft) => {
+      saved.push(draft);
+    },
+  });
+  const release = session.retain();
+  session.changeDraft({ text: "New typing" });
+  await Promise.resolve();
+  expect(saved).toEqual([]);
+  hydration.resolve(previous);
+  await session.flushDraft();
+  expect(session.getSnapshot().draft).toMatchObject({ text: "New typing", recovered: [previous] });
+  expect(saved.at(-1)).toMatchObject({ text: "New typing", recovered: [previous] });
+  session.restoreDraft(0);
+  await session.flushDraft();
+  expect(session.getSnapshot().draft).toMatchObject({ ...previous, recovered: [{ text: "New typing" }] });
+  release();
+});
+
 test("a stream notice does not discard delayed history or controls", async () => {
   const query = deferred<{ messages: ReturnType<typeof message>[] }>();
   const session = createChatSession({ query: () => query.promise, action: async () => undefined });
@@ -101,6 +127,31 @@ test("reconnecting keeps displayed messages and scopes revisions to the new conn
   release();
 });
 
+test("a disconnected SDK command stream reports its rejected result after chunks finish", async () => {
+  const result = deferred<unknown>();
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    watch: () =>
+      Object.assign(
+        (async function* () {
+          yield { revision: 0, snapshot: { notice: "Connected" } };
+        })(),
+        {
+          result: result.promise.then(() => {
+            throw new Error("Connection lost");
+          }),
+        },
+      ),
+  });
+  const release = session.retain();
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+  result.resolve(undefined);
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+  expect(session.getSnapshot().error).toBe("Connection lost");
+  release();
+});
+
 test("incremental events require a fresh stream transcript before they can supersede a delayed read", async () => {
   const query = deferred<{ messages: ReturnType<typeof message>[] }>();
   const session = createChatSession({ query: () => query.promise, action: async () => undefined });
@@ -127,4 +178,99 @@ test("a slow submission preserves a newer draft including its attachments", asyn
   sent.resolve();
   await pending;
   expect(session.getSnapshot().draft).toMatchObject({ text: "new", attachments: [{ id: "file" }] });
+});
+
+test("delayed action results and queries cannot replace a newer stream transcript", async () => {
+  const actionResult = deferred<unknown>();
+  const queryResult = deferred<unknown>();
+  const session = createChatSession({ query: () => queryResult.promise, action: () => actionResult.promise });
+  const release = session.retain();
+  const pending = session.run({ type: "stop" });
+  session.accept({ revision: 4, snapshot: { messages: [message("live")] } });
+  actionResult.resolve({ snapshot: { messages: [message("old action")] } });
+  queryResult.resolve({ messages: [message("old read")] });
+  await pending;
+  expect(session.getSnapshot().conversation.messages?.[0]?.parts[0]).toEqual({ type: "text", text: "live" });
+  release();
+});
+
+test("Retry actually retries a failed draft save before clearing its error", async () => {
+  let attempts = 0;
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    saveDraft: async () => {
+      if (++attempts === 1) throw new Error("Disk full");
+    },
+  });
+  const release = session.retain();
+  session.changeDraft({ text: "Keep this" });
+  await session.flushDraft();
+  expect(session.getSnapshot().error).toBe("Disk full");
+  session.reconnect();
+  expect(session.getSnapshot().error).toBe("Disk full");
+  await session.flushDraft();
+  expect(attempts).toBe(2);
+  expect(session.getSnapshot().error).toBeUndefined();
+  release();
+});
+
+test("an empty saved control map retains values already read from the session", async () => {
+  const hydration = deferred<{ text: string; attachments: []; values: Record<string, never> }>();
+  const session = createChatSession({
+    query: async () => ({ values: { model: "session-model", effort: "high" } }),
+    action: async () => undefined,
+    loadDraft: () => hydration.promise,
+  });
+  const release = session.retain();
+  await Promise.resolve();
+  hydration.resolve({ text: "", attachments: [], values: {} });
+  await hydration.promise;
+  await Promise.resolve();
+  expect(session.getSnapshot().draft.values).toEqual({ model: "session-model", effort: "high" });
+  release();
+});
+
+test("closing a view while draft hydration is pending still saves unsent work", async () => {
+  const hydration = deferred<{ text: string; attachments: []; values: Record<string, never> }>();
+  const saved: unknown[] = [];
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    loadDraft: () => hydration.promise,
+    saveDraft: async (draft) => {
+      saved.push(draft);
+    },
+  });
+  const release = session.retain();
+  session.changeDraft({ text: "Do not lose this" });
+  release();
+  hydration.resolve({ text: "", attachments: [], values: {} });
+  await session.flushDraft();
+  expect(saved.at(-1)).toMatchObject({ text: "Do not lose this" });
+});
+
+test("query values replace static defaults while locally selected controls win delayed reads", async () => {
+  const untouched = createChatSession({
+    initial: { values: { model: "default" } },
+    query: async () => ({ values: { model: "saved" } }),
+    action: async () => undefined,
+  });
+  const closeUntouched = untouched.retain();
+  await Promise.resolve();
+  expect(untouched.getSnapshot().draft.values).toEqual({ model: "saved" });
+  closeUntouched();
+  const query = deferred<{ values: { model: string; effort: string } }>();
+  const session = createChatSession({
+    initial: { values: { model: "default", effort: "default" } },
+    query: () => query.promise,
+    action: async () => undefined,
+  });
+  const release = session.retain();
+  session.changeDraft({ values: { model: "selected" } });
+  query.resolve({ values: { model: "saved", effort: "high" } });
+  await query.promise;
+  await Promise.resolve();
+  expect(session.getSnapshot().draft.values).toEqual({ model: "selected", effort: "high" });
+  release();
 });

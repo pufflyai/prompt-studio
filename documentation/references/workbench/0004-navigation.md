@@ -16,6 +16,10 @@ The workbench navigates only to explicit targets. This page lists the target kin
 
 A page target may carry `resource`, `section` or `position`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
 
+[Native chat views](../extensions/0028-native-chat.md) use those same page and panel
+targets. Their action bindings capture the current placement, so conversion does
+not give a delayed navigation result the previous viewer's context.
+
 ## Related resources
 
 Appearance's **Open related resources** setting is on by default. Opening a resource or selecting its tab evaluates its owner's optional `relatedOpenings` command. Only entries with `autoOpen: true` open automatically. Targets use their normal owner resolvers; automatic openings do not recursively open their own related resources.

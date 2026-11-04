@@ -114,6 +114,8 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
     actionHandlerId: z.string(),
     loadDraftHandlerId: z.string().optional(),
     saveDraftHandlerId: z.string().optional(),
+    resolveLinkHandlerId: z.string().optional(),
+    resolveImageHandlerId: z.string().optional(),
     stream: commandRefSchema.optional(),
     refreshEventIds: z.array(z.string()).optional(),
     resourceKind: z.string().optional(),

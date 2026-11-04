@@ -2,6 +2,9 @@
 
 This page explains how native file editors load, save, and refresh content, and how native views cancel and refresh their reads.
 
+[Native chat](0028-native-chat.md) shares state across placements, renders its
+composer before asynchronous reads, and releases watches without stopping execution.
+
 Editable native file renderers have one owner for loaded content, the current draft, one active save, errors, and external invalidation. Opening or saving an editor does not remount it, lose the selection, or repeat unchanged saves.
 
 ## Shared Markdown sources

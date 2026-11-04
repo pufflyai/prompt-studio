@@ -27,6 +27,8 @@ const body = z.discriminatedUnion("kind", [
       stream: localRefSchema("command").optional(),
       loadDraft: callbackSchema.optional(),
       saveDraft: callbackSchema.optional(),
+      resolveLink: callbackSchema.optional(),
+      resolveImage: callbackSchema.optional(),
     })
     .strict(),
   z

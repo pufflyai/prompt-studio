@@ -1,14 +1,16 @@
 import { Button, Flex, Text } from "@chakra-ui/react";
 import type { ChatAttachment, ChatQueuedRequest } from "@pstdio/sdk/extensions";
-import { ChatPanel } from "@pstdio/ui/chat-ui";
+import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { NativeChatApproval, NativeChatControls } from "./native-chat-controls";
+import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
 
 interface NativeChatViewProps {
   session: ChatSession;
   action: Parameters<ChatSession["run"]>[1];
+  linkHandler?: ChatLinkHandler;
   conversationKey: string;
   refreshKey?: number;
   emptyTitle?: string;
@@ -97,6 +99,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
   return (
     <ChatPanel
       conversationKey={conversationKey}
+      linkHandler={props.linkHandler}
       messages={conversation.messages ?? []}
       loading={loading}
       emptyStateTitle={props.emptyTitle ?? "No messages yet"}
@@ -168,6 +171,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
       }
       conversationNotices={
         <>
+          <NativeChatDraftRecovery recovered={draft.recovered} onRestore={session.restoreDraft} />
           {conversation.notice ? <Text>{conversation.notice}</Text> : null}
           {error ? (
             <Flex direction="column" gap="xs">
@@ -241,8 +245,8 @@ export const NativeChatView = (props: NativeChatViewProps) => {
           return rest;
         });
       }}
-      onQueuedFollowUpUpdate={(id, prompt) => queue("update", find(id), { prompt })}
-      onQueuedFollowUpCreate={(id, prompt) => queue("create", find(id), { prompt })}
+      onQueuedFollowUpUpdate={(id, prompt) => queue("update", selected?.id === id ? selected : find(id), { prompt })}
+      onQueuedFollowUpCreate={(id, prompt) => queue("create", selected?.id === id ? selected : find(id), { prompt })}
       canRestoreQueuedEditToDraft={!draft.attachments.length && !uploading}
       onQueuedFollowUpRestoreDraft={(id) => {
         const saved = edits[id];
@@ -251,8 +255,8 @@ export const NativeChatView = (props: NativeChatViewProps) => {
       onQueuedFollowUpRemove={(id) => {
         void queue("remove", find(id)).catch(() => undefined);
       }}
-      onQueuedFollowUpMove={(id, direction, steps) => {
-        void queue("move", find(id), { direction, steps }).catch(() => undefined);
+      onQueuedFollowUpMove={(id, direction, steps, selection) => {
+        void queue("move", selection?.source ?? find(id), { direction, steps }).catch(() => undefined);
       }}
       onQueuedFollowUpCombine={(source, target) => queue("combine", source, { target })}
       onQueuedFollowUpSteer={(item) => queue("steer", item)}

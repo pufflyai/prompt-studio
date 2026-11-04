@@ -1,4 +1,5 @@
 import { ChatPanel } from "@pstdio/ui/chat-ui";
+import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
 
 export default { title: "Renderers/Native chat", fullscreen: true };
 const composer = {
@@ -23,5 +24,18 @@ export const OtherDevice = () => (
     inputDisabled
     readOnlyQueue
     messages={[{ id: "history", role: "assistant", parts: [{ type: "text", text: "History from another device." }] }]}
+  />
+);
+export const RecoveredDraft = () => (
+  <ChatPanel
+    {...composer}
+    messages={[]}
+    chatInputDefaultValue="New typing"
+    conversationNotices={
+      <NativeChatDraftRecovery
+        recovered={[{ text: "Earlier saved work", attachments: [{ id: "file", name: "notes.txt" }], values: {} }]}
+        onRestore={() => undefined}
+      />
+    }
   />
 );
