@@ -23,6 +23,7 @@ export type CreateSessionMutation = {
     model: string | undefined;
     params?: HarnessParamValues;
     workspaceId?: string;
+    deviceId?: string;
     attachments?: SessionAttachment[];
   }) => Promise<{ sessionId: string; status: string }>;
 };
@@ -77,6 +78,7 @@ const submitNewSessionMessage = (input: {
   model: string | undefined;
   params?: HarnessParamValues;
   workspaceId?: string;
+  deviceId?: string;
   text: string;
   attachments?: SessionAttachment[];
   messages: SessionMessage[];
@@ -105,6 +107,7 @@ const submitNewSessionMessage = (input: {
       model: input.model,
       params: input.params,
       workspaceId: input.workspaceId,
+      deviceId: input.deviceId,
       attachments: input.attachments,
     })
     .then(
@@ -215,6 +218,7 @@ export const submitSessionMessage = (input: {
   model: string | undefined;
   params?: HarnessParamValues;
   workspaceId?: string;
+  deviceId?: string;
   text: string;
   attachments?: SessionAttachment[];
   questionResponse?: ChatInputQuestionResponse;

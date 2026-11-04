@@ -153,6 +153,25 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
       expect((await on.client.sessions.getQueuedFollowUps(session.id)).requests).toEqual(
         expect.arrayContaining([expect.objectContaining({ prompt: `Long prompt: ${"a".repeat(100_000)}` })]),
       );
+      const remoteQueue = await from.client.sessions.getQueuedFollowUps(session.id);
+      const saved = remoteQueue.requests.find((request) => request.prompt === `Long prompt: ${"a".repeat(100_000)}`);
+      expect(saved).toBeDefined();
+      expect(saved!.attachments).toEqual([{ file_id: attached.fileId }]);
+      const editedPrompt = `${saved!.prompt}\nKeep the attachment.`;
+      const updated = await from.client.sessions.updateQueuedFollowUp(session.id, saved!.queuePosition, {
+        prompt: editedPrompt,
+        expectedRevision: saved!.revision,
+        attachments: saved!.attachments,
+      });
+      expect(updated.request).toMatchObject({ prompt: editedPrompt, attachments: [{ file_id: attached.fileId }] });
+      expect(updated.request.revision).not.toBe(saved!.revision);
+      expect((await on.client.sessions.getQueuedFollowUps(session.id)).requests).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ prompt: editedPrompt, attachments: [{ file_id: attached.fileId }] }),
+        ]),
+      );
+      expect((await from.client.sessions.get(session.id)).device?.id).toBe(on.id);
+      expect((await on.client.sessions.get(session.id)).status).toBe("in_progress");
       await from.client.sessions.updateStatus(session.id, "cancelled");
       await waitFor(
         "the target turn to stop",

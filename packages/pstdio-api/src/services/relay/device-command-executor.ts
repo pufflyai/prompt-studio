@@ -4,6 +4,24 @@ import { type Json, jsonSchema } from "pstdio-sync-contracts";
 import { approveSessionHandler, approveSessionRoute } from "../../features/sessions/endpoints/approve-session";
 import { createSessionHandler, createSessionRoute } from "../../features/sessions/endpoints/create-session";
 import { followUpSessionHandler, followUpSessionRoute } from "../../features/sessions/endpoints/follow-up-session";
+import {
+  getQueuedMessagesHandler,
+  getQueuedMessagesRoute,
+} from "../../features/sessions/endpoints/get-queued-messages";
+import {
+  combineQueuedFollowUpsHandler,
+  combineQueuedFollowUpsRoute,
+  pendingQueuedFollowUpsHandler,
+  pendingQueuedFollowUpsRoute,
+} from "../../features/sessions/endpoints/pending-queued-follow-ups";
+import {
+  deleteQueuedFollowUpHandler,
+  deleteQueuedFollowUpRoute,
+  moveQueuedFollowUpHandler,
+  moveQueuedFollowUpRoute,
+  updateQueuedFollowUpHandler,
+  updateQueuedFollowUpRoute,
+} from "../../features/sessions/endpoints/queued-follow-ups";
 import { resolveCreateWorkspace } from "../../features/sessions/endpoints/resolve-create-workspace";
 import {
   updateSessionStatusHandler,
@@ -37,6 +55,33 @@ const requestFor = (command: DeviceCommand) => {
   if (command.type === "workspace.create") return { path: "/workspaces", method: "POST", body: command.input };
   const id = encodeURIComponent(command.id);
   switch (command.type) {
+    case "session.queuedMessages":
+      return { path: `/sessions/${id}/queued-messages`, method: "GET" };
+    case "session.queuedFollowUps":
+      return { path: `/sessions/${id}/queued-follow-ups`, method: "GET" };
+    case "session.queueUpdate":
+      return {
+        path: `/sessions/${id}/queued-follow-ups/${command.queuePosition}`,
+        method: "PATCH",
+        body: command.input,
+      };
+    case "session.queueDelete":
+      return {
+        path: `/sessions/${id}/queued-follow-ups/${command.queuePosition}?${new URLSearchParams(command.expectedRevision ? { expectedRevision: command.expectedRevision } : {})}`,
+        method: "DELETE",
+      };
+    case "session.queueMove":
+      return {
+        path: `/sessions/${id}/queued-follow-ups/${command.queuePosition}/move`,
+        method: "POST",
+        body: command.input,
+      };
+    case "session.queueCombine":
+      return {
+        path: `/sessions/${id}/queued-follow-ups/${command.queuePosition}/combine`,
+        method: "POST",
+        body: command.input,
+      };
     case "session.interrupt":
       return { path: `/sessions/${id}/status`, method: "PATCH", body: { status: "cancelled" } };
     case "session.followUp":
@@ -69,6 +114,12 @@ const requestFor = (command: DeviceCommand) => {
 /** Reuse the local actions and their validation. The relay cannot select an arbitrary host route. */
 export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.openapi(getQueuedMessagesRoute, getQueuedMessagesHandler(deps));
+  routes.openapi(pendingQueuedFollowUpsRoute, pendingQueuedFollowUpsHandler(deps));
+  routes.openapi(updateQueuedFollowUpRoute, updateQueuedFollowUpHandler(deps));
+  routes.openapi(deleteQueuedFollowUpRoute, deleteQueuedFollowUpHandler(deps));
+  routes.openapi(moveQueuedFollowUpRoute, moveQueuedFollowUpHandler(deps));
+  routes.openapi(combineQueuedFollowUpsRoute, combineQueuedFollowUpsHandler(deps));
   routes.openapi(createSessionRoute, createSessionHandler(deps));
   routes.openapi(followUpSessionRoute, followUpSessionHandler(deps));
   routes.openapi(approveSessionRoute, approveSessionHandler(deps));

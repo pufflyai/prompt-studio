@@ -213,3 +213,157 @@ test("only temporary failures are marked as worth retrying", async () => {
   controller.dispose();
   await registry.dispose();
 });
+
+test("approval snapshots survive reconnect and stop obsolete stream callbacks from restoring a resolved request", async () => {
+  const registry = createRendererReadRegistry();
+  const streams: SessionStreamHandlers[] = [];
+  let state!: SessionHistoryState;
+  const request = { id: "approval", toolName: "shell", toolInput: { command: "pwd" }, toolUseId: "tool" };
+  const controller = createSessionHistoryController({
+    sessionId: "approval-session",
+    ownerKey: "approval-placement",
+    reads: registry,
+    initialSession: { id: "approval-session", status: "in_progress" },
+    transport: {
+      getConversation: async () => ({ messages: [] }),
+      getQueuedMessages: async () => ({ messages: [] }),
+      connectStream: (_id, handlers) => {
+        streams.push(handlers);
+        return { close() {} };
+      },
+    },
+    onChange: (next) => {
+      state = next;
+    },
+  });
+  try {
+    controller.connect();
+    streams[0]!.onPatch!({ op: "replace", path: "/approval_requests", value: [request] });
+    expect(state.approvalRequests).toEqual([request]);
+    controller.reconnect();
+    streams[1]!.onPatch!({ op: "replace", path: "/approval_requests", value: [] });
+    streams[0]!.onApprovalRequest!(request);
+    expect(state.approvalRequests).toEqual([]);
+    streams[1]!.onApprovalRequest!(request);
+    expect(state.approvalRequests).toEqual([request]);
+    streams[1]!.onEnd!({});
+    expect(state.approvalRequests).toEqual([]);
+  } finally {
+    controller.dispose();
+    await registry.dispose();
+  }
+});
+
+test("a remote queue preview refreshes complete target metadata through the existing read binding", async () => {
+  const registry = createRendererReadRegistry();
+  let handlers!: SessionStreamHandlers;
+  let reads = 0;
+  let state!: SessionHistoryState;
+  const controller = createSessionHistoryController({
+    sessionId: "remote-queue",
+    ownerKey: "remote-queue-placement",
+    reads: registry,
+    initialSession: { id: "remote-queue", status: "in_progress", device: { id: "laptop" } },
+    transport: {
+      getConversation: async () => ({ messages: [] }),
+      getQueuedMessages: async () => {
+        reads++;
+        return { messages: [message(`queued-prompt-remote-queue-${reads}`)] };
+      },
+      connectStream: (_id, next) => {
+        handlers = next;
+        return { close() {} };
+      },
+    },
+    onChange: (next) => {
+      state = next;
+    },
+  });
+  try {
+    controller.connect();
+    await tick();
+    expect(reads).toBe(1);
+    handlers.onQueuedMessages!({
+      messages: [{ id: "truncated-preview", role: "user", parts: [{ type: "text", text: "preview" }] }],
+    });
+    await tick();
+    expect(reads).toBe(2);
+    expect(state.messages.map((item) => item.id)).toEqual(["queued-prompt-remote-queue-2"]);
+  } finally {
+    controller.dispose();
+    await registry.dispose();
+  }
+});
+
+test("remote stream previews cannot replace complete editable requests while a fresh read is pending", async () => {
+  const registry = createRendererReadRegistry();
+  let handlers!: SessionStreamHandlers;
+  let state!: SessionHistoryState;
+  let reads = 0;
+  const full = {
+    messages: [
+      {
+        id: "queued-prompt-remote-edit-1",
+        role: "user" as const,
+        parts: [{ type: "text" as const, text: "Full prompt" }],
+      },
+    ],
+    queue: {
+      requests: [
+        {
+          queuePosition: 1,
+          revision: "same-revision",
+          prompt: "Full prompt",
+          model: "model",
+          params: { effort: "high" },
+          attachments: [{ file_id: "file" }],
+          steeringDelivery: null,
+        },
+      ],
+      activeRunStartedAt: "run",
+      steeringAvailable: false,
+      steeringUnavailableReason: null,
+    },
+  };
+  const delayed = Promise.withResolvers<typeof full>();
+  const controller = createSessionHistoryController({
+    sessionId: "remote-edit",
+    ownerKey: "remote-edit-placement",
+    reads: registry,
+    initialSession: { id: "remote-edit", status: "in_progress", device: { id: "laptop" } },
+    transport: {
+      getConversation: async () => ({ messages: [] }),
+      getQueuedMessages: async () => (++reads === 1 ? full : delayed.promise),
+      connectStream: (_id, next) => {
+        handlers = next;
+        return { close() {} };
+      },
+    },
+    onChange: (next) => {
+      state = next;
+    },
+  });
+  try {
+    controller.connect();
+    await tick();
+    expect(state.queue).toEqual(full.queue);
+    handlers.onQueuedMessages!({
+      messages: [{ id: "queued-prompt-remote-edit-1", role: "user", parts: [{ type: "text", text: "Truncated…" }] }],
+      queue: {
+        ...full.queue,
+        requests: [{ ...full.queue.requests[0]!, prompt: "Truncated…", params: {}, attachments: [] }],
+      },
+    });
+    await tick();
+    expect(reads).toBe(2);
+    expect(state.queue).toEqual(full.queue);
+    expect(state.messages[0]?.parts[0]).toEqual({ type: "text", text: "Full prompt" });
+    delayed.resolve(full);
+    await tick();
+    expect(state.queue).toEqual(full.queue);
+  } finally {
+    delayed.resolve(full);
+    controller.dispose();
+    await registry.dispose();
+  }
+});

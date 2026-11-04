@@ -3,11 +3,13 @@ import { useEffect } from "react";
 import { useProject } from "@/shared/projects/use-project";
 import { createDashboardWorkspaceOptions, type DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
-import { resolveRuntimeWorkspaceSelection } from "../runtime/session-runtime-selection";
+import { resolveDeviceWorkspaceSelection } from "../runtime/session-device-access";
 import { SessionWorkspaceMenu } from "./session-workspace-menu";
 
 interface SessionWorkspaceControlProps {
   view: DashboardSessionView;
+  deviceId?: string;
+  unavailable?: boolean;
   projectId: string | undefined;
   selectedWorkspaceId: string;
   setSelectedWorkspaceId: Dispatch<SetStateAction<string>>;
@@ -28,9 +30,20 @@ const getSelectedWorkspaceLabel = (input: {
 
 /** Workspace identity/selector for the workspace hub header. */
 export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => {
-  const { view, projectId, selectedWorkspaceId, setSelectedWorkspaceId, onSelectWorkspace, onOpenWorkspace } = props;
+  const {
+    view,
+    projectId,
+    selectedWorkspaceId,
+    setSelectedWorkspaceId,
+    onSelectWorkspace,
+    onOpenWorkspace,
+    deviceId,
+    unavailable,
+  } = props;
   const { isLoading: isProjectLoading } = useProject(projectId);
-  const workspaceOptions = createDashboardWorkspaceOptions(projectId);
+  const workspaceOptions = createDashboardWorkspaceOptions(projectId).filter(
+    (workspace) => workspace.device?.id === deviceId,
+  );
   const workspaceSelectionKey = workspaceOptions.map((workspace) => workspace.id).join("|");
   const defaultWorkspaceId = workspaceOptions.find((workspace) => workspace.isDefault)?.id ?? null;
   const selectedWorkspaceLabel = getSelectedWorkspaceLabel({
@@ -46,14 +59,17 @@ export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => 
   // resolver reads without turning that array identity into an unconditional effect trigger.
   // biome-ignore lint/correctness/useExhaustiveDependencies: workspaceSelectionKey represents workspaceOptions.
   useEffect(() => {
-    const nextWorkspaceId = resolveRuntimeWorkspaceSelection({
-      workspaces: workspaceOptions,
-      selectedWorkspaceId,
-      // A draft with no bound workspace falls back to the project's default (root repo).
-      fallbackWorkspaceId: view.workspaceId ?? defaultWorkspaceId,
-    });
+    if (view.sessionId) return;
+    const nextWorkspaceId = resolveDeviceWorkspaceSelection(workspaceOptions, selectedWorkspaceId, view.workspaceId);
     if (nextWorkspaceId !== selectedWorkspaceId) setSelectedWorkspaceId(nextWorkspaceId);
-  }, [defaultWorkspaceId, selectedWorkspaceId, setSelectedWorkspaceId, view.workspaceId, workspaceSelectionKey]);
+  }, [
+    defaultWorkspaceId,
+    selectedWorkspaceId,
+    setSelectedWorkspaceId,
+    view.workspaceId,
+    view.sessionId,
+    workspaceSelectionKey,
+  ]);
 
   const handleSelectWorkspace = (workspaceId: string) => {
     const workspace = workspaceOptions.find((option) => option.id === workspaceId);
@@ -68,7 +84,9 @@ export const SessionWorkspaceControl = (props: SessionWorkspaceControlProps) => 
       selectedWorkspaceLabel={selectedWorkspaceLabel}
       onSelectWorkspace={handleSelectWorkspace}
       isDisabled={isExistingSession || isProjectLoading}
-      onOpenWorkspace={isExistingSession && selectedWorkspace ? () => onOpenWorkspace(selectedWorkspace) : undefined}
+      onOpenWorkspace={
+        isExistingSession && !unavailable && selectedWorkspace ? () => onOpenWorkspace(selectedWorkspace) : undefined
+      }
     />
   );
 };

@@ -153,3 +153,23 @@ describe("registerWorkspaceResourceActions", () => {
     expect(worktreeLabels).toContain("Rename workspace");
   });
 });
+
+test("a target-owned workspace does not offer local terminal or workspace mutations", () => {
+  const workbench = createWorkbench();
+  workbench.registerModule({
+    id: "test.remote-actions",
+    activate: (ctx) => {
+      registerWorkspaceResourceActions(ctx);
+      return undefined;
+    },
+  });
+  const workspace = createDashboardResource("workspace", "remote", "Target files", "GitBranch", "project", {
+    workspaceExecutionKind: "local",
+    workspaceProviderState: "ready",
+    workspacePath: "/target/files",
+    workspaceSupportsDelete: true,
+    workspaceReadOnly: true,
+    workspaceDeviceId: "laptop",
+  });
+  expect(listWorkbenchMenuItems(workbench, resourceContextMenuPath("workspace"), { resource: workspace })).toEqual([]);
+});

@@ -25,9 +25,23 @@ interface SessionQueuedChatPanelProps extends ComponentProps<typeof ChatPanel> {
   draftAttachments: ReturnType<typeof useSessionDraftAttachments>;
   modelControls: ComponentProps<typeof SessionComposerActions>;
   messagesBlocked?: boolean;
-  /** Another device runs this session: its queue shows read-only above the device notice. */
+  /** Offline owner: the queue remains readable above the device notice. */
   device?: Session["device"];
+  remote?: boolean;
+  onDeviceReconnect?(): unknown;
 }
+
+const queueIsReadOnly = (device: Session["device"], queue: PendingQueuedFollowUpsResponse | undefined) =>
+  Boolean(device) || queue?.readOnly;
+
+const requireEditableQueue = (queue: PendingQueuedFollowUpsResponse | undefined) => {
+  if (queue?.readOnly) throw new Error("Reconnect the device and refresh the queue before editing this request.");
+};
+
+const steeringReason = (remote: boolean | undefined, queue: PendingQueuedFollowUpsResponse | undefined) => {
+  if (remote) return "Live steering is unavailable on another device.";
+  return queue?.steeringUnavailableReason ?? "Refresh the queue to check live input support.";
+};
 
 export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
   const {
@@ -41,6 +55,8 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
     modelControls,
     messagesBlocked,
     device,
+    remote,
+    onDeviceReconnect,
     ...panel
   } = props;
   const selection = useQueuedRequestSelection(projectId, draftKey, drafts);
@@ -53,6 +69,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
     refreshQueue,
     activeRunStartedAt: queue?.activeRunStartedAt,
     editRequest: (id, prompt) => {
+      requireEditableQueue(queue);
       const edit = selection.edits[id];
       if (!edit?.item.revision) throw new Error("Refresh the queue before editing this request.");
       return {
@@ -79,8 +96,10 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
   return (
     <ChatPanel
       {...panel}
-      composerFallback={device ? <SessionPersonalDevice name={device.name} /> : panel.composerFallback}
-      readOnlyQueue={Boolean(device)}
+      composerFallback={
+        device ? <SessionPersonalDevice name={device.name} onReconnect={onDeviceReconnect} /> : panel.composerFallback
+      }
+      readOnlyQueue={queueIsReadOnly(device, queue)}
       messages={messages}
       queuedFollowUps={display.queuedFollowUps}
       conversationNotices={
@@ -122,10 +141,8 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
       onQueuedFollowUpSelect={selection.select}
       onQueuedFollowUpDiscard={selection.discard}
       onQueuedFollowUpCombine={actions.handleQueuedFollowUpCombine}
-      onQueuedFollowUpSteer={messagesBlocked ? undefined : actions.handleQueuedFollowUpSteer}
-      queueSteeringUnavailableReason={
-        queue ? queue.steeringUnavailableReason : "Refresh the queue to check live input support."
-      }
+      onQueuedFollowUpSteer={messagesBlocked || remote ? undefined : actions.handleQueuedFollowUpSteer}
+      queueSteeringUnavailableReason={steeringReason(remote, queue)}
       unsavedQueueItemIds={selection.dirtyItemIds}
       onQueuedFollowUpRemove={sessionId ? actions.handleQueuedFollowUpRemove : undefined}
       onQueuedFollowUpMove={sessionId ? actions.handleQueuedFollowUpMove : undefined}

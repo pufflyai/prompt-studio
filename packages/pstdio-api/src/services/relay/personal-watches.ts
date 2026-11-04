@@ -21,6 +21,10 @@ export const watchPersonalHistory = (input: {
   });
   const stopConversations = deps.sessionService.store.watch((id, patch) => {
     if (!input.ownsSession(id)) return;
+    if (patch?.path === "/approval_requests") {
+      input.indexChanged(id);
+      return;
+    }
     input.preview(id);
     const count = deps.sessionService.store.get(id)?.conversation?.messageCount ?? 0;
     if (patch?.op === "replace" && patch.path === `/messages/${count - 1}`) return;
