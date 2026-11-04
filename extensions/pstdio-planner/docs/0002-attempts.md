@@ -51,6 +51,12 @@ If two implementation sessions are already running in the project, Run attempt d
 
 `pst tickets implement` is a lighter option. It starts one agent session with the implement-ticket prompt. The agent updates the ticket status itself. It does not create a worktree, a managed attempt, or a review.
 
+## Recover a missing workspace
+
+Run the same `run-attempt --ticket <ticket>` command after explicitly deciding to resume. When the selected attempt's workspace is unavailable, Planner creates a managed continuation from its surviving branch, submitted commit, saved event commit, or available base. Its new owner receives the previous session, revisions, reports and linked PRs. Historical revisions and review verdicts stay on the old attempt; they do not approve the continuation. The new owner validates recovered code and submits a fresh revision.
+
+This manual command works with Auto Build disabled. It can resume work that was previously stopped, but a new stop or a running owner prevents recovery. Planner rechecks capacity, dependencies, pending input and workspace availability before launching. An intact workspace keeps its original owner and conversation. A linked audit workspace with a live session is not adopted or reassigned by recovery.
+
 ## Auto Build
 
 Auto Build uses a supervisor to query work with `pst tickets next` and dispatch matching tickets through the same readiness checks as manual implementation. It reuses stopped implementation owners when they can continue, assigns changed-stack repair in their existing workspaces, and asks owners to repair PR conflicts or failed CI. It does not approve or merge PRs.

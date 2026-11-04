@@ -15,7 +15,7 @@ import {
 import { idsFor } from "./view-rules";
 
 type BoardDefaults =
-  | { kind: "kanban"; settings: KanbanViewSettings }
+  | { kind: "kanban" | "resourceList"; settings: KanbanViewSettings }
   | { kind: "dataTable"; settings: DataTableRendererSettings };
 interface SavedViewState {
   settings: BoardViewSettings;
@@ -85,7 +85,7 @@ export const cleanBoardView = (board: BoardDefaults, view: SavedViewState, field
   return {
     // A saved view always has its board's kind of settings, because the API refuses others on write.
     settings:
-      board.kind === "kanban"
+      board.kind !== "dataTable"
         ? cleanKanbanSettings(view.settings as KanbanViewSettings, board.settings, fields)
         : cleanDataTableSettings(view.settings as DataTableRendererSettings, board.settings, fields),
     filter: cleanFilter(view.filter, fields),

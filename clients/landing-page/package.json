@@ -19,6 +19,7 @@
     "@emotion/react": "11.14.0",
     "@phosphor-icons/react": "^2.1.10",
     "@pstdio/ui": "workspace:*",
+    "@tanstack/charts": "1.2.1",
     "astro": "^7.3.5",
     "lucide-react": "^0.557.0",
     "matter-js": "^0.20.0",

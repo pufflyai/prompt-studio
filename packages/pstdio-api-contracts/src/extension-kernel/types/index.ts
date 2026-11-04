@@ -23,6 +23,7 @@ export type * from "./pages";
 export type * from "./params";
 export type * from "./renderer-base";
 export type * from "./resource-binding";
+export type * from "./resource-list-renderer";
 export type * from "./resources";
 export type * from "./saved-views";
 export type * from "./session-controls";

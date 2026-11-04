@@ -5,6 +5,14 @@ import { hasPendingSessionRunStarted } from "./session-work-start";
 
 const queuedPromptPrefix = "queued-prompt-";
 
+export const queuedFollowUpSteeringReason = (
+  remote: boolean | undefined,
+  queue: PendingQueuedFollowUpsResponse | undefined,
+) => {
+  if (remote) return "Live steering is unavailable on another device.";
+  return queue ? queue.steeringUnavailableReason : "Refresh the queue to check live input support.";
+};
+
 const getQueuedPromptPosition = (messageId: string, sessionId: string | null) => {
   if (!sessionId) return null;
 

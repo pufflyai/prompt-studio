@@ -110,6 +110,7 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
   fileBodySchema,
   controlsBodySchema,
   kanbanBodySchema,
+  kanbanBodySchema.extend({ kind: z.literal("resourceList") }),
   dataTableBodySchema,
 ]);
 

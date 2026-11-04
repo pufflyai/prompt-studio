@@ -27,7 +27,14 @@ export const capturePersonalHistory = async (input: {
   const workspaces = localWorkspaces.filter((row) => workspaceIds.has(row.id));
   const sessions = localSessions.filter((row) => sessionIds.has(row.id));
   await history.writeRecords("workspaces", device, workspaces);
-  await history.writeRecords("sessions", device, sessions);
+  await history.writeRecords(
+    "sessions",
+    device,
+    sessions.map((session) => ({
+      ...session,
+      approval_requests: deps.sessionService.store.get(session.id)?.approvalService.pendingRequests() ?? [],
+    })),
+  );
   const queued = new Map<string, Awaited<ReturnType<typeof deps.sessionQueueEntriesService.listUndispatched>>>();
   for (const entry of await deps.sessionQueueEntriesService.listUndispatched()) {
     if (!sessionIds.has(entry.session_id)) continue;
@@ -70,7 +77,13 @@ export const captureSessionChanges = async (input: Parameters<typeof capturePers
     present.add(id);
     const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
     const workspaceId = workspace?.project_id === row.project_id ? workspace.id : null;
-    await history.patchRecords("sessions", device, [{ ...row, workspace_id: workspaceId }]);
+    await history.patchRecords("sessions", device, [
+      {
+        ...row,
+        workspace_id: workspaceId,
+        approval_requests: deps.sessionService.store.get(id)?.approvalService.pendingRequests() ?? [],
+      },
+    ]);
     const requests = sharedQueue(await deps.sessionQueueEntriesService.listUndispatchedBySession(id));
     await history.patchRecords(
       "queues",

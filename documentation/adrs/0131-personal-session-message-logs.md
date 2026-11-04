@@ -25,7 +25,7 @@ A terminal session carries a small publication acknowledgment in the same encryp
 
 Live publication uses the same captured account/project ownership as durable logs. Events received before ownership is known are retained as IDs; capture and private-topic admission catch up the current resident preview without another chunk. Key preparation exposes a space only after its identifiers and generation are committed.
 
-Queued follow-up messages that have not started are shared as a separate index record per session, only while the queue has requests. Saving messages rewrites the session record but not its queue. The record carries each request's position, revision, model and a 500-character preview, at most 50 requests. Other devices show the queue read-only; changing it is a remote command (PS-827).
+Queued follow-up messages that have not started are shared as a separate index record per session, only while the queue has requests. Saving messages rewrites the session record but not its queue. The record carries each request's position, revision, model and a 500-character preview, at most 50 requests. Offline devices show these incomplete previews read-only. Online queue editing reads complete requests from the owning device through the normal API and sends revision-checked remote commands. A replicated preview only signals a refresh; it never replaces editable request data.
 
 ## Consequences
 
@@ -33,7 +33,7 @@ Every device still stores every completed conversation of its user's Cloud proje
 
 Legacy relay ciphertext is no longer read or updated. The current relay has no individual document-delete API, so that ciphertext remains until its space is deleted. This does not affect startup or sync memory.
 
-Personal history remains read-only on other devices. Remote commands, team sharing, and journal paging for ordinary CRDT documents are separate work.
+Personal history remains owned by its source device. Online remote session actions use the normal API forwarding path and never move execution ownership. Pending approvals travel in the existing encrypted session index and shared stream; only the source approval service resolves or expires them. Offline readers keep history and previews, with remote actions unavailable. Team sharing and journal paging for ordinary CRDT documents remain separate work.
 
 ## Validation
 

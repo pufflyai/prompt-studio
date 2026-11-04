@@ -49,10 +49,13 @@ export const createWorkbenchViewBodyRegistration =
         () => registries.refreshControlsRenderer(view.id),
       );
     }
-    if (body.kind === "kanban") {
+    if (body.kind === "kanban" || body.kind === "resourceList") {
       const { kind: _kind, ...definition } = body;
       return refreshable(
-        registries.registerKanbanRenderer({ ...definition, id: view.id, title: view.title }, metadata),
+        registries.registerKanbanRenderer(
+          { ...definition, presentation: body.kind, id: view.id, title: view.title },
+          metadata,
+        ),
         () => registries.refreshKanbanRenderer(view.id),
       );
     }

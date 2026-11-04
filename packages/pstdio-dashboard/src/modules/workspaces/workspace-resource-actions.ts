@@ -20,6 +20,7 @@ const workspaceLabel = (resource: ResourceRef) => {
   return typeof shorthand === "string" ? shorthand : (resource.label ?? resource.id ?? "workspace");
 };
 const isLocalReadyWorkspace = (resource: ResourceRef) =>
+  resource.metadata?.workspaceReadOnly !== true &&
   resource.metadata?.workspaceExecutionKind === "local" &&
   resource.metadata.workspaceProviderState === "ready" &&
   typeof resource.metadata.workspacePath === "string" &&
@@ -45,16 +46,16 @@ const resolveWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource:
 // action, so a workspace behaves identically wherever it is surfaced. These views
 // listen to synced rows, so the action only needs to fire the write.
 export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  if (!resource.id) return;
+  if (!resource.id || resource.metadata?.workspaceReadOnly === true) return;
   await deleteDashboardWorkspace(resource.id);
   ctx.notifications.show({ level: "success", title: `Deleted workspace ${workspaceLabel(resource)}` });
 };
 export const openRenameWorkspaceResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  if (!resource.id) return;
+  if (!resource.id || resource.metadata?.workspaceReadOnly === true) return;
   ctx.overlays.openOverlay(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource });
 };
 export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  if (!resource.id) return;
+  if (!resource.id || resource.metadata?.workspaceReadOnly === true) return;
   if (!ctx.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)) return;
   const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
   if (!isLocalReadyWorkspace(terminalResource)) return;
@@ -62,8 +63,8 @@ export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resou
 };
 // The default workspace (root repo) is permanent: hide every action when the active or
 // right-clicked resource is the default workspace.
-const mutableWorkspaceWhen = `${workbenchResourceTypeContextKey} == "workspace" && !${workbenchResourceMetadataContextKey("workspaceIsDefault")}`;
-const workspaceTerminalActionWhen = `${workbenchResourceTypeContextKey} == "workspace" && ${workbenchResourceMetadataContextKey("workspaceExecutionKind")} == "local" && ${workbenchResourceMetadataContextKey("workspaceProviderState")} == "ready"`;
+const mutableWorkspaceWhen = `!${workbenchResourceMetadataContextKey("workspaceReadOnly")} && ${workbenchResourceTypeContextKey} == "workspace" && !${workbenchResourceMetadataContextKey("workspaceIsDefault")}`;
+const workspaceTerminalActionWhen = `!${workbenchResourceMetadataContextKey("workspaceReadOnly")} && ${workbenchResourceTypeContextKey} == "workspace" && ${workbenchResourceMetadataContextKey("workspaceExecutionKind")} == "local" && ${workbenchResourceMetadataContextKey("workspaceProviderState")} == "ready"`;
 const workspaceDeleteActionWhen = `${mutableWorkspaceWhen} && ${workbenchResourceMetadataContextKey("workspaceSupportsDelete")}`;
 const workspaceActions = [
   {
