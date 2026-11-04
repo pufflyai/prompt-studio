@@ -9,6 +9,7 @@ import {
   runPackagedCli,
 } from "./packaged-app-helpers";
 import {
+  homePage,
   launchProject,
   openLabPreview,
   type PerformanceSnapshot,
@@ -98,7 +99,7 @@ test("keeps reporting slow frames after the workbench reloads", async () => {
       };
     });
     await app.page.reload();
-    await expect(app.page.getByTestId("start-page")).toBeVisible();
+    await expect(homePage(app.page)).toBeVisible();
     await expect.poll(async () => (await readSnapshot(app!.page)) !== null).toBe(true);
     await app.page.waitForFunction(
       () => (window as unknown as { slowFrameObserverReady?: boolean }).slowFrameObserverReady === true,
@@ -142,6 +143,15 @@ test("names the process that hosts an extension and ends its frames when paused"
       .getByTestId("performance-cpu-row")
       .filter({ hasText: "workbench-fixture" });
     await expect(row).toBeVisible();
+    // Closing the popover must retain its loaded webview for the next opening.
+    const detailsFrame = app.page.locator('iframe[title="Performance details"]');
+    const loadedFrame = await detailsFrame.elementHandle();
+    await performanceMeter(app.page).click();
+    await expect(detailsFrame).toBeHidden();
+    expect(await loadedFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
+    await performanceMeter(app.page).click();
+    await expect(row).toBeVisible();
+    expect(await detailsFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
     const pause = row.getByRole("button", { name: "Pause workbench-fixture", exact: true });
     // Enter the live CPU list before clicking: pointer entry freezes its order,
     // which can otherwise move the target between Playwright's stability check and input.

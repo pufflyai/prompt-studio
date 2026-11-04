@@ -78,7 +78,7 @@ The new-view button uses the layers-plus icon. Saved views offer Rename and Dupl
 
 ## Display settings
 
-Board views take `--mode board|list`, `--columns <field>`, `--rows <field|none>`, and `--show <ids>` for the card properties. Data table views take `--group <column|none>`, `--row-numbers show|hide`, `--wrap-rows on|off`, `--stats on|off`, and `--show <ids>` for the visible columns in order. Columns not listed in `--show` are hidden. Each kind refuses the other kind's flags.
+Board views take `--mode board|list`, `--columns <field>`, `--rows <field|none>`, and `--show <ids>` for the card properties. Data table views take `--group <column|none>`, `--row-numbers show|hide`, `--wrap-rows on|off`, `--stats on|off`, and `--show <ids>` for the visible columns in order. Columns not listed in `--show` are hidden. Resource list views take `--group <field|none>`, `--children nested|hidden`, and `--show <ids>` for visible properties. Each kind refuses flags that do not apply to it.
 
 ## Defaults and cleanup
 

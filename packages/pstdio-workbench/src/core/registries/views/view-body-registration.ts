@@ -22,7 +22,7 @@ const refreshable = <T extends { dispose(): void }>(registration: T, refresh: (i
 export const createWorkbenchViewBodyRegistration =
   (registries: ViewBodyRegistries) => (view: WorkbenchViewContribution, metadata?: ContributionMetadata) => {
     const body = view.body;
-    if (body.kind === "react") {
+    if (body.kind === "react" || body.kind === "webview") {
       return refreshable(registries.registerRenderer({ id: view.id, render: body.render }), () =>
         registries.refreshRenderer(view.id),
       );
@@ -49,10 +49,13 @@ export const createWorkbenchViewBodyRegistration =
         () => registries.refreshControlsRenderer(view.id),
       );
     }
-    if (body.kind === "kanban") {
+    if (body.kind === "kanban" || body.kind === "resourceList") {
       const { kind: _kind, ...definition } = body;
       return refreshable(
-        registries.registerKanbanRenderer({ ...definition, id: view.id, title: view.title }, metadata),
+        registries.registerKanbanRenderer(
+          { ...definition, presentation: body.kind, id: view.id, title: view.title },
+          metadata,
+        ),
         () => registries.refreshKanbanRenderer(view.id),
       );
     }

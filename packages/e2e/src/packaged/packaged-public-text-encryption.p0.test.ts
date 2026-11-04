@@ -31,6 +31,7 @@ test("encrypted public text inspection reconstructs the selected source's foundi
     const result = await readEncryptedPublicText(space, {
       documents: [[`~${documentId}`, { state, payload: state.payload, updates: [{ ...update, sequence: 1 }] }]],
       blobs: [],
+      retainedStates: [],
     });
     expect(result.documentId).toBe(documentId);
     expect(result.text).toBe("public-two-host-secret: Shared source");

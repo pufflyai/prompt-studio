@@ -124,6 +124,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
         >
           <WorkbenchWidgetContents
             renderer={renderer}
+            webview={view?.body.kind === "webview" || renderer.id === "webview:bridge"}
             input={{ workbench, panel, instance, refresh, sizing: props.sizing }}
             // File views start an async read; their heavy editors load separately.
             defer={view?.body.kind !== "file" && ["main", "side", "bottom"].includes(panel.region)}

@@ -48,8 +48,15 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     });
     const providers = await (await request.get(`${uiOrigin}/v1/projects/${projectId}/workspace-providers`)).json();
     expect(providers).toEqual([expect.objectContaining({ id: providerId })]);
+    const newWorkspace = workspaceNavigation.getByRole("button", {
+      name: "New workspace",
+      exact: true,
+      includeHidden: true,
+    });
+    // Catalog refresh can move rows. Wait for the action before positioning the pointer.
+    await expect(newWorkspace).toBeAttached();
     await workspaceNavigation.hover();
-    await workspaceNavigation.getByRole("button", { name: "New workspace", exact: true }).click();
+    await newWorkspace.click();
     staleCatalog.resolve();
     const providerDialog = page.getByRole("dialog", { name: "Create workspace", exact: true });
     await expect(providerDialog.getByRole("textbox", { name: "Source template" })).toBeVisible();

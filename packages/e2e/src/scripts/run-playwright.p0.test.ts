@@ -50,15 +50,24 @@ describe("buildPlaywrightEnv", () => {
   });
 });
 
-test("Playwright stops only P1 after a first failure", async () => {
+test("Playwright stops P1 after a first failure only outside production validation", async () => {
   const { getPlaywrightCommand } = await import("./run-playwright");
-  expect(getPlaywrightCommand(["selected.spec.ts"], "P1").args).toContain("--max-failures=1");
-  for (const priority of ["P0", "P2", "P3"]) {
-    const command = getPlaywrightCommand(["selected.spec.ts", "--max-failures=2", "-x"], priority);
-    expect(command.args).toContain("selected.spec.ts");
-    expect(command.args).toContain("--max-failures=0");
-    expect(command.args).not.toContain("--max-failures=2");
-    expect(command.args).not.toContain("-x");
+  const inheritedProfile = process.env.CI_PROFILE;
+  try {
+    delete process.env.CI_PROFILE;
+    expect(getPlaywrightCommand(["selected.spec.ts"], "P1").args).toContain("--max-failures=1");
+    for (const priority of ["P0", "P2", "P3"]) {
+      const command = getPlaywrightCommand(["selected.spec.ts", "--max-failures=2", "-x"], priority);
+      expect(command.args).toContain("selected.spec.ts");
+      expect(command.args).toContain("--max-failures=0");
+      expect(command.args).not.toContain("--max-failures=2");
+      expect(command.args).not.toContain("-x");
+    }
+    process.env.CI_PROFILE = "production";
+    expect(getPlaywrightCommand(["selected.spec.ts"], "P1").args).toContain("--max-failures=0");
+  } finally {
+    if (inheritedProfile === undefined) delete process.env.CI_PROFILE;
+    else process.env.CI_PROFILE = inheritedProfile;
   }
 });
 

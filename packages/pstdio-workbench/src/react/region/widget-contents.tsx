@@ -1,15 +1,18 @@
-import { type ReactNode, startTransition, useEffect, useState } from "react";
+import { Activity, type ReactNode, startTransition, useContext, useEffect, useState } from "react";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistration } from "../../core";
 import { afterPaint } from "../shared/after-paint";
+import { ViewActivityContext } from "../shared/view-activity-context";
 
 interface WorkbenchWidgetContentsProps {
   input: WorkbenchPanelRenderInput;
   renderer: WorkbenchRendererRegistration;
   defer: boolean;
+  webview?: boolean;
 }
 
 export const WorkbenchWidgetContents = (props: WorkbenchWidgetContentsProps) => {
-  const { input, renderer, defer } = props;
+  const { input, renderer, defer, webview } = props;
+  const active = useContext(ViewActivityContext);
   // Static rendering has no browser paint cycle to wait for.
   const [mounted, setMounted] = useState(!defer || typeof requestAnimationFrame !== "function");
   useEffect(() => {
@@ -22,5 +25,8 @@ export const WorkbenchWidgetContents = (props: WorkbenchWidgetContentsProps) => 
     return () => controller.abort();
   }, [mounted]);
   // Keep mounted panels intact when resources, placements, or regions change.
-  return mounted ? (renderer.render(input) as ReactNode) : null;
+  if (!mounted) return null;
+  const content = renderer.render({ ...input, visible: active }) as ReactNode;
+  // Webviews keep their bridge connected and receive visibility inside their document.
+  return webview ? content : <Activity mode={active ? "visible" : "hidden"}>{content}</Activity>;
 };

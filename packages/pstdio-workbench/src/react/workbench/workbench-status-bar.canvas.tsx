@@ -1,6 +1,6 @@
 import { Box, Button, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import type { ComponentProps } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 import { createWorkbench } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -138,6 +138,21 @@ export const ItemRegisteredAfterMount: Story = {
   args: { workbench: lateWorkbench },
 };
 const detailWorkbench = createWorkbench();
+const ActivityDetails = () => {
+  const [count, setCount] = useState(0);
+  const [ticks, setTicks] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTicks((value) => value + 1), 50);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <Box data-activity-ticks={ticks}>
+      <Button size="sm" onClick={() => setCount((value) => value + 1)}>
+        Activity checked {count} times
+      </Button>
+    </Box>
+  );
+};
 detailWorkbench.modes.registerMode({ id: "active", activate: () => undefined });
 detailWorkbench.modes.registerMode({ id: "other", activate: () => undefined });
 detailWorkbench.modes.registerMode({ id: "replaced", chrome: { status: false }, activate: () => undefined });
@@ -156,7 +171,7 @@ detailWorkbench.views.registerView({
 detailWorkbench.views.registerView({
   id: "status.details",
   title: "Activity details",
-  body: { kind: "react", render: () => <Text textStyle="paragraph/S/regular">Activity details</Text> },
+  body: { kind: "react", render: () => <ActivityDetails /> },
 });
 detailWorkbench.statusBar.registerItem({
   id: "activity",
@@ -173,6 +188,8 @@ const StatusDetailsExample = (props: ComponentProps<typeof WorkbenchStatusBar>) 
 export const DetailPopover: Story = {
   id: "pstdio-workbench-reference-core-api-status-bar--detail-popover",
   ...SeveralOwnersInOrder,
+  description:
+    "Details are prepared before opening. Open Activity, check it, and close with Escape. Hidden details pause their timer and keep their count when reopened.",
   args: { workbench: detailWorkbench },
   render: (args) => <StatusDetailsExample {...args} />,
   decorators: [

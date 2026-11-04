@@ -22,12 +22,18 @@ export interface WorkbenchReactViewBody {
   render: WorkbenchRendererRegistration["render"];
 }
 
+export interface WorkbenchWebviewBody extends Omit<WorkbenchReactViewBody, "kind"> {
+  kind: "webview";
+}
+
 export type WorkbenchViewBody =
   | WorkbenchReactViewBody
+  | WorkbenchWebviewBody
   | NativeViewBody<"tree", TreeRendererContribution>
   | NativeViewBody<"file", FileRendererContribution>
   | NativeViewBody<"controls", ControlsRendererContribution>
   | NativeViewBody<"kanban", KanbanRendererContribution>
+  | NativeViewBody<"resourceList", Omit<KanbanRendererContribution, "onMove" | "onReorder">>
   | NativeViewBody<"dataTable", DataTableRendererContribution>;
 
 export interface WorkbenchViewContribution {

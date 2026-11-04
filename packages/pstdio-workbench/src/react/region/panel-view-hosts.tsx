@@ -77,7 +77,8 @@ const PanelViewPortal = (props: {
 }) => {
   const { workbench, placement, slot, region, active } = props;
   const view = placement.viewId ? workbench.views.getView(placement.viewId) : undefined;
-  const collection = view?.body.kind === "dataTable" || view?.body.kind === "kanban";
+  const collection =
+    view?.body.kind === "dataTable" || view?.body.kind === "kanban" || view?.body.kind === "resourceList";
   // The portal target is stable for the life of a view. Only its DOM parent moves.
   const [host] = useState(() => {
     const node = document.createElement("div");
