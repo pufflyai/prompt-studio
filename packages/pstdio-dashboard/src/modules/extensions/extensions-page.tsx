@@ -42,9 +42,9 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
       getDashboardQueryClient()
         .getQueryCache()
         .subscribe((event) => {
-          // Creating and observing queries happens during render; only new extension data can rename a resource.
-          if (event.type === "updated" && event.query.queryKey[0] === projectExtensionsQueryKey(undefined)[0])
-            listener();
+          // Creating and observing queries happens during render; only changed extension data can rename a resource.
+          if (event.type !== "updated" && event.type !== "removed") return;
+          if (event.query.queryKey[0] === projectExtensionsQueryKey(undefined)[0]) listener();
         }),
   });
   ctx.views.registerView({

@@ -84,6 +84,8 @@ test("extension labels refresh only when extension data changes, not when anothe
     expect(notified).toBe(0);
     client.setQueryData(projectExtensionsQueryKey("project-1"), { extensions: [], marketplace: [] });
     expect(notified).toBe(1);
+    client.removeQueries({ queryKey: projectExtensionsQueryKey("project-1") });
+    expect(notified).toBe(2);
   } finally {
     if (typeof stop === "function") stop();
     else stop?.dispose();
