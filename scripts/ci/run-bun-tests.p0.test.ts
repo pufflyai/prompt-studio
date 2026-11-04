@@ -226,7 +226,7 @@ for (const priority of ["P0", "P1", "P2", "P3"]) {
         [process.execPath, resolve(import.meta.dirname, "run-bun-tests.ts"), "./contract.test.ts"],
         {
           cwd: directory,
-          env: { ...process.env, CI_PRIORITY: priority, BUN_TEST_EVIDENCE_FILE: evidencePath },
+          env: { ...process.env, CI_PROFILE: "", CI_PRIORITY: priority, BUN_TEST_EVIDENCE_FILE: evidencePath },
           stdout: "ignore",
           stderr: "ignore",
         },
