@@ -61,7 +61,7 @@ test("editing Planner statuses updates its board without changing the Lab workfl
   await name.fill("Planned");
   await name.press("Enter");
 
-  const save = ticketStatuses.getByRole("button", { name: "Save", exact: true });
+  const save = settings.getByRole("button", { name: "Save changes", exact: true });
   await expect(save).toBeEnabled();
   await save.click();
   await expect(save).toBeDisabled({ timeout: 15_000 });
@@ -138,7 +138,7 @@ test("state commands in the status editor control the matching column", async ({
   await backlogCommands.press("Escape");
   await expect(backlogCommands).toHaveText(/None/);
 
-  const save = ticketStatuses.getByRole("button", { name: "Save", exact: true });
+  const save = settings.getByRole("button", { name: "Save changes", exact: true });
   await expect(save).toBeEnabled();
   await save.click();
   await expect(save).toBeDisabled({ timeout: 15_000 });
