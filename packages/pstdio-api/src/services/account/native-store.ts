@@ -26,10 +26,6 @@ export const createNativeStore = (path: string) => {
   const read = async () => (await readState()).login;
   return {
     read,
-    async readForDevice(deviceId: string) {
-      const login = await read();
-      return login?.deviceId === deviceId ? login : null;
-    },
     signingKeys: (token: string) =>
       serializeNativeWrite(path, async () => {
         const state = await readState();

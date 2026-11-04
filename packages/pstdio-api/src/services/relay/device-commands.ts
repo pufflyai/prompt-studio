@@ -23,8 +23,8 @@ export const startDeviceCommands = (input: {
   const controller = new AbortController();
   const signal = AbortSignal.any([input.signal, controller.signal]);
   let channel: ReturnType<typeof createDeviceCommandChannel> | undefined;
-  const identity = async () => {
-    const identity = await deps.accountService.commandIdentity();
+  const identity = async (signal: AbortSignal) => {
+    const identity = await deps.accountService.commandIdentity(signal);
     if (identity.accountId !== config.accountId || identity.deviceId !== config.environmentId)
       throw new Error("Device command identity changed");
     return identity;
@@ -40,7 +40,14 @@ export const startDeviceCommands = (input: {
           live: input.live,
           identity,
           trustedKey: deps.accountService.deviceSigningKey,
-          space: async () => (await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal })).personal,
+          space: async (commandSignal) =>
+            (
+              await fetchSyncSpaces({
+                ...config,
+                credential: config.renewalGrant,
+                signal: AbortSignal.any([signal, commandSignal]),
+              })
+            ).personal,
           execute: createDeviceCommandExecutor(deps, config.workbenchId),
         });
       try {

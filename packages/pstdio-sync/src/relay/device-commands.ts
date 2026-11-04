@@ -25,24 +25,57 @@ const decode = (bytes: Uint8Array) => JSON.parse(new TextDecoder().decode(bytes)
 // Two base64 layers plus signatures and encryption fit inside the relay's 64 KiB frame.
 const resultChunkBytes = 12 * 1024;
 
+const track = <T>(active: Set<Promise<unknown>>, pending: Promise<T>) => {
+  active.add(pending);
+  void pending.finally(() => active.delete(pending)).catch(() => {});
+  return pending;
+};
+
+const resolveDeviceAccess = async (
+  spaceLookup: (signal: AbortSignal) => Promise<SyncSpace>,
+  identityLookup: (signal: AbortSignal) => Promise<DeviceIdentity>,
+  signal: AbortSignal,
+) => {
+  const failure = new AbortController();
+  const cancellation = AbortSignal.any([signal, failure.signal]);
+  const abort = (error: unknown): never => {
+    failure.abort(error);
+    throw error;
+  };
+  // Cancel a failed lookup's sibling, but retain ownership until any uncancellable database reads settle.
+  const [space, identity] = await Promise.allSettled([
+    Promise.resolve()
+      .then(() => spaceLookup(cancellation))
+      .catch(abort),
+    Promise.resolve()
+      .then(() => identityLookup(cancellation))
+      .catch(abort),
+  ]);
+  if (space.status === "rejected") throw space.reason;
+  if (identity.status === "rejected") throw identity.reason;
+  return { space: space.value, identity: identity.value };
+};
+
 /** The existing project socket carries calls; no command or reply is persisted or queued. */
 export const createDeviceCommandChannel = (input: {
   live: LiveConnection;
-  space: () => Promise<SyncSpace>;
-  identity: () => Promise<DeviceIdentity>;
-  trustedKey: (deviceId: string) => Promise<CryptoKey>;
+  space: (signal: AbortSignal) => Promise<SyncSpace>;
+  identity: (signal: AbortSignal) => Promise<DeviceIdentity>;
+  trustedKey: (deviceId: string, signal: AbortSignal) => Promise<CryptoKey>;
   execute: (command: Json, context: { signal: AbortSignal; partial: (result: Json) => Promise<void> }) => Promise<Json>;
 }) => {
   let closed = false;
+  const shutdown = new AbortController();
   const authorization = createDeviceCommandAuthorization();
   const active = new Set<Promise<unknown>>();
   const stop = input.live.listen((event) => {
     if (event.type === "disconnected") authorization.clear();
   });
   let unregister = () => {};
-  const context = async () => {
+  const context = async (signal = shutdown.signal) => {
     if (closed) throw new Error("Device commands closed");
-    const [space, identity] = await Promise.all([input.space(), input.identity()]);
+    const cancellation = AbortSignal.any([shutdown.signal, signal]);
+    const { space, identity } = await resolveDeviceAccess(input.space, input.identity, cancellation);
     if (space.spaceOwner !== identity.accountId) throw new Error("Device commands require the owner's private space");
     const procedure = await space.documentId("pstdio.device-commands.v1");
     if (closed) throw new Error("Device commands closed");
@@ -50,11 +83,11 @@ export const createDeviceCommandChannel = (input: {
   };
   const ready = context().then(({ space, procedure }) => {
     const handler: Parameters<LiveConnection["register"]>[1] = async (event, signal, partial) => {
-      const current = await context();
+      const current = await context(signal);
       if (event.spaceOwner !== current.space.spaceOwner || event.procedure !== current.procedure)
         throw new Error("Device command scope changed");
       const call = { callerDeviceId: event.deviceId, targetDeviceId: current.identity.deviceId, procedure };
-      const trusted = await input.trustedKey(event.deviceId);
+      const trusted = await input.trustedKey(event.deviceId, AbortSignal.any([signal, shutdown.signal]));
       const request = deviceCommandRequestSchema.parse(
         decode(await openDeviceCall(current.space, call, trusted, event.payload)),
       );
@@ -109,12 +142,9 @@ export const createDeviceCommandChannel = (input: {
       }
       throw new Error("Missing device result");
     };
-    unregister = input.live.register({ spaceOwner: space.spaceOwner, topic: procedure }, (...args) => {
-      const pending = handler(...args);
-      active.add(pending);
-      void pending.finally(() => active.delete(pending)).catch(() => {});
-      return pending;
-    });
+    unregister = input.live.register({ spaceOwner: space.spaceOwner, topic: procedure }, (...args) =>
+      track(active, handler(...args)),
+    );
   });
   // Owners can start while the manager is offline. Callers still observe the original failure through ready.
   void ready.catch(() => {});
@@ -123,8 +153,9 @@ export const createDeviceCommandChannel = (input: {
     body: { kind: "challenge" } | { kind: "command"; challenge: string; offset: number; chunk: string; final: boolean },
     options: { signal: AbortSignal; partial?: (result: Json) => void },
   ) => {
-    options.signal.throwIfAborted();
-    const { space, identity, procedure } = await context();
+    const signal = AbortSignal.any([options.signal, shutdown.signal]);
+    signal.throwIfAborted();
+    const { space, identity, procedure } = await context(signal);
     const requestId = crypto.randomUUID();
     const payload = await sealDeviceCall(
       space,
@@ -138,7 +169,7 @@ export const createDeviceCommandChannel = (input: {
     const chunks: Uint8Array[] = [];
     let trusted: Promise<CryptoKey> | undefined;
     const read = async (payload: string) => {
-      trusted ??= input.trustedKey(deviceId);
+      trusted ??= input.trustedKey(deviceId, signal);
       const key = await trusted;
       const reply = deviceCommandReplySchema.parse(
         decode(
@@ -154,25 +185,30 @@ export const createDeviceCommandChannel = (input: {
         throw new Error("Device reply does not match its call");
       return reply;
     };
-    const result = await input.live.call({
-      deviceId,
-      spaceOwner: space.spaceOwner,
-      procedure,
-      payload,
-      signal: options.signal,
-      partial: (payload) => {
-        receiving = receiving
-          .then(async () => {
-            const reply = await read(payload);
-            if (reply.kind === "progress") options.partial?.(reply.result);
-            else chunks.push(decodeBytes(reply.chunk));
-          })
-          .catch((error) => {
-            failure ??= error;
-          });
-      },
-    });
-    await receiving;
+    let result: string;
+    try {
+      result = await input.live.call({
+        deviceId,
+        spaceOwner: space.spaceOwner,
+        procedure,
+        payload,
+        signal,
+        partial: (payload) => {
+          receiving = receiving
+            .then(async () => {
+              const reply = await read(payload);
+              if (reply.kind === "progress") options.partial?.(reply.result);
+              else chunks.push(decodeBytes(reply.chunk));
+            })
+            .catch((error) => {
+              failure ??= error;
+            });
+        },
+      });
+    } finally {
+      // A transport abort must not release the database while a queued reply-key read is still settling.
+      await receiving;
+    }
     if (failure) throw failure;
     const reply = await read(result);
     if (reply.kind !== "result") throw new Error("Missing device result");
@@ -185,10 +221,42 @@ export const createDeviceCommandChannel = (input: {
     }
     return jsonSchema.parse(decode(bytes));
   };
+  const call = async (
+    deviceId: string,
+    command: Json,
+    options: { signal: AbortSignal; partial?: (result: Json) => void },
+  ) => {
+    if (closed) throw new Error("Device commands closed");
+    options.signal.throwIfAborted();
+    const bytes = encode(jsonSchema.parse(command));
+    if (bytes.byteLength > deviceCommandInputLimit) throw new DeviceCommandInputError();
+    const grant = deviceCommandChallengeSchema.parse(
+      await invoke(deviceId, { kind: "challenge" }, { signal: options.signal }),
+    );
+    for (let offset = 0; offset < bytes.byteLength; offset += resultChunkBytes) {
+      const final = offset + resultChunkBytes >= bytes.byteLength;
+      const result = await invoke(
+        deviceId,
+        {
+          kind: "command",
+          challenge: grant.challenge,
+          offset,
+          chunk: encodeBytes(bytes.subarray(offset, offset + resultChunkBytes)),
+          final,
+        },
+        options,
+      );
+      if (final) return result;
+      if (deviceCommandReceivedSchema.parse(result).received !== offset + resultChunkBytes)
+        throw new Error("Device command chunk was not accepted");
+    }
+    throw new Error("Missing device command");
+  };
   return {
     ready,
     close() {
       closed = true;
+      shutdown.abort();
       unregister();
       authorization.clear();
       stop();
@@ -197,31 +265,6 @@ export const createDeviceCommandChannel = (input: {
       await ready.catch(() => {});
       await Promise.allSettled([...active]);
     },
-    async call(deviceId: string, command: Json, options: { signal: AbortSignal; partial?: (result: Json) => void }) {
-      options.signal.throwIfAborted();
-      const bytes = encode(jsonSchema.parse(command));
-      if (bytes.byteLength > deviceCommandInputLimit) throw new DeviceCommandInputError();
-      const grant = deviceCommandChallengeSchema.parse(
-        await invoke(deviceId, { kind: "challenge" }, { signal: options.signal }),
-      );
-      for (let offset = 0; offset < bytes.byteLength; offset += resultChunkBytes) {
-        const final = offset + resultChunkBytes >= bytes.byteLength;
-        const result = await invoke(
-          deviceId,
-          {
-            kind: "command",
-            challenge: grant.challenge,
-            offset,
-            chunk: encodeBytes(bytes.subarray(offset, offset + resultChunkBytes)),
-            final,
-          },
-          options,
-        );
-        if (final) return result;
-        if (deviceCommandReceivedSchema.parse(result).received !== offset + resultChunkBytes)
-          throw new Error("Device command chunk was not accepted");
-      }
-      throw new Error("Missing device command");
-    },
+    call: (...args: Parameters<typeof call>) => track(active, call(...args)),
   };
 };

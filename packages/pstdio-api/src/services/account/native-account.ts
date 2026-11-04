@@ -86,6 +86,20 @@ const createAccountWatch = () => {
   };
 };
 
+const readDeviceLogin = async (
+  store: ReturnType<typeof createNativeStore>,
+  environment: Pick<RouteDeps["environmentService"], "get">,
+  deviceId?: string,
+) => {
+  const login = await store.read();
+  const environmentId = deviceId ?? (await environment.get()).environmentId;
+  return login?.deviceId === environmentId ? login : null;
+};
+
+const denied = (error: unknown) => error instanceof ManagerRequestDenied && error.status === 401;
+const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
+const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
+
 const retryProjectSync = async (
   projectId: string,
   projects: Pick<RouteDeps["projectService"], "get">,
@@ -131,31 +145,29 @@ export const createNativeAccount = (input: {
   let refreshing = Promise.resolve();
   let queued: Promise<void> | undefined;
   let closed = false;
+  const shutdown = new AbortController();
 
   // A login saved by another database in the same folder belongs to another device.
-  const readLogin = async (deviceId?: string) =>
-    store.readForDevice(deviceId ?? (await input.environment.get()).environmentId);
+  const readLogin = (deviceId?: string) => readDeviceLogin(store, input.environment, deviceId);
   const current = async () => {
     const login = await readLogin();
     if (!login) throw new AccountRequestError("Log in first with pst login");
     return login;
   };
-  const denied = (error: unknown) => error instanceof ManagerRequestDenied && error.status === 401;
-  const call = async (path: string, body?: unknown, credential?: string) => {
+  const call = async (path: string, body?: unknown, credential?: string, signal?: AbortSignal) => {
     const login = await current();
     if (credential && login.token !== credential) throw new Error("Device login changed");
     try {
-      return await managerRequest(login.managerOrigin, path, login.token, body);
+      const cancellation = AbortSignal.any([shutdown.signal, ...(signal ? [signal] : [])]);
+      return await managerRequest(login.managerOrigin, path, login.token, body, cancellation);
     } catch (error) {
       if (!denied(error)) throw error;
-      // Another device removed this one, so its credential no longer works.
+      // Removing this command owner drains its calls, so finish this rejected call before the refresh waits for it.
       await store.reject(login.token);
-      await refresh();
+      void refresh();
       throw new AccountRequestError("This device was removed from your account. Log in again with pst login");
     }
   };
-  const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
-  const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
 
   // Syncs every cloud project of the account that exists here, then recovers the missing ones.
   // One that cannot be recovered yet is tried again on the next refresh.
@@ -173,7 +185,7 @@ export const createNativeAccount = (input: {
     if (closed) return;
     let login = await readLogin();
     try {
-      cloudProjects = login ? await readManagerAccount(login) : undefined;
+      cloudProjects = login ? await readManagerAccount(login, shutdown.signal) : undefined;
     } catch (error) {
       if (login && denied(error)) {
         // Another device removed this one. A newer login saved meanwhile stays.
@@ -249,11 +261,11 @@ export const createNativeAccount = (input: {
       status: typeof projectStatus,
       recoverProject: Parameters<typeof missing.start>[0],
       retrySync: typeof retryProject = async () => {},
-      sendCommand: SendDeviceCommand = commands.send,
+      sendCommand?: SendDeviceCommand,
     ) {
       update = relay;
       retryProject = retrySync;
-      commands.connect(sendCommand);
+      if (sendCommand) commands.connect(sendCommand);
       projectStatus = status;
       missing.start(recoverProject);
       void refresh();
@@ -325,13 +337,15 @@ export const createNativeAccount = (input: {
     },
     async close() {
       closed = true;
+      shutdown.abort();
       presence.close();
       clearTimeout(retry);
       update = async () => {};
       for (const login of logins.values()) login.close();
       logins.clear();
       changes.close();
-      await missing.close();
+      // Startup account reads can still use the database; its owner closes only after they drain.
+      await Promise.all([refreshing, missing.close()]);
     },
   };
 };
