@@ -1,5 +1,10 @@
 import type { StorageOwner } from "pstdio-sync";
-import type { createOrderedReceiptIndex, OrderedReceipt, RecordStreamCursor } from "pstdio-sync/relay";
+import type {
+  createOrderedReceiptIndex,
+  OrderedIndexReference,
+  OrderedReceipt,
+  RecordStreamCursor,
+} from "pstdio-sync/relay";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
 import { dirtyOrderedReceipts } from "./ordered-checkpoint";
 import type { OrderedJournal } from "./ordered-journal";
@@ -34,3 +39,19 @@ export const coverOrderedReceiptRoot = async (
   await journal.markIndexed(covered);
   return { ...cursor, receiptStateId: cursor.stateId };
 };
+
+/** Decisions applied since the last state are recorded locally before they are indexed. */
+export const coversOrderedReceipts = async (
+  journal: OrderedJournal,
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  index: ReturnType<typeof createOrderedReceiptIndex>,
+  root: OrderedIndexReference | null,
+) =>
+  index.covers(receiptRoots((await readOrderedOwner(tx, owner)).receipt_root).root, root, async (value) => {
+    // Every identity entry travels with its representative receipt, which this check compares.
+    if (value.type === "identity") return true;
+    const { operationId, epoch, state, fingerprint } = value.receipt.decision;
+    const decision = await journal.cachedDecision(operationId, epoch);
+    return decision?.state === state && decision.fingerprint === fingerprint;
+  });

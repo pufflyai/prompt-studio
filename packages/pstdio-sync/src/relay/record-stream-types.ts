@@ -41,6 +41,8 @@ export interface RecordStreamStore {
   recordFormat?: "ordered";
   connect?(space: SyncSpace, relay: DocumentRelay): Promise<void>;
   checkpointPending?(): Promise<boolean>;
+  /** False when a latest state's receipt root holds decisions this device has not applied. */
+  coversReceipts?(root: OrderedIndexReference | null): Promise<boolean>;
   /** Starts keeping local saves for upload and returns the saved cursor. */
   open(): Promise<RecordStreamCursor>;
   /**

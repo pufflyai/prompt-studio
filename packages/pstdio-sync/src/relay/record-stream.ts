@@ -163,13 +163,23 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     (!result.state && result.lastSequence === 0 && !!cursor.stateId) ||
     (result.status === "state-required" && !result.state);
 
+  /** Founding and replaced states are loaded; so is an ordered state covering decisions this device lacks. */
+  const mustLoad = async (cursor: RecordStreamCursor, result: Extract<ReadResult, { status: "updates" }>) => {
+    if (loadsState(cursor, result.state, format)) return true;
+    const state = result.state;
+    if (!state || state.stateId === cursor.stateId || state.through > cursor.after || !store.coversReceipts)
+      return false;
+    // Records adopted from an incomplete state lack saves a later complete state covers.
+    return !(await store.coversReceipts((await reader.summary(state)).receiptRoot ?? null));
+  };
+
   /** Applies everything the relay holds after the cursor, a page per transaction. Null when the relay lost the stream. */
   const read = async (start: RecordStreamCursor): Promise<RecordStreamCursor | null> => {
     let cursor = start;
     while (true) {
       const result = await relay.read(cursor.after);
       if (lost(cursor, result)) return null;
-      if (result.status === "state-required" || loadsState(cursor, result.state, format)) {
+      if (result.status === "state-required" || (await mustLoad(cursor, result))) {
         const loaded = await load(cursor, result.state!);
         if (!loaded) return cursor;
         cursor = loaded;
@@ -261,7 +271,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     }
     const downloaded = await download();
     if (!downloaded) return null;
-    const { remote, after, state, skipped, pendingBytes } = downloaded;
+    const { remote, snapshot, frames, updates, after, state, skipped, pendingBytes } = downloaded;
     // An older-format stream without an authenticated founding state cannot supply this
     // client's order identity. Keep local work pending and the unreadable frames retained.
     if (format && !state && skipped) return null;
@@ -272,11 +282,18 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       pendingBytes,
       skipped: cursor.skipped || skipped,
     };
-    const { rejected, cursor: saved } = await withSourceRecovery(
-      () => store.merge(remote, "adopt", joined),
+    // The tail stays separate from the state's records, so each save is checked whole (R4).
+    const {
+      rejected,
+      rejectedFrames,
+      cursor: saved,
+    } = await withSourceRecovery(
+      () => store.merge(snapshot, "adopt", joined, frames),
       (error) => retainRecordSourceMap(input, remote, error, quarantine),
     );
     await skippedRecords(rejected);
+    for (const index of rejectedFrames)
+      await quarantine({ kind: "update", id: updates[index]!.updateId, envelope: updates[index] });
     return saved;
   };
 
@@ -295,6 +312,8 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     // The relay lost this stream. Any device with a full copy uploads it again (R3).
     if (!cursor) return (await publish(previous, true)) ?? previous;
     if (await push()) return cursor;
+    // A device that set data aside never claims to cover it, even to republish its receipts.
+    if (incomplete || cursor.skipped) return null;
     if (!due(cursor) && !(await store.checkpointPending?.())) return null;
     return publish(cursor, false);
   };

@@ -117,6 +117,73 @@ test("quiet holders republish a complete state before a reset device downloads a
   expect(fixture.requests.blobs).toBe(before.blobs);
 });
 
+const replaceWithEarlierManifest = async (fixture: ReturnType<typeof createRelay>, earlier: { stateId: string }) => {
+  const state = fixture.latest()!;
+  const source = earlier as typeof state;
+  const incomplete = await sealState(space, documentId, {
+    baseStateId: state.stateId,
+    through: fixture.updates().at(-1)!.sequence,
+    state: await openState(space, documentId, source, Buffer.from(source.payload, "base64")),
+    summary: await openSummary(space, documentId, source),
+    blobIds: source.blobIds,
+  });
+  expect(await fixture.relay.replace(incomplete)).toBe(true);
+  fixture.trim();
+  return incomplete;
+};
+
+test("a device that adopted a state omitting an accepted save loads the complete replacement", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { title: "Seeded" } }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  const earlier = fixture.latest()!;
+  await first.records.commit({ operationId: "later", edits: [{ recordId: "later", replace: { title: "Retained" } }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  await replaceWithEarlierManifest(fixture, earlier);
+  // The holders are offline while a reset device joins from the incomplete state.
+  const reset = await device(fixture.relay, { bytes: 1_000_000, updates: 0 });
+  await reset.sync.synchronize();
+  expect((await reset.records.read("later")).exists).toBe(false);
+  for (const holder of [first, second]) await holder.sync.synchronize();
+  await reset.sync.synchronize();
+  expect(await reset.value("later")).toEqual({ title: "Retained" });
+  await reset.records.commit({ operationId: "x", edits: [{ recordId: "x", replace: 1 }] });
+  await reset.sync.synchronize();
+  const late = await device(fixture.relay);
+  await late.sync.synchronize();
+  expect(await late.value("later")).toEqual({ title: "Retained" });
+  expect(await late.value("x")).toBe(1);
+});
+
+test("a device behind the relay keeps an accepted save that a replacing state omits", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { title: "Seeded" } }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  const earlier = fixture.latest()!;
+  await first.records.commit({ operationId: "later", edits: [{ recordId: "later", replace: { title: "Retained" } }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  // The second device is offline while the first saves again and the relay replaces its updates.
+  await first.records.commit({ operationId: "more", edits: [{ recordId: "more", replace: 1 }] });
+  await first.sync.synchronize();
+  await replaceWithEarlierManifest(fixture, earlier);
+  await second.sync.synchronize();
+  expect(await second.value("later")).toEqual({ title: "Retained" });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  for (const peer of [first, second]) {
+    expect(await peer.value("later")).toEqual({ title: "Retained" });
+    expect(await peer.value("more")).toBe(1);
+  }
+  const late = await device(fixture.relay);
+  await late.sync.synchronize();
+  expect(await late.value("later")).toEqual({ title: "Retained" });
+  expect(await late.value("more")).toBe(1);
+});
+
 test("an ordered client retains local work and the encrypted legacy frame when its older format cannot be adopted", async () => {
   const { relay } = createRelay();
   const initial = await editResourceDocument(

@@ -2,7 +2,7 @@ import type { StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import type { OrderedAdmission } from "pstdio-sync/records";
 import type { DocumentRelay, RecordFrame, RecordStreamCursor, RecordStreamStore } from "pstdio-sync/relay";
-import { createOrderedReceiptIndex, decodeOrderedEntry, type OrderedIndexReference } from "pstdio-sync/relay";
+import { createOrderedReceiptIndex, type OrderedIndexReference } from "pstdio-sync/relay";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
@@ -16,12 +16,12 @@ import { initializeOrderedOwner } from "./ordered-projection";
 import { admissionDecisions, rebaseOrderedProjection } from "./ordered-rebase";
 import { adoptOrderedCheckpoint } from "./ordered-receipts-adoption";
 import { createOrderedManifestCache } from "./ordered-receipts-blobs";
-import { coverOrderedReceiptRoot } from "./ordered-receipts-covered";
+import { coverOrderedReceiptRoot, coversOrderedReceipts } from "./ordered-receipts-covered";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
 import { nextOrderedUpload } from "./ordered-receipts-upload";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { applyOrderedStreamFrame } from "./ordered-stream-frames";
+import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
 import { orderedCursor, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { createRecordStreamStore } from "./record-stream-store";
 import type { NumberChange } from "./resource-number-repair";
@@ -101,6 +101,9 @@ export const createOrderedStreamStore = (
       connected = relay;
     },
     open: () => run(async (_journal, tx) => orderedCursor(await readOrderedOwner(tx, owner))),
+    /** A state whose receipts this device lacks covers saves its canonical records do not reflect. */
+    coversReceipts: (root: OrderedIndexReference | null) =>
+      run((journal, tx) => coversOrderedReceipts(journal, tx, owner, receiptIndex(), root)),
     checkpointPending: () =>
       run(async (_journal, tx) => {
         const roots = receiptRoots((await readOrderedOwner(tx, owner)).receipt_root);
@@ -113,7 +116,7 @@ export const createOrderedStreamStore = (
         const changed = new Set<string>();
         const rejected: number[] = [];
         for (const [position, frame] of frames.entries()) {
-          if (!frame) {
+          if (!frame || !(await admissibleOrderedFrame(frame))) {
             rejected.push(position);
             continue;
           }
@@ -142,8 +145,7 @@ export const createOrderedStreamStore = (
       const incoming = new Map(remote);
       const rejectedFrames: number[] = [];
       for (const [position, frame] of tail.entries()) {
-        const entries = await Promise.all((frame?.records ?? []).map((record) => decodeOrderedEntry(record.bytes)));
-        if (!frame || entries.some((entry) => entry.type !== "admission" && entry.type !== "text")) {
+        if (!frame || !(await admissibleOrderedFrame(frame))) {
           rejectedFrames.push(position);
           continue;
         }

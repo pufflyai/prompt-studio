@@ -298,3 +298,28 @@ test("merging a covered older root reuses the preferred root without rewriting a
     expect(f.requests.writes).toBe(writes);
   }
 });
+
+test("containment reads only divergent pages and detects receipts a root lacks", async () => {
+  const f = fixture();
+  const base = await f.index.append(
+    null,
+    Array.from({ length: 1024 }, (_, i) => receipt(`baseline-${i}`)),
+  );
+  const extended = await f.index.append(base, [receipt("extra-save")]);
+  const reader = createOrderedReceiptIndex({ space, blobs: f.blobs });
+  const reads = f.requests.reads;
+  const writes = f.requests.writes;
+  expect(await reader.covers(extended, base)).toBe(true);
+  expect(await reader.covers(base, extended)).toBe(false);
+  expect(await reader.covers(base, base)).toBe(true);
+  expect(await reader.covers(null, null)).toBe(true);
+  expect(await reader.covers(null, base)).toBe(false);
+  expect(
+    await reader.covers(
+      await f.index.append(null, [receipt("baseline-1", "first-order", "refused")]),
+      await f.index.append(null, [receipt("baseline-1")]),
+    ),
+  ).toBe(false);
+  expect(f.requests.reads - reads).toBeLessThan(40);
+  expect(f.requests.writes - writes).toBe(2);
+});

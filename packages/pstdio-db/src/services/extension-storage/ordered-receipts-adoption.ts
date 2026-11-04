@@ -8,6 +8,7 @@ import {
   storage_record_projections as projections,
 } from "../../db/schemas.pg";
 import { dirtyOrderedReceipts } from "./ordered-checkpoint";
+import { queueOrderedCheckpointRepairs } from "./ordered-checkpoint-repair";
 import type { OrderedJournal } from "./ordered-journal";
 import { resetCanonicalNumberIndex } from "./ordered-number-canonical";
 import { rebaseOrderedProjection } from "./ordered-rebase";
@@ -62,7 +63,19 @@ export const adoptOrderedCheckpoint = async (input: {
   const meta = metadata[0]!;
   if (cursor.receiptRoot !== undefined && !sameReceiptRoot(cursor.receiptRoot, meta.receiptRoot))
     throw new Error("Checkpoint summary and payload disagree about its receipt root");
-  const previous = receiptRoots((await readOrderedOwner(tx, owner)).receipt_root);
+  const owned = await readOrderedOwner(tx, owner);
+  const previous = receiptRoots(owned.receipt_root);
+  const records = entries.flatMap((entry) => (entry.type === "record" ? [entry.record] : []));
+  if (owned.epoch === meta.epoch)
+    await queueOrderedCheckpointRepairs({
+      journal,
+      tx,
+      owner,
+      index,
+      checkpointRoot: meta.receiptRoot,
+      localRoot: previous.root,
+      records,
+    });
   let root = await index.merge(meta.receiptRoot, previous.root);
   const dirty = await dirtyOrderedReceipts(journal);
   for (let offset = 0; offset < dirty.length; offset += 100)
@@ -79,7 +92,6 @@ export const adoptOrderedCheckpoint = async (input: {
     }
     after = page.at(-1)!.sequence;
   }
-  const records = entries.flatMap((entry) => (entry.type === "record" ? [entry.record] : []));
   if (new Set(records.map((record) => record.recordId)).size !== records.length)
     throw new Error("A checkpoint repeats a record");
   await tx.delete(canonical).where(orderedOwnerWhere(canonical, owner));

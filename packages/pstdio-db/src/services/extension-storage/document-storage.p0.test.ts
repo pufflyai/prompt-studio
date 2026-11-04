@@ -148,3 +148,21 @@ test("sync discovers text documents through the encrypted records document", asy
   });
   expect(await second.service.openTextDocument({ owner: second.owner, fileId: "note.md" }).read()).toBe("offline text");
 });
+
+test("an owner whose data was cleared can bind the same text field again", async () => {
+  const f = await fixture();
+  const documentKey = "a".repeat(64);
+  await f.storage.records.commit({
+    operationId: "create",
+    edits: [{ recordId: "note", replace: { content: "first" } }],
+  });
+  await f.storage.records.bindText({ recordId: "note", field: "/content", documentKey });
+  await createExtensionUserDataDBService(f.db).deleteForInstance(f.instanceAId);
+  const again = createDocumentStorageDBService(f.db).open({ owner: f.owner }).records;
+  expect((await again.read("note")).exists).toBe(false);
+  await again.commit({ operationId: "create", edits: [{ recordId: "note", replace: { content: "second" } }] });
+  await again.bindText({ recordId: "note", field: "/content", documentKey });
+  expect(
+    await createDocumentStorageDBService(f.db).openNativeTextDocument({ owner: f.owner, fileId: documentKey }).read(),
+  ).toBe("second");
+});

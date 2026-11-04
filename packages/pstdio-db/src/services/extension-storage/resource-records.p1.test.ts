@@ -277,3 +277,29 @@ test("a rejected concurrent transaction drains its saves before rollback and the
   expect((await f.storage.records.read("note")).value).toBe("Continued");
   expect(await recordDocuments(f)).toEqual([]);
 });
+
+test("a save started while a failed transaction drains is rolled back with it instead of escaping", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Shared" }] });
+  let late: Promise<unknown> | undefined;
+  const outcome = f.storage.records.transaction(async (records) => {
+    const chain = (async () => {
+      await records.commit({ operationId: "first", edits: [{ recordId: "other", replace: "X" }] });
+      late = records.commit({ operationId: "late", edits: [{ recordId: "note", replace: "Y" }] });
+      return late;
+    })();
+    chain.catch(() => {});
+    await Promise.all([
+      chain,
+      (async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        throw new Error("Cancel transaction");
+      })(),
+    ]);
+  });
+  await expect(outcome).rejects.toThrow("Cancel transaction");
+  await late?.catch(() => {});
+  expect((await f.storage.records.read("other")).exists).toBe(false);
+  expect((await f.storage.records.read("note")).value).toBe("Shared");
+  expect(await f.storage.records.outcome("late")).toBeUndefined();
+});
