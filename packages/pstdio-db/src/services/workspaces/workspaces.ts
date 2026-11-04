@@ -1,13 +1,8 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { workspaces } from "../../db/schemas.pg";
-import {
-  createLegacyAnchorMutations,
-  hostResourceRef,
-  workspaceColumns,
-  writeLegacyResourceLinks,
-} from "../legacy-resource-links";
-import { createResourceLinksDBService } from "../resource-links";
+import { createLegacyAnchorMutations, workspaceColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
+import { softDeleteWorkspace } from "./delete-workspace";
 import {
   beginProviderOperation,
   updateProviderOperationProjection,
@@ -155,18 +150,8 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return row ?? null;
   };
 
-  const softDelete = (id: string) =>
-    db.transaction(async (tx) => {
-      const timestamp = nowTimestamp();
-      const [row] = await tx
-        .update(workspaces)
-        .set({ deleted_at: timestamp, archived: true, updated_at: timestamp })
-        .where(and(eq(workspaces.id, id), isNull(workspaces.deleted_at)))
-        .returning(workspaceColumns);
-      if (!row) return null;
-      const changes = await createResourceLinksDBService(tx).removeResource(hostResourceRef("workspace", row));
-      return { workspace: row, changes };
-    });
+  const softDelete = (id: string, options?: Parameters<typeof softDeleteWorkspace>[2]) =>
+    softDeleteWorkspace(db, id, options);
 
   const archive = async (id: string) => {
     const timestamp = nowTimestamp();

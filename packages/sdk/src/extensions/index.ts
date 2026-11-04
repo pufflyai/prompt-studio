@@ -2,15 +2,24 @@ export type {
   HistoryProjection,
   HistoryRecoveryInput,
   HistoryRecoveryResult,
+  ToolResultSummary,
 } from "pstdio-api-contracts";
 export {
+  createToolOutputBuffer,
   HistoryConflict,
   historyMessageKey,
   historyValueKey,
   mergeHistoryMetadata,
+  normalizeMessageResults,
+  normalizeToolResult,
+  projectToolResultRecovery,
+  publishConversationChanges,
   reconcileMessageHistory,
   splitHistoryTurns,
   submittedPrompt,
+  TOOL_RESULT_LIMIT_BYTES,
+  toolOutputFingerprint,
+  toolResultBytes,
 } from "pstdio-api-contracts/collections";
 export type * from "pstdio-api-contracts/extension-kernel";
 export type {

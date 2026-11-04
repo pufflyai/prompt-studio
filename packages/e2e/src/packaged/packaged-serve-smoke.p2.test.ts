@@ -23,6 +23,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.
 // packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs and complete offline history after restart.
+// packaged-tool-result-limit.p2.test.ts bounds a 76 MB failed result, including duplicate details, across restart.
 // Packaged harnesses expose scoped account state and a private interactive account channel.
 // harness-npm-detection.p1.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
 // Allocated files stay isolated for two publishers with the same package name.
@@ -51,6 +52,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
 // packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
 // packaged-document-sync-smoke.p1.test.ts checks verified-document progress and pending counts through the compiled host.
+// packaged-workspace-cleanup-smoke.p1.test.ts rejects unavailable providers before saving rows and bounds provider deletion concurrency.
 // packaged-account-smoke.p2.test.ts checks rejected-device sign-in recovery across restarts and explicit sign-out.
 // packaged-document-sync-smoke.p1.test.ts checks encrypted large-save blobs trigger record-stream compaction.
 // packaged-two-device-sync-smoke.p2.test.ts opens a recovered cloud project in the picker and restores its managed files.

@@ -18,6 +18,7 @@ export interface SessionStreamListener {
 }
 
 export type ClientStreamSubscription =
+  | { text_editing: { project_id: string; token: string } }
   | { retain_session_id: string }
   | { session_id: string }
   | { command: { project_id: string; command_id: string; body: import("pstdio-api-contracts").CommandExecuteBody } };

@@ -14,10 +14,11 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
   let session = await deps.personalHistoryService.getSession(id);
   if (!session?.project_id) return false;
   const projectId = session.project_id;
-  const arrived: { index: number; message: SessionMessage; live: boolean }[] = [];
+  type Update = { index: number; message: SessionMessage; live: boolean };
+  const arrived = new Map<number, Update>();
   let wake: (() => void) | undefined;
   const stop = deps.personalHistoryService.watchMessages(id, (update) => {
-    arrived.push(update);
+    arrived.set(update.index, update);
     wake?.();
   });
   // The session row changes whenever its device changes the queue, so a row event marks the queue
@@ -43,8 +44,8 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
     let messages = (await deps.personalHistoryService.messages(id, projectId)) ?? [];
     await sink.write("patch", { op: "replace", path: "/messages", value: messages });
     await sendQueue();
-    let pendingLive: (typeof arrived)[number] | undefined;
-    const apply = async ({ index, message, live }: (typeof arrived)[number]) => {
+    let pendingLive: Update | undefined;
+    const apply = async ({ index, message, live }: Update) => {
       if (sink.aborted || !(await deps.personalHistoryService.getSession(id))) return;
       // A streaming preview can be ahead of the last saved message; the saved messages arrive in order.
       if (live && index > messages.length) {
@@ -63,10 +64,14 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
       await sink.write("patch", { op, path: `/messages/${index}`, value: message });
     };
     const flush = async () => {
-      while (arrived.length) {
-        for (const update of arrived.splice(0)) await apply(update);
+      while (arrived.size) {
+        for (const index of arrived.keys()) {
+          const update = arrived.get(index)!;
+          arrived.delete(index);
+          await apply(update);
+        }
         if (pendingLive?.index === messages.length) {
-          arrived.unshift(pendingLive);
+          if (!arrived.has(pendingLive.index)) arrived.set(pendingLive.index, pendingLive);
           pendingLive = undefined;
         }
       }
@@ -89,7 +94,7 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
       await sendQueue();
       if (sink.aborted) break;
       if (await complete()) break;
-      if (!arrived.length && !queueChanged) {
+      if (!arrived.size && !queueChanged) {
         // The queue record can sync in a later round than its session row, so a quiet reader checks it again.
         const timedOut = await Promise.race([
           sink.sleep(2000).then(() => true),
