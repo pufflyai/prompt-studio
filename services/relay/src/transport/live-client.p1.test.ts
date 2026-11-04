@@ -106,13 +106,12 @@ test("signed private device commands cross the real relay, stream replies and re
       },
     ],
   });
-  const keys = new Map(
-    await Promise.all(
-      ["Bearer a", "Bearer b"].map(
-        async (id) => [id, await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"])] as const,
-      ),
-    ),
-  );
+  const keys = new Map<string, CryptoKeyPair>();
+  for (const id of ["Bearer a", "Bearer b"]) {
+    const pair = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+    if (!("privateKey" in pair)) throw new Error("Ed25519 did not create a key pair");
+    keys.set(id, pair);
+  }
   const identity = (id: string) => {
     const key = keys.get(id)!.privateKey;
     return async () => ({ accountId: "owner", deviceId: id, key });
@@ -180,7 +179,9 @@ test("signed private device commands cross the real relay, stream replies and re
     "unavailable",
   );
   const original = keys.get("Bearer a")!;
-  keys.set("Bearer a", await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]));
+  const forged = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+  if (!("privateKey" in forged)) throw new Error("Ed25519 did not create a key pair");
+  keys.set("Bearer a", forged);
   await expect(source.call("Bearer b", command, { signal: new AbortController().signal })).rejects.toThrow("failed");
   expect(invocations).toBe(3);
   keys.set("Bearer a", original);

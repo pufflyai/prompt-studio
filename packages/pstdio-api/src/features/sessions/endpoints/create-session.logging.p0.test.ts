@@ -51,6 +51,7 @@ const createContext = () => {
   return {
     context: {
       req: {
+        raw: new Request("http://localhost/sessions", { method: "POST" }),
         valid: () => ({
           project_id: "project-1",
           title: "Session",
