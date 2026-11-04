@@ -189,3 +189,184 @@ test("an unchanged relay announcement makes a connected peer read without adding
     await stopPeer(peer);
   }
 });
+
+const documentRequests = async (peer: ReturnType<typeof createPackagedSyncPeer>, deviceId = "writer") => {
+  const projectId = "fixture-project";
+  const documentId = "records_fixture_0123456789";
+  const { token } = await enrolledAccess(peer.origin, deviceId, projectId);
+  const request = (operation: "read" | "updates" | "state", body: unknown) =>
+    fetch(`${peer.origin}${syncPath({ kind: "document", projectId, spaceOwner: null, documentId, operation })}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "pstdio-sync-protocol": "1" },
+      body: JSON.stringify(body),
+    });
+  const update = (id: string) => request("updates", { updateId: id, payload: "AQ==", blobIds: [] });
+  const state = (stateId: string, baseStateId: string | null, through: number) =>
+    request("state", { stateId, baseStateId, through, payload: "Ag==", summary: "Aw==", blobIds: [] });
+  const readState = (stateId: string) =>
+    fetch(
+      `${peer.origin}${syncPath({
+        kind: "state",
+        projectId,
+        spaceOwner: null,
+        documentId,
+        stateId,
+      })}`,
+      { headers: { authorization: `Bearer ${token}`, "pstdio-sync-protocol": "1" } },
+    );
+  return { documentId, request, update, state, readState };
+};
+
+test("pruned snapshot coverage requires the latest state and never reuses update sequence numbers", async () => {
+  const peer = createPeer();
+  const document = await documentRequests(peer);
+  try {
+    expect(await (await document.update("first_update_0123456789")).json()).toEqual({ sequence: 1, duplicate: false });
+    expect((await document.state("first_state_0123456789", null, 1)).status).toBe(200);
+    peer.trim(document.documentId);
+    expect(await (await document.request("read", { after: 0 })).json()).toMatchObject({
+      status: "state-required",
+      lastSequence: 1,
+      state: { through: 1 },
+    });
+    expect(await (await document.update("second_update_0123456789")).json()).toEqual({ sequence: 2, duplicate: false });
+    expect(await (await document.request("read", { after: 1 })).json()).toMatchObject({
+      status: "updates",
+      lastSequence: 2,
+      updates: [{ sequence: 2 }],
+    });
+    expect((await document.state("second_state_0123456789", "first_state_0123456789", 2)).status).toBe(200);
+    peer.trim(document.documentId);
+    expect(await (await document.update("third_update_0123456789")).json()).toEqual({ sequence: 3, duplicate: false });
+  } finally {
+    await stopPeer(peer);
+  }
+});
+
+test("latest state replacement rejects a stale base and preserves an accepted retry", async () => {
+  const peer = createPeer();
+  const document = await documentRequests(peer);
+  try {
+    await document.update("first_update_0123456789");
+    expect((await document.state("winner_state_0123456789", null, 1)).status).toBe(200);
+    expect((await document.state("winner_state_0123456789", null, 1)).status).toBe(200);
+    const rejected = await document.state("stale_state_0123456789", null, 1);
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).toMatchObject({
+      error: "stale-state",
+      state: { stateId: "winner_state_0123456789" },
+    });
+    expect(peer.states()).toBe(1);
+    expect((await document.state("future_state_0123456789", "winner_state_0123456789", 2)).status).toBe(400);
+  } finally {
+    await stopPeer(peer);
+  }
+});
+
+test("one blocked device cannot read or write while two other enrolled devices keep syncing", async () => {
+  const peer = createPeer();
+  const [first, second, third] = await Promise.all(
+    ["first", "second", "third"].map((id) => documentRequests(peer, id)),
+  );
+  try {
+    peer.blockDevice("third", true);
+    expect((await third.request("read", { after: 0 })).status).toBe(503);
+    expect((await third.update("blocked_update_0123456789")).status).toBe(503);
+    expect((await first.update("first_update_0123456789")).status).toBe(200);
+    expect(await (await second.request("read", { after: 0 })).json()).toMatchObject({
+      updates: [{ deviceId: "first" }],
+    });
+    peer.blockDevice("third", false);
+    expect(await (await third.request("read", { after: 0 })).json()).toMatchObject({
+      updates: [{ deviceId: "first" }],
+    });
+  } finally {
+    await stopPeer(peer);
+  }
+});
+
+test("snapshot fault injection preserves authenticated ciphertext and drops the covered tail explicitly", async () => {
+  const { createSyncSpace, openState, sealState } = await import("pstdio-sync/encryption");
+  const { packagedProjectKey } = await import("./packaged-sync-project-key.fixture");
+  const peer = createPeer();
+  const document = await documentRequests(peer);
+  const space = await createSyncSpace({ projectId: "fixture-project", spaceOwner: null, keys: [packagedProjectKey] });
+  try {
+    const original = new TextEncoder().encode("earlier encrypted state");
+    const first = await sealState(space, document.documentId, {
+      baseStateId: null,
+      through: 0,
+      state: original,
+      summary: new Uint8Array([1]),
+      blobIds: [],
+    });
+    expect((await document.request("state", first)).status).toBe(200);
+    const captured = peer.captureSnapshot(document.documentId);
+    await document.update("later_update_0123456789");
+    const current = await sealState(space, document.documentId, {
+      baseStateId: first.stateId,
+      through: 1,
+      state: new Uint8Array([2]),
+      summary: new Uint8Array([2]),
+      blobIds: [],
+    });
+    expect((await document.request("state", current)).status).toBe(200);
+    expect(captured.state.stateId).toBe(first.stateId);
+    expect(captured.blobIds).toEqual(first.blobIds);
+    const missingEdit = await sealState(space, document.documentId, {
+      baseStateId: current.stateId,
+      through: 1,
+      state: await openState(space, document.documentId, captured.state, Buffer.from(captured.payload, "base64")),
+      summary: new Uint8Array([1]),
+      blobIds: [],
+    });
+    peer.installSnapshot(document.documentId, missingEdit);
+    const installed = peer.captureSnapshot(document.documentId);
+    expect(installed.state.stateId).not.toBe(first.stateId);
+    expect(
+      await openState(space, document.documentId, installed.state, Buffer.from(installed.payload, "base64")),
+    ).toEqual(original);
+    expect(await (await document.request("read", { after: 0 })).json()).toMatchObject({
+      status: "state-required",
+      state: { stateId: missingEdit.stateId, through: 1 },
+      lastSequence: 1,
+    });
+  } finally {
+    await stopPeer(peer);
+  }
+});
+
+test("accepted and injected latest-state bytes remain immutable when a replacement races their read", async () => {
+  const peer = createPeer();
+  const document = await documentRequests(peer);
+  try {
+    const first = {
+      stateId: "older_state_0123456789",
+      baseStateId: null,
+      through: 0,
+      payload: "AQ==",
+      summary: "AQ==",
+      blobIds: [],
+    };
+    expect((await document.request("state", first)).status).toBe(200);
+    const second = { ...first, stateId: "newer_state_0123456789", baseStateId: first.stateId, payload: "Ag==" };
+    expect((await document.request("state", second)).status).toBe(200);
+    const oldRead = await document.readState(first.stateId);
+    expect(oldRead.status).toBe(200);
+    expect(new Uint8Array(await oldRead.arrayBuffer())).toEqual(new Uint8Array([1]));
+    const injected = { ...second, stateId: "fault_state_0123456789", baseStateId: second.stateId, payload: "Aw==" };
+    peer.installSnapshot(document.documentId, injected);
+    expect(new Uint8Array(await (await document.readState(second.stateId)).arrayBuffer())).toEqual(new Uint8Array([2]));
+    expect(new Uint8Array(await (await document.readState(injected.stateId)).arrayBuffer())).toEqual(
+      new Uint8Array([3]),
+    );
+    expect((await document.readState("unknown_state_0123456789")).status).toBe(404);
+    expect(peer.retainedStates().map((state) => state.payload)).toEqual([
+      first.payload,
+      second.payload,
+      injected.payload,
+    ]);
+  } finally {
+    await stopPeer(peer);
+  }
+});
