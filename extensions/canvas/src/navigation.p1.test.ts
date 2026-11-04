@@ -36,7 +36,7 @@ test("the canvas navigation panel exposes each grouped resource on overview and 
         resource: {
           type: "canvas",
           id: node.resource!.id,
-          icon: "pencil-ruler",
+          icon: "gallery-thumbnails",
           projectId: ctx.projectId,
           extensionId: "pstdio.canvas",
         },
@@ -46,9 +46,9 @@ test("the canvas navigation panel exposes each grouped resource on overview and 
 
 test("resolving a restored canvas replaces its stale resource icon", async () => {
   const { ctx } = await testContext();
-  ctx.resource = { type: "canvas", id: "src/foundations.canvas.tsx", icon: "table-properties" };
+  ctx.resource = { type: "canvas", id: "src/foundations.canvas.tsx", icon: "diamond" };
   expect(await resolveCanvasCommand.run(ctx, {})).toMatchObject({
     id: "src/foundations.canvas.tsx",
-    icon: "pencil-ruler",
+    icon: "gallery-thumbnails",
   });
 });

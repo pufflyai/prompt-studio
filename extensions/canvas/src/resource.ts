@@ -1,7 +1,7 @@
 import { defineCommand, defineResourceKind } from "@pstdio/sdk/extensions";
 import { buildFiles, readBuild } from "./build-mount";
 
-const canvasIcon = "pencil-ruler";
+const canvasIcon = "gallery-thumbnails";
 
 export const resolveCanvasCommand = defineCommand({
   id: "resolve",
