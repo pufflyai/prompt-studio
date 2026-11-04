@@ -12,7 +12,6 @@ import { openExtensionsPage, openSessionsPage } from "@/shared/workbench/page-na
 import { readProjectSetupError } from "@/shared/workspaces/dashboard-workspaces";
 import { StartAboutPanel } from "./start-about-panel";
 import { type StartAction, StartActionList } from "./start-action-list";
-import { StartHarnessAvailability } from "./start-harness-availability";
 import { StartRecentList } from "./start-recent-list";
 import { StartSetupStatus } from "./start-setup-status";
 
@@ -72,9 +71,6 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
         </Stack>
         {projectId && setupError && <StartSetupStatus key={projectId} projectId={projectId} error={setupError} />}
         <StartAboutPanel />
-        {projectId && !setupError && (
-          <StartHarnessAvailability key={projectId} projectId={projectId} onReviewExtensions={reviewExtensions} />
-        )}
         <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
           <Box flex="1" minW="0" w="full">
             <StartActionList actions={actions} />

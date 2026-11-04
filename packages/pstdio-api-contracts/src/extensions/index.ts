@@ -14,6 +14,7 @@ export * from "./execute";
 export * from "./host-capabilities";
 export * from "./install";
 export * from "./installation";
+export * from "./installation-jobs";
 export * from "./kanban-renderer";
 export * from "./keybindings";
 export { navigationTargetSchema } from "./navigation-target-metadata";

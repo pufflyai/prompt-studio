@@ -54,7 +54,6 @@
   },
   "appearance": {
     "title": "Appearance",
-    "description": "Choose how Prompt Studio looks. You can also change the theme with Alt+Shift+T.",
     "theme": "Theme",
     "themeHelper": "Applies to every project.",
     "openRelatedResources": "Open related resources",

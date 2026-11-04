@@ -5,8 +5,8 @@ import { lazy, Suspense } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
-import { AppearanceSettingsPanel } from "./components/appearance-settings-panel";
 import { BetaFeaturesPanel } from "./components/beta-features-panel";
+import { CustomizationsSettingsPanel } from "./components/customizations-settings-panel";
 import { MachineTokensPanel } from "./components/machine-tokens-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
 import { ProjectFolderPanel } from "./components/project-folder-panel";
@@ -27,7 +27,7 @@ export const dashboardSettingsDefaultPanel = { id: "runtime", title: "Runtime", 
 
 const settingsViewIds = {
   runtime: "dashboard.settings.runtime",
-  appearance: "dashboard.settings.appearance",
+  customizations: "dashboard.settings.customizations",
   projectFolder: "dashboard.settings.project-folder",
   skill: "dashboard.settings.skill",
   template: "dashboard.settings.template",
@@ -83,9 +83,9 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     body: { kind: "react", render: () => <RuntimeSettingsPanel projectId={getDashboardSelectedProjectId(ctx)} /> },
   });
   ctx.views.registerView({
-    id: settingsViewIds.appearance,
-    title: "Appearance",
-    body: { kind: "react", render: ({ workbench }) => <AppearanceSettingsPanel workbench={workbench} /> },
+    id: settingsViewIds.customizations,
+    title: "Customizations",
+    body: { kind: "react", render: ({ workbench }) => <CustomizationsSettingsPanel workbench={workbench} /> },
   });
   ctx.views.registerView({
     id: settingsViewIds.projectFolder,
@@ -164,13 +164,13 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
   });
   ctx.settings.registerPanel({
     kind: "view",
-    id: "appearance",
-    title: "Appearance",
+    id: "customizations",
+    title: "Customizations",
     section: "workbench",
     scope: "global",
     order: 20,
-    icon: "Palette",
-    viewId: settingsViewIds.appearance,
+    icon: "SlidersHorizontal",
+    viewId: settingsViewIds.customizations,
   });
 
   ctx.settings.registerPanel({

@@ -13,6 +13,7 @@ export type {
   CreateAutomationRunInput,
   DeviceCommand,
   ExtensionDiagnosticsResponse,
+  ExtensionInstallation,
   InstallExtensionRequest,
   InstallExtensionResponse,
   InstalledExtensionSource,

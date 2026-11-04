@@ -10,6 +10,10 @@ Cross-package native editor integration tests live in `packages/e2e`. They may
 start the real `pstdio-api/app` host and use the public `@pstdio/workbench` session
 API. The workbench package itself does not depend on the API host.
 
+The dashboard declares the four harness packages as development dependencies for
+Canvas imports of their provided SVG assets. Production onboarding reads resolved
+icons from the project inventory; it does not import those packages or copy their assets.
+
 ## Layers
 
 1. **Contracts and utilities**

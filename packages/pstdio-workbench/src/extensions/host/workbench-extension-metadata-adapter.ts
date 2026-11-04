@@ -260,10 +260,17 @@ export const toInternalWorkbenchExtensionMetadata = (
           viewId: view.id,
           extensionId: panel.extensionId,
           slotId: panel.slot.id,
-          scope: ["global.settings", "global.settingsPanels", "developer.settings"].includes(panel.slot.id)
+          scope: ["global.settings", "global.settingsPanels", "developer.settings", "customization.settings"].includes(
+            panel.slot.id,
+          )
             ? ("global" as const)
             : ("project" as const),
-          parentPanelId: panel.slot.id === "developer.settings" ? "developer-tools" : undefined,
+          parentPanelId: (
+            { "developer.settings": "developer-tools", "customization.settings": "customizations" } as Record<
+              string,
+              string
+            >
+          )[panel.slot.id],
           title: view.title,
           icon: view.icon,
           section: panel.section ? contributionRefId(panel.section) : undefined,

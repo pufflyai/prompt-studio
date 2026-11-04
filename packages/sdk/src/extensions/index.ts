@@ -179,6 +179,7 @@ export type {
   PerformanceRuntimeReading,
   PerformanceSnapshot,
 } from "pstdio-api-contracts/performance-diagnostics";
+export { prepareHarnessPackage } from "./harness-package";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
   mergeOrderedHistory,

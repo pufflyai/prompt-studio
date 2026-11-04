@@ -129,6 +129,18 @@ export const createWorkbenchExtensionMetadata = (
   input: CreateWorkbenchExtensionMetadataInput,
 ): WorkbenchExtensionMetadata => ({
   extensions: input.runtime.extensions.map(toExtensionRecord),
+  projectSetups: input.runtime.extensions.flatMap((extension) => {
+    const setup = extension.definition.projectSetup;
+    return setup
+      ? [
+          {
+            extensionId: extension.id,
+            view: normalizedRef(setup.view, extension.id),
+            hiddenSetting: setup.hiddenSetting,
+          },
+        ]
+      : [];
+  }),
   commands: input.runtime.commands.map(toCommandRecord),
   menuContributions: toMenuContributions(input.runtime),
   commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands).map((contribution) => ({

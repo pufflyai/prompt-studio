@@ -43,6 +43,10 @@
     "typescript": "6.0.2",
     "vite": "^8.3.1",
     "ws": "^8.21.3",
-    "@pstdio/canvas": "workspace:*"
+    "@pstdio/canvas": "workspace:*",
+    "harness-claude-code": "workspace:*",
+    "harness-codex": "workspace:*",
+    "harness-open-code": "workspace:*",
+    "harness-pi": "workspace:*"
   }
 }

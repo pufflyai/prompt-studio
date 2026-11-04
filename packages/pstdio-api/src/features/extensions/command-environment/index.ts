@@ -15,9 +15,11 @@ import { resolvePstdioHome } from "pstdio-paths";
 import { apiLogger } from "../../../lib/logger";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
+import { enqueueCatalogExtension } from "../catalog-installation";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionConnectionsApi } from "../extension-connection-service";
 import { findFreePort } from "../extension-process-api";
+import { listProjectExtensionInventory } from "../project-extension-inventory";
 import { createPublicationStorageAccess } from "../publication/storage-access";
 import { createAccountApi } from "./account";
 import { createActivityApi } from "./activity";
@@ -162,6 +164,14 @@ export const createCommandEnvironment = (
       files: createFilesApi(deps, input.projectId, signal),
       skills: { list: () => createReadBoundary(signal)(() => deps.skillService.list(input.projectId)) },
       settings,
+      extensions: {
+        list: () => createReadBoundary(signal)(() => listProjectExtensionInventory(deps, input.projectId)),
+        install: (names: string[]) =>
+          createReadBoundary(signal)(async () => {
+            for (const name of new Set(names))
+              await enqueueCatalogExtension(deps.extensionInstallations, name, input.projectId);
+          }),
+      },
       ...createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope),
     } satisfies ScopedHostApis;
   };

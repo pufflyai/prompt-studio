@@ -6,6 +6,7 @@ import type {
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
 import { isAlwaysEnabledExtensionSource } from "../features/extensions/always-on-extensions";
+import { enqueueDefaultExtensionInstall } from "../features/extensions/default-extension-install-queue";
 import type {
   checkExtensionSource,
   hashExtensionSource,
@@ -128,7 +129,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     deps.installedExtensionSourcesService.getByInstallName(installName);
 
   const findProjectInstanceForSource = async (
-    input: EnableInstalledSourceInput,
+    input: Pick<EnableInstalledSourceInput, "projectId">,
     installedSource: Awaited<ReturnType<typeof registerInstalledSource>>,
   ) => {
     return deps.extensionInstancesService.findByScopeInstalledSource("project", input.projectId, installedSource.id);
@@ -164,7 +165,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const createProjectInstance = async (
-    input: EnableInstalledSourceInput,
+    input: Pick<EnableInstalledSourceInput, "projectId">,
     installedSource: Awaited<ReturnType<typeof registerInstalledSource>>,
   ) => {
     try {
@@ -200,22 +201,40 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
 
   const mutateSourceAndRefresh = createExtensionSourceRefresh(mutateSource, notifyInstalledSourcesChanged);
 
+  const attachProjectInstance = async (
+    projectId: string,
+    installedSource: Awaited<ReturnType<typeof registerInstalledSource>>,
+  ) => {
+    const existing = await findProjectInstanceForSource({ projectId }, installedSource);
+    const candidate = existing ?? (await createProjectInstance({ projectId }, installedSource));
+    if (!existing) emitExtensionInstance(candidate);
+    if (candidate.enabled || !(await isAlwaysEnabledExtensionSource(installedSource)))
+      return { installedSource, instance: candidate };
+    await deps.validateResourcePrefixes?.(projectId, installedSource);
+    const instance = await claimExtensionId(candidate, installedSource);
+    if (!instance) throw new Error(`Failed to attach extension: ${installedSource.extension_id}`);
+    return { installedSource, instance };
+  };
+
   const syncInstalledSourceForProject = (input: SyncInstalledSourceInput) =>
     mutateSourceAndRefresh(input.sourcePath, async (notify) => {
       if (!(deps.sourceExists ?? existsSync)(input.sourcePath)) return null;
-      const { existing, installedSource } = await resolveProjectInstalledSource(input, (source) =>
+      const { installedSource } = await resolveProjectInstalledSource(input, (source) =>
         attachInstalledSource(source, notify),
       );
-      const candidate = existing ?? (await createProjectInstance(input, installedSource));
-      if (!existing) emitExtensionInstance(candidate);
-      if (candidate.enabled || !(await isAlwaysEnabledExtensionSource(installedSource))) {
-        return { installedSource, instance: candidate };
-      }
-      await deps.validateResourcePrefixes?.(input.projectId, installedSource);
-      const instance = await claimExtensionId(candidate, installedSource);
-      if (!instance) throw new Error(`Failed to sync extension: ${input.name}`);
-      return { installedSource, instance };
+      return attachProjectInstance(input.projectId, installedSource);
     });
+
+  const attachRegisteredSourceForProject = async (input: { projectId: string; installedSourceId: string }) => {
+    const source = await deps.installedExtensionSourcesService.get(input.installedSourceId);
+    if (!source) return null;
+    return mutateSource(source.source_path, async () => {
+      const current = await deps.installedExtensionSourcesService.get(source.id);
+      if (!current || !(deps.sourceExists ?? existsSync)(current.source_path)) return null;
+      if (!(await deps.projectService.get(input.projectId))) throw new ProjectNotFoundError(input.projectId);
+      return attachProjectInstance(input.projectId, current);
+    });
+  };
 
   const listEnabledSourcesForProject = async (projectId: string) => {
     const records = await listProjectInstances(projectId);
@@ -275,6 +294,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
         inputs,
       ),
     enableInstalledSourceForProject,
+    attachRegisteredSourceForProject,
     getInstalledSource,
     getInstalledSourceById: deps.installedExtensionSourcesService.get,
     getProjectExtensionInstance,
@@ -292,8 +312,10 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       const record = await getProjectExtensionInstance(input.projectId, input.instanceId);
       if (!record) return null;
       await assertOptional(record.installedSource);
-      return mutateSourceAndRefresh(record.installedSource.source_path, (notify) =>
-        uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged: notify }, input),
+      return enqueueDefaultExtensionInstall(record.installedSource.source_path, () =>
+        mutateSourceAndRefresh(record.installedSource.source_path, (notify) =>
+          uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged: notify }, input),
+        ),
       );
     },
   };

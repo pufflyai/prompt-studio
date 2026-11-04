@@ -12,24 +12,25 @@ test("Session menus share resource actions and switch through the full history",
     "Inspect this session",
     ...Array.from({ length: 65 }, (_, i) => `History ${String(i).padStart(2, "0")}`),
   ];
+  const sessions: { id: string; title: string }[] = [];
   for (const title of titles) {
-    expect(
-      (
-        await request.post("/v1/sessions", {
-          data: { project_id: project.id, title, prompt: "", agent: "pstdio.workbench-fixture.harness.fake" },
-        })
-      ).ok(),
-    ).toBe(true);
+    const response = await request.post("/v1/sessions", {
+      data: { project_id: project.id, title, prompt: "", agent: "pstdio.workbench-fixture.harness.fake" },
+    });
+    expect(response.ok()).toBe(true);
+    sessions.push(await response.json());
   }
   await prepareResourceActionsDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/sessions`);
+  // Menu parity needs a known Main resource, independent of startup layout changes.
+  const resource = `pstdio://extension-resource/session/${sessions[0]!.id}`;
+  await page.goto(`/projects/${project.id}/session?resource=${encodeURIComponent(resource)}`);
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Keep open");
   const nav = page.locator('[data-workbench-region="sidenav"]');
   await expect(nav.getByRole("option", { name: "History 64", exact: true })).toBeVisible();
   // The oldest sessions are outside the virtualized viewport until it is scrolled.
   await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
     for (const element of elements) element.scrollTop = element.scrollHeight;
   });
-  await nav.getByRole("option", { name: "Keep open", exact: true }).click();
   const route = page.url();
   await nav.getByRole("option", { name: "Inspect this session", exact: true }).click({ button: "right" });
   const resourceGroup = () => page.getByRole("group", { name: "Session", exact: true });
@@ -60,8 +61,7 @@ test("Session menus share resource actions and switch through the full history",
   await search.fill("history 00");
   await expect(options).toHaveText(["History 00"]);
   await expect(picker.getByRole("img", { name: "Session status: completed" })).toBeVisible();
-  const sessions = await (await request.get(`/v1/sessions?project_id=${project.id}`)).json();
-  const history = sessions.find((session: { title: string }) => session.title === "History 00");
+  const history = sessions.find((session) => session.title === "History 00")!;
   try {
     expect(
       (await request.patch(`/v1/sessions/${history.id}/title`, { data: { title: "History 00 updated" } })).ok(),

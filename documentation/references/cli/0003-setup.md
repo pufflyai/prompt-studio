@@ -13,6 +13,33 @@ The runtime is one background process that serves the API and the dashboard on t
 | `pst close` | Stop the runtime. It refuses while work is still running. |
 | `pst logs` | Print the end of the runtime log file, or its path. |
 
+## Project setup (after 0.46.0)
+
+Opening a new project waits for enabled setup contributions before offering a setup view.
+Absent, disabled or hidden setup opens no setup UI. Onboarding is a normal default
+extension: disable it for one project, or uninstall its shared source through Extensions.
+
+Onboarding owns the harness/tool choices, Skip, recovery and remembered defaults.
+Its **Extensions → Onboarding → Settings → Don’t show onboarding** preference is shared on this device;
+it does not disable the extension or change another project's enabled tools. Appearance remains
+in Customizations. Installation continues after setup closes.
+
+When the separately released extension is installed and enabled, its public commands expose
+these same operations to agents:
+
+~~~bash
+pst pstdio.pstdio-onboarding read
+pst pstdio.pstdio-onboarding update --request '{"step":"harnesses","harnesses":["codex"]}'
+pst pstdio.pstdio-onboarding update --request '{"step":"complete","workAreas":[]}'
+pst pstdio.pstdio-onboarding update --request '{"step":"skip"}'
+pst pstdio.pstdio-onboarding update --request '{"step":"visibility","hidden":true}'
+~~~
+
+Run in the linked project. Empty work choices keep foundation defaults without optional bundles.
+Skipping does not install unsubmitted choices; accepted jobs continue. Clearing `hidden` allows
+setup for later new projects while the extension remains enabled. The host does not provide a
+second onboarding command or fallback form when the extension is disabled or removed.
+
 ## Automatic start
 
 Most commands need the runtime. Before they run, the CLI looks for a running runtime and starts one when none is found. `pst close`, `pst logs`, `pst serve`, `pst extensions install-browser`, and `pst extensions test` skip this step. `extensions add` first looks for a linked project: a folder with `.pstdio/config.json`, in the current folder or a parent folder. Without one, it fails before it starts or contacts the API. From the release after 0.43.x, that error prints the command to run from your project folder, with the source as an absolute path. Installed-scope `extensions check` does the same. `extensions check <path>` stays local and checks the source with the extension API version built into this CLI.

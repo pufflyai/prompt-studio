@@ -45,7 +45,7 @@ test("dashboard keeps project selection open when no project is selected", async
   await expect(page.locator('[data-workbench-region="status"]')).toBeHidden();
 
   await projectPicker.getByRole("button", { name: "Settings", exact: true }).click();
-  await expect(page.getByRole("option", { name: "Appearance", exact: true })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Customizations", exact: true })).toBeVisible();
   await page.getByRole("button", { name: /^Close/ }).click();
   await expect(projectPicker).toBeVisible();
 

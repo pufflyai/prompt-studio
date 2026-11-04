@@ -30,7 +30,6 @@ test("project disablement releases its workers without a follow-up and preserves
   let unsubscribed = false;
   const registry = createHarnessRegistryService({
     installedExtensionSourcesService: { list: async () => [] } as never,
-    installDefaultExtensions: async () => [],
     extensionRuntimeCatalog: {
       getSourcesRuntime,
       get: async (projectId) =>
@@ -82,7 +81,6 @@ test("a failed host cleanup still waits for project cleanup before shutdown reje
   });
   const registry = createHarnessRegistryService({
     installedExtensionSourcesService: { list: async () => [] } as never,
-    installDefaultExtensions: async () => [],
     buildRegistry: async () => createHarnessRegistry([worker], () => ({}) as HarnessContext),
     extensionRuntimeCatalog: {
       getSourcesRuntime,
@@ -118,7 +116,6 @@ test("concurrent host reads cannot publish a handle retired by an older source l
   let notify: (input: RuntimeInvalidationInput) => void = () => {};
   const registry = createHarnessRegistryService({
     installedExtensionSourcesService: { list: async () => [] } as never,
-    installDefaultExtensions: async () => [],
     buildRegistry: async () => {
       builds += 1;
       if (builds === 1) {
@@ -161,7 +158,6 @@ test("a project workspace change keeps workers of unchanged providers running", 
   let notify: (input: RuntimeInvalidationInput) => void = () => {};
   const registry = createHarnessRegistryService({
     installedExtensionSourcesService: { list: async () => [] } as never,
-    installDefaultExtensions: async () => [],
     extensionRuntimeCatalog: {
       getSourcesRuntime,
       get: async (projectId) =>

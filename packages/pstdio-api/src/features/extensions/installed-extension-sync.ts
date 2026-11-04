@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { getExtensionApiVersionError } from "pstdio-extensions";
 import type { PruneProjectExtensionInstancesInput, SyncInstalledSourceInput } from "../../services/extension-service";
 import { hashExtensionSource, loadExtensionSource, readExtensionSourceMetadata } from "./extension-runtime";
@@ -51,7 +52,12 @@ type PrunedExtensionInstance = {
   installedSource: { extension_id: string; manifest_json: unknown };
 };
 
-const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps) => {
+type InstalledSource = Awaited<ReturnType<ReturnType<typeof createInstalledExtensionSourcesDBService>["list"]>>[number];
+
+const discoverInstalledExtensions = async (
+  deps: InstalledExtensionDiscoveryDeps,
+  registered = new Map<string, InstalledSource>(),
+) => {
   const root = deps.extensionsRoot ?? join(resolvePstdioHome({ env: deps.env, homedir: deps.homedir }), "extensions");
   if (!existsSync(root)) return { discovered: [], presentSourcePaths: [], root, rootExists: false };
 
@@ -64,6 +70,11 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
     if (!entry.isDirectory()) continue;
     const sourcePath = join(root, entry.name);
     if (existsSync(join(sourcePath, EXTENSION_INSTALLING_MARKER))) continue;
+    const existing = registered.get(sourcePath);
+    if (existing && existing.status !== "missing") {
+      presentSourcePaths.push(sourcePath);
+      continue;
+    }
 
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {
@@ -136,6 +147,32 @@ export const syncInstalledExtensionsForProject = async (deps: SyncInstalledExten
   const snapshotStartedAt = new Date().toISOString();
   const snapshot = await discoverInstalledExtensions(deps);
 
+  return syncSnapshotForProject({ ...deps, snapshot, snapshotStartedAt });
+};
+
+// Creating a project attaches the host's accepted sources. Refreshing their code belongs
+// to installation and reload, rather than every project that makes them available.
+export const attachInstalledExtensionsForProject = async (
+  deps: SyncInstalledExtensionsDeps & {
+    installedExtensionSourcesService: Pick<ReturnType<typeof createInstalledExtensionSourcesDBService>, "list">;
+    extensionService: {
+      attachRegisteredSourceForProject: (input: { projectId: string; installedSourceId: string }) => Promise<unknown>;
+    };
+  },
+) => {
+  const snapshotStartedAt = new Date().toISOString();
+  const registered = new Map(
+    (await deps.installedExtensionSourcesService.list()).map((source) => [source.source_path, source]),
+  );
+  const snapshot = await discoverInstalledExtensions(deps, registered);
+  const present = new Set(snapshot.presentSourcePaths);
+  for (const source of registered.values()) {
+    if (source.status === "missing" || !present.has(source.source_path)) continue;
+    await deps.extensionService.attachRegisteredSourceForProject({
+      projectId: deps.projectId,
+      installedSourceId: source.id,
+    });
+  }
   return syncSnapshotForProject({ ...deps, snapshot, snapshotStartedAt });
 };
 

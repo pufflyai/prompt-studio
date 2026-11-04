@@ -10,7 +10,9 @@ import { createDashboardSessionDraftPersistence } from "@/shared/app/session-dra
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
-import { createDashboardWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
+import { createDashboardWorkbench as createWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
+
+const createDashboardWorkbench = createWorkbench;
 
 const createStorage = (): WorkbenchStorageLike => {
   const values = new Map<string, string>();

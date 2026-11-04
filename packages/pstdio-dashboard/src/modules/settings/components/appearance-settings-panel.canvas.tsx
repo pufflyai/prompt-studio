@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { defaultThemePreferences, ThemePreferenceProvider } from "@pstdio/ui";
 import { createWorkbench } from "@pstdio/workbench";
 import { openRelatedResourcesPreference } from "@pstdio/workbench/react";
-import { AppearanceSettingsPanel } from "./appearance-settings-panel";
+import { AppearanceSettingsSection } from "./appearance-settings-section";
 
 const themePreferences = [
   ...defaultThemePreferences,
@@ -14,7 +14,7 @@ const AppearanceExample = () => {
   workbench.preferences.registerSchema({
     properties: { [openRelatedResourcesPreference]: { type: "boolean", scope: "user", default: true } },
   });
-  return <AppearanceSettingsPanel workbench={workbench} />;
+  return <AppearanceSettingsSection workbench={workbench} />;
 };
 const meta = {
   title: "Settings/Appearance",

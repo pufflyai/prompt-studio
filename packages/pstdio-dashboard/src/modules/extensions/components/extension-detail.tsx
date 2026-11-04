@@ -160,7 +160,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                   checked={extension.enabled}
                   onCheckedChange={handleCheckedChange}
                   disabled={toggling || uninstalling}
-                  aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
+                  inputProps={{
+                    "aria-label": t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName }),
+                  }}
                 />
               </HStack>
 

@@ -76,26 +76,31 @@ const initializeLocalProjectWorkspace = async (
     );
     await traceSetupPhase("project.repo_extensions", context, () =>
       installRepoDefaultExtensions({
+        extensionInstallations: deps.extensionInstallations,
+        projectId,
         defaultExtensions: defaults.defaultExtensions,
         repoPath: rootPath,
         releaseRef: deps.extensionUpgradeService?.releaseRef,
+        afterInstall: async () => {
+          await traceSetupPhase("project.repo_sync", context, () =>
+            syncRepoExtensionsForProject({
+              extensionService: deps.extensionService,
+              installedExtensionSourcesService: deps.installedExtensionSourcesService,
+              projectId,
+              repoPath: rootPath,
+            }),
+          );
+          deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
+          await traceSetupPhase("project.files", context, () => restoreProjectArtifacts(deps, projectId, workspace.id));
+          const provisioned = await traceSetupPhase("project.provision", context, () =>
+            runWorkspaceProvisioning(deps, { projectId, workspace, repoPath: rootPath }),
+          );
+          await deps.extensionRuntimeCatalog.activate(projectId);
+          if (provisioned.setup_error) throw new Error(provisioned.setup_error);
+        },
       }),
     );
-    await traceSetupPhase("project.repo_sync", context, () =>
-      syncRepoExtensionsForProject({
-        extensionService: deps.extensionService,
-        installedExtensionSourcesService: deps.installedExtensionSourcesService,
-        projectId,
-        repoPath: rootPath,
-      }),
-    );
-    deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
-    await traceSetupPhase("project.files", context, () => restoreProjectArtifacts(deps, projectId, workspace.id));
-    const provisioned = await traceSetupPhase("project.provision", context, () =>
-      runWorkspaceProvisioning(deps, { projectId, workspace, repoPath: rootPath }),
-    );
-    await deps.extensionRuntimeCatalog.activate(projectId);
-    return provisioned;
+    return (await deps.workspaceService.getDefault(projectId)) ?? workspace;
   } catch (error) {
     return (
       (await deps.workspaceService.setSetupError(

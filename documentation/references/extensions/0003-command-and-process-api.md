@@ -578,3 +578,19 @@ Without a workspace filter, `workspace_id` is the earliest linked workspace, wit
 `get()` and `create()` also expose the typed harness ID as `agent`. Use `query()` or `query({ workspaceId })` to list sessions. Read every `nextCursor` page when a command needs the full history. Results are newest first and exclude archived sessions unless `includeArchived: true` is set.
 
 Views can refresh on `viewDataEvents.sessionsChanged` (`view.sessions.changed`). Query with `updatedFrom` and merge by session ID. Webviews read sessions through an extension command using `commands.execute`.
+
+
+## Project extension management (API 0.3.1 on main)
+
+`ctx.extensions.list()` returns the invoking project's installed instances (including disabled
+ones) and the current configured marketplace, including resolved metadata icons.
+`ctx.extensions.install(installNames)` durably accepts explicit catalog selections for that
+project and returns without waiting for physical installation. Pending selections deduplicate;
+completed selections may be explicitly submitted again. A failed job requires normal explicit
+retry. Passive restart recovery does not replay completed work or re-enable disabled tools.
+
+The host owns installation, source reuse, project enablement and workspace provisioning, including
+already-installed canonical sources with aliases. Other projects keep their enabled/disabled
+choices. Installation jobs and retry use the same public service as direct extension controls.
+Older hosts may omit `ctx.extensions`; extensions requiring it declare API `^0.3.1` and depend on
+a published SDK/host containing this surface. The API takes no caller-supplied project identity.

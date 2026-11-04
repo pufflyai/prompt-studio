@@ -6,6 +6,7 @@ interface ExtensionRefreshRequest {
 
 interface CreateExtensionRefreshQueueInput<TValue> {
   apply: (projectId: string, value: TValue) => void;
+  onComplete?: (projectId: string) => void;
   fallback: () => TValue;
   getGeneration: () => number;
   getProjectId: () => string | undefined;
@@ -28,6 +29,7 @@ export const createExtensionRefreshQueue = <TValue>(input: CreateExtensionRefres
 
     const request: ExtensionRefreshRequest = { generation, projectId, queued: false };
     activeRequest = request;
+    let applied = false;
     void input
       .load(projectId)
       .then(
@@ -35,16 +37,19 @@ export const createExtensionRefreshQueue = <TValue>(input: CreateExtensionRefres
           if (!isCurrentRequest(request)) return;
           hasSuccessfulValue = true;
           input.apply(request.projectId, value);
+          applied = true;
         },
         () => {
           if (!isCurrentRequest(request) || hasSuccessfulValue) return;
           input.apply(request.projectId, input.fallback());
+          applied = true;
         },
       )
       .finally(() => {
         if (activeRequest !== request) return;
         activeRequest = undefined;
         if (request.queued && input.getProjectId() === request.projectId) refresh(request.projectId);
+        else if (applied && isCurrentRequest(request)) input.onComplete?.(request.projectId);
       });
   };
 

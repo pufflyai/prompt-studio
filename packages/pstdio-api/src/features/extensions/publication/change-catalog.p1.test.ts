@@ -223,3 +223,98 @@ test("returning to the shared set does not undo a newer shared choice", async ()
   expect(current.installedSource.loaded_revision).toBe(second);
   expect(current.instance.enabled).toBe(true);
 });
+
+test.each([
+  "same set",
+  "added member",
+])("retrying a failed rollback saves its shared selection and progress: %s", async (mode) => {
+  const { projectId, source, first } = await publishedProject(`retry-rollback-${mode}`);
+  await writeFile(join(source, "new.txt"), "second revision");
+  await select(projectId, source);
+  await catchUp(projectId);
+  const transfer = app.deps.assetTransferService;
+  const read = transfer.read.bind(transfer);
+  let unavailable = true;
+  const deps = {
+    ...app.deps,
+    assetTransferService: {
+      ...transfer,
+      read: async (...args: Parameters<typeof read>) => {
+        if (unavailable) throw new Error("Download interrupted");
+        return read(...args);
+      },
+    },
+  };
+  await expect(
+    changePublishedCatalog(deps, projectId, {
+      kind: "rollback",
+      extensionId,
+      revision: first,
+      expectedRevision: (await selection(projectId)).revision,
+    }),
+  ).rejects.toThrow("Download interrupted");
+  if (mode === "added member") {
+    const added = createTestExtensionSource({ root, installName: "added", name: "added", displayName: "Added" });
+    const asset = await app.deps.assetTransferService.stage(
+      publishedOwner(projectId),
+      crypto.randomUUID(),
+      await packExtension(added),
+    );
+    await (await catalogOf(projectId)).select(
+      { extensionId: "test.added", revision: asset.sha256, version: "0.0.0", enabled: true },
+      asset,
+    );
+  }
+  unavailable = false;
+  const job = app.deps.extensionInstallations
+    .list()
+    .reverse()
+    .find((item) => item.projectId === projectId)!;
+  app.deps.extensionInstallations.retry(job.id);
+  await app.deps.extensionInstallations.wait(job.id);
+  expect((await installed(projectId)).installedSource.loaded_revision).toBe(first);
+  expect((await selection(projectId)).value).toMatchObject({ revision: first });
+  if (mode === "added member") {
+    expect(
+      app.deps.extensionInstallations
+        .list()
+        .filter((item) => item.projectId === projectId)
+        .map((item) => item.extensionId),
+    ).toContain("test.added");
+  }
+});
+
+test("retrying adoption reads the latest shared set with its own lifetime", async () => {
+  const { adoptPublishedExtension } = await import("./change-catalog");
+  const { projectId, source } = await publishedProject("retry-adopt");
+  await writeFile(join(source, "new.txt"), "adopted revision");
+  await select(projectId, source);
+  const transfer = app.deps.assetTransferService;
+  const read = transfer.read.bind(transfer);
+  let unavailable = true;
+  const deps = {
+    ...app.deps,
+    assetTransferService: {
+      ...transfer,
+      read: async (...args: Parameters<typeof read>) => {
+        if (unavailable) throw new Error("Download interrupted");
+        return read(...args);
+      },
+    },
+  };
+  const caller = new AbortController();
+  await expect(adoptPublishedExtension(deps, projectId, extensionId, caller.signal)).rejects.toThrow(
+    "Download interrupted",
+  );
+  await writeFile(join(source, "latest.txt"), "latest shared revision");
+  const latest = await select(projectId, source);
+  unavailable = false;
+  caller.abort();
+  const job = app.deps.extensionInstallations
+    .list()
+    .reverse()
+    .find((item) => item.projectId === projectId)!;
+  app.deps.extensionInstallations.retry(job.id);
+  await app.deps.extensionInstallations.wait(job.id);
+  expect((await installed(projectId)).installedSource.loaded_revision).toBe(latest);
+});

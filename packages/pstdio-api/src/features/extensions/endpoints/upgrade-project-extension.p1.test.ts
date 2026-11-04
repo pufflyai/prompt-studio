@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,7 +42,12 @@ const createProject = async () => {
 };
 
 describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
-  test("replaces an older marketplace extension with the version from the host release", async () => {
+  test.each([
+    "direct",
+    "retry upgrade",
+    "retry refresh",
+  ])("replaces a release extension with complete provisioning: %s", async (mode) => {
+    await handle?.close();
     const sourcePath = createTestExtensionSource({
       root: process.env.PSTDIO_HOME!,
       name: "pstdio-planner",
@@ -87,20 +92,47 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       version: "1.0.0",
     });
 
+    const upgrade = handle.deps.extensionUpgradeService!;
+    const originalUpgrade = upgrade.upgrade.bind(upgrade);
+    let upgrades = 0;
+    const upgrading = spyOn(upgrade, "upgrade").mockImplementation(async (...args) => {
+      if (++upgrades === 1 && mode === "retry upgrade") throw new Error("Source unavailable");
+      return originalUpgrade(...args);
+    });
+    const originalList = handle.deps.workspaceService.list.bind(handle.deps.workspaceService);
+    let refreshes = 0;
+    const refreshing = spyOn(handle.deps.workspaceService, "list").mockImplementation(async (...args) => {
+      if (++refreshes === 1 && mode === "retry refresh") throw new Error("Provisioning unavailable");
+      return originalList(...args);
+    });
     const response = await handle.app.request(`/v1/projects/${project.id}/extensions/${enabled.instance.id}/upgrade`, {
       method: "POST",
     });
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      changed: true,
-      extension: {
-        canUpgrade: false,
-        id: enabled.instance.id,
-        status: "loaded",
-        version: "2.0.0",
-      },
-    });
+    if (mode !== "direct") {
+      expect(response.status).toBe(400);
+      const job = handle.deps.extensionInstallations.list().find((item) => item.extensionId === loaded.metadata.id)!;
+      expect(job.status).toBe("failed");
+      handle.deps.extensionInstallations.retry(job.id);
+      await handle.deps.extensionInstallations.wait(job.id);
+      expect(refreshes).toBe(mode === "retry refresh" ? 2 : 1);
+      expect(upgrades).toBe(mode === "retry upgrade" ? 2 : 1);
+      const updated = await handle.deps.extensionService.getProjectExtensionInstance(project.id, enabled.instance.id);
+      expect(updated?.installedSource.version).toBe("2.0.0");
+    } else {
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        changed: true,
+        extension: {
+          canUpgrade: false,
+          id: enabled.instance.id,
+          status: "loaded",
+          version: "2.0.0",
+        },
+      });
+    }
+    upgrading.mockRestore();
+    refreshing.mockRestore();
     expect(installExtensionSource).toHaveBeenCalledWith({
       force: true,
       hostReleaseRef: "f".repeat(40),

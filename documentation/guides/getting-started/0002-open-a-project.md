@@ -39,7 +39,7 @@ Other `pst` commands find the project from the folder you run them in. See [CLI 
 - The folder name becomes the project name. You can rename the project in its settings.
 - Prompt Studio writes `.pstdio/config.json` in the folder. This file links the folder to its project, so the docs call such a folder a linked project. Commands such as `pst extensions add` only work inside a linked project. A `.pstdio/.gitignore` keeps the file out of Git.
 - The project gets its default workspace: the folder itself. Agent sessions work in this folder and share its files.
-- The default extensions are downloaded, installed, and turned on. They connect the Claude Code, Codex, and OpenCode agents, and add themes and skills.
+- Themes and skills are available as foundation extensions. In the dashboard, setup lets you choose harnesses and tools for the new project. Sources already installed on this host are reused. Optional tools installed for another project stay off until you choose them for this one.
 
 Opening the same folder again reopens its project. A subfolder is a separate project, even inside a Git repository. Deleting a project keeps your chosen folder and your own files, but removes the project's matching `.pstdio/config.json` link and saved host data. Provider-created workspaces follow their provider's cleanup rules.
 

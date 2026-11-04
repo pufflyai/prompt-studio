@@ -102,6 +102,8 @@ export interface HarnessContext {
   connections: ExtensionConnectionsApi;
   logger: ExtensionLoggerApi;
   state: HarnessStateApi;
+  /** Host-managed, pinned packages acquired only when this harness needs them. */
+  packages?: { ensure(input: { name: string; version: string }): Promise<{ path: string }> };
 }
 
 export interface HarnessStateApi {
@@ -148,6 +150,8 @@ export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
  * and status transitions are keyed off the returned HarnessSession.
  */
 export interface HarnessProvider extends ContributionDefinition<"harness"> {
+  /** Prepare runtime dependencies before probes and operations. This runs outside the short detection deadline. */
+  prepare?(ctx: HarnessContext): MaybePromise<void>;
   label: Localizable<string>;
   /** Native commands and optional mode presentation. Older harnesses may omit both methods. */
   getCommandState?(ctx: HarnessContext, input: HarnessCommandDiscoveryContext): MaybePromise<HarnessCommandState>;
