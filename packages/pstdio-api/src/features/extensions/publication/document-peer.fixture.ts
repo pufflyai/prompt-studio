@@ -13,21 +13,28 @@ export const documentPeer = (projects: string[] = []) => {
     { parts: Map<number, Uint8Array>; complete: boolean; sha256: string; byteLength: number }
   >();
   const offsets: number[] = [];
-  let interrupt = false;
   let missing = false;
   type BlobState = NonNullable<ReturnType<typeof blobs.get>>;
+  type AfterPrefix = (blob: Pick<BlobState, "sha256" | "byteLength">) => Promise<void>;
+  let interrupt: AfterPrefix | undefined;
   const readBlob = async (request: Request, blob: BlobState) => {
     if (missing) return new Response(null, { status: 404 });
     const { offset } = (await request.json()) as { offset: number };
     offsets.push(offset);
     const bytes = Buffer.concat([...blob.parts].sort(([a], [b]) => a - b).map(([, bytes]) => Buffer.from(bytes)));
     if (interrupt) {
-      interrupt = false;
+      const afterPrefix = interrupt;
+      interrupt = undefined;
       return new Response(
         new ReadableStream({
           start(controller) {
             controller.enqueue(bytes.subarray(offset, Math.max(offset + 1, Math.floor(bytes.length / 2))));
-            setTimeout(() => controller.error(new Error("Interrupted blob")), 25);
+            // Disconnect only after the receiver has stored a prefix; a timer can
+            // discard every queued byte before a busy client begins reading.
+            void afterPrefix(blob).then(
+              () => controller.error(new Error("Interrupted blob")),
+              (error: unknown) => controller.error(error),
+            );
           },
         }),
       );
@@ -185,8 +192,8 @@ export const documentPeer = (projects: string[] = []) => {
     states,
     blobs,
     offsets,
-    interrupt: () => {
-      interrupt = true;
+    interrupt: (afterPrefix: AfterPrefix) => {
+      interrupt = afterPrefix;
     },
     missing: (value: boolean) => {
       missing = value;
