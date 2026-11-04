@@ -30,6 +30,7 @@ const workspace: DashboardWorkspaceOption = {
 const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boolean }) => {
   const { offline = false, queued = false, draft = false } = props;
   const [deviceId, setDeviceId] = useState(draft ? "this-device" : "laptop");
+  const [started, setStarted] = useState(!draft);
   const [text, setText] = useState("");
   const [running, setRunning] = useState(queued);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
@@ -49,7 +50,7 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
   );
   const name = devices.find((device) => device.id === deviceId)?.name ?? "Laptop";
   return (
-    <Stack h="40rem" w="full" maxW="52rem" gap="0" bg="bg" overflow="hidden">
+    <Stack h="2xl" w="full" maxW="3xl" gap="0" bg="bg" overflow="hidden">
       <Box flex="1" minH="0">
         <ChatPanel
           messages={messages}
@@ -60,6 +61,7 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
           chatInputDefaultValue={text}
           onChatInputChange={setText}
           onSubmitMessage={(prompt) => {
+            setStarted(true);
             if (running)
               setQueue((items) => [...items, { id: `queued-${items.length + 1}`, prompt, position: items.length + 1 }]);
             else
@@ -83,15 +85,15 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
                     devices={devices}
                     selectedDeviceId={deviceId}
                     onSelectDevice={setDeviceId}
-                    isDisabled={!draft}
+                    isDisabled={started}
                   />
                   <SessionWorkspaceMenu
                     workspaces={[workspace]}
                     selectedWorkspaceId={workspace.id}
                     selectedWorkspaceLabel={workspace.title}
                     onSelectWorkspace={() => {}}
-                    onOpenWorkspace={offline || draft ? undefined : () => setWorkspaceOpen(true)}
-                    isDisabled={!draft}
+                    onOpenWorkspace={offline || !started ? undefined : () => setWorkspaceOpen(true)}
+                    isDisabled={started}
                   />
                 </HStack>
               }
