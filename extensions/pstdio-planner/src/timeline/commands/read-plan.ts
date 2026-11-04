@@ -9,11 +9,10 @@ import {
   createTicketWorkspaceLookup,
 } from "../../data/mappers";
 import { migratePlannerStorage } from "../../data/migrate-storage";
-import { hasPendingInput } from "../../data/review-request-storage";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
-import { ticketActivationTarget } from "../../data/ticket-page-target";
+import { ticketPageTarget } from "../../data/ticket-page-target";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { sortedBySortOrder } from "../../utils/sort";
 import { buildPlan } from "../model/build-plan";
@@ -83,10 +82,7 @@ export const readPlanCommand = defineCommand({
         rows: section.rows.map((row) => ({
           ...row,
           instructions: row.gate ? row.instructions : "",
-          target: ticketActivationTarget(
-            resources.get(row.id)!,
-            hasPendingInput({ requests: row.requests, errors: row.requestErrors }),
-          ),
+          target: ticketPageTarget(resources.get(row.id)!),
         })),
       })),
       projectId: ctx.projectId,

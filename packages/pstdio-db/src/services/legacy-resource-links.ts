@@ -19,7 +19,7 @@ export const hostResourceRef = (kind: "workspace" | "session", row: { id: string
 // These read fields survive only until released extensions adopt ctx.resources.
 const anchorProjection = (table: typeof workspaces | typeof sessions, kind: string) =>
   sql<ResourceAnchor[]>`(
-  select coalesce(jsonb_agg(details order by target_owner, target_kind, target_id), '[]'::jsonb)
+  select coalesce(jsonb_agg(details - 'sourceRef' order by target_owner, target_kind, target_id), '[]'::jsonb)
   from resource_anchors
   where project_id = ${table.project_id} and source_owner = 'pstdio' and source_kind = ${kind} and source_id = ${table.id}
 )`.as("anchors_json");

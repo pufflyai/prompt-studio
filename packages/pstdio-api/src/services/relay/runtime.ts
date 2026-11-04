@@ -44,13 +44,13 @@ export const startRelayRuntime = async (input: {
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
   const { deps } = input;
-  const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
   const live = new Map<string, LiveConnection>();
+  const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
   const core = (config: RelayWorkbench) => ({
     config,
-    live: live.get(config.workbenchId)!,
     deps,
     access: access.get(config.workbenchId)!,
+    live: live.get(config.workbenchId)!,
     signal: controller.signal,
     statusChanged: () => statusChanged(config.workbenchId),
   });
@@ -98,11 +98,11 @@ export const startRelayRuntime = async (input: {
       if (connections.has(key)) continue;
       const connection = await startRelayExtension({
         config,
-        live: live.get(workbenchId)!,
         source,
         snapshot,
         contextKey,
         access: access.get(workbenchId)!,
+        live: live.get(workbenchId)!,
         deps,
         signal: controller.signal,
         statusChanged: () => statusChanged(workbenchId),
@@ -170,6 +170,7 @@ export const startRelayRuntime = async (input: {
   return {
     async retry(workbenchId: string) {
       await refresh();
+      personal.get(workbenchId)?.retry();
       publications.get(workbenchId)?.retry();
       automations.get(workbenchId)?.retry();
       coreDocuments.get(workbenchId)?.retry();
@@ -209,13 +210,14 @@ export const startRelayRuntime = async (input: {
           .filter(([id, current]) => canonicalJson(desired.get(id) ?? null) !== canonicalJson(current))
           .map(([id]) => id),
       );
-      // Refreshes triggered by shutdown must not recreate owners on the retiring socket.
+      // Events emitted while owners drain must not recreate them on the old shared connection.
       for (const id of changed) {
         workbenches.delete(id);
         access.delete(id);
       }
       for (const id of changed) {
         for (const owners of coreOwners) await owners.remove(id);
+        // Closing the project's connection also ends its extension owners' runs before they stop below.
         live.get(id)?.close();
         live.delete(id);
       }
@@ -247,12 +249,13 @@ export const startRelayRuntime = async (input: {
       clearTimeout(retry);
       storageChanges.close();
       controller.abort();
-      await Promise.all([...live.values()].map((channel) => channel.done));
       for (const owners of coreOwners) owners.close();
       for (const connection of connections.values()) connection.close();
       await running;
       for (const owners of coreOwners) await owners.done();
       await Promise.all([...connections.values()].map((connection) => connection.done));
+      await Promise.all([...live.values()].map((channel) => channel.done));
+      live.clear();
     },
   };
 };

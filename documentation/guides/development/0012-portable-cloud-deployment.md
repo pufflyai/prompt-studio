@@ -113,8 +113,8 @@ data loss. Clients with full local copies can upload lost relay data again.
 
 Distribute new manager public signing keys to every relay before issuing tokens with
 them. Retain old public keys until all their access tokens expire. Environment trust
-uses `RELAY_ACCESS_TRUST` and the base64 recovery key uses `RELAY_RECOVERY_KEY`.
-File injection through `RELAY_ACCESS_TRUST_FILE` and `RELAY_RECOVERY_KEY_FILE` remains
+uses `RELAY_ACCESS_TRUST`.
+File injection through `RELAY_ACCESS_TRUST_FILE` remains
 available. Environment values take precedence when supplied.
 
 ## DigitalOcean module

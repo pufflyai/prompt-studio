@@ -1,4 +1,5 @@
 import { type ComponentType, createContext, createElement, type ReactNode, useContext } from "react";
+import type { CanvasControls, CanvasMotion, CanvasSave } from "./parameters";
 
 type Props<T> =
   T extends ComponentType<infer P>
@@ -30,6 +31,9 @@ export interface CanvasFrame<T = any> {
   id?: string;
   name?: string;
   args?: Partial<Props<T>>;
+  controls?: CanvasControls;
+  motion?: CanvasMotion;
+  save?: CanvasSave;
   render?: CanvasRender<T>;
   decorators?: CanvasDecorator[];
   description?: string;
@@ -77,6 +81,8 @@ export const composePreview = (
   return {
     Component,
     args,
+    controls: { ...meta.controls, ...example.controls },
+    motion: example.motion ?? meta.motion,
     description: example.description,
     fullscreen: example.fullscreen ?? meta.fullscreen ?? false,
   };

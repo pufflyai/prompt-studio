@@ -35,8 +35,8 @@ export interface PlanViewProps {
   onRenameDeadline: (deadlineId: string, name: string) => Promise<unknown>;
   onRedate: (deadlineId: string, date: string) => Promise<unknown>;
   onRenameTrack: (trackId: string, name: string) => Promise<unknown>;
-  // Open the milestone's tickets that need a person in the side panel.
-  onReview: (deadlineId: string | null) => void;
+  // Open milestone requests, retaining a focus target if the attention bubble disappears.
+  onReview: (deadlineId: string | null, trigger: HTMLButtonElement, fallback: HTMLButtonElement | null) => void;
   onNewTrack: () => void;
   onCreateDeadline: (date: string) => void;
 }

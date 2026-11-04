@@ -41,7 +41,7 @@ The display menu switches between **Board** and **List**. It also sets the group
 
 Every view, including **All**, can be edited and renamed. Save your filter and display changes with **Save view**. Right-click a view to rename, duplicate, or delete it. At least one view must remain.
 
-Existing saved display choices are preserved. Enable **Needs attention** in Display settings if a saved view hides it. In Project Timeline, the attention count also opens the same Side Panel while keeping the timeline open. Selecting another ticket's count reuses that panel.
+Existing saved display choices are preserved. Enable **Needs attention** in Display settings if a saved view hides it. In Project Timeline, a card with pending decisions or its attention count opens a modal scoped to that ticket. Closing the modal returns focus to its card control.
 
 The board starts with a **Ticket is Active** filter. Remove it to show both active and archived tickets, or choose **Archived** to show only archived tickets. Use the filter menu to filter by status, parent, or tag.
 

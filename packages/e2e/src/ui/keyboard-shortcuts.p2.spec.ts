@@ -57,6 +57,8 @@ test("Go destinations use shortcut mode while history chords and Shift slash rem
   await page.keyboard.press("Alt+Shift+ArrowRight");
   await expect(page).toHaveURL(/\/sessions\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  // Shortcut help is available outside inputs; history restores the composer's focus.
+  await page.getByRole("button", { name: "Help", exact: true }).focus();
   await page.keyboard.press("Shift+/");
   const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
   await expect(reference).toBeVisible();

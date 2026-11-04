@@ -4,8 +4,11 @@ import { findCanvas, toCanvas } from "./canvas-model";
 import { layoutChanged } from "./events";
 import { readFrameAssets } from "./frames/module-graph";
 import { loadLayout, saveLayout } from "./layout-store";
+import { motionCommands } from "./motion/review-commands";
 import { canvasTarget, canvasUrl } from "./navigation";
+import { parameterCommands } from "./parameters/commands";
 import { resolveCanvasCommand } from "./resource";
+import { shaderCommands } from "./shaders/commands";
 
 const canvasParam = { canvas: params.text({ required: true, label: "Canvas file" }) };
 
@@ -17,6 +20,9 @@ const readCanvas = async (ctx: Parameters<typeof buildFiles>[0], id: string) => 
 };
 
 export const commands = {
+  ...parameterCommands,
+  ...motionCommands,
+  ...shaderCommands,
   "preview.assets": defineCommand({
     id: "preview.assets",
     title: l10n("command.previewAssets", "Load preview assets"),

@@ -8,7 +8,6 @@ import { toneColor } from "./flags";
 import { GatePanel } from "./gate-panel";
 import { InstructionLinks } from "./instruction-navigation";
 import { RequestsPanel } from "./requests-panel";
-import { type Review, ReviewBar } from "./review-bar";
 import { ReviewStatusIcon, StatusIcon } from "./status-icon";
 import type { PlanClient } from "./use-plan";
 
@@ -19,8 +18,6 @@ interface DetailsProps {
   onOpen: (target: NavigationTarget) => void;
   onSelect: (id: string) => void;
   onClose: () => void;
-  // Present while stepping through a milestone's tickets that need a person.
-  review?: Review;
 }
 
 function Links(props: { title: string; links: PlanLink[]; onSelect: (id: string) => void }) {
@@ -47,12 +44,11 @@ function Links(props: { title: string; links: PlanLink[]; onSelect: (id: string)
 }
 
 export function Details(props: DetailsProps) {
-  const { row, plan, client, onOpen, onSelect, onClose, review } = props;
+  const { row, plan, client, onOpen, onSelect, onClose } = props;
   return (
     <Box w={{ base: "260px", lg: "320px" }} flexShrink="0" minH="0" borderLeftWidth="1px" borderColor="border.subtle">
       <ScrollArea h="full" minH="0">
         <Stack p="md" gap="md">
-          {review ? <ReviewBar review={review} /> : null}
           <Flex align="start" gap="sm">
             <Stack gap="xs" flex="1" minW="0">
               <Flex align="center" gap="xs">

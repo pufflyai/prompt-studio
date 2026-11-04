@@ -1,4 +1,5 @@
 import type { CanvasTheme } from "../compose";
+import type { CanvasControls, CanvasMotion, ParameterValues } from "../parameters";
 import type { FrameBootstrap } from "./assets";
 
 // The messages between a UI Canvas frame and its host. They match the protocol the UI Canvas
@@ -14,7 +15,8 @@ export interface FrameItem {
 export interface FrameRequest {
   protocol: typeof frameProtocol;
   nonce: string;
-  type: "render" | "theme" | "bootstrap" | "assets";
+  type: "render" | "theme" | "bootstrap" | "assets" | "args";
+  args?: ParameterValues;
   requestId?: string;
   error?: string;
   item?: FrameItem;
@@ -52,5 +54,11 @@ export interface FrameMessage {
   deltaY?: number;
   deltaMode?: number;
   zoom?: boolean;
-  information?: { args?: string; description?: string };
+  information?: {
+    args?: string;
+    description?: string;
+    controls?: CanvasControls;
+    motion?: CanvasMotion;
+    values?: ParameterValues;
+  };
 }

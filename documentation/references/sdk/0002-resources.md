@@ -98,6 +98,26 @@ Native owner views that show linked resources should include
 project-scoped dependency after committed link changes, including changes made by
 another client or through the CLI.
 
+On `main`, after 0.46.0 (API 0.3.1), extension commands can call
+`ctx.resources.resolveMany(references)` with at most 100 references. The host
+deduplicates owner-qualified identities and groups each batch by its owner's
+`resolveMany` command. Results contain current owner information and qualified
+navigation targets. Missing resources, disabled owners, and failed resolvers are
+omitted; retain their saved references for unavailable entries. Host workspaces
+and sessions resolve through the same API. References stay within the calling
+project and resolution does not grant access to personal history on another device.
+
+`ctx.resources.queryAnchorsMany({ resources, direction: "both", limit: 100 })`
+reads a single indexed relationship page for up to 100 references. Follow its
+nullable `nextCursor` to include every relationship, and deduplicate resource
+identities across incoming and outgoing edges before resolving them.
+
+Include `viewDataEvents.resourcesChanged` to refresh labels and availability
+after owner discovery data events, extension availability changes, resource
+removal, or host workspace/session changes. Use both dependencies for a linked
+resource list. Resolve the unique references across visible rows in batches,
+instead of making a request for each badge.
+
 ## Resource file paths
 
 Resource kind `paths` ship in `@pstdio/sdk` 0.44.0.

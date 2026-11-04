@@ -13,12 +13,11 @@ API. The workbench package itself does not depend on the API host.
 ## Layers
 
 1. **Contracts and utilities**
-   `pstdio-sync-contracts` defines private, versioned synchronization wire schemas,
-   fingerprint validation, compatibility checks, and proposed authoring inputs.
-   Its main export depends only on Zod and Web Crypto. Its separate `./conformance`
-   export is test-only and uses development dependencies for PGlite, PostgreSQL,
-   Yjs, and S3 test storage. It imports no host, SDK, UI, database implementation,
-   or provider code. Its consumers, such as `pstdio-sync`, `pstdio-db`,
+   `pstdio-sync-contracts` defines private blind synchronization wire schemas,
+   canonical JSON fingerprints and current storage authoring inputs. Its only
+   package export depends on Zod and Web Crypto. Its scripts retain a shared
+   isolated PostgreSQL/object-storage test runner; this is not a runtime export.
+   It imports no host, SDK, UI, database implementation or provider code. Its consumers, such as `pstdio-sync`, `pstdio-db`,
    `pstdio-api`, `pstdio-relay`, and `pstdio-account-manager`, declare their own
    dependency and layer-map edge. `pstdio-api-contracts`
    consumes its identity and exact-target schemas for local environment bindings;
@@ -34,8 +33,8 @@ API. The workbench package itself does not depend on the API host.
    `pstdio-theme` owns browser-free palette conversion for the extension runtime
    and UI importer. UI bundles its implementation and public types; it is not
    a published SDK contract.
-   `pstdio-db` also consumes synchronization contracts for the durable extension
-   journal and accepted state. It does not import the test-only conformance entry.
+   `pstdio-db` also consumes synchronization contracts for durable document state,
+   current-record projections and encrypted record-stream persistence.
    The private `pstdio-sync` package owns the production, runtime-neutral record
    and text engines. Its root entry owns shared storage ports; records, text,
    transient presence, encryption and relay have separate entry points. Module
@@ -43,11 +42,6 @@ API. The workbench package itself does not depend on the API host.
    The six exports are module contracts, not individual internal file exports.
    It accepts storage adapters; `pstdio-db` supplies the durable local adapter.
    [Sync modules](0026-synchronization-contracts.md#sync-modules) defines each owner.
-   Its real-file integration tests declare `pstdio-storage` as a development
-   dependency to verify immutable asset gates; database runtime code does not import it.
-   Its production-relay conformance tests also declare `pstdio-relay` as a development
-   dependency. That edge is confined to test fixtures; local database runtime code
-   does not open PostgreSQL relay storage.
 
    The private `pstdio-diagnostics` package owns the bounded performance capture,
    recording and evidence summaries shared by desktop and benchmark drivers. It
@@ -190,12 +184,12 @@ installs. Service code does not belong in `infra/`.
 
 The private `pstdio-relay` workspace lives under `services/relay/`. It is a separate
 service, not part of the local API host or the CLI bundle. It consumes the shared diagnostic adapter, the private
-`pstdio-sync` record/branch rules and `pstdio-sync-contracts` wire schemas, including the
-blind sync protocol in `src/protocol/`. Its production
+`pstdio-sync-contracts` blind wire schemas in `src/protocol/`. Integration fixtures use
+private `pstdio-sync` encrypted document clients. Its production
 access verification uses only the database-free `pstdio-account-manager/access` entry;
 the relay receives public issuer/audience/JWKS trust, without the manager database role, signing secret or device credentials. Isolated integration fixtures may
 use the manager's operator exports to create disposable accounts and devices. Production
-modules never import the test-only conformance export. It must not import the API
+modules have no grouped conformance implementation. It must not import the API
 host, UI, clients, database implementation, or prototype. PostgreSQL persistence
 belongs to the relay; the real local adapter belongs to `pstdio-db`.
 See the [relay development guide](../../guides/development/0006-relay.md)
@@ -240,8 +234,7 @@ access check must preserve that authority boundary. See the
 - Every workspace package import must be declared in the importer's
   `package.json`.
 - Extensions consume host APIs only through `@pstdio/sdk` and `@pstdio/ui`. Additional workspace dependencies must be listed explicitly in the layer map.
-- The private `motion-lab` extension reads studies from `design/motion/studies` as project content. Its shared scene kit and Remotion Player belong to the extension. Runtime scenes reuse the preview’s React, Chakra, Remotion and shared UI modules. Production UI and host packages do not depend on Motion Lab or Remotion.
-  Its TypeScript paths resolve study imports through Motion Lab's installed dependencies, so type checking uses the same published UI as the preview.
+- The private `design-studies` workspace owns motion scenes, the shared kit in `design/motion/kit`, and shader renderers. Project-owned canvas files compile through `@pstdio/canvas`; UI Canvas supplies review controls and explicit version saves through the public extension API. The retired Lab extensions expose only read-only legacy preference exports. Production UI and host packages do not depend on the study renderers.
 - Extensions pin `@pstdio/ui` to an exact published version. The pin does not have to match an unreleased workspace version; extension dependency updates ship after the public package release.
 - Extensions resolve `@pstdio/sdk` and `@pstdio/ui` from npm, including development dependencies. `bunfig.toml` disables automatic workspace links for plain version ranges; explicit `workspace:` links in core packages still work. `verify:boundaries` checks `bun.lock` for registry entries under every extension in `extensions/`, `.pstdio/extensions/`, and `infra/local/extensions/`. A matching local version must never hide an unreleased API.
 - `@pstdio/ui` may not import or declare router or React Query dependencies.

@@ -58,6 +58,7 @@ export type StoredReviewOutcome = ReviewOutcome & { requestId: string };
 export type ReviewRequestState = "open" | "answered" | "cancelled";
 
 export interface ReviewRequestView extends ReviewRequest {
+  ticketLabel?: string;
   state: ReviewRequestState;
   outcome: ReviewOutcome | null;
   outcomeText: string | null;
