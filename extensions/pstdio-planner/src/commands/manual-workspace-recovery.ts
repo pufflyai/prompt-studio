@@ -1,5 +1,6 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
+import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { readSessionHistory } from "../data/session-history";
 import { loadAttemptReadiness } from "./attempt-readiness";
@@ -23,8 +24,17 @@ export async function prepareManualRecovery(
   const headSha = await readRecoverySeed(ctx, previous, readiness.baseHeadSha);
   const check = async () => {
     await beforeDispatch?.(readiness.baseHeadSha);
-    if ((await readRetiredWorkspaceIds(ctx.storage)).has(previous.workspaceId))
-      throw new Error("The recovery attempt changed before launch.");
+    const [attempts, selection, retired] = await Promise.all([
+      listAttempts(ctx.storage),
+      attemptSelectionsCollection(ctx.storage).get(previous.ticketId),
+      readRetiredWorkspaceIds(ctx.storage),
+    ]);
+    const variants = attempts.filter(
+      (attempt) => attempt.ticketId === previous.ticketId && !retired.has(attempt.workspaceId),
+    );
+    const chosen = selection ? variants.filter((attempt) => attempt.workspaceId === selection.workspaceId) : variants;
+    if (chosen.length !== 1 || chosen[0]?.workspaceId !== previous.workspaceId)
+      throw new Error("The implementation variant changed before recovery. Resume the current selection.");
     if ((await readSessionHistory(ctx.sessions, { workspaceId: previous.workspaceId })).some(isLiveSession))
       throw new Error("Another session is using the previous workspace. Wait for its handoff.");
     try {

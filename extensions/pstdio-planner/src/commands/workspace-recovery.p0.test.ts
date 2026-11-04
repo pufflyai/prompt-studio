@@ -316,3 +316,50 @@ test.each([
   expect(f.created).toHaveLength(0);
   expect(await attemptSelectionsCollection(f.storage).get(f.ticket.id)).toBeUndefined();
 });
+
+test.each([
+  "selected alternative",
+  "ambiguous alternatives",
+])("manual recovery preserves a changed target assignment: %s", async (change) => {
+  const f = await lostWorkspace();
+  let pendingSelection: Promise<unknown> | undefined;
+  const create = f.ctx.workspaces.create;
+  f.ctx.workspaces.create = async (input) => {
+    const workspace = await create(input);
+    await putAttempt(f.storage, { ...f.previous, workspaceId: "other", implementationSessionId: "other-owner" });
+    if (change === "selected alternative") {
+      const { selectAttemptCommand } = await import("./attempt-history");
+      pendingSelection = Promise.resolve(
+        selectAttemptCommand.run(f.ctx, { ticket: f.ticket.id, workspaceId: "other" }),
+      );
+    }
+    return workspace;
+  };
+  await expect(runAttemptCommand.run(f.ctx, { ticket: f.ticket.id })).rejects.toThrow("variant");
+  await pendingSelection;
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+  expect(await readAttempt(f.storage, "workspace-2")).toBeNull();
+  expect(f.created).toHaveLength(0);
+  const selection = await attemptSelectionsCollection(f.storage).get(f.ticket.id);
+  expect(selection?.workspaceId).toBe(change === "selected alternative" ? "other" : undefined);
+});
+
+test("a concurrent selection keeps its final choice after manual recovery launches", async () => {
+  const f = await lostWorkspace();
+  const { selectAttemptCommand } = await import("./attempt-history");
+  await putAttempt(f.storage, { ...f.previous, workspaceId: "other", implementationSessionId: "other-owner" });
+  await selectAttemptCommand.run(f.ctx, { ticket: f.ticket.id, workspaceId: f.old.workspace.id });
+  let selection: ReturnType<typeof selectAttemptCommand.run> | undefined;
+  const create = f.ctx.sessions.create;
+  f.ctx.sessions.create = async (input) => {
+    selection = selectAttemptCommand.run(f.ctx, { ticket: f.ticket.id, workspaceId: "other" });
+    // Let the concurrent command run while launch is still awaiting its host session.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return create(input);
+  };
+  const recovery = await runAttemptCommand.run(f.ctx, { ticket: f.ticket.id });
+  await selection;
+  expect(recovery.workspace.id).toBe("workspace-2");
+  expect((await attemptSelectionsCollection(f.storage).get(f.ticket.id))?.workspaceId).toBe("other");
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+});
