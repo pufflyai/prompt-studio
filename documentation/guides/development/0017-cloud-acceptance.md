@@ -169,6 +169,15 @@ ordinary saves concurrently and awaits every admitted outcome; tick 125 commits 
 Every original group, value size and checkpoint remains unchanged. Applicable Linux
 timings and the whole scenario still require latest-candidate CI.
 
+Linux CI 41842387374 confirms the Notes pass but times out during eighth-round
+staging after seven replacements (95.881 seconds through the seventh). Preserve
+this result as well. The next driver revision overlaps the previous receiver's
+download/readback with the next source's offline marker staging. It drains that
+exact witness before blocking the receiver or publishing the next large save, and
+drains the final witness before reconnecting the third device. Independent receiver
+enrollment runs concurrently. Every admitted error is retained; no workload or
+allowance is removed. Local and Linux results for this revision remain separate.
+
 ## Focused preparation and final candidate commands
 
 Run from the repository root, except where a subshell changes to the owning package.

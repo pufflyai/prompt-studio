@@ -13,6 +13,7 @@ import {
   createCloudAcceptanceFixture,
   signInCloudAcceptanceDevice,
 } from "./packaged-cloud-acceptance.fixture";
+import { withCloudReplacementWitness } from "./packaged-cloud-replacement-witness";
 import { buildBinary } from "./packaged-helpers";
 import { stopProcess } from "./packaged-serve-helpers";
 import { packagedProjectKey } from "./packaged-sync-project-key.fixture";
@@ -99,14 +100,18 @@ const setup = async (resources: Resources) => {
   await signInCloudAcceptanceDevice(first, fixture.peer.origin);
   await first.client.account.syncProject(project.id);
   await synced(first, project.id);
-  for (const device of [second, third]) {
-    await signInCloudAcceptanceDevice(device, fixture.peer.origin);
-    await expect
-      .poll(async () => (await device.client.projects.query()).items.map((row) => row.id))
-      .toContain(project.id);
-    await device.client.projects.chooseFolder(project.id, { path: device.folder, clone: false });
-    await synced(device, project.id);
-  }
+  const enrollment = await Promise.allSettled(
+    [second, third].map(async (device) => {
+      await signInCloudAcceptanceDevice(device, fixture.peer.origin);
+      await expect
+        .poll(async () => (await device.client.projects.query()).items.map((row) => row.id))
+        .toContain(project.id);
+      await device.client.projects.chooseFolder(project.id, { path: device.folder, clone: false });
+      await synced(device, project.id);
+    }),
+  );
+  const failedEnrollment = enrollment.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  if (failedEnrollment.length) throw new AggregateError(failedEnrollment, "Could not enroll all acceptance devices");
   expect((await first.client.account.devices()).map((device) => device.id).sort()).toEqual(
     devices.map((device) => device.environmentId).sort(),
   );
@@ -371,67 +376,76 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
   let priorState = old.state.stateId;
   const replacements = new Set<string>();
   const began = Date.now();
-  for (let index = 0; index < 8; index++) {
-    await test.step(`latest-state replacement ${index + 1}/8`, async () => {
-      await synced(first, projectId);
-      // Stage a complete local batch before transport resumes. Normal 128-edit checkpoints fold
-      // historical payloads; the distinct prelude makes pending bytes exceed the current state.
-      await fixture.peer.blockDevice(first.environmentId, true);
-      await fixture.peer.blockDevice(second.environmentId, true);
-      const markers = await first.command<{ operationIds: string[] }>(
-        projectId,
-        acceptanceOwner,
-        "advance-acceptance-revisions",
-        { round: index },
-      );
-      expect(markers.operationIds).toHaveLength(126);
-      expect(new Set(markers.operationIds).size).toBe(126);
-      console.log(
-        JSON.stringify({
-          phase: "replacement-markers-complete",
-          round: index,
-          groups: markers.operationIds.length,
-          elapsedMs: Date.now() - began,
-        }),
-      );
-      await first.command(projectId, acceptanceOwner, "commit", {
-        group: { operationId: `replacement-prelude-${index}`, edits: group(`prelude-${index}`) },
+  await withCloudReplacementWitness(async (witness) => {
+    for (let index = 0; index < 8; index++) {
+      await test.step(`latest-state replacement ${index + 1}/8`, async () => {
+        await synced(first, projectId);
+        // Stage a complete local batch before transport resumes. Normal 128-edit checkpoints fold
+        // historical payloads; the distinct prelude makes pending bytes exceed the current state.
+        await fixture.peer.blockDevice(first.environmentId, true);
+        const markers = await first.command<{ operationIds: string[] }>(
+          projectId,
+          acceptanceOwner,
+          "advance-acceptance-revisions",
+          { round: index },
+        );
+        expect(markers.operationIds).toHaveLength(126);
+        expect(new Set(markers.operationIds).size).toBe(126);
+        console.log(
+          JSON.stringify({
+            phase: "replacement-markers-complete",
+            round: index,
+            groups: markers.operationIds.length,
+            elapsedMs: Date.now() - began,
+          }),
+        );
+        // The previous receiver may download while the source stages offline. Finish that exact
+        // round's readback before blocking the receiver or exposing the next large save.
+        await witness.wait();
+        await fixture.peer.blockDevice(second.environmentId, true);
+        await first.command(projectId, acceptanceOwner, "commit", {
+          group: { operationId: `replacement-prelude-${index}`, edits: group(`prelude-${index}`) },
+        });
+        // Preserve every original eight-record, 200000-byte-value grouped save.
+        await first.command(projectId, acceptanceOwner, "commit", {
+          group: { operationId: `replacement-${index}`, edits: group(String(index)) },
+        });
+        await fixture.peer.blockDevice(first.environmentId, false);
+        await first.client.account.retryProjectSync(projectId);
+        await expect
+          .poll(async () => {
+            const snapshot = await fixture.peer.captureSnapshot(documentId);
+            return snapshot.state.stateId !== priorState && snapshot.state.through === snapshot.lastSequence;
+          })
+          .toBe(true);
+        const state = await fixture.peer.captureSnapshot(documentId);
+        priorState = state.state.stateId;
+        replacements.add(priorState);
+        console.log(
+          JSON.stringify({
+            phase: "latest-state-replacement",
+            round: index,
+            stateId: priorState,
+            through: state.state.through,
+            elapsedMs: Date.now() - began,
+          }),
+        );
+        await fixture.peer.trim(documentId);
+        await fixture.peer.blockDevice(second.environmentId, false);
+        witness.start(async () => {
+          await second.client.account.retryProjectSync(projectId);
+          await synced(second, projectId);
+          await expect
+            .poll(() =>
+              second.command<StorageRecord[]>(projectId, acceptanceOwner, "read-acceptance-records", {
+                ids: ["large-7"],
+              }),
+            )
+            .toMatchObject([{ value: group(String(index))[7]!.replace }]);
+        });
       });
-      // Preserve every original eight-record, 200000-byte-value grouped save.
-      await first.command(projectId, acceptanceOwner, "commit", {
-        group: { operationId: `replacement-${index}`, edits: group(String(index)) },
-      });
-      await fixture.peer.blockDevice(first.environmentId, false);
-      await first.client.account.retryProjectSync(projectId);
-      await expect
-        .poll(async () => {
-          const snapshot = await fixture.peer.captureSnapshot(documentId);
-          return snapshot.state.stateId !== priorState && snapshot.state.through === snapshot.lastSequence;
-        })
-        .toBe(true);
-      const state = await fixture.peer.captureSnapshot(documentId);
-      priorState = state.state.stateId;
-      replacements.add(priorState);
-      console.log(
-        JSON.stringify({
-          phase: "latest-state-replacement",
-          round: index,
-          stateId: priorState,
-          through: state.state.through,
-          elapsedMs: Date.now() - began,
-        }),
-      );
-      await fixture.peer.trim(documentId);
-      await fixture.peer.blockDevice(second.environmentId, false);
-      await second.client.account.retryProjectSync(projectId);
-      await synced(second, projectId);
-      await expect
-        .poll(() =>
-          second.command<StorageRecord[]>(projectId, acceptanceOwner, "read-acceptance-records", { ids: ["large-7"] }),
-        )
-        .toMatchObject([{ value: group(String(index))[7]!.replace }]);
-    });
-  }
+    }
+  });
   expect(replacements.size).toBe(8);
   await fixture.peer.blockDevice(third.environmentId, false);
   await third.client.account.retryProjectSync(projectId);
