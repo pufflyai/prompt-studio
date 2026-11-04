@@ -19,7 +19,12 @@ export const useSessionDevice = (owner: Session["device"], queueReadOnly?: boole
     refreshQueue?.();
   });
   useEffect(() => {
-    if (ownerOnline && queueReadOnly) refreshOnlineQueue();
+    if (!ownerOnline || !queueReadOnly) return;
+    refreshOnlineQueue();
+    // A forwarded read fails while either device renews its relay access, and the retry can land in the same
+    // window. Keep asking the online owner until its complete queue arrives.
+    const retry = setInterval(refreshOnlineQueue, 2_000);
+    return () => clearInterval(retry);
   }, [ownerOnline, queueReadOnly]);
   return {
     ...access,

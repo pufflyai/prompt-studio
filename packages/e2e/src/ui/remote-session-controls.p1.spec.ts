@@ -101,6 +101,31 @@ test("remote primary controls keep commands, queues, questions and approvals on 
   await page.screenshot({ path: test.info().outputPath("online-owner.png") });
 });
 
+test("an online owner's queue recovers by itself after its automatic refresh also fails", async ({ page }) => {
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+  }, fixture.projectId);
+  // While a relay access renews, every forwarded read falls back to the read-only saved queue.
+  let renewing = true;
+  let failedReads = 0;
+  const queueRoute = `**/v1/sessions/${fixture.sessionId}/queued-messages`;
+  await page.route(queueRoute, async (route) => {
+    const response = await route.fetch();
+    const saved = await response.json();
+    if (renewing) failedReads++;
+    await route.fulfill({ response, json: renewing ? { ...saved, queue: { ...saved.queue, readOnly: true } } : saved });
+  });
+  await page.goto(sessionUrl());
+  await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
+  await expect.poll(() => failedReads).toBeGreaterThanOrEqual(2);
+  await page.waitForTimeout(3_000);
+  renewing = false;
+  await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("send-message-button").filter({ visible: true }).last()).toBeVisible();
+  await page.unroute(queueRoute);
+});
+
 test("remote workspace files and diff open on their owner; offline history stays readable and new drafts choose a device", async ({
   page,
   request,
