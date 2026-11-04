@@ -12,4 +12,4 @@ Recent uses the host’s project-scoped navigation history through `workbenchCom
 
 The Canvas baseline is `src/components/home.canvas.tsx`: `Default`, `SetupDidNotFinish`, and `NoRecentResources`.
 
-Development currently uses the local SDK and a published UI preview. Before delivery, replace the workspace SDK dependency with the supporting published preview and generate the extension lockfile. The SDK/host prerequisite is [PR #1687](https://github.com/pufflyai/prompt-studio/pull/1687). See the [preview release workflow](../../documentation/guides/development/0014-sdk-ui-previews.md).
+Home pins the published SDK and UI nightly `0.47.0-nightly.20261104030253` and includes a standalone `bun.lock`. Its public API prerequisite landed in [PR #1687](https://github.com/pufflyai/prompt-studio/pull/1687). Dependency updates must use real published versions and regenerate the extension lockfile through the [supported release workflow](../../documentation/guides/development/0014-sdk-ui-previews.md).
