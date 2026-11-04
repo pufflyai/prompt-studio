@@ -17,6 +17,16 @@ export {
   setNativeFieldValue,
 } from "./native-record-source";
 export {
+  applyOrderedOperation,
+  type OrderedDecision,
+  type OrderedEdit,
+  type OrderedOperation,
+  type OrderedRecord,
+  observeOrderedRecord,
+  prepareOrderedOperation,
+  projectOrderedOperation,
+} from "./ordered-operation";
+export {
   type ProjectInfo,
   projectInfoDocumentId,
   projectInfoState,
