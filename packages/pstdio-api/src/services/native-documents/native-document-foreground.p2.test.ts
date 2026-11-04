@@ -74,19 +74,20 @@ beforeAll(async () => {
     .records;
   const seedStarted = performance.now();
   // This is an editor read-scope regression. Keep all real records while reducing fixture transaction overhead.
-  for (let start = 0; start < 99_999; start += 5_000) {
+  const batchSize = 25_000;
+  for (let start = 0; start < 99_999; start += batchSize) {
     await records.commit({
       operationId: `seed-${start}`,
-      edits: Array.from({ length: Math.min(5_000, 99_999 - start) }, (_, offset) => ({
+      edits: Array.from({ length: Math.min(batchSize, 99_999 - start) }, (_, offset) => ({
         recordId: `resource-${start + offset}`,
         replace: { title: `Resource ${start + offset}`, description: "An unrelated resource", status: "active" },
       })),
     });
-    if ((start + 5_000) % 25_000 === 0)
+    if ((start + batchSize) % 25_000 === 0)
       console.log(
         JSON.stringify({
           phase: "foreground-fixture",
-          resources: Math.min(start + 5_000, 99_999) + 1,
+          resources: Math.min(start + batchSize, 99_999) + 1,
           elapsedMs: performance.now() - seedStarted,
         }),
       );
