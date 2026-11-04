@@ -9,6 +9,7 @@ import {
   runPackagedCli,
 } from "./packaged-app-helpers";
 import {
+  homePage,
   launchProject,
   openLabPreview,
   type PerformanceSnapshot,
@@ -98,7 +99,7 @@ test("keeps reporting slow frames after the workbench reloads", async () => {
       };
     });
     await app.page.reload();
-    await expect(app.page.getByTestId("start-page")).toBeVisible();
+    await expect(homePage(app.page)).toBeVisible();
     await expect.poll(async () => (await readSnapshot(app!.page)) !== null).toBe(true);
     await app.page.waitForFunction(
       () => (window as unknown as { slowFrameObserverReady?: boolean }).slowFrameObserverReady === true,

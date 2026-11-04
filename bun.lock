@@ -137,6 +137,7 @@
         "electron": "43.8.1",
         "fflate": "0.8.3",
         "pstdio-benchmarks": "workspace:*",
+        "pstdio-home": "workspace:*",
         "pstdio-performance": "workspace:*",
         "pstdio-scripts": "workspace:*",
         "typescript": "6.0.2",
