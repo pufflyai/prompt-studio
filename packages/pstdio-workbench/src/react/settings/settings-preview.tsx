@@ -290,7 +290,11 @@ const PreviewCollection = (props: {
     />
   );
 };
-export const SettingsPreview = (props: { navigationLoading?: boolean; contentLoading?: boolean }) => {
+export const SettingsPreview = (props: {
+  navigationLoading?: boolean;
+  contentLoading?: boolean;
+  extensionViews?: boolean;
+}) => {
   const [workbench] = useState(() => createWorkbench());
   useEffect(() => {
     const contributions = workbench.registerModule({
@@ -308,7 +312,7 @@ export const SettingsPreview = (props: { navigationLoading?: boolean; contentLoa
             id: page.id,
             title: page.title,
             body: {
-              kind: "react",
+              kind: props.extensionViews ? "webview" : "react",
               layout: ["skill", "template"].includes(page.id) ? "full-width" : undefined,
               render: () => <PreviewFields id={page.id} loading={props.contentLoading} />,
             },
@@ -327,6 +331,6 @@ export const SettingsPreview = (props: { navigationLoading?: boolean; contentLoa
       settings.dispose();
       contributions.dispose();
     };
-  }, [workbench, props.navigationLoading, props.contentLoading]);
+  }, [workbench, props.navigationLoading, props.contentLoading, props.extensionViews]);
   return <Workbench workbench={workbench} />;
 };

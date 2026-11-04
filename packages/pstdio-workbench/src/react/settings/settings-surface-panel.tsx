@@ -153,7 +153,7 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
   const view = useWorkbenchStore(input.workbench.views.store, (value) =>
     panel && panel.kind !== "schema" ? value.views[panel.viewId] : undefined,
   );
-  const contentLayout = view?.body.kind === "react" ? view.body.layout : undefined;
+  const contentLayout = view?.body.kind === "react" || view?.body.kind === "webview" ? view.body.layout : undefined;
   const guard = settingsLeaveGuard(input.workbench);
   const draft = useSyncExternalStore(guard.subscribe, guard.getActions);
   const changes = draft

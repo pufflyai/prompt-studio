@@ -18,6 +18,7 @@ export default {
   ],
 } satisfies CanvasMeta<typeof SettingsPreview>;
 export const Settings = {};
+export const ExtensionSettings = { args: { extensionViews: true } };
 export const NavigationLoading = { args: { navigationLoading: true } };
 export const ContentLoading = { args: { contentLoading: true } };
 export const NavigationAndContentLoading = { args: { navigationLoading: true, contentLoading: true } };

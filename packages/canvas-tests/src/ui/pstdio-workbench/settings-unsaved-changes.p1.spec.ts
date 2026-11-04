@@ -1,6 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
+// Critical: extension editors must fill the settings body without a second host scrollbar constraining their content.
+test("extension settings editors own their scrolling", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/settings/settings-consistency.canvas.tsx#ExtensionSettings",
+  );
+  await preview.getByText("Bug fix", { exact: true }).click();
+  const content = preview.locator("pre");
+  await expect(content).toBeVisible();
+  await expect(content.locator('xpath=ancestor::*[@data-scope="scroll-area" and @data-part="viewport"]')).toHaveCount(
+    1,
+  );
+});
+
 // Critical: settings navigation and modal dismissal must not silently drop pending edits.
 test("settings preserve edits on Stay and guard both navigation and closing", async ({ page }) => {
   const preview = await openCanvasPreview(
