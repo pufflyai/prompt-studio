@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: "17 21 * * 0"
   workflow_dispatch:
+    inputs:
+      run_id:
+        description: Optional run whose failed job logs should be preserved instead of collecting the weekly report
+        type: string
+        default: ""
 
 permissions:
   actions: read
@@ -12,6 +17,7 @@ permissions:
 
 jobs:
   report:
+    if: inputs.run_id == ''
     runs-on: ubuntu-latest
     # The week to 2026-11-01 needed about 2,700 API requests. The token's 1,000 per hour are
     # shared with every workflow, so the collector keeps 300 in reserve and waits for each reset.
@@ -35,3 +41,40 @@ jobs:
           name: ci-failure-report-attempt-${{ github.run_attempt }}
           path: test-results/ci-failures
           if-no-files-found: warn
+
+  failure_logs:
+    if: inputs.run_id != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Collect the original failed job logs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          mkdir -p failure-logs
+          gh api "repos/$REPOSITORY/actions/runs/$RUN_ID" \
+            --jq '{id, head_sha, run_attempt, conclusion}' > failure-logs/run.json
+          gh api --paginate "repos/$REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .id' \
+            > failure-logs/failed-jobs.txt
+          failed=0
+          while read -r job_id; do
+            if ! gh api "repos/$REPOSITORY/actions/jobs/$job_id/logs" \
+              > "failure-logs/$job_id.log" 2> "$RUNNER_TEMP/job-log-error.txt"; then
+              echo "Could not retrieve original log for job $job_id" >> failure-logs/unavailable.txt
+              failed=1
+            fi
+          done < failure-logs/failed-jobs.txt
+          exit "$failed"
+      - name: Preserve original failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-job-logs-${{ inputs.run_id }}
+          path: failure-logs
+          if-no-files-found: error

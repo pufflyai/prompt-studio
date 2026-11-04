@@ -25,6 +25,12 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   }).toPass();
   await expect(tree.locator("[data-tree-list-drop-group]")).toHaveCount(1);
   await page.mouse.up();
+  // A drop schedules the tree update. Wait for this row to belong to the group
+  // before collapsing it, so the following click observes the updated layout.
+  const rowId = await source.getAttribute("data-tree-list-focus-id");
+  expect(rowId).toBeTruthy();
+  const section = group.locator("xpath=ancestor::*[@data-tree-list-focus-id]/../..");
+  await expect(section.locator(`[data-tree-list-focus-id=${JSON.stringify(rowId)}]`)).toBeVisible();
   // dnd-kit suppresses clicks briefly after a drop.
   await page.waitForTimeout(100);
   await group.click();
