@@ -389,6 +389,10 @@
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
+    "extensions/pstdio-cloud": {
+      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/devices-view.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
     "extensions/pstdio-planner": {
       "entry": [
         "package.json",
