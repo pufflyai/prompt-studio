@@ -1,6 +1,30 @@
 import { expect, test } from "bun:test";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
 
+test("an earlier settled refresh cannot complete a later failed readiness check", async () => {
+  let calls = 0;
+  let completed = 0;
+  const queue = createExtensionRefreshQueue({
+    getGeneration: () => 1,
+    getProjectId: () => "project",
+    fallback: () => "fallback",
+    load: async () => {
+      if (++calls === 1) return "valid";
+      throw new Error("offline");
+    },
+    apply: () => {},
+    onComplete: () => {
+      completed++;
+    },
+  });
+  queue.refresh("project");
+  await new Promise(setImmediate);
+  expect(completed).toBe(1);
+  queue.refresh("project");
+  await new Promise(setImmediate);
+  expect(completed).toBe(1);
+});
+
 test("a queued refresh failure completes readiness after the chain applied valid metadata", async () => {
   const first = Promise.withResolvers<string>();
   const second = Promise.withResolvers<string>();

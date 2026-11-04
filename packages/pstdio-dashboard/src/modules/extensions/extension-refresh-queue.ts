@@ -2,6 +2,7 @@ interface ExtensionRefreshRequest {
   generation: number;
   projectId: string;
   queued: boolean;
+  applied: boolean;
 }
 
 interface CreateExtensionRefreshQueueInput<TValue> {
@@ -20,36 +21,31 @@ export const createExtensionRefreshQueue = <TValue>(input: CreateExtensionRefres
   const isCurrentRequest = (request: ExtensionRefreshRequest) =>
     request.generation === input.getGeneration() && input.getProjectId() === request.projectId;
 
-  const refresh = (projectId: string) => {
-    const generation = input.getGeneration();
-    if (activeRequest?.projectId === projectId && activeRequest.generation === generation) {
-      activeRequest.queued = true;
-      return;
-    }
-
-    const request: ExtensionRefreshRequest = { generation, projectId, queued: false };
-    activeRequest = request;
-    let applied = false;
+  const load = (request: ExtensionRefreshRequest) => {
     void input
-      .load(projectId)
+      .load(request.projectId)
       .then(
         (value) => {
           if (!isCurrentRequest(request)) return;
-          hasSuccessfulValue = true;
           input.apply(request.projectId, value);
-          applied = true;
+          hasSuccessfulValue = true;
+          request.applied = true;
         },
         () => {
           if (!isCurrentRequest(request) || hasSuccessfulValue) return;
           input.apply(request.projectId, input.fallback());
-          applied = true;
+          request.applied = true;
         },
       )
       .finally(() => {
         if (activeRequest !== request) return;
-        activeRequest = undefined;
-        if (request.queued && input.getProjectId() === request.projectId) refresh(request.projectId);
-        else if ((applied || hasSuccessfulValue) && isCurrentRequest(request)) input.onComplete?.(request.projectId);
+        if (request.queued && isCurrentRequest(request)) {
+          request.queued = false;
+          load(request);
+        } else {
+          activeRequest = undefined;
+          if (request.applied && isCurrentRequest(request)) input.onComplete?.(request.projectId);
+        }
       });
   };
 
@@ -58,6 +54,15 @@ export const createExtensionRefreshQueue = <TValue>(input: CreateExtensionRefres
       activeRequest = undefined;
       hasSuccessfulValue = false;
     },
-    refresh,
+    refresh: (projectId: string) => {
+      const generation = input.getGeneration();
+      if (activeRequest?.projectId === projectId && activeRequest.generation === generation) {
+        activeRequest.queued = true;
+        return;
+      }
+      const request = { generation, projectId, queued: false, applied: false };
+      activeRequest = request;
+      load(request);
+    },
   };
 };
