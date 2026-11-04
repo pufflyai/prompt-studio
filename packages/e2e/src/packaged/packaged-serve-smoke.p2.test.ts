@@ -22,7 +22,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.
-// packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs, incremental device index edits, and complete offline history after restart.
+// packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs and complete offline history after restart.
 // packaged-tool-result-limit.p2.test.ts bounds a 76 MB failed result, including duplicate details, across restart.
 // Packaged harnesses expose scoped account state and a private interactive account channel.
 // harness-npm-detection.p1.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
@@ -37,7 +37,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/workbench-package-consumer.ts checks packaged activation, scoped status persistence and overlay exports.
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.
-// It also imports the packed SDK's browser-free theme converter and checks both packed UI contrast palettes.
+// It also imports the packed SDK's browser-free theme converter, checks both packed UI contrast palettes, and bundles the charts entry with a Gantt consumer.
 // packaged-session-tools.p1.spec.ts checks draft/session/tool tab restoration across navigation and reload, creation, closure and New session tools.
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.

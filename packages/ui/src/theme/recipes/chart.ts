@@ -1,0 +1,43 @@
+import { defineSlotRecipe } from "@chakra-ui/react";
+
+export const chartRecipe = defineSlotRecipe({
+  slots: ["root", "tooltip"],
+  base: {
+    root: {
+      minW: "0",
+      minH: "0",
+      w: "full",
+      color: "vis.text.primary",
+      textStyle: "label/XS/regular",
+      "--ts-chart-1": "{colors.vis.categorical.1}",
+      "--ts-chart-2": "{colors.vis.categorical.2}",
+      "--ts-chart-3": "{colors.vis.categorical.3}",
+      "--ts-chart-4": "{colors.vis.categorical.4}",
+      "--ts-chart-5": "{colors.vis.categorical.5}",
+      "--ts-chart-6": "{colors.vis.categorical.6}",
+      "--ts-chart-focus-fill": "{colors.bg}",
+      "--ts-chart-crosshair-label-halo": "{colors.bg}",
+      "--ts-chart-tooltip-background": "{colors.bg}",
+      "--ts-chart-tooltip-color": "{colors.vis.text.primary}",
+      "--ts-chart-tooltip-border": "1px solid {colors.border.subtle}",
+      "--ts-chart-tooltip-border-radius": "{radii.xs}",
+      "--ts-chart-tooltip-padding": "{spacing.xs} {spacing.sm}",
+      "--ts-chart-tooltip-shadow": "none",
+      "--ts-chart-tooltip-font": "inherit",
+      "--ts-chart-tooltip-active-row-background": "{colors.bg.hover}",
+      "--ts-chart-tooltip-active-row-shadow": "none",
+      "--ts-chart-tooltip-active-row-border-radius": "{radii.xs}",
+      "& svg text": { fontFamily: "body", fontSize: "xs" },
+    },
+    tooltip: {
+      bg: "bg",
+      color: "vis.text.primary",
+      borderWidth: "1px",
+      borderColor: "border.subtle",
+      borderRadius: "xs",
+      px: "sm",
+      py: "xs",
+      textStyle: "label/XS/regular",
+    },
+  },
+});

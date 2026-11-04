@@ -204,6 +204,11 @@ for (const theme of contrastThemes) {
 }
 import { Canvas, zoomCanvas, type CanvasCamera } from "@pstdio/ui/canvas";
 import { DependencyTimeline } from "@pstdio/ui/dependency-timeline";
+import { GanttChart, chartColor, type GanttTask } from "@pstdio/ui/charts";
+const chartTasks: GanttTask[] = [{ id: "work", label: "Work", start: 0, end: 7 }];
+const gantt = createElement(GanttChart, { tasks: chartTasks, ariaLabel: "Packed project forecast", formatValue: (value: number) => String(value) });
+if (!chartColor("vis.categorical.1")) throw new Error("Packed UI lost its chart theme");
+void gantt;
 import { KeyframeTimeline, sampleTrack, type KeyframeTrack } from "@pstdio/ui/keyframe-timeline";
 const animationTrack: KeyframeTrack = { id: "opacity", label: "Opacity", keyframes: [{ id: "start", time: 0, value: 0 }, { id: "end", time: 2, value: 1 }] };
 if (sampleTrack(animationTrack, 1) !== 0.5) throw new Error("Animation interpolation changed");

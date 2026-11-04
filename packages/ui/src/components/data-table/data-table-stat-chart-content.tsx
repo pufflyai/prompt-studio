@@ -1,36 +1,17 @@
-import { Chart, type UseChartProps, useChart } from "@chakra-ui/charts";
+import { Stack, Text } from "@chakra-ui/react";
+import { barX, barY, defineChart } from "@tanstack/charts";
+import { scaleBand } from "@tanstack/charts/scales/band";
+import { scaleLinear } from "@tanstack/charts/scales/linear";
+import { tooltip } from "@tanstack/charts/tooltip";
 import type { ReactNode } from "react";
-import {
-  Bar,
-  BarChart,
-  Tooltip as RechartsTooltip,
-  useActiveTooltipCoordinate,
-  usePlotArea,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Chart, chartColor } from "@/components/charts/chart";
 
-type ChartSeries<T> = NonNullable<UseChartProps<T>["series"]>[number];
 type StringKeyOf<T> = Extract<keyof T, string>;
-
-const StatChartCrosshair = () => {
-  const coordinate = useActiveTooltipCoordinate();
-  const plotArea = usePlotArea();
-
-  if (!coordinate || !plotArea) return null;
-
-  return (
-    <g pointerEvents="none" stroke="var(--chakra-colors-border-emphasized)" strokeWidth="1">
-      <line x1={coordinate.x} x2={coordinate.x} y1={plotArea.y} y2={plotArea.y + plotArea.height} />
-      <line x1={plotArea.x} x2={plotArea.x + plotArea.width} y1={coordinate.y} y2={coordinate.y} />
-    </g>
-  );
-};
 
 export interface DataTableStatChartProps<T extends object> {
   data: T[];
   dataKey: StringKeyOf<T>;
-  color: ChartSeries<T>["color"];
+  color: string;
   height: string;
   ariaLabel: string;
   tooltipLabel: (datum: T) => ReactNode;
@@ -49,51 +30,60 @@ export const DataTableStatChart = <T extends object>(props: DataTableStatChartPr
     dataKey,
     color,
     height,
+    ariaLabel,
     tooltipLabel,
     tooltipValue,
     tooltipSeriesLabel,
     layout = "horizontal",
-    categoryKey,
     domain,
     barSize,
     barCategoryGap = 1,
   } = props;
-  const chart = useChart({ data, series: [{ name: dataKey, color }] });
-  const getBarValue = (datum: T) => datum[dataKey] as string | number;
-  const getCategoryValue = categoryKey ? (datum: T) => datum[categoryKey] as string | number : undefined;
-
+  const points = data.map((datum, index) => ({ id: String(index), datum, value: Number(datum[dataKey]) }));
+  const fill = chartColor(color);
+  const chartProps = {
+    ariaLabel,
+    height,
+    renderTooltipBody: ({ primaryPoint }: { primaryPoint?: { datum: (typeof points)[number] } }) =>
+      primaryPoint ? (
+        <Stack gap="2xs">
+          <Text textStyle="label/XS/medium">{tooltipLabel(primaryPoint.datum.datum)}</Text>
+          <Text textStyle="label/XS/regular">
+            {tooltipSeriesLabel}: {tooltipValue(primaryPoint.datum.value)}
+          </Text>
+        </Stack>
+      ) : null,
+  };
+  if (layout === "vertical")
+    return (
+      <Chart
+        {...chartProps}
+        definition={defineChart(
+          {
+            marks: [barX(points, { x: "value", y: "id", fill, maxThickness: barSize })],
+            guides: false,
+            margin: 0,
+            scales: {
+              x: { scale: scaleLinear().domain(domain ?? [0, Math.max(1, ...points.map(({ value }) => value))]) },
+              y: { scale: () => scaleBand<string>().padding(0) },
+            },
+          },
+          { tooltip: { use: tooltip } },
+        )}
+      />
+    );
   return (
-    <Chart.Root chart={chart} height={height} aspectRatio="auto" cursor="crosshair">
-      <BarChart
-        responsive
-        data={chart.data}
-        layout={layout}
-        margin={{ top: 2, right: 0, bottom: 0, left: 0 }}
-        barCategoryGap={barCategoryGap}
-      >
-        {layout === "vertical" ? (
-          <>
-            <XAxis type="number" domain={domain} hide />
-            <YAxis type="category" dataKey={getCategoryValue} hide />
-          </>
-        ) : null}
-        <Bar dataKey={getBarValue} fill={chart.color(color)} barSize={barSize} isAnimationActive={false} />
-        <RechartsTooltip
-          allowEscapeViewBox={{ x: true, y: true }}
-          content={
-            <Chart.Tooltip
-              labelFormatter={(label, payload) => {
-                const datum = payload[0]?.payload as T | undefined;
-                return datum ? tooltipLabel(datum) : label;
-              }}
-              formatter={(value) => [tooltipValue(value), tooltipSeriesLabel]}
-            />
-          }
-          cursor={<StatChartCrosshair />}
-          isAnimationActive={false}
-          wrapperStyle={{ zIndex: 1800 }}
-        />
-      </BarChart>
-    </Chart.Root>
+    <Chart
+      {...chartProps}
+      definition={defineChart(
+        {
+          marks: [barY(points, { x: "id", y: "value", fill, inset: barCategoryGap / 2, maxThickness: barSize })],
+          guides: false,
+          margin: 0,
+          scales: { x: { scale: () => scaleBand<string>().padding(0) }, y: { scale: scaleLinear } },
+        },
+        { tooltip: { use: tooltip } },
+      )}
+    />
   );
 };

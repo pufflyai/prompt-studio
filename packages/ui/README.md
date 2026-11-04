@@ -29,7 +29,7 @@ See [Canvas coverage](../../documentation/guides/development/0003-canvas-coverag
 The root entry holds the light, widely reused components. A feature that pulls a
 heavy dependency, such as the Lexical editor, Monaco, Mermaid, or the terminal,
 gets its own entry: `./rich-text`, `./param-editor`, `./kanban-renderer`,
-`./data-table`, `./chat-ui`, `./diff`, `./mermaid`, `./terminal`. Nothing reachable
+`./data-table`, `./charts`, `./chat-ui`, `./diff`, `./mermaid`, `./terminal`. Nothing reachable
 from the root entry may import one of those, or every consumer's bundler emits the
 heavy chunks even when the consumer never renders the feature.
 
@@ -125,3 +125,7 @@ Arrow keys on a focused key move it, and Delete removes it then focuses its trac
 Pointer dragging uses the same snapping/collision rules. The timecode uses the
 rounded nominal frame rate (non-drop-frame); timeline positions use seconds.
 See **Components/Media/Keyframe Timeline** for Animation, ReadOnly, Empty, and Long.
+
+## Charts
+
+Use the themed TanStack components from `@pstdio/ui/charts`. See the [chart guide](src/components/charts/README.md) for sizing, palettes, tooltips, and Gantt dependencies.
