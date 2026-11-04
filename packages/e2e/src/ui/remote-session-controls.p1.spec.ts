@@ -26,7 +26,21 @@ test("remote primary controls keep commands, queues, questions and approvals on 
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, fixture.projectId);
-  await page.goto(sessionUrl());
+  const presence = Promise.withResolvers<void>();
+  const presenceRoute = "**/v1/account/devices";
+  await page.route(presenceRoute, async (route) => {
+    await presence.promise;
+    await route.continue();
+  });
+  try {
+    await page.goto(sessionUrl());
+    await expect(page.getByRole("button", { name: "Check connection", exact: true })).toBeVisible();
+    await expect(page.getByText("Laptop is offline", { exact: true }).filter({ visible: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
+  } finally {
+    presence.resolve();
+    await page.unroute(presenceRoute, { behavior: "wait" });
+  }
   const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
   const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
   await expect(page.getByTestId("session-device").filter({ visible: true }).last()).toContainText("Laptop");

@@ -239,6 +239,13 @@ const admin = async (request: Request) => {
     mirrorInBackground(true);
     return Response.json({ ok: true });
   }
+  if (input.action === "fail-source-close") {
+    const originalClose = source.close;
+    source.close = async () => {
+      await originalClose();
+      throw new Error("Injected source close failure");
+    };
+  }
   if (input.action === "offline") online = false;
   if (input.action === "online") online = true;
   if (input.action === "question") {
@@ -293,6 +300,7 @@ const dashboard = resolve(import.meta.dirname, "../../../pstdio-dashboard/dist")
 const server = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
+  error: (error) => new Response(error.message, { status: 500 }),
   fetch: async (request) => {
     const url = new URL(request.url);
     if (url.pathname === "/fixture/state") return Response.json(await snapshot());
@@ -318,15 +326,25 @@ const close = async () => {
   await syncing.catch(reportMirrorFailure);
   // Held fake turns own no native process. App close disposes their registry; completing them here
   // would manufacture terminal checkpoint writes during teardown rather than stop an owned resource.
-  phase("source-close");
-  await source.close();
-  phase("target-close");
-  await target.close();
-  phase("manager-close");
-  manager.stop(true);
-  await rm(root, { recursive: true, force: true });
+  let failed = false;
+  const release = async (resource: string, dispose: () => unknown) => {
+    phase(resource);
+    try {
+      await dispose();
+    } catch (error) {
+      failed = true;
+      setupLogger.error(
+        { event: "fixture.remote_session.cleanup_failed", resource, err: error },
+        "Remote fixture cleanup failed",
+      );
+    }
+  };
+  await release("source-close", () => source.close());
+  await release("target-close", () => target.close());
+  await release("manager-close", () => manager.stop(true));
+  await release("root-remove", () => rm(root, { recursive: true, force: true }));
   phase("complete");
-  process.exit(0);
+  process.exit(failed ? 1 : 0);
 };
 process.removeListener("SIGTERM", earlyExit);
 process.removeListener("SIGINT", earlyExit);

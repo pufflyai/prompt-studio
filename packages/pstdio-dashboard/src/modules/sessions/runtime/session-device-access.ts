@@ -4,18 +4,22 @@ import { resolveRuntimeWorkspaceSelection } from "./session-runtime-selection";
 export const sessionDeviceAccess = (
   owner: Session["device"],
   selectedDeviceId: string,
-  devices: AccountDevice[],
+  devices: AccountDevice[] | undefined,
   queueReadOnly?: boolean,
 ) => {
   const deviceId = owner?.id ?? (selectedDeviceId === "this-device" ? undefined : selectedDeviceId);
-  const device = devices.find((item) => item.id === deviceId);
-  const offline = Boolean(deviceId && !device?.online);
+  const device = devices?.find((item) => item.id === deviceId);
+  const connectionUnknown = Boolean(deviceId && devices === undefined);
+  const offline = Boolean(deviceId && devices !== undefined && !device?.online);
+  const connectionUnavailable = connectionUnknown || offline;
   return {
     deviceId,
     name: owner?.name ?? device?.name ?? selectedDeviceId,
     remote: Boolean(deviceId),
     offline,
-    unavailable: offline || Boolean(deviceId && queueReadOnly),
+    connectionUnknown,
+    connectionUnavailable,
+    unavailable: connectionUnavailable || Boolean(deviceId && queueReadOnly),
   };
 };
 

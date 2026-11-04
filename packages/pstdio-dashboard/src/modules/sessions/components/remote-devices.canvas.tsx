@@ -28,8 +28,15 @@ const workspace: DashboardWorkspaceOption = {
   updatedAt: "2026-01-01T00:00:00Z",
 };
 
-const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boolean; queueReadOnly?: boolean }) => {
-  const { offline = false, queued = false, draft = false, queueReadOnly = false } = props;
+const RemoteSession = (props: {
+  offline?: boolean;
+  queued?: boolean;
+  draft?: boolean;
+  queueReadOnly?: boolean;
+  connectionUnknown?: boolean;
+}) => {
+  const { offline = false, queued = false, draft = false, queueReadOnly = false, connectionUnknown = false } = props;
+  const unavailable = offline || connectionUnknown;
   const [deviceId, setDeviceId] = useState(draft ? "this-device" : "laptop");
   const [started, setStarted] = useState(!draft);
   const [text, setText] = useState("");
@@ -55,7 +62,7 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
       <Box flex="1" minH="0">
         <ChatPanel
           messages={messages}
-          streaming={running && !offline}
+          streaming={running && !unavailable}
           emptyStateTitle="Start a conversation"
           emptyStateDescription={`Run the session on ${name}.`}
           chatInputPlaceholder="Reply to the agent..."
@@ -79,10 +86,12 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
           onQueuedFollowUpUpdate={(id, prompt) =>
             setQueue((items) => items.map((item) => (item.id === id ? { ...item, prompt } : item)))
           }
-          readOnlyQueue={offline || queueReadOnly}
+          readOnlyQueue={unavailable || queueReadOnly}
           submitDisabled={queueReadOnly}
           conversationNotices={queueReadOnly ? <SessionQueueUnavailable name={name} onRefresh={() => {}} /> : null}
-          composerFallback={offline ? <SessionPersonalDevice name={name} /> : undefined}
+          composerFallback={
+            unavailable ? <SessionPersonalDevice name={name} connectionUnknown={connectionUnknown} /> : undefined
+          }
           workspaceHub={
             <ChatWorkspaceHub
               additions={12}
@@ -100,7 +109,7 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
                     selectedWorkspaceId={workspace.id}
                     selectedWorkspaceLabel={workspace.title}
                     onSelectWorkspace={() => {}}
-                    onOpenWorkspace={offline || !started ? undefined : () => setWorkspaceOpen(true)}
+                    onOpenWorkspace={unavailable || !started ? undefined : () => setWorkspaceOpen(true)}
                     isDisabled={started}
                   />
                 </HStack>
@@ -127,5 +136,6 @@ export default {
 export const OnlineConversation = () => <RemoteSession />;
 export const QueuedOnLaptop = () => <RemoteSession queued />;
 export const OfflineLaptop = () => <RemoteSession offline queued />;
+export const UnknownConnection = () => <RemoteSession connectionUnknown queued />;
 export const OnlineReadOnlyQueue = () => <RemoteSession queued queueReadOnly />;
 export const NewSessionDevicePicker = () => <RemoteSession draft />;

@@ -25,8 +25,9 @@ interface SessionQueuedChatPanelProps extends ComponentProps<typeof ChatPanel> {
   draftAttachments: ReturnType<typeof useSessionDraftAttachments>;
   modelControls: ComponentProps<typeof SessionComposerActions>;
   messagesBlocked?: boolean;
-  /** Offline owner: the queue remains readable above the device notice. */
+  /** Unavailable owner: the queue remains readable above the device notice. */
   device?: Session["device"];
+  connectionUnknown?: boolean;
   remote?: boolean;
   onDeviceReconnect?(): unknown;
 }
@@ -55,6 +56,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
     modelControls,
     messagesBlocked,
     device,
+    connectionUnknown,
     remote,
     onDeviceReconnect,
     ...panel
@@ -97,7 +99,15 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
     <ChatPanel
       {...panel}
       composerFallback={
-        device ? <SessionPersonalDevice name={device.name} onReconnect={onDeviceReconnect} /> : panel.composerFallback
+        device ? (
+          <SessionPersonalDevice
+            name={device.name}
+            connectionUnknown={connectionUnknown}
+            onReconnect={onDeviceReconnect}
+          />
+        ) : (
+          panel.composerFallback
+        )
       }
       readOnlyQueue={queueIsReadOnly(device, queue)}
       messages={messages}

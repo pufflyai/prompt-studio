@@ -12,9 +12,9 @@ export const useSessionDevice = (owner: Session["device"], queueReadOnly?: boole
     refetchInterval: 15_000,
     retry: false,
   });
-  const devices = query.isError ? [] : (query.data ?? []);
-  const access = sessionDeviceAccess(owner, selectedDeviceId, devices, queueReadOnly);
-  const ownerOnline = access.remote && !access.offline;
+  const devices = query.data ?? [];
+  const access = sessionDeviceAccess(owner, selectedDeviceId, query.data, queueReadOnly);
+  const ownerOnline = access.remote && !access.connectionUnavailable;
   const refreshOnlineQueue = useEffectEvent(() => {
     refreshQueue?.();
   });

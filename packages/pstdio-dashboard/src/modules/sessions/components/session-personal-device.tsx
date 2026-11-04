@@ -2,12 +2,16 @@ import { Button } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { Monitor } from "lucide-react";
 
-export const SessionPersonalDevice = (props: { name: string; onReconnect?(): unknown }) => {
-  const { name, onReconnect } = props;
+export const SessionPersonalDevice = (props: {
+  name: string;
+  connectionUnknown?: boolean;
+  onReconnect?(): unknown;
+}) => {
+  const { name, connectionUnknown, onReconnect } = props;
   return (
     <AlertMessage
       status="info"
-      title={`${name} is offline`}
+      title={connectionUnknown ? "Connection status unavailable" : `${name} is offline`}
       icon={<Monitor />}
       endElement={
         onReconnect ? (
@@ -17,7 +21,9 @@ export const SessionPersonalDevice = (props: { name: string; onReconnect?(): unk
         ) : undefined
       }
     >
-      You can read this conversation. Reconnect {name} to continue it.
+      {connectionUnknown
+        ? `Check the connection to ${name} before continuing this conversation.`
+        : `You can read this conversation. Reconnect ${name} to continue it.`}
     </AlertMessage>
   );
 };
