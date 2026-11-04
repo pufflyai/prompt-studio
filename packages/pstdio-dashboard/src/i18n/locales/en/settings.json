@@ -38,7 +38,9 @@
     "title": "Beta features",
     "description": "Try beta features. This setting applies to every project and dashboard connected to this installation.",
     "notifications": "Notifications",
+    "notificationsDescription": "Show notifications when work needs your attention or finishes.",
     "machineTokens": "Machine tokens",
+    "machineTokensDescription": "Create project tokens that let another machine connect to this installation.",
     "loading": "Loading settings…"
   },
   "developerTools": {

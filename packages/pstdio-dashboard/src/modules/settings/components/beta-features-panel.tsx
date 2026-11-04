@@ -19,8 +19,16 @@ export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
   const { settings, saving, error, onChange, onRetry } = props;
   const { t } = useTranslation("settings");
   const features = [
-    { key: "notifications_enabled", label: t("betaFeatures.notifications") },
-    { key: "machine_tokens_enabled", label: t("betaFeatures.machineTokens") },
+    {
+      key: "notifications_enabled",
+      label: t("betaFeatures.notifications"),
+      description: t("betaFeatures.notificationsDescription"),
+    },
+    {
+      key: "machine_tokens_enabled",
+      label: t("betaFeatures.machineTokens"),
+      description: t("betaFeatures.machineTokensDescription"),
+    },
   ] as const;
   return (
     <Stack gap="md">
@@ -28,22 +36,26 @@ export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
         ? features.map((feature) => {
             const checked = settings[feature.key] === true;
             return (
-              <ParamEditorRow
-                key={feature.key}
-                param={{
-                  id: feature.key,
-                  name: feature.label,
-                  type: "property",
-                  value: (
-                    <Switch
-                      checked={checked}
-                      inputProps={{ checked, "aria-label": feature.label }}
-                      disabled={saving}
-                      onCheckedChange={({ checked }) => onChange({ [feature.key]: checked })}
-                    />
-                  ),
-                }}
-              />
+              <Stack key={feature.key} gap="0">
+                <ParamEditorRow
+                  param={{
+                    id: feature.key,
+                    name: feature.label,
+                    type: "property",
+                    value: (
+                      <Switch
+                        checked={checked}
+                        inputProps={{ checked, "aria-label": feature.label }}
+                        disabled={saving}
+                        onCheckedChange={({ checked }) => onChange({ [feature.key]: checked })}
+                      />
+                    ),
+                  }}
+                />
+                <Text px="sm" color="fg.muted" textStyle="paragraph/S/regular">
+                  {feature.description}
+                </Text>
+              </Stack>
             );
           })
         : null}

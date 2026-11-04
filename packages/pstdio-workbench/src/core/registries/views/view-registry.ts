@@ -19,6 +19,8 @@ type NativeViewBody<Kind extends string, Contribution> = { kind: Kind } & Omit<C
 
 export interface WorkbenchReactViewBody {
   kind: "react";
+  /** Fill the available settings body; the view owns content alignment and scrolling. */
+  layout?: "fill";
   render: WorkbenchRendererRegistration["render"];
 }
 

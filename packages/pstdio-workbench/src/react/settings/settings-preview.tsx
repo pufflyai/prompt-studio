@@ -116,21 +116,29 @@ const PreviewFields = (props: { id: string; loading?: boolean }) => {
     return (
       <ParamEditor
         changeDelay={0}
-        fullWidth
         groups={[
+          {
+            id: "automation",
+            title: "Automation",
+            params: [{ id: "limit", name: "Maximum in-progress tickets", type: "number", min: 0, defaultValue: 2 }],
+          },
           {
             id: "implementation",
             title: "Implementation",
             params: [
               { id: "canvas", name: "Update Canvas design", type: "boolean", defaultValue: true },
               { id: "review", name: "Adversarial review", type: "boolean", defaultValue: true },
-              { id: "branch", name: "Target branch", type: "text", singleLine: true, defaultValue: "origin/main" },
+              {
+                id: "branch",
+                name: "Target branch",
+                type: "selection",
+                defaultValue: "origin/main",
+                options: [
+                  { id: "origin/main", name: "origin/main" },
+                  { id: "origin/release", name: "origin/release" },
+                ],
+              },
             ],
-          },
-          {
-            id: "automation",
-            title: "Automation",
-            params: [{ id: "limit", name: "Maximum in-progress tickets", type: "number", min: 1, defaultValue: 2 }],
           },
           {
             id: "workflow",
@@ -155,19 +163,36 @@ const PreviewFields = (props: { id: string; loading?: boolean }) => {
     );
   if (id === "beta")
     return (
-      <ParamEditor
-        changeDelay={0}
-        fullWidth
-        params={[
-          { id: "notifications", name: "Notifications", type: "boolean", defaultValue: false },
-          { id: "tokens", name: "Machine tokens", type: "boolean", defaultValue: false },
-        ]}
-      />
+      <Stack gap="md">
+        {[
+          {
+            id: "notifications",
+            name: "Notifications",
+            description: "Show notifications when work needs your attention or finishes.",
+          },
+          {
+            id: "tokens",
+            name: "Machine tokens",
+            description: "Create project tokens that let another machine connect to this installation.",
+          },
+        ].map((feature) => (
+          <Stack key={feature.id} gap="0">
+            <ParamEditor params={[{ id: feature.id, name: feature.name, type: "boolean", defaultValue: false }]} />
+            <Text px="sm" color="fg.muted" textStyle="paragraph/S/regular">
+              {feature.description}
+            </Text>
+          </Stack>
+        ))}
+      </Stack>
     );
+  return <PreviewGeneralFields id={id} value={value} setValue={setValue} />;
+};
+const PreviewGeneralFields = (props: { id: string; value: string; setValue: (value: string) => void }) => {
+  const { id, value, setValue } = props;
   return (
     <ParamEditor
       changeDelay={0}
-      fullWidth
+      fullWidth={id === "folder"}
       groups={[
         {
           id: "general",
@@ -176,10 +201,21 @@ const PreviewFields = (props: { id: string; loading?: boolean }) => {
             {
               id: "value",
               name: id === "folder" ? "Project name" : "Maximum concurrent sessions",
-              type: "text",
-              singleLine: true,
-              defaultValue: value,
+              ...(id === "runtime"
+                ? { type: "number" as const, min: 1, defaultValue: Number(value) }
+                : { type: "text" as const, singleLine: true, defaultValue: value }),
             },
+            ...(id === "runtime"
+              ? [
+                  {
+                    id: "model",
+                    name: "Default agent and model",
+                    type: "selection" as const,
+                    defaultValue: "sol",
+                    options: [{ id: "sol", name: "GPT-6.1-Sol" }],
+                  },
+                ]
+              : []),
           ],
         },
       ]}

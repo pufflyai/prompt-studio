@@ -122,6 +122,7 @@ export const NumberInput = (props: NumberInputProps) => {
           >
             <NumberInputField
               className="nodrag"
+              aria-label={name}
               readOnly={readOnly}
               placeholder={hideLabel ? name : undefined}
               onBlur={flushChange}
@@ -152,6 +153,7 @@ export const NumberInput = (props: NumberInputProps) => {
           >
             <NumberInputField
               className="nodrag"
+              aria-label={name}
               readOnly={readOnly}
               placeholder={hideLabel ? name : undefined}
               onBlur={flushChange}

@@ -87,7 +87,7 @@ export const PlannerCollectionEditor = (props: { host: GuestHost; kind: PlannerS
     );
   if (!session)
     return (
-      <Stack role="status" aria-label="Loading settings" gap="md">
+      <Stack role="status" aria-label="Loading settings" gap="md" maxW="3xl" w="full" mx="auto" px="lg">
         {[0, 1, 2, 3].map((id) => (
           <Skeleton key={id} variant="none" bg="bg.emphasized" h="8" borderRadius="xs" />
         ))}
@@ -123,7 +123,7 @@ const CollectionFields = (props: {
   };
   return (
     <ScrollArea h="full" minH="0">
-      <Stack gap="lg">
+      <Stack gap="lg" maxW="3xl" w="full" mx="auto" px="lg" pb="lg">
         {error ? (
           <Text role="alert" color="fg.error">
             {error}

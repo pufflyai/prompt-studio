@@ -1,6 +1,6 @@
-import { Box, Flex, Stack } from "@chakra-ui/react";
+import { Flex, Stack } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { EmptyState, ScrollArea, SettingsContentSkeleton, SettingsPage } from "@pstdio/ui";
+import { EmptyState, SettingsContentSkeleton, SettingsPage } from "@pstdio/ui";
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 import {
   type CollectionSettingsPanel,
@@ -25,13 +25,6 @@ const Centered = (props: { children: ReactNode }) => (
     {props.children}
   </Flex>
 );
-const ScrollableSettingsContent = (props: { children: ReactNode }) => (
-  <ScrollArea h="full" minH="0" contentProps={{ h: "full", minH: "full" }}>
-    <Box h="full" minH="full">
-      {props.children}
-    </Box>
-  </ScrollArea>
-);
 const SettingsViewContent = (props: {
   input: WorkbenchPanelRenderInput;
   panelId: string;
@@ -50,6 +43,7 @@ const SettingsViewContent = (props: {
   }
   const content = renderer.render({
     ...input,
+    sizing: props.embedded ? "content-height" : undefined,
     instance: {
       ...input.instance,
       instanceId: JSON.stringify([input.instance.instanceId, panelId, viewId]),
@@ -115,16 +109,14 @@ const SettingsSurfaceContent = (props: SettingsSurfacePanelProps) => {
     );
     if (children.length === 0) return <SettingsViewContent input={input} panelId={panel.id} viewId={panel.viewId} />;
     return (
-      <ScrollableSettingsContent>
-        <Stack gap="md">
-          <SettingsViewContent embedded input={input} panelId={panel.id} viewId={panel.viewId} />
-          {children.map((child) =>
-            child.kind === "view" ? (
-              <SettingsViewContent embedded key={child.id} input={input} panelId={child.id} viewId={child.viewId} />
-            ) : null,
-          )}
-        </Stack>
-      </ScrollableSettingsContent>
+      <Stack gap="md">
+        <SettingsViewContent embedded input={input} panelId={panel.id} viewId={panel.viewId} />
+        {children.map((child) =>
+          child.kind === "view" ? (
+            <SettingsViewContent embedded key={child.id} input={input} panelId={child.id} viewId={child.viewId} />
+          ) : null,
+        )}
+      </Stack>
     );
   }
   if (panel.kind === "collection") {
@@ -158,6 +150,10 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
   const state = useWorkbenchStore(settings.store, (value) => value);
   const panelId = input.instance.resource?.metadata?.panelId;
   const panel = typeof panelId === "string" ? state.panels[panelId] : undefined;
+  const view = useWorkbenchStore(input.workbench.views.store, (value) =>
+    panel && panel.kind !== "schema" ? value.views[panel.viewId] : undefined,
+  );
+  const contentLayout = view?.body.kind === "react" ? view.body.layout : undefined;
   const guard = settingsLeaveGuard(input.workbench);
   const draft = useSyncExternalStore(guard.subscribe, guard.getActions);
   const changes = draft
@@ -171,6 +167,7 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
         title={title}
         icon={<WorkbenchIcon name={panel?.icon ?? "settings"} size="1em" />}
         changes={changes}
+        contentLayout={contentLayout}
       >
         <SettingsSurfaceContent {...props} />
       </SettingsPage>

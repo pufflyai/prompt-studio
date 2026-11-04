@@ -13,6 +13,8 @@ export interface SettingsPageProps {
   title: string;
   icon?: ReactNode;
   changes?: SettingsChanges;
+  /** Fill the body for views that provide their own scrolling and centered content. */
+  contentLayout?: "fill";
   children: ReactNode;
 }
 export const SettingsActions = (props: SettingsChanges) => {
@@ -67,10 +69,16 @@ export const SettingsPage = (props: SettingsPageProps) => (
       </HStack>
       {props.changes ? <SettingsActions {...props.changes} /> : null}
     </HStack>
-    <ScrollArea flex="1" minH="0" contentProps={{ h: "full", minH: "full" }}>
-      <Stack h="full" gap="lg" px="lg" pb="lg" maxW="3xl" w="full" minW="0" mx="auto">
+    {props.contentLayout === "fill" ? (
+      <Stack flex="1" minH="0" minW="0" gap="0" overflow="hidden">
         {props.children}
       </Stack>
-    </ScrollArea>
+    ) : (
+      <ScrollArea flex="1" minH="0" contentProps={{ minH: "full" }}>
+        <Stack minH="full" gap="lg" px="lg" pb="lg" maxW="3xl" w="full" minW="0" mx="auto">
+          {props.children}
+        </Stack>
+      </ScrollArea>
+    )}
   </Stack>
 );

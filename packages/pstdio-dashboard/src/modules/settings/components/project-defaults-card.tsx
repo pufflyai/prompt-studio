@@ -1,4 +1,4 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, Stack } from "@chakra-ui/react";
 import {
   filterHarnessParamValues,
   HarnessParamEditor,
@@ -112,9 +112,7 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
   return (
     <Stack gap="sm" data-testid="project-defaults-card">
       {errorNotice}
-      <Text textStyle="label/L/medium">{t("harnessesPanel.defaultModelTitle")}</Text>
       <ParamEditorRow
-        fullWidth
         param={{
           id: "agent-model",
           name: "Default agent and model",
@@ -147,7 +145,7 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
       />
       <Box opacity={paramDefaults.isLoading ? 0.5 : 1} data-testid="project-run-defaults">
         <HarnessParamEditor
-          schema={paramSchema}
+          schema={Object.fromEntries(Object.entries(paramSchema ?? {}).filter(([key]) => key !== "collaboration_mode"))}
           overrides={paramValues}
           onOverridesChange={handleParamsChange}
           disabled={paramDefaults.isLoading || updateParamDefaults.isPending}

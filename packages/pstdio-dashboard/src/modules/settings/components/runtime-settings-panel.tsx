@@ -1,6 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import { SettingsContentSkeleton } from "@pstdio/ui";
-import { ParamEditor } from "@pstdio/ui/param-editor";
+import { NumberInputField, NumberInputRoot, SettingsContentSkeleton } from "@pstdio/ui";
+import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import { useSettingsChanges } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -48,21 +48,29 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
         </Button>
       ) : null}
       {settings ? (
-        <ParamEditor
-          changeDelay={0}
-          fullWidth
-          readOnly={update.isPending}
-          params={[
-            {
-              id: "concurrency",
-              name: t("runtimeSettings.maxConcurrentSessions.label"),
-              description: t("runtimeSettings.maxConcurrentSessions.helper"),
-              type: "text",
-              singleLine: true,
-              defaultValue: value,
-            },
-          ]}
-          onChange={(_id, next) => setValue(String(next))}
+        <ParamEditorRow
+          param={{
+            id: "concurrency",
+            name: t("runtimeSettings.maxConcurrentSessions.label"),
+            description: t("runtimeSettings.maxConcurrentSessions.helper"),
+            type: "property",
+            value: (
+              <NumberInputRoot
+                size="sm"
+                width="20"
+                min={1}
+                step={1}
+                value={value}
+                disabled={update.isPending}
+                onValueChange={({ value }) => setValue(value)}
+              >
+                <NumberInputField
+                  aria-label={t("runtimeSettings.maxConcurrentSessions.label")}
+                  placeholder={t("runtimeSettings.maxConcurrentSessions.none")}
+                />
+              </NumberInputRoot>
+            ),
+          }}
         />
       ) : null}
       {parsed === undefined ? (

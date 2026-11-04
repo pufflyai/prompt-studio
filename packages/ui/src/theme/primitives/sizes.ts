@@ -91,7 +91,7 @@ export const sizes = {
   "icon-md": { value: sp[250] },
   "tag-color-dot": { value: sp[250] },
   "tag-icon-cell": { value: "1.75rem" },
-  "tag-picker": { value: "16.75rem" },
+  "tag-picker": { value: "18rem" },
   "tag-picker-color-only": { value: "13.75rem" },
   "tag-swatch": { value: "1.625rem" },
   "tag-swatch-dot": { value: "0.625rem" },

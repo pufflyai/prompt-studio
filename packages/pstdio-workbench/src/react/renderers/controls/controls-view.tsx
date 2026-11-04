@@ -271,6 +271,7 @@ interface ControlsContentProps {
 }
 const ControlsContent = (props: ControlsContentProps) => {
   const { state, contribution, readOnly, onChange, renderParamField } = props;
+  const settingsPage = useContext(SettingsPageContext);
   // Host-backed controls reuse command fields; the UI editor still owns group layout.
   const hostParam = (param: Param): Param => {
     if (param.type !== "harness") return param;
@@ -294,7 +295,7 @@ const ControlsContent = (props: ControlsContentProps) => {
     return (
       <ParamEditor
         changeDelay={contribution.apply ? 0 : undefined}
-        fullWidth
+        fullWidth={!settingsPage}
         params={state.params.map(hostParam)}
         groups={state.groups.map((group) => ({ ...group, params: group.params.map(hostParam) }))}
         defaultValues={state.values}

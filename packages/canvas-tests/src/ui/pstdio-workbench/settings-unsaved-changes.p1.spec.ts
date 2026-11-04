@@ -7,7 +7,7 @@ test("settings preserve edits on Stay and guard both navigation and closing", as
     page,
     "packages/pstdio-workbench/src/react/settings/settings-consistency.canvas.tsx#Settings",
   );
-  const limit = preview.getByRole("textbox", { name: "Maximum concurrent sessions" });
+  const limit = preview.getByRole("spinbutton", { name: "Maximum concurrent sessions" });
   await expect(limit).toHaveValue("4");
   await limit.fill("8");
   await preview.getByText("Appearance", { exact: true }).click();

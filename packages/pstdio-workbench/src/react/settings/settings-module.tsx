@@ -35,8 +35,26 @@ export { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "./settings-resources";
 
 const WIDGET_ID = WORKBENCH_SETTINGS_WIDGET_ID;
 
-const openSettings = async (input: { args: unknown; ctx: WorkbenchModuleContext; hasProjectScope: () => boolean }) => {
-  const { args, ctx, hasProjectScope } = input;
+const resolveSettingsResource = async (
+  ctx: WorkbenchModuleContext,
+  panel: NonNullable<ReturnType<WorkbenchModuleContext["settings"]["getPanel"]>>,
+  itemId: unknown,
+) => {
+  if (panel.kind !== "collection" || typeof itemId !== "string") return settingsPanelResource(panel);
+  const item = await ctx.settings.resolveCollectionItem(panel.id, itemId);
+  return settingsItemResource(panel.id, {
+    id: itemId,
+    label: item === undefined ? panel.title : panel.itemLabel(item),
+  });
+};
+
+const openSettings = async (input: {
+  args: unknown;
+  ctx: WorkbenchModuleContext;
+  hasProjectScope: () => boolean;
+  isCurrent: () => boolean;
+}) => {
+  const { args, ctx, hasProjectScope, isCurrent } = input;
   const requested = args && typeof args === "object" ? args : undefined;
   const panelId = requested && "panelId" in requested ? requested.panelId : undefined;
   const itemId = requested && "itemId" in requested ? requested.itemId : undefined;
@@ -47,13 +65,14 @@ const openSettings = async (input: { args: unknown; ctx: WorkbenchModuleContext;
     (requestedPanel && isVisible(requestedPanel) ? requestedPanel : undefined) ??
     ctx.settings.listPanels().find(isVisible);
   if (!panel) return undefined;
+  const initialOverlay = ctx.layout.getLayout().regions.overlay.widgets.find((widget) => widget.viewId === WIDGET_ID);
   const resource =
-    panel.kind === "collection" && typeof itemId === "string"
-      ? settingsItemResource(panel.id, { id: itemId, label: itemId })
-      : settingsPanelResource(panel);
+    panel.kind === "collection" ? await resolveSettingsResource(ctx, panel, itemId) : settingsPanelResource(panel);
+  if (!isCurrent()) return undefined;
   const current = ctx.layout.getLayout().regions.overlay.widgets.find((widget) => widget.viewId === WIDGET_ID);
+  if (current?.widgetId !== initialOverlay?.widgetId) return undefined;
   if (current && resourceKey(current.resource) === resourceKey(resource)) return resource;
-  if (!(await settingsLeaveGuard(ctx).request())) return undefined;
+  if (!(await settingsLeaveGuard(ctx).request()) || !isCurrent()) return undefined;
   ctx.overlays.openOverlay(WIDGET_ID, {
     resource,
     title: resource.label,
@@ -74,6 +93,7 @@ export const createWorkbenchSettingsModule = (
   return {
     id: "workbench.settings.surface",
     activate(ctx) {
+      let navigationRevision = 0;
       ctx.views.registerView({
         id: WORKBENCH_SETTINGS_NAV_WIDGET_ID,
         title: `${title} navigation`,
@@ -144,7 +164,11 @@ export const createWorkbenchSettingsModule = (
           icon: standardResourceIcons.settings,
         },
         {
-          execute: (args) => openSettings({ args, ctx, hasProjectScope }),
+          execute: (args) => {
+            if (settingsLeaveGuard(ctx).getSnapshot()) return undefined;
+            const revision = ++navigationRevision;
+            return openSettings({ args, ctx, hasProjectScope, isCurrent: () => revision === navigationRevision });
+          },
         },
       );
 

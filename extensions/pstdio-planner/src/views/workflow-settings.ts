@@ -1,5 +1,6 @@
 import type { ControlParam, ControlsQueryResult, ControlValueMap, ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { saveWorkflowStatusSelections } from "../commands/workflow-statuses";
+import { readImplementationTargets } from "../data/implementation-targets";
 import { readWorkflowStatuses } from "../data/workflow-statuses";
 
 export const workflowSettingsControls = (input: Awaited<ReturnType<typeof readWorkflowStatuses>>) => {
@@ -68,6 +69,7 @@ const automationFields = [
 export const queryWorkflowSettings = async (ctx: ExtensionContextBase) => {
   const workflow = workflowSettingsControls(await readWorkflowStatuses(ctx));
   const settings = await ctx.settings.all();
+  const targets = await readImplementationTargets(ctx);
   const values: ControlValueMap = {};
   const params: ControlParam[] = automationFields.map((field) => {
     const stored = settings[field.id];
@@ -83,21 +85,33 @@ export const queryWorkflowSettings = async (ctx: ExtensionContextBase) => {
     }
     const value = typeof stored === "string" ? stored : field.fallback;
     values[field.id] = value;
-    return { id: field.id, name: field.name, type: "text", singleLine: true, defaultValue: value };
+    const options = targets.map(({ branch }) => ({ id: branch, name: branch }));
+    if (value && !options.some((option) => option.id === value))
+      options.push({ id: value, name: `${value} (unavailable)` });
+    return {
+      id: field.id,
+      name: field.name,
+      type: "selection",
+      defaultValue: value,
+      options,
+      clearable: true,
+      searchable: true,
+      placeholder: "Repository default",
+    };
   });
   return {
     groups: [
-      ...workflow.groups,
-      {
-        id: "implementation",
-        title: "Implementation",
-        params: params.filter((field) => field.id !== "automation.maxInProgress"),
-      },
       {
         id: "automation",
         title: "Automation",
         params: params.filter((field) => field.id === "automation.maxInProgress"),
       },
+      {
+        id: "implementation",
+        title: "Implementation",
+        params: params.filter((field) => field.id !== "automation.maxInProgress"),
+      },
+      ...workflow.groups,
     ],
     values: { ...workflow.values, ...values },
   } satisfies ControlsQueryResult;
