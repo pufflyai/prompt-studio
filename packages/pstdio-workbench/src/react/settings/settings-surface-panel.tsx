@@ -1,4 +1,4 @@
-import { Flex, Stack } from "@chakra-ui/react";
+import { Box, Flex, HStack, Stack } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { EmptyState, SettingsContentSkeleton, SettingsPage } from "@pstdio/ui";
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
@@ -14,7 +14,7 @@ import { WorkbenchPreferencesForm } from "../renderers/settings/preferences-form
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { settingsLeaveGuard } from "./settings-leave-guard";
-import { SettingsPageContext } from "./settings-page-context";
+import { SettingsHeaderContext, SettingsPageContext } from "./settings-page-context";
 export interface SettingsSurfacePanelProps {
   input: WorkbenchPanelRenderInput;
   settings: SettingsRegistry;
@@ -160,17 +160,25 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
     ? { dirty: draft.dirty, saving: draft.saving, disabled: draft.disabled, onSave: draft.save, onReset: draft.reset }
     : undefined;
   const title = input.instance.resource?.label ?? panel?.title ?? "Settings";
+  const [actions, setActions] = useState<HTMLDivElement | null>(null);
+  const [description, setDescription] = useState<HTMLDivElement | null>(null);
   const [binding] = useState(() => ({ workbench: input.workbench, title }));
   return (
-    <SettingsPageContext value={binding}>
-      <SettingsPage
-        title={title}
-        icon={<WorkbenchIcon name={panel?.icon ?? "settings"} size="1em" />}
-        changes={changes}
-        contentLayout={contentLayout}
-      >
-        <SettingsSurfaceContent {...props} />
-      </SettingsPage>
-    </SettingsPageContext>
+    <SettingsHeaderContext value={{ actions, description }}>
+      <SettingsPageContext value={binding}>
+        <SettingsPage
+          title={title}
+          icon={<WorkbenchIcon name={panel?.icon ?? "settings"} size="1em" />}
+          changes={changes}
+          headerActions={<HStack ref={setActions} gap="sm" _empty={{ display: "none" }} />}
+          description={
+            <Box ref={setDescription} color="fg.muted" textStyle="paragraph/S/regular" _empty={{ display: "none" }} />
+          }
+          contentLayout={contentLayout}
+        >
+          <SettingsSurfaceContent {...props} />
+        </SettingsPage>
+      </SettingsPageContext>
+    </SettingsHeaderContext>
   );
 };

@@ -1,6 +1,7 @@
 import { Badge, Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea, TreeList, type TreeListNavigateEvent, useFileIconThemePreference } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
+import { SettingsHeaderContent } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
 import { useProjectSkill } from "../data/use-skills";
@@ -14,15 +15,11 @@ interface SkillViewerProps {
 
 type SkillFile = ProjectSkillDetails["files"][number];
 
-const CONTENT_MAX_WIDTH = "720px";
-
 const getDefaultFilePath = (files: SkillFile[]) => {
   return files.find((file) => file.path === "SKILL.md")?.path ?? files[0]?.path ?? "";
 };
 
 const isMarkdown = (path: string) => path.toLowerCase().endsWith(".md");
-
-const installedVersionLabel = (version: string | null) => (version ? `v${version}` : "unknown");
 
 export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
   const { skill } = props;
@@ -43,8 +40,8 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
   const sections = [{ id: "files", nodes: treeNodes, collapsible: false }];
 
   const selectedFile = skill.files.find((file) => file.path === selectedPath) ?? skill.files[0];
-  const skillFile = skill.files.find((file) => file.path === "SKILL.md");
-  const currentVersion = parseSkillVersion(skillFile?.content ?? "");
+
+  const currentVersion = parseSkillVersion(skill.files.find((file) => file.path === "SKILL.md")?.content ?? "");
 
   const handleNavigate = (event: TreeListNavigateEvent) => {
     setSelectedPath(event.nodeId);
@@ -56,27 +53,19 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
 
   return (
     <Flex h="full" minH="0" minW="0" overflow="hidden" data-testid="project-skill-content">
-      <Flex h="full" minH="0" width="280px" minW="220px" flexShrink="0" borderRightWidth="1px" direction="column">
-        <Box flexShrink="0" borderBottomWidth="1px" padding="sm">
-          {skill.agent_installations.length > 0 ? (
-            <Stack gap="xs" data-testid="project-skill-agent-installations">
-              {skill.agent_installations.map((installation) => (
-                <Flex key={installation.agent_id} alignItems="center" gap="xs" minW="0">
-                  <Text textStyle="label/S/regular" flex="1" minW="0" truncate>
-                    {installation.agent_name}
-                  </Text>
-                  <Badge size="sm" data-testid="project-skill-installed-version">
-                    {installedVersionLabel(installation.installed_version)}
-                  </Badge>
-                </Flex>
-              ))}
-            </Stack>
-          ) : (
-            <Text textStyle="paragraph/XS/regular" color="fg.muted" data-testid="project-skill-not-installed">
-              Not installed locally
-            </Text>
-          )}
-        </Box>
+      <SettingsHeaderContent
+        description={
+          <Flex gap="sm" align="center" wrap="wrap">
+            <Text>{skill.description}</Text>
+            {currentVersion ? (
+              <Badge size="sm" data-testid="project-skill-version">
+                v{currentVersion}
+              </Badge>
+            ) : null}
+          </Flex>
+        }
+      />
+      <Flex h="full" minH="0" width="64" minW="48" flexShrink="0" borderRightWidth="1px" direction="column">
         <ScrollArea
           flex="1"
           minH="0"
@@ -97,24 +86,7 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
       </Flex>
       <ScrollArea flex="1" minH="0" minW="0" data-testid="project-skill-editor-scroll">
         <Flex justifyContent="center" minW="0">
-          <Stack width="100%" maxWidth={CONTENT_MAX_WIDTH} padding="md" gap="md" minW="0">
-            <Stack gap="xs">
-              <Flex alignItems="flex-start" justifyContent="space-between" gap="sm" wrap="wrap">
-                <Flex alignItems="center" gap="sm" minW="0" flex="1" wrap="wrap">
-                  <Text textStyle="heading/S" data-testid="project-skill-name">
-                    {skill.name}
-                  </Text>
-                  {currentVersion && (
-                    <Badge size="sm" data-testid="project-skill-version">
-                      v{currentVersion}
-                    </Badge>
-                  )}
-                </Flex>
-              </Flex>
-              <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
-                {skill.description}
-              </Text>
-            </Stack>
+          <Stack width="full" padding="md" gap="md" minW="0">
             {!selectedFile && (
               <Text textStyle="paragraph/S/regular" color="fg.muted">
                 No skill content.

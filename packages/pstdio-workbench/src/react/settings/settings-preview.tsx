@@ -1,13 +1,16 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import {
   DeleteConfirmationModal,
+  NumberInputField,
+  NumberInputRoot,
   SettingsContentSkeleton,
   SimpleCard,
   SimpleCardBody,
+  Switch,
   TagEditor,
   type TagEditorValue,
 } from "@pstdio/ui";
-import { ParamEditor } from "@pstdio/ui/param-editor";
+import { ParamEditor, ParamEditorRow } from "@pstdio/ui/param-editor";
 import { useEffect, useState } from "react";
 import { createWorkbench, getWorkbenchRenderers } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
@@ -18,12 +21,15 @@ import {
   WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
 } from "./settings-module";
 import { useSettingsChanges } from "./settings-page-context";
+import { PreviewAsset } from "./settings-preview-asset";
 
 const pages = [
   { id: "runtime", title: "Runtime", icon: "Cpu", section: "workbench" },
   { id: "appearance", title: "Appearance", icon: "Palette", section: "workbench" },
   { id: "updates", title: "Update channel", icon: "CloudDownload", section: "workbench" },
   { id: "folder", title: "Project folder", icon: "GitBranch", section: "project" },
+  { id: "skill", title: "Create ticket", icon: "BookOpen", section: "project" },
+  { id: "template", title: "Bug fix", icon: "FileCode", section: "project" },
   { id: "danger", title: "Danger zone", icon: "TriangleAlert", section: "project" },
   { id: "workflow", title: "Workflow & automation", icon: "Workflow", section: "planner" },
   { id: "status", title: "Ticket status", icon: "status-progress", section: "planner" },
@@ -44,7 +50,7 @@ const PreviewFields = (props: { id: string; loading?: boolean }) => {
   const collection = id === "status" || id === "tags";
   const dirty = collection ? JSON.stringify(options) !== JSON.stringify(savedOptions) : value !== saved;
   useSettingsChanges(
-    ["appearance", "updates", "beta", "danger"].includes(id)
+    ["appearance", "updates", "beta", "danger", "skill", "template"].includes(id)
       ? undefined
       : {
           dirty,
@@ -58,6 +64,7 @@ const PreviewFields = (props: { id: string; loading?: boolean }) => {
           },
         },
   );
+  if (id === "skill" || id === "template") return <PreviewAsset kind={id} />;
   if (loading) return <SettingsContentSkeleton />;
   if (id === "danger")
     return (
@@ -189,6 +196,56 @@ const PreviewFields = (props: { id: string; loading?: boolean }) => {
 };
 const PreviewGeneralFields = (props: { id: string; value: string; setValue: (value: string) => void }) => {
   const { id, value, setValue } = props;
+  if (id === "runtime")
+    return (
+      <Stack gap="sm">
+        <ParamEditorRow
+          param={{
+            id: "limited",
+            name: "Limit concurrent sessions",
+            type: "property",
+            value: (
+              <Switch
+                checked={value !== ""}
+                aria-label="Limit concurrent sessions"
+                onCheckedChange={({ checked }) => setValue(checked ? "1" : "")}
+              />
+            ),
+          }}
+        />
+        {value !== "" ? (
+          <ParamEditorRow
+            param={{
+              id: "limit",
+              name: "Maximum concurrent sessions",
+              type: "property",
+              value: (
+                <NumberInputRoot
+                  size="sm"
+                  width="20"
+                  min={1}
+                  value={value}
+                  onValueChange={({ value }) => setValue(value)}
+                >
+                  <NumberInputField aria-label="Maximum concurrent sessions" />
+                </NumberInputRoot>
+              ),
+            }}
+          />
+        ) : null}
+        <ParamEditor
+          params={[
+            {
+              id: "model",
+              name: "Default agent and model",
+              type: "selection",
+              defaultValue: "sol",
+              options: [{ id: "sol", name: "GPT-6.1-Sol" }],
+            },
+          ]}
+        />
+      </Stack>
+    );
   return (
     <ParamEditor
       changeDelay={0}
@@ -196,27 +253,8 @@ const PreviewGeneralFields = (props: { id: string; value: string; setValue: (val
       groups={[
         {
           id: "general",
-          title: id === "runtime" ? "Session queue" : "Project",
-          params: [
-            {
-              id: "value",
-              name: id === "folder" ? "Project name" : "Maximum concurrent sessions",
-              ...(id === "runtime"
-                ? { type: "number" as const, min: 1, defaultValue: Number(value) }
-                : { type: "text" as const, singleLine: true, defaultValue: value }),
-            },
-            ...(id === "runtime"
-              ? [
-                  {
-                    id: "model",
-                    name: "Default agent and model",
-                    type: "selection" as const,
-                    defaultValue: "sol",
-                    options: [{ id: "sol", name: "GPT-6.1-Sol" }],
-                  },
-                ]
-              : []),
-          ],
+          title: "Project",
+          params: [{ id: "value", name: "Project name", type: "text", singleLine: true, defaultValue: value }],
         },
       ]}
       onChange={(_id, next) => setValue(String(next))}
@@ -269,7 +307,11 @@ export const SettingsPreview = (props: { navigationLoading?: boolean; contentLoa
           ctx.views.registerView({
             id: page.id,
             title: page.title,
-            body: { kind: "react", render: () => <PreviewFields id={page.id} loading={props.contentLoading} /> },
+            body: {
+              kind: "react",
+              layout: ["skill", "template"].includes(page.id) ? "full-width" : undefined,
+              render: () => <PreviewFields id={page.id} loading={props.contentLoading} />,
+            },
           });
           ctx.settings.registerPanel({ ...page, scope: "global", kind: "view", viewId: page.id });
         }

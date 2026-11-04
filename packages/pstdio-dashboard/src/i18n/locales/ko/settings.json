@@ -10,11 +10,12 @@
     "retry": "다시 시도",
     "maxConcurrentSessions": {
       "label": "최대 동시 세션 수",
-      "helper": "무제한 세션은 비워 둡니다. 한 번에 하나의 세션만 실행할 수 있는 로컬 LLM 설정에는 1을 입력하세요.",
+      "limit": "동시 세션 수 제한",
+      "helper": "끄면 동시 세션 수를 제한하지 않습니다.",
       "placeholder": "none",
       "none": "없음",
       "current": "현재 값: {{value}}",
-      "invalid": "0보다 큰 정수를 입력하거나, 없음으로 두려면 비워 두세요."
+      "invalid": "0보다 큰 정수를 입력하세요."
     }
   },
   "agentRow": {

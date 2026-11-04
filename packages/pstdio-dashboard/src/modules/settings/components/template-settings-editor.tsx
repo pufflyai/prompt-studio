@@ -1,6 +1,7 @@
-import { Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Box, IconButton, Stack, Text } from "@chakra-ui/react";
 import { DeleteConfirmationModal, SettingsContentSkeleton, useToaster } from "@pstdio/ui";
-import { useSettingsChanges } from "@pstdio/workbench/react";
+import { CodeEditor } from "@pstdio/ui/diff";
+import { SettingsHeaderContent, useSettingsChanges } from "@pstdio/workbench/react";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
@@ -34,7 +35,7 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
 
   useSettingsChanges({
     dirty: Boolean(data) && content !== data?.content,
-    saving: updateTemplate.isPending,
+    saving: updateTemplate.isPending || deleteTemplate.isPending,
     onSave: save,
     onReset: () => setContent(data?.content ?? ""),
   });
@@ -45,13 +46,18 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
   };
 
   return (
-    <Stack gap="md" h="full" minH="0">
-      <HStack justify="flex-end">
-        <Button size="sm" variant="ghost" onClick={() => setIsDeleteOpen(true)}>
-          <Trash2 size={14} />
-          Delete template
-        </Button>
-      </HStack>
+    <Stack gap="0" h="full" minH="0">
+      <SettingsHeaderContent>
+        <IconButton
+          size="sm"
+          variant="destructive-ghost"
+          aria-label="Delete template"
+          disabled={isLoading || updateTemplate.isPending || deleteTemplate.isPending}
+          onClick={() => setIsDeleteOpen(true)}
+        >
+          <Trash2 />
+        </IconButton>
+      </SettingsHeaderContent>
       {updateTemplate.error ? (
         <Text role="alert" color="fg.error">
           {updateTemplate.error.message}
@@ -60,14 +66,16 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
       {isLoading ? (
         <SettingsContentSkeleton />
       ) : (
-        <Textarea
-          value={content}
-          onChange={(event) => setContent(event.target.value)}
-          flex="1"
-          resize="none"
-          fontFamily="mono"
-          fontSize="sm"
-        />
+        <Box flex="1" minH="0" minW="0">
+          <CodeEditor
+            language="markdown"
+            fileName={`${template.name}.md`}
+            code={content}
+            onChange={setContent}
+            isEditable={!updateTemplate.isPending && !deleteTemplate.isPending}
+            showLineNumbers
+          />
+        </Box>
       )}
 
       <DeleteConfirmationModal
@@ -75,7 +83,7 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
         onClose={() => setIsDeleteOpen(false)}
         onDelete={remove}
         headline="Delete template"
-        notificationText={`This permanently deletes "${template.title}".`}
+        notificationText={`This permanently deletes "${template.title}". Reset changes cannot restore a deleted template.`}
         buttonText="Delete template"
       />
     </Stack>

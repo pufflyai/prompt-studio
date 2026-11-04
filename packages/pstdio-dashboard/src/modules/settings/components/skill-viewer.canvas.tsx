@@ -1,5 +1,5 @@
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { FileIconThemePreferenceProvider } from "@pstdio/ui";
+import { FileIconThemePreferenceProvider, SettingsPage } from "@pstdio/ui";
 import type { ProjectSkillDetails } from "../data/skills-api";
 import { SkillViewerContent } from "./skill-viewer";
 
@@ -11,7 +11,13 @@ const meta: CanvasMeta<typeof SkillViewerContent> = {
     (Story) => (
       <FileIconThemePreferenceProvider>
         <div style={{ height: "640px" }}>
-          <Story />
+          <SettingsPage
+            title="Create Ticket"
+            contentLayout="full-width"
+            description="Create planner tickets from a short request."
+          >
+            <Story />
+          </SettingsPage>
         </div>
       </FileIconThemePreferenceProvider>
     ),

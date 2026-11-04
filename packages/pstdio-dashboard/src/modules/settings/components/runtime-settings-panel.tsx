@@ -1,5 +1,5 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import { NumberInputField, NumberInputRoot, SettingsContentSkeleton } from "@pstdio/ui";
+import { NumberInputField, NumberInputRoot, SettingsContentSkeleton, Switch } from "@pstdio/ui";
 import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import { useSettingsChanges } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
@@ -7,8 +7,9 @@ import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
 import { ProjectDefaultsCard } from "./project-defaults-card";
 
-const parseLimit = (value: string) => {
-  if (!value.trim()) return null;
+const parseLimit = (value: string | null) => {
+  if (value === null) return null;
+  if (!value.trim()) return undefined;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined;
 };
@@ -16,13 +17,13 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
   const { t } = useTranslation("settings");
   const { data: settings, error, isLoading, refetch } = useSettings();
   const update = useUpdateSettings();
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState<string | null>(null);
   useEffect(() => {
-    if (settings) setValue(settings.max_concurrent_sessions?.toString() ?? "");
+    if (settings) setValue(settings.max_concurrent_sessions?.toString() ?? null);
   }, [settings]);
   const parsed = parseLimit(value);
   useSettingsChanges({
-    dirty: Boolean(settings) && value !== (settings?.max_concurrent_sessions?.toString() ?? ""),
+    dirty: Boolean(settings) && value !== (settings?.max_concurrent_sessions?.toString() ?? null),
     saving: update.isPending,
     disabled: parsed === undefined,
     onSave: async () => {
@@ -30,7 +31,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
       await update.mutateAsync({ max_concurrent_sessions: parsed });
     },
     onReset: () => {
-      setValue(settings?.max_concurrent_sessions?.toString() ?? "");
+      setValue(settings?.max_concurrent_sessions?.toString() ?? null);
       update.reset();
     },
   });
@@ -50,9 +51,26 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
       {settings ? (
         <ParamEditorRow
           param={{
+            id: "limit-concurrency",
+            name: t("runtimeSettings.maxConcurrentSessions.limit"),
+            description: t("runtimeSettings.maxConcurrentSessions.helper"),
+            type: "property",
+            value: (
+              <Switch
+                aria-label={t("runtimeSettings.maxConcurrentSessions.limit")}
+                checked={value !== null}
+                disabled={update.isPending}
+                onCheckedChange={({ checked }) => setValue(checked ? "1" : null)}
+              />
+            ),
+          }}
+        />
+      ) : null}
+      {settings && value !== null ? (
+        <ParamEditorRow
+          param={{
             id: "concurrency",
             name: t("runtimeSettings.maxConcurrentSessions.label"),
-            description: t("runtimeSettings.maxConcurrentSessions.helper"),
             type: "property",
             value: (
               <NumberInputRoot
@@ -64,10 +82,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
                 disabled={update.isPending}
                 onValueChange={({ value }) => setValue(value)}
               >
-                <NumberInputField
-                  aria-label={t("runtimeSettings.maxConcurrentSessions.label")}
-                  placeholder={t("runtimeSettings.maxConcurrentSessions.none")}
-                />
+                <NumberInputField aria-label={t("runtimeSettings.maxConcurrentSessions.label")} />
               </NumberInputRoot>
             ),
           }}

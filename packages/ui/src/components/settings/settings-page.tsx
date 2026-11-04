@@ -13,8 +13,10 @@ export interface SettingsPageProps {
   title: string;
   icon?: ReactNode;
   changes?: SettingsChanges;
-  /** Fill the body for views that provide their own scrolling and centered content. */
-  contentLayout?: "fill";
+  description?: ReactNode;
+  headerActions?: ReactNode;
+  /** Views own scrolling in fill mode; full-width also expands the page header. */
+  contentLayout?: "fill" | "full-width";
   children: ReactNode;
 }
 export const SettingsActions = (props: SettingsChanges) => {
@@ -62,14 +64,28 @@ export const SettingsActions = (props: SettingsChanges) => {
 };
 export const SettingsPage = (props: SettingsPageProps) => (
   <Stack h="full" minH="0" gap="0" minW="0" w="full">
-    <HStack as="header" justify="space-between" gap="sm" p="lg" pb="md" maxW="3xl" w="full" mx="auto" flexWrap="wrap">
-      <HStack as="h1" gap="sm" textStyle="heading/S">
-        {props.icon}
-        <Text as="span">{props.title}</Text>
+    <Stack
+      as="header"
+      gap="sm"
+      p="lg"
+      pb="md"
+      maxW={props.contentLayout === "full-width" ? undefined : "3xl"}
+      w="full"
+      mx="auto"
+    >
+      <HStack justify="space-between" gap="sm" flexWrap="wrap">
+        <HStack as="h1" gap="sm" textStyle="heading/S">
+          {props.icon}
+          <Text as="span">{props.title}</Text>
+        </HStack>
+        <HStack gap="sm">
+          {props.changes ? <SettingsActions {...props.changes} /> : null}
+          {props.headerActions}
+        </HStack>
       </HStack>
-      {props.changes ? <SettingsActions {...props.changes} /> : null}
-    </HStack>
-    {props.contentLayout === "fill" ? (
+      {props.description}
+    </Stack>
+    {props.contentLayout ? (
       <Stack flex="1" minH="0" minW="0" gap="0" overflow="hidden">
         {props.children}
       </Stack>

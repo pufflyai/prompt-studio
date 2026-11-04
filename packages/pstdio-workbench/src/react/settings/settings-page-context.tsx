@@ -1,9 +1,24 @@
 import type { SettingsChanges } from "@pstdio/ui";
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { WorkbenchCore } from "../../core";
 import { settingsLeaveGuard } from "./settings-leave-guard";
 
 export const SettingsPageContext = createContext<{ workbench: WorkbenchCore; title: string } | null>(null);
+export const SettingsHeaderContext = createContext<{ actions: HTMLElement | null; description: HTMLElement | null }>({
+  actions: null,
+  description: null,
+});
+/** Place view-specific controls and descriptive content in the fixed settings header. */
+export const SettingsHeaderContent = (props: { children?: ReactNode; description?: ReactNode }) => {
+  const targets = useContext(SettingsHeaderContext);
+  return (
+    <>
+      {targets.actions && props.children ? createPortal(props.children, targets.actions) : null}
+      {targets.description && props.description ? createPortal(props.description, targets.description) : null}
+    </>
+  );
+};
 /** Register staged changes with the settings header and navigation warning. Live forms omit this hook. */
 export const useSettingsChanges = (changes: SettingsChanges | undefined) => {
   const page = useContext(SettingsPageContext);
