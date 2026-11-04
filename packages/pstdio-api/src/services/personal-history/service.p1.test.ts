@@ -228,7 +228,10 @@ test("personal history is readable offline after restart, private to the account
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ status: "cancelled" }),
     });
-    expect(cancel.status).toBe(404);
+    expect(cancel.status).toBe(400);
+    expect(await cancel.json()).toMatchObject({ error: expect.any(String) });
+    expect(await destination.deps.sessionService.get(session.id)).toBeNull();
+    expect((await destination.deps.personalHistoryService.getSession(session.id))?.status).toBe("completed");
     await verifyMetadataOwnership(native, login, session.id);
     const since = destination.deps.eventBus.seq;
     await destination.deps.accountService.logout();
