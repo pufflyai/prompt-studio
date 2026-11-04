@@ -1,17 +1,27 @@
-import { defineChart, dot, link, rect, ruleX } from "@tanstack/charts";
+import { Box, useSlotRecipe } from "@chakra-ui/react";
+import { defineChart, dot, link, rect, ruleX, text } from "@tanstack/charts";
 import { focusNearestY } from "@tanstack/charts/focus";
 import { decorative } from "@tanstack/charts/mark/decorative";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
+import type { ComponentType, CSSProperties } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
+import { ganttGeometry } from "@/theme/primitives/gantt";
+import psTheme from "@/theme/theme";
 import { Chart, chartColor, chartPalette } from "./chart";
-import { type GanttTask, ganttLayout } from "./gantt-layout";
+import { type GanttMilestone, type GanttTask, ganttLayout } from "./gantt-layout";
+import { milestoneLabelLayout } from "./gantt-milestones";
 import { dependencyRoute } from "./gantt-route";
+import { useChartWidth } from "./use-chart-width";
 
 export interface GanttChartProps {
   tasks: readonly GanttTask[];
   ariaLabel: string;
+  milestones?: readonly GanttMilestone[];
+  /** Optional application badges; the title action remains accessible independently. */
+  TaskBadges?: ComponentType<{ task: GanttTask }>;
+  onOpen?: (id: string) => void;
   formatValue?: (value: number) => string;
   now?: number;
   selectedId?: string;
@@ -27,19 +37,36 @@ const laneFocus = {
 // Composition follows TanStack's Gantt Dependencies catalog example:
 // https://tanstack.com/charts/catalog/charts/198-gantt-dependencies
 export function GanttChart(props: GanttChartProps) {
-  const { tasks, ariaLabel, formatValue = String, now, selectedId, onSelect } = props;
+  const {
+    tasks,
+    milestones = [],
+    ariaLabel,
+    formatValue = String,
+    now,
+    selectedId,
+    onSelect,
+    onOpen,
+    TaskBadges,
+  } = props;
+  const styles = useSlotRecipe({ recipe: psTheme.getSlotRecipe("chart") })();
+  const plot = useChartWidth();
   const layout = ganttLayout(tasks);
   if (!layout.rows.length) return <EmptyState title="No scheduled work" />;
-  const labels = new Map(layout.rows.map((row) => [row.lane, row.label]));
   const groups = [...new Set(tasks.map((task) => task.group ?? ""))];
   const starts = tasks.map((task) => task.start);
   const ends = tasks.map((task) => task.end);
-  const first = Math.min(...starts, now ?? Infinity);
-  const last = Math.max(...ends, now ?? -Infinity);
+  const first = Math.min(...starts, ...milestones.map(({ value }) => value), now ?? Infinity);
+  const last = Math.max(...ends, ...milestones.map(({ value }) => value), now ?? -Infinity);
   const padding = Math.max((last - first) * 0.04, 0.25);
-  const summaries = layout.rows.filter((row) => row.kind === "group");
+  const labelLayout = milestoneLabelLayout(
+    milestones,
+    [first - padding, last + padding],
+    Math.max(1, plot.width - ganttGeometry.left - ganttGeometry.right),
+    formatValue,
+    plot.measureLabel,
+  );
   const work = layout.rows.filter((row) => row.kind === "task");
-  const milestones = layout.rows.filter((row) => row.kind === "milestone");
+  const instant = layout.rows.filter((row) => row.kind === "milestone");
   const progress = work
     .filter((row) => row.progress > 0)
     .map((row) => ({
@@ -49,14 +76,6 @@ export function GanttChart(props: GanttChartProps) {
   const definition = defineChart(
     ({ width }) => ({
       marks: [
-        decorative(
-          rect(summaries, {
-            x1: () => first - padding,
-            x2: () => last + padding,
-            y: "lane",
-            fill: chartColor("bg.subtle"),
-          }),
-        ),
         rect(work, {
           id: "tasks",
           key: "lane",
@@ -91,17 +110,6 @@ export function GanttChart(props: GanttChartProps) {
             },
           ),
         ),
-        rect(summaries, {
-          id: "groups",
-          key: "lane",
-          x1: "start",
-          x2: "end",
-          y: "lane",
-          fill: chartColor("vis.axis"),
-          fillOpacity: 0.15,
-          stroke: chartColor("vis.axis"),
-          radius: 2,
-        }),
         decorative(
           link(layout.dependencies, {
             x1: "from",
@@ -109,11 +117,11 @@ export function GanttChart(props: GanttChartProps) {
             y1: "fromLane",
             y2: "toLane",
             stroke: chartColor("vis.text.secondary"),
-            strokeOpacity: 0.65,
+            strokeOpacity: 0.35,
             curve: dependencyRoute,
           }),
         ),
-        dot(milestones, {
+        dot(instant, {
           id: "milestones",
           key: "lane",
           x: "start",
@@ -121,6 +129,26 @@ export function GanttChart(props: GanttChartProps) {
           color: (row) => row.group ?? "",
           r: 5,
         }),
+        decorative(
+          ruleX(labelLayout.labels, {
+            id: "milestone-lines",
+            x: "value",
+            stroke: chartColor("vis.axis"),
+            strokeDasharray: "3 3",
+          }),
+        ),
+        decorative(
+          text(labelLayout.labels, {
+            id: "milestone-labels",
+            x: "value",
+            y: () => layout.rows[0].lane,
+            text: "label",
+            dy: (label) => label.dy,
+            anchor: "end",
+            dx: (label) => label.dx,
+            fill: chartColor("vis.text.primary"),
+          }),
+        ),
         ...(now === undefined
           ? []
           : [decorative(ruleX([now], { stroke: chartColor("vis.axis"), strokeDasharray: "4 4" }))]),
@@ -130,16 +158,27 @@ export function GanttChart(props: GanttChartProps) {
         x: {
           scale: scaleLinear().domain([first - padding, last + padding]),
           grid: true,
-          axis: { ticks: { count: Math.max(3, Math.floor(width / 120)), format: formatValue } },
+          axis: {
+            ticks: {
+              count: Math.max(3, Math.floor(width / 120)),
+              format: (value: number) => (value === now ? "Now" : formatValue(value)),
+            },
+          },
         },
         y: {
           scale: scaleBand<string>()
             .domain(layout.rows.map((row) => row.lane))
-            .padding(0.4),
-          axis: { line: false, ticks: { size: 0, format: (id: string) => labels.get(id) ?? id } },
+            .paddingInner(0.5)
+            .paddingOuter(0.25),
+          axis: false,
         },
       },
-      margin: { left: Math.min(260, width * 0.38), top: 16, bottom: 32 },
+      margin: {
+        left: ganttGeometry.left,
+        right: ganttGeometry.right,
+        top: labelLayout.top,
+        bottom: ganttGeometry.bottom,
+      },
     }),
     {
       focus: laneFocus,
@@ -152,13 +191,38 @@ export function GanttChart(props: GanttChartProps) {
     },
   );
   return (
-    <Chart
-      ariaLabel={ariaLabel}
-      definition={definition}
-      height={Math.max(280, layout.rows.length * 44 + 48)}
-      onSelect={(point) => {
-        if (point && point.datum.kind !== "group") onSelect?.(point.datum.id);
-      }}
-    />
+    <Box css={styles.gantt} data-gantt style={{ "--gantt-top": `${labelLayout.top}px` } as CSSProperties}>
+      <Box css={styles.tickets} role="list" aria-label="Scheduled tickets">
+        {tasks.map((task) => (
+          <Box
+            key={task.id}
+            css={styles.ticket}
+            role="listitem"
+            data-ticket-id={task.id}
+            data-selected={task.id === selectedId}
+          >
+            <Box
+              as="button"
+              css={styles.ticketTitle}
+              onClick={() => (onOpen ?? onSelect)?.(task.id)}
+              aria-label={`${onOpen ? "Open" : "Select"} ${task.label}`}
+            >
+              {task.label}
+            </Box>
+            {TaskBadges ? <TaskBadges task={task} /> : null}
+          </Box>
+        ))}
+      </Box>
+      <Box css={styles.plot} ref={plot.ref}>
+        <Chart
+          ariaLabel={ariaLabel}
+          definition={definition}
+          height={layout.rows.length * ganttGeometry.row + labelLayout.top + ganttGeometry.bottom}
+          onSelect={(point) => {
+            if (point) onSelect?.(point.datum.id);
+          }}
+        />
+      </Box>
+    </Box>
   );
 }
