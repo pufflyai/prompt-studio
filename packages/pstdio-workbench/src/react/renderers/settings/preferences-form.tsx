@@ -1,7 +1,8 @@
 import { Button, HStack, Stack } from "@chakra-ui/react";
 import { ParamEditor, type ParamEditorProps } from "@pstdio/ui/param-editor";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import type { PreferenceRegistry, PreferenceScope } from "../../../core";
+import { SettingsPageContext, useSettingsChanges } from "../../settings/settings-page-context";
 import {
   type PreferenceParamEntry,
   paramValueToPreference,
@@ -27,6 +28,7 @@ const toName = (entry: string | { name: string; label?: string }) =>
 // form is generic: it knows only about preference names + scope, never the domain.
 export const WorkbenchPreferencesForm = (props: WorkbenchPreferencesFormProps) => {
   const { preferences, names, resolveScopeId, mode = "live" } = props;
+  const settingsPage = useContext(SettingsPageContext);
   const [staged, setStaged] = useState<Record<string, ParamValue>>({});
   const [formKey, setFormKey] = useState(0);
 
@@ -70,19 +72,20 @@ export const WorkbenchPreferencesForm = (props: WorkbenchPreferencesFormProps) =
 
   const hasStaged = Object.keys(staged).length > 0;
 
+  useSettingsChanges(mode === "apply" ? { dirty: hasStaged, onSave: save, onReset: discard } : undefined);
   return (
-    <Stack gap="md" maxW="640px">
-      <ParamEditor key={formKey} params={params} onChange={handleChange} fullWidth />
-      {mode === "apply" && (
+    <Stack gap="md">
+      <ParamEditor changeDelay={0} key={formKey} params={params} onChange={handleChange} fullWidth />
+      {!settingsPage && mode === "apply" ? (
         <HStack gap="sm">
-          <Button size="sm" onClick={save} disabled={!hasStaged}>
+          <Button size="sm" disabled={!hasStaged} onClick={save}>
             Save
           </Button>
-          <Button size="sm" variant="outline" onClick={discard} disabled={!hasStaged}>
+          <Button size="sm" variant="outline" disabled={!hasStaged} onClick={discard}>
             Discard
           </Button>
         </HStack>
-      )}
+      ) : null}
     </Stack>
   );
 };

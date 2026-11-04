@@ -287,3 +287,54 @@ test("save commands stay with the calling extension", async () => {
     editor.frame().call({ ...open("source"), save: { commandId: "pstdio.other.command.save" } }),
   ).rejects.toThrow("editing_save_not_owner");
 });
+
+test("settings navigation saves or discards extension previews and keeps failed saves editable", async () => {
+  const { settingsLeaveGuard } = await import("../../react/settings/settings-leave-guard");
+  const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project-1");
+  let fails = true;
+  const writes: unknown[] = [];
+  workbench.commands.registerCommand(
+    { id: "pstdio.lab.command.save", label: "Save" },
+    {
+      execute: async (params) => {
+        if (fails) throw new Error("Offline");
+        writes.push(params);
+      },
+    },
+  );
+  const hostEvents = createHostEventPublisher();
+  const adapters = createWorkbenchWebviewHostCapabilities({
+    workbench,
+    projectId: "project-1",
+    extensionId: "pstdio.lab",
+    hostEvents,
+    placement: {
+      instanceId: "settings",
+      closable: true,
+      panelId: "settings",
+      viewId: "view",
+      resource: { type: "workbench-settings", id: "tags", label: "Ticket tags" },
+    },
+  });
+  const gate = createHostCapabilityGate({ capabilities: adapters, declaredCapabilities: ["editing.session"] });
+  const call = (params: object) => gate.call({ method: "editing.session", params });
+  await call(open("settings"));
+  await call({ ...change("settings", "Edited"), operation: "preview" });
+  const guard = settingsLeaveGuard(workbench);
+  expect(guard.getActions()?.dirty).toBe(true);
+  const navigation = guard.request();
+  await guard.leave(true);
+  expect(guard.getSnapshot()?.error).toBe("Offline");
+  expect(guard.isDirty()).toBe(true);
+  fails = false;
+  await guard.leave(true);
+  expect(await navigation).toBe(true);
+  expect(writes).toEqual([{ documentId: "document-1", changes: [{ path: ["title"], value: "Edited" }] }]);
+  expect(guard.isDirty()).toBe(false);
+  await call({ ...change("settings", "Discarded"), operation: "preview", sequence: 2 });
+  const leaving = guard.request();
+  await guard.leave(false);
+  expect(await leaving).toBe(true);
+  expect(await call({ operation: "cancel", sessionId: "settings" })).toMatchObject({ value: { title: "Edited" } });
+});

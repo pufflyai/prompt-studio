@@ -1,4 +1,4 @@
-import { Stack, Text } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
 import { ParamEditorRow, type SelectionParam } from "@pstdio/ui/param-editor";
 import type { WorkbenchCore } from "@pstdio/workbench";
@@ -35,34 +35,28 @@ export const AppearanceSettingsPanel = (props: { workbench: WorkbenchCore }) => 
   };
 
   return (
-    <Stack gap="md" padding="lg" maxW="720px">
-      <Stack gap="2xs">
-        <Text textStyle="heading/S">{t("appearance.title")}</Text>
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("appearance.description")}
-        </Text>
-      </Stack>
-      <Stack gap="0" borderWidth="1px" borderColor="border.subtle" borderRadius="md" py="xs">
-        <ParamEditorRow
-          param={themeParam}
-          onChange={(_id, value) => {
-            if (typeof value === "string") setThemePreference(value);
-          }}
-        />
-        <ParamEditorRow
-          param={{
-            id: "open-related-resources",
-            name: t("appearance.openRelatedResources"),
-            description: t("appearance.openRelatedResourcesHelper"),
-            type: "boolean",
-            defaultValue: openRelated,
-          }}
-          onChange={(_id, value) => {
-            if (typeof value !== "boolean") return;
-            workbench.preferences.setValue(openRelatedResourcesPreference, value, { scope: "user" });
-          }}
-        />
-      </Stack>
+    <Stack gap="0">
+      <ParamEditorRow
+        fullWidth
+        param={themeParam}
+        onChange={(_id, value) => {
+          if (typeof value === "string") setThemePreference(value);
+        }}
+      />
+      <ParamEditorRow
+        fullWidth
+        param={{
+          id: "open-related-resources",
+          name: t("appearance.openRelatedResources"),
+          description: t("appearance.openRelatedResourcesHelper"),
+          type: "boolean",
+          defaultValue: openRelated,
+        }}
+        onChange={(_id, value) => {
+          if (typeof value !== "boolean") return;
+          workbench.preferences.setValue(openRelatedResourcesPreference, value, { scope: "user" });
+        }}
+      />
     </Stack>
   );
 };

@@ -1,0 +1,99 @@
+import { expect, test } from "@playwright/test";
+import { openCanvasPreview } from "../preview";
+
+// Critical: extension editors must fill the settings body without a second host scrollbar constraining their content.
+test("extension settings editors own their scrolling", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/settings/settings-consistency.canvas.tsx#ExtensionSettings",
+  );
+  await preview.getByText("Bug fix", { exact: true }).click();
+  const content = preview.locator("pre");
+  await expect(content).toBeVisible();
+  await expect(content.locator('xpath=ancestor::*[@data-scope="scroll-area" and @data-part="viewport"]')).toHaveCount(
+    1,
+  );
+});
+
+// Critical: settings navigation and modal dismissal must not silently drop pending edits.
+test("settings preserve edits on Stay and guard both navigation and closing", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/settings/settings-consistency.canvas.tsx#Settings",
+  );
+  const limit = preview.getByRole("spinbutton", { name: "Maximum concurrent sessions" });
+  await expect(limit).toHaveValue("4");
+  await limit.fill("8");
+  await preview.getByText("Appearance", { exact: true }).click();
+  await expect(preview.getByRole("dialog", { name: "Unsaved changes" })).toBeVisible();
+  await preview.getByRole("button", { name: "Stay", exact: true }).click();
+  await expect(limit).toHaveValue("8");
+  await preview.getByText("Appearance", { exact: true }).click();
+  await preview.getByRole("button", { name: "Save and leave", exact: true }).click();
+  await expect(preview.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
+  await preview.getByText("Runtime", { exact: true }).click();
+  await limit.fill("12");
+  await preview.getByRole("button", { name: /^Close / }).click();
+  await expect(preview.getByRole("dialog", { name: "Unsaved changes" })).toBeVisible();
+  await preview.getByRole("button", { name: "Discard changes", exact: true }).click();
+  await expect(preview.getByRole("button", { name: /^Close / })).toHaveCount(0);
+});
+
+// Critical: unlimited concurrency must be an explicit, reversible draft rather than an empty number field.
+test("concurrency toggle stages unlimited sessions and Reset restores the saved limit", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/settings/settings-consistency.canvas.tsx#Settings",
+  );
+  const header = preview
+    .locator("header")
+    .filter({ has: preview.getByRole("heading", { name: "Runtime", exact: true }) });
+  // Measure in the preview document so Canvas zoom animation cannot change the result.
+  const cleanHeight = await header.evaluate((element) => element.clientHeight);
+  const toggle = preview.getByRole("checkbox", { name: "Limit concurrent sessions" });
+  const limit = preview.getByRole("spinbutton", { name: "Maximum concurrent sessions" });
+  const save = preview.getByRole("button", { name: "Save", exact: true });
+  const reset = preview.getByRole("button", { name: "Reset", exact: true });
+  await expect(save).toHaveCount(0);
+  await expect(reset).toHaveCount(0);
+  await expect(toggle).toBeChecked();
+  await toggle.press("Space");
+  await expect(limit).toHaveCount(0);
+  await expect(save).toBeEnabled();
+  await expect(reset).toBeEnabled();
+  expect(await header.evaluate((element) => element.clientHeight)).toBe(cleanHeight);
+  await reset.click();
+  await expect(toggle).toBeChecked();
+  await expect(limit).toHaveValue("4");
+  expect(await header.evaluate((element) => element.clientHeight)).toBe(cleanHeight);
+  await expect(save).toHaveCount(0);
+  await expect(reset).toHaveCount(0);
+  await toggle.press("Space");
+  await preview.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(save).toHaveCount(0);
+  await expect(reset).toHaveCount(0);
+  await toggle.press("Space");
+  await expect(limit).toHaveValue("1");
+  await preview.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(toggle).not.toBeChecked();
+  await expect(limit).toHaveCount(0);
+  await expect(save).toHaveCount(0);
+  await expect(reset).toHaveCount(0);
+});
+
+// Critical: immediate deletion must be confirmed and its header control must unmount when leaving the template.
+test("template header deletion requires confirmation and stays scoped to its page", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/settings/settings-consistency.canvas.tsx#Settings",
+  );
+  await preview.getByText("Bug fix", { exact: true }).click();
+  const header = preview.locator("header").filter({ has: preview.getByRole("heading", { name: "Bug fix" }) });
+  await header.getByRole("button", { name: "Delete template", exact: true }).click();
+  await expect(preview.getByRole("dialog").filter({ hasText: "Deletion is permanent." })).toBeVisible();
+  await preview.getByText("Close", { exact: true }).click();
+  await expect(preview.getByRole("dialog").filter({ hasText: "Deletion is permanent." })).toHaveCount(0);
+  await preview.getByText("Create ticket", { exact: true }).first().click();
+  await expect(preview.getByRole("heading", { name: "Create ticket", exact: true })).toBeVisible();
+  await expect(preview.getByRole("button", { name: "Delete template", exact: true })).toHaveCount(0);
+});

@@ -1,4 +1,6 @@
-import { Button, Dialog, Input, Stack, Text } from "@chakra-ui/react";
+import { Button, Dialog, Stack, Text } from "@chakra-ui/react";
+import { ParamEditor } from "@pstdio/ui/param-editor";
+import { useSettingsChanges } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getApiClient } from "@/lib/api";
@@ -38,6 +40,18 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
       await client.invalidateQueries({ queryKey });
     },
   });
+  useSettingsChanges({
+    dirty: Boolean(project) && name !== project?.name,
+    saving: update.isPending,
+    disabled: !name.trim(),
+    onSave: async () => {
+      await update.mutateAsync({ name: name.trim() });
+    },
+    onReset: () => {
+      setName(project?.name ?? "");
+      update.reset();
+    },
+  });
   const providerError =
     home && home.provider_state !== "ready" && (home.root_path || home.provider_ref_json || home.provider_operation_id)
       ? (home.provider_error_json?.message ??
@@ -45,24 +59,29 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
       : null;
   const setupError = retry.error?.message ?? home?.setup_error ?? providerError;
   return (
-    <Stack padding="lg" gap="md">
-      <Text textStyle="label/S/medium">Project name</Text>
-      <Input aria-label="Project name" value={name} onChange={(event) => setName(event.target.value)} />
-      <Button
-        variant="primary"
-        loading={update.isPending}
-        disabled={!name.trim() || name === project?.name}
-        onClick={() => update.mutate({ name: name.trim() })}
-      >
-        Save name
-      </Button>
+    <Stack gap="md">
+      <ParamEditor
+        changeDelay={0}
+        fullWidth
+        readOnly={update.isPending}
+        params={[
+          { id: "name", name: "Project name", type: "text", singleLine: true, defaultValue: name },
+          {
+            id: "folder",
+            name: "Project folder",
+            type: "property",
+            value: home?.root_path ?? home?.display_path ?? "No workspace attached",
+          },
+        ]}
+        onChange={(id, value) => {
+          if (id === "name") setName(String(value));
+        }}
+      />
       {update.error && (
         <Text role="alert" color="fg.error">
           {update.error.message}
         </Text>
       )}
-      <Text textStyle="label/S/medium">Project folder</Text>
-      <Text>{home?.root_path ?? home?.display_path ?? "No workspace attached"}</Text>
       {setupError && (
         <ProjectSetupStatus error={setupError} retrying={retry.isPending} onRetry={() => retry.mutate()} />
       )}

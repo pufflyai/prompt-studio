@@ -45,6 +45,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
         icon: panel.icon,
         body: {
           kind: "webview",
+          layout: "fill",
           render: (renderInput) => {
             const embedded = input.metadata.settingsPanels.some(
               (settingsPanel) => settingsPanel.id === renderInput.instance.panelId && settingsPanel.parentPanelId,

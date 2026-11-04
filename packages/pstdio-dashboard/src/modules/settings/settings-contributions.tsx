@@ -100,6 +100,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     title: "Skill",
     body: {
       kind: "react",
+      layout: "full-width",
       render: (input) => {
         const skill = settingsItem<ProjectSkill>(input, "skills");
         return skill ? (
@@ -115,6 +116,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     title: "Template",
     body: {
       kind: "react",
+      layout: "full-width",
       render: (input) => {
         const template = settingsItem<ProjectTemplateAsset>(input, "templates");
         return template ? (
