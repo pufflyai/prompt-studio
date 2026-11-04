@@ -1,7 +1,7 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { Disposable, FileRendererRefreshEnvelope, WorkbenchModuleContext } from "../../core";
 
-export type WorkbenchExtensionRendererKind = "tree" | "file" | "controls" | "dataTable" | "kanban" | "resourceList";
+export type WorkbenchExtensionRendererKind = "chat" | "tree" | "file" | "controls" | "dataTable" | "kanban" | "resourceList";
 
 interface RendererRefreshTarget {
   id: string;

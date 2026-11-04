@@ -7,6 +7,7 @@ import {
 import { createElement } from "react";
 import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
+import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import {
@@ -108,6 +109,9 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     });
     disposables.push(
       registerWorkbenchExtensionContributions({
+        createChatParamField: createDashboardParamFieldRenderer,
+        streamChatCommand: (commandId, body, signal) =>
+          getApiClient().extensions.streamCommand(input.projectId, commandId, body, { signal }),
         createKeybindingWhenExpression: buildDashboardWorkbenchWhenExpression,
         createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
         createNavigationWhenExpression: (when) =>

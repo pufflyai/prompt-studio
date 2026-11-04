@@ -1,0 +1,125 @@
+import { Button, Flex, Text } from "@chakra-ui/react";
+import type { ChatDraft, ChatRendererSnapshot, ControlValueMap } from "@pstdio/sdk/extensions";
+import { HarnessControls } from "@pstdio/ui/chat-ui";
+import { type Param, ParamEditor } from "@pstdio/ui/param-editor";
+import { controlValueSchema } from "pstdio-api-contracts";
+import type { ChatSession } from "../../../extensions/contributions/chat-session";
+import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
+import { HarnessControl } from "../controls/harness-control";
+
+interface NativeChatControlsProps {
+  run: ChatSession["run"];
+  conversation: ChatRendererSnapshot;
+  draft: ChatDraft;
+  renderParamField?: CommandParamFieldRenderer;
+  changeValues(values: ControlValueMap): void;
+}
+
+export const NativeChatControls = (props: NativeChatControlsProps) => {
+  const { run, conversation, draft, renderParamField, changeValues } = props;
+  const change = (id: string, value: unknown) => {
+    const values = { ...draft.values, [id]: controlValueSchema.parse(value) };
+    changeValues(values);
+    void run({ type: "control", id, values }).catch(() => undefined);
+  };
+  const hostParam = (param: NonNullable<ChatRendererSnapshot["controls"]>[number]): Param => {
+    if (param.type !== "harness") return param;
+    return {
+      id: param.id,
+      name: "",
+      type: "property",
+      value: (
+        <HarnessControl
+          param={param}
+          value={draft.values[param.id] ?? param.defaultValue}
+          readOnly={Boolean(conversation.readOnly)}
+          renderParamField={renderParamField}
+          onChange={(value) => change(param.id, value)}
+        />
+      ),
+    };
+  };
+  return (
+    <Flex direction="column" gap="xs">
+      {conversation.harness ? (
+        <HarnessControls
+          modes={conversation.harness.modes}
+          unavailable={conversation.readOnly}
+          draftTag={
+            conversation.draftTag
+              ? {
+                  ...conversation.draftTag,
+                  onClose: () => {
+                    void run({
+                      type: "operation",
+                      id: conversation.draftTag!.clearActionId,
+                      values: draft.values,
+                    }).catch(() => undefined);
+                  },
+                }
+              : undefined
+          }
+          onRequestConfirmation={(modeId) => {
+            void run({ type: "confirmation", modeId }).catch(() => undefined);
+          }}
+          onAction={async (modeId, actionId, argument, modeSnapshot) => {
+            await run({
+              type: "harness",
+              operation: { kind: "mode-action", modeId, actionId, argument },
+              modeSnapshot,
+            });
+          }}
+        />
+      ) : null}
+      {conversation.controls?.length ? (
+        <ParamEditor
+          variant="small"
+          params={conversation.controls.map(hostParam)}
+          defaultValues={draft.values}
+          readOnly={conversation.readOnly}
+          onChange={change}
+        />
+      ) : null}
+      {conversation.operations?.length ? (
+        <Flex gap="xs" wrap="wrap">
+          {conversation.operations.map((operation) => (
+            <Button
+              key={operation.id}
+              size="xs"
+              variant="ghost"
+              disabled={conversation.readOnly || operation.disabled}
+              onClick={() =>
+                void run({ type: "operation", id: operation.id, values: draft.values }).catch(() => undefined)
+              }
+            >
+              {operation.label}
+            </Button>
+          ))}
+        </Flex>
+      ) : null}
+    </Flex>
+  );
+};
+
+export const NativeChatApproval = (props: { run: ChatSession["run"]; conversation: ChatRendererSnapshot }) => {
+  const { run, conversation } = props;
+  const approval = conversation.approval;
+  if (!approval) return null;
+  return (
+    <Flex direction="column" gap="xs">
+      <Text>{approval.title}</Text>
+      <Flex gap="xs">
+        {approval.choices.map((choice) => (
+          <Button
+            key={choice.id}
+            size="xs"
+            disabled={conversation.readOnly}
+            onClick={() => void run({ type: "approve", id: approval.id, choice: choice.id }).catch(() => undefined)}
+          >
+            {choice.label}
+          </Button>
+        ))}
+      </Flex>
+    </Flex>
+  );
+};

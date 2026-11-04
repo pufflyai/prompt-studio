@@ -18,6 +18,7 @@ import type {
   ExtensionWebviewArtifactCapabilities,
   ExtensionWebviewFileCapabilities,
 } from "../bridge/webview-command-capabilities";
+import type { ChatCommandTransport } from "../contributions/chat-renderer-contributions";
 import type { WorkbenchExtensionDataTableRendererAdapter } from "../contributions/data-table-renderer-contributions";
 import type {
   WorkbenchExtensionMenuRegistration,
@@ -34,7 +35,7 @@ export interface WorkbenchExtensionHostMenuRegistration
   menuItems: Array<{ menuItem: MenuItem; menuPath: MenuPath }>;
 }
 
-export interface RegisterWorkbenchExtensionContributionsInput {
+export interface RegisterWorkbenchExtensionContributionsInput extends ChatCommandTransport {
   createKeybindingWhenExpression?: (when: ExtensionKeybindingRecord["when"]) => string | undefined;
   createMenuWhenExpression?: WorkbenchExtensionMenuWhenBuilder;
   createNavigationWhenExpression?: (

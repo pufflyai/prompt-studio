@@ -1,4 +1,5 @@
 import {
+  chatRendererSnapshotSchema,
   controlValuesSchema,
   extensionTreeRendererRecordSchema,
   localizableStringSchema,
@@ -15,6 +16,19 @@ const native = {
   emptyDescription: localizableStringSchema.optional(),
 };
 const body = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("chat"),
+      ...native,
+      draftKey: z.string().min(1),
+      initial: chatRendererSnapshotSchema.optional(),
+      query: callbackSchema,
+      onAction: callbackSchema,
+      stream: localRefSchema("command").optional(),
+      loadDraft: callbackSchema.optional(),
+      saveDraft: callbackSchema.optional(),
+    })
+    .strict(),
   z
     .object({
       kind: z.literal("controls"),

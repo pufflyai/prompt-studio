@@ -1,5 +1,6 @@
 export * from "./appearance";
 export * from "./artifacts";
+export * from "./chat-renderer";
 export * from "./check";
 export * from "./collection-view";
 export * from "./collection-view-builtins";
