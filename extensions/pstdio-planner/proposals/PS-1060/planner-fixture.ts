@@ -6,7 +6,7 @@ export const milestones = [
   { id: "launch", date: "2026-11-09", name: "Launch", hours: 3 },
 ];
 
-export const tickets = [
+const scheduledTickets = [
   { id: "schema", title: "Define project structure", milestone: "foundation", hours: 4, dependsOn: [] },
   { id: "navigation", title: "Build project navigation", milestone: "foundation", hours: 3, dependsOn: ["schema"] },
   { id: "preview", title: "Review the working preview", milestone: "preview", hours: 2, dependsOn: ["navigation"] },
@@ -14,11 +14,25 @@ export const tickets = [
   { id: "docs", title: "Update the user guide", milestone: "launch", hours: 1, dependsOn: [] },
 ];
 
+export const tickets = scheduledTickets.map((ticket, index) => ({
+  ...ticket,
+  shorthand: `DEMO-${index + 1}`,
+  status: ["Done", "In progress"][index] ?? "Todo",
+  priority: index < 2 ? "High" : "Normal",
+  description: [
+    "Define the project structure, shared configuration, and initial ticket model.",
+    "Add Project Planning navigation and connect the timeline and Auto Build actions.",
+    "Review the preview, check ticket interactions, and approve the release scope.",
+    "Build and publish the approved release after the preview review.",
+    "Document the new planning views and ticket workflow.",
+  ][index],
+}));
+
 const original = buildPlan({
   statuses: [],
   tags: [],
   today: "2026-11-04",
-  tickets: tickets.map((ticket, index) => ({ ...ticket, shorthand: `DEMO-${index + 1}`, content: "", statusId: null })),
+  tickets: tickets.map((ticket) => ({ ...ticket, content: "", statusId: null })),
   plan: {
     deadlines: milestones,
     order: tickets.map(({ id, milestone }) => ({ ticketId: id, deadlineId: milestone })),
@@ -46,7 +60,11 @@ export const plan = {
 };
 
 export const headerData = {
-  rows: tickets.map(({ id, title }) => ({ id, title, attributes: {} })),
-  attributes: [{ id: "title", label: "Title", type: { kind: "string" as const }, filterable: true }],
+  rows: tickets.map(({ id, title, status, priority }) => ({ id, title, attributes: { status, priority } })),
+  attributes: [
+    { id: "title", label: "Title", type: { kind: "string" as const }, filterable: true },
+    { id: "status", label: "Status", displayable: true, type: { kind: "string" as const }, filterable: true },
+    { id: "priority", label: "Priority", displayable: true, type: { kind: "string" as const }, filterable: true },
+  ],
   storageKey: "proposal-PS-1060-timeline",
 };
