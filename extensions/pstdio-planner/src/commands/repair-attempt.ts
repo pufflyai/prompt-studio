@@ -34,6 +34,7 @@ export const repairAttempt = async (
     evidenceKey?: string;
     expectedRun?: SessionRunSnapshot;
   },
+  beforeFollowup?: () => Promise<void>,
 ) => {
   return withWriteGuard(ctx, `attempt:${input.workspaceId}`, async () => {
     const attempt = await readAttempt(ctx.storage, input.workspaceId);
@@ -54,6 +55,7 @@ export const repairAttempt = async (
     await assertNoCompetingWriter(ctx, attempt.workspaceId, session.id);
     if (await alreadyRequested(ctx, input.evidenceKey))
       return { decision: "already-requested" as const, sessionId: session.id };
+    await beforeFollowup?.();
     const outcome = await ctx.sessions.followup({
       sessionId: session.id,
       expectedRun: input.expectedRun,
