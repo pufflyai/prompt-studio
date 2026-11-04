@@ -7,9 +7,12 @@ import {
   storage_document_operations,
   storage_document_updates,
   storage_documents,
+  storage_log_streams,
+  storage_ordered_owners,
   storage_record_projections,
   storage_record_sync,
 } from "../../db/schemas.pg";
+import { orderedOwnerWhere } from "./ordered-sql";
 import { resourceDocumentId } from "./resource-document-persistence";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -64,6 +67,10 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
         eq(storage_record_sync.extension_id, owner.extensionId),
       ),
     );
+  // Canonical records, pending saves, retained receipts and logs cascade from their owner rows,
+  // so a cleared owner founds or joins again and may reuse its operation IDs.
+  await tx.delete(storage_ordered_owners).where(orderedOwnerWhere(storage_ordered_owners, owner));
+  await tx.delete(storage_log_streams).where(orderedOwnerWhere(storage_log_streams, owner));
   // Advancing the owner revision rejects cursors issued before the purge.
   await tx
     .update(storage_record_projections)

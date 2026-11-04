@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
-import { eq } from "drizzle-orm";
-import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
+import { and, eq } from "drizzle-orm";
+import { storage_current_records, storage_document_updates } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
@@ -37,7 +37,12 @@ test("obsolete document journals can be discarded without loading their content 
     await f.db
       .select()
       .from(storage_document_updates)
-      .where(eq(storage_document_updates.extension_id, f.owner.extensionId)),
+      .where(
+        and(
+          eq(storage_document_updates.extension_id, f.owner.extensionId),
+          eq(storage_document_updates.document_id, name),
+        ),
+      ),
   ).toHaveLength(0);
 });
 
@@ -51,7 +56,8 @@ test("document revisions can be read cold without opening owner or record conten
     if (event.phase === "document-loaded") loaded++;
   });
   expect(await cold.documents.open("notes.md").revision(f.owner)).toBe(1);
-  expect(await cold.documents.open("records").revision(f.owner)).toBe(0);
+  // The first durable write registers the shared document in the encrypted owner directory.
+  expect(await cold.documents.open("records").revision(f.owner)).toBe(1);
   expect(loaded).toBe(0);
 });
 
@@ -80,9 +86,9 @@ test("a durable multi-record update survives a new service and folds without rep
   const reopened = createDocumentStorageDBService(f.db).open({ owner: f.owner });
   expect((await reopened.records.read("ticket")).value).toEqual({ title: "Title 129", status: "ready" });
   expect((await reopened.records.read("note")).value).toBe("first\nlast");
-  expect((await f.db.select().from(storage_document_updates)).length).toBeLessThan(128);
-  // The owner metadata document plus one document per record.
-  expect(await f.db.select().from(storage_documents)).toHaveLength(3);
+  // Reads use one projected row per record instead of a growing per-record document journal.
+  expect(await f.db.select().from(storage_document_updates)).toHaveLength(0);
+  expect(await f.db.select().from(storage_current_records)).toHaveLength(2);
 });
 
 test("another store sees a complete update only after its database commit", async () => {
@@ -98,9 +104,7 @@ test("another store sees a complete update only after its database commit", asyn
   });
   expect((await other.records.list()).map((record) => record.value)).toEqual([1, 2]);
   await f.storage.records.commit({ operationId: "later", edits: [{ recordId: "one", replace: 3 }] });
-  expect(await f.db.select().from(storage_document_updates)).toHaveLength(1);
-  await f.db.delete(storage_documents).where(eq(storage_documents.workbench_id, f.owner.workbenchId));
-  expect(await f.db.select().from(storage_document_updates)).toHaveLength(0);
+  expect((await other.records.list()).map((record) => record.value)).toEqual([3, 2]);
 });
 
 test("declared text files have separate durable documents and merge offline character edits", async () => {

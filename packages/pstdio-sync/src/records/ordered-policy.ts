@@ -1,11 +1,16 @@
 import { assertStorageLimits, isStorageLimitError } from "pstdio-sync-contracts";
+import type { OrderedRecord } from "./ordered-operation";
 import { applyOrderedOperation, projectOrderedOperation } from "./ordered-operation";
-import { orderedProjection } from "./ordered-projection";
+import { orderedBody } from "./ordered-projection";
 import { OrderedTextCausalityError } from "./ordered-text";
 
-const fits = async (records: Parameters<typeof orderedProjection>[0][]) => {
+// Limits measure stored content only; a revision digest per replayed save would make each
+// commit cost grow with every earlier pending save of the same record.
+const fits = (records: OrderedRecord[]) => {
   try {
-    assertStorageLimits(await Promise.all(records.map(orderedProjection)));
+    assertStorageLimits(
+      records.map((record) => ({ recordId: record.recordId, deleted: record.deleted, ...orderedBody(record) })),
+    );
     return true;
   } catch (error) {
     if (isStorageLimitError(error)) return false;
@@ -17,7 +22,7 @@ const fits = async (records: Parameters<typeof orderedProjection>[0][]) => {
 export const applyBoundedOrderedOperation = async (...args: Parameters<typeof applyOrderedOperation>) => {
   try {
     const result = applyOrderedOperation(...args);
-    if (await fits(result.records)) return result;
+    if (fits(result.records)) return result;
     return { decision: { ...result.decision, state: "refused" as const }, records: [] };
   } catch (error) {
     if (!(error instanceof OrderedTextCausalityError)) throw error;
@@ -37,7 +42,7 @@ export const applyBoundedOrderedOperation = async (...args: Parameters<typeof ap
 export const projectBoundedOrderedOperation = async (...args: Parameters<typeof projectOrderedOperation>) => {
   try {
     const records = projectOrderedOperation(...args);
-    return (await fits(records)) ? records : [];
+    return fits(records) ? records : [];
   } catch (error) {
     if (error instanceof OrderedTextCausalityError) return [];
     throw error;

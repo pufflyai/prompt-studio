@@ -145,13 +145,13 @@ const accepts = (
 ) => {
   const observed = edit.condition;
   if (!observed) return true;
-  const normalize = (stamp: string, current: string | undefined) =>
-    resolveStamp(stamp, decisions, optimistic && stamp === current);
+  // An undecided pending stamp equals only itself, so an optimistic check can compare it as is.
+  const normalize = (stamp: string) => resolveStamp(stamp, decisions, optimistic);
   const lifetime = record?.lifetime;
   if (
     observed.exists !== !!record ||
-    (observed.lifetime === null ? null : normalize(observed.lifetime, lifetime)) !==
-      (lifetime === undefined ? null : normalize(lifetime, lifetime)) ||
+    (observed.lifetime === null ? null : normalize(observed.lifetime)) !==
+      (lifetime === undefined ? null : normalize(lifetime)) ||
     observed.deleted !== (record?.deleted ?? false)
   )
     return false;
@@ -163,13 +163,13 @@ const accepts = (
   const stamps = Object.fromEntries(
     Object.entries(overlappingJsonStamps(observed.stamps, paths)).map(([pointer, stamp]) => [
       pointer,
-      normalize(stamp, record?.stamps[pointer]),
+      normalize(stamp),
     ]),
   );
   const current = Object.fromEntries(
     Object.entries(overlappingJsonStamps(record?.stamps ?? {}, paths)).map(([pointer, stamp]) => [
       pointer,
-      normalize(stamp, stamp),
+      normalize(stamp),
     ]),
   );
   return unchangedJsonPaths(stamps, current, paths);
