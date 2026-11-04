@@ -2,7 +2,9 @@ import { Box, Stack, Text, Wrap } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { CollectionBadge } from "./collection-badge";
+import { KanbanRendererCard } from "./kanban-renderer-card";
 import { renderBadgeListDisplay } from "./kanban-renderer-helpers";
+import { KanbanRendererListRow } from "./kanban-renderer-list-row";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
 const descriptor = {
@@ -75,3 +77,46 @@ export const ReviewRequestCounts: Story = {
     </Wrap>
   ),
 };
+
+function TicketResourceInteraction(props: { list?: boolean }) {
+  const [opened, setOpened] = useState("None");
+  const [drags, setDrags] = useState(0);
+  const customSlots = [
+    <CollectionBadge key="workspace" label="Working copy" icon="folder" onClick={() => setOpened("Workspace")} />,
+    <CollectionBadge key="artifact" label="Prototype" icon="file-code" onClick={() => setOpened("Artifact")} />,
+    <CollectionBadge key="missing" label="Saved resource" icon="circle-alert" tooltip="Unavailable" />,
+  ];
+  const item = {
+    id: "ticket",
+    title: "Open related work",
+    draggable: true,
+    onClick: () => setOpened("Ticket"),
+    customSlots,
+  };
+  return (
+    <Stack maxW={props.list ? "full" : "sm"} gap="md">
+      {props.list ? (
+        <KanbanRendererListRow
+          row={{ id: item.id, item, depth: 0, isGroup: false, canExpand: false }}
+          isExpanded={false}
+          selectedItemId={null}
+          activeDropTargetId={null}
+          draggedItemId={null}
+          onDraggedItemChange={(id) => {
+            if (id) setDrags((count) => count + 1);
+          }}
+          onDropTargetChange={() => {}}
+          onExpandedChange={() => {}}
+        />
+      ) : (
+        <KanbanRendererCard {...item} onDragStart={() => setDrags((count) => count + 1)} />
+      )}
+      <Text role="status">
+        Opened: {opened}; Drags: {drags}
+      </Text>
+    </Stack>
+  );
+}
+
+export const TicketResources: Story = { render: () => <TicketResourceInteraction /> };
+export const ListResources: Story = { render: () => <TicketResourceInteraction list /> };
