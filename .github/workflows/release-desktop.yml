@@ -196,13 +196,38 @@ jobs:
 
       - name: Build signed macOS distributions
         if: matrix.platform == 'darwin'
+        shell: bash
         env:
           PSTDIO_DESKTOP_RELEASE: "1"
           MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
           APPLE_API_KEY: ${{ runner.temp }}/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-        run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
+        run: |
+          set -o pipefail
+          bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }} 2>&1 |
+            bun -e '
+              import { appendFileSync, mkdirSync } from "node:fs";
+              import { createInterface } from "node:readline";
+              import { redactSensitiveText } from "pstdio-logging";
+              const secrets = Object.entries(process.env)
+                .filter(([name, value]) => /TOKEN|SECRET|PASSWORD|KEY|ISSUER|IDENTITY/.test(name) && value)
+                .map(([, value]) => value);
+              mkdirSync("clients/desktop/test-results", { recursive: true });
+              for await (const line of createInterface({ input: process.stdin })) {
+                const safe = redactSensitiveText(line, secrets);
+                appendFileSync("clients/desktop/test-results/release-build.log", safe + "\n");
+                console.log(safe);
+              }
+            '
+
+      - name: Preserve masked macOS build output
+        if: always() && matrix.platform == 'darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-build-log-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: clients/desktop/test-results/release-build.log
+          if-no-files-found: warn
 
       - name: Build signed Windows distributions
         if: matrix.platform == 'win32'
