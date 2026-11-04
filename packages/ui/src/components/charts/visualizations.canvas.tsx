@@ -1,6 +1,7 @@
 import type { CanvasMeta } from "@pstdio/canvas";
 import { VisualizationFrame } from "./visualization-frame";
 import { VisualizationGallery } from "./visualization-gallery";
+import { AdvancedLineExamples } from "./visualization-lines";
 import { PaletteExamples } from "./visualization-palettes";
 import { PieExamples } from "./visualization-parts";
 import { AreaExamples, LineExamples } from "./visualization-trends";
@@ -22,6 +23,7 @@ export const AreaCharts = () => (
 );
 export const LinePlots = () => (
   <VisualizationFrame title="Line plots">
+    <AdvancedLineExamples />
     <LineExamples />
   </VisualizationFrame>
 );

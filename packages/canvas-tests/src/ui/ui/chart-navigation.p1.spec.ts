@@ -6,10 +6,12 @@ test("statistics keep their fixed percentage scale and expose values on keyboard
   const preview = await openCanvasPreview(page, "packages/ui/src/components/charts/charts.canvas.tsx#Statistics");
   const low = preview.getByRole("img", { name: "25% share" });
   const high = preview.getByRole("img", { name: "75% share" });
-  const lowBar = low.locator(".ts-chart__marks rect").first();
-  const highBar = high.locator(".ts-chart__marks rect").first();
+  const lowBar = low.locator(".ts-chart__marks :is(rect, path)").first();
+  const highBar = high.locator(".ts-chart__marks :is(rect, path)").first();
   await expect(lowBar).toBeVisible();
-  const ratio = Number(await highBar.getAttribute("width")) / Number(await lowBar.getAttribute("width"));
+  const ratio =
+    (await highBar.evaluate((element) => (element as SVGGraphicsElement).getBBox().width)) /
+    (await lowBar.evaluate((element) => (element as SVGGraphicsElement).getBBox().width));
   expect(ratio).toBeCloseTo(3, 1);
   await low.focus();
   await low.press("ArrowRight");
@@ -38,9 +40,12 @@ test("visualization gallery applies light, dark, and contributed chart tokens", 
     page,
     "packages/ui/src/components/charts/visualizations.canvas.tsx#CustomPalette",
   );
-  const bar = preview.getByRole("img", { name: "Columns", exact: true }).locator(".ts-chart__marks rect").first();
+  const bar = preview
+    .getByRole("img", { name: "Columns", exact: true })
+    .locator(".ts-chart__marks :is(rect, path)")
+    .first();
   await expect(bar).toHaveCSS("fill", "rgb(212, 187, 255)");
-  await expect(preview.getByRole("img")).toHaveCount(30);
+  await expect(preview.getByRole("img")).toHaveCount(34);
   const shell = page.frameLocator("[data-verification-host]");
   await shell.getByRole("button", { name: "Theme for Custom palette", exact: true }).click();
   await shell.getByRole("menuitem", { name: "Prompt Dark", exact: true }).click();
@@ -55,7 +60,7 @@ test("Carbon palette keeps fourteen distinct theme colors", async ({ page }) => 
   const preview = await openCanvasPreview(page, "packages/ui/src/components/charts/visualizations.canvas.tsx#Palettes");
   const marks = preview
     .getByRole("img", { name: "Carbon categorical palette", exact: true })
-    .locator(".ts-chart__marks rect");
+    .locator(".ts-chart__marks :is(rect, path)");
   await expect(marks).toHaveCount(14);
   const colors = await marks.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).fill));
   expect(new Set(colors).size).toBe(14);
