@@ -2,7 +2,7 @@
 
 Proposed: 2026-11-01
 
-Status: Accepted direction for PS-1016; implementation and qualification are incomplete. The ticket's human decisions approve the semantics and 6,000–9,000 additional-line scope. This does not claim the new format has shipped.
+Status: Accepted for PS-1016; the client implementation is local. Full qualification and SDK/extension delivery remain incomplete. The ticket's human decisions approve the semantics and implementation scope. This does not claim the new format has shipped.
 
 ## Context
 

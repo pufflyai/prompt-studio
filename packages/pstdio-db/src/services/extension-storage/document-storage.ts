@@ -147,7 +147,10 @@ export const createDocumentStorageDBService = (
     logs,
     observer,
     getEnvironment,
-    flushStatistics: statistics.flush,
+    flushStatistics: async () => {
+      await statistics.flush();
+      await logs.flushStatistics();
+    },
     watchNumbers(listener: (event: NumberChange) => void) {
       numberListeners.add(listener);
       return () => {

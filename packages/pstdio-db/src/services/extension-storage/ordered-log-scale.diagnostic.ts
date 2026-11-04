@@ -6,6 +6,7 @@ import { fingerprint, type Json, type StateInfo, type StorageLogEntry } from "ps
 import { createDb } from "../../db/connection.pglite";
 import { storage_log_entries as entries, projects, storage_log_streams as streams } from "../../db/schemas.pg";
 import { encodeLogValue, logAddress } from "./ordered-log-sql";
+import { orderedLogStatistics } from "./ordered-log-statistics";
 import { createOrderedLogStore } from "./ordered-log-store";
 import { createRelay } from "./record-stream-relay.fixture";
 
@@ -54,6 +55,10 @@ const qualify = async (count: number) => {
       );
       await source.db.insert(entries).values(rows);
     }
+    // Bulk fixture rows use the same post-commit maintenance as normal production writes.
+    const statistics = orderedLogStatistics(source.db);
+    statistics.record(count);
+    await statistics.flush();
     const space = await createSyncSpace({
       projectId: id,
       spaceOwner: null,
@@ -148,7 +153,8 @@ const qualify = async (count: number) => {
     );
     return {
       historyEntries: count,
-      setup: "Bulk fixture canonical rows, production full-copy founding and compaction",
+      setup:
+        "Bulk fixture canonical rows with production statistics flush, production full-copy founding and compaction",
       append,
       newest,
     };

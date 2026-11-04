@@ -18,6 +18,7 @@ import {
   logWhere,
   type OrderedLogAddress,
 } from "./ordered-log-sql";
+import { orderedLogStatistics } from "./ordered-log-statistics";
 
 const identityError = () => new Error("Log entry identity reused with changed content");
 const validateEntry = (entry: StorageLogEntry) => {
@@ -47,12 +48,16 @@ const readLogStatus = async (db: DbClient, input: OrderedLogAddress) => {
     through: row?.through ?? 0,
   };
 };
-const pruneLogEntries = (tx: Pick<DbClient, "delete">, input: OrderedLogAddress) =>
-  input.keep
-    ? tx.delete(entries).where(and(logWhere(entries, input), lt(entries.created_at, logCutoff(input))))
-    : Promise.resolve();
+const pruneLogEntries = async (tx: Pick<DbClient, "delete">, input: OrderedLogAddress) => {
+  if (!input.keep) return 0;
+  const result = await tx
+    .delete(entries)
+    .where(and(logWhere(entries, input), lt(entries.created_at, logCutoff(input))));
+  return result.affectedRows ?? 0;
+};
 export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) => {
   validateLogAddress(input);
+  const statistics = orderedLogStatistics(db);
   const listeners = new Set<() => void>();
   const changed = () => {
     input.changed?.();
@@ -78,12 +83,14 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
         (previous.relay_sequence === null ||
           sequence < previous.relay_sequence ||
           (sequence === previous.relay_sequence && index! < previous.relay_index!))
-      )
+      ) {
         await tx
           .update(entries)
           .set({ relay_sequence: sequence, relay_index: index, envelope: null })
           .where(rowWhere(entry.id));
-      return;
+        return 1;
+      }
+      return 0;
     }
     await tx.insert(entries).values({
       ...logAddress(input),
@@ -96,6 +103,7 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
       relay_sequence: sequence,
       relay_index: index,
     });
+    return 1;
   };
   const completeBatch = async (tx: LogTransaction, batch: LogReceivedBatch) => {
     if (batch.expected) {
@@ -132,14 +140,15 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
     return cached!.count >= (batch.retainedCount ?? batch.entries.length);
   };
   const receiveBatches = async (tx: LogTransaction, batches: LogReceivedBatch[], complete: number) => {
+    let changed = 0;
     for (const batch of batches) {
       validateLogPosition(batch.sequence);
       if (batch.skipBefore !== undefined && complete === batch.skipBefore) complete = batch.sequence - 1;
       for (const [index, entry] of batch.entries.entries())
-        if (entry) await write(entry, tx, false, batch.sequence, index);
+        if (entry) changed += await write(entry, tx, false, batch.sequence, index);
       if (batch.sequence === complete + 1 && (await completeBatch(tx, batch))) complete = batch.sequence;
     }
-    return complete;
+    return { complete, changed };
   };
   return {
     address: logAddressKey(input),
@@ -155,7 +164,7 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
           const entry = await decodeLogPayload<StorageLogEntry>(input, previous.entry);
           if (entry.writerId !== input.writerId || canonicalJson(entry.value) !== canonicalJson(owned))
             throw identityError();
-          return entry;
+          return { entry, changed: 0 };
         }
         const entry = {
           id,
@@ -163,12 +172,12 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
           createdAt: new Date((input.now ?? Date.now)()).toISOString(),
           value: owned,
         };
-        await write(entry, tx, true);
-        await pruneLogEntries(tx, input);
-        return entry;
+        const changed = (await write(entry, tx, true)) + (await pruneLogEntries(tx, input));
+        return { entry, changed };
       });
+      if (result.changed) statistics.record(result.changed);
       changed();
-      return result;
+      return result.entry;
     },
     read: (options = {}) => {
       const owned = structuredClone(options);
@@ -183,17 +192,19 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
     lookupMetadata: (ids: readonly string[]) => lookupOrderedLogMetadata(db, input, ids),
     async prepare(id: string, delivery: LogDelivery) {
       const owned = structuredClone(delivery);
-      return db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         await lockLogStream(tx, input);
         const row = await entryRow(tx, id);
         if (!row?.local) throw new Error("Only this device's append can be delivered");
-        if (row.envelope) return decodeLogPayload<LogDelivery>(input, row.envelope);
+        if (row.envelope) return { delivery: await decodeLogPayload<LogDelivery>(input, row.envelope), changed: 0 };
         await tx
           .update(entries)
           .set({ envelope: await encodeLogPayload(input, owned) })
           .where(rowWhere(id));
-        return owned;
+        return { delivery: owned, changed: 1 };
       });
+      if (result.changed) statistics.record(result.changed);
+      return result.delivery;
     },
     async receive(
       batches: LogReceivedBatch[],
@@ -201,7 +212,7 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
       options: { from?: number; skipTo?: number; stateId?: string; through?: number } = {},
     ) {
       const owned = structuredClone({ batches, head, options });
-      const notify = await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         const stream = await lockLogStream(tx, input);
         const complete = await receiveBatches(
           tx,
@@ -214,20 +225,23 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
           .update(streams)
           .set({
             head: Math.max(stream.head, owned.head),
-            complete_through: Math.max(stream.complete_through, complete),
+            complete_through: Math.max(stream.complete_through, complete.complete),
             ...(owned.options.stateId === undefined
               ? {}
               : { state_id: owned.options.stateId, through: owned.options.through ?? 0 }),
           })
           .where(logWhere(streams, input));
-        await pruneLogEntries(tx, input);
-        return (
-          owned.batches.some((batch) => batch.entries.some(Boolean)) ||
-          owned.head > stream.head ||
-          (owned.options.stateId !== undefined && owned.options.stateId !== stream.state_id)
-        );
+        const removed = await pruneLogEntries(tx, input);
+        return {
+          changed: complete.changed + removed,
+          notify:
+            owned.batches.some((batch) => batch.entries.some(Boolean)) ||
+            owned.head > stream.head ||
+            (owned.options.stateId !== undefined && owned.options.stateId !== stream.state_id),
+        };
       });
-      if (notify) changed();
+      if (result.changed) statistics.record(result.changed);
+      if (result.notify) changed();
     },
     status: () => readLogStatus(db, input),
     snapshotPage: (after, limit) => orderedLogSnapshotPage(db, input, after, limit),

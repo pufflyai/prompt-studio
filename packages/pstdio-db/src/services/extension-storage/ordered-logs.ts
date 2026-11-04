@@ -6,6 +6,7 @@ import type { StorageLogDefinition } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createEnvironmentDBService } from "../environment/environment";
 import type { LogPayloads } from "./ordered-log-sql";
+import { orderedLogStatistics } from "./ordered-log-statistics";
 import { createOrderedLogStore } from "./ordered-log-store";
 import { createOrderedManifestCache } from "./ordered-receipts-blobs";
 
@@ -64,6 +65,7 @@ export const createOrderedLogs = (
     };
   };
   return {
+    flushStatistics: orderedLogStatistics(db).flush,
     writerId: async () => (await environment.get()).environmentId,
     directory,
     stream,
