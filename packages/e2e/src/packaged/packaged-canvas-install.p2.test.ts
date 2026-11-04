@@ -179,7 +179,7 @@ test(
       await signInBrowser(page, started.descriptor);
       phase("browser signed in");
       // The resource-free entry must open the first built canvas in a packaged install too.
-      await page.goto(`${url}/extensions/pstdio.canvas/canvases`);
+      await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.canvas/canvases`);
       phase("dashboard loaded");
       const viewer = page.frameLocator('iframe[title="UI Canvas"]:visible');
       await viewer.locator('iframe[data-frame-ready="true"]').waitFor();
