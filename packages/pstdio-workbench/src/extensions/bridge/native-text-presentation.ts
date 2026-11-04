@@ -103,7 +103,10 @@ export const createNativeTextPresentation = (input: NativeTextPresentationInput)
         input.workbench.resources.wasRemovedSince(input.placement.resource, removalVersion)
       )
         await releasePlacementTextGuest(input.workbench, events);
-      else await prepareSessionClose();
+      else {
+        await prepareSessionClose();
+        await releasePlacementTextGuest(input.workbench, events);
+      }
       lifetime.abort();
       events.unbind();
       listeners.clear();

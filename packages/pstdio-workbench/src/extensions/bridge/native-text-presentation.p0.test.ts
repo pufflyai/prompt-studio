@@ -3,6 +3,7 @@ import { createClient } from "@pstdio/sdk/client";
 import * as Y from "yjs";
 import { harness, navigate, openFile } from "../../core/controllers/composition/placement-lifecycle-test-support";
 import { createNativeTextPresentation } from "./native-text-presentation";
+import { createRetainedTextPresentation } from "./retained-text-presentation";
 
 // A controlled HTTP peer. SDK, capability dispatch, placement ownership and close are production code.
 const fixture = () => {
@@ -93,14 +94,17 @@ const fixture = () => {
   workbench.navigation.openTarget(navigate("workspace"));
   workbench.navigation.openTarget(openFile("document"));
   const placement = workbench.layout.getActivePanel("main")!;
-  const presentation = createNativeTextPresentation({
-    workbench,
-    placement,
-    projectId: "project",
-    textEditing: createClient({ baseUrl: server.url.href }).textEditing,
-    textTarget: { fileRendererId: "paper.source.view.markdown", resource: placement.resource },
-  });
+  const connect = () =>
+    createNativeTextPresentation({
+      workbench,
+      placement,
+      projectId: "project",
+      textEditing: createClient({ baseUrl: server.url.href }).textEditing,
+      textTarget: { fileRendererId: "paper.source.view.markdown", resource: placement.resource },
+    });
+  const presentation = connect();
   return {
+    connect,
     workbench,
     placement,
     presentation,
@@ -296,6 +300,77 @@ test("only authoritative removal lets the user explicitly close a refused public
     expect(f.document.getText("content").toString()).toBe("source");
   } finally {
     f.refuseSubmit(false);
+    await f.stop();
+  }
+});
+
+test("departed native views release only their admitted member and keep refused drafts recoverable", async () => {
+  const f = fixture();
+  try {
+    const session = await f.presentation.open();
+    const draft = session.createDraft();
+    draft.text.insert(draft.text.length, " private");
+    f.workbench.pageLocations.closePlacement(f.placement.placementIdentity!);
+    await expect(f.presentation.close()).rejects.toMatchObject({ code: "draft_active" });
+    expect(draft.text.toString()).toBe("source private");
+    expect(f.calls).not.toContain("disconnect");
+    expect(draft.cancel()).toBe(true);
+    await f.presentation.close();
+    expect(f.calls).toContain("close");
+    expect(f.calls).toContain("disconnect");
+    await expect(f.presentation.open()).rejects.toMatchObject({ code: "session_closed" });
+  } finally {
+    await f.stop();
+  }
+});
+
+test("retained native reopening cannot replace a refused private draft and retries its owner after cancellation", async () => {
+  const f = fixture();
+  const owner = createRetainedTextPresentation(f.connect);
+  try {
+    const session = await owner.open();
+    const draft = session.createDraft();
+    draft.text.insert(draft.text.length, " private");
+    expect(owner.owns(session)).toBe(true);
+    await expect(owner.close()).rejects.toMatchObject({ code: "draft_active" });
+    expect(owner.owns(session)).toBe(false);
+    await expect(owner.open()).rejects.toMatchObject({ code: "draft_active" });
+    expect(f.calls.filter((call) => call === "open")).toHaveLength(1);
+    expect(draft.text.toString()).toBe("source private");
+    expect(draft.cancel()).toBe(true);
+    const next = await owner.retry();
+    expect(next).not.toBe(session);
+    expect(owner.owns(next)).toBe(true);
+    expect(f.calls.filter((call) => call === "open")).toHaveLength(2);
+    expect(f.calls.indexOf("disconnect")).toBeLessThan(f.calls.lastIndexOf("connect"));
+    await owner.close();
+  } finally {
+    await f.stop();
+  }
+});
+
+test("retained native reopening waits for the admitted close finalizer before successor admission", async () => {
+  const f = fixture();
+  const owner = createRetainedTextPresentation(f.connect);
+  const release = Promise.withResolvers<void>();
+  try {
+    const session = await owner.open();
+    const entered = Promise.withResolvers<void>();
+    session.beforeClose(async () => {
+      entered.resolve();
+      await release.promise;
+    });
+    const closing = owner.close();
+    await entered.promise;
+    const reopening = owner.open();
+    expect(f.calls.filter((call) => call === "open")).toHaveLength(1);
+    release.resolve();
+    await closing;
+    expect(await reopening).not.toBe(session);
+    expect(f.calls.filter((call) => call === "open")).toHaveLength(2);
+    await owner.close();
+  } finally {
+    release.resolve();
     await f.stop();
   }
 });

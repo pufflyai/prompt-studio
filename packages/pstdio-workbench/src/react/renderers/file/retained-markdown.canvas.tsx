@@ -38,7 +38,7 @@ const RetainedMarkdown = () => (
   </Stack>
 );
 export default {
-  title: "Proposals/PS-776 Retained Markdown",
+  title: "Patterns/Editors/Retained Markdown",
   component: RetainedMarkdown,
   description:
     "Synthetic ticket and attachment. Returning to a retained view preserves its document DOM and independent scroll position while public editing authority is reacquired. Existing editor and tab appearance is unchanged; no real project records are created.",

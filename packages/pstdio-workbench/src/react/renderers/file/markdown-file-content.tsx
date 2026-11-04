@@ -35,7 +35,6 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
         <PublicMarkdownFileEditor
           key={editorKey}
           connect={connectText}
-          presence={presence}
           open={open}
           placeholder={content.placeholder ?? "Write…"}
           sectionNavigation={sectionNavigation}

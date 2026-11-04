@@ -718,3 +718,65 @@ test("selected page parameters own the scope while equivalent parameter ordering
   expect(f.scopes).toHaveLength(2);
   expect(f.scopes[1]).toMatchObject({ target: { pageParams: { file: "second" } } });
 });
+
+test("late cleanup from a replaced selected scope cannot abandon its same-ID successor", async () => {
+  const f = await fixture();
+  const old = f.frame(f.placement, undefined, f.events, { file: "first" });
+  const memberId = crypto.randomUUID();
+  await old({ operation: "register", memberId });
+  await old({ operation: "open", memberId, input: { grant: { token: "selected" } } });
+  const next = f.frame(f.placement, undefined, f.events, { file: "second" });
+  await next({ operation: "register", memberId });
+  const opened = (await next({
+    operation: "open",
+    memberId,
+    input: { grant: { token: "selected" } },
+  })) as TextEditingOpened;
+  const before = f.requests.length;
+  await expect(old({ operation: "abandon", memberId })).rejects.toMatchObject({ code: "session_closed" });
+  await expect(old({ operation: "close", handle: opened.handle })).rejects.toMatchObject({ code: "session_closed" });
+  expect(f.requests).toHaveLength(before);
+  expect(
+    (await next({ operation: "open", memberId, input: { grant: { token: "selected" } } })) as TextEditingOpened,
+  ).toMatchObject({ handle: opened.handle });
+});
+
+test("late cleanup from a departed viewer generation cannot release its same-scope same-ID successor", async () => {
+  const f = await fixture();
+  const old = f.frame();
+  const memberId = crypto.randomUUID();
+  await old({ operation: "register", memberId });
+  await old({ operation: "open", memberId, input: { grant: { token: "selected" } } });
+  f.workbench.pageLocations.closePlacement(f.placement.placementIdentity!);
+  await f.workbench.navigation.openTarget(openFile("document"));
+  const placement = f.workbench.layout.getActivePanel("main")!;
+  const next = f.frame(placement);
+  await next({ operation: "register", memberId });
+  const opened = (await next({
+    operation: "open",
+    memberId,
+    input: { grant: { token: "selected" } },
+  })) as TextEditingOpened;
+  const before = f.requests.length;
+  await expect(old({ operation: "abandon", memberId })).rejects.toThrow();
+  await expect(old({ operation: "close", handle: opened.handle })).rejects.toThrow();
+  expect(f.requests).toHaveLength(before);
+  expect(
+    (await next({ operation: "open", memberId, input: { grant: { token: "selected" } } })) as TextEditingOpened,
+  ).toMatchObject({ handle: opened.handle });
+});
+
+test("a current adapter rerender can close the same admitted guest without reopening", async () => {
+  const f = await fixture();
+  const request = f.frame();
+  const memberId = crypto.randomUUID();
+  await request({ operation: "register", memberId });
+  const opened = (await request({
+    operation: "open",
+    memberId,
+    input: { grant: { token: "selected" } },
+  })) as TextEditingOpened;
+  await f.frame()({ operation: "close", handle: opened.handle });
+  expect(f.scopes).toHaveLength(1);
+  expect(f.requests.filter((value) => value === "close")).toHaveLength(1);
+});

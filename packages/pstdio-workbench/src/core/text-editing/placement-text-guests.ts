@@ -15,6 +15,7 @@ interface Owner {
   connection: Promise<TextEditingConnection>;
   guest: Promise<Guest>;
   presence: ReturnType<typeof createPlacementTextPresence>;
+  owns(projectId: string, scope: Scope): boolean;
   current(scope?: Scope): boolean;
   detach(): void;
   close(): Promise<void>;
@@ -81,8 +82,9 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
     events,
     connection,
     presence,
+    owns: (requestedProject, scope) => requestedProject === projectId && scopeKey(scope) === selectedScope,
     current: (scope = input.scope) =>
-      scopeKey(scope) === selectedScope &&
+      owner.owns(projectId, scope) &&
       state.live.get(events) === owner &&
       workbench.pages.store.getState().projectId === projectId &&
       invocation.isViewerCurrent?.() !== false,
@@ -176,14 +178,29 @@ const placementTextOwner = (input: PlacementTextGuestInput) => {
   return owner;
 };
 
-export const requestPlacementText = async <Request extends TextEditingRequest>(
-  input: PlacementTextGuestInput,
-  request: Request,
-) => {
-  const owner = placementTextOwner(input);
-  const guest = await owner.guest;
-  if (!owner.current(input.scope)) throw closed();
-  return owner.presence.request(request, () => guest.host.call("editing.text", request));
+export const createPlacementTextRequester = (input: PlacementTextGuestInput) => {
+  let admittedOwner: Owner | undefined;
+  const invocation = input.workbench.viewers.captureContext(input.placement.placementIdentity);
+  return async <Request extends TextEditingRequest>(request: Request) => {
+    // Pin cleanup to this adapter's admitted owner, including after its viewer lease expires.
+    // A publisher can be reused by a successor; looking it up again could release the wrong member.
+    if (request.operation === "close" || request.operation === "abandon") {
+      let owner = admittedOwner;
+      // A current adapter rerender can finish its existing guest without another admission request.
+      if (!owner && invocation.isViewerCurrent?.() !== false) {
+        const live = getOwnership(input.workbench).live.get(input.events);
+        if (live?.current(input.scope)) owner = live;
+      }
+      if (!owner?.owns(input.projectId, input.scope)) throw closed();
+      const guest = await owner.guest;
+      return owner.presence.request(request, () => guest.host.call("editing.text", request));
+    }
+    const owner = placementTextOwner(input);
+    admittedOwner = owner;
+    const guest = await owner.guest;
+    if (!owner.current(input.scope)) throw closed();
+    return owner.presence.request(request, () => guest.host.call("editing.text", request));
+  };
 };
 
 /** Failed native admission is drained before a fresh public session is requested. */
