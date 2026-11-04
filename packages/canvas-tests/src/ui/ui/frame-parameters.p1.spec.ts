@@ -202,6 +202,8 @@ test("frame parameters and playback stay independent across themes and movement"
   await loopEnd.press("Tab");
   await expect(endHandle).toHaveAttribute("aria-valuenow", "1.5");
   await page.keyboard.press("Escape");
+  // The closing dialog owns focus until its exit completes; Home/End belong to the loop handles next.
+  await expect(settings).toBeHidden();
   await startHandle.press("Home");
   await endHandle.press("End");
   await expect(startHandle).toHaveAttribute("aria-valuenow", "0");

@@ -93,7 +93,9 @@ test("clicking a tab closes its right-click menu", async ({ page }) => {
   const menu = preview.getByRole("menu", { name: "Beta.md context menu", exact: true });
   await tab.click({ button: "right" });
   await expect(menu).toBeVisible();
-  await tab.click();
+  // The context menu starts at the right-click point, so its label covers the tab's center.
+  // Click the still-visible edge as a person would, rather than asking Playwright to click through it.
+  await tab.click({ position: { x: 4, y: 4 } });
   await expect(menu).toBeHidden();
   await expect(tab).toHaveAttribute("aria-selected", "true");
   await tab.press("Shift+F10");
