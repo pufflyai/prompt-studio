@@ -216,7 +216,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         title: localize(record.title, record.id),
         icon: record.icon,
         body: {
-          kind: "kanban",
+          kind: record.kind === "resourceList" ? "resourceList" : "kanban",
           resourceKind: record.resourceKind,
           toolbarActions: mapViewToolbarActions(record),
           listRowActions: () =>
@@ -239,10 +239,16 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           createRow: toCreateRowConfig(record, localize),
           getBoardColumnConfig: (groupKey) => toWorkbenchBoardColumnConfig(columnConfigs?.[groupKey], localize),
           onRowActivate,
-          executeQuery: async (state, signal) => (await query.read(state, signal)).rows,
+          executeQuery: async (state: import("../../core").KanbanRendererQueryState, signal: AbortSignal) =>
+            (await query.read(state, signal)).rows,
           executePage:
             record.queryMode === "paged"
-              ? async (state, signal) => acceptRendererPage(await query.read(state, signal), state.page)
+              ? async (
+                  state: import("../../core").KanbanRendererQueryState & {
+                    page: import("@pstdio/sdk/extensions").CollectionPageRequest;
+                  },
+                  signal: AbortSignal,
+                ) => acceptRendererPage(await query.read(state, signal), state.page)
               : undefined,
           onAttributeChange: record.attributeChangeHandlerId
             ? (rowId, attributeId, value) =>

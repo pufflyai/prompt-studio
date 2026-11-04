@@ -38,6 +38,8 @@ export { KanbanRendererList } from "./kanban-renderer-list";
 export { KanbanRendererSkeleton } from "./kanban-renderer-skeleton";
 export type { KanbanRendererToolbarProps } from "./kanban-renderer-toolbar";
 export { KanbanRendererToolbar } from "./kanban-renderer-toolbar";
+export { ResourceListRenderer, type ResourceListRendererProps } from "./resource-list-renderer";
+export { resourceListSettings } from "./resource-list-view-model";
 export type {
   AttributeDescriptor,
   AttributeDisplayDescriptor,

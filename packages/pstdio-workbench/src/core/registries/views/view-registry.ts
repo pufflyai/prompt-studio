@@ -28,6 +28,7 @@ export type WorkbenchViewBody =
   | NativeViewBody<"file", FileRendererContribution>
   | NativeViewBody<"controls", ControlsRendererContribution>
   | NativeViewBody<"kanban", KanbanRendererContribution>
+  | NativeViewBody<"resourceList", Omit<KanbanRendererContribution, "onMove" | "onReorder">>
   | NativeViewBody<"dataTable", DataTableRendererContribution>;
 
 export interface WorkbenchViewContribution {

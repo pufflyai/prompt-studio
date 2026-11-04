@@ -7,7 +7,7 @@ import {
 } from "pstdio-api-contracts";
 import type { ViewFilterGroup, ViewSort } from "pstdio-api-contracts/extension-kernel";
 
-export type BoardKind = "kanban" | "dataTable";
+export type BoardKind = "kanban" | "resourceList" | "dataTable";
 export interface ViewDraft {
   settings: object;
   filter: ViewFilterGroup;
@@ -62,9 +62,15 @@ export const validateBoardView = (
   sent: { filter?: unknown; sorts?: unknown },
 ) => {
   const settings =
-    kind === "kanban"
+    kind !== "dataTable"
       ? validateKanbanSettings(view.settings, fields)
       : validateDataTableSettings(view.settings, fields);
+  if (
+    kind === "resourceList" &&
+    "viewMode" in settings &&
+    (settings.viewMode !== "list" || settings.rowGrouping !== "none")
+  )
+    throw new BoardViewError("Resource lists require list display and one grouping.");
   const problem =
     (sent.filter === undefined ? undefined : findViewFilterProblem(view.filter, fields)) ??
     (sent.sorts === undefined ? undefined : findViewSortsProblem(view.sorts, fields));
