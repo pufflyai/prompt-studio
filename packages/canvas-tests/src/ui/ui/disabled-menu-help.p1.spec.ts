@@ -5,7 +5,7 @@ import { openCanvasPreview } from "../preview";
 test("composer readiness keeps focus on the session row the person selected", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
-    "packages/ui/proposals/PS-1049/disabled-menu-help.canvas.tsx#ChosenRow",
+    "packages/ui/src/components/rich-text/prompt-input/prompt-input-focus.canvas.tsx#ChosenRow",
   );
   const row = preview.getByRole("option", { name: "Waiting for input", exact: true });
   await row.focus();
@@ -16,7 +16,7 @@ test("composer readiness keeps focus on the session row the person selected", as
 test("composer readiness keeps a chosen menu explanation focused", async ({ page }, testInfo) => {
   const preview = await openCanvasPreview(
     page,
-    "packages/ui/proposals/PS-1049/disabled-menu-help.canvas.tsx#ChosenMenuHelp",
+    "packages/ui/src/components/rich-text/prompt-input/prompt-input-focus.canvas.tsx#ChosenMenuHelp",
   );
   await page.frameLocator("[data-verification-host]").locator("[data-canvas-viewport]").press("0");
   const row = preview.getByRole("option", { name: "Waiting for input", exact: true });
@@ -42,4 +42,28 @@ test("composer readiness keeps a chosen menu explanation focused", async ({ page
   });
   await page.keyboard.press("Escape");
   await expect(preview.getByRole("menu")).toHaveCount(0);
+});
+
+// A normal pending request must still focus the composer after Unlock; another chosen field keeps focus.
+test("an unlocked composer still receives its pending focus request", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/chat-ui/components/chat-input-delayed-enable.canvas.tsx#AutoFocusWhenUnlocked",
+  );
+  const editor = preview.locator('[contenteditable="false"]');
+  await expect(editor).toBeVisible();
+  await preview.getByRole("button", { name: "Unlock", exact: true }).click();
+  await expect(preview.locator('[contenteditable="true"]')).toBeFocused();
+});
+
+test("a chosen text field keeps focus while a requested composer unlocks", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/chat-ui/components/chat-input-delayed-enable.canvas.tsx#KeepsFocusInAnotherField",
+  );
+  await preview.getByRole("button", { name: "Load request", exact: true }).click();
+  const notes = preview.getByRole("textbox", { name: "Notes", exact: true });
+  await notes.fill("Keep my keyboard here");
+  await expect(preview.locator('[contenteditable="true"]')).toBeVisible();
+  await expect(notes).toBeFocused();
 });

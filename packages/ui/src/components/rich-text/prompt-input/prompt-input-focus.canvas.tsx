@@ -62,7 +62,7 @@ const Preview = (props: { completion: "row" | "menu" }) => {
   );
 };
 export default {
-  title: "Proposals/PS-1049 Keyboard focus while the composer loads",
+  title: "Prompt input/Preserve chosen focus while loading",
   component: Preview,
   description:
     "Synthetic loading completes when the session row or its Info explanation gets focus. Readiness must keep that chosen focus. Open the row menu with ContextMenu, then Tab to Info. Escape keeps the original keyboard context. The product adds no control or appearance.",
