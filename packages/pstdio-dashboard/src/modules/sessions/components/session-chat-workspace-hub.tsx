@@ -24,7 +24,7 @@ export const SessionChatWorkspaceHub = (props: SessionChatWorkspaceHubProps) => 
             onSelectDevice={device.setSelectedDeviceId}
             isDisabled={Boolean(workspace.view.sessionId)}
           />
-          <SessionWorkspaceControl {...workspace} deviceId={device.deviceId} unavailable={device.unavailable} />
+          <SessionWorkspaceControl {...workspace} deviceId={device.deviceId} unavailable={device.offline} />
         </HStack>
       }
       additions={additions}

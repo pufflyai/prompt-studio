@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
 import { SessionDeviceMenu } from "./session-device-menu";
 import { SessionPersonalDevice } from "./session-personal-device";
+import { SessionQueueUnavailable } from "./session-queue-unavailable";
 import { SessionWorkspaceMenu } from "./session-workspace-menu";
 
 const devices = [
@@ -27,8 +28,8 @@ const workspace: DashboardWorkspaceOption = {
   updatedAt: "2026-01-01T00:00:00Z",
 };
 
-const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boolean }) => {
-  const { offline = false, queued = false, draft = false } = props;
+const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boolean; queueReadOnly?: boolean }) => {
+  const { offline = false, queued = false, draft = false, queueReadOnly = false } = props;
   const [deviceId, setDeviceId] = useState(draft ? "this-device" : "laptop");
   const [started, setStarted] = useState(!draft);
   const [text, setText] = useState("");
@@ -78,7 +79,9 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
           onQueuedFollowUpUpdate={(id, prompt) =>
             setQueue((items) => items.map((item) => (item.id === id ? { ...item, prompt } : item)))
           }
-          readOnlyQueue={offline}
+          readOnlyQueue={offline || queueReadOnly}
+          submitDisabled={queueReadOnly}
+          conversationNotices={queueReadOnly ? <SessionQueueUnavailable name={name} onRefresh={() => {}} /> : null}
           composerFallback={offline ? <SessionPersonalDevice name={name} /> : undefined}
           workspaceHub={
             <ChatWorkspaceHub
@@ -124,4 +127,5 @@ export default {
 export const OnlineConversation = () => <RemoteSession />;
 export const QueuedOnLaptop = () => <RemoteSession queued />;
 export const OfflineLaptop = () => <RemoteSession offline queued />;
+export const OnlineReadOnlyQueue = () => <RemoteSession queued queueReadOnly />;
 export const NewSessionDevicePicker = () => <RemoteSession draft />;

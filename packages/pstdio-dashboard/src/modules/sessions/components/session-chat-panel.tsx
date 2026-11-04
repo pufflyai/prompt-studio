@@ -3,7 +3,7 @@ import { type ChatInputQuestionResponse, ChatSkeleton } from "@pstdio/ui/chat-ui
 import type { HarnessParamValues } from "@pstdio/ui/param-editor";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
-import type { SessionAttachment } from "pstdio-api-contracts";
+import type { Session, SessionAttachment } from "pstdio-api-contracts";
 import { useApiFileParts } from "@/lib/api-file-url";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
@@ -72,6 +72,14 @@ const commandSessionDraft = (
 
 const composerDecision = (composer: ReturnType<typeof useCommandComposer>) =>
   composer.decision && { ...composer.decision, controls: composer.controls };
+
+const deviceSendError = (device: ReturnType<typeof useSessionDevice>, questionResponse?: ChatInputQuestionResponse) => {
+  if (device.offline) return new Error(`${device.name} is offline. Reconnect it before sending.`);
+  if (device.unavailable && !questionResponse) return new Error(`Refresh the queue on ${device.name} before sending.`);
+};
+
+const offlineDevice = (device: ReturnType<typeof useSessionDevice>, owner: Session["device"]) =>
+  device.offline ? { id: device.deviceId!, name: device.name, ownerId: owner?.ownerId ?? "" } : undefined;
 
 const useSelectedProjectId = (input: SessionViewContext) =>
   useWorkbenchStore(input.workbench.context.store, (state) => {
@@ -142,7 +150,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const chatMessages = useApiFileParts(splitDisplay.messages);
   const effectiveStreaming = streaming || view.status === "in_progress" || pendingWork;
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
-  const interrupt = sessionId && canInterrupt && !device.unavailable ? () => stopSession.mutate(sessionId) : undefined;
+  const interrupt = sessionId && canInterrupt && !device.offline ? () => stopSession.mutate(sessionId) : undefined;
   const { account, canSubmit, noHarnessAvailable, needsLogin, setup, commands, submitAccountCommand } =
     useSessionHarness({
       input,
@@ -159,7 +167,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     questionResponse: ChatInputQuestionResponse | undefined,
     onSubmitted?: () => void,
   ) => {
-    if (device.unavailable) return Promise.reject(new Error(`${device.name} is offline. Reconnect it before sending.`));
+    const deviceError = deviceSendError(device, questionResponse);
+    if (deviceError) return Promise.reject(deviceError);
     const accountCommand = submitAccountCommand(text, () => chatDraft.change(""));
     if (accountCommand) return accountCommand;
     const command = commandComposer.submit(text, attachments, questionResponse, onSubmitted);
@@ -208,7 +217,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           conversationNotices={
             <SessionChatFeedback
               sessionId={sessionId}
-              unavailable={device.unavailable}
+              unavailable={device.offline}
+              queueReadOnlyDevice={device.unavailable && !device.offline ? device.name : undefined}
               history={history}
               interrupt={stopSession}
               pending={pendingFollowUp}
@@ -240,11 +250,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           onChatInputChange={chatDraft.change}
           chatInputCommands={commands(commandComposer.suggestions)}
           composerDecision={decision}
-          device={
-            device.unavailable
-              ? { id: device.deviceId!, name: device.name, ownerId: view.device?.ownerId ?? "" }
-              : undefined
-          }
+          device={offlineDevice(device, view.device)}
           remote={device.remote}
           onDeviceReconnect={device.refresh}
           attachedResources={[view.workspaceTitle, view.workspaceShorthand].filter(Boolean)}
@@ -269,7 +275,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           }}
           submitDisabled={device.unavailable || (!canSubmit && !account.isCommand(chatDraft.text))}
           messagesBlocked={needsLogin || noHarnessAvailable || account.checking || Boolean(account.progress)}
-          inputDisabled={device.unavailable}
+          inputDisabled={device.offline}
           workspaceHub={
             <SessionChatWorkspaceHub
               view={view}
@@ -287,7 +293,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               onOpenWorkspace={(workspace) => void openSelectedWorkspace(input, workspace, projectId)}
             />
           }
-          onSubmitMessage={device.unavailable ? undefined : submit}
+          onSubmitMessage={device.offline ? undefined : submit}
           onInterrupt={interrupt}
         />
       </Box>

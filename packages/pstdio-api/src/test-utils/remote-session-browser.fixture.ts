@@ -37,7 +37,7 @@ const answers: unknown[] = [];
 const approvals: unknown[] = [];
 let online = true;
 let closing = false;
-let mirror = async () => {};
+let mirror: (fail?: boolean) => Promise<void> = async () => {};
 const record = () =>
   createTestHarnessRecord("browser-remote", {
     provider: {
@@ -141,39 +141,49 @@ const references = createHistoryReferences(
 );
 const namespace = historyNamespace({ ...login, projectId: project.id });
 let syncing = Promise.resolve();
-mirror = () => {
+mirror = (fail = false) => {
   if (closing) return syncing;
-  syncing = syncing.then(async () => {
-    await capturePersonalHistory({ projectId: project.id, device, history, references, deps: target.deps });
-    const rows = await target.deps.sessionService.list(project.id, { includeArchived: true });
-    for (const row of rows) {
-      const active = target.deps.sessionService.store.get(row.id)?.conversation?.getMessages();
-      if (active) messages.set(row.id, active);
-      const content = messages.get(row.id) ?? [];
-      await source.deps.personalHistoryService.logs.append(
-        namespace,
-        row.id,
-        content.flatMap((message, index) => messageEntries(index, message)),
-      );
-      await history.writeHeads(
-        new Map([[row.id, 0]]),
-        new Map([[row.id, { version: sessionLogVersion(row), head: 0 }]]),
-      );
-      for (const [index, message] of content.entries())
-        source.deps.personalHistoryService.messageReceived(row.id, { index, message, live: false });
-    }
-    const state = await source.deps.personalHistoryService.fullState(project.id);
-    for (const row of state.sessions) source.deps.eventBus.emit("sessions", "set", row);
-    for (const row of state.workspaces) source.deps.eventBus.emit("workspaces", "set", row);
-    for (const row of state.workspace_sessions) source.deps.eventBus.emit("workspace_sessions", "set", row);
-  });
+  syncing = syncing
+    .catch(() => undefined)
+    .then(async () => {
+      if (fail) {
+        throw new Error("Injected mirror delivery failure");
+      }
+      await capturePersonalHistory({ projectId: project.id, device, history, references, deps: target.deps });
+      const rows = await target.deps.sessionService.list(project.id, { includeArchived: true });
+      for (const row of rows) {
+        const active = target.deps.sessionService.store.get(row.id)?.conversation?.getMessages();
+        if (active) messages.set(row.id, active);
+        const content = messages.get(row.id) ?? [];
+        await source.deps.personalHistoryService.logs.append(
+          namespace,
+          row.id,
+          content.flatMap((message, index) => messageEntries(index, message)),
+        );
+        await history.writeHeads(
+          new Map([[row.id, 0]]),
+          new Map([[row.id, { version: sessionLogVersion(row), head: 0 }]]),
+        );
+        for (const [index, message] of content.entries())
+          source.deps.personalHistoryService.messageReceived(row.id, { index, message, live: false });
+      }
+      const state = await source.deps.personalHistoryService.fullState(project.id);
+      for (const row of state.sessions) source.deps.eventBus.emit("sessions", "set", row);
+      for (const row of state.workspaces) source.deps.eventBus.emit("workspaces", "set", row);
+      for (const row of state.workspace_sessions) source.deps.eventBus.emit("workspace_sessions", "set", row);
+    });
   return syncing;
 };
+const reportMirrorFailure = (error: unknown) =>
+  setupLogger.error({ event: "fixture.remote_session.mirror_failed", err: error }, "Remote fixture mirror failed");
+const mirrorInBackground = (fail = false) => {
+  void mirror(fail).catch(reportMirrorFailure);
+};
 const unsubscribe = target.deps.eventBus.subscribe((event) => {
-  if (["sessions", "session_queue_entries", "workspace_sessions"].includes(event.table)) void mirror();
+  if (["sessions", "session_queue_entries", "workspace_sessions"].includes(event.table)) mirrorInBackground();
 });
 const unwatch = target.deps.sessionService.store.watch(() => {
-  void mirror();
+  mirrorInBackground();
 });
 const execute = createDeviceCommandExecutor(target.deps, project.id);
 source.deps.accountService.start(
@@ -221,6 +231,14 @@ const snapshot = async () => ({
 const admin = async (request: Request) => {
   const input = (await request.json()) as { action: string };
   const entry = target.deps.sessionService.store.get(session.id);
+  if (input.action === "fail-mirror") {
+    await mirror(true);
+    return Response.json({ ok: true });
+  }
+  if (input.action === "fail-background-mirror") {
+    mirrorInBackground(true);
+    return Response.json({ ok: true });
+  }
   if (input.action === "offline") online = false;
   if (input.action === "online") online = true;
   if (input.action === "question") {
@@ -249,7 +267,7 @@ const admin = async (request: Request) => {
             path: `/messages/${index}`,
             value: { ...question, parts: [{ ...tool, status: "completed", state: { output: "Blue" } }] },
           });
-          void mirror();
+          mirrorInBackground();
         },
         () => {},
       );
@@ -265,7 +283,7 @@ const admin = async (request: Request) => {
       })
       .then((answer) => {
         approvals.push(answer);
-        void mirror();
+        mirrorInBackground();
       });
   }
   await mirror();
@@ -286,7 +304,7 @@ const server = Bun.serve({
   },
 });
 console.log(
-  `REMOTE_SESSION_FIXTURE ${JSON.stringify({ origin: server.url.origin, projectId: project.id, sessionId: session.id, unrelatedId: unrelated.id, workspaceId: workspace.id, targetId })}`,
+  `REMOTE_SESSION_FIXTURE ${JSON.stringify({ origin: server.url.origin, root, projectId: project.id, sessionId: session.id, unrelatedId: unrelated.id, workspaceId: workspace.id, targetId })}`,
 );
 const close = async () => {
   if (closing) return;
@@ -297,7 +315,7 @@ const close = async () => {
   const phase = (name: string) =>
     setupLogger.info({ event: "fixture.remote_session.cleanup", phase: name }, "Remote fixture cleanup");
   phase("delivery-drain");
-  await syncing;
+  await syncing.catch(reportMirrorFailure);
   // Held fake turns own no native process. App close disposes their registry; completing them here
   // would manufacture terminal checkpoint writes during teardown rather than stop an owned resource.
   phase("source-close");

@@ -35,7 +35,7 @@ const queueIsReadOnly = (device: Session["device"], queue: PendingQueuedFollowUp
   Boolean(device) || queue?.readOnly;
 
 const requireEditableQueue = (queue: PendingQueuedFollowUpsResponse | undefined) => {
-  if (queue?.readOnly) throw new Error("Reconnect the device and refresh the queue before editing this request.");
+  if (queue?.readOnly) throw new Error("Refresh the queue before editing this request.");
 };
 
 const steeringReason = (remote: boolean | undefined, queue: PendingQueuedFollowUpsResponse | undefined) => {

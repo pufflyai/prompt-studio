@@ -7,10 +7,12 @@ import { sessionUnsentActions } from "../chat/session-unsent-actions";
 import type { SessionHistoryState } from "../data/session-history-controller";
 import { SessionApprovalRequests } from "./session-approval-requests";
 import { SessionChatNotices } from "./session-chat-notices";
+import { SessionQueueUnavailable } from "./session-queue-unavailable";
 
 interface SessionChatFeedbackProps {
   sessionId: string | null;
   unavailable: boolean;
+  queueReadOnlyDevice?: string;
   history: SessionHistoryState & { reconnect(): void; refreshQueue(): unknown };
   interrupt: { error: Error | null; reset(): void };
   pending: PendingFollowUpState | null;
@@ -21,7 +23,18 @@ interface SessionChatFeedbackProps {
 }
 
 export const SessionChatFeedback = (props: SessionChatFeedbackProps) => {
-  const { sessionId, unavailable, history, interrupt, pending, draftKey, send, restore, children } = props;
+  const {
+    sessionId,
+    unavailable,
+    queueReadOnlyDevice,
+    history,
+    interrupt,
+    pending,
+    draftKey,
+    send,
+    restore,
+    children,
+  } = props;
   const unsent = pending?.failure
     ? {
         notice: pending.failure,
@@ -38,6 +51,9 @@ export const SessionChatFeedback = (props: SessionChatFeedbackProps) => {
         />
       ) : null}
       {children}
+      {queueReadOnlyDevice ? (
+        <SessionQueueUnavailable name={queueReadOnlyDevice} onRefresh={history.refreshQueue} />
+      ) : null}
       {interrupt.error ? (
         <AlertMessage status="error" title="Could not interrupt" onClose={() => interrupt.reset()}>
           {interrupt.error.message}

@@ -24,6 +24,21 @@ test("missing or offline ownership keeps history readable and disables actions",
   expect(sessionDeviceAccess(owner, "this-device", [{ ...laptop, online: false }]).unavailable).toBe(true);
 });
 
+test("an online owner with a read-only queue remains online while sending waits for a complete queue", () => {
+  expect(sessionDeviceAccess(owner, "this-device", [laptop], true)).toMatchObject({
+    offline: false,
+    unavailable: true,
+  });
+  expect(sessionDeviceAccess(owner, "this-device", [{ ...laptop, online: false }], true)).toMatchObject({
+    offline: true,
+    unavailable: true,
+  });
+  expect(sessionDeviceAccess(undefined, "this-device", [], true)).toMatchObject({
+    offline: false,
+    unavailable: false,
+  });
+});
+
 test("new sessions target only the selected online device; local sessions need no account", () => {
   expect(sessionDeviceAccess(undefined, "laptop", [laptop])).toMatchObject({
     deviceId: "laptop",

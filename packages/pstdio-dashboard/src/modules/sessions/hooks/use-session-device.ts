@@ -13,8 +13,8 @@ export const useSessionDevice = (owner: Session["device"], queueReadOnly?: boole
     retry: false,
   });
   const devices = query.isError ? [] : (query.data ?? []);
-  const access = sessionDeviceAccess(owner, selectedDeviceId, devices);
-  const ownerOnline = access.remote && !access.unavailable;
+  const access = sessionDeviceAccess(owner, selectedDeviceId, devices, queueReadOnly);
+  const ownerOnline = access.remote && !access.offline;
   const refreshOnlineQueue = useEffectEvent(() => {
     refreshQueue?.();
   });
@@ -27,7 +27,6 @@ export const useSessionDevice = (owner: Session["device"], queueReadOnly?: boole
       await query.refetch();
       await refreshQueue?.();
     },
-    unavailable: access.unavailable || Boolean(access.remote && queueReadOnly),
     selectedDeviceId: owner?.id ?? selectedDeviceId,
     setSelectedDeviceId,
     devices: [

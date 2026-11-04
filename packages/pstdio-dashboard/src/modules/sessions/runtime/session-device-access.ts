@@ -1,14 +1,21 @@
 import type { AccountDevice, Session } from "pstdio-api-contracts";
 import { resolveRuntimeWorkspaceSelection } from "./session-runtime-selection";
 
-export const sessionDeviceAccess = (owner: Session["device"], selectedDeviceId: string, devices: AccountDevice[]) => {
+export const sessionDeviceAccess = (
+  owner: Session["device"],
+  selectedDeviceId: string,
+  devices: AccountDevice[],
+  queueReadOnly?: boolean,
+) => {
   const deviceId = owner?.id ?? (selectedDeviceId === "this-device" ? undefined : selectedDeviceId);
   const device = devices.find((item) => item.id === deviceId);
+  const offline = Boolean(deviceId && !device?.online);
   return {
     deviceId,
     name: owner?.name ?? device?.name ?? selectedDeviceId,
     remote: Boolean(deviceId),
-    unavailable: Boolean(deviceId && !device?.online),
+    offline,
+    unavailable: offline || Boolean(deviceId && queueReadOnly),
   };
 };
 
