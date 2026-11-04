@@ -1,3 +1,4 @@
+import { lstat, readlink } from "node:fs/promises";
 import { getImagePreviewMimeType, isImagePreviewPath } from "pstdio-file-types";
 import { git, gitBytes } from "./git";
 
@@ -325,5 +326,3 @@ export const getWorktreeDiff = async (opts: { worktreePath: string; base: string
 
   return { files, totals: buildTotals(files) };
 };
-
-import { lstat, readlink } from "node:fs/promises";
