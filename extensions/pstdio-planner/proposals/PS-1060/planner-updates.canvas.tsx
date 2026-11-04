@@ -23,7 +23,7 @@ function PlannerPrototype(props: { initialView?: "tree" | "gantt"; autoBuildOpen
   );
   return (
     <TimelinePresentationProvider projectId={`PS-1060-${props.initialView}-${props.selected}`}>
-      <Flex w="7xl" h="3xl" bg="bg" color="fg" borderWidth="1px" borderColor="border.subtle" overflow="hidden">
+      <Flex w="full" h="3xl" bg="bg" color="fg" borderWidth="1px" borderColor="border.subtle" overflow="hidden">
         <PlannerNavigation defaultOpen={props.autoBuildOpen} />
         <Stack flex="1" minW="0" minH="0" gap="0">
           <HStack px="md" py="sm" borderBottomWidth="1px" borderColor="border.subtle">
@@ -82,6 +82,7 @@ function PlannerPrototype(props: { initialView?: "tree" | "gantt"; autoBuildOpen
 
 export default {
   title: "Proposals/PS-1060 Planner navigation and timeline",
+  fullscreen: true,
   description:
     "Synthetic interactive proposal. Open Auto Build in Project Planning; use Display to switch Tree/Gantt. Milestone ETAs accumulate to 7h, 9h, and 12h. No real tickets or runs are changed.",
 } satisfies CanvasMeta;
