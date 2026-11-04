@@ -160,8 +160,6 @@ export const LongHarnessReason: Story = {
   },
 };
 export const Loaded: Story = {
-  description:
-    "The same extension detail opens from an installed name or its full publisher and name, including installation progress links.",
   id: "projectsettings-extensiondetail--loaded",
 };
 export const CustomWorkflowSettings: Story = {

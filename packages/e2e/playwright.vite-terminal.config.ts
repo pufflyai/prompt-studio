@@ -18,7 +18,6 @@ process.env.E2E_HOME = resolvedHomePath;
 
 export default defineConfig({
   testDir: "./src/vite-terminal",
-  globalSetup: "./src/scripts/global-setup.ts",
   testMatch:
     process.env.TEST_PRIORITIES?.split(",").map((priority) => `**/*.${priority.toLowerCase()}.spec.ts`) ??
     "**/*.spec.ts",

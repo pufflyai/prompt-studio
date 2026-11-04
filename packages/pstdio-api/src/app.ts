@@ -180,20 +180,6 @@ const buildApp = async (
     storageRoot,
   });
   let deps!: RouteDeps;
-  // Finish asynchronous domain preparation before recovery can schedule extension completion.
-  const automationService = await createAppAutomationService({
-    automationDBService,
-    getCommandDeps: () => deps,
-    maxRunsPerMinute: input.config.automation.runsPerMinute,
-  });
-
-  let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
-  const settingsService = await createAppSettingsService({
-    eventBus,
-    settingsDb: settingsDBService,
-    onCapacityAvailable: () => drainSessionQueue(),
-  });
-
   const {
     extensionConnectionService,
     extensionInstallations,
@@ -227,8 +213,16 @@ const buildApp = async (
     skillsDBService,
   });
 
+  const automationService = await createAppAutomationService({
+    automationDBService,
+    getCommandDeps: () => deps,
+    maxRunsPerMinute: input.config.automation.runsPerMinute,
+  });
+
   const sessionQueueLifecycle = createSessionQueueLifecycle();
   const sessionHooks = createSessionLifecycleCallbacks(() => deps);
+
+  let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
   const sessionService = createSessionService({
     sessionsDb: sessionsDBService,
@@ -236,6 +230,11 @@ const buildApp = async (
     eventBus,
     ...sessionHooks,
     onCapacityAvailable: (input) => drainSessionQueue(input),
+  });
+  const settingsService = await createAppSettingsService({
+    eventBus,
+    settingsDb: settingsDBService,
+    onCapacityAvailable: () => drainSessionQueue(),
   });
 
   const workspaceCapacityService = createWorkspaceCapacityService({

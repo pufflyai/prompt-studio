@@ -1,7 +1,7 @@
 import { join, resolve } from "node:path";
 import { resolvePstdioHome } from "pstdio-paths";
 import { apiLogger } from "../../lib/logger";
-import { getExtensionCatalog, loadExtensionCatalog } from "./extension-catalog";
+import { getExtensionCatalog } from "./extension-catalog";
 
 export class AlwaysEnabledExtensionError extends Error {
   constructor() {
@@ -21,18 +21,5 @@ export const isAlwaysEnabledExtensionSource = async (source: { install_name: str
     // working; the policy applies again once the catalog loads.
     apiLogger.warn({ err: error, event: "extension.catalog.unavailable" }, "Extension catalog unavailable");
     return false;
-  }
-};
-
-export const requiredDefaultInstallNames = async (env: Record<string, string | undefined>) => {
-  try {
-    return new Set(
-      (await loadExtensionCatalog({ env })).extensions
-        .filter((entry) => entry.alwaysEnabled)
-        .map((entry) => entry.installName),
-    );
-  } catch (error) {
-    apiLogger.warn({ err: error, event: "extension.catalog.unavailable" }, "Extension catalog unavailable");
-    return new Set<string>();
   }
 };

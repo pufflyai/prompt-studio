@@ -7,7 +7,7 @@ import { createProject } from "../data/project-creation";
 
 interface CreateProjectWidgetProps {
   input: WorkbenchPanelRenderInput;
-  onProjectOpening?: (project: Promise<{ id: string }>) => Promise<void>;
+  onProjectOpening?: (project: Promise<{ id: string; created?: boolean }>) => Promise<void>;
 }
 export const CreateProjectWidget = (props: CreateProjectWidgetProps) => {
   const { input, onProjectOpening } = props;

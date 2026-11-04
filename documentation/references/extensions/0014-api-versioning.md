@@ -33,9 +33,7 @@ Pages that describe APIs from `main` say so and name the first release that has 
 Status bar items on `main` can also declare a `popover` view through the additive
 `status-bar-item.popover.v1` host capability. This shares the planned API 0.3.0 release.
 
-API 0.3.1 on `main`, after 0.46.0, adds project-scoped `ctx.extensions.list/install`, declarative `projectSetup`,
-`workbenchSlots.customizationSettings` and the `/client` installation-job methods. Harnesses can implement `prepare(ctx)` and acquire
-pinned packages through `ctx.packages.ensure()`. Existing harnesses need no change.
+API 0.3.1 on `main`, after 0.46.0, adds project-scoped `ctx.extensions.list/install` and declarative `projectSetup`.
 These additions share the existing post-0.46.0 patch step with Cloud sync changes.
 Publish the host and SDK containing them before separately released extensions adopt them;
 SDK 0.46.0 provides API 0.3.0 and does not contain these additions.
@@ -144,7 +142,6 @@ workbench packages use `/api` and `/resources`.
 | Subpath | Status | Purpose |
 | --- | --- | --- |
 | `/extensions` | Public, reported | Extension definitions, contexts and typed webview clients. |
-| `/extensions/keyboard` | Public, reported, API 0.3.1 | Keyboard relay helpers without the full extension entrypoint. |
 | `/extensions/react` | Public, reported | React helpers for extensions. |
 | `/testing` | Public, reported | Test contexts and in-memory service implementations. |
 | `/data` | Public, reported | Pure frontmatter, draft-layout and name helpers. |

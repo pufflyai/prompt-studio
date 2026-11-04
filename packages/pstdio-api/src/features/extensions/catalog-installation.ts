@@ -11,7 +11,7 @@ export const createCatalogInstaller =
     installedExtensionSourcesService: Pick<ReturnType<typeof createInstalledExtensionSourcesDBService>, "list">;
     releaseRef?: string;
   }) =>
-  async (installName: string, signal?: AbortSignal, projectId?: string) => {
+  async (installName: string, signal: AbortSignal, projectId: string) => {
     const entry = await findExtensionCatalogEntry(installName);
     if (!entry) throw new Error(`Unknown catalog extension: ${installName}`);
     const extensionId = entry.extensionId ?? `pstdio.${installName}`;
@@ -30,8 +30,7 @@ export const createCatalogInstaller =
         (source) => source.extension_id === extensionId,
       );
     }
-    signal?.throwIfAborted();
-    if (!projectId) return;
+    signal.throwIfAborted();
     let selected = (await input.extensionService.listProjectExtensionInstances(projectId)).find(
       ({ installedSource }) => installedSource.extension_id === extensionId,
     );
@@ -46,19 +45,25 @@ export const createCatalogInstaller =
     if (!selected.instance.enabled) await input.extensionService.setProjectExtensionEnabled(selected.instance.id, true);
   };
 
-export const enqueueCatalogExtension = async (
+/** Validates every name before accepting any, then returns once the selections are durable. */
+export const enqueueCatalogExtensions = async (
   jobs: ExtensionInstallations,
-  installName: string,
-  projectId?: string,
+  installNames: string[],
+  projectId: string,
 ) => {
-  const entry = await findExtensionCatalogEntry(installName);
-  if (!entry) throw new Error(`Unknown catalog extension: ${installName}`);
-  jobs.enqueueCatalog({
-    installName,
-    displayName: entry.displayName,
-    extensionId: entry.extensionId ?? `pstdio.${installName}`,
-    projectId,
-  });
-  // The queue owns restart recovery; saving preferences must not create a second install owner.
+  const entries = await Promise.all(
+    [...new Set(installNames)].map(async (installName) => {
+      const entry = await findExtensionCatalogEntry(installName);
+      if (!entry) throw new Error(`Unknown catalog extension: ${installName}`);
+      return { installName, entry };
+    }),
+  );
+  for (const { installName, entry } of entries)
+    jobs.enqueue({
+      installName,
+      displayName: entry.displayName,
+      extensionId: entry.extensionId ?? `pstdio.${installName}`,
+      projectId,
+    });
   await jobs.flush();
 };

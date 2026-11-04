@@ -2,7 +2,6 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { createExtensionInstallations } from "../../services/extension-installations";
 import { installDefaultExtensions, resolveDefaultExtensionsConfig } from "./default-extensions";
 import { installed, writeExtension } from "./default-extensions-test-fixtures";
 
@@ -16,6 +15,9 @@ describe("resolveDefaultExtensionsConfig", () => {
 
     expect(config.defaultExtensions).toEqual([
       "pstdio-home",
+      "harness-claude-code",
+      "harness-codex",
+      "harness-open-code",
       "pstdio-base-themes",
       "pstdio-skills",
       "pstdio-performance",
@@ -71,34 +73,6 @@ describe("resolveDefaultExtensionsConfig", () => {
   });
 });
 
-test("default preparation and catalog installations finish when they overlap", async () => {
-  const root = mkdtempSync(join(tmpdir(), "pstdio-default-jobs-"));
-  const source = join(root, "pstdio-planner");
-  writeExtension(source, "pstdio-planner");
-  const jobs = createExtensionInstallations({
-    installCatalog: async () => {
-      await installDefaultExtensions({
-        config: { defaultExtensions: [{ source }] },
-        installExtensionSource: async () => installed,
-      });
-    },
-  });
-  const one = jobs.enqueueCatalog({ installName: "one", displayName: "One" });
-  const two = jobs.enqueueCatalog({ installName: "two", displayName: "Two" });
-  try {
-    await installDefaultExtensions({
-      config: { defaultExtensions: [{ source }] },
-      extensionInstallations: jobs,
-      installExtensionSource: async () => installed,
-    });
-    await Promise.all([jobs.wait(one.id), jobs.wait(two.id)]);
-    expect(jobs.list().map((job) => job.status)).toEqual(["completed", "completed", "completed"]);
-  } finally {
-    await jobs.dispose();
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
 describe("installDefaultExtensions", () => {
   test("prepares independent defaults while another dependency install is pending", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-overlap-"));
@@ -109,7 +83,7 @@ describe("installDefaultExtensions", () => {
     writeExtension(second, "second");
     writeExtension(third, "third");
     const releaseFirst = Promise.withResolvers<void>();
-    const bothStarted = Promise.withResolvers<void>();
+    const firstStarted = Promise.withResolvers<void>();
     const started: string[] = [];
     const pending = installDefaultExtensions({
       config: { defaultExtensions: [{ source: first }, { source: second }, { source: third }] },
@@ -118,15 +92,15 @@ describe("installDefaultExtensions", () => {
         const name = basename(input.source);
         started.push(name);
         if (name !== "third") {
-          if (started.length === 2) bothStarted.resolve();
+          if (name === "first") firstStarted.resolve();
           await releaseFirst.promise;
         }
         return { ...installed, installName: name };
       },
     });
     try {
-      await bothStarted.promise;
-      expect([...started].sort()).toEqual(["first", "second"]);
+      await firstStarted.promise;
+      expect(started).toEqual(["first", "second"]);
       releaseFirst.resolve();
       expect((await pending).map((entry) => entry.installName)).toEqual(["first", "second", "third"]);
     } finally {
@@ -303,6 +277,9 @@ describe("installDefaultExtensions sources", () => {
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
     expect(calls.map((call) => call.installName)).toEqual([
+      "harness-claude-code",
+      "harness-codex",
+      "harness-open-code",
       "pstdio-base-themes",
       "pstdio-skills",
       "pstdio-performance",

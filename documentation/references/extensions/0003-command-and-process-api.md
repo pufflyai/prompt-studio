@@ -582,15 +582,10 @@ Views can refresh on `viewDataEvents.sessionsChanged` (`view.sessions.changed`).
 
 ## Project extension management (API 0.3.1 on main)
 
-`ctx.extensions.list()` returns the invoking project's installed instances (including disabled
-ones) and the current configured marketplace, including resolved metadata icons.
-`ctx.extensions.install(installNames)` durably accepts explicit catalog selections for that
-project and returns without waiting for physical installation. Pending selections deduplicate;
-completed selections may be explicitly submitted again. A failed job requires normal explicit
-retry. Passive restart recovery does not replay completed work or re-enable disabled tools.
+`ctx.extensions.list()` returns the invoking project's installed instances, including disabled ones, and the configured catalog with resolved icons.
 
-The host owns installation, source reuse, project enablement and workspace provisioning, including
-already-installed canonical sources with aliases. Other projects keep their enabled/disabled
-choices. Installation jobs and retry use the same public service as direct extension controls.
-Older hosts may omit `ctx.extensions`; extensions requiring it declare API `^0.3.1` and depend on
-a published SDK/host containing this surface. The API takes no caller-supplied project identity.
+`ctx.extensions.install(installNames)` accepts catalog extensions for the invoking project and returns once the selection is saved, without waiting for installation. It rejects the whole call if any name is not in the catalog. The host installs each source once, reuses an installed source, enables it only in this project, and provisions the project's workspaces when the extension needs it. Other projects keep their own choices.
+
+Installation continues in the background and survives a runtime restart. Selecting an extension again while it is pending has no effect. Selecting it again after it finished re-enables it in this project; after it failed, it runs again. Restarting the runtime does not replay finished work or retry failures on its own. Use `ctx.extensions.list()` to see which extensions the project has enabled.
+
+The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.

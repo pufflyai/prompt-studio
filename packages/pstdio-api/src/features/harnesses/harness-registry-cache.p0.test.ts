@@ -66,6 +66,7 @@ const makeService = (opts: {
       subscribeInvalidation: () => () => {},
     } as never,
     buildRegistry: opts.build as never,
+    installDefaultExtensions: (async () => {}) as never,
     now: opts.now,
     detectCacheTtlMs: opts.detectCacheTtlMs,
     createConnectionsApi: opts.createConnectionsApi,

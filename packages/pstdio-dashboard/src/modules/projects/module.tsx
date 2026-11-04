@@ -25,7 +25,7 @@ import {
 import { registerProjectSetupCommand } from "./project-setup-command";
 
 interface CreateProjectsModuleInput {
-  onProjectOpening?: (project: Promise<{ id: string }>) => Promise<void>;
+  onProjectOpening?: (project: Promise<{ id: string; created?: boolean }>) => Promise<void>;
   initialProjectId?: string;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   projectTabs?: DesktopProjectTabsController;

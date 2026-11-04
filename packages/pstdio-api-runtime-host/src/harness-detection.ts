@@ -3,16 +3,13 @@ import type { HarnessContext, HarnessProvider, ProcessRunInput } from "pstdio-ap
 import { traceDetectionPhase } from "./harness-detection-phase";
 
 // Detection is a short availability probe, not a model request or a session.
-export const DETECTION_TIMEOUT_MS = 3_000;
+const DETECTION_TIMEOUT_MS = 3_000;
 
-export const detectHarness = async (
-  provider: HarnessProvider,
-  context: HarnessContext,
-  deadline = Date.now() + DETECTION_TIMEOUT_MS,
-) => {
+export const detectHarness = async (provider: HarnessProvider, context: HarnessContext) => {
   if (!provider.detect) return { available: true };
   const started = performance.now();
   const identity = { harness_id: provider.id, detection_id: randomUUID() };
+  const deadline = Date.now() + DETECTION_TIMEOUT_MS;
   const deadlineError = new Error("Harness detection deadline reached.");
   let finished = false;
   const pending = new Set<Promise<unknown>>();
@@ -45,7 +42,7 @@ export const detectHarness = async (
     return await Promise.race([
       traceDetectionPhase(context, identity, "provider", () => Promise.resolve().then(() => provider.detect!(ctx))),
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(deadlineError), Math.max(0, deadline - Date.now()));
+        timer = setTimeout(() => reject(deadlineError), DETECTION_TIMEOUT_MS);
       }),
     ]);
   } catch (error) {

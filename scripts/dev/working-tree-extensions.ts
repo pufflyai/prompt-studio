@@ -1,20 +1,24 @@
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-interface DefaultCatalog {
-  extensions: { installName: string; default: boolean; alwaysEnabled?: boolean; origin: { path: string } }[];
-}
-const catalog = JSON.parse(
-  readFileSync(new URL("../../packages/pstdio-api/files/extension-catalog.json", import.meta.url), "utf8"),
-) as DefaultCatalog;
+const WORKING_TREE_EXTENSIONS = [
+  ["pstdio-home", "extensions/pstdio-home"],
+  ["harness-claude-code", "extensions/harness-claude-code"],
+  ["harness-codex", "extensions/harness-codex"],
+  ["harness-open-code", "extensions/harness-open-code"],
+  ["pstdio-base-themes", "extensions/pstdio-base-themes"],
+  ["pstdio-notes", "extensions/pstdio-notes"],
+  ["pstdio-performance", "extensions/pstdio-performance"],
+  ["pstdio-planner", "extensions/pstdio-planner"],
+  ["pstdio-skills", "extensions/pstdio-skills"],
+  ["extension-lab", "extensions/extension-lab"],
+  ["local-example", "infra/local/extensions/local-example"],
+] as const;
 
 export const resolveWorkingTreeDefaultExtensions = (repoRoot: string, resolvePath = resolve) => ({
-  defaultExtensions: catalog.extensions
-    .filter((entry) => entry.default || entry.alwaysEnabled)
-    .map(({ installName, origin }) => ({
-      force: true,
-      installName,
-      skipInstall: true,
-      source: resolvePath(repoRoot, origin.path),
-    })),
+  defaultExtensions: WORKING_TREE_EXTENSIONS.map(([installName, source]) => ({
+    force: true,
+    installName,
+    skipInstall: true,
+    source: resolvePath(repoRoot, source),
+  })),
 });

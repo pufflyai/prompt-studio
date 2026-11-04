@@ -15,7 +15,7 @@ import { resolvePstdioHome } from "pstdio-paths";
 import { apiLogger } from "../../../lib/logger";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
-import { enqueueCatalogExtension } from "../catalog-installation";
+import { enqueueCatalogExtensions } from "../catalog-installation";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionConnectionsApi } from "../extension-connection-service";
 import { findFreePort } from "../extension-process-api";
@@ -166,11 +166,11 @@ export const createCommandEnvironment = (
       settings,
       extensions: {
         list: () => createReadBoundary(signal)(() => listProjectExtensionInventory(deps, input.projectId)),
-        install: (names: string[]) =>
-          createReadBoundary(signal)(async () => {
-            for (const name of new Set(names))
-              await enqueueCatalogExtension(deps.extensionInstallations, name, input.projectId);
-          }),
+        // Accepted selections continue after the command ends, so cancellation applies only before acceptance.
+        install: async (names: string[]) => {
+          signal?.throwIfAborted();
+          await enqueueCatalogExtensions(deps.extensionInstallations, names, input.projectId);
+        },
       },
       ...createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope),
     } satisfies ScopedHostApis;

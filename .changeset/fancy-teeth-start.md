@@ -4,4 +4,4 @@
 "@pstdio/sdk": minor
 ---
 
-Add optional extension setup contributions, project-scoped catalog installation, removable defaults, and background installation tracking.
+Let extensions offer a setup view for new projects and install catalog extensions for their project with `ctx.extensions`. New projects enable only the configured defaults.

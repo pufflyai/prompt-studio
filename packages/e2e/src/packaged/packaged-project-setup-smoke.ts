@@ -4,12 +4,6 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
-export const expectPackagedInstallations = async (baseUrl: string, headers: Record<string, string>) => {
-  const jobs = await fetch(`${baseUrl}/v1/extension-installations`, { headers });
-  expect(jobs.status).toBe(200);
-  expect(Array.isArray(await jobs.json())).toBe(true);
-};
-
 const writePackagedChoiceSource = (root: string, name: string) => {
   const source = join(root, "extensions", name);
   mkdirSync(source, { recursive: true });

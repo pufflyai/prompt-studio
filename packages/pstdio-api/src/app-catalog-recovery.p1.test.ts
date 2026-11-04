@@ -44,16 +44,13 @@ test("restored catalog work completes after deferred app dependencies are ready"
       join(storageRoot, "extension-installations.json"),
       JSON.stringify([
         {
-          job: {
-            id,
-            installName: "pstdio-base-themes",
-            displayName: "Themes",
-            projectId: project.id,
-            extensionId: "pstdio.pstdio-base-themes",
-            status: "queued",
-            queuedAt: new Date().toISOString(),
-          },
-          request: { kind: "catalog", name: "pstdio-base-themes" },
+          id,
+          installName: "pstdio-base-themes",
+          displayName: "Themes",
+          projectId: project.id,
+          extensionId: "pstdio.pstdio-base-themes",
+          status: "queued",
+          queuedAt: new Date().toISOString(),
         },
       ]),
     );
@@ -68,8 +65,9 @@ test("restored catalog work completes after deferred app dependencies are ready"
     });
     opening = createTestApp({ databasePath, storageRoot });
     await entered.promise;
-    // If recovery started early, let that real queued job reach its completion before app construction resumes.
-    if (services) await services.extensionInstallations.wait(id).catch(() => {});
+    // Recovery waits for the remaining app dependencies instead of running against a partial host.
+    await Bun.sleep(20);
+    expect(services?.extensionInstallations.list()).toMatchObject([{ id, status: "queued" }]);
     release.resolve();
     handle = await opening;
     await handle.deps.extensionInstallations.wait(id);

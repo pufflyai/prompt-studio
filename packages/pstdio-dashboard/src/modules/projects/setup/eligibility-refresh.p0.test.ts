@@ -55,7 +55,7 @@ test("same-project removal waits for the latest metadata without opening stale s
     await flushMicrotasks();
     // Installed contributions remain live during refresh; they are not fresh setup eligibility.
     expect(workbench.views.getView(metadata.views[0].id)).toBeDefined();
-    const pending = opening.open(projectId);
+    const pending = opening.open(Promise.resolve({ id: projectId, created: true }));
     expect(workbench.layout.getActivePanel("overlay")).toBeUndefined();
     writer.upsert({ id: projectId, enabled: false });
     await flushMicrotasks();

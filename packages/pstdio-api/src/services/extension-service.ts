@@ -6,7 +6,6 @@ import type {
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
 import { isAlwaysEnabledExtensionSource } from "../features/extensions/always-on-extensions";
-import { enqueueDefaultExtensionInstall } from "../features/extensions/default-extension-install-queue";
 import type {
   checkExtensionSource,
   hashExtensionSource,
@@ -312,10 +311,8 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       const record = await getProjectExtensionInstance(input.projectId, input.instanceId);
       if (!record) return null;
       await assertOptional(record.installedSource);
-      return enqueueDefaultExtensionInstall(record.installedSource.source_path, () =>
-        mutateSourceAndRefresh(record.installedSource.source_path, (notify) =>
-          uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged: notify }, input),
-        ),
+      return mutateSourceAndRefresh(record.installedSource.source_path, (notify) =>
+        uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged: notify }, input),
       );
     },
   };

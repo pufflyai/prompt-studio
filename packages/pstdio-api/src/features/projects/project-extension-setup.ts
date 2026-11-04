@@ -7,8 +7,8 @@ import {
   installMissingDefaultExtensions,
   registerInstalledExtensionSources,
   resolveDefaultExtensionsConfig,
+  syncInstalledExtensionsForProject,
 } from "../extensions/default-extensions";
-import { attachInstalledExtensionsForProject } from "../extensions/installed-extension-sync";
 import type { ProjectsRouteDeps } from "./deps";
 
 const enableDefaultProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string, existingIds: Set<string>) => {
@@ -59,7 +59,6 @@ export const prepareDefaultProjectExtensions = async (deps: ProjectsRouteDeps) =
 
   try {
     const installed = await installMissingDefaultExtensions({
-      extensionInstallations: deps.extensionInstallations,
       forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
       onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
       releaseRef: deps.extensionUpgradeService?.releaseRef,
@@ -86,9 +85,8 @@ export const setupProjectExtensions = async (
   };
 
   await traceSetupPhase("project.extension_sync", { project_id: projectId }, () =>
-    attachInstalledExtensionsForProject({
+    syncInstalledExtensionsForProject({
       extensionService: deps.extensionService,
-      installedExtensionSourcesService: deps.installedExtensionSourcesService,
       onLoadFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
       projectId,
     }),

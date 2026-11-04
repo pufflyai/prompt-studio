@@ -692,10 +692,9 @@ The host owns the dialog and focus trap: webviews render standalone content with
 providers, without nested dialogs. Declare `placement.close` to let Skip/Finish close the calling
 overlay; that capability cannot close another placement.
 
-Use `workbenchSlots.customizationSettings` with a normal settings panel to embed preferences
-within Customizations. It is a global placement within each enabled project, not a pre-project
-extension runtime. Disabled or removed extensions contribute neither their setup nor preferences.
-These additions require a published SDK/host containing API 0.3.1 and `project-setup.v1`.
+Reopening a folder that already has a project does not offer setup. Disabled or removed
+extensions contribute no setup. These additions require a published SDK and host containing
+API 0.3.1 and `project-setup.v1`.
 
 ## Dashboard commands and session ordering (API 0.3.1 on main)
 

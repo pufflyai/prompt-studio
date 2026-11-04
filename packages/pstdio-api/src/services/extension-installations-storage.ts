@@ -1,15 +1,24 @@
 import { readFileSync } from "node:fs";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { extensionInstallationSchema } from "pstdio-api-contracts";
 import { z } from "zod";
 
-const storedJobs = z.array(
-  z.object({
-    job: extensionInstallationSchema,
-    request: z.object({ kind: z.literal("catalog"), name: z.string() }),
-  }),
-);
+const extensionInstallationSchema = z.object({
+  id: z.string(),
+  installName: z.string(),
+  extensionId: z.string().optional(),
+  displayName: z.string(),
+  projectId: z.string(),
+  status: z.enum(["queued", "running", "completed", "failed"]),
+  queuedAt: z.string(),
+  startedAt: z.string().optional(),
+  completedAt: z.string().optional(),
+  error: z.string().optional(),
+});
+export type ExtensionInstallation = z.infer<typeof extensionInstallationSchema>;
+
+const storedJobs = z.array(extensionInstallationSchema);
+
 export const createInstallationStorage = (path?: string) => {
   let writes = Promise.resolve();
   const read = () => {
@@ -21,7 +30,7 @@ export const createInstallationStorage = (path?: string) => {
       throw error;
     }
   };
-  const save = (jobs: z.infer<typeof storedJobs>) => {
+  const save = (jobs: ExtensionInstallation[]) => {
     if (!path) return Promise.resolve();
     const body = JSON.stringify(jobs);
     writes = writes

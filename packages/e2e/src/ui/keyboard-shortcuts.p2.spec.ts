@@ -1,6 +1,5 @@
 import { expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
-import { homePage } from "../helpers/home-loading";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 import { installShortcutReferenceExtension } from "./helpers/shortcut-reference-extension";
@@ -46,7 +45,6 @@ test("Go destinations use shortcut mode while history chords and Shift slash rem
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.goto(`/projects/${project.id}`);
-  await expect(homePage(page)).toBeVisible();
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");

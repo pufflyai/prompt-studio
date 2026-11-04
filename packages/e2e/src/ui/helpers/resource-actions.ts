@@ -50,8 +50,6 @@ export const expectResourceMenuItems = async (page: Page, labels: string[]) => {
 export const openSessionSidePanel = async (page: Page, title: string) => {
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
-  // Open the menu after the attached composer's editable mount commit and its focus effect.
-  await expect(page.getByTestId("workbench-side-panel-attached").getByRole("textbox")).toBeEditable();
   await page
     .locator('[data-workbench-panel-header="side"]')
     .getByRole("tab", { selected: true })

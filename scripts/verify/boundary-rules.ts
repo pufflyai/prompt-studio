@@ -94,11 +94,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-benchmarks",
   ],
   "pstdio-dashboard": [
-    // Design fixtures consume the canonical harness assets through public package exports.
-    "harness-claude-code",
-    "harness-codex",
-    "harness-open-code",
-    "harness-pi",
     "@pstdio/canvas",
     "@pstdio/sdk",
     "@pstdio/ui",

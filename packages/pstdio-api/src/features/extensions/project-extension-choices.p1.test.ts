@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
-import { enqueueCatalogExtension } from "./catalog-installation";
+import { enqueueCatalogExtensions } from "./catalog-installation";
 import { writeExtension } from "./default-extensions-test-fixtures";
 import { listProjectExtensionInventory } from "./project-extension-inventory";
 
@@ -53,7 +53,7 @@ test("new projects reuse installed tools without inheriting another project's ch
       expect.arrayContaining(["pstdio.harness-codex", "pstdio.pstdio-planner"]),
     );
     const choose = async (projectId: string, names: string[]) => {
-      for (const name of names) await enqueueCatalogExtension(handle!.deps.extensionInstallations, name, projectId);
+      await enqueueCatalogExtensions(handle!.deps.extensionInstallations, names, projectId);
       await Promise.all(
         handle!.deps.extensionInstallations
           .list()

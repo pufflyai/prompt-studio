@@ -160,9 +160,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                   checked={extension.enabled}
                   onCheckedChange={handleCheckedChange}
                   disabled={toggling || uninstalling}
-                  inputProps={{
-                    "aria-label": t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName }),
-                  }}
+                  aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
                 />
               </HStack>
 
@@ -277,11 +275,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                         checked={automation.enabled}
                         disabled={togglingAutomationId === automation.id}
                         onCheckedChange={(details) => onToggleAutomation(automation, details.checked)}
-                        inputProps={{
-                          "aria-label": t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
-                            name: resolveLocalizableString(automation.title, automation.extensionId),
-                          }),
-                        }}
+                        aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
+                          name: resolveLocalizableString(automation.title, automation.extensionId),
+                        })}
                       />
                     </HStack>
                   ))}

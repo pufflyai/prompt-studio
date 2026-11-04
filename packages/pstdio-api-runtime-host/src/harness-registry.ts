@@ -8,6 +8,7 @@ import type {
   HarnessCommandContext,
   HarnessCommandDiscoveryContext,
   HarnessCommandState,
+  HarnessExit,
   HarnessMessagesInput,
   HarnessOperation,
   HarnessReattachInput,
@@ -33,9 +34,8 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createHarnessAuthenticationLifetime } from "./harness-authentication";
+import { detectHarness } from "./harness-detection";
 import { HarnessDisposedError } from "./harness-disposed-error";
-import { detectPreparedHarness } from "./harness-preparation-detection";
-import { adaptSession } from "./harness-session-adapter";
 import { createHarnessSessionResources, type HarnessSessionResources } from "./harness-session-resources";
 import { createRetainedHarnessCalls } from "./harness-session-retention";
 
@@ -96,6 +96,23 @@ export type HarnessRegistry = {
   dispose(): Promise<void>;
 };
 
+const FAILED_EXIT: HarnessExit = { status: "failed" };
+
+const isHarnessExit = (value: unknown): value is HarnessExit => {
+  if (!value || typeof value !== "object") return false;
+  const status = (value as HarnessExit).status;
+  return status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
+};
+
+// `done` must settle exactly once and never reject, so a misbehaving provider
+// still transitions the session to "failed" instead of wedging it.
+const adaptSession = (session: HarnessSession): HarnessSession => ({
+  ...session,
+  done: Promise.resolve(session.done)
+    .then((exit) => (isHarnessExit(exit) ? exit : FAILED_EXIT))
+    .catch(() => FAILED_EXIT),
+});
+
 const normalizeSkills = (skills: HarnessSkillsLayout | undefined) => {
   if (!skills || typeof skills.dir !== "string" || skills.dir.length === 0) return null;
   return { dir: skills.dir, globalDir: skills.globalDir || skills.dir };
@@ -107,55 +124,20 @@ const toHandle = (
   resources: HarnessSessionResources,
 ): HarnessHandle => {
   const contexts = new Map<string | undefined, Promise<HarnessContext>>();
-  const preparation = new Map<string | undefined, Promise<HarnessContext>>();
   let closing: Promise<void> | undefined;
   let disposed = false;
   const ensureActive = () => {
     if (disposed) throw new HarnessDisposedError(`Harness has been disposed: ${record.id}`);
   };
-  const rawContext = async (options?: HarnessCallOptions) => {
+  const ctx = async (options?: HarnessCallOptions) => {
     ensureActive();
     const key = options?.projectId;
     let value = contexts.get(key);
     if (!value) {
-      value = Promise.resolve()
-        .then(() => buildContext(record, options))
-        .catch((error) => {
-          contexts.delete(key);
-          throw error;
-        });
+      value = Promise.resolve().then(() => buildContext(record, options));
       contexts.set(key, value);
     }
     const context = await value;
-    ensureActive();
-    return context;
-  };
-  const ctx = async (options?: HarnessCallOptions) => {
-    ensureActive();
-    const key = options?.projectId;
-    let pending = preparation.get(key);
-    if (!pending) {
-      pending = rawContext(options)
-        .then(async (context) => {
-          try {
-            await record.provider.prepare?.(context);
-          } catch (error) {
-            context.logger.warn(`Harness ${record.id} preparation failed.`, {
-              event: "harness.preparation.failed",
-              failure: "provider_error",
-            });
-            throw error;
-          }
-          ensureActive();
-          return context;
-        })
-        .catch((error) => {
-          preparation.delete(key);
-          throw error;
-        });
-      preparation.set(key, pending);
-    }
-    const context = await pending;
     ensureActive();
     return context;
   };
@@ -189,8 +171,8 @@ const toHandle = (
     supportsReattach: typeof provider.reattach === "function",
     supportsHistory: typeof provider.getMessages === "function",
     supportsModels: typeof provider.listModels === "function",
-    capabilities: async (options) => provider.capabilities(await rawContext(options)),
-    detect: (options) => detectPreparedHarness(provider, () => ctx(options), ensureActive),
+    capabilities: async (options) => provider.capabilities(await ctx(options)),
+    detect: async (options) => detectHarness(provider, await ctx(options)),
     ...(provider.getAuthentication
       ? {
           getAuthentication: async (options?: HarnessCallOptions) =>
@@ -291,7 +273,6 @@ const toHandle = (
       closing ??= (async () => {
         await authentication.dispose();
         await retained.retire();
-        await Promise.allSettled([...preparation.values()]);
         const results = await Promise.allSettled(
           [...contexts.values()].map((context) =>
             context.then(

@@ -22,7 +22,6 @@ import { createInstalledExtensionRuntime } from "./features/extensions/installed
 import { completeProjectExtensionInstallation } from "./features/extensions/project-extension-lifecycle";
 import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
 import { subscribeProjectWorkspaceExtensionRefresh } from "./features/extensions/project-workspace-extension-refresh";
-import { createHarnessPackages } from "./features/harnesses/harness-packages";
 import { createHarnessRegistryService } from "./features/harnesses/harness-registry-service";
 import type { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
@@ -59,9 +58,8 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
   const extensionInstallations = createExtensionInstallations({
     path: join(input.storageRoot, "extension-installations.json"),
     installCatalog: (name, signal, projectId) => installCatalog(name, signal, projectId),
-    afterCatalogInstall: async (name, projectId) => {
-      if (projectId) await completeProjectExtensionInstallation(input.getProjectExtensionDeps(), projectId, name);
-    },
+    afterCatalogInstall: (name, projectId) =>
+      completeProjectExtensionInstallation(input.getProjectExtensionDeps(), projectId, name),
   });
   let refreshInstalledExtensionProcesses: (
     sourcePath?: string,
@@ -137,7 +135,6 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
       ),
   });
   const harnessRegistry = input.dependencies.createHarnessRegistry({
-    packages: createHarnessPackages({ installations: extensionInstallations }),
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionRuntimeCatalog,
     createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),

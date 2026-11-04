@@ -76,20 +76,3 @@ for (const projectId of ["project-1", "project-2"]) {
     });
   });
 }
-
-test("a removable extension can embed device preferences in Customizations", () => {
-  const workbench = createWorkbench();
-  const metadata = metadataForSlot({ id: "customization.settings" });
-  const registered = registerWorkbenchExtensionContributions({
-    metadata,
-    workbench,
-    projectId: "project",
-    executeCommand: () => undefined,
-  });
-  expect(workbench.settings.getPanel("pstdio.lab.settings-panel.workflow")).toMatchObject({
-    scope: "global",
-    parentPanelId: "customizations",
-  });
-  registered.dispose();
-  expect(workbench.settings.getPanel("pstdio.lab.settings-panel.workflow")).toBeUndefined();
-});

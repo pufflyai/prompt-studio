@@ -1,11 +1,9 @@
 import type { LiveConnection } from "pstdio-sync/relay";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
+import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
-import { openPublishedCatalog, publishedOwner } from "../../features/extensions/publication/catalog";
-import {
-  publishedCatalogKey,
-  synchronizePublishedExtensions,
-} from "../../features/extensions/publication/change-catalog";
+import { activatePublishedSet } from "../../features/extensions/publication/activate";
+import { openPublishedCatalog, publishedEntries, publishedOwner } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { createExtensionDocumentSync } from "./documents";
 import type { RelayWorkbench } from "./runtime";
@@ -61,22 +59,16 @@ export const startPublishedExtensions = (input: {
       await documents.synchronize(attemptSignal);
       const catalog = await openPublishedCatalog(deps, config.workbenchId, attemptSignal);
       const selected = await catalog.list();
-      let key = publishedCatalogKey(selected);
+      const key = canonicalJson(selected.map(({ recordId, value, asset }) => ({ recordId, value, asset })));
       if (failed?.key === key && failed.waiting) return;
       try {
-        await synchronizePublishedExtensions(
-          deps,
-          config.workbenchId,
-          attemptSignal,
-          () => {
-            failed = undefined;
-            clearTimeout(retry);
-            input.statusChanged?.();
-          },
-          (attemptedKey) => {
-            key = attemptedKey;
-          },
-        );
+        const entries = publishedEntries(selected);
+        await activatePublishedSet(deps, config.workbenchId, entries, attemptSignal, false, async () => {
+          const current = (await catalog.list()).map((record) => ({ publication: record.value, asset: record.asset }));
+          if (canonicalJson(current) !== canonicalJson(entries))
+            throw new Error("Extension set changed during activation; retry");
+        });
+        failed = undefined;
       } catch (error) {
         if (attemptSignal.aborted) throw error;
         const delay = failed?.key === key ? Math.min(failed.delay * 2, maxRetryDelay) : firstRetryDelay;

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
-import { enqueueCatalogExtension } from "./catalog-installation";
+import { enqueueCatalogExtensions } from "./catalog-installation";
 import { writeExtension } from "./default-extensions-test-fixtures";
 import { packagedExtensionCatalog } from "./extension-catalog";
 
@@ -53,7 +53,7 @@ test("catalog selection uses its configured catalog identity without evaluating 
       join(unrelated, "extension.ts"),
       `await fetch(${JSON.stringify(gate.url.href)}); export default {};`,
     );
-    await enqueueCatalogExtension(handle.deps.extensionInstallations, "harness-codex", project.id);
+    await enqueueCatalogExtensions(handle.deps.extensionInstallations, ["harness-codex"], project.id);
     const job = handle.deps.extensionInstallations.list().find((job) => job.projectId === project.id)!;
     expect(job.extensionId).toBe("pstdio.custom-codex");
     const completed = handle.deps.extensionInstallations.wait(job.id);
@@ -95,7 +95,7 @@ test("explicit catalog selection again re-enables a harness after its completed 
     expect(created.status).toBe(201);
     const project = await created.json();
     const choose = async () => {
-      await enqueueCatalogExtension(handle.deps.extensionInstallations, "harness-codex", project.id);
+      await enqueueCatalogExtensions(handle.deps.extensionInstallations, ["harness-codex"], project.id);
       await Promise.all(
         handle.deps.extensionInstallations
           .list()

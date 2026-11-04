@@ -232,6 +232,8 @@ export const startAppLifecycle = async (input: {
     if (!startupAbort.signal.aborted) apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed");
   });
 
+  // Recovered extension selections need every dependency and the closer that stops them.
+  input.deps.extensionInstallations.start();
   return createAppCloser({
     ...input,
     unsubscribeExtensionEvents: () => {

@@ -9,8 +9,7 @@ import {
   subscribeDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 
-const legacyProgressViewId = "dashboard.project-opening";
-const setupOverlayPrefix = `${legacyProgressViewId}.setup.`;
+const setupOverlayPrefix = "dashboard.project-opening.setup.";
 const ownedContributionPrefix = `workbench.overlay.${encodeURIComponent(setupOverlayPrefix)}`;
 const overlayConfig = {
   placement: "center" as const,
@@ -34,23 +33,13 @@ type OpeningRequest = {
 export const createProjectOpeningModule = () => {
   let context: WorkbenchModuleContext;
   let request: OpeningRequest | undefined;
-  const legacyContributions = new Set<string>();
-  const learnSetupOwnership = (projectId?: string) => {
-    for (const { view } of getCachedDashboardExtensionMetadata(projectId)?.projectSetups ?? [])
-      legacyContributions.add(`workbench.overlay.${encodeURIComponent(`${view.extensionId}.view.${view.id}`)}`);
-  };
   let cleaning = false;
   const removeOrphans = (keep?: string) => {
     if (cleaning) return;
     cleaning = true;
     try {
       for (const placement of context.layout.getLayout().regions.overlay.widgets)
-        if (
-          (placement.viewId === legacyProgressViewId ||
-            placement.contributionId.startsWith(ownedContributionPrefix) ||
-            legacyContributions.has(placement.contributionId)) &&
-          placement.widgetId !== keep
-        )
+        if (placement.contributionId.startsWith(ownedContributionPrefix) && placement.widgetId !== keep)
           context.overlays.closeOverlay(placement.widgetId);
     } finally {
       cleaning = false;
@@ -100,14 +89,20 @@ export const createProjectOpeningModule = () => {
     pending.views = (metadata.projectSetups ?? []).map(({ view }) => `${view.extensionId}.view.${view.id}`);
     next(pending);
   };
-  const open = async (project: string | Promise<{ id: string }>) => {
+  const open = async (project: Promise<{ id: string; created?: boolean }>) => {
     close();
     const completion = Promise.withResolvers<void>();
     const pending: OpeningRequest = { registrations: [], finish: () => completion.resolve() };
     request = pending;
     try {
-      pending.projectId = typeof project === "string" ? project : (await project).id;
+      const opened = await project;
       if (request !== pending) return;
+      // Reopening a folder's existing project is ordinary navigation, so it does not replay setup.
+      if (!opened.created) {
+        close();
+        return;
+      }
+      pending.projectId = opened.id;
       // Selection happens in the creator after this promise resolves; registration may finish later.
       ready();
       await completion.promise;
@@ -121,7 +116,6 @@ export const createProjectOpeningModule = () => {
     activate(ctx) {
       context = ctx;
       // Requests are transient: a saved placement has no live owner after reload.
-      learnSetupOwnership(getDashboardSelectedProjectId(ctx));
       removeOrphans();
       let rotating = false;
       let scopeRequest: OpeningRequest | undefined;
@@ -145,7 +139,6 @@ export const createProjectOpeningModule = () => {
       const registration = subscribeDashboardExtensionsReadyProject(ctx, ready);
       const metadata = subscribeDashboardExtensionMetadata(() => {
         const pending = request;
-        learnSetupOwnership(pending?.projectId ?? getDashboardSelectedProjectId(ctx));
         if (!pending) removeOrphans();
         if (!pending?.projectId || !pending.views) return;
         const allowed = new Set(
