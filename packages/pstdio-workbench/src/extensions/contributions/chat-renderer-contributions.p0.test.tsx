@@ -36,10 +36,18 @@ test("native chat renders before commands and binds callbacks to their project, 
     },
   });
   const render = getWorkbenchRenderers(workbench).getRenderer(viewId)!.render;
-  const element = render({
+  const renderInput: WorkbenchPanelRenderInput = {
     workbench,
-    instance: { resource: { type: "session", id: "session-one" } },
-  } as WorkbenchPanelRenderInput) as ReactElement<{
+    instance: {
+      instanceId: "main",
+      panelId: viewId,
+      closable: true,
+      resource: { type: "session", id: "session-one" },
+    },
+    panel: { id: viewId, title: "Chat", region: "main", rendererId: viewId },
+    refresh: () => undefined,
+  };
+  const element = render(renderInput) as ReactElement<{
     session: ChatSession;
     action: (action: { type: "stop" }) => Promise<unknown>;
   }>;
@@ -61,12 +69,13 @@ test("native chat renders before commands and binds callbacks to their project, 
     }),
   );
   const converted = render({
-    workbench,
+    ...renderInput,
     instance: {
-      resource: { type: "session", id: "session-one" },
-      pageContext: { pageId: "page", params: { filter: "recent" } },
+      ...renderInput.instance,
+      instanceId: "side",
+      pageContext: { page: { kind: "page", extensionId: "acme.chat", id: "page" }, params: { filter: "recent" } },
     },
-  } as WorkbenchPanelRenderInput) as typeof element;
+  }) as typeof element;
   expect(converted.props.session).toBe(element.props.session);
   await converted.props.action({ type: "stop" });
   expect(calls.at(-1)?.body).toMatchObject({ params: { renderer: { pageParams: { filter: "recent" } } } });
