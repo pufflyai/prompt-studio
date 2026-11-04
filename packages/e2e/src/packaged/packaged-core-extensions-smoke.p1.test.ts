@@ -119,6 +119,17 @@ test(
         headers: runtimeAuthorization(started.descriptor),
       });
       expect(devicesRuntime.status).toBe(200);
+      const devicesModule = await fetch(`${started.baseUrl}${devicesView.body.webview.moduleUrl}`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(devicesModule.status).toBe(200);
+      const reloaded = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(reloaded.status).toBe(200);
+      expect((await reloaded.json()).extensions).toContainEqual(
+        expect.objectContaining({ installName: "pstdio-cloud", status: "loaded", lastError: null }),
+      );
 
       const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
       expect(planner).toBeDefined();
