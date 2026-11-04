@@ -27,6 +27,20 @@ const variantParam = (variants: string[]): HarnessParamDescriptor => {
 const asRecord = (value: unknown) =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : undefined;
 
+const parseNativeCatalog = (items: unknown[]): AgentModel[] =>
+  items.flatMap((item) => {
+    const model = asRecord(item);
+    if (model?.enabled !== true || typeof model.id !== "string" || typeof model.providerID !== "string") return [];
+    const id = `${model.providerID}/${model.id}`;
+    const variants = Array.isArray(model.variants)
+      ? model.variants.flatMap((variant) => {
+          const id = asRecord(variant)?.id;
+          return typeof id === "string" && id !== "default" ? [id] : [];
+        })
+      : [];
+    return [{ id, label: id, paramOverrides: { variant: variants.length ? variantParam(variants) : null } }];
+  });
+
 const parseCandidates = (items: unknown[]): AgentModel[] => {
   const models = items.flatMap((item) => {
     if (typeof item === "string" && item.includes("/")) return [{ id: item.trim() }];
@@ -77,13 +91,14 @@ const parseVerboseBlocks = (output: string) => {
 export const parseOpencodeModels = (output: string): AgentModel[] => {
   if (!output.trim()) return [];
 
-  try {
+  if (/^[[{]/.test(output.trimStart())) {
     const parsed = JSON.parse(output) as unknown;
     if (Array.isArray(parsed)) return parseCandidates(parsed);
+    const data = asRecord(parsed)?.data;
+    if (Array.isArray(data)) return parseNativeCatalog(data);
     const models = asRecord(parsed)?.models;
     if (Array.isArray(models)) return parseCandidates(models);
-  } catch {
-    // Fall back to verbose or plain line output.
+    return [];
   }
 
   const verbose = parseVerboseBlocks(output);
