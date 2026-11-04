@@ -14,6 +14,9 @@ const writeProject = (root: string, label: string, color = "rgb(0, 128, 0)") => 
     "src/button.css": `.button { color: ${color}; }\n`,
     "src/button.tsx": `import "./button.css";\nexport const Button = (props: { label: string }) => <button className="button">${label}: {props.label}</button>;\n`,
     "src/default.json": '{"name":"Default","values":{"label":"Save"}}',
+    "src/secondary.canvas.tsx": `export default { title: "Components/Secondary" };
+export const Default = () => <button>Secondary canvas</button>;
+`,
     "src/button.canvas.tsx": `import { Button } from "./button";
 import config from "./default.json";
 export default { title: "Components/Button", component: Button, args: config.values,
@@ -56,6 +59,8 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
     await page.goto(`/projects/${project.id}/extensions/pstdio.canvas/canvases`);
     await expect(page.getByText("UI Canvas", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Components", { exact: true })).toHaveCount(0);
+    const viewer = page.frameLocator('iframe[title="UI Canvas"]');
+    await expect(viewer.locator("[data-ui-canvas-setup]")).toBeVisible();
     watcher = spawn("bun", [join(repoRoot, "packages/canvas/bin/pstdio-canvas.ts"), "watch", "--root", root], {
       stdio: "inherit",
     });
@@ -71,13 +76,31 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
     };
     await expect
       .poll(async () => (await list()).map((canvas) => canvas.id), { timeout: 30_000 })
-      .toEqual(["src/button.canvas.tsx"]);
+      .toEqual(["src/button.canvas.tsx", "src/secondary.canvas.tsx"]);
 
     await expect(page.getByText("Components", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
-    await page.goto((await list())[0]!.href);
-    const viewer = page.frameLocator('iframe[title="UI Canvas"]');
+    // Critical: opening Canvas must select the first design without a tree click.
+    await expect(page).toHaveURL(/canvases\/design/);
     const frame = viewer.frameLocator('iframe[data-frame-ready="true"]');
     await expect(frame.getByRole("button", { name: "Version 1: Save" })).toBeVisible({ timeout: 30_000 });
+
+    await page.getByText("Secondary", { exact: true }).first().click();
+    await expect(frame.getByRole("button", { name: "Secondary canvas", exact: true })).toBeVisible();
+    const secondaryTab = page.getByRole("tab", { name: "Secondary", exact: true });
+    await secondaryTab.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    await page.reload();
+    await page.getByText("UI Canvas", { exact: true }).first().click();
+    await expect(frame.getByRole("button", { name: "Secondary canvas", exact: true })).toBeVisible();
+
+    // A stale remembered design falls back to the first surviving canvas.
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    rmSync(join(root, "src/secondary.canvas.tsx"));
+    await expect.poll(async () => (await list()).map((canvas) => canvas.id)).toEqual(["src/button.canvas.tsx"]);
+    await expect(page).not.toHaveURL(/canvases/);
+    await page.getByText("UI Canvas", { exact: true }).first().click();
+    await expect(frame.getByRole("button", { name: "Version 1: Save" })).toBeVisible();
 
     writeProject(root, "Version 2");
     const button = frame.getByRole("button", { name: "Version 2: Save" });

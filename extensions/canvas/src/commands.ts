@@ -52,9 +52,7 @@ export const commands = {
       if (build.status !== "ready") return { status: build.status };
       const { manifest } = build;
       if (!manifest.canvases.length) return { status: "empty" as const };
-      const entry = input.canvas
-        ? manifest.canvases.find((canvas) => canvas.id === input.canvas)
-        : manifest.canvases[0];
+      const entry = manifest.canvases.find((canvas) => canvas.id === input.canvas) ?? manifest.canvases[0];
       return { status: "ready" as const, canvas: entry && toCanvas(manifest, entry) };
     },
   }),

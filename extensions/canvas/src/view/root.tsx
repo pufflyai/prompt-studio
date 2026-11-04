@@ -3,6 +3,7 @@ import {
   artifactChanged,
   createWebviewClient,
   type GuestHost,
+  type PageLocation,
   type PropsStore,
   type ResourceRef,
 } from "@pstdio/sdk/extensions";
@@ -16,13 +17,14 @@ import { layoutChanged } from "../events";
 import { FrameHostContext } from "../frames/frame-loader";
 import { readLayout } from "../layout";
 import { createLayoutSession } from "../layout-session";
+import { canvasPage, canvasTarget, homePage } from "../navigation";
 import { BuildNotice, type BuildStatus } from "./build-notice";
 import { CanvasStage } from "./canvas-stage";
 import { CanvasThemeContext, CanvasThemeProvider, readCanvasTheme } from "./canvas-theme";
 export interface CanvasProps {
   themePreference?: string;
   resource?: ResourceRef;
-  pageLocation?: { resource?: ResourceRef };
+  pageLocation?: PageLocation;
 }
 interface RootProps {
   host: GuestHost;
@@ -94,7 +96,7 @@ const ConnectedCanvas = (props: ConnectedCanvasProps) => {
 
 type CanvasRead = { status: BuildStatus | "ready"; canvas?: CanvasDefinition; message?: string };
 
-const useCanvasBuild = (host: GuestHost, id: string | undefined) => {
+const useCanvasBuild = (host: GuestHost, id: string | undefined, selected: boolean) => {
   const [read, setRead] = useState<CanvasRead>();
   useEffect(() => {
     const client = createWebviewClient<typeof commands>(host);
@@ -104,10 +106,16 @@ const useCanvasBuild = (host: GuestHost, id: string | undefined) => {
     const refresh = () => {
       const request = ++latest;
       const current = () => active && request === latest;
-      void client.commands["canvas.read"]({ canvas: id }).then(
-        (next) => current() && setRead(next as CanvasRead),
-        (error) => current() && setRead({ status: "error", message: String(error) }),
-      );
+      void client.commands["canvas.read"]({ canvas: id })
+        .then(async (next) => {
+          if (!current()) return;
+          if (next.status === "ready" && next.canvas && next.canvas.id !== id) {
+            if (selected) await client.navigation.open(canvasTarget(next.canvas.id, next.canvas.name));
+            return;
+          }
+          setRead(next as CanvasRead);
+        })
+        .catch((error) => current() && setRead({ status: "error", message: String(error) }));
     };
     refresh();
     const unsubscribe = client.events.subscribe(artifactChanged(buildMount), refresh);
@@ -115,7 +123,7 @@ const useCanvasBuild = (host: GuestHost, id: string | undefined) => {
       active = false;
       unsubscribe();
     };
-  }, [host, id]);
+  }, [host, id, selected]);
   return read;
 };
 
@@ -128,7 +136,11 @@ export const CanvasRoot = (props: RootProps) => {
     return () => cancelAnimationFrame(frame);
   }, [current.themePreference]);
   const id = current.resource?.id ?? current.pageLocation?.resource?.id;
-  const read = useCanvasBuild(host, id);
+  const location = current.pageLocation;
+  const active =
+    location?.page.extensionId === "pstdio.canvas" &&
+    ((location.page.id === homePage.id && !id) || (location.page.id === canvasPage.id && location.resource?.id === id));
+  const read = useCanvasBuild(host, id, active);
   let body = <BuildNotice status="loading" />;
   if (read?.status === "ready" && read.canvas) {
     // Frames that appear, disappear or change size start a new runtime, which owns their layout.
