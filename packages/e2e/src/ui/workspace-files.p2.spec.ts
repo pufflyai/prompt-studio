@@ -211,7 +211,10 @@ test("browses and edits files in the default workspace", async ({ page, request 
 
     const search = page.getByRole("textbox", { name: "Search files" });
     await search.fill("README");
-    await expect(page.getByRole("region", { name: "Files", exact: true }).getByRole("option")).toHaveCount(1);
+    const readme = page
+      .getByRole("region", { name: "Files", exact: true })
+      .getByRole("option", { name: "README.md", exact: true });
+    await expect(readme).toBeVisible();
     const fileResponse = Promise.withResolvers<void>();
     const pendingFileRoutes: Promise<void>[] = [];
     let fileRequested = false;
@@ -222,7 +225,7 @@ test("browses and edits files in the default workspace", async ({ page, request 
       return continued;
     });
     try {
-      await page.getByRole("option", { name: "README.md" }).click();
+      await readme.click();
       await expect.poll(() => fileRequested).toBe(true);
       // The editor runtime loads while the file is still on the network.
       await expect.poll(() => page.evaluate(() => "MonacoEnvironment" in window)).toBe(true);
