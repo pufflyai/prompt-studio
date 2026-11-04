@@ -60,7 +60,7 @@ test("timeline ticket selection keeps the planner visible and replaces the unpin
   }
 });
 
-test("timeline tickets with pending input keep the planner visible while opening their requests", async ({
+test("timeline tickets keep their preview while the attention bubble opens and resolves requests", async ({
   page,
   request,
 }) => {
@@ -84,8 +84,16 @@ test("timeline tickets with pending input keep the planner visible while opening
     await page.goto(timelinePath);
     const timeline = page.frameLocator('iframe[title="Project Timeline"]');
     await timeline.locator(`[data-ticket="${ticket.id}"]`).click();
-    const requests = page.locator('[data-workbench-panel="side"]').frameLocator('iframe[title="Needs attention"]');
+    const side = page.locator('[data-workbench-panel="side"]');
+    await expect(side.getByRole("textbox")).toContainText("Ticket awaiting input");
+    const card = timeline.locator(`[data-ticket="${ticket.id}"]`);
+    await card.getByRole("button", { name: "1 item needs attention", exact: true }).click();
+    const requests = timeline.getByRole("dialog");
     await expect(requests.getByText("Confirm the timeline change", { exact: true })).toBeVisible();
+    await requests.getByRole("button", { name: "Confirm completed", exact: true }).click();
+    await expect(requests).not.toBeVisible();
+    await expect(card.getByRole("button", { name: "1 item resolved", exact: true })).toBeFocused();
+    await expect(side.getByRole("textbox")).toContainText("Ticket awaiting input");
     await expect(timeline.locator(`[data-ticket="${ticket.id}"] [data-testid="renderer-card"]`)).toHaveAttribute(
       "data-selected",
       "true",
