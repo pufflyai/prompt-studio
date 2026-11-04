@@ -23,6 +23,8 @@ Store canonical state per record separately from the indexed optimistic query pr
 
 Local commits update only affected records. Applying relay input changes canonical state and settles exact outcomes in the same owner transaction as its cursor. Rebase affected pending work over that canonical state. Accepting the writer's pending prefix need not replay its remaining overlay. A delivery acknowledgment alone never settles a condition or deletes its envelope.
 
+Unlike [ADR 0102](0102-record-stream-sync.md)'s Yjs states, an ordered compaction is not loaded over canonical state; a device that already applied its covered updates merges only its receipt root. When that root lacks receipts the device holds, the device publishes a complete replacement before a reset device can download the incomplete one. Founding states and states that replaced updates the device still needs are loaded together with their retained tail.
+
 Founding publishes a complete base and an explicitly included pending prefix atomically. Adoption preserves remaining envelopes and their original conditions. A founding state is not one author commit: preserve per-record limits and bounded SQL batches instead of imposing the 4 MiB group limit on an entire project.
 
 ## Observations and retries
