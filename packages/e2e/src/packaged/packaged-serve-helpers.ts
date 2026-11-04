@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { once } from "node:events";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { Page } from "@playwright/test";
 import { stopChildProcess } from "../scripts/child-process";
 import { registerPendingTestProcess } from "../scripts/pending-test-processes";
@@ -136,6 +136,12 @@ export const startPackagedServe = async (
         PSTDIO_DB_PATH: join(tempRoot, "db.sqlite"),
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
         PSTDIO_STORAGE_PATH: join(tempRoot, "storage"),
+        // Retain setup/shutdown phases after the fixture removes its disposable home.
+        PSTDIO_LOG_PATH: join(
+          import.meta.dirname,
+          "../../test-results/packaged-runtime",
+          `${basename(tempRoot)}.jsonl`,
+        ),
         ...env,
       },
       stdio: "pipe",

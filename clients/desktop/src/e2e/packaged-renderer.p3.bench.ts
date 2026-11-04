@@ -129,7 +129,9 @@ test("long tool-heavy stream stays within budget", async () => {
       if (!response.ok) throw new Error(await response.text());
       return (await response.json()) as { id: string };
     }, launched.project.id);
-    await app.page.getByRole("button", { name: "Long replay", exact: true }).click();
+    const sidenav = app.page.locator('[data-workbench-region="sidenav"]');
+    await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+    await sidenav.getByRole("option", { name: "Long replay", exact: true }).click();
     await expect(app.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
     const workbench = await openRendererSession(app.page);
 
