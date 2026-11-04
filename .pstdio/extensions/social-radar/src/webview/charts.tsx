@@ -1,19 +1,17 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import { psTheme } from "@pstdio/ui";
+import { Chart, chartColor as token } from "@pstdio/ui/charts";
 import { barX, barY, defineChart } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import type { ReactNode } from "react";
 import type { Sentiment } from "../schemas";
 
 // Charts paint with theme tokens, so they follow the light and dark themes.
-const token = (name: string) => psTheme.token.var(`colors.${name}`);
-const countColor = token("blue.solid");
+const countColor = token("vis.categorical.1");
 export const sentimentTokens: Record<Sentiment, string> = {
-  negative: "red.solid",
-  neutral: "gray.emphasized",
-  positive: "blue.solid",
+  negative: "vis.categorical.4",
+  neutral: "vis.text.secondary",
+  positive: "vis.categorical.1",
 };
 const sentimentLabels: Record<Sentiment, string> = { negative: "Negative", neutral: "Neutral", positive: "Positive" };
 // The chart's own sizing API: without a height prop, style.height lets the chart follow the box it sits in,
@@ -76,10 +74,9 @@ export const RankedBars = (props: RankedBarsProps) => {
     scales: {
       x: { scale: scaleLinear, nice: true, axis: false },
       y: {
-        scale: () =>
-          scaleBand<string>()
-            .domain(rows.map((row) => row.label))
-            .padding(0.3),
+        scale: scaleBand<string>()
+          .domain(rows.map((row) => row.label))
+          .padding(0.3),
       },
     },
   });

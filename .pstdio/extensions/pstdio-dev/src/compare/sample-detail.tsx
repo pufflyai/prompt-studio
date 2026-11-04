@@ -1,7 +1,7 @@
 import { Box, Grid, HStack, Stack, Text } from "@chakra-ui/react";
-import { psTheme, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { Chart, chartColor as token } from "@pstdio/ui/charts";
 import { defineChart, dot, lineY, ruleX, ruleY } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import type { CompareRow } from "../benchmarks/analysis";
@@ -20,7 +20,6 @@ interface Sample {
   value: number;
 }
 
-const token = (name: string) => psTheme.token.var(`colors.${name}`);
 // One color scale keeps base and head in the same colors in both charts and the legend.
 const commitColors = { domain: ["Base", "Head"], range: [token(BASE_COLOR), token(HEAD_COLOR)] };
 
@@ -62,8 +61,8 @@ export const SampleDetail = (props: SampleDetailProps) => {
       dot(samples, { x: "value", y: "commit", color: "commit", r: 4, fillOpacity: 0.85 }),
     ],
     scales: {
-      x: { scale: () => scaleLinear().domain(domain), axis: { ticks: { format } } },
-      y: { scale: () => scaleBand<string>().domain(["Base", "Head"]).padding(0.3) },
+      x: { scale: scaleLinear().domain(domain), axis: { ticks: { format } } },
+      y: { scale: scaleBand<string>().domain(["Base", "Head"]).padding(0.3) },
     },
   });
   const order = defineChart({
@@ -74,8 +73,8 @@ export const SampleDetail = (props: SampleDetailProps) => {
       dot(samples, { x: "sample", y: "value", color: "commit", r: 3 }),
     ],
     scales: {
-      x: { scale: () => scaleLinear().domain([1, Math.max(1, ...samples.map((sample) => sample.sample))]) },
-      y: { scale: () => scaleLinear().domain(domain), grid: true, axis: { ticks: { format } } },
+      x: { scale: scaleLinear().domain([1, Math.max(1, ...samples.map((sample) => sample.sample))]) },
+      y: { scale: scaleLinear().domain(domain), grid: true, axis: { ticks: { format } } },
     },
   });
   return (

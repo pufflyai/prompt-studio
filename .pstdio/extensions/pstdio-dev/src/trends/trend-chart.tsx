@@ -1,7 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
-import { psTheme } from "@pstdio/ui";
+import { Chart, chartColor as token } from "@pstdio/ui/charts";
 import { areaY, defineChart, dot, lineY, ruleY } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { scalePoint } from "@tanstack/charts/scales/point";
 import type { TrendMetric, TrendPoint } from "../benchmarks/analysis";
@@ -9,7 +8,6 @@ import { PLATFORMS } from "../benchmarks/platforms";
 import { formatValue } from "../webview/format";
 
 // Charts paint with theme tokens, so they follow the light and dark themes.
-const token = (name: string) => psTheme.token.var(`colors.${name}`);
 
 // Each platform keeps one color on every chart, so the shared legend reads for all of them.
 export const platformColor = (platform: string) =>
@@ -67,7 +65,7 @@ export const TrendChart = (props: TrendChartProps) => {
       ruleY(budget, { y: (value) => value, stroke: token("fg.muted"), strokeDasharray: "4 4", strokeWidth: 1 }),
     ],
     scales: {
-      x: { scale: () => scalePoint<string>().domain(versions).padding(0.5) },
+      x: { scale: scalePoint<string>().domain(versions).padding(0.5) },
       y: {
         scale: scaleLinear,
         nice: true,
