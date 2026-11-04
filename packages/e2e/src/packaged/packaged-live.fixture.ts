@@ -2,8 +2,11 @@ import { type LiveClientMessage, liveClientMessageSchema, liveProtocolVersion } 
 
 export interface PeerLiveData {
   discovery: Set<string | null>;
+  deviceId: string;
+  projectId: string;
 }
-const topicKey = (spaceOwner: string | null, topic: string) => JSON.stringify([spaceOwner, topic]);
+const topicKey = (projectId: string, spaceOwner: string | null, topic: string) =>
+  JSON.stringify([projectId, spaceOwner, topic]);
 
 /** Wire-level subscription peer for packaged sync tests; production routing has separate integration coverage. */
 export const createPeerLive = () => {
@@ -12,9 +15,20 @@ export const createPeerLive = () => {
     socket: Bun.ServerWebSocket<PeerLiveData>,
     message: Extract<LiveClientMessage, { topic: string }>,
   ) => {
-    const key = topicKey(message.spaceOwner, message.topic);
+    const key = topicKey(socket.data.projectId, message.spaceOwner, message.topic);
     if (message.type === "subscribe") socket.subscribe(key);
     if (message.type === "unsubscribe") socket.unsubscribe(key);
+    if (message.type === "publish")
+      socket.publish(
+        key,
+        JSON.stringify({
+          type: "event",
+          spaceOwner: message.spaceOwner,
+          topic: message.topic,
+          deviceId: socket.data.deviceId,
+          payload: message.payload,
+        }),
+      );
     if (message.type === "follow")
       socket.send(
         JSON.stringify({ type: "subscribers", spaceOwner: message.spaceOwner, topic: message.topic, active: false }),
@@ -25,8 +39,8 @@ export const createPeerLive = () => {
       notice: { spaceOwner: string | null; documentId: string; lastSequence: number; stateId: unknown },
       created: boolean,
     ) {
-      const key = topicKey(notice.spaceOwner, notice.documentId);
       for (const socket of sockets) {
+        const key = topicKey(socket.data.projectId, notice.spaceOwner, notice.documentId);
         if (socket.isSubscribed(key)) socket.send(JSON.stringify({ type: "changed", ...notice }));
         else if (created && socket.data.discovery.has(notice.spaceOwner))
           socket.send(JSON.stringify({ type: "discovered", ...notice }));

@@ -28,14 +28,13 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
     errorNotice,
     onChange,
   } = props;
-  if (connectText && content.textDocument) {
+  if (connectText && (content.textDocument || content.documentSource)) {
     return (
       <Flex ref={rendererRef} direction="column" h="full" minH="0" bg="bg">
         {positionNotice}
         <PublicMarkdownFileEditor
           key={editorKey}
           connect={connectText}
-          presence={presence}
           open={open}
           placeholder={content.placeholder ?? "Write…"}
           sectionNavigation={sectionNavigation}

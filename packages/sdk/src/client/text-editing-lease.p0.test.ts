@@ -21,10 +21,18 @@ const fixture = async () => {
   let currentGate: typeof openGate;
   let declinedSubmitGate: typeof openGate;
   let inactiveGate: typeof openGate;
+  let abandonGate: typeof openGate;
   const calls: { lease: number; operation: string; active: boolean }[] = [];
+  const openInputs: Extract<TextEditingRequest, { operation: "open" }>["input"][] = [];
   const answer = async (input: TextEditingRequest | undefined) => {
     if (!input) return { ok: true };
     calls.push({ lease, operation: input.operation, active });
+    if (input.operation === "abandon" && abandonGate) {
+      const held = abandonGate;
+      abandonGate = undefined;
+      held.entered.resolve();
+      await held.resume.promise;
+    }
     if (input.operation === "submit" && declinedSubmitGate) {
       const held = declinedSubmitGate;
       declinedSubmitGate = undefined;
@@ -43,6 +51,7 @@ const fixture = async () => {
       return { ok: true, value: grant };
     }
     if (input.operation === "open") {
+      openInputs.push(input.input);
       const opened = {
         handle: `${lease}:${input.memberId}`,
         grant: { token: `grant-${lease}` },
@@ -140,6 +149,7 @@ const fixture = async () => {
       loseInactive = true;
     },
     calls,
+    openInputs,
     expire: () => {
       lease++;
     },
@@ -147,8 +157,43 @@ const fixture = async () => {
     holdCurrent: () => (currentGate = gate()),
     holdDeclinedSubmit: () => (declinedSubmitGate = gate()),
     holdInactive: () => (inactiveGate = gate()),
+    holdAbandon: () => (abandonGate = gate()),
   };
 };
+
+test.each([
+  "body",
+  "different-source",
+])("a late abandon receipt retains a same-ID successor (%s) for transport rejoining", async (sourceId) => {
+  const f = await fixture();
+  const memberId = crypto.randomUUID();
+  const open = (sourceId: string) =>
+    f.guest.host.call("editing.text", {
+      operation: "open",
+      memberId,
+      input: { sourceId, params: {} },
+    });
+  await f.guest.host.call("editing.text", { operation: "register", memberId });
+  await open("body");
+  const held = f.holdAbandon();
+  const abandoned = f.guest.host.call("editing.text", { operation: "abandon", memberId });
+  try {
+    await held.entered.promise;
+    await f.guest.host.call("editing.text", { operation: "register", memberId });
+    await open(sourceId);
+    held.resume.resolve();
+    await abandoned;
+    f.expire();
+    await expect(f.connection.request({ operation: "current" })).rejects.toMatchObject({ code: "connection_reset" });
+    await open(sourceId);
+    expect(f.openInputs.at(-1)).toEqual({ sourceId, params: {} });
+    expect(f.calls.filter((call) => call.lease === 1 && call.operation === "register")).toHaveLength(1);
+  } finally {
+    held.resume.resolve();
+    await abandoned;
+    await f.guest.close();
+  }
+});
 
 test("a refused participation change reenters live watch recovery and applies the desired state", async () => {
   const f = await fixture();

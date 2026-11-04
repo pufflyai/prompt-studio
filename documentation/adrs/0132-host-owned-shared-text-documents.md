@@ -4,9 +4,10 @@ Proposed: 2026-10-17
 
 ## Status
 
-Accepted design for PS-776. Implementation is incomplete. Source-provider and
-projection ownership repairs and public session primitives are implemented. Native
-bridge adoption, installed editor acceptance and release validation remain open.
+Accepted design for PS-776. Source providers, projection ownership, public sessions,
+native bridge adoption and Notes/Planner integration are implemented. Qualification
+remains incomplete: bounded installed-editor evidence does not replace the complete
+two-host acceptance matrix, aggregate, package and final revision checks.
 
 This record was recovered as 0117 after main assigned 0116 to the Firefox
 test-home decision. It moved to 0118 when main independently assigned 0117 to
@@ -68,8 +69,10 @@ Source providers register `resolve` and `project` callbacks without a rendering 
 They run through ordinary extension command execution under the source owner's
 permissions. A file can return a local `textDocument` reference. Legacy
 `documentSource` stays supported and is deprecated in favor of that reference.
-The intended public session and selected-source grant boundary is still required;
-the private native session is not acceptance of public editor parity.
+Both forms enter the public session and selected-source grant boundary. The default
+Markdown renderer uses that boundary for writable legacy declarations as well as
+provider references. Published low-level native-document clients remain supported;
+they are not the default renderer's collaboration path.
 
 One revalidated writable locator owns domain projection for each source. A new
 provider reference can replace it only after resolving the same source authority.
@@ -210,13 +213,19 @@ Relay storage resets invalidate view reads, resource references, and tab title
 queries. The workbench breadcrumb uses that current title. A rename keeps the existing
 document identity, editor session, and pending local edits.
 
-The workbench presence service observes connected editors from every open native
-document tab. The breadcrumb header shows each remote device once, using its
+The workbench presence service observes public guest membership from native and
+installed editors. The breadcrumb header shows each remote participant once, using its
 friendly account name. Device and session IDs remain internal. Views own their
 connections and unregister when closed; text and selection updates do not redraw
 unchanged chrome presence. The native editor adds no title header or local-save
 footer. Save failures still appear beside the document, and the close guard still
 protects edits that have not been acknowledged.
+
+Presence received before an open reply is buffered by handle and becomes visible
+only when the current admission receipt selects that handle. A pending reopen
+retains the admitted handle's close ownership. Old open or abandon receipts cannot
+restore a closed member or erase its same-ID successor. This projects the existing
+guest membership without opening a second source session.
 
 Presence follows open placement ownership, not React mount lifetime. The workbench
 can retain a closed editor for recovery. That editor pauses its live stream and
@@ -327,7 +336,9 @@ cancels the barrier and restores input for every member. A transport failure alo
 does not prove cancellation: only the host receipt for that exact barrier restores
 input. Re-emitting a live barrier does not rerun an already admitted finalizer. Forced
 revocation stops new admission and presence while draining already admitted work.
-The workbench/native binding adoption of these primitives remains a delivery gate.
+Native Markdown uses the same SDK session, placement dispatcher and close barrier
+as installed editors. Integration and package acceptance still qualify that behavior
+on each submitted revision; this architecture statement does not waive those gates.
 
 ## Rich editor projection
 

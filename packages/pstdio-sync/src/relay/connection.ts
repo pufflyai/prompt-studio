@@ -1,6 +1,8 @@
 import { serviceAddress, serviceUrl } from "./http";
 
-const NativeWebSocket = globalThis.WebSocket as { new (url: string | URL, options?: Bun.WebSocketOptions): WebSocket };
+const NativeWebSocket = globalThis.WebSocket as unknown as {
+  new (url: string | URL, options?: Bun.WebSocketOptions): Bun.WebSocket;
+};
 type TargetedSync = (signal: AbortSignal) => Promise<boolean>;
 
 interface RelaySocketInput {
@@ -33,7 +35,7 @@ const readAccess = async (input: Pick<RelaySocketInput, "access">, signal: Abort
 };
 
 const watchSocketErrors = (
-  connection: WebSocket,
+  connection: Bun.WebSocket,
   handshakeError: () => Promise<void> | undefined,
   failed: () => void,
 ) => {
@@ -57,7 +59,7 @@ const watchSocketErrors = (
 
 export const createRelaySocket = (input: RelaySocketInput) => {
   const address = serviceAddress(input.origin);
-  let socket: WebSocket | undefined;
+  let socket: Bun.WebSocket | undefined;
   let socketReady = () => false;
   let dirty = false;
   let running: Promise<void> | undefined;
@@ -128,7 +130,9 @@ export const createRelaySocket = (input: RelaySocketInput) => {
     clearTimeout(retry);
     clearTimeout(expiry);
     retryDone?.();
-    socket?.close();
+    // Cancellation owns the transport locally; a peer may never reply to a closing handshake.
+    // The attempt's admitted synchronization work is still drained by done below.
+    socket?.terminate();
     attempt?.abort();
     input.onDisconnect?.("offline");
   };
