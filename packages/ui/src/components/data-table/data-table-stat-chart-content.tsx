@@ -5,6 +5,7 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import type { ReactNode } from "react";
 import { Chart, chartColor } from "@/components/charts/chart";
+import { chartGeometry } from "@/theme/primitives/chart";
 
 type StringKeyOf<T> = Extract<keyof T, string>;
 
@@ -60,7 +61,9 @@ export const DataTableStatChart = <T extends object>(props: DataTableStatChartPr
         {...chartProps}
         definition={defineChart(
           {
-            marks: [barX(points, { x: "value", y: "id", fill, maxThickness: barSize })],
+            marks: [
+              barX(points, { radius: chartGeometry.barRadius, x: "value", y: "id", fill, maxThickness: barSize }),
+            ],
             guides: false,
             margin: 0,
             scales: {
@@ -77,7 +80,16 @@ export const DataTableStatChart = <T extends object>(props: DataTableStatChartPr
       {...chartProps}
       definition={defineChart(
         {
-          marks: [barY(points, { x: "id", y: "value", fill, inset: barCategoryGap / 2, maxThickness: barSize })],
+          marks: [
+            barY(points, {
+              radius: chartGeometry.barRadius,
+              x: "id",
+              y: "value",
+              fill,
+              inset: barCategoryGap / 2,
+              maxThickness: barSize,
+            }),
+          ],
           guides: false,
           margin: 0,
           scales: { x: { scale: () => scaleBand<string>().padding(0) }, y: { scale: scaleLinear } },
