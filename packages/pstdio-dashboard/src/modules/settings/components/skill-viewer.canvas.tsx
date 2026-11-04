@@ -7,6 +7,8 @@ const meta: CanvasMeta<typeof SkillViewerContent> = {
   title: "ProjectSettings/SkillViewer",
   component: SkillViewerContent,
   fullscreen: true,
+  description:
+    "Full-width preview with a top divider. Info and Files tabs switch the sidebar while preserving the selected file.",
   decorators: [
     (Story) => (
       <FileIconThemePreferenceProvider>

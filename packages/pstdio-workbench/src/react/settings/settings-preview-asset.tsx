@@ -1,4 +1,4 @@
-import { Box, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Stack, Tabs, Text } from "@chakra-ui/react";
 import { DeleteConfirmationModal, ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
 import { WorkbenchIcon } from "../shared/icon";
@@ -40,28 +40,43 @@ export const PreviewAsset = (props: { kind: "skill" | "template" }) => {
           </Box>
         </ScrollArea>
       ) : (
-        <HStack flex="1" minH="0" gap="0" align="stretch">
-          <Stack w="64" minH="0" flexShrink="0" borderRightWidth="1px" gap="0">
-            <ScrollArea maxH="1/2" flexShrink="0" contentProps={{ p: "md" }}>
-              <Stack gap="sm">
-                <Text>Name: create-ticket</Text>
-                <Text>Version: 1.2.0</Text>
-                <Stack gap="xs">
-                  <Text>Description:</Text>
-                  <Text color="fg.muted">
-                    Create planner tickets from a short request, with a clear problem, expected behavior and validation
-                    steps.
-                  </Text>
+        <HStack flex="1" minH="0" gap="0" align="stretch" borderTopWidth="1px">
+          <Tabs.Root
+            defaultValue="info"
+            size="sm"
+            tray
+            w="64"
+            minH="0"
+            flexShrink="0"
+            borderRightWidth="1px"
+            display="flex"
+            flexDirection="column"
+          >
+            <Tabs.List flexShrink="0" py="sm">
+              <Tabs.Trigger value="info">Info</Tabs.Trigger>
+              <Tabs.Trigger value="files">Files</Tabs.Trigger>
+            </Tabs.List>
+            <Tabs.Content value="info" flex="1" minH="0" p="0">
+              <ScrollArea h="full" minH="0" contentProps={{ p: "md" }}>
+                <Stack gap="sm">
+                  <Text>Name: create-ticket</Text>
+                  <Text>Version: 1.2.0</Text>
+                  <Stack gap="xs">
+                    <Text>Description:</Text>
+                    <Text color="fg.muted">
+                      Create planner tickets from a short request, with a clear problem, expected behavior and
+                      validation steps.
+                    </Text>
+                  </Stack>
                 </Stack>
-              </Stack>
-            </ScrollArea>
-            <Stack borderTopWidth="1px" borderBottomWidth="1px" p="sm" gap="0">
-              <Text>Files</Text>
-            </Stack>
-            <ScrollArea flex="1" minH="0" contentProps={{ p: "sm" }}>
-              <Text>SKILL.md</Text>
-            </ScrollArea>
-          </Stack>
+              </ScrollArea>
+            </Tabs.Content>
+            <Tabs.Content value="files" flex="1" minH="0" p="0">
+              <ScrollArea h="full" minH="0" contentProps={{ p: "sm" }}>
+                <Text>SKILL.md</Text>
+              </ScrollArea>
+            </Tabs.Content>
+          </Tabs.Root>
           <ScrollArea flex="1" minW="0" contentProps={{ p: "lg" }}>
             <Stack gap="md">
               <Text textStyle="heading/S">Create ticket</Text>
