@@ -60,3 +60,21 @@ test("ordered editor histories admit their host roots while text frames cannot m
     document.destroy();
   }
 });
+
+for (const root of ["ordered-text-frontier", "text-genesis-context"]) {
+  test(`full text recovery rejects removed immutable host metadata in ${root}`, async () => {
+    const document = new Y.Doc();
+    try {
+      await seedTextDocument(document, "source", 77, "field-incarnation");
+      document.getMap("ordered-text-frontier").set(JSON.stringify(["conditional", "a".repeat(64)]), true);
+      const original = Y.encodeStateAsUpdate(document);
+      await validateTextEditorState(original);
+      document.getMap(root).clear();
+      await expect(validateTextEditorState(Y.encodeStateAsUpdate(document))).rejects.toMatchObject({
+        code: "invalid_frame",
+      });
+    } finally {
+      document.destroy();
+    }
+  });
+}

@@ -6,6 +6,7 @@ import {
   readTextDocumentSeed,
   saveTextDocument,
   seedTextDocument,
+  validateTextEditorState,
 } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
@@ -89,9 +90,7 @@ export const openNativeDocument = (
       const snapshot = new Y.Doc();
       try {
         Y.applyUpdate(snapshot, Y.encodeStateAsUpdate(source));
-        if (snapshot.store.pendingStructs || snapshot.store.pendingDs)
-          throw new Error("The editor source is missing causal history");
-        await readTextDocumentSeed(snapshot);
+        await validateTextEditorState(Y.encodeStateAsUpdate(snapshot));
         await transactionFor(
           documentId,
           async (canonical) => {

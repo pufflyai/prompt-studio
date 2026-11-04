@@ -81,15 +81,27 @@ export const planLogStream = async (
   ];
   const known = new Map((await store.lookupMetadata(identities)).map((row) => [row.id, row]));
   const candidates = new Map<string, Choice>();
+  let deferred = false;
   for (const entry of local.entries) {
     const saved = known.get(entry.id)!;
-    if (saved.sequence === null && remote.more && !options.newest) continue;
-    candidates.set(entry.id, { entry, sequence: saved.sequence, index: saved.index ?? 0, local: saved.localSequence });
+    const position = decodeLogCursor(store.address, entry.cursor);
+    const pending = position.local > cursor.local;
+    if (!pending && position.relay > remote.head) {
+      deferred = true;
+      continue;
+    }
+    if (pending && remote.more && !options.newest) continue;
+    candidates.set(entry.id, {
+      entry,
+      sequence: pending ? null : position.relay,
+      index: position.index,
+      local: saved.localSequence,
+    });
   }
   addRemoteChoices(candidates, remote.rows, known, cursor, !!options.newest);
   const ordered = [...candidates.values()].sort(compare);
   const selected = options.newest ? ordered.slice(-limit) : ordered.slice(0, limit);
-  const more = !options.newest && (remote.more || local.more || ordered.length > selected.length);
+  const more = !options.newest && (deferred || remote.more || local.more || ordered.length > selected.length);
   let end = { ...cursor };
   const entries = selected.map((item) => {
     end = item.sequence === null ? { ...end, local: item.local } : { ...end, relay: item.sequence, index: item.index };

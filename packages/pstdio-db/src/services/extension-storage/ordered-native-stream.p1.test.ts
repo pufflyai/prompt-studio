@@ -328,3 +328,50 @@ test("a foreign native child waits across restart and relay loss while independe
     ),
   ).toBe(false);
 });
+
+test("a recovered full editor state cannot strip a foreign pending group's proof and republish refused text", async () => {
+  const f = await fixture();
+  const first = await f.device();
+  const second = await f.device();
+  const key = "a".repeat(64);
+  await first.records.commit({
+    operationId: "seed",
+    edits: [{ recordId: "card:one", replace: { body: "base", model: "small" } }],
+  });
+  await first.records.bindText({ recordId: "card:one", field: "/body", documentKey: key });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  const observed = await first.records.read("card:one");
+  await first.records.commit({
+    operationId: "careful",
+    edits: [
+      {
+        recordId: "card:one",
+        expectedRevision: observed.revision,
+        set: { "/model": "careful" },
+        text: { "/body": [{ kind: "text.insert", index: 0, text: "REFUSED " }] },
+      },
+    ],
+  });
+  const forwarded = await first.native(key).snapshot();
+  const forged = new Y.Doc();
+  try {
+    Y.applyUpdate(forged, forwarded.state);
+    forged.getMap("ordered-text-frontier").clear();
+    await expect(second.native(key).applySource(forged, { generation: forwarded.generation })).rejects.toMatchObject({
+      code: "invalid_frame",
+    });
+  } finally {
+    forged.destroy();
+  }
+  await second.records.commit({
+    operationId: "competing",
+    edits: [{ recordId: "card:one", set: { "/model": "remote" } }],
+  });
+  await second.sync.synchronize();
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect((await first.records.outcome("careful"))?.state).toBe("refused");
+  expect(await first.native(key).read()).toBe("base");
+  expect(await second.native(key).read()).toBe("base");
+});

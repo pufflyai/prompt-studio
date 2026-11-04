@@ -10,9 +10,9 @@ import { createNativeDocumentRoomsDBService } from "./native-document-rooms";
 import { createNativeFileProjectionsDBService } from "./native-file-projections";
 import { resolveNativeRecordAddress } from "./native-source-address";
 import { upgradeNativeSourceLifetimes } from "./native-source-upgrade";
+import { createPersonalHistoryIndex } from "./personal-history-index";
 import { installRecordIndexes } from "./record-index-installation";
 import { createRecoveryPoints } from "./recovery-points";
-import { createPersonalHistoryIndex } from "./personal-history-index";
 import { getExtensionStorageOwner } from "./storage-owner";
 
 export type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";

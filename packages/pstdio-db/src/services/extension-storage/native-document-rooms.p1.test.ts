@@ -3,9 +3,9 @@ import { createNativeDocumentKey } from "pstdio-api-contracts";
 import { saveTextDocument, seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
 import { native_document_room_updates } from "../../db/schemas.pg";
+import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageDBService } from "./extension-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
-import { createDocumentStorageDBService } from "./document-storage";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
