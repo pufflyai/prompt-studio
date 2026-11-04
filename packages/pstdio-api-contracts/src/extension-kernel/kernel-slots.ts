@@ -109,8 +109,11 @@ export const accountEvents = {
 
 /** View dependencies delivered by the host when synced project data changes. */
 export const viewDataEvents = {
+  recentResourcesChanged: hostEventRef<{ projectId: string }>("view.recent-resources.changed"),
   boardViewsChanged: hostEventRef<{ projectId: string }>("view.board-views.changed"),
   resourceAnchorsChanged: hostEventRef<{ projectId: string }>("view.resource-anchors.changed"),
+  /** Owner data, availability, or host resource presentation changed. */
+  resourcesChanged: hostEventRef<{ projectId: string }>("view.resources.changed"),
   sessionsChanged: hostEventRef<{ projectId: string }>("view.sessions.changed"),
   workspacesChanged: hostEventRef<{ projectId: string }>("view.workspaces.changed"),
   repositoriesChanged: hostEventRef<{ projectId: string }>("view.repositories.changed"),

@@ -1,10 +1,7 @@
 import { Client } from "pg";
 import { createAccountManager, migrateAccountManager } from "pstdio-account-manager";
-import { createRelayAssets, createRelayStorage, migrateRelayStorage } from "../src/index";
-import { initializeRecoveryKey } from "../src/recovery-key";
+import { migrateRelayStorage } from "../src/index";
 import { createFixtureAuthentication, fixtureManagerConfig } from "./manager.fixture";
-
-await initializeRecoveryKey("/recovery/key");
 
 if (process.env.FIXTURE_ADMIN_URL) {
   const admin = new Client({ connectionString: process.env.FIXTURE_ADMIN_URL });
@@ -26,17 +23,6 @@ await migrateAccountManager(managerUrl, "/app/manager-drizzle");
 await migrateRelayStorage(databaseUrl, "/app/drizzle");
 const manager = createAccountManager(managerUrl);
 const auth = createFixtureAuthentication();
-const assets = createRelayAssets({
-  databaseUrl,
-  bucket: process.env.S3_BUCKET!,
-  s3: {
-    endpoint: process.env.S3_ENDPOINT,
-    region: process.env.S3_REGION,
-    forcePathStyle: true,
-    credentials: { accessKeyId: process.env.S3_ACCESS_KEY_ID!, secretAccessKey: process.env.S3_SECRET_ACCESS_KEY! },
-  },
-});
-const storage = createRelayStorage(databaseUrl, assets);
 try {
   const scope = {
     accountId: "built-network-account",
@@ -56,7 +42,6 @@ try {
     name: "Built network smoke",
     platform: "linux",
   });
-  await storage.initialize(scope, "published-network");
   await Bun.write(
     "/fixture/grant.json",
     JSON.stringify({ scope, token: device.token, environmentId: device.deviceId }),
@@ -68,5 +53,5 @@ try {
   );
   console.log("Built fixture initialized separate authority and relay roles");
 } finally {
-  await Promise.all([storage.close(), assets.close(), manager.close(), auth.close()]);
+  await Promise.all([manager.close(), auth.close()]);
 }

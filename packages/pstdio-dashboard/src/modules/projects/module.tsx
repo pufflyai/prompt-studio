@@ -22,6 +22,7 @@ import {
   registerSingleProjectSelectionSync,
   selectProject,
 } from "./project-selection-sync";
+import { registerProjectSetupCommand } from "./project-setup-command";
 
 interface CreateProjectsModuleInput {
   initialProjectId?: string;
@@ -217,6 +218,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       );
 
       registerProjectWidgets(ctx);
+      registerProjectSetupCommand(ctx);
       registerProjectFolder(ctx);
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);

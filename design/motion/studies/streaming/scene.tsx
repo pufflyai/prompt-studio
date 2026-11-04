@@ -1,6 +1,6 @@
 import { Box, Flex, Stack } from "@chakra-ui/react";
-import type { SceneProps } from "motion-lab/kit";
-import { Composer, duration, Message, progress, responseChunks, SceneWindow, timings, track } from "motion-lab/kit";
+import type { SceneProps } from "../../kit";
+import { Composer, duration, Message, progress, responseChunks, SceneWindow, timings, track } from "../../kit";
 
 const StreamingChunk = (props: SceneProps & { chunk: (typeof responseChunks)[number] }) => {
   const { chunk, time, variant, reducedMotion } = props;
@@ -36,7 +36,7 @@ const StreamingChunk = (props: SceneProps & { chunk: (typeof responseChunks)[num
   );
 };
 
-export const Streaming = (props: SceneProps) => {
+const Streaming = (props: SceneProps) => {
   const { time } = props;
   const y = track(time, [
     { at: 0, value: -480, duration: 0 },

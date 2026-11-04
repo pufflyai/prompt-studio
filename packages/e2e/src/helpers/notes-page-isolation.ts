@@ -6,7 +6,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   const notes = nav.getByRole("option", { name: "Notes", exact: true });
   const first = main.getByRole("tab", { name: "Isolation first", exact: true });
   const second = main.getByRole("tab", { name: "Isolation second", exact: true });
-  const add = page.getByLabel("Main panel header", { exact: true }).getByRole("button", { name: "Add panel" });
+  const add = page.locator('[data-workbench-panel-header="main"]').getByRole("button", { name: "Add panel" });
   const renameSelected = async (title: string) => {
     await main.getByRole("tab", { selected: true }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename note", exact: true }).click();

@@ -1,4 +1,4 @@
-import { Box, Button, Text } from "@chakra-ui/react";
+import { Box, Button, Text, VStack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useRef, useState } from "react";
 import { Tooltip } from "./tooltip";
@@ -40,4 +40,44 @@ export const TruncatedLabel: Story = {
   id: "components-overlays-tooltip--truncated-label",
   args: { content: "Session notes for review" },
   render: () => <ResizingLabel />,
+};
+
+const NearbyAction = () => {
+  const [completed, setCompleted] = useState(false);
+  return (
+    <VStack align="start" gap="2">
+      <Tooltip open content="This explains the control" positioning={{ placement: "bottom-start" }}>
+        <Button>Control explanation</Button>
+      </Tooltip>
+      <Button onClick={() => setCompleted(true)}>{completed ? "Action completed" : "Nearby action"}</Button>
+    </VStack>
+  );
+};
+
+export const PointerThrough: Story = {
+  id: "components-overlays-tooltip--pointer-through",
+  description: "A noninteractive tooltip explains a control without blocking nearby actions underneath it.",
+  args: { content: "This explains the control" },
+  render: () => <NearbyAction />,
+};
+
+const InteractiveAction = () => {
+  const [completed, setCompleted] = useState(false);
+  return (
+    <Tooltip
+      open
+      interactive
+      content={
+        <Button onClick={() => setCompleted(true)}>{completed ? "Tooltip action completed" : "Tooltip action"}</Button>
+      }
+    >
+      <Button>Interactive explanation</Button>
+    </Tooltip>
+  );
+};
+
+export const Interactive: Story = {
+  id: "components-overlays-tooltip--interactive",
+  args: { content: "Interactive explanation" },
+  render: () => <InteractiveAction />,
 };

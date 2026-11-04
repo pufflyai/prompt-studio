@@ -84,6 +84,10 @@
     "./dependency-timeline": {
       "import": "./dist/dependency-timeline.js",
       "types": "./dist/dependency-timeline.d.ts"
+    },
+    "./keyframe-timeline": {
+      "import": "./dist/keyframe-timeline.js",
+      "types": "./dist/keyframe-timeline.d.ts"
     }
   },
   "scripts": {
@@ -124,7 +128,6 @@
     "@lexical/rich-text": "^0.40.0",
     "@lexical/selection": "^0.40.0",
     "@lexical/utils": "^0.40.0",
-    "@lexical/yjs": "^0.40.0",
     "@monaco-editor/react": "^4.7.0",
     "@pstdio/sdk": "workspace:*",
     "@tanstack/react-table": "^8.21.3",
@@ -149,8 +152,6 @@
     "prismjs": "^1.30.0",
     "recharts": "^3.9.2",
     "use-stick-to-bottom": "^1.1.3",
-    "y-protocols": "^1.0.7",
-    "y-websocket": "^3.0.0",
     "yjs": "^13.6.29",
     "zustand": "^5.0.8"
   },

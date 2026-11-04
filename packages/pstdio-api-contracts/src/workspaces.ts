@@ -15,6 +15,16 @@ const workspaceProviderRefShape = {
   data: jsonObjectSchema,
 } satisfies Record<keyof WorkspaceProviderRef, z.ZodType>;
 
+export const updateWorkspaceCapacityInputSchema = z.object({ limit: z.number().int().positive().nullable() }).strict();
+export const workspaceCapacitySchema = z.object({
+  deviceId: z.string(),
+  deviceName: z.string(),
+  activeCount: z.number().int().nonnegative(),
+  limit: z.number().int().positive().nullable(),
+});
+export type { WorkspaceCapacity } from "./extension-kernel/types/workspaces";
+export type UpdateWorkspaceCapacityInput = z.infer<typeof updateWorkspaceCapacityInputSchema>;
+
 export const workspaceProviderRefSchema = z.object(workspaceProviderRefShape);
 
 const workspaceProviderStates = [
@@ -107,6 +117,7 @@ export const workspaceSchema = z.object({
 export const workspaceListItemSchema = workspaceSchema;
 
 export const createWorkspaceInputSchema = z.object({
+  device_id: z.string().min(1).optional(),
   project_id: z.string().min(1),
   /** Provider responsible for creating the workspace. */
   provider_id: z.string().min(1),
@@ -119,6 +130,7 @@ export const createWorkspaceInputSchema = z.object({
 });
 
 export const extensionWorkspaceCreateInputSchema = z.object({
+  deviceId: z.string().min(1).optional(),
   projectId: z.string().min(1),
   providerId: z.string().min(1),
   shorthandBase: z.string().trim().min(1).optional(),

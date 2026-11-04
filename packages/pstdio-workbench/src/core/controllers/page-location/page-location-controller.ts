@@ -1,6 +1,7 @@
 import type { NavigationTargetPage, PageLocation } from "@pstdio/sdk/extensions";
 import { isWorkbenchProjectUrl } from "pstdio-api-contracts";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { createWorkbenchEvent } from "../../shared/workbench-event";
 import { createPageHistoryReplay } from "./page-history-replay";
 import { createPageLocationControllerActions } from "./page-location-actions";
@@ -48,19 +49,95 @@ export type {
   WorkbenchPageNavigationResult,
 } from "./page-location-types";
 
+// Missing pages reuse the selected mode, layout persistence and existing page-history entries.
+const clearMissingPage = <Value>(
+  input: CreateWorkbenchPageLocationControllerInput<Value>,
+  history: ReturnType<typeof createPageLocationHistory>,
+  entry: ReturnType<typeof createPageHistoryEntry>,
+  projectId: string | undefined,
+  operation: "push" | "replace" | "none",
+  selectedModeId?: string,
+) => {
+  const internals = getWorkbenchPageRegistryInternals(input.registry);
+  if (!projectId) return false;
+  if (operation === "none") {
+    const current = input.browser.current();
+    if (
+      !isWorkbenchProjectUrl(current.url, projectId) ||
+      (isPageHistoryState(current.state) && current.state.projectId !== projectId)
+    )
+      return false;
+    const location = isPageHistoryState(current.state) ? current.state.location : undefined;
+    const removedDefault =
+      location?.page &&
+      location.page.extensionId === input.startPage.extensionId &&
+      location.page.id === input.startPage.id;
+    if (
+      !removedDefault &&
+      new URL(current.url, "http://workbench.local").pathname.replace(/\/$/, "") !==
+        `/projects/${encodeURIComponent(projectId)}`
+    )
+      return false;
+  }
+  if (
+    input.registry
+      .listPages()
+      .some((page) => page.ref.extensionId === input.startPage.extensionId && page.ref.id === input.startPage.id)
+  )
+    return false;
+  return batchWorkbenchChanges(() => {
+    const current = input.registry.store.getState();
+    const state = internals.prepare.compose(current, {
+      projectId,
+      activeModeId: input.modes.getActiveModeId?.() ?? selectedModeId ?? current.activeModeId,
+      pageStates: current.pageStates,
+      action: "unavailablePage",
+    });
+    const index = history.getIndex() + (operation === "push" ? 1 : 0);
+    if (operation !== "none") input.browser[operation](entry(projectId, undefined, index));
+    history.commitIndex(index, operation === "push");
+    internals.publish(state, "unavailablePage");
+    history.publish();
+    return true;
+  });
+};
+
+const normalizeTarget = <Value>(
+  input: CreateWorkbenchPageLocationControllerInput<Value>,
+  memory: ReturnType<typeof createPageNavigationMemory>,
+  target: NavigationTargetPage,
+): ResolvedPageLocation => {
+  const pages = input.registry.listPages;
+  const resources = getWorkbenchPageRegistryInternals(input.registry).resources;
+  const resolved = normalizeWorkbenchPageTarget({
+    target,
+    pages: pages(),
+    resources,
+    active: input.registry.store.getState().location,
+  });
+  if (target.intent !== "restore") return resolved;
+  return restoreRememberedLocation(
+    resolved,
+    memory.find(resolved.location),
+    (location) => normalizeWorkbenchPageLocation({ location, pages: pages(), resources }),
+    (location) => input.restoreLocation?.(location, input.registry.store.getState().projectId!) ?? location,
+  );
+};
+
 export const createWorkbenchPageLocationController = <Value>(
   input: CreateWorkbenchPageLocationControllerInput<Value>,
 ): WorkbenchPageLocationController => {
   const navigation = createWorkbenchEvent<PageLocation>("page navigation subscriber");
   const internals = getWorkbenchPageRegistryInternals(input.registry);
   const pages = input.registry.listPages;
-  const memory = createPageNavigationMemory({ pages, resources: internals.resources });
+  const resources = internals.resources;
+  const memory = createPageNavigationMemory({ pages, resources });
   const history = createPageLocationHistory();
 
   const fail = createPageLocationFailureHandler(input.reportDiagnostic);
   const historyEntry = createPageHistoryEntry({
     pages,
-    resources: internals.resources,
+    resources,
     removalVersion: input.getResourceRemovalVersion,
     removalEpoch: input.getResourceRemovalEpoch,
   });
@@ -69,7 +146,7 @@ export const createWorkbenchPageLocationController = <Value>(
     levels: input,
     pages,
     normalize: (location) => normalizeStored(location),
-    resourceKey: (resource) => internals.resources.toUri(internals.resources.normalize(resource)),
+    resourceKey: (resource) => resources.toUri(resources.normalize(resource)),
     start: () => start(),
   });
 
@@ -93,7 +170,7 @@ export const createWorkbenchPageLocationController = <Value>(
     );
 
   const normalizeStored = (location: PageLocation): ResolvedPageLocation =>
-    normalizeWorkbenchPageLocation({ location, pages: pages(), resources: internals.resources });
+    normalizeWorkbenchPageLocation({ location, pages: pages(), resources });
   const restoreResolved = (resolved: ResolvedPageLocation, projectId: string, removalVersion?: number) =>
     restoreRememberedLocation(
       resolved,
@@ -101,43 +178,35 @@ export const createWorkbenchPageLocationController = <Value>(
       normalizeStored,
       (location) => input.restoreLocation?.(location, projectId, removalVersion) ?? location,
     );
-  const normalizeTarget = (target: NavigationTargetPage): ResolvedPageLocation => {
-    const resolved = normalizeWorkbenchPageTarget({
-      target,
-      pages: pages(),
-      resources: internals.resources,
-      active: input.registry.store.getState().location,
-    });
-    if (target.intent !== "restore") return resolved;
-    return restoreRememberedLocation(
-      resolved,
-      memory.find(resolved.location),
-      normalizeStored,
-      (location) => input.restoreLocation?.(location, input.registry.store.getState().projectId!) ?? location,
-    );
-  };
 
   const start = (): ResolvedPageLocation =>
     normalizeWorkbenchPageTarget({
       target: { kind: "page", page: input.startPage },
       pages: pages(),
-      resources: internals.resources,
+      resources,
     });
 
-  const resolveUrl = createPageUrlResolver({ pages, resources: internals.resources, normalize: normalizeStored });
+  const missingPage = (projectId: string | undefined, operation: "push" | "replace" | "none", modeId?: string) =>
+    clearMissingPage(input, history, historyEntry, projectId, operation, modeId);
+
+  const resolveUrl = createPageUrlResolver({
+    pages,
+    resources,
+    normalize: normalizeStored,
+    root: start,
+  });
 
   const restore = (
     projectId: string,
     source: "boot" | "project-switch",
     useCurrentUrl: boolean,
+    selectedModeId?: string,
   ): WorkbenchPageNavigationResult => {
     try {
       const browserEntry = input.browser.current();
-      if (isPageHistoryState(browserEntry.state) && browserEntry.state.projectId === projectId) {
+      if (isPageHistoryState(browserEntry.state) && browserEntry.state.projectId === projectId)
         history.adopt(browserEntry.state.index);
-      } else {
-        history.reset();
-      }
+      else history.reset();
       const hasProjectUrl = useCurrentUrl && isWorkbenchProjectUrl(browserEntry.url, projectId);
       const fromUrl = hasProjectUrl ? resolveUrl(projectId, browserEntry) : undefined;
       if (hasProjectUrl && !fromUrl) throw new Error(`Cannot resolve page URL: ${browserEntry.url}`);
@@ -151,18 +220,25 @@ export const createWorkbenchPageLocationController = <Value>(
       const matchesSavedLocation = workbenchPageLocationsEqual(
         persisted?.location,
         resolved.location,
-        internals.resources,
+        resources,
         pages(),
       );
       const prepare = matchesSavedLocation ? prepareState.restore : prepareState.open;
-      const result = publish(projectId, prepare(projectId, resolved, action), "replace", action, () =>
-        memory.consume(resolved.consumeRemembered),
-      );
+      const state = prepare(projectId, resolved, action);
+      const commitRestoration = () => {
+        try {
+          return publish(projectId, state, "replace", action, () => memory.consume(resolved.consumeRemembered));
+        } catch (error) {
+          return fail(source, error);
+        }
+      };
+      const result = commitRestoration();
       if (result.ok && fromUrl && !matchesSavedLocation) navigation.notify(result.location);
       return result;
     } catch (error) {
       fail(source, error);
       try {
+        if (missingPage(projectId, "replace", selectedModeId)) return fail(source, error);
         return commit(projectId, start(), "replace", `${source}StartFallback`);
       } catch (fallbackError) {
         return fail(source, fallbackError);
@@ -176,16 +252,16 @@ export const createWorkbenchPageLocationController = <Value>(
     adopt: history.adopt,
     resolve: resolveUrl,
     restore: restoreResolved,
-    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources, pages()),
+    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, resources, pages()),
     commit,
     notify: navigation.notify,
-    fail: (error) => fail("history", error),
+    fail: (error) => missingPage(input.registry.store.getState().projectId, "none") || fail("history", error),
   });
   const popStateSubscription = input.browser.onPopState(onPopState);
   const pageRemovalSubscription = connectPageOwnerRemoval({
     registry: input.registry,
     pages,
-    resources: internals.resources,
+    resources,
     normalizeStored,
     start,
     commit,
@@ -213,11 +289,12 @@ export const createWorkbenchPageLocationController = <Value>(
     },
     resetHistory: history.reset,
     rootLevelTarget: rootLevel.target,
+    clearMissingPage: () => missingPage(input.registry.store.getState().projectId!, "push"),
     restore,
     resolveUrl,
-    normalizeTarget,
+    normalizeTarget: (target) => normalizeTarget(input, memory, target),
     normalizeStored,
-    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources, pages()),
+    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, resources, pages()),
     commit,
     replay: (projectId, resolved) =>
       createPageLocationReplayer({
@@ -231,7 +308,7 @@ export const createWorkbenchPageLocationController = <Value>(
     closePlacement: closeActivePlacement,
     removeResource: createPageResourceRemover({
       getState: input.registry.store.getState,
-      resources: internals.resources,
+      resources,
       forgetRootLevel: rootLevel.forget,
       forgetMemory: memory.forgetResource,
       persistence: input.persistence,
@@ -246,13 +323,13 @@ export const createWorkbenchPageLocationController = <Value>(
     },
   });
   setPageLocationPreparation<Value>(controller, {
-    resolve: normalizeTarget,
+    resolve: (target) => normalizeTarget(input, memory, target),
     commit: (state, beforePublish, consumeRemembered = []) => {
       if (!state.projectId || !state.location) throw new Error("Cannot navigate before a project is active");
       const history = workbenchPageLocationsEqual(
         input.registry.store.getState().location,
         state.location,
-        internals.resources,
+        resources,
         pages(),
       )
         ? "none"

@@ -4,6 +4,13 @@ import { testContext, testManifest } from "./test-build";
 
 const foundations = "src/foundations.canvas.tsx";
 
+test("falls back to the first built canvas when the requested canvas was removed", async () => {
+  const { ctx } = await testContext();
+  const result = await commands["canvas.read"].run(ctx, { canvas: "src/removed.canvas.tsx" });
+  expect(result.status).toBe("ready");
+  expect(result.canvas?.id).toBe(foundations);
+});
+
 test("resolves canvas resource names from the project's build", async () => {
   const { ctx } = await testContext();
   ctx.resource = { type: "canvas", id: foundations, label: "Previous name" };

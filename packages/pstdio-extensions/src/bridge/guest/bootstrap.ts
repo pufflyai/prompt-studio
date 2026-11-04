@@ -1,4 +1,4 @@
-import { installWebviewKeyboardRelay } from "@pstdio/sdk/extensions";
+import { installWebviewKeyboardRelay } from "@pstdio/sdk/extensions/keyboard";
 import type { WebviewHostProps, WebviewKeyboardShortcut } from "pstdio-api-contracts/extension-kernel";
 import { guest } from "rimless";
 import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";

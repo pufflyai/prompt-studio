@@ -1,7 +1,7 @@
 import { type Asset, assetSchema, syncIdSchema } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { openBlob, sealBlob } from "../encryption";
-import type { AssetStore } from "../types";
+import type { AssetStore } from "../shared";
 import { DocumentBlobMissing, type DocumentSyncInput } from "./document-sync-types";
 
 interface BlobReference {
@@ -19,6 +19,10 @@ const assetsOf = (document: Y.Doc) => {
     }
   }
   return assets;
+};
+export const hasDocumentAssets = (document: Y.Doc) => {
+  for (const name of document.getMap<string>("records").values()) if (document.getMap(name).get("asset")) return true;
+  return false;
 };
 const sha256 = async (bytes: Uint8Array) => {
   const hash = await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>);

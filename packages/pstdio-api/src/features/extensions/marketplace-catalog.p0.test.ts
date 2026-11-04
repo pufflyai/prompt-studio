@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import catalogData from "../../../files/extension-catalog.json";
 import { loadExtensionCatalog, packagedExtensionCatalog, parseExtensionCatalog } from "./extension-catalog";
 
 const entry = (installName: string) => ({
@@ -19,6 +20,17 @@ const entry = (installName: string) => ({
 });
 
 describe("extension catalog", () => {
+  test("identifies every downloadable extension with its manifest ID and icon", () => {
+    for (const extension of catalogData.extensions) {
+      const manifest = JSON.parse(
+        readFileSync(join(import.meta.dir, "../../../../..", extension.origin.path, "package.json"), "utf8"),
+      );
+      expect(extension.extensionId).toBe(`${manifest.publisher}.${manifest.name}`);
+      expect(typeof extension.icon).toBe("string");
+      expect(extension.icon).toBe(manifest.icon);
+    }
+  });
+
   test("rejects duplicate install names", () => {
     expect(() =>
       parseExtensionCatalog({
@@ -94,12 +106,13 @@ describe("extension catalog", () => {
     }
   });
 
-  test("ships only platform extensions as defaults", () => {
+  test("ships Home and platform extensions as defaults", () => {
     const defaults = packagedExtensionCatalog.extensions
       .filter((catalogEntry) => catalogEntry.default)
       .map((catalogEntry) => catalogEntry.installName);
 
     expect(defaults).toEqual([
+      "pstdio-home",
       "harness-claude-code",
       "harness-codex",
       "harness-open-code",

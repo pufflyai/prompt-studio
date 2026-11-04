@@ -1,6 +1,7 @@
 import { createWorkspaceFilesMount, WorkspaceFileAccessError, type WorkspaceMountEntry } from "pstdio-extensions";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
+import { remoteWorkspaceAction } from "../remote-workspace-action";
 import { resolveWorkspaceExecutionTarget } from "../workspace-provider-service";
 import type {
   createWorkspaceDirectoryRoute,
@@ -10,6 +11,10 @@ import type {
   listWorkspaceFilesRoute,
   moveWorkspaceEntryRoute,
   writeWorkspaceFileRoute,
+} from "./workspace-file-routes";
+import {
+  getWorkspaceFileRoute as remoteFileRoute,
+  listWorkspaceFilesRoute as remoteFilesRoute,
 } from "./workspace-file-routes";
 
 export {
@@ -167,6 +172,14 @@ export const listWorkspaceFilesHandler = (
   return async (c) => {
     const { id } = c.req.valid("param");
     const { limit = DEFAULT_LIST_LIMIT, path = "", query } = c.req.valid("query");
+    const forwarded = await remoteWorkspaceAction(
+      remoteFilesRoute,
+      deps,
+      id,
+      { type: "workspace.listFiles", id, limit, path, query },
+      c.req.raw.signal,
+    );
+    if (forwarded) return forwarded;
     const context = await resolveWorkspaceMount(deps, id, "files:read");
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
@@ -205,6 +218,14 @@ export const getWorkspaceFileHandler = (deps: WorkspacesRouteDeps): AppRouteHand
   return async (c) => {
     const { id } = c.req.valid("param");
     const { path } = c.req.valid("query");
+    const forwarded = await remoteWorkspaceAction(
+      remoteFileRoute,
+      deps,
+      id,
+      { type: "workspace.readFile", id, path },
+      c.req.raw.signal,
+    );
+    if (forwarded) return forwarded;
     const context = await resolveWorkspaceMount(deps, id, "files:read");
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 

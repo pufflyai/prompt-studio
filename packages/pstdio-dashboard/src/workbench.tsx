@@ -22,14 +22,15 @@ import { createNotificationsModule } from "./modules/notifications/module";
 import { createPerformanceModule } from "./modules/performance/module";
 import type { DesktopProjectTabsController } from "./modules/projects/desktop-project-tabs-controller";
 import { createProjectsModule } from "./modules/projects/module";
+import { createRecentResourcesModule } from "./modules/recent-resources/module";
 import { createResourceLinksModule } from "./modules/resource-links/module";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
 import { createSidenavModule } from "./modules/sidenav/module";
-import { createStartModule } from "./modules/start/module";
 import { createTerminalModule } from "./modules/terminal/module";
 import { createUpdatesModule } from "./modules/updates/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
+import { dashboardHomePage } from "./shared/app/resources";
 import { resolveDashboardPersistenceScope } from "./shared/workbench/dashboard-persistence-scope";
 import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-sidenav";
 
@@ -54,6 +55,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
   createWorkspacesModule(),
   createExtensionsModule(),
   createResourceLinksModule(),
+  createRecentResourcesModule(),
   createProjectsModule({
     initialProjectId: input.initialProjectId,
     projectSelectionPersistence: input.projectSelectionPersistence,
@@ -70,7 +72,6 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
   createSettingsModule(),
   createPerformanceModule(input.settings),
   createUpdatesModule(),
-  createStartModule(),
   createWorkbenchTerminalModule(),
   createTerminalModule(),
   createBootstrapModule({
@@ -104,6 +105,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const urlProjectId = pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
   const workbench = createWorkbench({
+    startPage: dashboardHomePage,
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
     regionSettings: {

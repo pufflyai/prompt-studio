@@ -20,6 +20,56 @@ afterEach(async () => {
 });
 
 describe("workspace provider operations", () => {
+  test.each([
+    { provider_ref_json: { version: 1 as const, data: { remoteId: "recovered" } } },
+    { provider_state: "ready" as const },
+    { execution_kind: "local" as const },
+    { root_path: "/recovered/path" },
+  ])("forget atomically rejects changed eligibility: %j", async (recovered) => {
+    const workspace = await workspacesService.createStandalone({ project_id: projectId, provider_id: "nope" });
+    await workspacesService.updateProviderProjection(workspace.id, {
+      provider_state: "provider_missing",
+      execution_kind: "remote",
+      ...recovered,
+    });
+    const before = await workspacesService.get(workspace.id);
+
+    expect(await workspacesService.softDelete(workspace.id, { forget: true })).toBeNull();
+    expect(await workspacesService.get(workspace.id)).toEqual(before);
+  });
+
+  test("forget atomically removes an eligible orphan", async () => {
+    const workspace = await workspacesService.createStandalone({ project_id: projectId, provider_id: "nope" });
+    await workspacesService.updateProviderProjection(workspace.id, {
+      provider_state: "provider_missing",
+      execution_kind: "remote",
+    });
+
+    expect(await workspacesService.softDelete(workspace.id, { forget: true })).not.toBeNull();
+    expect((await workspacesService.get(workspace.id))?.deleted_at).toBeTruthy();
+  });
+
+  test("rejects stale recovery writes after a workspace is forgotten", async () => {
+    const workspace = await workspacesService.createStandalone({
+      project_id: projectId,
+      provider_id: "example.remote",
+      provider_state: "provider_missing",
+      provider_operation_id: "recover-create",
+      provider_operation_kind: "delete",
+    });
+    await workspacesService.softDelete(workspace.id);
+    const deleted = await workspacesService.get(workspace.id);
+
+    const updated = await workspacesService.updateProviderOperationProjection(workspace.id, {
+      operationId: "recover-create",
+      operationKind: "delete",
+      patch: { provider_params_json: { recovered: true } },
+    });
+
+    expect(updated).toBeNull();
+    expect(await workspacesService.get(workspace.id)).toEqual(deleted);
+  });
+
   test("atomically replaces a referenced pending create with a cleanup operation", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,

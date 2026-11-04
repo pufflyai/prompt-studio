@@ -69,12 +69,11 @@
     ".pstdio/extensions/font-editor",
     ".pstdio/extensions/pstdio-dev",
     "scripts",
-    ".pstdio/extensions/motion-lab",
     ".pstdio/extensions/social-radar",
-    ".pstdio/extensions/shader-lab",
     ".pstdio/extensions/shape-art",
     "services/telemetry",
-    "services/psx"
+    "services/psx",
+    "design"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.4.10",

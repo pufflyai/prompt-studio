@@ -30,6 +30,13 @@ const environment: CommandRunnerEnvironment = {
   workspaces: {
     addAnchors: async () => {},
     removeAnchors: async () => {},
+    getCapacity: async () => ({ deviceId: "test-device", deviceName: "Test device", activeCount: 0, limit: null }),
+    updateCapacity: async ({ limit }) => ({
+      deviceId: "test-device",
+      deviceName: "Test device",
+      activeCount: 0,
+      limit,
+    }),
     listProviders: async () => [],
     getDefault: async () => null,
     list: async () => [],

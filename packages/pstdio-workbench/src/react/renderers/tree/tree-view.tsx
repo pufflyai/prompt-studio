@@ -59,7 +59,11 @@ const useSidenavContextActions = (
   onChange: SidenavContextActionsChange | undefined,
 ) => {
   const actionsRef = useRef(actions);
-  actionsRef.current = actions;
+  // Updated after render, before the effect below reads it: React Compiler skips hooks that write
+  // refs while rendering.
+  useEffect(() => {
+    actionsRef.current = actions;
+  }, [actions]);
 
   useEffect(() => {
     void revision;
@@ -227,6 +231,10 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds);
 
   const navigationContext = { workbench, treeViewId, onOpenResourceError };
+  // One handler for every list: an inline one inside a list's JSX changes whenever that list's other props do,
+  // and every row of the list would render again.
+  const navigate = (event: { nodeId: string; intent?: { id?: string; payload?: unknown } }) =>
+    navigateTreeNode(navigationContext, event.nodeId, event.intent);
 
   return (
     <TreeListDragProvider
@@ -261,10 +269,11 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               onReorderSections={(nextSectionIds) => onReorderSections("header", nextSectionIds)}
               onReorderNodes={onReorderNodes}
               canMove={treeRenderer.canMove}
-              onNavigate={(event) => navigateTreeNode(navigationContext, event.nodeId, event.intent)}
+              onNavigate={navigate}
             />
           </Flex>
         ) : null}
+        {isSidenav ? <TreeModeReturn workbench={workbench} /> : null}
         <TreeViewSearch
           visible={Boolean(treeRenderer.searchable)}
           placeholder={treeRenderer.searchPlaceholder}
@@ -287,7 +296,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         >
           <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
             <TreeViewBody
-              leadingContent={isSidenav ? <TreeModeReturn workbench={workbench} /> : undefined}
               error={error}
               loading={loading}
               moduleLoading={treeState.loading}
@@ -305,7 +313,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               onReorderNodes={onReorderNodes}
               canMove={treeRenderer.canMove}
               onMoveNode={moveNode}
-              onNavigate={(event) => navigateTreeNode(navigationContext, event.nodeId, event.intent)}
+              onNavigate={navigate}
             />
           </Box>
         </ScrollArea>
@@ -325,7 +333,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               onReorderSections={(nextSectionIds) => onReorderSections("footer", nextSectionIds)}
               onReorderNodes={onReorderNodes}
               canMove={treeRenderer.canMove}
-              onNavigate={(event) => navigateTreeNode(navigationContext, event.nodeId, event.intent)}
+              onNavigate={navigate}
             />
           </Flex>
         ) : null}
@@ -333,7 +341,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           request={paramsRequest}
           renderParamField={renderParamField}
           workbench={workbench}
-          onClose={() => setParamsRequest(null)}
+          onClose={() => setParamsRequest((current) => (current === paramsRequest ? null : current))}
         />
       </Flex>
     </TreeListDragProvider>

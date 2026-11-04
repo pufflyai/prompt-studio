@@ -32,7 +32,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "pstdio-sync",
     "pstdio-sync-contracts",
-    "pstdio-relay",
     "pstdio-benchmarks",
     "storage-scale-fixture",
   ],
@@ -91,6 +90,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-api-contracts",
     "pstdio-extensions",
     "pstdio-sync-contracts",
+    "pstdio-sync",
     "pstdio-benchmarks",
   ],
   "pstdio-dashboard": [
@@ -115,8 +115,11 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // e2e also declares the extensions it installs at runtime and the dashboard it serves,
   // so changing one marks e2e as affected.
   e2e: [
+    "@pstdio/ui",
     "@pstdio/sdk",
+    "@pstdio/workbench",
     "pstdio",
+    "pstdio-api",
     "pstdio-api-contracts",
     "pstdio-db",
     "pstdio-diagnostics",
@@ -124,6 +127,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-sync",
     "pstdio-sync-contracts",
     "pstdio-wt",
+    "pstdio-relay",
     "canvas",
     "extension-lab",
     "harness-claude-code",
@@ -132,6 +136,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "harness-pi",
     "local-example",
     "pstdio-artifacts",
+    "pstdio-home",
     "pstdio-base-themes",
     "pstdio-dashboard",
     "pstdio-notes",
@@ -161,7 +166,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-scripts",
   ],
   "@pstdio/landing-page": ["@pstdio/canvas", "@pstdio/ui"],
-  "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],
+  "design-studies": ["@pstdio/canvas", "@pstdio/ui"],
 };
 
 // Extensions may only consume the public authoring surface.
@@ -185,6 +190,8 @@ export const FORBIDDEN_FOLDER_SPECIFIERS: Record<string, { folder: string; speci
 // lower limit as soon as an entry is removed. The API exposes only its app and runtime.
 export const DEFAULT_PRIVATE_EXPORT_LIMIT = 2;
 export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
+  // These are ownership boundaries, not file-level escape hatches.
+  "pstdio-sync": 6,
   "pstdio-api": 2,
   "pstdio-api-contracts": 7,
   "pstdio-extensions": 12,

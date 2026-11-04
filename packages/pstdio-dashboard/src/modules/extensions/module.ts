@@ -31,6 +31,7 @@ import {
   setDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
 import { invalidateExtensionQueries } from "@/shared/extensions/project-extension-cache";
+import { subscribeResourceViewDataEvents } from "@/shared/extensions/resource-view-data-events";
 import {
   clearCachedDashboardExtensionMetadata,
   dashboardEditableTemplatesContextKey,
@@ -52,6 +53,7 @@ import {
   registerExtensionContributions,
 } from "./extension-contribution-registration";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
+import { registerExtensionsPage } from "./extensions-page";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
@@ -81,6 +83,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
   ({
     id: "dashboard.extensions",
     activate(ctx: WorkbenchModuleContext) {
+      registerExtensionsPage(ctx);
       const owner = getRuntimeCollections();
       const executeCommand = input.executeCommand ?? executeExtensionCommand;
       const loadAppearance = input.loadAppearance ?? getProjectExtensionAppearance;
@@ -261,6 +264,11 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       i18n.on("languageChanged", reapplyLocale);
       const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refreshProject);
       const unsubscribeViewData = subscribeCoreViewDataEvents();
+      const unsubscribeResourceData = subscribeResourceViewDataEvents({
+        projectId: () => projectId,
+        refreshEventIds: () =>
+          ctx.commandPaletteResources.listProviders().flatMap((provider) => provider.refreshEventIds ?? []),
+      });
       const unsubscribeSync = subscribeCollections((change) => {
         if (!change) return;
         if (extensionSyncTables.has(change.table)) {
@@ -286,6 +294,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           unsubscribeProject();
           unsubscribeSync();
           unsubscribeViewData();
+          unsubscribeResourceData();
         },
       };
     },

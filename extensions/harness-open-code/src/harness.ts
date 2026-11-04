@@ -20,19 +20,22 @@ import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-
 
 // --- Detection ---
 
-const readOpencodeModels = async (ctx: HarnessContext) => {
-  try {
-    const result = await ctx.process.run({ command: [resolveOpencodeCommand(), "models", "--verbose"] });
-    if (result.exitCode !== 0) return "";
-    return result.stdout.trim();
-  } catch {
-    return "";
-  }
+const readOpencodeModels = async (ctx: HarnessContext, version?: string) => {
+  const number = version?.match(/\d+\.\d+\.\d+/)?.[0];
+  // A private v2 server receives this runtime's environment and exits after discovery.
+  const args =
+    number && Bun.semver.satisfies(number, ">=2.0.0")
+      ? ["api", "GET", "/api/model", "--standalone"]
+      : ["models", "--verbose"];
+  const result = await ctx.process.run({ command: [resolveOpencodeCommand(), ...args] });
+  // Native API output may contain provider credentials. Never include it in diagnostics.
+  if (result.exitCode !== 0) throw new Error("OpenCode model command failed. Check the OpenCode installation.");
+  return result.stdout.trim();
 };
 
 type OpencodeHarnessDeps = {
   detect: NonNullable<HarnessProvider["detect"]>;
-  getModelsOutput: (ctx: HarnessContext) => Promise<string>;
+  getModelsOutput: (ctx: HarnessContext, version?: string) => Promise<string>;
   // Tests shorten the session poll interval; the pollers own the default.
   pollIntervalMs?: number;
 };
@@ -122,15 +125,16 @@ export const createOpencodeHarness = (
   let modelCache: { expiresAt: number; value: Promise<ReturnType<typeof parseOpencodeModels>> } | undefined;
 
   const listModels = async (ctx: HarnessContext) => {
-    if (!(await deps.detect(ctx)).available) return [];
+    const detection = await deps.detect(ctx);
+    if (!detection.available) return [];
     if (modelCache && modelCache.expiresAt > Date.now()) return modelCache.value;
 
     const value = deps
-      .getModelsOutput(ctx)
+      .getModelsOutput(ctx, detection.version)
       .then(parseOpencodeModels)
-      .catch((error) => {
+      .catch(() => {
         modelCache = undefined;
-        ctx.logger.warn(`OpenCode model discovery failed: ${error instanceof Error ? error.message : String(error)}`);
+        ctx.logger.warn("OpenCode model discovery failed. Check the OpenCode installation and provider configuration.");
         return [];
       });
     modelCache = { expiresAt: Date.now() + MODEL_CACHE_TTL_MS, value };

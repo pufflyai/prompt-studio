@@ -7,7 +7,7 @@ import { showSidenavEntry } from "./helpers/sidenav-navigation";
 
 test.use({ notificationsEnabled: true });
 
-const allSectionRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
+const allSectionRowNames = ["Home", "Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
 const withoutWorkspaces = allSectionRowNames.filter((name) => name !== "Workspaces");
 
 const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
@@ -122,7 +122,8 @@ test("removes and restores owner-scoped collections across project and session p
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
   ).toBeVisible();
   await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
-  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAccessibleName("Home");
+  await expect(row(sidenav, "Search")).toBeVisible();
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
@@ -260,6 +261,7 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   };
   const top = async (target: Locator) => (await target.boundingBox())!.y;
 
+  await drag(option("Home"), lowerHalfOf(option("Workspaces")));
   await drag(option("Search"), lowerHalfOf(option("Workspaces")));
   await expect(sidenav.locator("[data-tree-list-node-id]").first()).not.toHaveAttribute(
     "data-tree-list-node-id",
@@ -271,6 +273,7 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
 
   await drag(option("Settings"), lowerHalfOf(option("Workspaces")));
   await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Workspaces")));
+  await drag(option("Extensions"), lowerHalfOf(option("Workspaces")));
   expect(await top(option("Settings"))).toBeLessThan(await top(option("Scribble")));
   await drag(option("Settings"), middleOf(zone));
   expect(await top(option("Settings"))).toBeGreaterThan(await top(option("Scribble")));

@@ -52,11 +52,13 @@ test("Go destinations use shortcut mode while history chords and Shift slash rem
   await expect(page).toHaveURL(/\/sessions\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Alt+Shift+ArrowRight");
   await expect(page).toHaveURL(/\/sessions\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  // Shortcut help is available outside inputs; history restores the composer's focus.
+  await page.getByRole("button", { name: "Help", exact: true }).focus();
   await page.keyboard.press("Shift+/");
   const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
   await expect(reference).toBeVisible();
@@ -299,7 +301,8 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
     ["K", "Tickets", /\/tickets$/],
     ["A", "Artifacts", /\/artifacts$/],
   ] as const) {
-    await page.goto(`/projects/${project.id}/tickets`);
+    await page.getByRole("option", { name: "Home", exact: true }).click();
+    await (await showSidenavEntry(page, "Tickets")).click();
     await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
@@ -318,7 +321,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
   await page.keyboard.press("h");
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("n");

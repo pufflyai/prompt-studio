@@ -3,6 +3,7 @@ import { apiClient } from "@/features/api-client";
 
 export const createSession = async (input: {
   project_id: string;
+  device_id?: string;
   title: string;
   prompt?: string;
   agent?: string;

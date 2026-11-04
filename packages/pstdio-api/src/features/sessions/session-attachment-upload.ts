@@ -17,7 +17,7 @@ export class SessionAttachmentUploadError extends Error {
 export const uploadSessionAttachment = async (
   deps: SessionsRouteDeps,
   projectId: string,
-  input: { name: string; data: Uint8Array | ArrayBuffer; mimeType?: string | null },
+  input: { name: string; data: Uint8Array | ArrayBuffer; mimeType?: string | null; fileId?: string },
 ) => {
   const data = Buffer.from(input.data instanceof ArrayBuffer ? new Uint8Array(input.data) : input.data);
   if (data.byteLength > 25 * 1024 * 1024)
@@ -36,6 +36,7 @@ export const uploadSessionAttachment = async (
     );
   const file = await deps.fileService.upload({
     project_id: projectId,
+    id: input.fileId,
     file_name: input.name,
     file_kind: SESSION_ATTACHMENT_FILE_KIND,
     data,

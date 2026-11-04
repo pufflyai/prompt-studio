@@ -44,3 +44,16 @@ type Story = CanvasFrame<typeof meta>;
 export const EditableAndLocked: Story = {
   id: "modules-sessions-workspace-selector--editable-and-locked",
 };
+
+export const NoWorkspace: Story = {
+  args: {
+    workspaces: [],
+    selectedWorkspaceId: "",
+    selectedWorkspaceLabel: "",
+    onOpenWorkspace: undefined,
+  },
+};
+
+export const NewSessionDraft: Story = {
+  args: { onOpenWorkspace: undefined },
+};

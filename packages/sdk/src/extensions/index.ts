@@ -2,15 +2,24 @@ export type {
   HistoryProjection,
   HistoryRecoveryInput,
   HistoryRecoveryResult,
+  ToolResultSummary,
 } from "pstdio-api-contracts";
 export {
+  createToolOutputBuffer,
   HistoryConflict,
   historyMessageKey,
   historyValueKey,
   mergeHistoryMetadata,
+  normalizeMessageResults,
+  normalizeToolResult,
+  projectToolResultRecovery,
+  publishConversationChanges,
   reconcileMessageHistory,
   splitHistoryTurns,
   submittedPrompt,
+  TOOL_RESULT_LIMIT_BYTES,
+  toolOutputFingerprint,
+  toolResultBytes,
 } from "pstdio-api-contracts/collections";
 export type * from "pstdio-api-contracts/extension-kernel";
 export type {
@@ -55,6 +64,7 @@ export {
   storageLimits,
   VIEW_FILTER_CONDITIONS,
   viewDataEvents,
+  workbenchCommands,
   workbenchModeDefinitions,
   workbenchModes,
   workbenchPageDefinitions,
@@ -110,6 +120,7 @@ export {
   type PropsStore,
   type WebviewFilesClient,
 } from "./define-extension-view";
+export { defineTextSource } from "./define-text-source";
 export { resolveEventReferenceId } from "./event-reference";
 export { chooseHarnessAuthentication } from "./harness-authentication";
 export {
@@ -197,6 +208,8 @@ export type {
   NotificationStatus,
   UpdateNotificationInput,
 } from "./resource-compat";
+export { createTextEditingClient } from "./text-editing-client";
+export type * from "./text-editing-types";
 export { isWebviewCapabilityError, type WebviewCapabilityError } from "./webview-capability-error";
 export type { WebviewPageClient } from "./webview-page-client";
 export type { WebviewPerformanceClient } from "./webview-performance-client";

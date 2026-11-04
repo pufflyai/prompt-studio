@@ -88,6 +88,11 @@ describe("createWorkspaceSessionsDBService", () => {
 
     expect(sessions).toHaveLength(2);
     expect(sessions.map((s) => s.id).sort()).toEqual([s1.id, s2.id].sort());
+
+    await workspacesService.softDelete(ws.id);
+    expect((await workspaceSessionsService.listByWorkspace(ws.id)).map((s) => s.id).sort()).toEqual(
+      [s1.id, s2.id].sort(),
+    );
   });
 
   test("allows concurrent sessions on the same workspace", async () => {

@@ -66,6 +66,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
                   workbench: renderInput.workbench,
                   webviewId: panel.id,
                   placement: renderInput.instance,
+                  textTarget: renderInput.textTarget,
                   hostEvents: getBridgeWebviewHostEventPublisher(renderInput.workbench, renderInput.instance),
                 },
                 createHostAdapters: createExtensionHostAdapters(input, slotKind),

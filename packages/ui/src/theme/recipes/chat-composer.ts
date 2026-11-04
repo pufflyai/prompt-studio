@@ -24,7 +24,7 @@ export const chatComposerRecipe = defineSlotRecipe({
         workspace: {
           padding: "2xs",
           borderRadius: "xs",
-          bg: "bg.muted",
+          bg: "var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-subtle))",
         },
       },
     },

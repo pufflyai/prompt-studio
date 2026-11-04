@@ -3,10 +3,10 @@
 A workspace is where sessions run. A project's default folder workspace shares files between sessions and needs no Git setup.
 
 ```sh
-pst workspaces create --provider <id> [--params <json>]
+pst workspaces create --provider <id> [--params <json>] [--device <device-id>]
 pst workspaces list [--json]
 pst workspaces merge --id <workspace-shorthand> [--delete-workspace]
-pst workspaces delete --id <workspace-shorthand>
+pst workspaces delete --id <workspace-shorthand> [--forget]
 ```
 
 Run these commands inside a linked project. A workspace shorthand is the short name shown in workspace lists:
@@ -31,7 +31,9 @@ On the CLI, pass the provider ID and its parameters as JSON:
 pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'
 ```
 
-Parameters are checked before anything is created. Unknown keys and missing required values fail, and the error lists the accepted parameters and choices. Omitted values use their declared defaults. The Git `base` parameter defaults to the current branch. It also accepts any valid commit, such as `HEAD` or a commit SHA. An invalid revision fails before a workspace record or worktree is created.
+The provider must be available on the current host. Unknown or unavailable providers fail before a workspace record is saved. Parameters are checked before anything is created. Unknown keys and missing required values fail, and the error lists the accepted parameters and choices. Omitted values use their declared defaults. The Git `base` parameter defaults to the current branch. It also accepts any valid commit, such as `HEAD` or a commit SHA. An invalid revision fails before a workspace record or worktree is created.
+
+**Unreleased:** `--device <device-id>` creates a workspace on one of your online Cloud devices. Provider parameters and paths are interpreted there. Use `pst devices list` to find its ID. The project must sync on both devices; no command waits for an offline device.
 
 ## Git worktrees
 
@@ -45,6 +47,18 @@ Remote providers supply their own source and environment. They do not upload or 
 
 `delete` asks the provider to clean up its resources and removes the workspace. Folders that you chose yourself stay on disk.
 
+If an orphaned record has a missing provider, remote execution kind, no saved provider reference, and no local path, explicitly discard it with:
+
+```sh
+pst workspaces delete --id WS-5 --forget
+```
+
+Forgetting removes the record and archives its sessions. It abandons recovery and leaves any remote resource unchanged. A missing reference can mean a remote creation response was lost, so check the provider directly for resources before forgetting. Normal deletion preserves recovery when the provider or its response is unavailable. Default workspaces, local workspaces, and workspaces with a saved backing reference cannot be forgotten.
+
+The HTTP API accepts `DELETE /v1/workspaces/{id}?forget=true`. SDK clients use `client.workspaces.delete(id, { forget: true })`. Omitting the option, or passing `false`, keeps normal deletion behavior.
+
+Forgetting checks eligibility before cancelling or archiving sessions. If session cleanup fails after the record is removed, repeat the HTTP or SDK request with the same workspace ID to finish cleanup. The saved workspace/session links remain available for that retry.
+
 Run `pst workspaces <command> --help` for current options.
 
 ## File links
@@ -55,4 +69,4 @@ Run inside a linked project:
 pst workspaces file-link --workspace WS-1 --path src/app.ts --line 12 --column 4
 ```
 
-The command accepts a workspace shorthand or UUID and prints JSON containing `href`, a canonical dashboard path. Paths are workspace-root relative. The command does not read or change the file. A column requires a line; coordinates must be positive integers. Copied URLs restore the selected file after reload. Remote workspace file transport remains unavailable.
+The command accepts a workspace shorthand or UUID and prints JSON containing `href`, a canonical dashboard path. Paths are workspace-root relative. The command does not read or change the file. A column requires a line; coordinates must be positive integers. Copied URLs restore the selected file after reload. Unreleased Cloud device commands let the API read another device's files and diff while that device is online; remote file content is read-only.

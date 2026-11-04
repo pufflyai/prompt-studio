@@ -5,10 +5,26 @@ import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { acknowledgeAutoBuildWake, readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
 import { withWriteGuard } from "../data/write-guard";
+import { readImplementationCapacity } from "./attempt-readiness";
 import { supervisorWakePrompt } from "./auto-build-prompts";
 import { acknowledgePullRequestNotifications, readPendingPullRequestRepair } from "./auto-build-pull-request-progress";
 import { isUnexpectedExit } from "./auto-build-resume";
 import { isLiveSession } from "./auto-build-sessions";
+
+const implementationCapacityFull = async (ctx: CommandContext) => {
+  const { running, limit } = await readImplementationCapacity(ctx);
+  return running >= limit;
+};
+
+const followupSuperseded = (
+  latest: Awaited<ReturnType<CommandContext["sessions"]["get"]>>,
+  expected: { status: string; startedAt?: string | null; endedAt?: string | null },
+) =>
+  latest &&
+  latest.status !== "failed" &&
+  (latest.status !== expected.status ||
+    latest.lastRequestStarted !== expected.startedAt ||
+    latest.lastRequestEnded !== expected.endedAt);
 
 const timestamp = (value: string | null | undefined) => (value ? Date.parse(value) : 0);
 
@@ -71,6 +87,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
       const stalled = progress.some((work) => work?.active) && Date.now() - progressAt >= 60 * 60 * 1000;
       const pendingWake = supervisor.pendingWakeRevision === mode.revision;
       if (!pendingWake && !stalled && session.status !== "failed" && !progress.some((work) => work?.changed)) return;
+      if (await implementationCapacityFull(ctx)) return;
       const current = await readAutoBuildMode(ctx);
       if (!current?.enabled || current.revision !== mode.revision) return;
       try {
@@ -83,14 +100,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
         await acknowledgeAutoBuildWake(ctx, supervisor);
       } catch (error) {
         const latest = await ctx.sessions.get(session.id);
-        if (
-          latest &&
-          latest.status !== "failed" &&
-          (latest.status !== expectedRun.status ||
-            latest.lastRequestStarted !== expectedRun.startedAt ||
-            latest.lastRequestEnded !== expectedRun.endedAt)
-        )
-          return;
+        if (followupSuperseded(latest, expectedRun)) return;
         await pauseAutoBuildMode(ctx, mode);
         throw error;
       }

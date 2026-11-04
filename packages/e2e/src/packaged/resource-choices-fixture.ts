@@ -1,16 +1,11 @@
 import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { installBuiltSdk } from "../helpers/installed-sdk";
 
 export const writeResourceChoicesExtension = (root: string) => {
   const source = join(root, "extensions", "resource-choices");
-  const sdk = join(source, "node_modules", "@pstdio", "sdk");
-  mkdirSync(sdk, { recursive: true });
-  cpSync(join(import.meta.dirname, "../../../sdk/dist"), join(sdk, "dist"), { recursive: true });
-  writeFileSync(
-    join(sdk, "package.json"),
-    JSON.stringify({ name: "@pstdio/sdk", type: "module", exports: { "./extensions": "./dist/extensions/index.js" } }),
-  );
+  mkdirSync(source, { recursive: true });
   writeFileSync(
     join(source, "package.json"),
     JSON.stringify({
@@ -23,4 +18,5 @@ export const writeResourceChoicesExtension = (root: string) => {
     }),
   );
   cpSync(join(import.meta.dirname, "../fixtures/resource-choices/extension.ts"), join(source, "extension.ts"));
+  installBuiltSdk(source);
 };

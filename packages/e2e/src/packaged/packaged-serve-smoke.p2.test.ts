@@ -1,6 +1,10 @@
+// packaged-page-params-during-mount.p2.test.ts covers host props changed during async guest initialization.
+// packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
+// packaged-collection-view-order-smoke.p2.test.ts keeps Save view clickable beneath explanatory tooltips.
+// packaged-extension-icons.p1.spec.ts covers public SVG assets and light/dark image colors.
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -9,18 +13,26 @@ import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } f
 import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves and independent schema dependencies.
+// packaged-native-settings.p2.spec.ts checks the Extensions nav page, direct routes, reload, native settings and scrolling.
+// packaged-marketplace-search.p1.spec.ts finds downloads by their visible full ID.
+// Git-free installation preserves bundled extension IDs, names and icon metadata.
 // packaged-extension-settings-smoke.p2.test.ts checks device settings across projects and restarts.
 // packaged-independent-extensions-smoke.p2.test.ts checks stable and nightly extension package versions.
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.
+// packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs, incremental device index edits, and complete offline history after restart.
+// packaged-tool-result-limit.p2.test.ts bounds a 76 MB failed result, including duplicate details, across restart.
 // Packaged harnesses expose scoped account state and a private interactive account channel.
 // harness-npm-detection.p1.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
+import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./packaged-native-markdown-smoke";
+// The Markdown fixture resolves/projects a registered source and uses the public SDK session through authenticated agent admission, preserving front matter and one Yjs runtime.
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
 // packaged-canvas-install.p2.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
+// Catalog IDs and extension icons remain available through the compiled host.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/workbench-package-consumer.ts checks packaged activation, scoped status persistence and overlay exports.
@@ -29,15 +41,18 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // packaged-session-tools.p1.spec.ts checks draft/session/tool tab restoration across navigation and reload, creation, closure and New session tools.
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.
-// packaged-notes-page.p2.spec.ts checks Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
+// packaged-notes-page.p2.spec.ts checks immediate palette creation, Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
 // packaged-planner-timeline-smoke.ts checks side-panel attention actions without leaving the board or timeline.
 // packaged-lab-selection.p2.spec.ts checks tabless selection, retained frames, shared edits and saved transforms.
 // packaged-scribble-pages.p2.spec.ts checks native Scribble pages, drafts, favorites and group operations.
 // performance-observer.p2.test.ts checks native CPU units and memory through the compiled observer's direct startup path.
+// packaged-core-extensions-smoke.p1.test.ts installs Home through packed public SDK/UI packages and checks its landing declaration.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
+// packaged-artifact-watch-limit.p2.test.ts checks watched mounts refresh when an initial tree exceeds the folder limit.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
 // packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
 // packaged-document-sync-smoke.p1.test.ts checks verified-document progress and pending counts through the compiled host.
+// packaged-workspace-cleanup-smoke.p1.test.ts rejects unavailable providers before saving rows and bounds provider deletion concurrency.
 // packaged-account-smoke.p2.test.ts checks rejected-device sign-in recovery across restarts and explicit sign-out.
 // packaged-document-sync-smoke.p1.test.ts checks encrypted large-save blobs trigger record-stream compaction.
 // packaged-two-device-sync-smoke.p2.test.ts opens a recovered cloud project in the picker and restores its managed files.
@@ -93,12 +108,41 @@ test(
       const navigationProbe = writeNavigationExtension(tempRoot);
       const nativeActions = writeNativeActionsExtension(tempRoot);
       const otherNativeActions = writeNativeActionsExtension(join(tempRoot, "other-source"), "other");
+      const catalogPath = join(tempRoot, "catalog.json");
+      writeFileSync(
+        catalogPath,
+        JSON.stringify({
+          version: 1,
+          extensions: [
+            {
+              installName: "metadata-probe",
+              extensionId: "test.metadata-probe",
+              displayName: "Metadata probe",
+              icon: "Blocks",
+              description: "",
+              origin: { kind: "git", url: "https://example.com/probe.git", path: "extension", ref: "main" },
+              default: false,
+            },
+            {
+              installName: "servicing-only",
+              extensionId: "test.servicing-only",
+              displayName: "Servicing only",
+              description: "",
+              listed: false,
+              origin: { kind: "git", url: "https://example.com/probe.git", path: "extension", ref: "main" },
+              default: false,
+            },
+          ],
+        }),
+      );
       const started = await startPackagedServe(tempRoot, {
+        PSTDIO_EXTENSION_CATALOG: catalogPath,
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
           { source: nativeActions, installName: "native-actions" },
+          { source: writeNativeMarkdownExtension(tempRoot), installName: "native-markdown" },
           { source: otherNativeActions, installName: "other-native-actions" },
         ]),
         HTTPS_PROXY: "http://127.0.0.1:9",
@@ -108,6 +152,21 @@ test(
         OPENAI_API_KEY: "provider-secret",
       });
       child = started.child;
+
+      const capacityUrl = `${started.baseUrl}/v1/workspaces/capacity`;
+      const capacityHeaders = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
+      const initialCapacity = await fetch(capacityUrl, { headers: capacityHeaders });
+      expect(initialCapacity.status).toBe(200);
+      expect(await initialCapacity.json()).toMatchObject({ activeCount: 0, limit: null });
+      for (const limit of [1, null]) {
+        const updated = await fetch(capacityUrl, {
+          method: "PATCH",
+          headers: capacityHeaders,
+          body: JSON.stringify({ limit }),
+        });
+        expect(updated.status).toBe(200);
+        expect(await updated.json()).toMatchObject({ activeCount: 0, limit });
+      }
 
       const projectFolder = join(tempRoot, "project");
       const peerFolder = join(tempRoot, "peer-project");
@@ -141,7 +200,12 @@ test(
 
       const body = (await extensionsRes.json()) as {
         extensions: Array<{ enabled: boolean; installName: string; name: string }>;
+        marketplace: Array<{ extensionId?: string; icon?: string }>;
       };
+      expect(body.marketplace).toContainEqual(
+        expect.objectContaining({ extensionId: "test.metadata-probe", icon: "Blocks" }),
+      );
+      expect(body.marketplace).not.toContainEqual(expect.objectContaining({ extensionId: "test.servicing-only" }));
       const extension = body.extensions.find((entry) => entry.installName === "dep-ext");
 
       expect(extension).toMatchObject({
@@ -149,6 +213,12 @@ test(
         name: "dep-ext",
       });
       await expectPackagedNativeActions({
+        projectFolder,
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      await expectPackagedNativeMarkdown({
         projectFolder,
         baseUrl: started.baseUrl,
         projectId: project.id,
@@ -192,7 +262,7 @@ test("packaged CLI includes automation and machine authentication", () => {
 });
 
 test(
-  "installs bundled defaults without Git and does not offer Git workspaces",
+  "installs bundled defaults and recovers existing extensions without Git",
   expectPackagedGitFreeExtensions,
   PACKAGED_TEST_TIMEOUT,
 );

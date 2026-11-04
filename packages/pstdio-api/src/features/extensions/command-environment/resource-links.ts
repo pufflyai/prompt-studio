@@ -1,4 +1,9 @@
-import { addResourceAnchorsSchema, removeResourceAnchorsSchema, resourceAnchorQuerySchema } from "pstdio-api-contracts";
+import {
+  addResourceAnchorsSchema,
+  removeResourceAnchorsSchema,
+  resourceAnchorQuerySchema,
+  resourceAnchorsQuerySchema,
+} from "pstdio-api-contracts";
 import type { ResourceAnchor, ResourceAnchorQuery, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import { publishResourceAnchorChanges, refreshResourceAnchorSources } from "../../../services/resource-anchor-events";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -36,6 +41,20 @@ export const createResourceLinksApi = (
     });
   };
   return {
+    queryAnchorsMany: async (query: Omit<ResourceAnchorQuery, "resource"> & { resources: ResourceRef[] }) => {
+      const parsed = resourceAnchorsQuerySchema.parse(query);
+      const page = await deps.resourceLinksService.listMany({
+        ...parsed,
+        resources: await Promise.all(parsed.resources.map(canonical)),
+      });
+      const items = await Promise.all(
+        page.items.map(async (item) => ({
+          source: await canonical(item.source),
+          target: { ...(await canonical(item.target)), role: item.target.role },
+        })),
+      );
+      return { ...page, items, nextCursor: page.nextCursor ?? null };
+    },
     addAnchors: async (resource: ResourceRef, anchors: ResourceAnchor[]) => {
       ({ resource, anchors } = addResourceAnchorsSchema.parse({ resource, anchors }));
       const policy = await createAnchorPolicy(deps, input.projectId);

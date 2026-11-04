@@ -20,6 +20,7 @@ export type { DocumentAddress } from "./document-address";
 
 /** Metadata-only notice that a document gained an update or a latest state. */
 export interface DocumentChange extends DocumentAddress {
+  created?: boolean;
   lastSequence: number;
   stateId: string | null;
 }
@@ -149,9 +150,15 @@ export const createSyncDocuments = ({ connection, payloads, limits, changed }: S
           createdAt: now,
         });
         await transaction.update(syncDocuments).set({ lastSequence: sequence }).where(documentWhere(address));
-        return { stored: true, sequence, stateId: document.stateId };
+        return {
+          stored: true,
+          sequence,
+          stateId: document.stateId,
+          created: document.lastSequence === 0 && document.stateId === null,
+        };
       });
-      if (result.stored) changed({ ...pick(address), lastSequence: result.sequence, stateId: result.stateId });
+      if (result.stored)
+        changed({ ...pick(address), lastSequence: result.sequence, stateId: result.stateId, created: result.created });
       return { sequence: result.sequence, duplicate: !result.stored };
     },
 
@@ -190,7 +197,12 @@ export const createSyncDocuments = ({ connection, payloads, limits, changed }: S
         return { stored: true, state: state!, document };
       });
       if (result.stored)
-        changed({ ...pick(address), lastSequence: result.document.lastSequence, stateId: result.state.stateId });
+        changed({
+          ...pick(address),
+          lastSequence: result.document.lastSequence,
+          stateId: result.state.stateId,
+          created: result.document.lastSequence === 0 && result.document.stateId === null,
+        });
       return { state: stateInfo(result.state) };
     },
   };

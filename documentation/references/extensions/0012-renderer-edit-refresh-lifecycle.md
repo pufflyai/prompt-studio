@@ -4,6 +4,71 @@ This page explains how native file editors load, save, and refresh content, and 
 
 Editable native file renderers have one owner for loaded content, the current draft, one active save, errors, and external invalidation. Opening or saving an editor does not remount it, lose the selection, or repeat unchanged saves.
 
+## Shared Markdown sources
+
+Source providers separate domain persistence from presentation. Register a
+`defineTextSource` in `textSources` with parameter definitions, a `resolve` callback
+returning the complete `source`, `content` and `editable` value, and an idempotent
+`project` callback. The host runs both under that extension's normal permissions.
+`FileRendererLoadResult.textDocument` names a local source with `{ sourceId, params,
+resource? }`. Legacy `documentSource` remains supported and is deprecated. The two
+declarations are mutually exclusive.
+
+```ts
+const body = defineTextSource({
+  id: "body",
+  params: {},
+  async resolve(ctx) {
+    return {
+      source: { kind: "workspace", path: "README.md" },
+      content: await ctx.workspaceFiles.readText("README.md"),
+      editable: true,
+    };
+  },
+  async project(ctx, { content }) {
+    await ctx.workspaceFiles.writeText("README.md", content);
+  },
+});
+```
+
+Projection follows durable text commits after editors close. Startup retries
+registered handlers whose canonical revision exceeds their completed revision.
+Unavailable providers retain pending work. A read-only resolution cannot replace
+the writable projection locator. An observed record deletion and recreation starts
+a new text authority, including when the recreated bytes are identical.
+
+An editable Markdown load result can declare `documentSource`. The host then owns
+one durable source document and live presence. The extension still supplies its
+normal load and save handlers. Extensions contain no relay or merge code.
+
+| Source | Declaration |
+| --- | --- |
+| Public storage record field | `{ kind: "record", recordId, field: "/content" }` |
+| Project collection field | `{ kind: "collection", collection: "tickets", id, field: "/content" }` |
+| Stored file | `{ kind: "blob", id: blob.id, identity: file.id }` |
+| Declared artifact file | `{ kind: "artifact", mount: documents.id, path: "note/content.md", identity: note.id }` |
+| Default workspace file | `{ kind: "workspace", path: "README.md" }` |
+
+Fields use JSON pointers. File paths are relative to their mount. An artifact or
+blob `identity` names one file lifetime; use a new identity when replacing a
+deleted file with a new document. Keep stored file IDs stable with
+`ctx.storage.files.update(id, input)`. Views of the same source share one document,
+independently of labels and renderer IDs, and must use the same full-source save
+semantics. Load the complete Markdown source, including front matter. Notes hides
+that front matter in the editor while keeping it in the shared text.
+
+The host routes ordinary writes to a bound source into that document. The original
+record field or asset stays as recovery evidence. A downloaded pointer can arrive
+before its text; this is pending data, never an empty file. An incompatible older
+source is retained for recovery instead of being silently merged. Each physical
+file copy keeps its own confirmed text history. Outside edits are compared with
+that history even when a later step of its save handler fails.
+
+Local persistence precedes acknowledgement. Other devices receive encrypted text
+updates; cursors and selections are transient. A disconnected browser retains its
+unsent edits in its current session and retries on reconnect. Read-only, non-Markdown
+and undeclared views use the lifecycle below.
+
 ## Guarantees
 
 - Opening unchanged content performs no save.

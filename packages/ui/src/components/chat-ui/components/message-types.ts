@@ -85,6 +85,8 @@ export type ChatMessagePart = SessionMessagePart | AlertPart;
 
 export type SessionMessage = {
   id: string;
+  /** Shared by optimistic and confirmed copies so delivery does not replay the entrance animation. */
+  animationKey?: string;
   role: SessionMessageRole;
   parts: ChatMessagePart[];
   index?: number;

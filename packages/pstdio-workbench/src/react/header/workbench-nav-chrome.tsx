@@ -1,17 +1,20 @@
 import { Box, HStack, IconButton } from "@chakra-ui/react";
-import { Header, Tooltip } from "@pstdio/ui";
+import { ResourceContextMenu, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
 import { useModeChrome } from "../region/mode-chrome";
+import { PanelDragHeader, usePanelPositionActions } from "../region/panel-position-controls";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { FullscreenControls } from "../workbench/fullscreen-controls";
+import { WorkbenchHeaderBorder } from "../workbench/header-bottom-border";
 import { WorkbenchPanelToggles } from "../workbench/workbench-panel-toggles";
 import { WorkbenchHeaderActions } from "./header-actions";
 import { WorkbenchBreadcrumbActions } from "./resource-actions";
+import { WorkbenchPresence } from "./workbench-presence";
 
 interface WorkbenchNavChromeProps {
   workbench: WorkbenchCore;
@@ -56,55 +59,63 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const chrome = useModeChrome(workbench, "nav");
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
 
+  const positionActions = usePanelPositionActions(workbench, "main");
+
   return (
-    <Header
-      data-workbench-region="nav"
-      display="flex"
-      variant="main"
-      padding={chrome ? "0" : undefined}
-      bg={workbenchBackgrounds.main}
-      position="relative"
-      flexShrink={0}
-      gap="xs"
-      overflow="hidden"
-      overflowY="hidden"
-    >
-      <Box display={chrome !== undefined || fullscreen ? "none" : "contents"}>
-        <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
-        <WorkbenchNavigationControls workbench={workbench} />
-      </Box>
-      <Box
-        display={hasNav && !fullscreen ? "block" : "none"}
-        flex={chrome ? "1" : undefined}
-        h="full"
-        minW="0"
-        maxW={chrome ? undefined : "60%"}
+    <ResourceContextMenu actions={fullscreen ? [] : positionActions} keepMountedWhenEmpty>
+      <PanelDragHeader
+        workbench={workbench}
+        region="main"
+        data-workbench-region="nav"
+        display="flex"
+        variant="main"
+        padding={chrome ? "0" : undefined}
+        bg={workbenchBackgrounds.main}
+        position="relative"
+        flexShrink={0}
+        gap="xs"
         overflow="hidden"
+        overflowY="hidden"
       >
-        <WorkbenchRegion workbench={workbench} region="nav" title="Nav Chrome" />
-      </Box>
-      <Box display={chrome !== undefined || fullscreen ? "none" : "contents"}>
-        {!hasNav ? (
-          <Box h="full" minW="0" maxW="60%" overflow="hidden">
-            <WorkbenchBreadcrumbView workbench={workbench} />
-          </Box>
-        ) : null}
-        <HStack
-          data-workbench-breadcrumb-action-slot=""
-          flexShrink={0}
-          gap="2xs"
-          h="6"
-          justifyContent="center"
-          minW="6"
+        <Box display={chrome !== undefined || fullscreen ? "none" : "contents"}>
+          <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
+          <WorkbenchNavigationControls workbench={workbench} />
+        </Box>
+        <Box
+          display={hasNav && !fullscreen ? "block" : "none"}
+          flex={chrome ? "1" : undefined}
+          h="full"
+          minW="0"
+          maxW={chrome ? undefined : "60%"}
+          overflow="hidden"
         >
-          <WorkbenchBreadcrumbActions workbench={workbench} />
-        </HStack>
-        <Box flex="1" minW="0" />
-        <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
-      </Box>
-      {fullscreen || chrome === false ? <Box flex="1" minW="0" /> : null}
-      {panelControls && !fullscreen ? <WorkbenchPanelToggles workbench={workbench} /> : null}
-      {panelControls || fullscreen ? <FullscreenControls workbench={workbench} /> : null}
-    </Header>
+          <WorkbenchRegion workbench={workbench} region="nav" title="Nav Chrome" />
+        </Box>
+        <Box display={chrome !== undefined || fullscreen ? "none" : "contents"}>
+          {!hasNav ? (
+            <Box h="full" minW="0" maxW="60%" overflow="hidden">
+              <WorkbenchBreadcrumbView workbench={workbench} />
+            </Box>
+          ) : null}
+          <HStack
+            data-workbench-breadcrumb-action-slot=""
+            flexShrink={0}
+            gap="2xs"
+            h="6"
+            justifyContent="center"
+            minW="6"
+          >
+            <WorkbenchBreadcrumbActions workbench={workbench} />
+          </HStack>
+          <Box flex="1" minW="0" />
+          <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
+        </Box>
+        {fullscreen || chrome === false ? <Box flex="1" minW="0" /> : null}
+        <WorkbenchPresence workbench={workbench} />
+        {panelControls && !fullscreen ? <WorkbenchPanelToggles workbench={workbench} /> : null}
+        {panelControls || fullscreen ? <FullscreenControls workbench={workbench} /> : null}
+        <WorkbenchHeaderBorder workbench={workbench} region="nav" />
+      </PanelDragHeader>
+    </ResourceContextMenu>
   );
 };

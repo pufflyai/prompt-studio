@@ -19,6 +19,15 @@ describe("createCommandPaletteResourceRegistry", () => {
     expect(() => registry.registerProvider({ id: "a", title: "A2", query: async () => [] })).toThrow();
   });
 
+  test("an open palette lists again when a provider registers or unregisters", () => {
+    const registry = createCommandPaletteResourceRegistry();
+    const before = registry.store.getState().refreshToken;
+    const disposable = registry.registerProvider({ id: "a", title: "A", query: async () => [] });
+    expect(registry.store.getState().refreshToken).toBe(before + 1);
+    disposable.dispose();
+    expect(registry.store.getState().refreshToken).toBe(before + 2);
+  });
+
   test("unregisters via disposable", () => {
     const registry = createCommandPaletteResourceRegistry();
     const disposable = registry.registerProvider({ id: "a", title: "A", query: async () => [] });

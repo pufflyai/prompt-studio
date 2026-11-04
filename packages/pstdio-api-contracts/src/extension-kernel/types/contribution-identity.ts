@@ -24,6 +24,7 @@ export type ContributionKind =
   | "template"
   | "template-type"
   | "theme"
+  | "text-source"
   | "view"
   | "view-menu"
   | "workspace-type";

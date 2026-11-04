@@ -1,4 +1,5 @@
 import { expect } from "bun:test";
+import { runTestCommand } from "../scripts/run-test-command";
 import { expectPackagedDependencyBlockers } from "./packaged-planner-blockers-smoke";
 import { commandRunner, configurePlannerWorkflow, type PackagedPlanner } from "./packaged-planner-helpers";
 
@@ -76,6 +77,36 @@ export async function expectPackagedPlannerAutoBuild(input: PackagedPlanner) {
   expect(restarted.revision).not.toBe(stopped.revision);
   expect(await execute("auto-build.read", {})).toMatchObject({ supervisor: null });
   await execute("auto-build.configure", { enabled: false });
+  // Launchable work needs an actual local target revision, even for a read-only query.
+  await runTestCommand("git", ["init", "-b", "main", input.projectPath], {});
+  await runTestCommand(
+    "git",
+    [
+      "-C",
+      input.projectPath,
+      "-c",
+      "user.name=Planner smoke",
+      "-c",
+      "user.email=smoke@example.invalid",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "Initialize blocked work smoke",
+    ],
+    {},
+  );
+  const blocked = await execute("create-ticket", { content: "# Repair the local tool environment", status: "Blocked" });
+  await execute("update-ticket", { id: blocked.id, blockedReason: "Repair the local build setup." });
+  await execute("auto-build.configure", { enabled: false, eligible: { conjunction: "and", rules: [] } });
+  const blockedWork = await execute("next-tickets", {});
+  expect(blockedWork).toMatchObject({
+    enabled: false,
+    tickets: [expect.objectContaining({ id: blocked.id, action: "start" })],
+  });
+  expect(await execute("get-ticket", { id: blocked.id })).toMatchObject({
+    blockedReason: "Repair the local build setup.",
+  });
+  await execute("delete-ticket", { id: blocked.id });
   await expectPackagedDependencyBlockers({ ...input, execute });
 }
 

@@ -1,3 +1,4 @@
+import { quoteYamlScalar } from "@pstdio/sdk/data";
 import type { ArtifactMount } from "@pstdio/sdk/extensions";
 import { buildNoteDocument, firstNoteTitle, parseNoteDocument } from "./note-frontmatter";
 import { writeResourceInOrder } from "./resource-writes";
@@ -5,7 +6,7 @@ import { writeResourceInOrder } from "./resource-writes";
 export type NotesMount = Pick<ArtifactMount, "exists" | "list" | "readText" | "writeText" | "updateText" | "delete">;
 
 const CONTENT_PATH = "/content.md";
-const notePath = (id: string) => `${id}${CONTENT_PATH}`;
+export const notePath = (id: string) => `${id}${CONTENT_PATH}`;
 const titlePath = (id: string) => `${id}/title.txt`;
 export const noteOrderPath = ".order.json";
 export const noteFolderPath = (id: string) => `${id}/folder.txt`;
@@ -29,6 +30,7 @@ const readNoteDocument = async (mount: NotesMount, id: string) => {
   return document;
 };
 export const readNote = async (mount: NotesMount, id: string) => (await readNoteDocument(mount, id)).body;
+export const readNoteSource = (mount: NotesMount, id: string) => mount.readText(notePath(id));
 export const readNoteTitle = async (mount: NotesMount, id: string) =>
   (await readNoteDocument(mount, id)).title || "New note";
 
@@ -42,6 +44,21 @@ export const writeNote = (mount: NotesMount, id: string, content: string) =>
     const document = await readNoteDocument(mount, id);
     const title = document.title || firstNoteTitle(content);
     await saveNoteDocument(mount, id, content, title, document.fields);
+  });
+
+/** Shared editors own the complete source; ordinary body edits must keep its header bytes. */
+export const writeNoteSource = (mount: NotesMount, id: string, content: string) =>
+  writeResourceInOrder(id, async () => {
+    const current = await readNoteDocument(mount, id);
+    const document = parseNoteDocument(content);
+    let next = content;
+    if (!document.title) {
+      const title = current.title || firstNoteTitle(document.body);
+      if (document.title === undefined) next = buildNoteDocument(document.body, title, document.fields);
+      else if (title) next = content.replace(/^title:[^\r\n]*/m, () => `title: ${quoteYamlScalar(title)}`);
+    }
+    await mount.updateText(notePath(id), next);
+    if (await mount.exists(titlePath(id))) await mount.delete(titlePath(id));
   });
 export const deleteNote = (mount: NotesMount, id: string) => writeResourceInOrder(id, () => mount.delete(id));
 

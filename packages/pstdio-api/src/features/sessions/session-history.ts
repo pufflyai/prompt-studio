@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { SessionConversationSources, SessionMessage } from "pstdio-api-contracts";
-import { sessionMessageSchema } from "pstdio-api-contracts";
+import { normalizeMessageResults, projectToolResultRecovery, sessionMessageSchema } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
 import { resolveSessionWorkspaceContext } from "./session-workspace-context";
@@ -31,7 +31,10 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
       try {
         const file = await deps.fileService.get(session.session_file_id);
         if (!file) throw new Error("Checkpoint missing");
-        sources.checkpoint = sessionMessageSchema.array().parse(JSON.parse(await readFile(file.storage_path, "utf8")));
+        sources.checkpoint = sessionMessageSchema
+          .array()
+          .parse(JSON.parse(await readFile(file.storage_path, "utf8")))
+          .map(normalizeMessageResults);
       } catch {
         sources.checkpoint = null;
         sources.checkpointError = "checkpoint_unreadable";
@@ -43,10 +46,12 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
         workspace = deps.workspaceSessionService
           ? await resolveSessionWorkspaceContext(deps.workspaceSessionService, sessionId, harness.cwdRequirement)
           : undefined;
-        sources.native = await harness.getMessages(
-          { agentSessionId: session.agent_session_id, cwd: session.cwd ?? undefined, workspace },
-          { projectId: session.project_id ?? undefined },
-        );
+        sources.native = (
+          await harness.getMessages(
+            { agentSessionId: session.agent_session_id, cwd: session.cwd ?? undefined, workspace },
+            { projectId: session.project_id ?? undefined },
+          )
+        ).map(normalizeMessageResults);
       } catch {
         sources.nativeError = "native_unavailable";
       }
@@ -63,14 +68,14 @@ export const loadSessionHistory = async (
   retained?: readonly SessionMessage[],
 ) => {
   const { sources, session, harness, workspace } = await readSessionHistorySources(sessionId, deps);
-  const known = retained ? [...retained] : sources.checkpoint;
+  const known = retained ? retained.map(normalizeMessageResults) : sources.checkpoint;
   if (!known) return sources.native ?? [];
   if (!sources.native) return known;
   const result = await harness!.recoverMessages(
-    { knownMessages: known, nativeMessages: sources.native, cwd: session.cwd ?? undefined, workspace },
+    { ...projectToolResultRecovery(known, sources.native), cwd: session.cwd ?? undefined, workspace },
     { projectId: session.project_id ?? undefined },
   );
-  return result.kind === "recovered" ? result.messages : known;
+  return result.kind === "recovered" ? result.messages.map(normalizeMessageResults) : known;
 };
 
 export const getSessionHistory = async (sessionId: string, deps: HistoryDeps) => {

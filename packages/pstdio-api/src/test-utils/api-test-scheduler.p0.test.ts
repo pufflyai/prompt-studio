@@ -1,5 +1,14 @@
-import { expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, test } from "bun:test";
 import { runApiTestFiles } from "./api-test-scheduler";
+
+const inheritedProfile = process.env.CI_PROFILE;
+beforeEach(() => {
+  delete process.env.CI_PROFILE;
+});
+afterEach(() => {
+  if (inheritedProfile === undefined) delete process.env.CI_PROFILE;
+  else process.env.CI_PROFILE = inheritedProfile;
+});
 
 for (const [platform, separator] of [
   ["POSIX", "/"],

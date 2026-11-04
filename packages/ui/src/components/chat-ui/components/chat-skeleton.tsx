@@ -19,7 +19,7 @@ const SkeletonLines = (props: SkeletonLinesProps) => {
 
 export const ChatSkeleton = () => {
   return (
-    <Stack minH="full" py="xs" gap="0">
+    <Stack layerStyle="chatContent" minH="full" py="xs" gap="0">
       <ChatMessage.Root from="user">
         <ChatMessage.Content from="user">
           <SkeletonLines widths={["72%", "46%"]} />

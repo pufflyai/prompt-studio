@@ -1,5 +1,5 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { serverShowsPendingFollowUp } from "../chat/queued-follow-ups";
 import {
   getPendingFollowUp,
@@ -17,6 +17,9 @@ export const usePendingSessionFollowUp = (
   runInProgress: boolean,
 ) => {
   const pendingFollowUp = useSyncExternalStore(subscribePendingFollowUps, () => getPendingFollowUp(conversationKey));
+  const animationKeys = useRef({ conversationKey, keys: new Map<string, string>() });
+  if (animationKeys.current.conversationKey !== conversationKey)
+    animationKeys.current = { conversationKey, keys: new Map() };
 
   useEffect(() => {
     // An unsent message stays until the user resends or removes it.
@@ -28,7 +31,7 @@ export const usePendingSessionFollowUp = (
   return {
     pendingFollowUp,
     pendingWork: Boolean(pendingFollowUp && !pendingFollowUp.failure && pendingFollowUp.destination === "conversation"),
-    displayedMessages: mergeMessagesWithPendingFollowUp(messages, pendingFollowUp),
+    displayedMessages: mergeMessagesWithPendingFollowUp(messages, pendingFollowUp, animationKeys.current.keys),
     streamingStartedAt: resolveSessionWorkStartedAt(
       lastRequestStarted,
       pendingFollowUp?.failure ? undefined : (pendingFollowUp ?? undefined),

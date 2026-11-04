@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createClient } from "@pstdio/sdk/client";
 import { CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT, withPackagedCoreExtensions } from "./packaged-core-extensions.fixture";
 import { expectNotesResources } from "./packaged-notes-resources-smoke";
 import { expectPlannerCommands } from "./packaged-planner-commands-smoke";
@@ -84,6 +85,7 @@ test(
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),
         metadata,
+        client: createClient({ baseUrl: started.baseUrl, token: started.descriptor.token }),
       });
       phase("Notes resources checked");
       const tagsRes = await fetch(

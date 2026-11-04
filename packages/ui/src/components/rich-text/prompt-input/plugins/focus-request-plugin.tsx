@@ -13,14 +13,32 @@ export const FocusRequestPlugin = (props: { requested: boolean; isEditable: bool
   useLayoutEffect(() => {
     if (!requested || !isEditable || !rendered) return;
     const root = editor.getRootElement();
-    const active = document.activeElement;
-    // A request can wait while the editor is locked. Keep focus in a field or embedded view the person chose.
-    const typingElsewhere =
-      active instanceof HTMLElement &&
-      !root?.contains(active) &&
-      (active.isContentEditable || active.matches("input, textarea, select, iframe"));
-    if (!typingElsewhere) root?.focus();
-    onComplete?.();
+    const document = root?.ownerDocument ?? globalThis.document;
+    const completeFocusRequest = () => {
+      const active = document.activeElement;
+      // A selected menu can still own focus while its closed state restores the trigger.
+      if (active instanceof HTMLElement && active.closest('[role="menu"][data-state="closed"]')) return;
+      document.removeEventListener("focusin", completeFocusRequest);
+      observer.disconnect();
+      // Keep focus in a field, embedded view, open menu or navigation row the person chose.
+      const focusElsewhere =
+        active instanceof HTMLElement &&
+        !root?.contains(active) &&
+        (active.isContentEditable ||
+          active.matches("input, textarea, select, iframe") ||
+          active.closest('[role="menu"], [role="option"], [role="treeitem"]'));
+      if (!focusElsewhere) root?.focus();
+      onComplete?.();
+    };
+    // Context menus may release focus by unmounting instead of focusing a trigger.
+    const observer = new MutationObserver(completeFocusRequest);
+    document.addEventListener("focusin", completeFocusRequest);
+    observer.observe(document, { childList: true, subtree: true });
+    completeFocusRequest();
+    return () => {
+      document.removeEventListener("focusin", completeFocusRequest);
+      observer.disconnect();
+    };
   }, [requested, isEditable, rendered, editor, onComplete]);
 
   return null;
