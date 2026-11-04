@@ -6,6 +6,7 @@ export * from "./automation";
 export * from "./board-views";
 export { resolveCommandResourceParams, resourceContextValue } from "./command-resource-params";
 export { createDataMigrationRunner } from "./data-migration";
+export * from "./device-commands";
 export * from "./environment";
 export * from "./extension-kernel";
 export * from "./extensions";

@@ -1,5 +1,11 @@
 import { afterEach, expect, test } from "bun:test";
-import { createDocumentRelayConnection, createLiveConnection, type LiveConnection } from "pstdio-sync/relay";
+import { createSyncSpace } from "pstdio-sync/encryption";
+import {
+  createDeviceCommandChannel,
+  createDocumentRelayConnection,
+  createLiveConnection,
+  type LiveConnection,
+} from "pstdio-sync/relay";
 import { liveProtocolHeader, liveProtocolVersion, syncPath } from "pstdio-sync-contracts";
 import { defaultRelayLimits } from "../limits";
 import { createLiveHub } from "./live";
@@ -86,6 +92,100 @@ const fixture = (limits = defaultRelayLimits, now = () => Date.now()) => {
   };
 };
 
+test("signed private device commands cross the real relay, stream replies and reject forged callers", async () => {
+  const f = fixture();
+  const a = f.client("a");
+  const b = f.client("b");
+  const space = await createSyncSpace({
+    projectId: "project",
+    spaceOwner: "owner",
+    keys: [
+      {
+        generation: 1,
+        secret: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url"),
+      },
+    ],
+  });
+  const keys = new Map(
+    await Promise.all(
+      ["Bearer a", "Bearer b"].map(
+        async (id) => [id, await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"])] as const,
+      ),
+    ),
+  );
+  const identity = (id: string) => {
+    const key = keys.get(id)!.privateKey;
+    return async () => ({ accountId: "owner", deviceId: id, key });
+  };
+  let invocations = 0;
+  const source = createDeviceCommandChannel({
+    live: a,
+    space: async () => space,
+    identity: identity("Bearer a"),
+    trustedKey: async (id) => keys.get(id)!.publicKey,
+    execute: async () => null,
+  });
+  const target = createDeviceCommandChannel({
+    live: b,
+    space: async () => space,
+    identity: identity("Bearer b"),
+    trustedKey: async (id) => keys.get(id)!.publicKey,
+    execute: async (command, { partial }) => {
+      invocations++;
+      await partial({ progress: "private-progress" });
+      return command === "read-large" ? "Private Unicode: 🦊 é\n".repeat(15_000) : command;
+    },
+  });
+  cleanups.push(async () => {
+    source.close();
+    target.close();
+  });
+  await Promise.all([source.ready, target.ready]);
+  await barrier(b);
+  const partials: unknown[] = [];
+  const command = { type: "session.interrupt", sessionId: "private-session" };
+  expect(
+    await source.call("Bearer b", command, {
+      signal: new AbortController().signal,
+      partial: (value) => partials.push(value),
+    }),
+  ).toEqual(command);
+  expect(partials).toEqual([{ progress: "private-progress" }]);
+  expect(invocations).toBe(1);
+  const previous = (f.received as { type: string; procedure?: string; payload?: string }[])
+    .filter((frame) => frame.type === "call")
+    .at(-1)!;
+  await expect(
+    a.call({
+      deviceId: "Bearer b",
+      procedure: previous.procedure!,
+      payload: previous.payload!,
+      spaceOwner: "owner",
+      signal: new AbortController().signal,
+    }),
+  ).rejects.toThrow("failed");
+  expect(invocations).toBe(1);
+  expect(JSON.stringify(f.received)).not.toContain("private-session");
+  expect(JSON.stringify(f.received)).not.toContain("private-progress");
+  expect(await source.call("Bearer b", "read-large", { signal: new AbortController().signal })).toBe(
+    "Private Unicode: 🦊 é\n".repeat(15_000),
+  );
+  expect(invocations).toBe(2);
+  const longPrompt = "a".repeat(100_000);
+  expect(await source.call("Bearer b", { prompt: longPrompt }, { signal: new AbortController().signal })).toEqual({
+    prompt: longPrompt,
+  });
+  expect(invocations).toBe(3);
+  await expect(source.call("offline", command, { signal: new AbortController().signal })).rejects.toThrow(
+    "unavailable",
+  );
+  const original = keys.get("Bearer a")!;
+  keys.set("Bearer a", await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]));
+  await expect(source.call("Bearer b", command, { signal: new AbortController().signal })).rejects.toThrow("failed");
+  expect(invocations).toBe(3);
+  keys.set("Bearer a", original);
+});
+
 test("many document owners share one socket and existing changes wake only the interested owner", async () => {
   const f = fixture();
   const live = f.client("desktop");
@@ -111,7 +211,8 @@ test("many document owners share one socket and existing changes wake only the i
     });
     return connection;
   });
-  await until(() => counts.every((count) => count === 1));
+  // Admission can run catch-up before this observer sees the first pass.
+  await until(() => counts.every((count) => count >= 1));
   expect(f.opens()).toBe(1);
   await barrier(live);
   await until(() => owners.every((owner) => !owner.status().busy));

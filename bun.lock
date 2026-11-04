@@ -507,6 +507,7 @@
         "pstdio-notes": "workspace:*",
         "pstdio-performance": "workspace:*",
         "pstdio-planner": "workspace:*",
+        "pstdio-relay": "workspace:*",
         "pstdio-reports": "workspace:*",
         "pstdio-scripts": "workspace:*",
         "pstdio-skills": "workspace:*",

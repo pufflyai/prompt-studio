@@ -1,0 +1,1 @@
+ALTER TABLE "manager_devices" ADD COLUMN "signingKey" text;

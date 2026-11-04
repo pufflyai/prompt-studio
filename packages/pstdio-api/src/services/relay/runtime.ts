@@ -6,6 +6,7 @@ import { AccountRequestError } from "../account/native-account";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
 import type { RelayDeps } from "./deps";
+import { startDeviceCommands } from "./device-commands";
 import { startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
@@ -33,6 +34,37 @@ const assertLiveAvailable = (channel?: LiveConnection) => {
     );
 };
 
+const callDeviceCommand =
+  (get: (id: string) => ReturnType<typeof startDeviceCommands> | undefined) =>
+  async (
+    workbenchId: string,
+    deviceId: string,
+    command: Parameters<ReturnType<typeof startDeviceCommands>["call"]>[1],
+    signal: AbortSignal,
+  ) => {
+    const target = get(workbenchId);
+    if (!target) throw new AccountRequestError("This project is not connected to Cloud");
+    try {
+      return await target.call(deviceId, command, { signal });
+    } catch {
+      throw new AccountRequestError("The device action is unavailable. Check that the device is online and signed in.");
+    }
+  };
+
+const watchNativeSources = (
+  deps: RelayDeps,
+  connections: Map<string, Awaited<ReturnType<typeof startRelayExtension>>>,
+) =>
+  deps.nativeDocuments.sources.watch((owner, name) => {
+    connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]))?.wakeDocument(name);
+  });
+
+const watchRuntimeChanges = (deps: RelayDeps, refresh: () => Promise<void>) =>
+  deps.eventBus.subscribe((event) => {
+    if (["extension_instances", "installed_extension_sources", "projects", "workspaces"].includes(event.table))
+      void refresh();
+  });
+
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
 export const startRelayRuntime = async (input: {
@@ -59,6 +91,8 @@ export const startRelayRuntime = async (input: {
   const personal = createWorkbenchConnections((config) => startRelayPersonalHistory(core(config)));
   const coreDocuments = createWorkbenchConnections((config) => startCoreDocumentSync(core(config)));
   const coreOwners = [publications, automations, personal, coreDocuments];
+  const commands = createWorkbenchConnections((config) => startDeviceCommands(core(config)));
+  const lifecycleOwners = [...coreOwners, commands];
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
     await connection.done;
@@ -75,7 +109,7 @@ export const startRelayRuntime = async (input: {
   let retry: ReturnType<typeof setTimeout> | undefined;
   const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
-    for (const owners of coreOwners) owners.ensure(config);
+    for (const owners of lifecycleOwners) owners.ensure(config);
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     const workspace = await deps.workspaceService.getDefault(workbenchId);
@@ -159,15 +193,11 @@ export const startRelayRuntime = async (input: {
     } else void refresh();
   });
   const stopCatalog = deps.extensionRuntimeCatalog.subscribeInvalidation(() => void refresh());
-  const stopNativeSources = deps.nativeDocuments.sources.watch((owner, name) => {
-    connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]))?.wakeDocument(name);
-  });
-  const stopEvents = deps.eventBus.subscribe((event) => {
-    if (["extension_instances", "installed_extension_sources", "projects", "workspaces"].includes(event.table))
-      void refresh();
-  });
+  const stopNativeSources = watchNativeSources(deps, connections);
+  const stopEvents = watchRuntimeChanges(deps, refresh);
   await refresh();
   return {
+    call: callDeviceCommand(commands.get),
     async retry(workbenchId: string) {
       await refresh();
       personal.get(workbenchId)?.retry();
@@ -216,7 +246,7 @@ export const startRelayRuntime = async (input: {
         access.delete(id);
       }
       for (const id of changed) {
-        for (const owners of coreOwners) await owners.remove(id);
+        for (const owners of lifecycleOwners) await owners.remove(id);
         // Closing the project's connection also ends its extension owners' runs before they stop below.
         live.get(id)?.close();
         live.delete(id);
@@ -249,10 +279,10 @@ export const startRelayRuntime = async (input: {
       clearTimeout(retry);
       storageChanges.close();
       controller.abort();
-      for (const owners of coreOwners) owners.close();
+      for (const owners of lifecycleOwners) owners.close();
       for (const connection of connections.values()) connection.close();
       await running;
-      for (const owners of coreOwners) await owners.done();
+      for (const owners of lifecycleOwners) await owners.done();
       await Promise.all([...connections.values()].map((connection) => connection.done));
       await Promise.all([...live.values()].map((channel) => channel.done));
       live.clear();

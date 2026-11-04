@@ -126,6 +126,7 @@ export const sessionAttachmentSchema = z.object({
 
 export const createSessionInputSchema = z.object({
   project_id: z.string().min(1),
+  device_id: z.string().min(1).optional(),
   title: z.string().min(1),
   prompt: z.string().optional(),
   operation: harnessOperationSchema.optional(),
@@ -225,8 +226,9 @@ export type FollowUpDecision = z.infer<typeof followUpDecisionSchema>;
 export type FollowUpResponse = z.infer<typeof followUpResponseSchema>;
 
 export const sessionCreateRequestSchema = createSessionInputSchema
-  .omit({ project_id: true, workspace_id: true, original_session_id: true, attachments: true })
+  .omit({ project_id: true, device_id: true, workspace_id: true, original_session_id: true, attachments: true })
   .extend({
+    deviceId: z.string().min(1).optional(),
     attachments: z.array(z.object({ fileId: z.string().min(1) })).optional(),
     projectId: z.string().min(1),
     workspaceId: z.string().optional(),

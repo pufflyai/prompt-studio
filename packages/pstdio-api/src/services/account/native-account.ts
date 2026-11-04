@@ -1,12 +1,14 @@
 import { hostname } from "node:os";
 import { dirname, join } from "node:path";
-import type { ProjectSyncStatus } from "pstdio-api-contracts";
+import type { DeviceCommand, ProjectSyncStatus } from "pstdio-api-contracts";
+import type { Json } from "pstdio-sync-contracts";
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { RelayWorkbench } from "../relay/runtime";
 import { readAccountStatus } from "./account-status";
+import { createDeviceIdentity } from "./device-identity";
 import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
 import { createMissingProjectRecovery } from "./missing-project-recovery";
@@ -47,6 +49,24 @@ const connectionFor = (login: DeviceLogin, workbenchId: string) => ({
 // Messages that are safe to show; other account failures stay generic.
 export class AccountRequestError extends Error {}
 export const accountUnavailableMessage = "Account request unavailable. Check the login and the account service.";
+
+type SendDeviceCommand = (
+  projectId: string,
+  deviceId: string,
+  command: DeviceCommand,
+  signal: AbortSignal,
+) => Promise<Json>;
+const createDeviceCommandSender = () => {
+  let send: SendDeviceCommand = async () => {
+    throw new AccountRequestError("This project is not connected to Cloud");
+  };
+  return {
+    send: (...args: Parameters<SendDeviceCommand>) => send(...args),
+    connect: (next: SendDeviceCommand) => {
+      send = next;
+    },
+  };
+};
 
 const createAccountWatch = () => {
   const listeners = new Set<() => void>();
@@ -97,6 +117,7 @@ export const createNativeAccount = (input: {
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
   let retryProject: (projectId: string) => Promise<void> = async () => {};
+  const commands = createDeviceCommandSender();
   const missing = createMissingProjectRecovery({
     exists: async (id) => Boolean(await input.projects.get(id)),
     recovered: () => void refresh(),
@@ -112,19 +133,17 @@ export const createNativeAccount = (input: {
   let closed = false;
 
   // A login saved by another database in the same folder belongs to another device.
-  const readLogin = async (deviceId?: string) => {
-    const login = await store.read();
-    const environmentId = deviceId ?? (await input.environment.get()).environmentId;
-    return login?.deviceId === environmentId ? login : null;
-  };
+  const readLogin = async (deviceId?: string) =>
+    store.readForDevice(deviceId ?? (await input.environment.get()).environmentId);
   const current = async () => {
     const login = await readLogin();
     if (!login) throw new AccountRequestError("Log in first with pst login");
     return login;
   };
   const denied = (error: unknown) => error instanceof ManagerRequestDenied && error.status === 401;
-  const call = async (path: string, body?: unknown) => {
+  const call = async (path: string, body?: unknown, credential?: string) => {
     const login = await current();
+    if (credential && login.token !== credential) throw new Error("Device login changed");
     try {
       return await managerRequest(login.managerOrigin, path, login.token, body);
     } catch (error) {
@@ -223,14 +242,18 @@ export const createNativeAccount = (input: {
   };
 
   return {
+    ...createDeviceIdentity({ current, store, call }),
+    sendDeviceCommand: commands.send,
     start(
       relay: (connections: RelayWorkbench[]) => Promise<void>,
       status: typeof projectStatus,
       recoverProject: Parameters<typeof missing.start>[0],
       retrySync: typeof retryProject = async () => {},
+      sendCommand: SendDeviceCommand = commands.send,
     ) {
       update = relay;
       retryProject = retrySync;
+      commands.connect(sendCommand);
       projectStatus = status;
       missing.start(recoverProject);
       void refresh();

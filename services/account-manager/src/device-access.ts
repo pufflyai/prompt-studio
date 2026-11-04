@@ -5,6 +5,7 @@ import { account } from "./auth-schema";
 import { deviceNameSchema, deviceProfileSchema } from "./contracts";
 import { digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
+import { readDeviceSigningKey, registerDeviceSigningKey } from "./device-signing-keys";
 import {
   accountOfCredential,
   addWorkbenchInTransaction,
@@ -68,6 +69,12 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
     });
   };
   return {
+    registerSigningKey: (token: string, publicKey: unknown) =>
+      apply(token, (transaction, device) => registerDeviceSigningKey(transaction, device, publicKey)),
+    signingKey: (token: string, deviceId: string) =>
+      apply(token, (transaction, device) =>
+        readDeviceSigningKey(transaction, device.accountId, identitySchema.parse(deviceId)),
+      ),
     account: (token: string) =>
       apply(token, async (transaction, device) => ({
         features: await readAccountFeatures(transaction, device.accountId),

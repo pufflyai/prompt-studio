@@ -30,6 +30,18 @@ pst sessions create --prompt "Review this workspace" --workspace-id WS-1
 
 Other create options are `--title`, `--project-id`, `--attach` (repeat it for more files), and `--original-session-id` (the session that started this one).
 
+### Run on another device (unreleased)
+
+For a Cloud project, `--device <device-id>` starts the session on one of your online devices. Read IDs with `pst devices list`. Workspace IDs and shorthands are resolved on the selected device.
+
+```sh
+pst sessions create --device <device-id> --workspace-id WS-1 --prompt "Run the focused tests"
+```
+
+The session stays on that device. Once its history appears here, ordinary `follow-up`, `approve`, `deny`, and `stop` commands target the device that owns it. Attachments are copied through the encrypted connection before submission. A stop interrupts only that session's turn and preserves the conversation; it does not stop the device or its workspace.
+
+The target must be online. Commands are never saved for delivery after reconnecting. If the connection is lost after submission, inspect the session before sending the same action again.
+
 ## Continue a session
 
 `follow-up` accepts `--prompt`, or `--summary-of` to send a summary of another session. It also accepts `--agent`, `--model`, and repeated `--attach` options.

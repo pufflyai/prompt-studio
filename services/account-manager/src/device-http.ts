@@ -31,6 +31,20 @@ const workbenchRoute = async (devices: Authentication["devices"], request: Reque
   return null;
 };
 
+const signingKeyRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
+  const { method } = request;
+  if (path === "/v1/devices/signing-key" && method === "POST") {
+    const body = z.strictObject({ publicKey: z.unknown() }).parse(await request.json());
+    return ok(devices.registerSigningKey(bearer(request), body.publicKey));
+  }
+  const signingKey = /^\/v1\/devices\/([^/]+)\/signing-key$/.exec(path);
+  if (signingKey && method === "GET") {
+    const found = await devices.signingKey(bearer(request), decodeURIComponent(signingKey[1]));
+    return found ? json(found) : json({ error: "Unknown device signing key" }, 404);
+  }
+  return null;
+};
+
 const route = async (auth: Authentication, origin: string, request: Request, path: string) => {
   const { method } = request;
   if (path === "/v1/device-login" && method === "POST") {
@@ -39,6 +53,8 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
     return json(await auth.loginDevice(request.headers, await request.json()), 201);
   }
   const devices = auth.devices;
+  const signingKey = await signingKeyRoute(devices, request, path);
+  if (signingKey) return signingKey;
   if (path === "/v1/account" && method === "GET") return json(await devices.account(bearer(request)));
   if (path === "/v1/devices/presence" && method === "POST") return ok(devices.heartbeat(bearer(request)));
   if (path === "/v1/devices" && method === "GET") return json(await devices.devices(bearer(request)));

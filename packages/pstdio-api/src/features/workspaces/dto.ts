@@ -20,6 +20,7 @@ export const createWorkspaceBodySchema = z.union([
   createWorkspaceInputSchema.strict(),
   extensionWorkspaceCreateInputSchema.strict().transform((input) => ({
     project_id: input.projectId,
+    device_id: input.deviceId,
     provider_id: input.providerId,
     shorthand_base: input.shorthandBase,
     params: input.params,

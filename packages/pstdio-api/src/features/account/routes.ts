@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
+import { deviceCommandSchema } from "pstdio-api-contracts";
 import { managerOriginSchema } from "../../services/account/manager-client";
 import {
   AccountRequestError,
@@ -20,6 +21,20 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
   // Account service errors never reach generic API error logging or extension event payloads.
   routes.onError((error, c) =>
     c.json({ error: error instanceof AccountRequestError ? error.message : accountUnavailableMessage }, 400),
+  );
+  routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/projects/{id}/devices/{deviceId}/commands",
+      tags,
+      request: { params: params.extend({ deviceId: z.string().min(1) }), body: json(deviceCommandSchema) },
+      responses,
+    }),
+    async (c) => {
+      const { id, deviceId } = c.req.valid("param");
+      const result: unknown = await service.sendDeviceCommand(id, deviceId, c.req.valid("json"), c.req.raw.signal);
+      return c.json(result, 200);
+    },
   );
   routes.openapi(
     createRoute({

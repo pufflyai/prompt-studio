@@ -3,7 +3,7 @@
 A workspace is where sessions run. A project's default folder workspace shares files between sessions and needs no Git setup.
 
 ```sh
-pst workspaces create --provider <id> [--params <json>]
+pst workspaces create --provider <id> [--params <json>] [--device <device-id>]
 pst workspaces list [--json]
 pst workspaces merge --id <workspace-shorthand> [--delete-workspace]
 pst workspaces delete --id <workspace-shorthand>
@@ -33,6 +33,8 @@ pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'
 
 Parameters are checked before anything is created. Unknown keys and missing required values fail, and the error lists the accepted parameters and choices. Omitted values use their declared defaults. The Git `base` parameter defaults to the current branch. It also accepts any valid commit, such as `HEAD` or a commit SHA. An invalid revision fails before a workspace record or worktree is created.
 
+**Unreleased:** `--device <device-id>` creates a workspace on one of your online Cloud devices. Provider parameters and paths are interpreted there. Use `pst devices list` to find its ID. The project must sync on both devices; no command waits for an offline device.
+
 ## Git worktrees
 
 The Git provider needs a repository with at least one commit. For a project in a repository subfolder, sessions run in the matching subfolder of the worktree. Files stay within that folder, but Git diff and merge include every changed path in the repository.
@@ -55,4 +57,4 @@ Run inside a linked project:
 pst workspaces file-link --workspace WS-1 --path src/app.ts --line 12 --column 4
 ```
 
-The command accepts a workspace shorthand or UUID and prints JSON containing `href`, a canonical dashboard path. Paths are workspace-root relative. The command does not read or change the file. A column requires a line; coordinates must be positive integers. Copied URLs restore the selected file after reload. Remote workspace file transport remains unavailable.
+The command accepts a workspace shorthand or UUID and prints JSON containing `href`, a canonical dashboard path. Paths are workspace-root relative. The command does not read or change the file. A column requires a line; coordinates must be positive integers. Copied URLs restore the selected file after reload. Unreleased Cloud device commands let the API read another device's files and diff while that device is online; remote file content is read-only.
