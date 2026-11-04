@@ -15,6 +15,7 @@ export const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const CORE_DEFAULT_EXTENSION_NAMES = [
   "pstdio-home",
+  "pstdio-onboarding",
   "harness-claude-code",
   "harness-codex",
   "harness-open-code",
