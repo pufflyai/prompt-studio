@@ -4,9 +4,6 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
-const directory = await mkdtemp(join(tmpdir(), "manager-authority-"));
-const file = join(directory, "compose.json");
-const project = `manager-authority-${crypto.randomUUID()}`;
 const requested = process.argv.slice(2);
 const priorities = (process.env.TEST_PRIORITIES ?? "P0,P1,P2").split(",");
 const entries = (requested.length ? requested : ["src", "scripts"])
@@ -22,6 +19,20 @@ const entries = (requested.length ? requested : ["src", "scripts"])
   })
   .sort();
 if (!entries.length) throw new Error("No account authority contracts selected");
+
+// Native-host fixtures consume the public SDK exports from their built package.
+// Prepare them on the host before the tester mounts this checkout read-only.
+console.log("Preparing the public SDK for native-host account integration fixtures");
+const sdk = Bun.spawn([process.execPath, "run", "build", "--", "--scope", "@pstdio/sdk", "--include-dependencies"], {
+  cwd: root,
+  stdout: "inherit",
+  stderr: "inherit",
+});
+if ((await sdk.exited) !== 0) throw new Error("Public SDK preparation failed for account integration fixtures");
+
+const directory = await mkdtemp(join(tmpdir(), "manager-authority-"));
+const file = join(directory, "compose.json");
+const project = `manager-authority-${crypto.randomUUID()}`;
 const compose = async (...args: string[]) => {
   const child = Bun.spawn(["docker", "compose", "-f", file, "-p", project, ...args], {
     stdout: "inherit",
