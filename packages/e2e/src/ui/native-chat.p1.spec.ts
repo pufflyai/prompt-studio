@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -44,19 +44,12 @@ test("independent native chat paints and accepts input before history, then reta
     });
     expect(created.ok()).toBe(true);
     projectId = (await created.json()).id;
-    const installed = await request.post(`/v1/projects/${projectId}/extensions/installed/native-chat/enable`, {
-      data: {
-        displayName: "Native chat",
-        extensionId: "acme.native-chat",
-        manifest: { id: "acme.native-chat", name: "native-chat" },
-        name: "native-chat",
-        sourceHash: "native-chat",
-        sourceKind: "local_path",
-        sourcePath,
-        sourceRef: null,
-        version: "0.1.0",
-      },
-    });
+    const upload = new FormData();
+    upload.append("kind", "upload");
+    upload.append("folderName", "native-chat");
+    for (const name of ["package.json", "extension.ts"])
+      upload.append("files", new File([readFileSync(join(sourcePath, name))], name));
+    const installed = await request.post(`/v1/projects/${projectId}/extensions/install`, { multipart: upload });
     expect(installed.ok()).toBe(true);
     const seededDraft = await request.post(
       `/v1/projects/${projectId}/extensions/commands/acme.native-chat.view.conversation.chat.saveDraft/execute`,
