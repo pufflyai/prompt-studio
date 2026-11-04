@@ -30,11 +30,15 @@ const setup = async (
     },
   });
   let afterReply: ((request: Request) => Promise<void>) | undefined;
+  const watching = Promise.withResolvers<void>();
   const client = createClient({
     baseUrl: server.url.toString().replace(/\/$/, ""),
     fetch: (async (url, options) => {
       const request = new Request(url, options);
+      // Each request must reach the current server, not a pooled socket from before its forced restart.
+      request.headers.set("connection", "close");
       const response = await fetch(request.clone());
+      if (new URL(request.url).pathname.endsWith("/stream")) watching.resolve();
       await afterReply?.(request);
       return response;
     }) as typeof fetch,
@@ -46,6 +50,7 @@ const setup = async (
   const guest = connection.guest();
   const text = createTextEditingClient(guest.host);
   const session = await text.open(source ?? { grant: (await text.current())! });
+  await watching.promise;
   return {
     ...fixture,
     session,
@@ -125,8 +130,14 @@ test("restart recovery refuses a different source before admitting the retained 
 
 test("an owned source can commit a new draft after its parent session rejoins", async () => {
   const f = await setup({ kind: "placement", viewId: editorView }, { sourceId: "body", params: {} });
+  const disconnected = Promise.withResolvers<void>();
+  const stop = f.session.subscribe(() => {
+    if (!f.session.getSnapshot().connected) disconnected.resolve();
+  });
   try {
     await f.restart();
+    // Observe the old stream's failure before authoring recovery work; an in-flight flush may honestly reject it.
+    await disconnected.promise;
     f.session.transact((text) => text.insert(text.length, " rejoined"));
     await f.session.flush();
     const draft = f.session.createDraft();
@@ -136,6 +147,7 @@ test("an owned source can commit a new draft after its parent session rejoins", 
     expect(f.session.getSnapshot().pending).toBe(false);
     await f.session.close();
   } finally {
+    stop();
     await f.guest.close().catch(() => {});
   }
 });

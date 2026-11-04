@@ -14,8 +14,6 @@ Each action has one default shortcut. The Keyboard shortcuts reference groups as
 | Reports | — | R report | O read; S save, using normal command forms |
 | Font Editor | G F editor | G glyph | R rename; C move codepoint; B build; V validate, while the editor is visible |
 | Shape Art | G S studio | P piece | R render; P read, while the studio is visible |
-| Motion Lab | G M lab | A animation study | F refresh; V read review; P play/pause; R restart selected animation |
-| Shader Lab | G S lab | S shader version | R rename; D duplicate; C compare selected version |
 | Social Radar | G R radar | I reply idea for a selected thread | R daily run; D digest; S selected thread status |
 | Development tools | — | — | O VS Code; I isolated app; S stop; D service discovery, with normal workspace forms |
 | Remote Workspaces | — | S PocketCoder session | Uses the public launch flow |

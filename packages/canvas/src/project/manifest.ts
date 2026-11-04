@@ -20,6 +20,7 @@ export interface CanvasFrameEntry {
   fullscreen?: boolean;
   /** The theme the host shows this frame in until the person picks another. */
   defaultTheme?: string;
+  save?: { file: string; key?: string };
 }
 
 export interface CanvasEntry {

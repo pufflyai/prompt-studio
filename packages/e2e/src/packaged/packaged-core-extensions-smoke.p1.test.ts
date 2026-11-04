@@ -23,7 +23,14 @@ const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Rec
     files: Array<{ path: string }>;
     name: string;
   }>;
-  for (const name of ["implement-ticket", "pstdio"]) {
+  for (const name of [
+    "create-ticket",
+    "create-proposal",
+    "refine-ticket",
+    "create-sub-tickets",
+    "implement-ticket",
+    "pstdio",
+  ]) {
     expect(skills).toContainEqual(
       expect.objectContaining({
         name,

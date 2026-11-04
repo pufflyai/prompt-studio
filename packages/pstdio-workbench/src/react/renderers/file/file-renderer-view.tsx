@@ -1,5 +1,5 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
-import { type PageParams, resourceKey } from "@pstdio/sdk/extensions";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   RegisteredFileRendererContribution,
@@ -14,6 +14,7 @@ import {
 } from "../../../core/registries/renderers/file-section-navigation";
 import { useOpenPlacementIds } from "../../shared/use-open-placement-ids";
 import { usePageParams } from "../use-page-params";
+import { getNativeMarkdownConnection, getPublicMarkdownConnection } from "./file-renderer-connections";
 import { FileRendererContentView } from "./file-renderer-content";
 import {
   createFileEditController,
@@ -29,7 +30,6 @@ import {
   storeCachedFileContent,
 } from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
-import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 import { useFileSectionSelection } from "./file-renderer-sections";
 import { FileRendererStatusNotice } from "./file-renderer-status-notice";
 import { SelectedTextEditor } from "./selected-text-editor";
@@ -90,30 +90,6 @@ const fileRendererOwnerKey = (
   contributionId: string,
   loadKey: string,
 ) => (placement ? rendererReadKey(placement) : JSON.stringify(["file", contributionId, loadKey]));
-
-const getNativeMarkdownConnection = (
-  contribution: RegisteredFileRendererContribution,
-  file: LoadedFile | null,
-  resource: WorkbenchPanelInstance["resource"],
-  pageParams: PageParams | undefined,
-) => {
-  const connect = contribution.connectDocument;
-  if (contribution.saveMode === "manual" || !file?.documentSource || !connect) return undefined;
-  const presentation = resolveFileRendererPresentation(file, Boolean(contribution.save));
-  if (presentation.kind !== "markdown" || !presentation.isEditable) return undefined;
-  return () => connect(resource, pageParams);
-};
-const getPublicMarkdownConnection = (
-  contribution: RegisteredFileRendererContribution,
-  file: LoadedFile | null,
-  input: WorkbenchPanelRenderInput | undefined,
-  pageParams: PageParams | undefined,
-) => {
-  const connect = contribution.connectText;
-  if (contribution.saveMode === "manual" || !file?.textDocument || !input || !connect) return undefined;
-  if (resolveFileRendererPresentation(file, Boolean(contribution.save)).kind !== "markdown") return undefined;
-  return () => connect(input, pageParams);
-};
 
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
@@ -230,6 +206,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       if (resourceKey(resource) !== resourceKey(resourceRef.current)) return [];
       removed = true;
       const retain = controllerRef.current?.markRemoved();
+      setEditState((state) => ({ ...state, removed: true }));
       const identity = placementRef.current?.placementIdentity;
       return retain && identity ? [identity] : [];
     });
@@ -263,9 +240,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [manualSave]);
-  const handleChange = (value: string) => {
-    controllerRef.current?.handleChange(value);
-  };
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
   if (currentLoaded?.textEditor)
@@ -296,6 +270,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       retrySave={() => controllerRef.current?.retry()}
     />
   );
+  if (!open && editState.removed) return errorNotice;
   return (
     <Flex
       direction="column"
@@ -331,7 +306,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
               ? (sectionId) => syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId })
               : undefined
           }
-          onChange={handleChange}
+          onChange={(value) => controllerRef.current?.handleChange(value)}
           rendererRef={rendererRef}
           sectionNavigation={editorSectionNavigation}
           title={resource?.label ?? contribution.title}

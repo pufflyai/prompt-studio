@@ -285,3 +285,19 @@ export const validatePageNavigationTargets = (runtime: Accumulator) => {
     }
   }
 };
+
+/** Check returned owner navigation against the enabled runtime without changing its diagnostics. */
+export const isRuntimeNavigationTargetAvailable = (runtime: Accumulator, target: NavigationTarget): boolean => {
+  if (target.kind === "compound")
+    return target.targets.every((item) => isRuntimeNavigationTargetAvailable(runtime, item));
+  if (target.kind !== "page" && target.kind !== "panel") return false;
+  let extensionId: string | undefined;
+  if (target.kind === "page") extensionId = target.page.extensionId;
+  else extensionId = target.panel.kind === "placement" ? target.panel.extensionId : target.panel.page.extensionId;
+  if (!extensionId) return false;
+  const checking = { ...runtime, diagnostics: [] };
+  const record = { id: "resource-resolution", localId: "resource-resolution", extensionId, sourcePath: "" };
+  validateTarget(checking, record, target.kind === "page" ? { ...target, parent: undefined } : target, "target");
+  if (checking.diagnostics.length) return false;
+  return target.kind !== "page" || !target.parent || isRuntimeNavigationTargetAvailable(runtime, target.parent);
+};

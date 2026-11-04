@@ -1,5 +1,6 @@
 import { expect } from "bun:test";
-import type { TreeViewSection } from "@pstdio/sdk/extensions";
+import type { createClient } from "@pstdio/sdk/client";
+import { createTextEditingClient, type TreeViewSection } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 
 export const expectNotesResources = async (input: {
@@ -7,6 +8,7 @@ export const expectNotesResources = async (input: {
   projectId: string;
   headers: Record<string, string>;
   metadata: WorkbenchExtensionMetadata;
+  client: ReturnType<typeof createClient>;
 }) => {
   const { baseUrl, projectId, headers, metadata } = input;
   const execute = async (id: string, params: object) => {
@@ -93,8 +95,31 @@ export const expectNotesResources = async (input: {
   const editor = metadata.views.find((entry) => entry.id === "pstdio.pstdio-notes.view.note-editor")!;
   if (editor.body.kind !== "file") throw new Error("Missing Notes editor");
   const editorRenderer = { rendererId: editor.id, projectId, resource: { type: "note", id: next.id } };
-  await execute(editor.body.saveHandlerId!, { renderer: editorRenderer, content: "# First title\n\nBody" });
-  await execute(editor.body.saveHandlerId!, { renderer: editorRenderer, content: "A different opening" });
+  const connection = await input.client.textEditing.connect({
+    projectId,
+    scope: { kind: "agent", target: { fileRendererId: editor.id, resource: { type: "note", id: next.id } } },
+  });
+  const guest = connection.guest();
+  try {
+    const editing = createTextEditingClient(guest.host);
+    const grant = await editing.current();
+    expect(grant).toBeDefined();
+    const session = await editing.open({ grant: grant! });
+    try {
+      for (const content of ["# First title\n\nBody", "A different opening"]) {
+        session.transact((text) => {
+          text.delete(0, text.length);
+          text.insert(0, content);
+        });
+        await session.flush();
+        await session.project();
+      }
+    } finally {
+      await session.close();
+    }
+  } finally {
+    await guest.close();
+  }
   const page = metadata.pages.find((entry) => entry.id === "pstdio.pstdio-notes.page.notes")!;
   const tab = page.slots[0]!.tab!;
   expect(await execute(tab.queryHandlerId, { renderer: editorRenderer })).toMatchObject({

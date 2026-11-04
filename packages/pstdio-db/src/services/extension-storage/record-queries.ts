@@ -118,12 +118,8 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
           previous.map((row) => row.definition) as unknown as Json,
         ) as unknown as StorageRecordIndex[],
       );
-      const [ready] = await db.select().from(projections).where(ownerWhere(projections));
-      if (
-        ready &&
-        (await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json))
-      )
-        return;
+      // Every project runtime reload calls this for each extension, records or not.
+      if ((await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json))) return;
       await db.transaction(async (tx) => {
         await dropRecordIndexes(tx, ownerWhere(indexes)!);
         await tx.delete(indexes).where(ownerWhere(indexes));
@@ -151,7 +147,8 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
           });
         }
         // Expression indexes get planner statistics only from ANALYZE, not from CREATE INDEX.
-        await tx.execute(sql`ANALYZE storage_current_records`);
+        // Dropping indexes needs none, and analyzing the table shared by all owners is slow.
+        if (desired.length) await tx.execute(sql`ANALYZE storage_current_records`);
       });
     },
     query: (query) =>

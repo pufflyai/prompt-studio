@@ -613,7 +613,7 @@ test("native edits project through the file save handler and retain a non-overla
   }
 });
 
-test("a racing file projection retains its pending write and acknowledges durable editor frames", async () => {
+test("a racing file projection preserves outside edits and acknowledges durable editor frames", async () => {
   const deps = { ...extension.deps, extensionStorageService: storage.svc };
   let outsideWrite = false;
   const service = createService({
@@ -645,8 +645,6 @@ test("a racing file projection retains its pending write and acknowledges durabl
     } finally {
       received.destroy();
     }
-    await expect(service.flush({ projectId: storage.projectAId, roomId: room.roomId })).rejects.toThrow();
-    expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeInstanceOf(Uint8Array);
     await service.flush({ projectId: storage.projectAId, roomId: room.roomId });
     expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("LOCAL selected folder OUTSIDE");
     expect((await storage.svc.nativeFileProjections.read(room))?.pending).toBeNull();

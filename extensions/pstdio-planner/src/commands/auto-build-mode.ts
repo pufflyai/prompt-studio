@@ -3,6 +3,7 @@ import { readAutoBuildFilter } from "../data/auto-build-filter";
 import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
 import { readPendingAutoBuildRequests } from "../data/auto-build-ownership";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
+import { ticketsCollection } from "../data/collections";
 import { withWriteGuard } from "../data/write-guard";
 import { enqueueAutoBuild } from "../hooks/auto-build";
 import { readPlanCommand } from "../timeline/commands/read-plan";
@@ -48,13 +49,20 @@ export const readAutoBuildCommand = defineCommand({
       ticketSessions.length > 0 &&
       ticketSessions.every(({ status }) => status === "awaiting_input");
     if (inspect && work) stuck ||= work.readyTicketCount === 0 && work.blockedTickets.length > 0;
+    const pendingRequests = await readPendingAutoBuildRequests(
+      ctx,
+      mode.state === "stopped" ? undefined : state.sessionId,
+      work?.reviewRequests,
+    );
+    const reviewRequests = await Promise.all(
+      pendingRequests.map(async (request) => {
+        const ticket = await ticketsCollection(ctx).get(request.ticketId);
+        return { ...request, ticketLabel: ticket ? `${ticket.shorthand} · ${ticket.title}` : request.ticketId };
+      }),
+    );
     return {
       ...mode,
-      reviewRequests: await readPendingAutoBuildRequests(
-        ctx,
-        mode.state === "stopped" ? undefined : state.sessionId,
-        work?.reviewRequests,
-      ),
+      reviewRequests,
       requestErrors: work?.requestErrors ?? [],
       observations: work?.observations ?? [],
       waitingTickets: work?.waitingTickets ?? [],

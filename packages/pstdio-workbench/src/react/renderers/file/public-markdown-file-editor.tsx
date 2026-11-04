@@ -2,15 +2,14 @@ import { Flex, Spinner, Text } from "@chakra-ui/react";
 import type { TextEditingSession } from "@pstdio/sdk/extensions";
 import { LazyMarkdownEditor, type MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { WorkbenchPresence } from "../../../core/presence/workbench-presence";
 import type { NativeTextPresentation } from "../../../extensions/bridge/native-text-presentation";
+import { createRetainedTextPresentation } from "../../../extensions/bridge/retained-text-presentation";
 import { participantColor } from "../../shared/participant-color";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { FileRendererLoading } from "./file-renderer-loading";
 
 interface PublicMarkdownFileEditorProps {
   connect: () => NativeTextPresentation;
-  presence: WorkbenchPresence;
   open: boolean;
   placeholder?: string;
   sectionNavigation?: MarkdownEditorProps["sectionNavigation"];
@@ -21,56 +20,46 @@ const subscribeEmpty = () => () => {};
 const empty = () => undefined;
 
 export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) => {
-  const { connect, presence, open, placeholder, sectionNavigation, onActiveSectionChange, errorNotice } = props;
+  const { connect, open, placeholder, sectionNavigation, onActiveSectionChange, errorNotice } = props;
   const connectRef = useRef(connect);
   connectRef.current = connect;
   const [session, setSession] = useState<TextEditingSession>();
   const [openingError, setOpeningError] = useState<string>();
   const retryRef = useRef<() => Promise<void>>(async () => {});
+  const [presentation] = useState(() => createRetainedTextPresentation(() => connectRef.current()));
   const state = useSyncExternalStore(session?.subscribe ?? subscribeEmpty, session?.getSnapshot ?? empty, empty);
   useEffect(() => {
-    const presentation = connectRef.current();
+    // Retained views keep their document DOM while their public authority closes and reopens.
+    setOpeningError(undefined);
+    if (!open) return;
     let mounted = true;
-    retryRef.current = async () => {
+    const receive = async (operation: () => Promise<TextEditingSession | undefined>) => {
       setOpeningError(undefined);
       try {
-        const value = await presentation.retry();
-        if (mounted) setSession(value);
+        const value = await operation();
+        if (mounted && value) setSession(value);
       } catch (error) {
         if (mounted) setOpeningError(error instanceof Error ? error.message : String(error));
       }
     };
-    void presentation.open().then(
-      (value) => {
-        if (mounted) setSession(value);
-      },
-      (error) => {
-        if (mounted) setOpeningError(error instanceof Error ? error.message : String(error));
-      },
-    );
+    retryRef.current = () => receive(presentation.retry);
+    void receive(presentation.open);
     return () => {
       mounted = false;
       retryRef.current = async () => {};
-      // Ordinary close is drained by the placement owner before this render tree unmounts.
       void presentation.close().catch(() => {});
     };
-  }, []);
-  useEffect(() => {
-    if (!session || !open) return;
-    const registration = presence.register({
-      getParticipants: () =>
-        session.getSnapshot().participants.map((person) => ({ id: person.id, label: person.label })),
-      subscribe: session.subscribe,
-    });
-    return () => registration.dispose();
-  }, [session, open, presence]);
-  const error = session ? state?.error?.message : openingError;
-  const participants = state?.participants.map((person) => ({
-    id: person.id,
-    label: person.label,
-    color: participantColor(person.id),
-    selection: person.selection ? { anchor: person.selection.anchor, focus: person.selection.head } : null,
-  }));
+  }, [open, presentation]);
+  const error = openingError ?? state?.error?.message;
+  const participants =
+    open && session && presentation.owns(session) && !state?.closing && !openingError
+      ? state?.participants.map((person) => ({
+          id: person.id,
+          label: person.label,
+          color: participantColor(person.id),
+          selection: person.selection ? { anchor: person.selection.anchor, focus: person.selection.head } : null,
+        }))
+      : [];
   return (
     <Flex direction="column" h="full" minH="0" bg="bg">
       {errorNotice}
@@ -110,7 +99,7 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
             placeholder={placeholder}
             sectionNavigation={sectionNavigation}
             onActiveSectionChange={onActiveSectionChange}
-            isEditable={state.editable && !state.closing}
+            isEditable={open && presentation.owns(session) && state.editable && !state.closing}
           />
         </Flex>
       ) : (
