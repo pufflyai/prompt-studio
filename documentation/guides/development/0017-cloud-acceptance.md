@@ -162,6 +162,13 @@ reproduces the pending-source failure in RP-429. The fixture now checks exact na
 note projection before connecting receiver editors; a project status alone does not
 prove a newly bound standalone text source has downloaded.
 
+The corrected three-device Notes scenario passes locally. Its replacement companion
+completes all eight replacements in 43.266 seconds, then preserves the original reset
+recovery failure. RP-429 records both results. The marker driver submits at most eight
+ordinary saves concurrently and awaits every admitted outcome; tick 125 commits last.
+Every original group, value size and checkpoint remains unchanged. Applicable Linux
+timings and the whole scenario still require latest-candidate CI.
+
 ## Focused preparation and final candidate commands
 
 Run from the repository root, except where a subshell changes to the owning package.
@@ -174,11 +181,17 @@ commands below assume `EVIDENCE` is the report's returned `filesPath`, and
 bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-cloud-record-repair.fixture.p0.test.ts
 ```
 
-The record-stream repair check currently exposes an acceptance failure: a quiet joined
+The original record-stream repair check exposed an acceptance failure: a quiet joined
 client accepts an authenticated incomplete replacement at the same cursor without
-repairing the missing record. Preserve that red result. PS-1064 owns the production
-repair in separate WS-166; its separate PR must be reviewed and integrated explicitly
-before this harness can establish that behavior. Do not import PS-1016 instead.
+repairing the missing record. Preserve that red result. PS-1064 owns its production
+repair in separate WS-166 and [PR #1748](https://github.com/pufflyai/prompt-studio/pull/1748),
+commit `c723c17be60b7b0bdb10327bc283d5edacc60efb`. This preparation branch incorporates
+that exact independently reviewed prerequisite; it is not a merge/delivery claim.
+The unchanged focused regression now passes (one test, 77 assertions). A changed
+snapshot and its retained tail must preserve whole-group validation before repair;
+the original atomicity review failure and corrected probe remain in PS-1064's report.
+Final packaged and latest-head CI results must be recorded separately. Do not import
+PS-1016 instead.
 The green `createDocumentSync` checks exercise the text/document path and do not
 waive the record-stream failure. Cloud extension UI is also absent at this base; no
 UI selectors or passing production UI coverage are invented for its Canvas previews.
