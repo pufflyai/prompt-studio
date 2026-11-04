@@ -62,7 +62,7 @@ export const expectPackagedSavedRecordings = async () => {
   const home = mkdtempSync(join(tmpdir(), "pstdio-offline-performance-"));
   try {
     const directory = join(home, "saved");
-    const writer = createPerformanceRecording(directory);
+    const writer = await createPerformanceRecording(directory);
     writer.write({ kind: "sample", captureId: "saved", sample: { sequence: 0 } });
     writer.close();
     const child = Bun.spawn([PACKAGED_BINARY_PATH, "performance", "recordings", directory], {

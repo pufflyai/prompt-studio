@@ -77,6 +77,8 @@ export const startApi = async (options: StartApiOptions = {}) => {
   const url = `http://127.0.0.1:${port}`;
   try {
     await waitForReady(url, child);
+    child.stdout!.resume();
+    child.stderr!.resume();
   } catch (error) {
     await stop();
     throw error;

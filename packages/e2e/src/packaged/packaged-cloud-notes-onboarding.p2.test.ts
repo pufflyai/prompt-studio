@@ -27,6 +27,9 @@ setupPackagedSmokeTests();
 test(
   "a downloaded cloud project opens Notes on this device and creates a note through its plus button",
   async () => {
+    const startedAt = performance.now();
+    const phase = (name: string) =>
+      console.info(`Cloud Notes +${Math.round(performance.now() - startedAt)}ms: ${name}`);
     const root = await mkdtemp(join(tmpdir(), "cloud-notes-onboarding-"));
     let peerCleanup: ReturnType<typeof createPackagedSyncPeer> | undefined;
     let firstCleanup: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
@@ -41,8 +44,8 @@ test(
       completeInitialSetup = resolve;
     });
     try {
-      const key = join(root, "key.pem");
-      const cert = join(root, "cert.pem");
+      const key = join(root, "key.pem"),
+        cert = join(root, "cert.pem");
       const openssl = Bun.spawnSync([
         "openssl",
         "req",
@@ -83,6 +86,7 @@ test(
       secondCleanup = second;
       const a = createClient({ baseUrl: first.baseUrl, token: first.descriptor.token });
       const b = createClient({ baseUrl: second.baseUrl, token: second.descriptor.token });
+      phase("both runtimes ready; open browser");
       const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
       browserCleanup = browser;
       const sourceFolder = join(root, "source");
@@ -96,9 +100,11 @@ test(
       });
       expect(seeded.outcome.ok).toBe(true);
       await b.projects.create(folderProjectInput({ name: "Local project" }, localFolder));
+      phase("both local projects created; sign in A");
       await signIn(a, peer.origin);
       await a.account.syncProject(project.id);
       await waitFor(async () => (await a.account.projectSyncStatus(project.id)).offlineReady);
+      phase("A offline-ready; sign in B");
       await signIn(b, peer.origin);
       await waitFor(async () => (await b.projects.query()).items.some((item) => item.id === project.id));
       await waitFor(async () => (await b.account.projectSyncStatus(project.id)).offlineReady);
@@ -113,6 +119,7 @@ test(
         }>;
         return workspaces.some((row) => row.is_default && row.device && row.root_path);
       });
+      phase("B downloaded; browser sign-in");
       expect((await b.projects.folder(project.id)).path).toBeNull();
       const page = await browser.newPage();
       const opens: number[] = [];
@@ -152,18 +159,22 @@ test(
         localStorage.setItem("onboarding-complete", "true");
         localStorage.removeItem("dashboard-wb2:selected-project:global");
       });
+      page.on("pageerror", (error) => console.error("Cloud Notes page error:", error.message));
       await signInBrowser(page, { origin: second.baseUrl, token: second.descriptor.token });
       await page
         .getByRole("dialog", { name: "Projects", exact: true })
         .getByRole("option", { name: "Cloud notes", exact: true })
         .click();
+      phase("project selected");
       const opening = page.getByRole("dialog", { name: /^Opening / });
       await opening.getByRole("button", { name: "Retry", exact: true }).click();
       await browserExpect(opening.getByText("The sync retry failed.", { exact: true })).toBeVisible();
+      phase("sync retry failure checked; release download");
       downloaded = true;
       await browserExpect.poll(() => attempts).toBe(1);
       await browserExpect(opening.getByText("The sync retry failed.", { exact: true })).toHaveCount(0);
       await browserExpect(opening.getByRole("status")).toBeVisible();
+      phase("initial setup pending; release failure");
       completeInitialSetup();
       await browserExpect(opening.getByText("The project folder could not be created.", { exact: true })).toBeVisible();
       await opening.getByRole("button", { name: "Retry", exact: true }).click();
@@ -172,18 +183,22 @@ test(
       );
       await browserExpect(opening.getByText("The sync retry failed.", { exact: true })).toHaveCount(0);
       await browserExpect(opening.getByRole("status")).toBeVisible();
+      phase("setup retry pending; release success");
       completeRetry();
       await browserExpect.poll(() => opens).toContain(200);
       expect((await b.projects.folder(project.id)).path).toBeTruthy();
       await browserExpect(page.getByRole("dialog", { name: /^Opening / })).toHaveCount(0);
+      phase("project folder opened; Notes navigation");
       const sidebar = page.locator('[data-workbench-region="sidenav"]');
       await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
       await browserExpect(sidebar.getByRole("option", { name: "From device A", exact: true })).toBeVisible();
       await sidebar.getByRole("button", { name: "New note", exact: true }).click();
+      phase("new note selected; await editor");
       const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
       await browserExpect(editor).toBeVisible();
       await editor.fill("Created on device B");
       await browserExpect(sidebar.getByRole("option", { name: "Created on device B", exact: true })).toBeVisible();
+      phase("note authored; reload");
       await page.reload();
       await browserExpect(editor).toContainText("Created on device B");
       await waitFor(async () => {

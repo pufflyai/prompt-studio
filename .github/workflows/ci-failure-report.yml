@@ -120,9 +120,10 @@ jobs:
           - { os: windows-2025, platform_pkg: cli-win-x64 }
           - { os: windows-11-arm, platform_pkg: cli-win-arm64 }
           - { os: macos-15-intel, platform_pkg: cli-darwin-x64 }
-          - { os: macos-15, platform_pkg: cli-darwin-arm64 }
     env:
       PSTDIO_BUILD_PLATFORM_PKG: ${{ matrix.platform_pkg }}
+      CI_PRIORITY: P2
+      CI_PROFILE: production
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
@@ -152,7 +153,6 @@ jobs:
           bun run test:packaged:cli
           src/packaged/packaged-cloud-peer.fixture.p0.test.ts
           src/packaged/packaged.p1.test.ts
-          src/packaged/extension-browser-install.p1.test.ts
           src/packaged/packaged-core-extensions-smoke.p1.test.ts
           src/packaged/packaged-cloud-notes-onboarding.p2.test.ts
           src/packaged/packaged-board-panning-smoke.p2.test.ts

@@ -150,6 +150,8 @@ export const startPackagedServe = async (
   try {
     if (child.pid !== undefined) observe?.({ pid: child.pid, descriptor: null });
     const descriptor = await waitForPackagedReady(descriptorPath, child, observe);
+    child.stdout!.resume();
+    child.stderr!.resume();
     return { child, baseUrl: descriptor.origin, descriptor };
   } catch (error) {
     await stopProcess(child);

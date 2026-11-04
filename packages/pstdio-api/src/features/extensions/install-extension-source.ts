@@ -10,6 +10,7 @@ import {
 } from "pstdio-extensions";
 import { parseRegistrySourceRef, unpackExtension } from "pstdio-extensions/distribution";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
 import {
   checkExtensionSource,
@@ -297,27 +298,34 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       mkdirSync(extensionsRoot, { recursive: true });
       stagingRoot = mkdtempSync(join(dirname(extensionsRoot), ".extension-install-"));
       installPath = join(stagingRoot, directoryName);
-      await copyExtensionSource(resolvedSource.path, installPath);
+      await traceSetupPhase("extension.source_copy", { extension: installName }, () =>
+        copyExtensionSource(resolvedSource.path, installPath),
+      );
     }
 
-    const linkedInstalledDependencies = await prepareInstallDependencies({
-      installInput: input,
-      installPath,
-      source: resolvedSource,
-      targetPath,
-    });
+    const linkedInstalledDependencies = await traceSetupPhase(
+      "extension.prepare_dependencies",
+      { extension: installName },
+      () =>
+        prepareInstallDependencies({
+          installInput: input,
+          installPath,
+          source: resolvedSource,
+          targetPath,
+        }),
+    );
     input.signal?.throwIfAborted();
 
-    const { check, loaded } = await validatePreparedInstall(
-      installPath,
-      extensionsRoot,
-      input.allowUnsupportedApiVersion === true,
+    const { check, loaded } = await traceSetupPhase("extension.validate", { extension: installName }, () =>
+      validatePreparedInstall(installPath, extensionsRoot, input.allowUnsupportedApiVersion === true),
     );
     input.signal?.throwIfAborted();
 
     // A replacement must activate every managed view before the working source is replaced.
     if (targetExists && !reuseExisting) await validateExtensionWebviews(loaded, installPath, installName, input.signal);
-    const sourceHash = hashExtensionSource(installPath);
+    const sourceHash = await traceSetupPhase("extension.source_hash", { extension: installName }, async () =>
+      hashExtensionSource(installPath),
+    );
     let snapshot = { check, manifest: loaded.manifest };
     if (installPath !== targetPath) {
       // Resolve asset bases while staging still exists, before its folder is promoted.
