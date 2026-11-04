@@ -50,7 +50,7 @@ test("resizes, closes, and reopens the Secondary Panel within the interaction bu
   await preparePerfPage(page, project.id);
 
   await page.goto(`/projects/${project.id}`);
-  await expect(page.getByRole("link", { name: "Start", exact: true })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Home", exact: true })).toHaveAttribute("aria-selected", "true");
   const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
