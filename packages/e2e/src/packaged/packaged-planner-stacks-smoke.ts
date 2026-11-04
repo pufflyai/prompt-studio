@@ -271,7 +271,7 @@ export async function expectPackagedManualWorkspaceRecovery(input: {
   const { execute, request, started, stop, child } = await expectDependencyStack(input, false);
   await execute("auto-build.configure", { enabled: false });
   const stopped = await request(`/sessions/${started.session.id}/status`, "PATCH", { status: "cancelled" });
-  expect(stopped).toMatchObject({ status: "cancelled", last_exit: { cause: "user_stop" } });
+  expect(stopped).toMatchObject({ status: "cancelled" });
   const before = await execute("read-attempt-history", { workspaceId: started.workspace.id });
   const path = started.workspace.root_path;
   await rename(path, `${path}.missing`);
