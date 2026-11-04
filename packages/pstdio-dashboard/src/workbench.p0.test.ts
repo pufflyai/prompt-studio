@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
+import { workbenchPanels } from "@pstdio/sdk/extensions";
 import { WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { dashboardHomePage } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { registerHomePage } from "./home-page.test-support";
 import { createDashboardWorkbench } from "./workbench";
 
 describe("createDashboardWorkbench", () => {
@@ -15,9 +17,10 @@ describe("createDashboardWorkbench", () => {
   test("offers the session panel on project home", () => {
     const workbench = createDashboardWorkbench();
 
+    registerHomePage(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Project" });
     workbench.pageLocations.setProject("project-1");
-    workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.start });
+    expect(workbench.pageLocations.navigate({ kind: "page", page: dashboardHomePage }).ok).toBe(true);
 
     expect(workbench.getPrimaryResource()).toBeUndefined();
     const sessionBubble = workbench.modePlacements.getPlacement(workbenchPanels.projectSession);

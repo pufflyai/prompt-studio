@@ -14,7 +14,12 @@ describe("resolveDefaultExtensionsConfig", () => {
   test("returns the production defaults when the env override is absent", async () => {
     const config = await resolveDefaultExtensionsConfig({});
 
-    expect(config.defaultExtensions).toEqual(["pstdio-base-themes", "pstdio-skills", "pstdio-performance"]);
+    expect(config.defaultExtensions).toEqual([
+      "pstdio-home",
+      "pstdio-base-themes",
+      "pstdio-skills",
+      "pstdio-performance",
+    ]);
   });
 
   test("uses PSTDIO_DEFAULT_EXTENSIONS JSON when set", async () => {
@@ -282,7 +287,7 @@ describe("installDefaultExtensions cancellation", () => {
 });
 
 describe("installDefaultExtensions sources", () => {
-  test("uses local source packages for production defaults when running from source", async () => {
+  test("uses local source packages for user-scoped production defaults when running from source", async () => {
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
       calls.push(input);

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
@@ -23,7 +24,9 @@ for (const destination of ["start", "extension", "navigate-away"] as const) {
     let child: ChildProcess | undefined;
     let browser: Browser | undefined;
     try {
-      const runtime = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") });
+      const runtime = await startPackagedServe(root, {
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "pstdio-home"),
+      });
       child = runtime.child;
       const folder = join(root, "project");
       mkdirSync(folder);
@@ -50,8 +53,7 @@ for (const destination of ["start", "extension", "navigate-away"] as const) {
       await requested.promise;
       await expect(page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
       if (destination === "start") {
-        await expect(page.getByTestId("start-page")).toBeVisible();
-        await expect(page.getByRole("link", { name: "New conversation", exact: true })).toBeEnabled();
+        await expect(page.locator('iframe[title="Home"]')).toHaveCount(0);
       } else {
         await expect(page).toHaveURL(destinationUrl);
       }
@@ -64,7 +66,7 @@ for (const destination of ["start", "extension", "navigate-away"] as const) {
       loading.resolve();
       await registered;
       if (destination === "extension") await expect(page.locator('iframe[title="Lab"]')).toBeVisible();
-      if (destination === "start") await expect(page.getByTestId("start-page")).toBeVisible();
+      if (destination === "start") await expect(homePage(page)).toBeVisible();
       if (destination === "navigate-away") await expect(page).toHaveURL(`${projectUrl}/sessions/compose`);
       // A page with its own navigation replaces the project rows. Return to Start
       // after proving restoration so the extension's root entry is visible again.

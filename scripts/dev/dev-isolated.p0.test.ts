@@ -38,6 +38,7 @@ describe("isolated development paths", () => {
 
     expect(config.defaultExtensions).toEqual(
       [
+        ["pstdio-home", "extensions/pstdio-home"],
         ["pstdio-base-themes", "extensions/pstdio-base-themes"],
         ["pstdio-skills", "extensions/pstdio-skills"],
         ["pstdio-performance", "extensions/pstdio-performance"],

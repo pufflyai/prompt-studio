@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 
@@ -90,7 +91,7 @@ test("creating the first folder project opens Home", async ({ page, request }) =
   await page.getByRole("button", { name: "Open folder", exact: true }).click();
   await page.getByRole("dialog", { name: "Open project folder", exact: true }).waitFor({ state: "hidden" });
   await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
-  await expect(page.getByTestId("start-page")).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
 });
 
 test("dashboard selects the only project on first load", async ({ page, request }) => {
@@ -100,7 +101,7 @@ test("dashboard selects the only project on first load", async ({ page, request 
 
   await page.goto("/");
 
-  await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))
     .toBeTruthy();
@@ -115,7 +116,7 @@ test("switching projects never reopens the picker while restoring the landing vi
   }, firstProject.id);
 
   await page.goto("/");
-  await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   await navSwitchProjectButton(page).click();
 
   const picker = page.getByRole("dialog", { name: "Projects", exact: true });
@@ -147,7 +148,7 @@ test("switching projects never reopens the picker while restoring the landing vi
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))
     .toBe(secondProject.id);
-  await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   expect(
     await page.evaluate(
       () =>

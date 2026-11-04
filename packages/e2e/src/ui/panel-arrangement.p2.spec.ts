@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homeFrame } from "../helpers/home-loading";
 import { uiOrigin as apiBase } from "../ui-server";
 
 test("an invalid drop onto Home preserves the terminal's live view and shell state", async ({ page, request }) => {
@@ -13,7 +14,7 @@ test("an invalid drop onto Home preserves the terminal's live view and shell sta
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
-  await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+  await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
   const originalUrl = page.url();
   const main = page.getByRole("region", { name: "Main", exact: true });
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
@@ -59,5 +60,5 @@ test("an invalid drop onto Home preserves the terminal's live view and shell sta
   await retained.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
   await expect(mainHeader).not.toBeVisible();
-  await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+  await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
 });

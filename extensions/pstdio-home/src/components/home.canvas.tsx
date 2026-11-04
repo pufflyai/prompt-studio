@@ -1,36 +1,22 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { createDashboardResource } from "@/shared/app/resources";
-import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
-import type { RecentProjectResource } from "@/shared/recents/recent-project-resources";
+import { recentProjectResources } from "../recent-resources";
+import { ProjectSetupStatus } from "./project-setup-status";
 import { StartAboutPanel } from "./start-about-panel";
 import { type StartAction, StartActionList } from "./start-action-list";
 import { StartRecentList } from "./start-recent-list";
 
-const recentResource = (
-  id: string,
-  title: string,
-  kind: string,
-  icon: string,
-  updatedAt: string,
-): RecentProjectResource => ({
-  id,
-  title,
-  icon,
-  updatedAt,
-  resource: createDashboardResource(kind.toLowerCase(), id, title, icon, "project-1"),
-});
-const resources: RecentProjectResource[] = [
-  recentResource(
-    "session-1",
-    "Make the weekly report easier to scan",
-    "Session",
-    "message-circle",
-    "2026-06-16T14:24:00.000Z",
-  ),
-  recentResource("ticket-1", "PS-231 Persistent project tabs", "Ticket", "component", "2026-06-16T11:02:00.000Z"),
-  recentResource("artifact-1", "Weekly activity summary", "Artifact", "file-code", "2026-06-15T09:10:00.000Z"),
-  recentResource("workspace-1", "PS-231_A1", "Workspace", "computer", "2026-06-14T17:45:00.000Z"),
+interface PreviewResource {
+  id: string;
+  title: string;
+  icon: string;
+  status?: "completed" | "in_progress" | "awaiting_input";
+}
+const resources: PreviewResource[] = [
+  { id: "session-1", title: "Make the weekly report easier to scan", icon: "message-circle", status: "in_progress" },
+  { id: "ticket-1", title: "PS-231 Persistent project tabs", icon: "component" },
+  { id: "artifact-1", title: "Weekly activity summary", icon: "file-code" },
+  { id: "workspace-1", title: "PS-231_A1", icon: "computer" },
 ];
 const actions: StartAction[] = [
   { id: "new-conversation", label: "New conversation", icon: "message-square", run: () => undefined },
@@ -44,7 +30,6 @@ interface StartPagePreviewProps {
 }
 const StartPagePreview = (props: StartPagePreviewProps) => {
   const { setupError } = props;
-
   return (
     <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl">
       <Stack gap="xs" minW="0">
@@ -60,14 +45,28 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
           <StartActionList actions={actions} />
         </Box>
         <Box flex="1" minW="0" w="full">
-          <StartRecentList resources={resources} onOpen={() => undefined} />
+          <StartRecentList
+            resources={recentProjectResources(
+              resources.map(({ id, title, icon, status }) => ({
+                resource: {
+                  id,
+                  type: status ? "session" : "example",
+                  label: title,
+                  icon,
+                  ...(status ? { metadata: { status } } : {}),
+                },
+                target: { kind: "page", page: { kind: "page", extensionId: "example", id: "detail" } },
+              })),
+            )}
+            onOpen={() => undefined}
+          />
         </Box>
       </Stack>
     </Stack>
   );
 };
 const meta: CanvasMeta<typeof StartPagePreview> = {
-  title: "Start/StartPage",
+  title: "Home/Project home",
   component: StartPagePreview,
 };
 export default meta;

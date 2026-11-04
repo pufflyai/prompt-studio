@@ -2,6 +2,7 @@ import { expect } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 export const expectPackagedInstallations = async (baseUrl: string, headers: Record<string, string>) => {
   const jobs = await fetch(`${baseUrl}/v1/extension-installations`, { headers });
@@ -65,6 +66,14 @@ export const expectPackagedProjectChoices = async (
     }[];
   const enabled = async (id: string, extensionId: string) =>
     (await extensions(id)).find((entry) => entry.extensionId === extensionId)?.enabled;
+  const waitForEnabled = async (id: string, extensionId: string) => {
+    const deadline = Date.now() + PACKAGED_TEST_TIMEOUT;
+    while (Date.now() < deadline) {
+      if (await enabled(id, extensionId)) return;
+      await Bun.sleep(25);
+    }
+    throw new Error(`Extension ${extensionId} was not enabled for project ${id} before the packaged test deadline.`);
+  };
   for (const id of [projectId, peerId]) {
     expect(await enabled(id, "pstdio.harness-codex")).toBe(false);
     expect(await enabled(id, "pstdio.pstdio-planner")).toBe(false);
@@ -99,7 +108,7 @@ export const expectPackagedProjectChoices = async (
     },
   );
   expect(harness.status).toBe(200);
-  while (!(await enabled(projectId, "pstdio.harness-codex"))) await Bun.sleep(25);
+  await waitForEnabled(projectId, "pstdio.harness-codex");
   expect(await enabled(peerId, "pstdio.harness-codex")).toBe(false);
   const empty = await fetch(
     `${baseUrl}/v1/projects/${peerId}/extensions/commands/pstdio.catalog-client.command.select/execute`,
@@ -110,7 +119,7 @@ export const expectPackagedProjectChoices = async (
     },
   );
   expect(empty.status).toBe(200);
-  while (!(await enabled(peerId, "pstdio.pstdio-skills"))) await Bun.sleep(25);
+  await waitForEnabled(peerId, "pstdio.pstdio-skills");
   expect(await enabled(peerId, "pstdio.pstdio-planner")).toBe(false);
   const sourcePath = writePackagedChoiceSource(root, "harness-pi");
   const registered = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions/installed/harness-pi/enable`, {
@@ -136,6 +145,6 @@ export const expectPackagedProjectChoices = async (
     },
   );
   expect(late.status).toBe(200);
-  while (!(await enabled(peerId, "pstdio.harness-pi"))) await Bun.sleep(25);
+  await waitForEnabled(peerId, "pstdio.harness-pi");
   expect(await enabled(peerId, "pstdio.pstdio-planner")).toBe(false);
 };

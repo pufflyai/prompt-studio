@@ -106,11 +106,11 @@ describe("extension catalog", () => {
     }
   });
 
-  test("ships only platform extensions as defaults", () => {
+  test("ships Home and platform extensions as defaults", () => {
     const defaults = packagedExtensionCatalog.extensions
       .filter((catalogEntry) => catalogEntry.default)
       .map((catalogEntry) => catalogEntry.installName);
 
-    expect(defaults).toEqual(["pstdio-base-themes", "pstdio-skills", "pstdio-performance"]);
+    expect(defaults).toEqual(["pstdio-home", "pstdio-base-themes", "pstdio-skills", "pstdio-performance"]);
   });
 });

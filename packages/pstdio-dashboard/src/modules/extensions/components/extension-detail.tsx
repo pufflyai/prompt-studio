@@ -277,9 +277,11 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                         checked={automation.enabled}
                         disabled={togglingAutomationId === automation.id}
                         onCheckedChange={(details) => onToggleAutomation(automation, details.checked)}
-                        aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
-                          name: resolveLocalizableString(automation.title, automation.extensionId),
-                        })}
+                        inputProps={{
+                          "aria-label": t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
+                            name: resolveLocalizableString(automation.title, automation.extensionId),
+                          }),
+                        }}
                       />
                     </HStack>
                   ))}

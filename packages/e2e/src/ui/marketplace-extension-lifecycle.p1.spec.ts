@@ -83,6 +83,7 @@ test("disables and enables an extension automation", async ({ page, request }) =
   const automationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Lab heartbeat" });
   await expect(automationRow).toBeVisible();
   const automationCheckbox = automationRow.locator("input[type='checkbox']");
+  await expect(automationCheckbox).toHaveAccessibleName("Toggle automation Lab heartbeat");
   const automationSwitch = automationRow.locator("[data-scope='switch'][data-part='control']");
   await expect(automationCheckbox).toBeChecked();
 

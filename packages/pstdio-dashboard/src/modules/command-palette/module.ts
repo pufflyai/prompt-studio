@@ -1,6 +1,8 @@
 import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 
+import { registerToolResources } from "./tool-resources";
+
 export const createCommandPaletteModule = () =>
   ({
     id: "dashboard.command-palette",
@@ -18,5 +20,6 @@ export const createCommandPaletteModule = () =>
           },
         },
       );
+      return registerToolResources(ctx);
     },
   }) satisfies WorkbenchModuleContribution;

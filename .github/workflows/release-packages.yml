@@ -12,19 +12,20 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: Release stable, nightly, a stable patch, or SDK/UI previews only (packages)
+        description: Release stable, nightly, a patch, SDK/UI previews (packages), or verify without publishing
         type: choice
         options:
           - stable
           - nightly
           - patch
           - packages
+          - verify
         default: stable
       base_tag:
         description: "Patch only: current stable tag, such as pstdio@0.43.1"
         type: string
       source_sha:
-        description: "Patch only: full commit SHA of the reviewed fixes, based on base_tag"
+        description: "Patch: reviewed fix SHA. Verify: full SHA of the Changesets version candidate."
         type: string
       summary:
         description: "Patch only: one-line release note"
@@ -38,7 +39,7 @@ on:
 # replaces a run of the same channel that is still waiting. A queued nightly never replaces
 # a queued stable run.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.channel == 'packages' && 'packages' || (github.event_name == 'schedule' || inputs.channel == 'nightly') && 'nightly' || 'stable' }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.channel == 'verify' && 'verify' || inputs.channel == 'packages' && 'packages' || (github.event_name == 'schedule' || inputs.channel == 'nightly') && 'nightly' || 'stable' }}
   cancel-in-progress: false
 
 permissions:
@@ -133,17 +134,17 @@ jobs:
       contents: write
       actions: read
     outputs:
-      release: ${{ needs.prepare_patch.outputs.release || steps.stable.outputs.release || steps.nightly.outputs.release }}
+      release: ${{ steps.verify.outputs.release || needs.prepare_patch.outputs.release || steps.stable.outputs.release || steps.nightly.outputs.release }}
       channel: ${{ steps.channel.outputs.channel }}
-      version: ${{ needs.prepare_patch.outputs.version || steps.stable.outputs.version || steps.nightly.outputs.version || steps.existing.outputs.version }}
-      tag: ${{ needs.prepare_patch.outputs.tag || steps.stable.outputs.tag || steps.nightly.outputs.tag || steps.existing.outputs.tag }}
-      commit: ${{ needs.prepare_patch.outputs.commit || steps.stable.outputs.commit || steps.nightly.outputs.commit || steps.existing.outputs.commit }}
-      previous_tag: ${{ needs.prepare_patch.outputs.previous_tag || steps.stable.outputs.previous_tag }}
+      version: ${{ steps.verify.outputs.version || needs.prepare_patch.outputs.version || steps.stable.outputs.version || steps.nightly.outputs.version || steps.existing.outputs.version }}
+      tag: ${{ steps.verify.outputs.tag || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag || steps.nightly.outputs.tag || steps.existing.outputs.tag }}
+      commit: ${{ steps.verify.outputs.commit || needs.prepare_patch.outputs.commit || steps.stable.outputs.commit || steps.nightly.outputs.commit || steps.existing.outputs.commit }}
+      previous_tag: ${{ steps.verify.outputs.previous_tag || needs.prepare_patch.outputs.previous_tag || steps.stable.outputs.previous_tag }}
       candidate_run_id: ${{ steps.existing.outputs.artifact_run_id }}
       candidate_attempt: ${{ steps.existing.outputs.artifact_attempt }}
-      source_sha: ${{ inputs.channel == 'patch' && inputs.source_sha || (steps.channel.outputs.channel == 'nightly' && github.sha || steps.stable.outputs.commit) }}
+      source_sha: ${{ steps.verify.outputs.source_sha || (inputs.channel == 'patch' && inputs.source_sha || (steps.channel.outputs.channel == 'nightly' && github.sha || steps.stable.outputs.commit)) }}
       # Nightly tags are pruned, so nightly builds install core extensions from the main commit.
-      extension_ref: ${{ steps.channel.outputs.channel == 'nightly' && github.sha || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag }}
+      extension_ref: ${{ steps.verify.outputs.commit || (steps.channel.outputs.channel == 'nightly' && github.sha || needs.prepare_patch.outputs.tag || steps.stable.outputs.tag) }}
       targets: ${{ steps.channel.outputs.channel == 'nightly' && '["darwin-arm64","linux-x64"]' || '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]' }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -155,6 +156,7 @@ jobs:
 
       - uses: actions/checkout@v5
         with:
+          ref: ${{ inputs.channel == 'verify' && inputs.source_sha || github.sha }}
           fetch-depth: 0
 
       - name: Setup Bun
@@ -169,8 +171,29 @@ jobs:
 
       - name: Plan the stable release
         id: stable
-        if: steps.channel.outputs.channel == 'stable' && inputs.channel != 'patch'
+        if: steps.channel.outputs.channel == 'stable' && inputs.channel != 'patch' && inputs.channel != 'verify'
         run: bun scripts/release/plan-release.ts
+
+      - name: Select the exact version candidate for verification without placing a release tag
+        id: verify
+        if: inputs.channel == 'verify'
+        env:
+          CANDIDATE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          bun -e 'if (!/^[a-f0-9]{40}$/.test(process.env.CANDIDATE_SHA ?? "")) throw new Error("Verify requires the full Changesets version candidate SHA");'
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test "$(git show -s --format=%s HEAD)" = "Version Packages"
+          VERSION=$(bun -e 'console.log((await Bun.file("packages/pstdio/package.json").json()).version)')
+          PREVIOUS_TAG=$(gh release view --json tagName --jq .tagName)
+          {
+            echo "release=true"
+            echo "version=$VERSION"
+            echo "tag=pstdio@$VERSION"
+            echo "commit=$CANDIDATE_SHA"
+            echo "source_sha=$(git rev-parse HEAD^)"
+            echo "previous_tag=$PREVIOUS_TAG"
+          } >> "$GITHUB_OUTPUT"
 
       # Only an unpublished release reaches this step, so moving its tag affects nothing users see.
       - name: Place the release tag
@@ -361,6 +384,7 @@ jobs:
     needs: [plan, release_build, containers, desktop, windows_update, production]
     if: >-
       ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'stable' &&
+      inputs.channel != 'verify' &&
       (inputs.channel != 'patch' || inputs.publish_patch) &&
       needs.release_build.result == 'success' &&
       (needs.plan.outputs.channel == 'nightly' || needs.production.result == 'success') &&
@@ -406,6 +430,7 @@ jobs:
     needs: [plan, release_build, containers, desktop]
     if: >-
       ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' &&
+      inputs.channel != 'verify' &&
       (inputs.channel != 'patch' || inputs.publish_patch) &&
       needs.release_build.result == 'success' &&
       needs.containers.result == 'success' &&
@@ -492,7 +517,7 @@ jobs:
     needs: [prepare_patch, publish]
     if: >-
       ${{ !cancelled() && github.ref == 'refs/heads/main' &&
-      github.event_name != 'schedule' && inputs.channel != 'nightly' && inputs.channel != 'packages' &&
+      github.event_name != 'schedule' && inputs.channel != 'nightly' && inputs.channel != 'packages' && inputs.channel != 'verify' &&
       needs.prepare_patch.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15

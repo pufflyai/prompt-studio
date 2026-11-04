@@ -3,6 +3,7 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbench } from "@pstdio/workbench";
 import { registerWorkbenchExtensionContributions } from "@pstdio/workbench/extensions";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
+import i18n from "@/i18n";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
 import { receiveSettings } from "@/shared/settings/synced-settings";
@@ -10,6 +11,21 @@ import { createSettingsModule } from "./module";
 
 describe("createSettingsModule", () => {
   afterEach(() => getWriter("settings")!.remove("global"));
+
+  test("uses the active language for Customizations navigation and view titles", async () => {
+    const language = i18n.language;
+    await i18n.changeLanguage("es");
+    const workbench = createWorkbench();
+    const registration = workbench.registerModule(createSettingsModule());
+    try {
+      const title = i18n.t("projectOpening.customizations", { ns: "common" });
+      expect(workbench.settings.listPanels().find((panel) => panel.id === "customizations")?.title).toBe(title);
+      expect(workbench.views.getView("dashboard.settings.customizations")?.title).toBe(title);
+    } finally {
+      registration.dispose();
+      await i18n.changeLanguage(language);
+    }
+  });
 
   test("shows the Machine tokens panel only while its beta switch is on", () => {
     const workbench = createWorkbench();

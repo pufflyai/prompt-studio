@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homeFrame, homePage } from "../helpers/home-loading";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -12,7 +13,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
   try {
-    const defaults = JSON.parse(e2eExtensions("workbench-fixture"));
+    const defaults = JSON.parse(e2eExtensions("workbench-fixture", "pstdio-home"));
     defaults.defaultExtensions[0].force = true;
     const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults) });
     child = started.child;
@@ -54,7 +55,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     expect(readFileSync(installedNote, "utf8")).toBe("Keep the installed source");
     const project = (await response.json()) as { id: string };
     await expect(page.getByRole("option", { name: "Home", exact: true })).toBeVisible();
-    await expect(page.getByTestId("start-page")).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
     const enter = page.getByRole("button", { name: "Enter Main fullscreen", exact: true });
     await enter.click();
     await expect(page.getByRole("button", { name: "Exit Main fullscreen", exact: true })).toBeVisible();
@@ -70,7 +71,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(page.getByRole("dialog", { name: "Side Panel", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Close Side Panel", exact: true }).click();
     await expect(bubble).toBeVisible();
-    await page.getByText("Project home", { exact: true }).click();
+    await homeFrame(page).getByText("Project home", { exact: true }).click();
     await page.keyboard.press("Escape");
     await expect(enter).toBeFocused();
     await enter.click();

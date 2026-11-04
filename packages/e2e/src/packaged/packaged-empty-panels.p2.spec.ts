@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import { expectNoDefaultHomePlaceholder, observeHomeLoading, verifyPageHeaders } from "../helpers/home-loading";
+import { homeFrame, verifyPageHeaders } from "../helpers/home-loading";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { verifyEmptyPanelAddition } from "./packaged-empty-panel-addition";
@@ -26,7 +26,7 @@ test("adding a tool keeps the other empty panel open", async () => {
   let browser: Browser | null = null;
   try {
     const started = await test.step("Start the packaged runtime", () =>
-      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-artifacts") }));
+      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-home", "pstdio-artifacts") }));
     child = started.child;
     phase("runtime ready; create project");
     const folder = join(root, "project");
@@ -45,10 +45,11 @@ test("adding a tool keeps the other empty panel open", async () => {
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, started.descriptor);
     phase("signed in; open project");
-    await observeHomeLoading(page);
     await page.goto(`${started.baseUrl}/projects/${project.id}/`);
-    await expect(page.getByText("Project home", { exact: true })).toBeVisible();
-    await expectNoDefaultHomePlaceholder(page);
+    await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
+    await expect(
+      page.locator('[data-workbench-panel="main"]').getByLabel("Available tabs", { exact: true }),
+    ).toHaveCount(0);
     await verifyPageHeaders(page);
     phase("project ready; check panel additions");
     await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));

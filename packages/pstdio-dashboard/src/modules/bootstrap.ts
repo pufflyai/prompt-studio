@@ -1,5 +1,5 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
-import type { WorkbenchModuleContribution } from "@pstdio/workbench";
+import { batchWorkbenchChanges, type WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
@@ -91,7 +91,14 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             }
             readyUnsubscribe?.();
             readyUnsubscribe = undefined;
-            ctx.pageLocations.boot(projectId);
+            batchWorkbenchChanges(() => {
+              const overlay = ctx.layout.getLayout().regions.overlay;
+              ctx.pageLocations.boot(projectId);
+              if (overlay.widgets.length) {
+                const layout = ctx.layout.getLayout();
+                ctx.layout.restoreLayout({ ...layout, regions: { ...layout.regions, overlay } });
+              }
+            });
             return true;
           };
 

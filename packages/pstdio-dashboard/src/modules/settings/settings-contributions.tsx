@@ -2,6 +2,7 @@ import { Spinner } from "@chakra-ui/react";
 import { standardResourceIcons, type WorkbenchModuleContext, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { lazy, Suspense } from "react";
+import i18n from "@/i18n";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
@@ -84,7 +85,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
   });
   ctx.views.registerView({
     id: settingsViewIds.customizations,
-    title: "Customizations",
+    title: i18n.t("projectOpening.customizations", { ns: "common" }),
     body: { kind: "react", render: ({ workbench }) => <CustomizationsSettingsPanel workbench={workbench} /> },
   });
   ctx.views.registerView({
@@ -165,7 +166,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
   ctx.settings.registerPanel({
     kind: "view",
     id: "customizations",
-    title: "Customizations",
+    title: i18n.t("projectOpening.customizations", { ns: "common" }),
     section: "workbench",
     scope: "global",
     order: 20,

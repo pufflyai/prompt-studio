@@ -257,7 +257,7 @@ test("updates a New session Sub Panel in place after the first message", async (
 
   await expect(sessionTabs).toHaveCount(2);
   await expect(activeTab).toContainText(prompt);
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
 });
 
 test("renames a moved session and restores its destination after reload", async ({ page, request }) => {
