@@ -37,7 +37,7 @@ const setup = async (
       // Each request must reach the current server, not a pooled socket from before its forced restart.
       request.headers.set("connection", "close");
       const response = await fetch(request.clone());
-      if (new URL(request.url).pathname.endsWith("/stream")) watching.resolve();
+      if (request.method === "POST" && new URL(request.url).pathname.endsWith("/subscriptions")) watching.resolve();
       await afterReply?.(request);
       return response;
     }) as typeof fetch,
