@@ -1,9 +1,16 @@
 import { expect, test } from "bun:test";
+import type { ChatRendererContribution } from "../extension-kernel/types/chat-renderer";
 import { chatRendererEventSchema, chatRendererSnapshotSchema } from "./chat-renderer";
-import { workbenchExtensionViewRecordSchema } from "./workbench-metadata";
+import { type WorkbenchExtensionViewBody, workbenchExtensionViewRecordSchema } from "./workbench-metadata";
+
+test("side-effect-only action handlers need no return value", async () => {
+  const perform = async () => {};
+  const onAction: ChatRendererContribution["onAction"] = perform;
+  expect(await onAction({} as never, {} as never)).toBeUndefined();
+});
 
 test("native chat metadata carries static composer state and qualified handlers without executable entries", () => {
-  const body = {
+  const body: WorkbenchExtensionViewBody = {
     kind: "chat",
     draftKey: "new-conversation",
     initial: { messages: [], controls: [], values: {}, readOnly: false },

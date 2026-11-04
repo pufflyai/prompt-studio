@@ -28,7 +28,8 @@ export interface ChatRendererContribution extends RendererContributionBase {
   /** Available on the first render, before any command or stream connects. */
   initial?: ChatRendererSnapshot;
   query: RendererCallback<JsonObject, ChatRendererSnapshot>;
-  onAction: RendererCallback<{ action: ChatRendererAction; draftKey: string }, ChatRendererActionResult | undefined>;
+  // biome-ignore lint/suspicious/noConfusingVoidType: side-effect-only callbacks may infer Promise<void>.
+  onAction: RendererCallback<{ action: ChatRendererAction; draftKey: string }, ChatRendererActionResult | void>;
   resolveLink?: RendererCallback<{ candidate: ChatLinkCandidate }, ChatLinkPresentation>;
   resolveImage?: RendererCallback<{ source: string }, string | null>;
   /** A normal cancellable command that writes ChatRendererEvent chunks; abort must release holds, never stop work. */
