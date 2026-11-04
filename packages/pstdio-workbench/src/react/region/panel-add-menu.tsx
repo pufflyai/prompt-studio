@@ -15,7 +15,6 @@ interface WorkbenchPanelAddMenuProps {
 export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
   const { panels, region, resource, workbench } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const pendingPanels = useRef<WorkbenchCompositionAddablePanel[]>([]);
   const label = "Add panel";
   if (panels.length === 0) return null;
 
@@ -45,15 +44,7 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
   if (panels.length === 1) return <Tooltip content={label}>{trigger}</Tooltip>;
 
   return (
-    <Menu.Root
-      positioning={{ placement: "bottom-start", getAnchorElement: () => triggerRef.current }}
-      onExitComplete={() => {
-        const selected = pendingPanels.current;
-        pendingPanels.current = [];
-        // A reopened menu can interrupt its exit. Retain every selection until focus restoration finishes.
-        for (const panel of selected) openPanel(panel);
-      }}
-    >
+    <Menu.Root positioning={{ placement: "bottom-start", getAnchorElement: () => triggerRef.current }}>
       <Tooltip content={label}>
         <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       </Tooltip>
@@ -69,9 +60,7 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
                   icon={
                     panel.contribution.icon ? <WorkbenchIcon name={panel.contribution.icon} size={14} /> : undefined
                   }
-                  onActivate={() => {
-                    pendingPanels.current.push(panel);
-                  }}
+                  onActivate={() => openPanel(panel)}
                 />
               </Menu.Item>
             ))}

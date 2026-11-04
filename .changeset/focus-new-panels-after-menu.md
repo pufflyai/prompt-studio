@@ -1,6 +1,6 @@
 ---
 "pstdio": patch
-"@pstdio/workbench": patch
+"@pstdio/ui": patch
 ---
 
-Focus newly opened panels after their selecting menu finishes closing.
+Focus new composers after their selecting menu restores focus.
