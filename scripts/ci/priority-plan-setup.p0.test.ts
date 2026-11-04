@@ -5,6 +5,29 @@ import { join } from "node:path";
 import { createPriorityPlan } from "./priority-plan";
 import { priorityPlanSetup } from "./priority-plan-setup";
 
+test("extension-owned Canvas checks retain their scope and build their source dependencies", () => {
+  const packages: Parameters<typeof createPriorityPlan>[1] = [
+    { name: "canvas-tests", dir: "packages/canvas-tests", dependencies: [], scripts: {} },
+    { name: "pstdio-cloud", dir: "extensions/pstdio-cloud", dependencies: ["@pstdio/ui"], scripts: {} },
+    { name: "@pstdio/ui", dir: "packages/ui", dependencies: [], scripts: {} },
+  ];
+  const file = "packages/canvas-tests/src/ui/pstdio-cloud/devices.p1.spec.ts";
+  const plan = createPriorityPlan([file], packages, "P1", { scope: "pstdio-cloud" });
+  expect(plan.flatMap((run) => run.files)).toEqual([file]);
+  const setup = priorityPlanSetup("/repo", plan, packages);
+  expect(setup[0]?.command).toEqual(["bun", "run", "build", "--", "--scope", "pstdio-cloud", "--include-dependencies"]);
+  expect(setup[1]?.command).toEqual([
+    "bun",
+    "x",
+    "--no-install",
+    "lerna",
+    "run",
+    "build:previews",
+    "--scope",
+    "canvas-tests",
+  ]);
+});
+
 test("packaged setup builds its host once alongside the selected test dependencies", async () => {
   const root = await mkdtemp(join(tmpdir(), "packaged-build-plan-"));
   try {
