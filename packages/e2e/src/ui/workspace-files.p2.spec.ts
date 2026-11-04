@@ -213,7 +213,8 @@ test("browses and edits files in the default workspace", async ({ page, request 
     await search.fill("README");
     const readme = page
       .getByRole("region", { name: "Files", exact: true })
-      .getByRole("option", { name: "README.md", exact: true });
+      .getByRole("option", { name: "README.md", exact: true })
+      .and(page.locator('[data-tree-list-node-id="README.md"]'));
     await expect(readme).toBeVisible();
     const fileResponse = Promise.withResolvers<void>();
     const pendingFileRoutes: Promise<void>[] = [];
@@ -252,7 +253,7 @@ test("browses and edits files in the default workspace", async ({ page, request 
 
     await page.reload();
     await page.getByRole("textbox", { name: "Search files" }).fill("README");
-    await page.getByRole("option", { name: "README.md", exact: true }).click();
+    await readme.click();
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("Edited in the default workspace");
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
