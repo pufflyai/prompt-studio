@@ -80,8 +80,9 @@ export const createOrderedMemoryRecords = (
     read,
     list: async (prefix = "") =>
       Promise.all(
-        [...views.keys()]
-          .filter((id) => id.startsWith(prefix))
+        [...views]
+          .filter(([id, record]) => id.startsWith(prefix) && !record.deleted)
+          .map(([id]) => id)
           .sort()
           .map(read),
       ),

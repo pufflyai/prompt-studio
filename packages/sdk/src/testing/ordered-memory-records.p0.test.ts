@@ -83,3 +83,22 @@ test("the helper resolves pending dependencies and refuses stale ABA observation
     expect((await storage.records.read("audit")).exists).toBe(false);
   }
 });
+
+test("legacy collection lists omit deleted items before and after device sync", async () => {
+  const pair = await createMemoryStorageDevices();
+  const [first] = pair.devices;
+  for (const [id, value] of [
+    ["removed", "old"],
+    ["kept", "saved"],
+  ] as const)
+    await first.collection("migration-input").put(id, { value });
+  await pair.merge();
+  await first.collection("migration-input").delete("removed");
+  expect(await first.collection("migration-input").list()).toEqual([{ value: "saved" }]);
+  await pair.merge();
+  for (const storage of pair.devices) {
+    expect(await storage.collection("migration-input").get("removed")).toBeUndefined();
+    expect(await storage.collection("migration-input").list()).toEqual([{ value: "saved" }]);
+    expect((await storage.records.list()).every((record) => !record.deleted)).toBe(true);
+  }
+});
