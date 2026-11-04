@@ -111,7 +111,7 @@ test("provisions a distinct private device, then preserves it through stop/start
     size: "s-2vcpu-4gb",
     image,
   });
-  expect((await stat(f.file)).mode & 0o777).toBe(0o600);
+  if (process.platform !== "win32") expect((await stat(f.file)).mode & 0o777).toBe(0o600);
   f.droplets[0].status = "active";
   f.online();
   expect((await f.service.cloudDevices())[0]).toMatchObject({ id: device.id, power: "active", online: true });
@@ -165,7 +165,7 @@ test("exports a fresh private bootstrap file without a provider request or crede
   expect(exported.deviceId).not.toBe("laptop");
   expect(exported.path).toStartWith(f.file);
   expect(Object.keys(exported).sort()).toEqual(["deviceId", "expiresAt", "path"]);
-  expect((await stat(exported.path)).mode & 0o777).toBe(0o600);
+  if (process.platform !== "win32") expect((await stat(exported.path)).mode & 0o777).toBe(0o600);
   const envelope = JSON.parse(await readFile(exported.path, "utf8"));
   expect(envelope).toMatchObject({ deviceId: exported.deviceId, accountId: "owner", grant: "single-use-grant" });
   expect(JSON.stringify(exported)).not.toContain("single-use-grant");
