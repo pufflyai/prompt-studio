@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { dashboardExtensionsPage } from "@/shared/app/resources";
+import { projectExtensionsQueryKey } from "@/shared/extensions/project-extension-cache";
 import { registerExtensionsPage } from "./extensions-page";
 
 const setup = () => {
@@ -66,6 +68,26 @@ test("opens extension details as a nested page and returns to its parent", () =>
       restored.dispose();
     }
   } finally {
+    workbench.dispose();
+  }
+});
+
+test("extension labels refresh only when extension data changes, not when another query starts during render", () => {
+  const workbench = setup();
+  const client = getDashboardQueryClient();
+  const kind = workbench.resources.listKinds().find((entry) => entry.kind === "extension");
+  let notified = 0;
+  const stop = kind?.subscribe?.(() => notified++);
+  try {
+    expect(stop).toBeDefined();
+    client.getQueryCache().build(client, { queryKey: ["unrelated-session-query"] });
+    expect(notified).toBe(0);
+    client.setQueryData(projectExtensionsQueryKey("project-1"), { extensions: [], marketplace: [] });
+    expect(notified).toBe(1);
+  } finally {
+    if (typeof stop === "function") stop();
+    else stop?.dispose();
+    client.clear();
     workbench.dispose();
   }
 });
