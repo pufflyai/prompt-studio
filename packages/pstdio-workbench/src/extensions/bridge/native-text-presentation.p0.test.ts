@@ -58,7 +58,9 @@ const fixture = () => {
     port: 0,
     async fetch(request) {
       const path = new URL(request.url).pathname;
-      const input = (await request.json()) as {
+      if (path.includes("/session-stream/") && path.includes("/subscriptions"))
+        return new Response(null, { status: 204 });
+      const input = (request.method === "POST" ? await request.json() : {}) as {
         request?: WireRequest;
         active?: boolean;
       };
@@ -73,12 +75,12 @@ const fixture = () => {
         }
         return reply({ token: "connection" });
       }
-      if (path.endsWith("/stream"))
+      if (path === "/v1/session-stream")
         return new Response(
           new ReadableStream({
             start(controller) {
               streams.add(controller);
-              controller.enqueue(new TextEncoder().encode(": ready\n\n"));
+              controller.enqueue(new TextEncoder().encode('event: connected\ndata: {"connection_id":"shared"}\n\n'));
             },
             cancel() {},
           }),

@@ -12,6 +12,8 @@ The [shared stream architecture](../references/architecture/0021-stream.md) limi
 
 ## Decision
 
+Native text observations also subscribe on this shared connection, using their existing project-scoped connection token. Each watch cancels independently; reconnecting replays the active close barrier and observes the current full text/presence state. Slow watches coalesce superseded full states and reconnect when their pending queue fills. A single previously supported large snapshot can travel without a smaller document-size limit. The original direct text stream route remains supported for existing HTTP callers.
+
 Command subscriptions use the existing `/v1/session-stream` connection. `createClient` owns its transport and passes it to both session and extension clients. Each subscription has its own cancellation controller. Closing a connection aborts every subscription. A dropped connection ends command streams; it does not replay them.
 
 A command declares `stream: streamOf<T>()` and sends chunks with `await ctx.stream.write(chunk)`. Its return value remains the final command outcome. Ordinary calls discard chunks immediately. Middleware, workspace resolution, notices, and emitted event IDs use the existing command runner.

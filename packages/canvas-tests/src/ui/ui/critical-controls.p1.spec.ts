@@ -71,8 +71,8 @@ test("preview setup failures are visible", async ({ page }) => {
   await expect(shell.getByRole("alert")).toContainText("Missing preview source");
 });
 
-// Critical: extension examples must load the catalog's fallback provider rather than a missing module.
-test("extension examples load their fallback suite provider", async ({ page }) => {
-  const preview = await openCanvasPreview(page, ".pstdio/extensions/motion-lab/src/study-status.canvas.tsx#Deleted");
-  await expect(preview.getByText("This study was deleted or does not exist.", { exact: true })).toBeVisible();
+// Critical: migrated studies must load their project's Chakra provider and shared scene kit.
+test("motion studies load their project provider", async ({ page }) => {
+  const preview = await openCanvasPreview(page, "design/motion/studies/tabs/study.canvas.tsx#Subtle");
+  await expect(preview.getByLabel("README.md", { exact: true })).toBeVisible();
 });

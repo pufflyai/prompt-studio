@@ -65,6 +65,7 @@ export const updateProviderOperationProjection = async (
     .where(
       and(
         eq(workspaces.id, id),
+        isNull(workspaces.deleted_at),
         eq(workspaces.provider_operation_id, input.operationId),
         eq(workspaces.provider_operation_kind, input.operationKind),
       ),

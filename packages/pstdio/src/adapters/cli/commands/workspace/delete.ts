@@ -6,10 +6,17 @@ export const command = "delete";
 export const describe = "Force-remove a workspace";
 
 export const builder = (yargs: Argv) =>
-  yargs.option("id", { type: "string", demandOption: true, describe: "Workspace shorthand (e.g. PS-1_A1)" });
+  yargs
+    .option("id", { type: "string", demandOption: true, describe: "Workspace shorthand (e.g. PS-1_A1)" })
+    .option("forget", {
+      type: "boolean",
+      describe:
+        "Discard a remote missing-provider record with no backing reference or local path; abandons recovery and leaves remote resources unchanged",
+    });
 
 type DeleteArgs = {
   id: string;
+  forget?: boolean;
 };
 
 type Deps = {
@@ -38,6 +45,7 @@ export const createHandler =
     await deps.deleteWorkspace({
       projectId: config.project_id,
       workspaceShorthand: argv.id,
+      ...(argv.forget ? { forget: true } : {}),
     });
   };
 

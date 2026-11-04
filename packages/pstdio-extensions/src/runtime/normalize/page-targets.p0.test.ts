@@ -13,6 +13,7 @@ import {
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
+import { isRuntimeNavigationTargetAvailable } from "./page-target-validation";
 
 const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensionSource => ({
   packagePath: "/fake/lab",
@@ -43,6 +44,47 @@ const ticketKind = defineResourceKind({
 });
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
   normalizeExtensionSources([source(definition)]).diagnostics;
+
+test("returned resource targets require available pages, panels, parents, and every compound destination", () => {
+  const viewer = definePlacement({
+    id: "viewer",
+    mode: workbenchModes.project,
+    region: "side",
+    item: { kind: "binding", binding: { kinds: [ticketKind.ref], view: resourceView.ref, cardinality: "many" } },
+  });
+  const page = definePage({
+    id: "resource",
+    title: "Resource",
+    path: "resource",
+    slots: [],
+    mode: workbenchModes.project,
+    parent: workbenchPages.start,
+    resource: { kinds: [ticketKind.ref] },
+    main: { kind: "view", view: resourceView.ref, cardinality: "many" },
+  });
+  const runtime = normalizeExtensionSources([
+    source(
+      defineExtension({ views: [resourceView], resourceKinds: [ticketKind], placements: [viewer], pages: [page] }),
+    ),
+  ]);
+  const resource = { type: "ticket", id: "ticket", extensionId: "pstdio.lab", projectId: "project" };
+  const pageTarget = { kind: "page" as const, page: { ...page.ref, extensionId: "pstdio.lab" }, resource };
+  const panelTarget = { kind: "panel" as const, panel: { ...viewer.ref, extensionId: "pstdio.lab" }, resource };
+  const missing = { ...panelTarget, panel: { ...panelTarget.panel, id: "missing" } };
+  expect(isRuntimeNavigationTargetAvailable(runtime, pageTarget)).toBe(true);
+  expect(isRuntimeNavigationTargetAvailable(runtime, panelTarget)).toBe(true);
+  expect(isRuntimeNavigationTargetAvailable(runtime, { kind: "compound", targets: [pageTarget, panelTarget] })).toBe(
+    true,
+  );
+  expect(isRuntimeNavigationTargetAvailable(runtime, { kind: "compound", targets: [pageTarget, missing] })).toBe(false);
+  expect(
+    isRuntimeNavigationTargetAvailable(runtime, {
+      ...pageTarget,
+      parent: { ...pageTarget, page: { ...pageTarget.page, id: "missing" } },
+    }),
+  ).toBe(false);
+  expect(runtime.diagnostics).toEqual([]);
+});
 test.each(["pin", "preview"] as const)("collection resource viewers accept %s page navigation", (open) => {
   const viewer = definePlacement({
     id: "viewer",

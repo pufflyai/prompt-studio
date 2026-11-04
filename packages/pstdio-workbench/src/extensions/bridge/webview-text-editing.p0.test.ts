@@ -32,6 +32,7 @@ const fixture = async () => {
   let holdClose = false;
   let refuseDisconnect = false;
   const streams = new Set<ReadableStreamDefaultController<Uint8Array>>();
+  const subscriptions = new Set<string>();
   const encoder = new TextEncoder();
   const reply = (value?: unknown) => Response.json({ ok: true, value });
   const connect = async (input: unknown) => {
@@ -75,7 +76,16 @@ const fixture = async () => {
     port: 0,
     async fetch(request) {
       const path = new URL(request.url).pathname;
-      const input = (await request.json()) as {
+      if (path.startsWith("/v1/session-stream/shared/subscriptions")) {
+        if (request.method === "DELETE") subscriptions.delete(path.split("/").at(-1)!);
+        else {
+          const input = await request.json();
+          subscriptions.add(input.subscription_id);
+          streamReady.resolve();
+        }
+        return new Response(null, { status: 204 });
+      }
+      const input = (request.method === "POST" ? await request.json() : {}) as {
         token?: string;
         active?: boolean;
         request?: { operation: string };
@@ -92,15 +102,14 @@ const fixture = async () => {
         return reply();
       }
       if (path.endsWith("/disconnect")) return disconnect(input.token!);
-      if (path.endsWith("/stream")) {
+      if (path === "/v1/session-stream") {
         let current: ReadableStreamDefaultController<Uint8Array>;
         return new Response(
           new ReadableStream<Uint8Array>({
             start(controller) {
               current = controller;
               streams.add(controller);
-              controller.enqueue(encoder.encode(": ready\n\n"));
-              streamReady.resolve();
+              controller.enqueue(encoder.encode('event: connected\ndata: {"connection_id":"shared"}\n\n'));
             },
             cancel() {
               streams.delete(current);
@@ -205,7 +214,10 @@ const fixture = async () => {
     },
     emit(event: TextEditingEvent) {
       for (const controller of streams)
-        controller.enqueue(encoder.encode(`event: text\ndata: ${JSON.stringify(event)}\n\n`));
+        for (const subscription_id of subscriptions)
+          controller.enqueue(
+            encoder.encode(`event: text\ndata: ${JSON.stringify({ subscription_id, data: event })}\n\n`),
+          );
     },
     async stop() {
       for (const held of activityGates.values()) held.release.resolve();

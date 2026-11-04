@@ -137,7 +137,9 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
     ) {
       const connection = connectionFor(address);
       connection.listeners.add(listener);
+      const bufferedBarrier = connection.buffered.has("prepareClose");
       for (const event of connection.buffered.values()) listener(event);
+      if (connection.barrier && !bufferedBarrier) listener({ type: "prepareClose", barrierId: connection.barrier.id });
       connection.buffered.clear();
       for (const member of connection.members.values()) observeTextMember(deps, connection, member);
       return () => {

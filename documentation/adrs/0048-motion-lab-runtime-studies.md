@@ -2,7 +2,11 @@
 
 Proposed: 2026-09-29
 
-Status: Accepted in PS-444. Consolidates the retired Remotion subpath alias (ADR 0045) and separate scene link pass (ADR 0051).
+Status: Superseded by PS-1006. Consolidates the retired Remotion subpath alias (ADR 0045) and separate scene link pass (ADR 0051).
+
+UI Canvas now renders the project studies through the PS-987 project build. Existing study paths remain, shared scene helpers live in `design/motion/kit`, and Canvas owns review commands. Canvas also owns saved review records. The former extension, runtime compiler, shared-module link pass, and Remotion Player are removed.
+
+The following records the PS-444 decision.
 
 ## Decision
 

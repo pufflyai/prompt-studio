@@ -22,6 +22,9 @@ test("Auto Build exposes pending requests in its work scope above its session ac
     eligible: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Tool builder" }] },
   });
   expect((await readAutoBuildCommand.run(ctx, {})).reviewRequests.map((request) => request.id)).toEqual([pending.id]);
+  expect((await readAutoBuildCommand.run(ctx, {})).reviewRequests[0]?.ticketLabel).toBe(
+    `${included.shorthand} · Tool builder release`,
+  );
   await pauseAutoBuildCommand.run(ctx, {});
   expect((await readAutoBuildCommand.run(ctx, {})).reviewRequests.map((request) => request.id)).toEqual([pending.id]);
   await reviewCommand.run(ctx, { requestId: pending.id, response: { confirmed: true } });

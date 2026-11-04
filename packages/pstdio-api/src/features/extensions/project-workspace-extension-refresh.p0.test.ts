@@ -76,3 +76,11 @@ test("ignores folders that belong to another device", () => {
   expect(state.refreshes()).toBe(0);
   expect(state.invalidations).toEqual([]);
 });
+
+test("keeps extensions loaded when a workspace is deleted", () => {
+  const state = setup();
+  // Deleting a workspace never changes the default folder that extensions load from.
+  state.eventBus.emit("workspaces", "delete", { id: "feature-workspace" });
+  expect(state.refreshes()).toBe(0);
+  expect(state.invalidations).toEqual([]);
+});

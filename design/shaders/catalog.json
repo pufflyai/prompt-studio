@@ -1,0 +1,700 @@
+[
+  {
+    "id": "section-hatch",
+    "title": "Section hatch",
+    "description": "Diagonal hatching, like a cut section in an engineering drawing.",
+    "groups": [
+      {
+        "id": "pattern",
+        "title": "Pattern",
+        "description": "Diagonal lines that drift slowly.",
+        "fields": [
+          {
+            "id": "spacing",
+            "name": "Spacing",
+            "description": "Distance between lines in px.",
+            "min": 2,
+            "max": 32,
+            "step": 1,
+            "defaultValue": 8
+          },
+          {
+            "id": "angle",
+            "name": "Angle",
+            "description": "Line angle in degrees.",
+            "min": 0,
+            "max": 180,
+            "step": 1,
+            "defaultValue": 45
+          },
+          {
+            "id": "lineWidth",
+            "name": "Width",
+            "description": "Stroke width in px.",
+            "min": 0.5,
+            "max": 3,
+            "step": 0.25,
+            "defaultValue": 1
+          },
+          {
+            "id": "lineDrift",
+            "name": "Drift",
+            "description": "Line movement in px per second.",
+            "min": 0,
+            "max": 30,
+            "step": 0.5,
+            "defaultValue": 3
+          }
+        ]
+      },
+      {
+        "id": "opacity",
+        "title": "Opacity",
+        "description": "Peak line opacity in each theme.",
+        "fields": [
+          {
+            "id": "lightOpacity",
+            "name": "Light theme",
+            "description": "Usually lower than dark to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.06
+          },
+          {
+            "id": "darkOpacity",
+            "name": "Dark theme",
+            "description": "Usually higher than light to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.17
+          }
+        ]
+      },
+      {
+        "id": "noise",
+        "title": "Noise",
+        "description": "Drifting patches that vary the pattern's transparency.",
+        "fields": [
+          {
+            "id": "noiseScale",
+            "name": "Scale",
+            "description": "Patch size in px.",
+            "min": 20,
+            "max": 800,
+            "step": 10,
+            "defaultValue": 200
+          },
+          {
+            "id": "noiseContrast",
+            "name": "Contrast",
+            "description": "Low is a soft gradient; high gives sharp patches.",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "defaultValue": 1.6
+          },
+          {
+            "id": "noiseBalance",
+            "name": "Balance",
+            "description": "Negative hides more of the pattern; 1 turns the noise off.",
+            "min": -1,
+            "max": 1,
+            "step": 0.05,
+            "defaultValue": 0
+          },
+          {
+            "id": "noiseDrift",
+            "name": "Drift",
+            "description": "Patch movement in px per second.",
+            "min": 0,
+            "max": 60,
+            "step": 1,
+            "defaultValue": 5
+          },
+          {
+            "id": "noiseDetail",
+            "name": "Detail",
+            "description": "Noise octaves. More adds finer variation.",
+            "min": 1,
+            "max": 4,
+            "step": 1,
+            "defaultValue": 1
+          },
+          {
+            "id": "seed",
+            "name": "Seed",
+            "description": "Picks a different noise layout.",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "defaultValue": 7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dots-to-grid",
+    "title": "Dots to grid",
+    "description": "A dot grid that resolves into a line grid where a soft band passes.",
+    "groups": [
+      {
+        "id": "pattern",
+        "title": "Pattern",
+        "description": "A drafting sheet: dots everywhere, lines inside the moving band.",
+        "fields": [
+          {
+            "id": "spacing",
+            "name": "Spacing",
+            "description": "Grid cell size in px.",
+            "min": 4,
+            "max": 32,
+            "step": 1,
+            "defaultValue": 8
+          },
+          {
+            "id": "dotSize",
+            "name": "Dot size",
+            "description": "Dot width in px.",
+            "min": 0.5,
+            "max": 3,
+            "step": 0.25,
+            "defaultValue": 1
+          },
+          {
+            "id": "lineStrength",
+            "name": "Line strength",
+            "description": "Grid line opacity relative to the dots.",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "defaultValue": 0.75
+          },
+          {
+            "id": "bandWidth",
+            "name": "Band width",
+            "description": "Share of the surface the band covers.",
+            "min": 0.1,
+            "max": 1,
+            "step": 0.05,
+            "defaultValue": 0.4
+          },
+          {
+            "id": "cycle",
+            "name": "Cycle",
+            "description": "Seconds for the band to cross the surface.",
+            "min": 1,
+            "max": 15,
+            "step": 0.5,
+            "defaultValue": 4.5
+          }
+        ]
+      },
+      {
+        "id": "opacity",
+        "title": "Opacity",
+        "description": "Peak line opacity in each theme.",
+        "fields": [
+          {
+            "id": "lightOpacity",
+            "name": "Light theme",
+            "description": "Usually lower than dark to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.3
+          },
+          {
+            "id": "darkOpacity",
+            "name": "Dark theme",
+            "description": "Usually higher than light to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.5
+          }
+        ]
+      },
+      {
+        "id": "noise",
+        "title": "Noise",
+        "description": "Drifting patches that vary the pattern's transparency.",
+        "fields": [
+          {
+            "id": "noiseScale",
+            "name": "Scale",
+            "description": "Patch size in px.",
+            "min": 20,
+            "max": 800,
+            "step": 10,
+            "defaultValue": 200
+          },
+          {
+            "id": "noiseContrast",
+            "name": "Contrast",
+            "description": "Low is a soft gradient; high gives sharp patches.",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "defaultValue": 1.6
+          },
+          {
+            "id": "noiseBalance",
+            "name": "Balance",
+            "description": "Negative hides more of the pattern; 1 turns the noise off.",
+            "min": -1,
+            "max": 1,
+            "step": 0.05,
+            "defaultValue": 0
+          },
+          {
+            "id": "noiseDrift",
+            "name": "Drift",
+            "description": "Patch movement in px per second.",
+            "min": 0,
+            "max": 60,
+            "step": 1,
+            "defaultValue": 5
+          },
+          {
+            "id": "noiseDetail",
+            "name": "Detail",
+            "description": "Noise octaves. More adds finer variation.",
+            "min": 1,
+            "max": 4,
+            "step": 1,
+            "defaultValue": 1
+          },
+          {
+            "id": "seed",
+            "name": "Seed",
+            "description": "Picks a different noise layout.",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "defaultValue": 7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "plotter-crosshair",
+    "title": "Plotter crosshair",
+    "description": "A dashed crosshair wanders over a faint grid.",
+    "groups": [
+      {
+        "id": "pattern",
+        "title": "Pattern",
+        "description": "A plotter head over graph paper.",
+        "fields": [
+          {
+            "id": "gridSpacing",
+            "name": "Grid spacing",
+            "description": "Grid cell size in px.",
+            "min": 4,
+            "max": 40,
+            "step": 1,
+            "defaultValue": 12
+          },
+          {
+            "id": "gridStrength",
+            "name": "Grid strength",
+            "description": "Grid opacity relative to the crosshair.",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "defaultValue": 0.25
+          },
+          {
+            "id": "speed",
+            "name": "Speed",
+            "description": "How fast the crosshair moves.",
+            "min": 0,
+            "max": 4,
+            "step": 0.1,
+            "defaultValue": 1
+          },
+          {
+            "id": "markerSize",
+            "name": "Marker size",
+            "description": "Size of the square at the crossing in px.",
+            "min": 2,
+            "max": 16,
+            "step": 1,
+            "defaultValue": 6
+          }
+        ]
+      },
+      {
+        "id": "opacity",
+        "title": "Opacity",
+        "description": "Peak line opacity in each theme.",
+        "fields": [
+          {
+            "id": "lightOpacity",
+            "name": "Light theme",
+            "description": "Usually lower than dark to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.4
+          },
+          {
+            "id": "darkOpacity",
+            "name": "Dark theme",
+            "description": "Usually higher than light to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.6
+          }
+        ]
+      },
+      {
+        "id": "noise",
+        "title": "Noise",
+        "description": "Drifting patches that vary the pattern's transparency.",
+        "fields": [
+          {
+            "id": "noiseScale",
+            "name": "Scale",
+            "description": "Patch size in px.",
+            "min": 20,
+            "max": 800,
+            "step": 10,
+            "defaultValue": 200
+          },
+          {
+            "id": "noiseContrast",
+            "name": "Contrast",
+            "description": "Low is a soft gradient; high gives sharp patches.",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "defaultValue": 1.6
+          },
+          {
+            "id": "noiseBalance",
+            "name": "Balance",
+            "description": "Negative hides more of the pattern; 1 turns the noise off.",
+            "min": -1,
+            "max": 1,
+            "step": 0.05,
+            "defaultValue": 0
+          },
+          {
+            "id": "noiseDrift",
+            "name": "Drift",
+            "description": "Patch movement in px per second.",
+            "min": 0,
+            "max": 60,
+            "step": 1,
+            "defaultValue": 5
+          },
+          {
+            "id": "noiseDetail",
+            "name": "Detail",
+            "description": "Noise octaves. More adds finer variation.",
+            "min": 1,
+            "max": 4,
+            "step": 1,
+            "defaultValue": 1
+          },
+          {
+            "id": "seed",
+            "name": "Seed",
+            "description": "Picks a different noise layout.",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "defaultValue": 7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ruler-ticks",
+    "title": "Ruler ticks",
+    "description": "Ruler ticks slide along the top and bottom edges.",
+    "groups": [
+      {
+        "id": "pattern",
+        "title": "Pattern",
+        "description": "A measuring scale along the edges.",
+        "fields": [
+          {
+            "id": "tickSpacing",
+            "name": "Tick spacing",
+            "description": "Distance between ticks in px.",
+            "min": 2,
+            "max": 16,
+            "step": 1,
+            "defaultValue": 4
+          },
+          {
+            "id": "majorEvery",
+            "name": "Major every",
+            "description": "Ticks between major ticks.",
+            "min": 2,
+            "max": 10,
+            "step": 1,
+            "defaultValue": 5
+          },
+          {
+            "id": "majorLength",
+            "name": "Major length",
+            "description": "Major tick length in px.",
+            "min": 2,
+            "max": 16,
+            "step": 1,
+            "defaultValue": 5
+          },
+          {
+            "id": "minorLength",
+            "name": "Minor length",
+            "description": "Minor tick length in px.",
+            "min": 1,
+            "max": 8,
+            "step": 1,
+            "defaultValue": 2
+          },
+          {
+            "id": "speed",
+            "name": "Speed",
+            "description": "Tick movement in px per second.",
+            "min": 0,
+            "max": 60,
+            "step": 1,
+            "defaultValue": 12
+          }
+        ]
+      },
+      {
+        "id": "opacity",
+        "title": "Opacity",
+        "description": "Peak line opacity in each theme.",
+        "fields": [
+          {
+            "id": "lightOpacity",
+            "name": "Light theme",
+            "description": "Usually lower than dark to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.5
+          },
+          {
+            "id": "darkOpacity",
+            "name": "Dark theme",
+            "description": "Usually higher than light to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.7
+          }
+        ]
+      },
+      {
+        "id": "noise",
+        "title": "Noise",
+        "description": "Drifting patches that vary the pattern's transparency.",
+        "fields": [
+          {
+            "id": "noiseScale",
+            "name": "Scale",
+            "description": "Patch size in px.",
+            "min": 20,
+            "max": 800,
+            "step": 10,
+            "defaultValue": 200
+          },
+          {
+            "id": "noiseContrast",
+            "name": "Contrast",
+            "description": "Low is a soft gradient; high gives sharp patches.",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "defaultValue": 1.6
+          },
+          {
+            "id": "noiseBalance",
+            "name": "Balance",
+            "description": "Negative hides more of the pattern; 1 turns the noise off.",
+            "min": -1,
+            "max": 1,
+            "step": 0.05,
+            "defaultValue": 0
+          },
+          {
+            "id": "noiseDrift",
+            "name": "Drift",
+            "description": "Patch movement in px per second.",
+            "min": 0,
+            "max": 60,
+            "step": 1,
+            "defaultValue": 5
+          },
+          {
+            "id": "noiseDetail",
+            "name": "Detail",
+            "description": "Noise octaves. More adds finer variation.",
+            "min": 1,
+            "max": 4,
+            "step": 1,
+            "defaultValue": 1
+          },
+          {
+            "id": "seed",
+            "name": "Seed",
+            "description": "Picks a different noise layout.",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "defaultValue": 7
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dashed-outline",
+    "title": "Dashed outline",
+    "description": "A moving dashed line runs just inside the border.",
+    "groups": [
+      {
+        "id": "pattern",
+        "title": "Pattern",
+        "description": "A marked-up region.",
+        "fields": [
+          {
+            "id": "dash",
+            "name": "Dash",
+            "description": "Dash length in px.",
+            "min": 1,
+            "max": 20,
+            "step": 0.5,
+            "defaultValue": 4
+          },
+          {
+            "id": "gap",
+            "name": "Gap",
+            "description": "Gap length in px.",
+            "min": 1,
+            "max": 20,
+            "step": 0.5,
+            "defaultValue": 3
+          },
+          {
+            "id": "inset",
+            "name": "Inset",
+            "description": "Distance from the border in px.",
+            "min": 0.5,
+            "max": 8,
+            "step": 0.5,
+            "defaultValue": 2.5
+          },
+          {
+            "id": "speed",
+            "name": "Speed",
+            "description": "Dash movement in px per second.",
+            "min": 0,
+            "max": 60,
+            "step": 1,
+            "defaultValue": 10
+          }
+        ]
+      },
+      {
+        "id": "opacity",
+        "title": "Opacity",
+        "description": "Peak line opacity in each theme.",
+        "fields": [
+          {
+            "id": "lightOpacity",
+            "name": "Light theme",
+            "description": "Usually lower than dark to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.5
+          },
+          {
+            "id": "darkOpacity",
+            "name": "Dark theme",
+            "description": "Usually higher than light to look the same.",
+            "min": 0,
+            "max": 1,
+            "step": 0.005,
+            "defaultValue": 0.75
+          }
+        ]
+      },
+      {
+        "id": "noise",
+        "title": "Noise",
+        "description": "Drifting patches that vary the pattern's transparency.",
+        "fields": [
+          {
+            "id": "noiseScale",
+            "name": "Scale",
+            "description": "Patch size in px.",
+            "min": 20,
+            "max": 800,
+            "step": 10,
+            "defaultValue": 200
+          },
+          {
+            "id": "noiseContrast",
+            "name": "Contrast",
+            "description": "Low is a soft gradient; high gives sharp patches.",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "defaultValue": 1.6
+          },
+          {
+            "id": "noiseBalance",
+            "name": "Balance",
+            "description": "Negative hides more of the pattern; 1 turns the noise off.",
+            "min": -1,
+            "max": 1,
+            "step": 0.05,
+            "defaultValue": 0
+          },
+          {
+            "id": "noiseDrift",
+            "name": "Drift",
+            "description": "Patch movement in px per second.",
+            "min": 0,
+            "max": 60,
+            "step": 1,
+            "defaultValue": 5
+          },
+          {
+            "id": "noiseDetail",
+            "name": "Detail",
+            "description": "Noise octaves. More adds finer variation.",
+            "min": 1,
+            "max": 4,
+            "step": 1,
+            "defaultValue": 1
+          },
+          {
+            "id": "seed",
+            "name": "Seed",
+            "description": "Picks a different noise layout.",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "defaultValue": 7
+          }
+        ]
+      }
+    ]
+  }
+]
