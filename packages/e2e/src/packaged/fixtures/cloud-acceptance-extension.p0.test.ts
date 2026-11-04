@@ -68,3 +68,25 @@ test("record revision preparation durably commits 126 distinct groups while pres
       shared: { kind: "map", value: { compactionTick: 377 } },
     });
 });
+
+// A bad fixture record must report every rejected save it admitted, then leave storage untouched.
+test("marker preparation preserves admitted validation failures without partial record writes", async () => {
+  const storage = createMemoryStorage();
+  const context = makeCommandContext({ storage, params: {} });
+  await storage.records.commit({
+    operationId: "marker-validation-seed",
+    edits: Array.from({ length: 8 }, (_, index) => ({
+      recordId: `large-${index}`,
+      replace: `unchanged-${index}`,
+      ...(index === 0 ? { shared: [{ kind: "text.insert" as const, index: 0, text: "Text channel" }] } : {}),
+    })),
+  });
+  const before = await storage.records.list();
+  const failure = await Promise.resolve(
+    command("advance-acceptance-revisions").run(context, { round: 0 } as never),
+  ).catch((error: unknown) => error);
+  expect(failure).toBeInstanceOf(AggregateError);
+  expect((failure as AggregateError).errors.length).toBeGreaterThan(1);
+  for (const error of (failure as AggregateError).errors) expect(error).toBeInstanceOf(Error);
+  expect(await storage.records.list()).toEqual(before);
+});

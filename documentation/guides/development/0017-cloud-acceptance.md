@@ -14,8 +14,10 @@ work, not the phase 1 baseline or a new dependency gate.
 Preparation may run before delivery. Full integrated and hosted acceptance may
 only run against the delivered, correctly deployed candidates. A green component
 test, a submitted prerequisite branch, or an old hosted run does not satisfy that
-condition. Keep PS-789 and PS-735 unfinished until their actual criteria are met.
-Do not create a managed attempt to bypass the unfinished rollup.
+condition. PS-735's platform delivery is now Done; keep PS-789 unfinished until its
+actual acceptance criteria are met. PS-877 still needs managed closure and broad
+qualification. Do not create a competing managed attempt or change dependencies
+to bypass unfinished acceptance.
 
 For each run, save the following under the `filesPath` returned by
 `pst reports write --kind change_request --name change_request --template change-request`:
@@ -30,10 +32,13 @@ For each run, save the following under the `filesPath` returned by
 - A per-requirement verdict: passed, failed, blocked, or unproved, with exact evidence.
   Do not convert a missing run into a pass or an unrelated dependency into a new gate.
 
-The initial preparation workspace contains submitted PS-776
+The historical initial preparation workspace contained submitted PS-776
 `d4da8b532dc39b0c073cd8a6246650fbd02f9fb3`. This makes its public text APIs available;
-it does not establish delivery or deployment. Inspect current branches again before
-running final acceptance. Leave other workspaces, tickets and managed attempts alone.
+its presence alone did not establish delivery or deployment. PS-776 PRs #1718 and
+#1736 have since merged. The resumed preparation branch incorporates current main
+`0f5974665734db4a88bfea12e73ec93b6030c696`; record the final harness HEAD separately.
+Inspect current branches again before final acceptance. Leave other workspaces,
+tickets and managed attempts alone.
 
 ## Shared-machine lease
 
@@ -138,8 +143,24 @@ positions through `storage.positions.between`. A passing core order fixture cann
 certify the Planner R51 adoption requirement. Report the mismatch to its owner;
 acceptance work must not fix Planner or substitute PS-1016 behavior.
 
-The existing two-isolated-setup waiver for PS-877 does not waive PS-789's three-device
-workload, real login, product content, scale, retention, UI or recovery requirements.
+PS-875 and PS-841 have Done statuses, but their saved bodies explicitly retain these
+production UI and Planner adoption gaps. Check the actual candidate source rather
+than assuming those statuses supply the missing behavior. Full-folder R57–R59 also
+remain unproved; these are current acceptance gaps, not newly invented dependencies.
+
+PS-877's accepted hosted login/project-recovery evidence is preserved in RP-109 and
+independently verified by RP-411. Do not repeat that two-isolated-setup OAuth workload
+as preparation. Its waiver does not waive PS-789's three-device content, scale,
+retention, UI or recovery requirements, nor PS-877's remaining closure/qualification.
+
+Keep the original packaged failures visible. CI 41831764633 at `2246bf6bf` completed
+with 82 component passes and the record-stream repair failure, a pending Notes source
+at editor connection, and a timeout during the sixth of eight replacements under the
+unchanged 120-second allowance. RP-419 preserves the full logs; RP-420 reviews the
+rebase's source preservation, not acceptance. The resumed current-main Notes baseline
+reproduces the pending-source failure in RP-429. The fixture now checks exact native
+note projection before connecting receiver editors; a project status alone does not
+prove a newly bound standalone text source has downloaded.
 
 ## Focused preparation and final candidate commands
 
@@ -155,7 +176,9 @@ bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-cloud-reco
 
 The record-stream repair check currently exposes an acceptance failure: a quiet joined
 client accepts an authenticated incomplete replacement at the same cursor without
-repairing the missing record. Preserve that red result and refer it to the sync owner.
+repairing the missing record. Preserve that red result. PS-1064 owns the production
+repair in separate WS-166; its separate PR must be reviewed and integrated explicitly
+before this harness can establish that behavior. Do not import PS-1016 instead.
 The green `createDocumentSync` checks exercise the text/document path and do not
 waive the record-stream failure. Cloud extension UI is also absent at this base; no
 UI selectors or passing production UI coverage are invented for its Canvas previews.

@@ -145,10 +145,12 @@ const advanceRevisions = defineCommand({
   mutating: true,
   params: { round: params.number({ required: true }) },
   async run(ctx, { round }) {
-    // These are ordinary small edits, using the unchanged production checkpoint cadence.
+    // Keep every public save and its group boundary; the host serializes writes to this owner.
+    // Submit bounded batches so fixture scheduling does not add a promise round trip per save.
     const operationIds: string[] = [];
-    for (let tick = 0; tick < 126; tick++) {
+    const commitTick = async (tick: number) => {
       const operationId = ctx.storage.ids.create();
+      operationIds.push(operationId);
       await ctx.storage.records.commit({
         operationId,
         edits: Array.from({ length: 8 }, (_, index) => ({
@@ -156,8 +158,15 @@ const advanceRevisions = defineCommand({
           shared: [{ kind: "map.set" as const, key: "compactionTick", value: round * 126 + tick }],
         })),
       });
-      operationIds.push(operationId);
+    };
+    for (let start = 0; start < 125; start += 8) {
+      const admitted = Array.from({ length: Math.min(8, 125 - start) }, (_, offset) => commitTick(start + offset));
+      const results = await Promise.allSettled(admitted);
+      const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (failures.length) throw new AggregateError(failures, "Acceptance marker saves failed");
     }
+    // This final save follows every admitted group, preserving the caller-visible final tick.
+    await commitTick(125);
     return { operationIds };
   },
 });

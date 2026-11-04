@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTextEditingClient, type StorageRecord } from "@pstdio/sdk/extensions";
@@ -76,6 +76,10 @@ const synced = (device: CloudAcceptanceDevice, projectId: string) =>
     .toBe("synced");
 const read = <T>(device: CloudAcceptanceDevice, projectId: string) =>
   device.command<T>(projectId, acceptanceOwner, "read-acceptance");
+const noteCopy = (device: CloudAcceptanceDevice, noteId: string) => {
+  const path = join(device.folder, ".pstdio/extension-storage/pstdio.pstdio-notes/documents", noteId, "content.md");
+  return existsSync(path) ? readFileSync(path, "utf8") : undefined;
+};
 const setup = async (resources: Resources) => {
   const fixture = await createCloudAcceptanceFixture(resources.root, resources.children);
   resources.fixture = fixture;
@@ -168,10 +172,19 @@ test("three independent packaged devices keep extension content, offline collabo
     content: "# phase-one-secret-ticket\n\nBefore",
   });
   for (const device of devices) await synced(device, projectId);
-  const editors = [];
-  for (const device of devices) editors.push(await openNote(resources, device, projectId, note.id));
+  const editors = [await test.step("open first Notes editor", () => openNote(resources, first, projectId, note.id))];
   const initial = `${editors[0]!.text()}\n\n`;
   await editors[0]!.insert("\n\nfirst\nlast");
+  // Binding publishes the source pointer and standalone text separately. Project status can
+  // precede that download; verify actual text projection before admitting a receiver's editor.
+  for (const device of [second, third]) {
+    await expect
+      .poll(() => noteCopy(device, note.id), { message: `${device.name}: Notes source downloaded` })
+      .toBe(`${initial}first\nlast`);
+    editors.push(
+      await test.step(`open ${device.name} Notes editor`, () => openNote(resources, device, projectId, note.id)),
+    );
+  }
   for (const editor of editors) await expect.poll(editor.text).toBe(`${initial}first\nlast`);
 
   await fixture.peer.stop();
@@ -307,12 +320,7 @@ test("three independent packaged devices keep extension content, offline collabo
       .toBe(`${initial}local first: offline left: first\nlast: offline right: local second`);
   for (const device of devices)
     await expect
-      .poll(() =>
-        readFileSync(
-          join(device.folder, ".pstdio/extension-storage/pstdio.pstdio-notes/documents", note.id, "content.md"),
-          "utf8",
-        ),
-      )
+      .poll(() => noteCopy(device, note.id))
       .toBe(`${initial}local first: offline left: first\nlast: offline right: local second`);
   await assertBlind(fixture, [
     "phase-one-secret-project",
