@@ -75,6 +75,9 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
           }}
           onInterrupt={() => setRunning(false)}
           queuedFollowUps={queue}
+          onQueuedFollowUpUpdate={(id, prompt) =>
+            setQueue((items) => items.map((item) => (item.id === id ? { ...item, prompt } : item)))
+          }
           readOnlyQueue={offline}
           composerFallback={offline ? <SessionPersonalDevice name={name} /> : undefined}
           workspaceHub={

@@ -13,6 +13,13 @@ test("remote device proposal starts and restarts a session before queuing follow
   await input.fill("Then update the changelog");
   await preview.getByRole("button", { name: "Queue message", exact: true }).click();
   await expect(preview.getByText("Then update the changelog", { exact: true })).toBeVisible();
+  await preview.getByRole("button", { name: "Edit queued message: Then update the changelog", exact: true }).click();
+  await expect(preview.getByRole("button", { name: "Update", exact: true })).toBeVisible();
+  await input.fill("Then update the release notes");
+  await preview.getByRole("button", { name: "Update", exact: true }).click();
+  await expect(
+    preview.getByRole("button", { name: "Edit queued message: Then update the release notes", exact: true }),
+  ).toBeVisible();
   await preview.getByRole("button", { name: "Stop Response", exact: true }).click();
   await input.fill("Resume the checks");
   await preview.getByRole("button", { name: "Send message", exact: true }).click();
