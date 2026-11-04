@@ -36,7 +36,9 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
   let sentQueue: string | undefined;
   let sentApprovals: string | undefined;
   const sendApprovals = async () => {
-    const requests = session?.approval_requests ?? [];
+    const current = await deps.personalHistoryService.getSession(id, projectId);
+    if (!current || sink.aborted) return;
+    const requests = current.approval_requests ?? [];
     const next = JSON.stringify(requests);
     if (next === sentApprovals || sink.aborted) return;
     sentApprovals = next;

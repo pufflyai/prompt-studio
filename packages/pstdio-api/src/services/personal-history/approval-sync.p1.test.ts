@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,7 +18,7 @@ test("personal session followers receive pending approvals and their resolution 
   const root = await mkdtemp(join(tmpdir(), "personal-approval-"));
   const source = await createTestApp();
   const destination = await createTestApp({ storageRoot: join(root, "destination") });
-  let stopWatching: (() => void) | undefined;
+  let stopWatching: (() => Promise<void>) | undefined;
   try {
     const project = await source.deps.projectService.create({ name: "Approvals" });
     await destination.deps.projectService.create({ id: project.id, name: project.name });
@@ -132,8 +132,68 @@ test("personal session followers receive pending approvals and their resolution 
     expect(await reply).toEqual({ id: approval.id, decision: "approve" });
     expect(destination.deps.sessionService.store.get(session.id)).toBeNull();
     expect(source.deps.sessionService.store.get(session.id)).toBe(entry);
+    const privateReply = entry.approvalService.requestApproval({ ...approval, id: "private-approval" });
+    await capture(true);
+    const reading = Promise.withResolvers<void>();
+    const continueReading = Promise.withResolvers<void>();
+    const readMessages = destination.deps.personalHistoryService.messages;
+    const heldMessages = spyOn(destination.deps.personalHistoryService, "messages").mockImplementation(
+      async (...args) => {
+        reading.resolve();
+        await continueReading.promise;
+        return readMessages(...args);
+      },
+    );
+    const privateFrames: unknown[] = [];
+    const switchingSink = {
+      aborted: false,
+      onAbort() {},
+      async sleep() {},
+      async write(event: string, data: unknown) {
+        if (event === "patch" && (data as { path: string }).path === "/approval_requests")
+          privateFrames.push((data as { value: unknown }).value);
+      },
+    };
+    const switching = streamPersonalSession(session.id, destination.deps, switchingSink);
+    await reading.promise;
+    await createNativeStore(nativeAccountFile(":memory:", join(root, "destination"))).save({
+      ...login,
+      accountId: "bob",
+    });
+    await destination.deps.personalHistoryService.refreshIdentity();
+    continueReading.resolve();
+    await switching;
+    heldMessages.mockRestore();
+    entry.approvalService.handleResponse({ id: "private-approval", decision: "approve" });
+    await privateReply;
+    expect(privateFrames).toEqual([]);
+    changed.clear();
+    admitted = false;
+    const lookupStarted = Promise.withResolvers<void>();
+    const finishLookup = Promise.withResolvers<void>();
+    const getSession = source.deps.sessionService.get;
+    const heldLookup = spyOn(source.deps.sessionService, "get").mockImplementation(async (...args) => {
+      lookupStarted.resolve();
+      await finishLookup.promise;
+      return getSession(...args);
+    });
+    const stoppingReply = entry.approvalService.requestApproval({ ...approval, id: "stopping-approval" });
+    await lookupStarted.promise;
+    let stopped = false;
+    const stopping = Promise.resolve(stopWatching()).then(() => {
+      stopped = true;
+    });
+    await Promise.resolve();
+    const stoppedBeforeLookup = stopped;
+    finishLookup.resolve();
+    await stopping;
+    heldLookup.mockRestore();
+    entry.approvalService.handleResponse({ id: "stopping-approval", decision: "approve" });
+    await stoppingReply;
+    expect(stoppedBeforeLookup).toBe(false);
+    expect([...changed]).toEqual([]);
   } finally {
-    stopWatching?.();
+    await stopWatching?.();
     await source.close();
     await destination.close();
     await rm(root, { recursive: true, force: true });
