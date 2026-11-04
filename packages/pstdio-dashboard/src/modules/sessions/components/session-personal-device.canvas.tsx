@@ -6,7 +6,7 @@ import { SessionPersonalDevice } from "./session-personal-device";
 const meta = {
   title: "Modules/Sessions/Personal Device",
   component: SessionPersonalDevice,
-  args: { name: "Laptop" },
+  args: { name: "Laptop", onReconnect: () => {} },
   render: (args) => (
     <Box h="lg">
       <ChatPanel

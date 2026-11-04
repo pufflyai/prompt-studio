@@ -40,8 +40,12 @@ stays blind and unchanged: it stores ciphertext updates, latest states and blobs
   builds it only when it has read every update and its outbox is empty, so it holds nothing an
   update did not already carry. A device that set aside a frame or record marks its cursor
   `skipped` and builds no compaction until it loads a later latest state, including after a
-  restart. A latest state's records and files are read in one transaction. A device that follows the updates loads only the founding state, or
-  a latest state when the relay removed updates it still needed. A compaction is due when the
+  restart. A latest state's records and files are read in one transaction. A device loads each
+  changed latest state and its retained update tail before acknowledging the new state ID. It
+  merges that complete remote copy with retained local records and queues any missing edits
+  (R19), even when its cursor already reached the state's claimed sequence. Record counts and
+  byte sizes in the encrypted summary do not prove edit coverage. An unchanged state needs no
+  chunk download or repair merge. A compaction is due when the
   updates after the latest state outgrow it (its encrypted summary holds its size), so a large owner
   is rewritten in proportion to its edits, not every 1 MiB.
 - **Joining.** A device joins on its first sync. If the relay has no stream and the device has
@@ -70,6 +74,8 @@ directly, which the protocol allows up to 100,000 blob IDs.
 - Catch-up costs one read per page of updates, not one per record. A new device downloads a latest
   state in a few chunk reads.
 - Building or loading a latest state holds the owner's record states in memory once.
+- A peer's replacement costs one latest-state and chunk download, plus its retained tail. This
+  validates content rather than trusting sequence coverage; a quiet unchanged stream stays cheap.
 - A device whose saves are still queued cannot compact; another device can.
 - Key generations do not restart the stream: the relay document stays the same and devices keep
   every key they need to read older updates.

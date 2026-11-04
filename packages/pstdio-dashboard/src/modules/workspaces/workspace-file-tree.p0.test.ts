@@ -127,3 +127,12 @@ describe("workspace file loading", () => {
     }
   });
 });
+
+test("another device's workspace exposes readable files without local mutation or Finder actions", async () => {
+  const sections = await loadFiles({ workspaceReadOnly: true, workspaceDeviceId: "laptop" });
+  expect(sections[0]?.nodes[0]?.id).toBe("notes.md");
+  expect(sections[0]?.actions ?? []).toEqual([]);
+  const file = sections[0]?.nodes[0];
+  expect(file?.canDrag).not.toBe(true);
+  expect(file?.contextMenuActions?.map((action) => action.label)).toEqual(["Copy relative path"]);
+});

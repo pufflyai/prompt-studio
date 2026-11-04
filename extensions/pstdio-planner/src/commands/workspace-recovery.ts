@@ -1,4 +1,4 @@
-import type { CommandContext } from "@pstdio/sdk/extensions";
+import type { CommandContext, ExtensionSessionsApi } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import {
   appendAttemptEvent,
@@ -15,7 +15,15 @@ export interface WorkspaceRecovery {
   previous: AttemptRecord;
   headSha: string;
   detail: string;
+  resumedStoppedRun?: ReturnType<typeof recoveryOwnerRun>;
 }
+
+export const recoveryOwnerRun = (owner: NonNullable<Awaited<ReturnType<ExtensionSessionsApi["get"]>>>) => ({
+  status: owner.status,
+  startedAt: owner.last_request_started ?? null,
+  endedAt: owner.last_request_ended ?? null,
+  stoppedAt: owner.last_exit?.endedAt ?? null,
+});
 
 export async function readRecoveryBase(ctx: CommandContext, attempt: AttemptRecord, base?: string) {
   const home = await ctx.workspaces.getDefault();
@@ -138,7 +146,10 @@ export async function recoverySessionInput(
     throw new Error("The recovery attempt changed before launch.");
   if (isLiveSession(owner))
     throw new Error("The previous implementation session is running. Continue its existing owner.");
-  if (owner?.last_exit?.cause === "user_stop")
+  if (
+    owner?.last_exit?.cause === "user_stop" &&
+    JSON.stringify(recovery.resumedStoppedRun) !== JSON.stringify(recoveryOwnerRun(owner))
+  )
     throw new Error("The previous implementation session was stopped. Keep its work paused.");
   return owner ? { originalSessionId: owner.id } : {};
 }

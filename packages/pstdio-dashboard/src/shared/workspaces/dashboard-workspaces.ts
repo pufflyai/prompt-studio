@@ -83,6 +83,9 @@ const createWorkspaceResourceMetadata = (input: {
     | undefined;
   const metadata: Record<string, unknown> = {
     workspaceId: input.workspace.id,
+    ...(input.workspace.device
+      ? { workspaceDeviceId: (input.workspace.device as { id: string }).id, workspaceReadOnly: true }
+      : {}),
     ...(input.workspacePath ? { workspacePath: input.workspacePath } : {}),
     workspaceShorthand: input.workspace.workspace_shorthand as string,
     workspaceType: workspaceKind(input.workspace),

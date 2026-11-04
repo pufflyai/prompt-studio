@@ -128,7 +128,10 @@ test("another device's queued messages are readable in order, kept out of sessio
       `/v1/sessions/${running.id}/queued-follow-ups/${body.queue.requests[0]!.queuePosition}`,
       { method: "DELETE" },
     );
-    expect(removal.status).toBe(404);
+    expect(removal.status).toBe(400);
+    expect(await removal.json()).toMatchObject({ error: expect.any(String) });
+    expect(await destination.deps.sessionQueueEntriesService.listPendingBySession(running.id)).toEqual([]);
+    expect(await source.deps.sessionQueueEntriesService.listPendingBySession(running.id)).toHaveLength(3);
 
     const state = await destination.deps.syncService.getFullState();
     expect((state.sessions as { id: string }[]).find((row) => row.id === running.id)).not.toHaveProperty("queue");

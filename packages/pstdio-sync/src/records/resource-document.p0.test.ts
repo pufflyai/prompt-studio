@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { editResourceDocument } from "./resource-document";
+import { editResourceDocument, mergeResourceDocument } from "./resource-document";
 
 test("a resource document keeps one record's value, shared edits, deletion and restore", async () => {
   const states: Uint8Array[] = [];
@@ -34,4 +34,44 @@ test("an invalid shared edit is rejected before the document changes", async () 
       false,
     ),
   ).rejects.toThrow("outside");
+});
+
+test("a serialized writer continues after checkpoints and merges with an independent offline writer", async () => {
+  const base = await editResourceDocument([], { recordId: "note", replace: { title: "Draft", body: "" } }, true);
+  const first = await editResourceDocument(
+    [base.checkpoint!],
+    { recordId: "note", replace: { title: "First", body: "" } },
+    true,
+    undefined,
+    10,
+  );
+  const second = await editResourceDocument(
+    [first.checkpoint!],
+    { recordId: "note", replace: { title: "Second", body: "" } },
+    false,
+    undefined,
+    10,
+  );
+  const offline = await editResourceDocument(
+    [base.checkpoint!],
+    { recordId: "note", replace: { title: "Draft", body: "Offline" } },
+    true,
+    undefined,
+    20,
+  );
+  for (const incoming of [
+    [second.update!, offline.checkpoint!],
+    [offline.checkpoint!, second.update!],
+  ]) {
+    const merged = await mergeResourceDocument("note", [first.checkpoint!], incoming, { checkpoint: true });
+    expect(merged.record.value).toEqual({ title: "Second", body: "Offline" });
+    const continued = await editResourceDocument(
+      [merged.checkpoint!],
+      { recordId: "note", replace: { title: "After merge", body: "Offline" } },
+      true,
+      undefined,
+      10,
+    );
+    expect(continued.record.value).toEqual({ title: "After merge", body: "Offline" });
+  }
 });

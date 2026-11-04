@@ -2,6 +2,7 @@ import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import type { SessionStreamConnection, SessionStreamHandlers } from "@pstdio/sdk/client";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { RendererReadBinding, RendererReadRegistry } from "@pstdio/workbench";
+import type { ApprovalRequest } from "pstdio-api-contracts";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { getSessionHistoryCache, isSessionLive, sessionHistoryVersion } from "./session-history-cache";
 import {
@@ -13,6 +14,7 @@ import { type SessionNotice, toSessionNotice } from "./session-notice";
 
 export interface SessionHistoryState {
   messages: SessionMessage[];
+  approvalRequests?: ApprovalRequest[];
   queue?: PendingQueuedFollowUpsResponse;
   loading: boolean;
   streaming: boolean;
@@ -139,6 +141,10 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
       onPatch: (data) => {
         if (!active()) return;
         const patch = data as DashboardSessionMessagePatch;
+        if (patch.path === "/approval_requests") {
+          publish({ approvalRequests: Array.isArray(patch.value) ? (patch.value as ApprovalRequest[]) : [] });
+          return;
+        }
         const previous = confirmed;
         confirmed = applyDashboardSessionMessagePatch(confirmed, patch);
         if (confirmed === previous) return;
@@ -146,17 +152,26 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         if (patch.path === "/messages") snapshotSeen = true;
         publish({ loading: false, streaming: true, error: undefined });
       },
+      onApprovalRequest: (data) => {
+        if (!active() || !data || typeof data !== "object" || !("id" in data)) return;
+        const request = data as ApprovalRequest;
+        publish({
+          approvalRequests: [...(state.approvalRequests ?? []).filter((item) => item.id !== request.id), request],
+        });
+      },
       onQueuedMessages: (value) => {
         if (!active()) return;
         queueRevision++;
         queueBinding?.dispose();
         queueBinding = undefined;
         if ("error" in value) publish({ queueError: { message: value.error, temporary: true } });
+        // Personal streams carry incomplete previews. Keep complete request data until the normal read settles.
+        else if (session?.device) void refreshQueue("retry");
         else showQueue(value);
       },
       onEnd: () => {
         if (!active()) return;
-        publish({ loading: false, streaming: false });
+        publish({ loading: false, streaming: false, approvalRequests: [] });
         connection?.close();
         connection = undefined;
         if (snapshotSeen) cache.set(sessionId, session, confirmed);

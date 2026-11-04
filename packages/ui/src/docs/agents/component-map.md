@@ -46,3 +46,7 @@ Use this map to choose the first component to inspect in the live Canvas catalog
 
 - `MarkdownEditor`, `PromptEditor`, `RichMessage`, and collaborative editor canvas examples cover rich-text surfaces.
 - `ChatPanel`, `ChatInput`, `ChatMessage`, `ChatPrimitives`, `AttachmentList`, and `ToolInvocationTimeline` cover agent conversation UI.
+
+## Charts
+
+Import `Chart`, `GanttChart`, `chartColor`, and `chartPalette` from `@pstdio/ui/charts`. Use TanStack Charts for chart definitions and the shared components for theme, sizing, and tooltip integration. See [chart authoring](../../components/charts/README.md). Keep application data, forecasts, and filters outside the shared chart components.

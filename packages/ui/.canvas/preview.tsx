@@ -1,6 +1,7 @@
 import { ChakraProvider } from "@chakra-ui/react";
 import type { CanvasPreview } from "@pstdio/canvas";
 import { psTheme } from "@/theme";
+import { chartForestTheme } from "@/theme/custom/chart-theme.canvas-fixture";
 import { canvasVsCodeThemes } from "@/theme/custom/vscode-theme.canvas-fixture";
 import { defaultThemePreferences } from "@/utils/apply-theme-preference";
 import { ThemePreferenceProvider } from "@/utils/theme-preference";
@@ -9,7 +10,7 @@ import { ThemePreferenceProvider } from "@/utils/theme-preference";
 const storage = { getItem: () => null, setItem: () => {} };
 // UI Canvas knows the built-in themes. For the imported-palette examples it sends only the id,
 // and this project supplies their colors.
-const projectThemes = [...defaultThemePreferences, ...canvasVsCodeThemes];
+const projectThemes = [...defaultThemePreferences, ...canvasVsCodeThemes, chartForestTheme];
 
 const preview: CanvasPreview = {
   decorators: [

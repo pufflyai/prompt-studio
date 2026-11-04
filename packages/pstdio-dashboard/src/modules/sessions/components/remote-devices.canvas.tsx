@@ -2,10 +2,11 @@ import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 import type { CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel, ChatWorkspaceHub, type SessionMessage } from "@pstdio/ui/chat-ui";
 import { useState } from "react";
-import { SessionDeviceMenu } from "../../src/modules/sessions/components/session-device-menu";
-import { SessionWorkspaceMenu } from "../../src/modules/sessions/components/session-workspace-menu";
-import type { DashboardWorkspaceOption } from "../../src/shared/workspaces/workspace-options";
+import type { DashboardWorkspaceOption } from "@/shared/workspaces/workspace-options";
+import { SessionDeviceMenu } from "./session-device-menu";
 import { SessionPersonalDevice } from "./session-personal-device";
+import { SessionQueueUnavailable } from "./session-queue-unavailable";
+import { SessionWorkspaceMenu } from "./session-workspace-menu";
 
 const devices = [
   { id: "this-device", name: "This device", current: true },
@@ -27,8 +28,15 @@ const workspace: DashboardWorkspaceOption = {
   updatedAt: "2026-01-01T00:00:00Z",
 };
 
-const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boolean }) => {
-  const { offline = false, queued = false, draft = false } = props;
+const RemoteSession = (props: {
+  offline?: boolean;
+  queued?: boolean;
+  draft?: boolean;
+  queueReadOnly?: boolean;
+  connectionUnknown?: boolean;
+}) => {
+  const { offline = false, queued = false, draft = false, queueReadOnly = false, connectionUnknown = false } = props;
+  const unavailable = offline || connectionUnknown;
   const [deviceId, setDeviceId] = useState(draft ? "this-device" : "laptop");
   const [started, setStarted] = useState(!draft);
   const [text, setText] = useState("");
@@ -54,7 +62,7 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
       <Box flex="1" minH="0">
         <ChatPanel
           messages={messages}
-          streaming={running && !offline}
+          streaming={running && !unavailable}
           emptyStateTitle="Start a conversation"
           emptyStateDescription={`Run the session on ${name}.`}
           chatInputPlaceholder="Reply to the agent..."
@@ -78,8 +86,12 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
           onQueuedFollowUpUpdate={(id, prompt) =>
             setQueue((items) => items.map((item) => (item.id === id ? { ...item, prompt } : item)))
           }
-          readOnlyQueue={offline}
-          composerFallback={offline ? <SessionPersonalDevice name={name} /> : undefined}
+          readOnlyQueue={unavailable || queueReadOnly}
+          submitDisabled={queueReadOnly}
+          conversationNotices={queueReadOnly ? <SessionQueueUnavailable name={name} onRefresh={() => {}} /> : null}
+          composerFallback={
+            unavailable ? <SessionPersonalDevice name={name} connectionUnknown={connectionUnknown} /> : undefined
+          }
           workspaceHub={
             <ChatWorkspaceHub
               additions={12}
@@ -97,7 +109,7 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
                     selectedWorkspaceId={workspace.id}
                     selectedWorkspaceLabel={workspace.title}
                     onSelectWorkspace={() => {}}
-                    onOpenWorkspace={offline || !started ? undefined : () => setWorkspaceOpen(true)}
+                    onOpenWorkspace={unavailable || !started ? undefined : () => setWorkspaceOpen(true)}
                     isDisabled={started}
                   />
                 </HStack>
@@ -116,7 +128,7 @@ const RemoteSession = (props: { offline?: boolean; queued?: boolean; draft?: boo
 };
 
 export default {
-  title: "Proposals/PS-827 Remote devices",
+  title: "Modules/Sessions/Remote devices",
   description:
     "Synthetic interactions only. Online sessions use the normal composer; existing sessions stay on their device. Offline sessions retain readable history and have no workspace link or command queue.",
 } satisfies CanvasMeta;
@@ -124,4 +136,6 @@ export default {
 export const OnlineConversation = () => <RemoteSession />;
 export const QueuedOnLaptop = () => <RemoteSession queued />;
 export const OfflineLaptop = () => <RemoteSession offline queued />;
+export const UnknownConnection = () => <RemoteSession connectionUnknown queued />;
+export const OnlineReadOnlyQueue = () => <RemoteSession queued queueReadOnly />;
 export const NewSessionDevicePicker = () => <RemoteSession draft />;

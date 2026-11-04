@@ -125,7 +125,7 @@ For a `tickets next` action of `update-stack`, reuse the listed workspace and it
 
 ### Recover a missing workspace
 
-A `recover-workspace` action is runnable work. Dispatch it through Auto Build. Planner creates a managed continuation from available Git code and passes the old attempt, session, revision, report and PR references. Missing workspace availability alone does not require a human decision or a blocked ticket.
+A `recover-workspace` action is runnable work. For manual work, run `pst pstdio-planner run-attempt --ticket <ticket>` to recover the selected attempt. Auto Build can also dispatch eligible recovery when enabled; do not enable it for a manual task. An explicit manual resume can continue a previously stopped owner, while automatic recovery keeps user-stopped work paused. Planner creates a managed continuation from available Git code and passes the old attempt, session, revision, report and PR references. Missing workspace availability alone does not require a human decision or a blocked ticket.
 
 In the continuation, read those references and restore previous code from surviving branches, commits or PRs. Fetch the PR branch when needed. If no previous code can be found, restart from the ticket requirements. Record what was recovered and what had to be redone. Keep the new assigned workspace and branch, integrate required dependencies with update-stack, validate, and submit a fresh revision. Old attempts and approvals remain historical evidence; they do not approve the recovered revision. Real dependency, access, assignment and human-input rules still apply. Never replace an intact workspace or a running owner merely to repair a stack.
 

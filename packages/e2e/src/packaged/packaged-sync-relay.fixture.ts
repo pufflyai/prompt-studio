@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import { liveProtocolHeader, liveProtocolVersion, syncRoute } from "pstdio-sync-contracts";
 import { createPeerLive, type PeerLiveData } from "./packaged-live.fixture";
+import { createPackagedDocumentStore } from "./packaged-sync-document-store.fixture";
 import { createPackagedSyncIdentity } from "./packaged-sync-identity.fixture";
 import { packagedProjectKey } from "./packaged-sync-project-key.fixture";
 
@@ -66,37 +67,9 @@ export const createPackagedSyncPeer = (
   const identity = createPackagedSyncIdentity();
   const projects = new Set<string>();
   const blobs = createBlobStore();
-  const documents = new Map<
-    string,
-    { state: Record<string, unknown> | null; payload?: string; updates: Record<string, unknown>[] }
-  >();
-  let storedStates = 0;
-  const personalDocumentIds = new Set<string>();
-  // While set, document reads fail, so a device cannot finish its first download. A function picks the
-  // documents whose reads fail.
-  let failReads: boolean | ((documentId: string) => boolean) = false;
-  let failedReads = 0;
-  let completedReads = 0;
-  const document = (id: string) => {
-    let value = documents.get(id);
-    if (!value) {
-      value = { state: null, updates: [] };
-      documents.set(id, value);
-    }
-    return value;
-  };
+  const blockedDevices = new Set<string>();
+  const { request: documentRequest, ...documentStore } = createPackagedDocumentStore(blobs, live.changed);
   const json = (body: unknown) => Response.json(body);
-  // Like the relay, tell connected devices that a document changed so they read it again.
-  const publishChange = (documentId: string, spaceOwner: string | null, created = false) => {
-    const doc = document(documentId);
-    const notice = {
-      spaceOwner,
-      documentId: documentId.slice(1),
-      lastSequence: doc.updates.length,
-      stateId: doc.state?.stateId ?? null,
-    };
-    live.changed(notice, created);
-  };
   const workbenchRequest = (path: string) => {
     if (path.endsWith("/keys"))
       return json({
@@ -116,70 +89,21 @@ export const createPackagedSyncPeer = (
 
     return null;
   };
-  const documentRequest = async (
-    request: Request,
-    path: string,
-    parts: string[],
-    spaceOwner: string | null,
-    deviceId: string,
-  ) => {
-    const id = parts[5]!;
-    if (spaceOwner) personalDocumentIds.add(id);
-    const input = async () => (await request.json()) as Record<string, unknown>;
-    const doc = document(id);
-    if (path.endsWith("/read")) {
-      if (typeof failReads === "function" ? failReads(id.slice(1)) : failReads) {
-        failedReads++;
-        return new Response(null, { status: 503 });
-      }
-      const { after } = await input();
-      completedReads++;
-      return json({
-        status: "updates",
-        state: doc.state,
-        lastSequence: doc.updates.length,
-        more: false,
-        updates: doc.updates.filter((update) => Number(update.sequence) > Number(after)),
-      });
-    }
-    if (parts[6] === "states") return new Response(Buffer.from(String(doc.payload), "base64"));
-    const body = await input();
-    const created = doc.updates.length === 0 && doc.state === null;
-    for (const blobId of body.blobIds as string[]) expect(blobs.complete(`~${blobId}`)).toBe(true);
-    expect(String(body.payload)).not.toContain("packaged-secret");
-    if (path.endsWith("/updates")) {
-      const sequence = doc.updates.length + 1;
-      doc.updates.push({
-        updateId: body.updateId,
-        payload: body.payload,
-        sequence,
-        deviceId,
-        createdAt: new Date().toISOString(),
-      });
-      publishChange(id, spaceOwner, created);
-      return json({ sequence, duplicate: false });
-    }
-    expect(body.summary).toBeString();
-    storedStates++;
-    doc.payload = String(body.payload);
-    doc.state = {
-      stateId: body.stateId,
-      baseStateId: body.baseStateId,
-      through: body.through,
-      summary: body.summary,
-      byteLength: Buffer.from(String(body.payload), "base64").length,
-      deviceId,
-      createdAt: new Date().toISOString(),
-    };
-    publishChange(id, spaceOwner, created);
-    return json({ state: doc.state });
-  };
   const storedRequest = (request: Request, path: string, deviceId: string) => {
     const parts = path.split("/");
     const spaceOwner = privateSpaceOwner(parts);
     if (spaceOwner !== null && spaceOwner !== "owner") return new Response(null, { status: 403 });
     if (parts[4] === "blobs") return blobs.request(request, path, parts);
     return documentRequest(request, path, parts, spaceOwner, deviceId);
+  };
+  const upgradeLive = (
+    request: Request,
+    server: Bun.Server<PeerLiveData>,
+    access: { deviceId: string; projectId: string },
+  ) => {
+    expect(request.headers.get(liveProtocolHeader)).toBe(String(liveProtocolVersion));
+    if (server.upgrade(request, { data: { ...access, discovery: new Set() } })) return;
+    return new Response(null, { status: 426 });
   };
   // Private project data lives under /spaces/~<owner>; the rest of the path matches project documents.
   const serve = (port: number) =>
@@ -197,10 +121,9 @@ export const createPackagedSyncPeer = (
         if (!route) return new Response(null, { status: 404 });
         const access = identity.access(request, route.projectId);
         if (!access) return new Response(null, { status: 403 });
+        if (blockedDevices.has(access.deviceId)) return Response.json({ error: "unavailable" }, { status: 503 });
         if (route.kind === "live") {
-          expect(request.headers.get(liveProtocolHeader)).toBe(String(liveProtocolVersion));
-          if (server.upgrade(request, { data: { ...access, discovery: new Set() } })) return;
-          return new Response(null, { status: 426 });
+          return upgradeLive(request, server, access);
         }
         return storedRequest(request, path, access.deviceId);
       },
@@ -212,35 +135,18 @@ export const createPackagedSyncPeer = (
     get origin() {
       return server.url.origin;
     },
-    documents,
+    ...documentStore,
     blobContents: blobs.contents,
-    states: () => storedStates,
-    reads: () => completedReads,
-    announceUnchanged() {
-      for (const id of documents.keys()) publishChange(id, personalDocumentIds.has(id) ? "owner" : null);
-    },
-    failedReads: () => failedReads,
-    personalDocuments: () => [...personalDocumentIds].map((id) => documents.get(id)!),
-    failReads(value: boolean | ((documentId: string) => boolean)) {
-      failReads = value;
+    /** One device loses durable relay access while its peers can continue replacing latest states. */
+    blockDevice(deviceId: string, blocked: boolean) {
+      if (blocked) blockedDevices.add(deviceId);
+      else blockedDevices.delete(deviceId);
     },
     /** Drops every connection, as a lost network does. */
     stop: () => server.stop(true),
     /** Serves again on the same address with the stored data. */
     restart() {
       server = serve(port!);
-    },
-    corrupt() {
-      for (const [documentId, doc] of documents) {
-        doc.updates.push({
-          updateId: "invalidciphertext000000",
-          payload: "AAAA",
-          sequence: doc.updates.length + 1,
-          deviceId: "fixture-corrupt",
-          createdAt: new Date().toISOString(),
-        });
-        publishChange(documentId, null);
-      }
     },
   };
 };

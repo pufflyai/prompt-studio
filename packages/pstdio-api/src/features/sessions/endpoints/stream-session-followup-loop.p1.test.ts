@@ -305,9 +305,10 @@ describe("session stream follow-up resume continuity", () => {
           (event.data as JsonPatch).path === "/messages/4" &&
           ((event.data as JsonPatch).value as { parts?: Array<{ text?: string }> }).parts?.[0]?.text === "SECOND DONE",
       );
-      const messagePatches = resumed.filter((event) => event.event === "patch").map((event) => event.data as JsonPatch);
+      const patches = resumed.filter((event) => event.event === "patch").map((event) => event.data as JsonPatch);
 
-      expect(messagePatches.map((patch) => patch.path)).toEqual(["/messages/3", "/messages/4"]);
+      expect(patches.map((patch) => patch.path)).toEqual(["/approval_requests", "/messages/3", "/messages/4"]);
+      expect(patches[0]).toEqual({ op: "replace", path: "/approval_requests", value: [] });
       sse.close();
     } finally {
       await delayedApp.close();
