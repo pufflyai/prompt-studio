@@ -22,6 +22,16 @@ Developer tools holds device-local controls that extensions contribute. Extensio
 
 Extensions can contribute settings through public APIs. Template editors call commands declared by the owning extension. Ticket statuses and tags belong to Planner; core does not own a generic ticket-settings page.
 
+## Consistent layout and pending changes
+
+Settings pages share one centered content width and parameter-editor controls. Each page title uses the same icon as its navigation entry. Save changes and Reset changes stay in the page header, above scrolling content. The overlay close button stays at the top right of the modal header.
+
+Leaving a page with pending changes, including closing settings, offers Stay, Discard changes, and Save and leave. A failed save keeps the page and its draft open with the error visible. Settings that save immediately do not prompt. Navigation and content loading use visible static skeletons.
+
+Planner contributes **Project Planner → Workflow & automation**, **Ticket status**, and **Ticket tags**. Status and tag editors share the same collection editor and staged editing sessions. Saves preserve concurrent additions and untouched fields; deleted entries are explicit. Selecting a default status leaves exactly one default. A draft targeting an entry removed elsewhere must fail with recovery guidance rather than recreate it.
+
+Danger zone shows a red delete-project action card with a trash icon and a separate confirmation. Error-only controls appear only when an action actually fails.
+
 ## Folder requirements
 
 1. Opening a folder must not require an agent-selection step or an installed harness executable.

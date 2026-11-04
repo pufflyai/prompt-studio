@@ -1,7 +1,7 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Settings, UpdateSettingsInput } from "@pstdio/sdk/api";
-import { SettingsContentSkeleton } from "@pstdio/ui";
-import { ParamEditor } from "@pstdio/ui/param-editor";
+import { SettingsContentSkeleton, Switch } from "@pstdio/ui";
+import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
 
@@ -24,19 +24,29 @@ export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
   ] as const;
   return (
     <Stack gap="md">
-      {settings ? (
-        <ParamEditor
-          fullWidth
-          readOnly={saving}
-          params={features.map((feature) => ({
-            id: feature.key,
-            name: feature.label,
-            type: "boolean",
-            defaultValue: settings[feature.key] === true,
-          }))}
-          onChange={(id, value) => onChange({ [id]: value === true })}
-        />
-      ) : null}
+      {settings
+        ? features.map((feature) => {
+            const checked = settings[feature.key] === true;
+            return (
+              <ParamEditorRow
+                key={feature.key}
+                param={{
+                  id: feature.key,
+                  name: feature.label,
+                  type: "property",
+                  value: (
+                    <Switch
+                      checked={checked}
+                      inputProps={{ checked, "aria-label": feature.label }}
+                      disabled={saving}
+                      onCheckedChange={({ checked }) => onChange({ [feature.key]: checked })}
+                    />
+                  ),
+                }}
+              />
+            );
+          })
+        : null}
       {!settings && !error ? <SettingsContentSkeleton /> : null}
       {error ? (
         <Stack gap="sm" role="alert">
