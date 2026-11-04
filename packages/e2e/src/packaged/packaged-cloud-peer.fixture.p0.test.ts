@@ -41,7 +41,11 @@ test("the process bridge preserves snapshot fault controls and aborts diagnostic
     await peer.blockDevice("third-runtime", true);
     await peer.blockDevice("third-runtime", false);
     phase("device controls complete; capture missing snapshot");
-    await expect(peer.captureSnapshot("missing")).rejects.toThrow("no latest state");
+    const snapshot = peer.captureSnapshot("missing").catch((error) => {
+      phase("missing snapshot rejected at process bridge");
+      throw error;
+    });
+    await expect(snapshot).rejects.toThrow("no latest state");
     const abort = new AbortController();
     abort.abort(new Error("diagnostic cancelled"));
     await expect(peer.inspect(abort.signal)).rejects.toThrow("diagnostic cancelled");
