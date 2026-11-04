@@ -14,6 +14,7 @@ describe("resolveDefaultExtensionsConfig", () => {
     const config = await resolveDefaultExtensionsConfig({});
 
     expect(config.defaultExtensions).toEqual([
+      "pstdio-home",
       "harness-claude-code",
       "harness-codex",
       "harness-open-code",
@@ -260,7 +261,7 @@ describe("installDefaultExtensions cancellation", () => {
 });
 
 describe("installDefaultExtensions sources", () => {
-  test("uses local source packages for production defaults when running from source", async () => {
+  test("uses local source packages for user-scoped production defaults when running from source", async () => {
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
       calls.push(input);

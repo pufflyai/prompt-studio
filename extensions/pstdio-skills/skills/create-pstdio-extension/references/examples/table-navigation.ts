@@ -3,8 +3,8 @@ import {
   definePage,
   defineResourceKind,
   defineView,
+  l10n,
   workbenchModes,
-  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
 // An explicit callback type breaks the inference cycle when a table targets its own page.
@@ -17,7 +17,7 @@ const activate: DataTableRendererRowActivationHandler = (ctx, { row }) =>
   });
 const table = defineView({
   id: "notes-table",
-  title: "Notes",
+  title: l10n("notes.title", "Notes"),
   body: {
     kind: "dataTable",
     columns: [{ id: "title", label: "Title" }],
@@ -25,15 +25,23 @@ const table = defineView({
     onRowActivate: activate,
   },
 });
+const rootPage = definePage({
+  id: "root",
+  title: l10n("notes.title", "Notes"),
+  path: "root",
+  mode: workbenchModes.project,
+  main: { kind: "panels" },
+  slots: [],
+});
 const collection = definePage({
+  parent: rootPage.ref,
   id: "notes-collection",
-  title: "Notes",
+  title: l10n("notes.title", "Notes"),
   path: "notes-collection",
   mode: workbenchModes.project,
   resource: { kinds: [note.ref] },
-  parent: workbenchPages.start,
   main: { kind: "view", view: table.ref, cardinality: "one" },
   slots: [],
 });
 
-export { collection, table };
+export { collection, rootPage, table };

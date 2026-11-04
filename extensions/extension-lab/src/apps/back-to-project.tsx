@@ -9,7 +9,7 @@ export const BackToProject = () => {
       aria-label="Back to project"
       size="xs"
       variant="ghost"
-      onClick={() => host.navigate({ kind: "page", page: workbenchPages.start })}
+      onClick={() => host.navigate({ kind: "page", page: workbenchPages.workspaces })}
     >
       <ExampleIcon name="ArrowLeft" />
     </IconButton>

@@ -9,9 +9,15 @@ import { createDashboardProjectSelectionPersistence } from "@/shared/app/project
 import { createDashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { registerHomePage } from "./home-page.test-support";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
-import { createDashboardWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
+import { createDashboardWorkbench as createWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
 
+const createDashboardWorkbench = (input: Parameters<typeof createWorkbench>[0] = {}) => {
+  const workbench = createWorkbench(input);
+  registerHomePage(workbench);
+  return workbench;
+};
 const createStorage = (): WorkbenchStorageLike => {
   const values = new Map<string, string>();
   return {
