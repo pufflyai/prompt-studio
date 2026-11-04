@@ -1,4 +1,9 @@
-import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
+import {
+  createLiveConnection,
+  createRelayAccess,
+  DeviceCommandInputError,
+  type LiveConnection,
+} from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
@@ -46,7 +51,8 @@ const callDeviceCommand =
     if (!target) throw new AccountRequestError("This project is not connected to Cloud");
     try {
       return await target.call(deviceId, command, { signal });
-    } catch {
+    } catch (error) {
+      if (error instanceof DeviceCommandInputError) throw new AccountRequestError(error.message);
       throw new AccountRequestError("The device action is unavailable. Check that the device is online and signed in.");
     }
   };

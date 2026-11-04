@@ -1,3 +1,5 @@
+import { deviceCommandInputLimit } from "pstdio-sync-contracts";
+
 /** A target issues one-use challenges. A captured command cannot run twice or survive target restart. */
 export const createDeviceCommandAuthorization = () => {
   const pending = new Map<string, { caller: string; expiresAt: number; chunks: Uint8Array[]; byteLength: number }>();
@@ -46,7 +48,7 @@ export const createDeviceCommandAuthorization = () => {
       if (offset !== grant.byteLength) throw new Error("Device command chunk is out of order");
       if (!bytes.byteLength) throw new Error("Device command chunks must not be empty");
       // A whole supported 25 MiB attachment fits after base64 encoding. Bound all incomplete calls together.
-      if (retainedBytes + bytes.byteLength > 64 * 1024 * 1024) {
+      if (retainedBytes + bytes.byteLength > deviceCommandInputLimit) {
         release(challenge);
         throw new Error("Device command input exceeds available transfer memory");
       }

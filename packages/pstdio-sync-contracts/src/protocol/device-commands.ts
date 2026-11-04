@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { jsonSchema } from "../json";
 
+/** Complete encoded input, shared with the target's incomplete-request admission pool. */
+export const deviceCommandInputLimit = 64 * 1024 * 1024;
+
 export const deviceCommandRequestSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("challenge"), requestId: z.string().uuid() }),
   z.strictObject({

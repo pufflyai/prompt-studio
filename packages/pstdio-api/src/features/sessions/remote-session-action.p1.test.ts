@@ -1,8 +1,8 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HarnessExit } from "pstdio-api-contracts";
+import type { DeviceCommand, HarnessExit } from "pstdio-api-contracts";
 import { jsonSchema } from "pstdio-sync-contracts";
 import { nativeAccountFile } from "../../services/account/native-account";
 import { createNativeStore } from "../../services/account/native-store";
@@ -12,6 +12,79 @@ import { createDeviceCommandExecutor } from "../../services/relay/device-command
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { inertSessionChannelHooks } from "./session-store.test-utils";
+
+const verifyUncertainSubmissionCleanup = async (input: {
+  source: Awaited<ReturnType<typeof createTestApp>>;
+  target: Awaited<ReturnType<typeof createTestApp>>;
+  execute: ReturnType<typeof createDeviceCommandExecutor>;
+  projectId: string;
+  workspaceId: string;
+  fileId: string;
+}) => {
+  const { source, target, execute, projectId, workspaceId, fileId } = input;
+  const command: Extract<DeviceCommand, { type: "session.create" }> = {
+    type: "session.create",
+    input: {
+      projectId,
+      workspaceId,
+      agent: testHarnessId("remote"),
+      title: "Uncertain submission",
+      attachments: [{ fileId }],
+    },
+  };
+  const loseReply = async (value: DeviceCommand) => {
+    await execute(jsonSchema.parse(JSON.parse(JSON.stringify(value))), { signal: new AbortController().signal });
+    throw new Error("Lost acknowledgement");
+  };
+  await expect(
+    withDeviceCommandAttachments(
+      source.deps,
+      projectId,
+      { ...command, input: { ...command.input, agent: "missing.harness" } },
+      loseReply,
+    ),
+  ).rejects.toThrow("Lost acknowledgement");
+  expect(await target.deps.fileService.get(fileId)).toBeNull();
+  expect(await source.deps.fileService.get(fileId)).not.toBeNull();
+
+  const cancelled = new AbortController();
+  const actions: string[] = [];
+  const upload = target.deps.fileService.upload;
+  const importing = spyOn(target.deps.fileService, "upload").mockImplementation(async (...args) => {
+    const file = await upload(...args);
+    cancelled.abort(new Error("User cancelled before dispatch"));
+    return file;
+  });
+  try {
+    await expect(
+      withDeviceCommandAttachments(source.deps, projectId, command, async (value) => {
+        cancelled.signal.throwIfAborted();
+        actions.push(value.type);
+        return execute(jsonSchema.parse(JSON.parse(JSON.stringify(value))), { signal: cancelled.signal });
+      }),
+    ).rejects.toThrow("User cancelled before dispatch");
+  } finally {
+    importing.mockRestore();
+  }
+  expect(actions).toEqual(["session.create"]);
+  expect(await target.deps.fileService.get(fileId)).toBeNull();
+
+  // A lost final reply must retain files that the target already submitted successfully.
+  await expect(withDeviceCommandAttachments(source.deps, projectId, command, loseReply)).rejects.toThrow(
+    "Lost acknowledgement",
+  );
+  expect(await target.deps.fileService.get(fileId)).not.toBeNull();
+  const unrelatedId = crypto.randomUUID();
+  const unrelated = await execute(
+    jsonSchema.parse({
+      ...command,
+      attachmentContents: [{ fileId: unrelatedId, name: "extra.txt", mimeType: "text/plain", data: "ZXh0cmE=" }],
+    }),
+    { signal: new AbortController().signal },
+  );
+  expect(unrelated).toMatchObject({ status: 400 });
+  expect(await target.deps.fileService.get(unrelatedId)).toBeNull();
+};
 
 test("the normal session API sends follow-ups, question answers, approvals and interrupts to their owning device", async () => {
   const root = await mkdtemp(join(tmpdir(), "remote-session-actions-"));
@@ -108,7 +181,10 @@ test("the normal session API sends follow-ups, question answers, approvals and i
     expect(uploaded.status).toBe(201);
     const attachment = await uploaded.json();
     expect(await target.deps.fileService.get(attachment.fileId)).toBeNull();
-    const withFile = await request("follow-up", { prompt: "Read this", attachments: [{ fileId: attachment.fileId }] });
+    const withFile = await request("follow-up", {
+      prompt: "Read this",
+      attachments: [{ fileId: attachment.fileId }, { fileId: attachment.fileId }],
+    });
     expect(withFile.status).toBe(200);
     expect(await target.deps.fileService.get(attachment.fileId)).toMatchObject({
       project_id: project.id,
@@ -175,34 +251,14 @@ test("the normal session API sends follow-ups, question answers, approvals and i
     expect(await target.deps.fileService.get(unusedFile.fileId)).toBeNull();
     expect(await source.deps.fileService.get(unusedFile.fileId)).not.toBeNull();
     expect(await target.deps.fileService.get(attachment.fileId)).not.toBeNull();
-    const cancelled = new AbortController();
-    const actions: string[] = [];
-    const send = async (command: Parameters<typeof withDeviceCommandAttachments>[2], signal = cancelled.signal) => {
-      signal.throwIfAborted();
-      actions.push(command.type);
-      const result = await execute(jsonSchema.parse(JSON.parse(JSON.stringify(command))), { signal });
-      if (command.type === "session.copyAttachment") cancelled.abort(new Error("User cancelled before dispatch"));
-      return result;
-    };
-    await expect(
-      withDeviceCommandAttachments(
-        source.deps,
-        project.id,
-        {
-          type: "session.create",
-          input: {
-            projectId: project.id,
-            title: "Aborted creation",
-            agent: testHarnessId("remote"),
-            workspaceId: workspace.id,
-            attachments: [{ fileId: unusedFile.fileId }],
-          },
-        },
-        send,
-      ),
-    ).rejects.toThrow("User cancelled before dispatch");
-    expect(actions).toEqual(["session.copyAttachment", "session.removeUnsubmittedAttachment"]);
-    expect(await target.deps.fileService.get(unusedFile.fileId)).toBeNull();
+    await verifyUncertainSubmissionCleanup({
+      source,
+      target,
+      execute,
+      projectId: project.id,
+      workspaceId: workspace.id,
+      fileId: unusedFile.fileId,
+    });
     const files = await source.app.request(`/v1/workspaces/${workspace.id}/files`);
     expect(files.status).toBe(200);
     expect(await files.json()).toMatchObject({ entries: [{ name: "note.md" }] });

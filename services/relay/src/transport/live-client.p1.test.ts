@@ -175,6 +175,10 @@ test("signed private device commands cross the real relay, stream replies and re
     prompt: longPrompt,
   });
   expect(invocations).toBe(3);
+  await expect(
+    source.call("Bearer b", { prompt: "a".repeat(64 * 1024 * 1024) }, { signal: new AbortController().signal }),
+  ).rejects.toThrow("64 MiB");
+  expect(invocations).toBe(3);
   await expect(source.call("offline", command, { signal: new AbortController().signal })).rejects.toThrow(
     "unavailable",
   );

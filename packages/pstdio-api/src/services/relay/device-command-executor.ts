@@ -30,11 +30,9 @@ import {
 } from "../../features/workspaces/endpoints/workspace-files";
 import type { AppBindings } from "../../types";
 import type { RelayDeps } from "./deps";
-import { importDeviceAttachment, removeUnsubmittedDeviceAttachment } from "./device-command-attachments";
+import { executeWithDeviceAttachments } from "./device-command-attachments";
 
 const requestFor = (command: DeviceCommand) => {
-  if (command.type === "session.copyAttachment" || command.type === "session.removeUnsubmittedAttachment")
-    throw new Error("Attachment transfer has no HTTP dispatch");
   if (command.type === "session.create") return { path: "/sessions", method: "POST", body: command.input };
   if (command.type === "workspace.create") return { path: "/workspaces", method: "POST", body: command.input };
   const id = encodeURIComponent(command.id);
@@ -85,8 +83,6 @@ export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) 
   const localSession = async (id: string) => (await deps.sessionService.get(id))?.project_id === projectId;
   const localWorkspace = async (id: string) => (await deps.workspaceService.get(id))?.project_id === projectId;
   const inScope = async (command: DeviceCommand) => {
-    if (command.type === "session.copyAttachment" || command.type === "session.removeUnsubmittedAttachment")
-      return command.projectId === projectId && Boolean(await deps.projectService.get(projectId));
     if (command.type === "session.create") {
       const input = command.input;
       return (
@@ -110,16 +106,18 @@ export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) 
     if (!(await inScope(command)))
       return { status: 404, body: { error: "Resource not found on this device in this project" } };
     context.signal.throwIfAborted();
-    if (command.type === "session.copyAttachment") return jsonSchema.parse(await importDeviceAttachment(deps, command));
-    if (command.type === "session.removeUnsubmittedAttachment")
-      return jsonSchema.parse(await removeUnsubmittedDeviceAttachment(deps, projectId, command.fileId));
-    const request = requestFor(command);
-    const response = await routes.request(request.path, {
-      method: request.method,
-      signal: context.signal,
-      headers: { "content-type": "application/json" },
-      ...("body" in request ? { body: JSON.stringify(request.body) } : {}),
-    });
-    return { status: response.status, body: jsonSchema.parse(await response.json()) };
+    return jsonSchema.parse(
+      await executeWithDeviceAttachments(deps, projectId, command, async () => {
+        context.signal.throwIfAborted();
+        const request = requestFor(command);
+        const response = await routes.request(request.path, {
+          method: request.method,
+          signal: context.signal,
+          headers: { "content-type": "application/json" },
+          ...("body" in request ? { body: JSON.stringify(request.body) } : {}),
+        });
+        return { status: response.status, body: jsonSchema.parse(await response.json()) };
+      }),
+    );
   };
 };

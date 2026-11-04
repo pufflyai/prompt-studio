@@ -1,5 +1,5 @@
 export { createRelayAccess } from "./access";
-export { createDeviceCommandChannel } from "./device-commands";
+export { createDeviceCommandChannel, DeviceCommandInputError } from "./device-commands";
 export { createDocumentRelayConnection } from "./document-connection";
 export { createDocumentRelay } from "./document-http";
 export { createDocumentSync, latestStateLimits } from "./document-sync";

@@ -68,8 +68,8 @@ export const startDeviceCommands = (input: {
     },
     async call(deviceId: string, command: DeviceCommand, options: { signal: AbortSignal }) {
       if (!channel || !input.live.status().connected) throw new Error("Device disconnected");
-      const send = (command: DeviceCommand, signal = options.signal) =>
-        channel!.call(deviceId, jsonSchema.parse(JSON.parse(JSON.stringify(command))), { signal });
+      const send = (command: DeviceCommand) =>
+        channel!.call(deviceId, jsonSchema.parse(JSON.parse(JSON.stringify(command))), options);
       return withDeviceCommandAttachments(deps, config.workbenchId, command, send);
     },
   };

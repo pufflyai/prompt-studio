@@ -3,21 +3,25 @@ import { approvalInputSchema, sessionCreateRequestSchema, sessionFollowUpRequest
 import { extensionWorkspaceCreateInputSchema } from "./workspaces";
 
 const id = z.string().min(1);
+const attachmentSchema = z.strictObject({
+  fileId: z.string().uuid(),
+  name: z.string().min(1),
+  mimeType: z.string().nullable(),
+  data: z.string(),
+});
+export type DeviceCommandAttachment = z.infer<typeof attachmentSchema>;
 const commandSchema = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("session.removeUnsubmittedAttachment"), projectId: id, fileId: z.string().uuid() }),
-  z.strictObject({
-    type: z.literal("session.copyAttachment"),
-    projectId: id,
-    fileId: z.string().uuid(),
-    name: z.string().min(1),
-    mimeType: z.string().nullable(),
-    data: z.string(),
-  }),
   z.strictObject({
     type: z.literal("session.create"),
     input: sessionCreateRequestSchema.omit({ deviceId: true }).strict(),
+    attachmentContents: z.array(attachmentSchema).optional(),
   }),
-  z.strictObject({ type: z.literal("session.followUp"), id, input: sessionFollowUpRequestSchema.strict() }),
+  z.strictObject({
+    type: z.literal("session.followUp"),
+    id,
+    input: sessionFollowUpRequestSchema.strict(),
+    attachmentContents: z.array(attachmentSchema).optional(),
+  }),
   z.strictObject({ type: z.literal("session.approve"), id, input: approvalInputSchema.strict() }),
   z.strictObject({ type: z.literal("session.interrupt"), id }),
   z.strictObject({

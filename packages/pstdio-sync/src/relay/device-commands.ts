@@ -1,5 +1,6 @@
 import {
   deviceCommandChallengeSchema,
+  deviceCommandInputLimit,
   deviceCommandReceivedSchema,
   deviceCommandReplySchema,
   deviceCommandRequestSchema,
@@ -12,6 +13,13 @@ import { createDeviceCommandAuthorization } from "./device-command-authorization
 import type { LiveConnection } from "./live";
 
 type DeviceIdentity = { accountId: string; deviceId: string; key: CryptoKey };
+export class DeviceCommandInputError extends Error {
+  constructor() {
+    super(
+      "The complete remote action must fit within 64 MiB, including base64-encoded attachments. Send fewer or smaller files.",
+    );
+  }
+}
 const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
 const decode = (bytes: Uint8Array) => JSON.parse(new TextDecoder().decode(bytes));
 // Two base64 layers plus signatures and encryption fit inside the relay's 64 KiB frame.
@@ -190,10 +198,12 @@ export const createDeviceCommandChannel = (input: {
       await Promise.allSettled([...active]);
     },
     async call(deviceId: string, command: Json, options: { signal: AbortSignal; partial?: (result: Json) => void }) {
+      options.signal.throwIfAborted();
+      const bytes = encode(jsonSchema.parse(command));
+      if (bytes.byteLength > deviceCommandInputLimit) throw new DeviceCommandInputError();
       const grant = deviceCommandChallengeSchema.parse(
         await invoke(deviceId, { kind: "challenge" }, { signal: options.signal }),
       );
-      const bytes = encode(jsonSchema.parse(command));
       for (let offset = 0; offset < bytes.byteLength; offset += resultChunkBytes) {
         const final = offset + resultChunkBytes >= bytes.byteLength;
         const result = await invoke(
