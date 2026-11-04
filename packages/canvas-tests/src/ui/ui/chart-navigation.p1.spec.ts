@@ -39,14 +39,31 @@ test("visualization gallery applies light, dark, and contributed chart tokens", 
     "packages/ui/src/components/charts/visualizations.canvas.tsx#CustomPalette",
   );
   const bar = preview.getByRole("img", { name: "Columns", exact: true }).locator(".ts-chart__marks rect").first();
-  await expect(bar).toHaveCSS("fill", "rgb(140, 219, 145)");
-  await expect(preview.getByRole("img")).toHaveCount(20);
+  await expect(bar).toHaveCSS("fill", "rgb(212, 187, 255)");
+  await expect(preview.getByRole("img")).toHaveCount(30);
   const shell = page.frameLocator("[data-verification-host]");
   await shell.getByRole("button", { name: "Theme for Custom palette", exact: true }).click();
   await shell.getByRole("menuitem", { name: "Prompt Dark", exact: true }).click();
-  await expect(bar).not.toHaveCSS("fill", "rgb(140, 219, 145)");
-  const dark = await bar.evaluate((element) => getComputedStyle(element).fill);
+  await expect(bar).toHaveCSS("fill", "rgb(138, 63, 252)");
   await shell.getByRole("button", { name: "Theme for Custom palette", exact: true }).click();
   await shell.getByRole("menuitem", { name: "Prompt Light", exact: true }).click();
-  await expect(bar).not.toHaveCSS("fill", dark);
+  await expect(bar).toHaveCSS("fill", "rgb(105, 41, 196)");
+});
+
+// Critical: every categorical series needs a distinct color beyond the first seven.
+test("Carbon palette keeps fourteen distinct theme colors", async ({ page }) => {
+  const preview = await openCanvasPreview(page, "packages/ui/src/components/charts/visualizations.canvas.tsx#Palettes");
+  const marks = preview
+    .getByRole("img", { name: "Carbon categorical palette", exact: true })
+    .locator(".ts-chart__marks rect");
+  await expect(marks).toHaveCount(14);
+  const colors = await marks.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).fill));
+  expect(new Set(colors).size).toBe(14);
+  await expect(marks.first()).toHaveCSS("fill", "rgb(105, 41, 196)");
+  const shell = page.frameLocator("[data-verification-host]");
+  await shell.getByRole("button", { name: "Theme for Palettes", exact: true }).click();
+  await shell.getByRole("menuitem", { name: "Prompt Dark", exact: true }).click();
+  await expect(marks.first()).toHaveCSS("fill", "rgb(138, 63, 252)");
+  const darkColors = await marks.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).fill));
+  expect(new Set(darkColors).size).toBe(14);
 });

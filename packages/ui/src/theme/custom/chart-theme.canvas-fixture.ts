@@ -1,4 +1,5 @@
 import type { ThemePreferenceOption } from "@/utils/apply-theme-preference";
+import { chartCategorical, chartSequential } from "../primitives/chart-palettes";
 
 // A contributed theme can override chart tokens independently of UI accent colors.
 export const chartForestTheme = {
@@ -15,17 +16,17 @@ export const chartForestTheme = {
     "colors.vis.text.secondary": "#acc9b8",
     "colors.vis.axis": "#c4dfca",
     "colors.vis.grid": "#3c5c4c",
-    "colors.vis.categorical.1": "#8cdb91",
-    "colors.vis.categorical.2": "#efcb79",
-    "colors.vis.categorical.3": "#b9b1f5",
-    "colors.vis.categorical.4": "#f49a90",
-    "colors.vis.categorical.5": "#e8a8cf",
-    "colors.vis.categorical.6": "#79cdd2",
-    "colors.vis.categorical.7": "#b9d87b",
-    "colors.vis.sequential.blue.low-3": "#234534",
-    "colors.vis.sequential.blue.low-2": "#356847",
-    "colors.vis.sequential.blue.low-1": "#4a8c5d",
-    "colors.vis.sequential.blue.default": "#70b879",
-    "colors.vis.sequential.blue.high-1": "#a0d99b",
+    // Carbon hues with lighter first/teal series for the contributed Forest surface.
+    ...Object.fromEntries(chartCategorical.dark.map((color, index) => [`colors.vis.categorical.${index + 1}`, color])),
+    "colors.vis.categorical.1": "#d4bbff",
+    "colors.vis.categorical.3": "#08bdba",
+    "colors.vis.categorical.11": "#007d79",
+    "colors.vis.categorical.14": "#8a3ffc",
+    ...Object.fromEntries(
+      ["low-3", "low-2", "low-1", "default", "high-1", "high-2", "high-3"].map((step, index) => [
+        `colors.vis.sequential.blue.${step}`,
+        [...chartSequential.teal].reverse()[index],
+      ]),
+    ),
   },
 } satisfies ThemePreferenceOption;
