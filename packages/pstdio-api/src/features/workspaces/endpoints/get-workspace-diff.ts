@@ -4,6 +4,7 @@ import { getWorktreeDiff, getWorktreeDiffFile, getWorktreeDiffSummaryFiles } fro
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
+import { remoteWorkspaceAction } from "../remote-workspace-action";
 import { resolveBase, resolveHeadLabel } from "../resolve-base";
 import { resolveWorkspaceExecutionTarget } from "../workspace-provider-service";
 
@@ -20,6 +21,10 @@ export const getWorkspaceDiffRoute = createRoute({
     query: z.object({ mode: diffModeSchema }).strict(),
   },
   responses: {
+    400: {
+      description: "Remote device unavailable.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
     200: {
       description: "Workspace diff.",
       content: { "application/json": { schema: workspaceDiffResponseSchema } },
@@ -41,6 +46,10 @@ export const getWorkspaceDiffFilesRoute = createRoute({
     query: z.object({ mode: diffModeSchema }).strict(),
   },
   responses: {
+    400: {
+      description: "Remote device unavailable.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
     200: {
       description: "Workspace changed file metadata.",
       content: { "application/json": { schema: workspaceDiffFilesResponseSchema } },
@@ -62,6 +71,10 @@ export const getWorkspaceDiffFileRoute = createRoute({
     query: z.object({ mode: diffModeSchema, path: z.string() }).strict(),
   },
   responses: {
+    400: {
+      description: "Remote device unavailable.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
     200: {
       description: "Workspace changed file body.",
       content: { "application/json": { schema: fileDiffSchema } },
@@ -87,6 +100,14 @@ export const getWorkspaceDiffHandler = (deps: WorkspacesRouteDeps): AppRouteHand
   return async (c) => {
     const { id } = c.req.valid("param");
     const { mode } = c.req.valid("query");
+    const forwarded = await remoteWorkspaceAction(
+      getWorkspaceDiffRoute,
+      deps,
+      id,
+      { type: "workspace.diff", id, mode },
+      c.req.raw.signal,
+    );
+    if (forwarded) return forwarded;
     const context = await resolveWorkspaceDiffContext(deps, id, mode);
 
     if (context.error) {
@@ -117,6 +138,14 @@ export const getWorkspaceDiffFilesHandler = (
   return async (c) => {
     const { id } = c.req.valid("param");
     const { mode } = c.req.valid("query");
+    const forwarded = await remoteWorkspaceAction(
+      getWorkspaceDiffFilesRoute,
+      deps,
+      id,
+      { type: "workspace.diffFiles", id, mode },
+      c.req.raw.signal,
+    );
+    if (forwarded) return forwarded;
     const context = await resolveWorkspaceDiffContext(deps, id, mode);
 
     if (context.error) {
@@ -147,6 +176,14 @@ export const getWorkspaceDiffFileHandler = (
   return async (c) => {
     const { id } = c.req.valid("param");
     const { mode, path } = c.req.valid("query");
+    const forwarded = await remoteWorkspaceAction(
+      getWorkspaceDiffFileRoute,
+      deps,
+      id,
+      { type: "workspace.diffFile", id, mode, path },
+      c.req.raw.signal,
+    );
+    if (forwarded) return forwarded;
     const context = await resolveWorkspaceDiffContext(deps, id, mode);
 
     if (context.error) {

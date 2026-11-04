@@ -11,6 +11,7 @@ export type {
   BoardViews,
   BoardViewUpdate,
   CreateAutomationRunInput,
+  DeviceCommand,
   ExtensionDiagnosticsResponse,
   InstallExtensionRequest,
   InstallExtensionResponse,

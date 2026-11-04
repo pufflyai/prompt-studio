@@ -4,6 +4,7 @@ import { getWorktreeDiffSummary } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
+import { remoteWorkspaceAction } from "../remote-workspace-action";
 import { resolveBase } from "../resolve-base";
 import { resolveWorkspaceExecutionTarget } from "../workspace-provider-service";
 
@@ -19,6 +20,10 @@ export const getWorkspaceDiffSummaryRoute = createRoute({
     query: z.object({ mode: diffModeSchema }).strict(),
   },
   responses: {
+    400: {
+      description: "Remote device unavailable.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
     200: {
       description: "Workspace diff summary.",
       content: { "application/json": { schema: diffSummaryResponseSchema } },
@@ -36,6 +41,14 @@ export const getWorkspaceDiffSummaryHandler = (
   return async (c) => {
     const { id } = c.req.valid("param");
     const { mode } = c.req.valid("query");
+    const forwarded = await remoteWorkspaceAction(
+      getWorkspaceDiffSummaryRoute,
+      deps,
+      id,
+      { type: "workspace.diffSummary", id, mode },
+      c.req.raw.signal,
+    );
+    if (forwarded) return forwarded;
     const context = await resolveWorkspaceExecutionTarget(deps, id, "diff");
     if (!context) return c.json({ error: `Workspace has no linked file root: ${id}` }, 404);
 

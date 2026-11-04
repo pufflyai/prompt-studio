@@ -1,5 +1,11 @@
 import { afterEach, expect, test } from "bun:test";
-import { createDocumentRelayConnection, createLiveConnection, type LiveConnection } from "pstdio-sync/relay";
+import { createSyncSpace } from "pstdio-sync/encryption";
+import {
+  createDeviceCommandChannel,
+  createDocumentRelayConnection,
+  createLiveConnection,
+  type LiveConnection,
+} from "pstdio-sync/relay";
 import { liveProtocolHeader, liveProtocolVersion, syncPath } from "pstdio-sync-contracts";
 import { defaultRelayLimits } from "../limits";
 import { createLiveHub } from "./live";
@@ -86,6 +92,260 @@ const fixture = (limits = defaultRelayLimits, now = () => Date.now()) => {
   };
 };
 
+test("closing a command owner aborts key registration and drains without dispatching", async () => {
+  const f = fixture();
+  const space = await createSyncSpace({
+    projectId: "project",
+    spaceOwner: "owner",
+    keys: [{ generation: 1, secret: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url") }],
+  });
+  const entered = Promise.withResolvers<void>();
+  const signals: AbortSignal[] = [];
+  const channel = createDeviceCommandChannel({
+    live: f.client("a"),
+    space: async () => space,
+    identity: (signal?: AbortSignal) => {
+      entered.resolve();
+      if (!signal) return Promise.reject(new Error("Missing key-registration cancellation signal"));
+      signals.push(signal);
+      return new Promise((_resolve, reject) =>
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true }),
+      );
+    },
+    trustedKey: async () => {
+      throw new Error("No caller should be admitted");
+    },
+    execute: async () => {
+      throw new Error("No action should execute");
+    },
+  });
+  cleanups.push(async () => {
+    channel.close();
+    await channel.drain();
+  });
+  await entered.promise;
+  expect(signals).toHaveLength(1);
+  channel.close();
+  expect(signals[0]!.aborted).toBe(true);
+  await expect(channel.ready).rejects.toThrow();
+  await channel.drain();
+});
+
+test.each(["startup", "outgoing"] as const)("closing drains setup branches during %s", async (mode) => {
+  const f = fixture();
+  const space = await createSyncSpace({
+    projectId: "project",
+    spaceOwner: "owner",
+    keys: [{ generation: 1, secret: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url") }],
+  });
+  const pair = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+  if (!("privateKey" in pair)) throw new Error("Expected signing keys");
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let identitySettled = false;
+  const heldIdentity = release.promise.then(() => {
+    identitySettled = true;
+    throw new Error("Cancelled identity read");
+  });
+  let spaceCalls = 0;
+  let identityCalls = 0;
+  const channel = createDeviceCommandChannel({
+    live: f.client("a"),
+    space: (signal?: AbortSignal) =>
+      mode === "outgoing" && ++spaceCalls === 1
+        ? Promise.resolve(space)
+        : new Promise((_resolve, reject) => {
+            if (!signal) return reject(new Error("Missing cancellation signal"));
+            signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+          }),
+    identity: () => {
+      if (mode === "outgoing" && ++identityCalls === 1)
+        return Promise.resolve({ accountId: "owner", deviceId: "Bearer a", key: pair.privateKey });
+      entered.resolve();
+      return heldIdentity;
+    },
+    trustedKey: async () => pair.publicKey,
+    execute: async () => {
+      throw new Error("No action should execute");
+    },
+  });
+  cleanups.push(async () => {
+    channel.close();
+    await channel.drain();
+  });
+  if (mode === "outgoing") await channel.ready;
+  const request =
+    mode === "outgoing" ? channel.call("offline", null, { signal: new AbortController().signal }) : channel.ready;
+  void request.catch(() => {});
+  await entered.promise;
+  channel.close();
+  let drained = false;
+  const closing = channel.drain().then(() => {
+    drained = true;
+  });
+  try {
+    await Bun.sleep(0);
+    expect(drained).toBe(false);
+    expect(identitySettled).toBe(false);
+  } finally {
+    release.resolve();
+    await request.catch(() => {});
+    await closing;
+  }
+  expect(identitySettled).toBe(true);
+});
+
+test("signed private device commands cross the real relay, stream replies and reject forged callers", async () => {
+  const f = fixture();
+  const a = f.client("a");
+  const b = f.client("b");
+  const space = await createSyncSpace({
+    projectId: "project",
+    spaceOwner: "owner",
+    keys: [
+      {
+        generation: 1,
+        secret: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url"),
+      },
+    ],
+  });
+  const keys = new Map<string, CryptoKeyPair>();
+  for (const id of ["Bearer a", "Bearer b"]) {
+    const pair = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+    if (!("privateKey" in pair)) throw new Error("Ed25519 did not create a key pair");
+    keys.set(id, pair);
+  }
+  const identity = (id: string) => {
+    const key = keys.get(id)!.privateKey;
+    return async () => ({ accountId: "owner", deviceId: id, key });
+  };
+  let invocations = 0;
+  const admitted = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let finished = false;
+  const verifying = Promise.withResolvers<void>();
+  const releaseKey = Promise.withResolvers<void>();
+  let keyReads = 0;
+  let holdReplyAt = -1;
+  const source = createDeviceCommandChannel({
+    live: a,
+    space: async () => space,
+    identity: identity("Bearer a"),
+    trustedKey: async (id) => {
+      if (++keyReads === holdReplyAt) {
+        verifying.resolve();
+        await releaseKey.promise;
+      }
+      return keys.get(id)!.publicKey;
+    },
+    execute: async () => null,
+  });
+  const target = createDeviceCommandChannel({
+    live: b,
+    space: async () => space,
+    identity: identity("Bearer b"),
+    trustedKey: async (id) => keys.get(id)!.publicKey,
+    execute: async (command, { partial }) => {
+      invocations++;
+      await partial({ progress: "private-progress" });
+      if (command === "hold-action") {
+        admitted.resolve();
+        await release.promise;
+        finished = true;
+      }
+      return command === "read-large" ? "Private Unicode: 🦊 é\n".repeat(15_000) : command;
+    },
+  });
+  cleanups.push(async () => {
+    source.close();
+    target.close();
+  });
+  await Promise.all([source.ready, target.ready]);
+  await barrier(b);
+  const partials: unknown[] = [];
+  const command = { type: "session.interrupt", sessionId: "private-session" };
+  expect(
+    await source.call("Bearer b", command, {
+      signal: new AbortController().signal,
+      partial: (value) => partials.push(value),
+    }),
+  ).toEqual(command);
+  expect(partials).toEqual([{ progress: "private-progress" }]);
+  expect(invocations).toBe(1);
+  const previous = (f.received as { type: string; procedure?: string; payload?: string }[])
+    .filter((frame) => frame.type === "call")
+    .at(-1)!;
+  await expect(
+    a.call({
+      deviceId: "Bearer b",
+      procedure: previous.procedure!,
+      payload: previous.payload!,
+      spaceOwner: "owner",
+      signal: new AbortController().signal,
+    }),
+  ).rejects.toThrow("failed");
+  expect(invocations).toBe(1);
+  expect(JSON.stringify(f.received)).not.toContain("private-session");
+  expect(JSON.stringify(f.received)).not.toContain("private-progress");
+  expect(await source.call("Bearer b", "read-large", { signal: new AbortController().signal })).toBe(
+    "Private Unicode: 🦊 é\n".repeat(15_000),
+  );
+  expect(invocations).toBe(2);
+  const longPrompt = "a".repeat(100_000);
+  expect(await source.call("Bearer b", { prompt: longPrompt }, { signal: new AbortController().signal })).toEqual({
+    prompt: longPrompt,
+  });
+  expect(invocations).toBe(3);
+  await expect(
+    source.call("Bearer b", { prompt: "a".repeat(64 * 1024 * 1024) }, { signal: new AbortController().signal }),
+  ).rejects.toThrow("64 MiB");
+  expect(invocations).toBe(3);
+  await expect(source.call("offline", command, { signal: new AbortController().signal })).rejects.toThrow(
+    "unavailable",
+  );
+  const original = keys.get("Bearer a")!;
+  const forged = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+  if (!("privateKey" in forged)) throw new Error("Ed25519 did not create a key pair");
+  keys.set("Bearer a", forged);
+  await expect(source.call("Bearer b", command, { signal: new AbortController().signal })).rejects.toThrow("failed");
+  expect(invocations).toBe(3);
+  keys.set("Bearer a", original);
+  let returned = false;
+  holdReplyAt = keyReads + 2;
+  const pending = source.call("Bearer b", "hold-action", { signal: new AbortController().signal }).then(
+    () => {
+      returned = true;
+    },
+    () => {
+      returned = true;
+    },
+  );
+  await admitted.promise;
+  await verifying.promise;
+  let drained = false;
+  let closing = Promise.resolve();
+  try {
+    source.close();
+    closing = source.drain().then(() => {
+      drained = true;
+    });
+    await Bun.sleep(0);
+    expect(returned).toBe(false);
+    expect(drained).toBe(false);
+    releaseKey.resolve();
+    await until(() => returned);
+    await closing;
+    expect(finished).toBe(false);
+  } finally {
+    releaseKey.resolve();
+    release.resolve();
+    await pending;
+    await closing;
+    await target.drain();
+  }
+  expect(finished).toBe(true);
+});
+
 test("many document owners share one socket and existing changes wake only the interested owner", async () => {
   const f = fixture();
   const live = f.client("desktop");
@@ -111,7 +371,8 @@ test("many document owners share one socket and existing changes wake only the i
     });
     return connection;
   });
-  await until(() => counts.every((count) => count === 1));
+  // Admission can run catch-up before this observer sees the first pass.
+  await until(() => counts.every((count) => count >= 1));
   expect(f.opens()).toBe(1);
   await barrier(live);
   await until(() => owners.every((owner) => !owner.status().busy));

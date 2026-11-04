@@ -117,6 +117,7 @@ export const workspaceSchema = z.object({
 export const workspaceListItemSchema = workspaceSchema;
 
 export const createWorkspaceInputSchema = z.object({
+  device_id: z.string().min(1).optional(),
   project_id: z.string().min(1),
   /** Provider responsible for creating the workspace. */
   provider_id: z.string().min(1),
@@ -129,6 +130,7 @@ export const createWorkspaceInputSchema = z.object({
 });
 
 export const extensionWorkspaceCreateInputSchema = z.object({
+  deviceId: z.string().min(1).optional(),
   projectId: z.string().min(1),
   providerId: z.string().min(1),
   shorthandBase: z.string().trim().min(1).optional(),

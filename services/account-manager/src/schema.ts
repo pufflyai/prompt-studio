@@ -58,6 +58,7 @@ export const devices = pgTable(
     name: text().notNull(),
     platform: text().notNull(),
     digest: text().notNull(),
+    signingKey: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     lastSeenAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     removedAt: timestamp({ withTimezone: true }),

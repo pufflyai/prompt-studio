@@ -68,6 +68,18 @@ const verifyMetadataOwnership = async (
   await destination.deps.personalHistoryService.refreshIdentity();
 };
 
+const verifyOfflineInterrupt = async (sessionId: string) => {
+  const cancel = await destination.app.request(`/v1/sessions/${sessionId}/status`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ status: "cancelled" }),
+  });
+  expect(cancel.status).toBe(400);
+  expect(await cancel.json()).toMatchObject({ error: expect.any(String) });
+  expect(await destination.deps.sessionService.get(sessionId)).toBeNull();
+  expect((await destination.deps.personalHistoryService.getSession(sessionId))?.status).toBe("completed");
+};
+
 test("personal history is readable offline after restart, private to the account, and never a local execution record", async () => {
   const managerOrigin = "https://127.0.0.1:1";
   const accountId = "alice";
@@ -223,12 +235,7 @@ test("personal history is readable offline after restart, private to the account
     expect(frames).toContainEqual({ event: "end", data: { status: "completed" } });
     const queue = await destination.app.request(`/v1/sessions/${session.id}/queued-messages`);
     expect(await queue.json()).toMatchObject({ messages: [], queue: { requests: [] } });
-    const cancel = await destination.app.request(`/v1/sessions/${session.id}/status`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status: "cancelled" }),
-    });
-    expect(cancel.status).toBe(404);
+    await verifyOfflineInterrupt(session.id);
     await verifyMetadataOwnership(native, login, session.id);
     const since = destination.deps.eventBus.seq;
     await destination.deps.accountService.logout();

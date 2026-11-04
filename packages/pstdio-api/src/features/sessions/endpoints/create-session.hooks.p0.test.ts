@@ -29,6 +29,7 @@ const createContext = (body: {
   return {
     context: {
       req: {
+        raw: new Request("http://localhost/sessions", { method: "POST" }),
         valid: () => body,
       },
       json: (jsonBody: unknown, status: number) => {

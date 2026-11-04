@@ -12,6 +12,7 @@ export const builder = (yargs: Argv) =>
     .option("title", { type: "string", describe: "Session title (defaults to prompt excerpt)" })
     .option("workspace-id", { type: "string", describe: "Workspace ID or shorthand" })
     .option("project-id", { type: "string", describe: "Project ID" })
+    .option("device", { type: "string", describe: "Run on this online Cloud device ID" })
     .option("agent", { type: "string", describe: "Agent ID. Run `pst agents list` to see the installed agents" })
     .option("model", { type: "string", describe: "Model override" })
     .option("attach", { type: "string", array: true, describe: "Local file to attach to the session prompt" })
@@ -26,6 +27,7 @@ export type CreateArgs = {
   title?: string;
   "workspace-id"?: string;
   "project-id"?: string;
+  device?: string;
   agent?: string;
   model?: string;
   attach?: string[];
@@ -78,6 +80,7 @@ export const createHandler =
     try {
       const session = await deps.createSession({
         project_id: projectId,
+        ...(argv.device ? { device_id: argv.device } : {}),
         title,
         prompt: argv.prompt,
         agent,

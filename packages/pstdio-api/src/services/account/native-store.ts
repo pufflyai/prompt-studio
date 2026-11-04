@@ -15,6 +15,7 @@ export const deviceLoginSchema = z.strictObject({
 });
 const fileSchema = z.strictObject({
   login: deviceLoginSchema.nullable(),
+  signingKeys: z.strictObject({ publicKey: z.string(), privateKey: z.string() }).optional(),
   rejected: z.object({ deviceId: identitySchema, credentialHash: z.string() }).optional(),
 });
 const credentialHash = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -25,6 +26,19 @@ export const createNativeStore = (path: string) => {
   const read = async () => (await readState()).login;
   return {
     read,
+    signingKeys: (token: string) =>
+      serializeNativeWrite(path, async () => {
+        const state = await readState();
+        if (state.login?.token !== token) throw new Error("Device login changed");
+        if (state.signingKeys) return state.signingKeys;
+        const pair = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+        const signingKeys = {
+          publicKey: Buffer.from(await crypto.subtle.exportKey("raw", pair.publicKey)).toString("base64url"),
+          privateKey: Buffer.from(await crypto.subtle.exportKey("pkcs8", pair.privateKey)).toString("base64url"),
+        };
+        await writePrivateFile(path, { ...state, signingKeys });
+        return signingKeys;
+      }),
     signInRequired: async (deviceId: string) => (await readState()).rejected?.deviceId === deviceId,
     save: (login: z.input<typeof deviceLoginSchema>) =>
       serializeNativeWrite(path, () => writePrivateFile(path, { login: deviceLoginSchema.parse(login) })),

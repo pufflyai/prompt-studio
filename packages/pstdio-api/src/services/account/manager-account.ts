@@ -6,10 +6,14 @@ import type { DeviceLogin } from "./native-store";
 const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
 const accountSchema = z.object({ features: z.object({ relay: z.boolean() }) });
 
-export const readManagerAccount = async (login: DeviceLogin) => {
+export const readManagerAccount = async (login: DeviceLogin, signal?: AbortSignal) => {
   const [account, projects] = await Promise.all([
-    managerRequest(login.managerOrigin, "/v1/account", login.token).then((data) => accountSchema.parse(data)),
-    managerRequest(login.managerOrigin, "/v1/workbenches", login.token).then((data) => workbenchesSchema.parse(data)),
+    managerRequest(login.managerOrigin, "/v1/account", login.token, undefined, signal).then((data) =>
+      accountSchema.parse(data),
+    ),
+    managerRequest(login.managerOrigin, "/v1/workbenches", login.token, undefined, signal).then((data) =>
+      workbenchesSchema.parse(data),
+    ),
   ]);
   return { credential: login.token, ids: projects.map((row) => row.workbenchId), features: account.features };
 };
