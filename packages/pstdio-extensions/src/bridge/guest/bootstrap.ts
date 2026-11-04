@@ -12,6 +12,7 @@ import { installModifierForwarder } from "./modifier-forwarder";
 import { observeContentHeight } from "./observe-content-height";
 import { observeContentWidth } from "./observe-content-width";
 import { createViewLifecycle } from "./view-lifecycle";
+import { createViewVisibility } from "./view-visibility";
 
 const MOUNT_ID = "pstdio-extension-mount";
 
@@ -97,6 +98,7 @@ const start = async () => {
   installOpaqueOriginStorageFallbacks();
   acceptBridgeMessagesOnlyFromHost();
 
+  const visibility = createViewVisibility(document);
   const propsStore = createPropsStore<WebviewHostProps>(createWebviewHostProps());
   const hostEventListeners = new Map<string, Set<(payload: unknown) => void>>();
   const subscribeHostEvent = (scope: string, handler: (payload: unknown) => void) => {
@@ -145,6 +147,7 @@ const start = async () => {
   });
 
   const connection = await guest.connect({
+    visibilityUpdate: (visible: boolean) => visibility.setVisible(visible),
     keyboardUpdate: (shortcuts: readonly WebviewKeyboardShortcut[]) => {
       keyboardShortcuts = shortcuts;
       keyboardRelay.update();
@@ -158,6 +161,7 @@ const start = async () => {
     },
     init: async (message: InitMessage) => {
       try {
+        visibility.setVisible(message.visible ?? true);
         keyboardShortcuts = message.keyboardShortcuts ?? [];
         applyTheme(message.theme, message.themeVariables);
         propsStore.set(message.props);

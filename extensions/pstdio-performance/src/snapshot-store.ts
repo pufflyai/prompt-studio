@@ -9,28 +9,37 @@ export const createSnapshotStore = (performance: Pick<WebviewPerformanceClient, 
   let error: string | undefined;
   const listeners = new Set<() => void>();
   let stop: Promise<() => Promise<void>> | undefined;
+  let revision = 0;
+  let readVersion = 0;
   const publish = (next: PerformanceSnapshot | null, failure?: string) => {
+    revision++;
     snapshot = next;
     error = failure;
     for (const listener of listeners) listener();
   };
+  const refresh = () => {
+    const request = ++readVersion;
+    const startedAt = revision;
+    void performance.snapshot().then(
+      (initial) => {
+        if (revision === startedAt && request === readVersion) publish(initial);
+      },
+      (cause) => {
+        if (revision === startedAt && request === readVersion) publish(snapshot ?? null, String(cause));
+      },
+    );
+  };
+  // Prepare one reading before opening; live subscriptions belong to visible effects.
+  refresh();
   return {
     get: () => snapshot,
     getError: () => error,
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       if (!stop) {
+        refresh();
         stop = performance.subscribe(publish);
         void stop.catch((cause) => publish(snapshot ?? null, String(cause)));
-        // The host pushes nothing while monitoring is off, so read the current value once.
-        void performance
-          .snapshot()
-          .then((initial) => {
-            if (snapshot === undefined) publish(initial);
-          })
-          .catch((cause) => {
-            if (snapshot === undefined) publish(null, String(cause));
-          });
       }
       return () => {
         listeners.delete(listener);

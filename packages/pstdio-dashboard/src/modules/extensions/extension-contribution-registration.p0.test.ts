@@ -113,7 +113,7 @@ describe("registerExtensionContributions", () => {
     });
     const panel = workbench.settings.getPanel(settingsPanelId);
     expect(panel).toMatchObject({ kind: "view", viewId: settingsViewId });
-    expect(workbench.views.getView(settingsViewId)?.body.kind).toBe("react");
+    expect(workbench.views.getView(settingsViewId)?.body.kind).toBe("webview");
     disposeExtensionContributions(registration);
   });
   test("a storage change refreshes only the views of the project that changed", () => {
