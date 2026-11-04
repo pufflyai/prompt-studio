@@ -33,20 +33,31 @@ test("concurrency toggle stages unlimited sessions and Reset restores the saved 
   );
   const toggle = preview.getByRole("checkbox", { name: "Limit concurrent sessions" });
   const limit = preview.getByRole("spinbutton", { name: "Maximum concurrent sessions" });
+  const save = preview.getByRole("button", { name: "Save", exact: true });
+  const reset = preview.getByRole("button", { name: "Reset", exact: true });
+  await expect(save).toHaveCount(0);
+  await expect(reset).toHaveCount(0);
   await expect(toggle).toBeChecked();
   await toggle.press("Space");
   await expect(limit).toHaveCount(0);
-  await preview.getByRole("button", { name: "Reset changes", exact: true }).click();
+  await expect(save).toBeEnabled();
+  await expect(reset).toBeEnabled();
+  await reset.click();
   await expect(toggle).toBeChecked();
   await expect(limit).toHaveValue("4");
+  await expect(save).toHaveCount(0);
+  await expect(reset).toHaveCount(0);
   await toggle.press("Space");
-  await preview.getByRole("button", { name: "Save changes", exact: true }).click();
-  await expect(preview.getByRole("button", { name: "Save changes", exact: true })).toBeDisabled();
+  await preview.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(save).toHaveCount(0);
+  await expect(reset).toHaveCount(0);
   await toggle.press("Space");
   await expect(limit).toHaveValue("1");
-  await preview.getByRole("button", { name: "Reset changes", exact: true }).click();
+  await preview.getByRole("button", { name: "Reset", exact: true }).click();
   await expect(toggle).not.toBeChecked();
   await expect(limit).toHaveCount(0);
+  await expect(save).toHaveCount(0);
+  await expect(reset).toHaveCount(0);
 });
 
 // Critical: immediate deletion must be confirmed and its header control must unmount when leaving the template.

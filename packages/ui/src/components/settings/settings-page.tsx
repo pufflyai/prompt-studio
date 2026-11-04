@@ -1,4 +1,5 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { RotateCcw, Save } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { ScrollArea } from "../primitives/scroll-area";
 
@@ -33,6 +34,7 @@ export const SettingsActions = (props: SettingsChanges) => {
       setPending(false);
     }
   };
+  if (!props.dirty) return null;
   return (
     <Stack gap="xs" align="end">
       <HStack gap="sm">
@@ -42,7 +44,8 @@ export const SettingsActions = (props: SettingsChanges) => {
           disabled={!props.dirty || props.saving || pending}
           onClick={() => void run(props.onReset)}
         >
-          Reset changes
+          <RotateCcw />
+          Reset
         </Button>
         <Button
           size="sm"
@@ -51,7 +54,8 @@ export const SettingsActions = (props: SettingsChanges) => {
           disabled={!props.dirty || props.disabled || props.saving || pending}
           onClick={() => void run(props.onSave)}
         >
-          Save changes
+          <Save />
+          Save
         </Button>
       </HStack>
       {error ? (
