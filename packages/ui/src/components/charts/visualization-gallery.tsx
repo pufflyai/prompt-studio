@@ -28,10 +28,11 @@ import { GanttDemo } from "./gantt-demo";
 import { activity, edges, matrix, nodes, observations, parts, series } from "./visualization-data";
 import { VisualizationExample as Example } from "./visualization-example";
 import { PartsExamples } from "./visualization-parts";
+import { AreaExamples, LineExamples } from "./visualization-trends";
 
 const options = { keyboard: true, tooltip: { use: tooltip } };
 const xy = { x: { scale: scaleLinear }, y: { scale: scaleLinear, grid: true } };
-const columns = { x: { scale: scaleBand }, y: { scale: scaleLinear, grid: true } };
+const columns = { x: { scale: () => scaleBand().padding(0.2) }, y: { scale: scaleLinear, grid: true } };
 const bins = binX(observations, { value: "value", thresholds: 8 });
 const ramp = ["low-3", "low-2", "low-1", "default", "high-1"].map((value) =>
   chartColor(`vis.sequential.blue.${value}`),
@@ -248,6 +249,8 @@ export function VisualizationGallery() {
               />
             </Example>
             <PartsExamples />
+            <AreaExamples />
+            <LineExamples />
             <Example title="Network">
               <Chart
                 ariaLabel="Network"
