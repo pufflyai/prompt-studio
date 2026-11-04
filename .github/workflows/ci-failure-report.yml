@@ -67,6 +67,7 @@ jobs:
           while read -r job_id; do
             if ! gh api "repos/$REPOSITORY/actions/jobs/$job_id/logs" \
               > "failure-logs/$job_id.log" 2> "$RUNNER_TEMP/job-log-error.txt"; then
+              : > "failure-logs/$job_id.log"
               echo "Could not retrieve original log for job $job_id" >> failure-logs/unavailable.txt
               failed=1
             fi
