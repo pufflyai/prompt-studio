@@ -1,7 +1,11 @@
 import type { ExtensionResourcesApi, ResourceIdentity } from "@pstdio/sdk/extensions";
-import { createMemoryResources } from "@pstdio/sdk/testing";
+import { createMemoryResources, createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 
-export const createBenchResources = (prefixes: Record<string, string>, seeds: ResourceIdentity[] = []) => {
+export const createBenchResources = (
+  prefixes: Record<string, string>,
+  seeds: ResourceIdentity[] = [],
+  projectId = "bench-project",
+) => {
   const byId = new Map(seeds.map((identity) => [identity.id, identity]));
   const sequences = new Map<string, number>();
   for (const identity of seeds) {
@@ -11,13 +15,18 @@ export const createBenchResources = (prefixes: Record<string, string>, seeds: Re
     if (Number.isSafeInteger(sequence) && sequence > 0)
       sequences.set(identity.kind, Math.max(sequences.get(identity.kind) ?? 0, sequence));
   }
-  const allocated = createMemoryResources(prefixes, sequences);
+  const context = makeCommandContext({ storage: createMemoryStorage(), params: {}, projectId });
+  const allocated = createMemoryResources(prefixes, sequences, undefined, {
+    projectId,
+    extensionId: context.extensionId,
+  });
   const seededIdentity = (kind: string, id: string) => {
     const identity = byId.get(id);
     return identity?.kind === kind ? structuredClone(identity) : null;
   };
   const resources: ExtensionResourcesApi = {
-    ...allocated,
+    ...context.resources,
+    allocate: allocated.allocate,
     identity: async (input) => seededIdentity(input.kind, input.id) ?? allocated.identity(input),
     identityMany: async (input) => {
       const identities = await allocated.identityMany(input);
