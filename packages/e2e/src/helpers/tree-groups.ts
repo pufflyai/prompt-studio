@@ -29,7 +29,7 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   // before collapsing it, so the following click observes the updated layout.
   const rowId = await source.getAttribute("data-tree-list-focus-id");
   expect(rowId).toBeTruthy();
-  const section = group.locator("xpath=ancestor::*[@data-tree-list-focus-id]/../..");
+  const section = group.locator("xpath=ancestor::*[.//*[@data-tree-reveal]][1]");
   await expect(section.locator(`[data-tree-list-focus-id=${JSON.stringify(rowId)}]`)).toBeVisible();
   // dnd-kit suppresses clicks briefly after a drop.
   await page.waitForTimeout(100);
