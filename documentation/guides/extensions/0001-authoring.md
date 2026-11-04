@@ -509,3 +509,7 @@ from core. Extensions do not keep their own copy or repair numbers after offline
 merges. The [resource numbers reference](../../references/sdk/0002-resources.md#resource-numbers)
 describes allocation, current identities, aliases, and change events available on
 `main` for the release after 0.44.0. The Bookmarks example does not need numbers.
+
+## Project Home on main
+
+The default `pstdio.pstdio-home` extension owns the project home presentation. It uses public session/workspace queries, webview commands and navigation. Prompt Studio directly configures its ordinary Home page as the project default. If Home is disabled or uninstalled, the dashboard uses its existing empty-panel UI. See [dashboard commands and session ordering](../../references/extensions/0004-contribution-api.md#dashboard-commands-and-session-ordering-api-031-on-main).

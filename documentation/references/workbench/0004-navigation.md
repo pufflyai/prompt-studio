@@ -42,7 +42,7 @@ The routed page owns its breadcrumb and page actions. A collection page uses Mai
 
 Before a project is selected, the required Projects dialog appears on an empty background. Project selection hides navigation, activity, status widgets, floating panels, project tabs, and panel controls. Native window controls remain available. The dialog footer opens global Settings; closing Settings returns to the picker. System errors still use the status bar when they need attention.
 
-Creating the first project opens its Start page and tools without reloading. Project selection commits the project scope and dialog changes together, so automatic selection cannot interrupt that transition.
+Creating the first project opens its configured Home page and tools without reloading. Project selection commits the project scope and dialog changes together, so automatic selection cannot interrupt that transition.
 
 ### Main fullscreen
 
@@ -139,4 +139,4 @@ During a tab drag, a closed eligible Side offers both allowed left/right edges a
 
 ## Project default page
 
-An application sets its default page with `createWorkbench({ startPage })`. Project-root bookmarks resolve that ordinary page at its normal URL. Valid saved destinations and the last root-level page used by the project breadcrumb retain their existing precedence. If the configured page is unavailable, the selected mode and its shared panels remain active so the existing empty-panel UI can render. Start targets and parents are ordinary references; they are not rewritten to the configured default.
+An application sets its default page with `createWorkbench({ startPage })`. Prompt Studio sets this directly to the ordinary project-local Home extension page. Project-root bookmarks open Home at its normal namespaced URL. Valid saved destinations and the last root-level page used by the project breadcrumb retain their existing precedence. If Home is unavailable, the selected mode and its shared panels remain active so the existing empty-panel UI can render. Prompt Studio-owned callers target Home directly. Start targets and parents contributed by other hosts remain ordinary references; they are not rewritten to the configured default.

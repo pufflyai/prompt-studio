@@ -58,10 +58,11 @@ test("streams every opened session over one shared connection", async ({ page, r
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
     await page.goto(`/projects/${project.id}/`);
-    await page.getByRole("button", { name: "Session A", exact: true }).click();
+    const sidenav = page.getByRole("region", { name: "Sidenav" }).first();
+    await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+    await sidenav.getByRole("option", { name: "Session A", exact: true }).click();
     await expect.poll(() => subscribed).toEqual([sessions[0]!.id]);
     await expect.poll(() => retained).toEqual([sessions[0]!.id]);
-    const sidenav = page.getByRole("region", { name: "Sidenav" }).first();
     await sidenav.getByRole("option", { name: "Session B", exact: true }).click();
     await expect.poll(() => subscribed).toEqual([sessions[0]!.id, sessions[1]!.id]);
     await expect.poll(() => retained).toEqual([sessions[0]!.id, sessions[1]!.id]);

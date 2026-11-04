@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
-import { createStartModule } from "./module";
+import { createCommandPaletteModule } from "../command-palette/module";
 
 const registerExtensionPage = (
   workbench: ReturnType<typeof createWorkbench>,
@@ -33,7 +33,7 @@ describe("tool resources", () => {
   test("lists the pages that extensions open as tools", () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.registerModule(createStartModule());
+    workbench.registerModule(createCommandPaletteModule());
     registerExtensionPage(workbench, { id: "scribble", title: "Scribble" });
     registerExtensionPage(workbench, { id: "note", title: "Note", resourceKind: "note" });
 

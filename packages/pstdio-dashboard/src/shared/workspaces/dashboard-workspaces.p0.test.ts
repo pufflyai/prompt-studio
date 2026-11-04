@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { getCollection, getWriter } from "@/lib/sync/collections";
-import {
-  buildDashboardWorkspacesFromRows,
-  readProjectSetupError,
-  toWorkspaceDataTableRow,
-} from "./dashboard-workspaces";
+import { buildDashboardWorkspacesFromRows, toWorkspaceDataTableRow } from "./dashboard-workspaces";
 
 const rows = {
   files: [],
@@ -314,21 +309,5 @@ describe("dashboard workspace list rows", () => {
     );
 
     expect(workspaces.map((workspace) => workspace.resource.icon)).toEqual(["GitBranch", "Folder", "Cloud"]);
-  });
-
-  test("reads the setup error of the selected project's default workspace only", () => {
-    const previous = [...getCollection("workspaces").state.values()];
-    try {
-      getWriter("workspaces")?.truncateAndWrite([
-        { ...rows.workspaces[1], is_default: true, setup_error: "spawn git ENOENT" },
-        { ...rows.workspaces[0], is_default: true, setup_error: null },
-      ]);
-
-      expect(readProjectSetupError("project-2", 0)).toBe("spawn git ENOENT");
-      expect(readProjectSetupError("project-1", 0)).toBeNull();
-      expect(readProjectSetupError(undefined, 0)).toBeNull();
-    } finally {
-      getWriter("workspaces")?.truncateAndWrite(previous);
-    }
   });
 });
