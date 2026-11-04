@@ -20,7 +20,9 @@ qualification. Do not create a competing managed attempt or change dependencies
 to bypass unfinished acceptance.
 
 For each run, save the following under the `filesPath` returned by
-`pst reports write --kind change_request --name change_request --template change-request`:
+`pst reports write --kind change_request --name <ticket-purpose-session> --template change-request`:
+Use a unique ticket/purpose/session name in parallel work. Preserve existing names and IDs;
+verify that a returned checkout belongs to you before editing it.
 
 - Workspace, branch, exact HEAD, dirty status, current `origin/main`, prerequisite
   branch heads and PR URLs. Record which prerequisite commits are present.
@@ -54,38 +56,91 @@ Use a wrapper with `try/finally`, for example save this as `heavy-command.ts` un
 the report's evidence directory. `CLOUD_SESSION_ID` must identify the owning session.
 
 ```ts
-import { mkdir, readFile, rmdir, unlink, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { mkdir, open, readFile, readdir, rmdir, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
+import { constants } from "node:os";
 
 const lock = "/tmp/pstdio-cloud-heavy-validation.lock";
 const session = process.env.CLOUD_SESSION_ID;
 const command = process.argv.slice(2);
 if (!session || command.length === 0) throw new Error("Provide session and command");
-await mkdir(lock); // Existing leases fail closed; never remove another owner here.
+await mkdir(lock); // Outside finally: failed acquisition never owns a predecessor's lease.
+const directory = await stat(lock);
 const path = join(lock, "owner.json");
-const owner = { session, pid: process.pid, purpose: command, acquiredAt: new Date().toISOString() };
-let child: ReturnType<typeof Bun.spawn> | undefined;
-const interrupt = () => child?.kill("SIGINT");
-const terminate = () => child?.kill("SIGTERM");
+const owner = { session, pid: process.pid, token: crypto.randomUUID(), purpose: command,
+  acquiredAt: new Date().toISOString() };
+let ownerFile: Awaited<ReturnType<typeof stat>> | undefined;
+let group: number | undefined;
+let interrupted: NodeJS.Signals | undefined;
+const signalGroup = (signal: NodeJS.Signals) => {
+  if (!group) return;
+  try { process.kill(-group, signal); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error; }
+};
+const interrupt = (signal: NodeJS.Signals) => {
+  const force = interrupted !== undefined;
+  interrupted ??= signal;
+  process.exitCode = 128 + constants.signals[interrupted];
+  console.log(JSON.stringify({ interrupt: signal, force }));
+  signalGroup(force ? "SIGKILL" : signal);
+};
+const onInt = () => interrupt("SIGINT");
+const onTerm = () => interrupt("SIGTERM");
+process.on("SIGINT", onInt);
+process.on("SIGTERM", onTerm);
 try {
-  await writeFile(path, JSON.stringify(owner, null, 2), { flag: "wx" });
-  process.on("SIGINT", interrupt);
-  process.on("SIGTERM", terminate);
-  child = Bun.spawn(command, { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
-  process.exitCode = await child.exited;
+  const file = await open(path, "wx");
+  try {
+    ownerFile = await file.stat();
+    await file.writeFile(JSON.stringify({ ...owner, inode: directory.ino, device: directory.dev }));
+  } finally { await file.close(); }
+  if (interrupted) throw new Error(`Interrupted before launch: ${interrupted}`);
+  const child = spawn(command[0]!, command.slice(1), { detached: true, stdio: "inherit" });
+  group = child.pid;
+  const result = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve, reject) => {
+    child.on("error", reject);
+    child.on("close", (code, signal) => resolve({ code, signal }));
+  });
+  console.log(JSON.stringify({ childResult: result, interrupted }));
+  process.exitCode = interrupted ? 128 + constants.signals[interrupted]
+    : result.code ?? 128 + constants.signals[result.signal!];
 } finally {
-  process.off("SIGINT", interrupt);
-  process.off("SIGTERM", terminate);
-  const current = JSON.parse(await readFile(path, "utf8"));
-  if (current.session !== session || current.pid !== process.pid) throw new Error("Lease owner changed");
-  await unlink(path);
+  // Drain this command's process group before releasing the shared resource.
+  signalGroup("SIGTERM");
+  while (group) {
+    try { process.kill(-group, 0); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ESRCH") { group = undefined; break; }
+      throw error;
+    }
+    signalGroup("SIGKILL");
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  process.off("SIGINT", onInt);
+  process.off("SIGTERM", onTerm);
+  const currentDirectory = await stat(lock);
+  if (currentDirectory.ino !== directory.ino || currentDirectory.dev !== directory.dev)
+    throw new Error("Lease directory changed; refusing removal");
+  if (ownerFile) {
+    const currentFile = await stat(path);
+    const current = JSON.parse(await readFile(path, "utf8"));
+    if (currentFile.ino !== ownerFile.ino || currentFile.dev !== ownerFile.dev ||
+        current.pid !== owner.pid || current.token !== owner.token)
+      throw new Error("Lease owner changed; refusing removal");
+    await unlink(path);
+  } else if ((await readdir(lock)).length) {
+    throw new Error("Unexpected file in acquisition directory; refusing removal");
+  }
   await rmdir(lock);
 }
 ```
 
 Run one heavy command per wrapper invocation. Do not launch a second wrapper while
 the first owns the lease. A forced kill can leave the lease and child processes
-behind: preserve their metadata and reconcile them with the owner. Do not remove
+behind: preserve their metadata and reconcile them with the owner. If a command
+ignores the first interrupt, send a second interrupt to this wrapper to force its
+owned group; killing the wrapper itself with SIGKILL skips finally. Do not remove
 an active directory to make another command start.
 
 This lease is not the separate acknowledged exclusive machine timing window
@@ -241,12 +296,37 @@ bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:cli --
 bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-public-text-sync.p2.spec.ts src/packaged/packaged-public-text-native-sync.p2.spec.ts
 ```
 
+The preparation stack now also isolates the stable-writer storage prerequisite in
+[PR #1759](https://github.com/pufflyai/prompt-studio/pull/1759), PS-1066. Its five
+storage paths originate in commit `525e332` from PR #1754; unrelated UI, desktop and
+benchmark ancestors are excluded. Independent review requires same-handle concurrent
+saves, distinct handle/device writers, rollback and checkpoint/offline-merge coverage.
+Do not substitute a global writer identity. Production repair #1748, storage #1759
+and preparation #1739 remain separate PRs with bases matching their dependency order.
+After a prerequisite squash reaches main, rebase the next branch onto the actual
+main commit and retarget it; do not merge a child into a temporary parent branch.
+
+Original Linux candidate `1e0aa33e` timed out during replacement 7/8 at the unchanged
+120-second allowance. Keep that failure. Corrected source candidate `459e47d4` passed
+both maintained scenarios in Linux CI run `41869906693`, job `126714014107`, retaining
+all eight replacement states and 1,008 marker groups. The eighth state milestone was
+80.177 seconds; this is not the whole-case duration. Marker stages stayed 7.5–7.9
+seconds instead of growing to 17.848 seconds. RP-447 preserves the original RED,
+complete new output, source identities and round timings; RP-458/RP-459 preserve
+storage RED/GREEN and independent safety review. Record any later run under its own
+actual HEAD. A documentation-only follow-up does not turn the recorded command into
+a same-head rerun; preserve source-equivalence evidence explicitly.
+
+These results qualify controlled-peer fixture behavior only. Current local full and
+default package qualification still need their own evidence. They do not establish
+hosted/deployed product acceptance, PS-877 closure or PS-789 completion.
+
 The first two commands run focused fixture checks, not integrated acceptance. The
 record-stream check uses the maintained packaged runner’s existing platform allowance;
 the original direct-Bun 5-second setup timeouts remain failure evidence. The
-packaged browser scenarios are maintained preparation and have not established a
-passing packaged run at the preparation base. They do not include Cloud UI because
-its production extension has not been delivered.
+packaged browser scenarios are maintained preparation; their recorded Linux pass
+above does not replace later candidate qualification. They do not exercise the
+production Cloud extension UI; that requires its separately delivered candidate.
 The existing packaged test and fixture allowances remain unchanged. Do not raise
 Bun/Playwright timeouts, job limits, retries or budgets; do not drop a device, record,
 sample, file, platform or scenario to obtain a pass. Preserve slow-phase diagnostics.
