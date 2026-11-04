@@ -49,7 +49,7 @@ export const createFileReconciler = (input: {
         if (node?.kind !== "directory") throw new Error(`Artifact parent is not a directory: ${parent}`);
         changes.set(parent, {
           recordId: fileRecordId(parent),
-          expectedRevision: state[parent]?.revision ?? initialRecordRevision(input.owner, fileRecordId(parent)),
+          expectedRevision: state[parent]?.revision ?? initialRecordRevision(),
           replace: node,
           asset: null,
         });
@@ -68,7 +68,7 @@ export const createFileReconciler = (input: {
         : (nodes.get(path) ?? null);
     return {
       recordId: fileRecordId(path),
-      expectedRevision: previous?.revision ?? initialRecordRevision(input.owner, fileRecordId(path)),
+      expectedRevision: previous?.revision ?? initialRecordRevision(),
       ...(node && { replace: node }),
       asset: found?.file ? await input.assets.stage(input.owner, crypto.randomUUID(), found.file, input.signal) : null,
       deleted: !found,
