@@ -41,11 +41,15 @@ test("the process bridge preserves snapshot fault controls and aborts diagnostic
     await peer.blockDevice("third-runtime", true);
     await peer.blockDevice("third-runtime", false);
     phase("device controls complete; capture missing snapshot");
-    const snapshot = peer.captureSnapshot("missing").catch((error) => {
-      phase("missing snapshot rejected at process bridge");
-      throw error;
-    });
-    await expect(snapshot).rejects.toThrow("no latest state");
+    // Await process I/O before invoking Bun's synchronous rejection matcher. On
+    // Windows the matcher can leave the child's pipe unread until test teardown.
+    const snapshotError = await peer.captureSnapshot("missing").then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    phase("missing snapshot rejected at process bridge");
+    expect(snapshotError).toBeInstanceOf(Error);
+    expect((snapshotError as Error).message).toContain("no latest state");
     const abort = new AbortController();
     abort.abort(new Error("diagnostic cancelled"));
     await expect(peer.inspect(abort.signal)).rejects.toThrow("diagnostic cancelled");
