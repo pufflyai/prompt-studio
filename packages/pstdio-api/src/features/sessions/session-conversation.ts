@@ -1,4 +1,14 @@
 import type { EventStore, JsonPatch, SessionMessage } from "pstdio-api-contracts";
+import { normalizeMessageResults } from "pstdio-api-contracts";
+
+const normalizePatch = (patch: JsonPatch) => {
+  if (patch.op === "remove") return patch;
+  if (patch.path === "/messages" && Array.isArray(patch.value))
+    return { ...patch, value: (patch.value as SessionMessage[]).map(normalizeMessageResults) };
+  if (/^\/messages\/\d+$/.test(patch.path))
+    return { ...patch, value: normalizeMessageResults(patch.value as SessionMessage) };
+  return patch;
+};
 
 const applyMessagePatch = (messages: SessionMessage[], patch: JsonPatch) => {
   if (patch.path === "/messages" && (patch.op === "add" || patch.op === "replace")) {
@@ -22,7 +32,7 @@ export const createSessionConversation = (
   initialMessages: SessionMessage[] = [],
   changed?: () => void,
 ) => {
-  let messages = [...initialMessages];
+  let messages = initialMessages.map(normalizeMessageResults);
   let closed = false;
   return {
     get closed() {
@@ -30,6 +40,7 @@ export const createSessionConversation = (
     },
     push(patch: JsonPatch) {
       if (closed) throw new Error("Conversation is closed");
+      patch = normalizePatch(patch);
       messages = applyMessagePatch(messages, patch);
       events.push(patch);
       changed?.();
@@ -39,7 +50,11 @@ export const createSessionConversation = (
       return messages.length;
     },
     snapshotAndSubscribe() {
-      const iterator = events.subscribe()[Symbol.asyncIterator]();
+      const iterator = events
+        .subscribe({
+          conversationSnapshot: () => ({ op: "replace", path: "/messages", value: [...messages] }),
+        })
+        [Symbol.asyncIterator]();
       return { messages: [...messages], stream: { [Symbol.asyncIterator]: () => iterator } };
     },
     close() {

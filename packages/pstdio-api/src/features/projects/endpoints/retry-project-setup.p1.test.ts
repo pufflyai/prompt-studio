@@ -31,7 +31,7 @@ afterEach(async () => {
 test.each([
   true,
   false,
-])("retries remote project setup while preserving provider ownership (available: %s)", async (initiallyAvailable) => {
+])("retries remote project setup while preserving provider ownership (available during provisioning: %s)", async (initiallyAvailable) => {
   const source = join(root, "default-extension");
   await mkdir(source);
   await writeFile(
@@ -69,7 +69,11 @@ test.each([
   const app = new OpenAPIHono<AppBindings>();
   const deps = {
     ...handle.deps,
-    workspaceProviderRuntime: { find: async () => (available ? { context: {} as never, provider } : null) },
+    workspaceProviderRuntime: {
+      // The provider can disappear after parameter validation accepts the request.
+      find: async (_deps: unknown, input: { workspaceId?: string }) =>
+        !input.workspaceId || available ? { context: {} as never, provider } : undefined,
+    },
   };
   app.route("/v1", createProjectRoutes(deps));
   const response = await app.request("/v1/projects", {
@@ -81,6 +85,12 @@ test.each([
   const project = await response.json();
   const failed = await handle.deps.workspaceService.getDefault(project.id);
   expect(failed?.setup_error).toContain("missing-dependency");
+  expect(failed).toMatchObject({
+    provider_id: "example.remote",
+    provider_params_json: { image: "documents" },
+    provider_state: initiallyAvailable ? "ready" : "provider_missing",
+  });
+  expect(creations).toHaveLength(initiallyAvailable ? 1 : 0);
   const stillFailed = await app.request(`/v1/projects/${project.id}/retry-setup`, { method: "POST" });
   expect(stillFailed.status).toBe(200);
   expect((await stillFailed.json()).setup_error).toContain("missing-dependency");
@@ -100,6 +110,23 @@ test.each([
   expect(creations).toHaveLength(1);
   if (!initiallyAvailable) expect(creations[0]).toBe(failed!.provider_operation_id!);
   expect(await handle.deps.projectService.list()).toHaveLength(1);
+});
+
+test("rejects an unavailable initial provider before accepting a project", async () => {
+  const app = new OpenAPIHono<AppBindings>();
+  const deps = {
+    ...handle.deps,
+    workspaceProviderRuntime: { find: async () => undefined },
+  };
+  app.route("/v1", createProjectRoutes(deps));
+  const response = await app.request("/v1/projects", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ initial_workspace: { provider_id: "example.remote", params: { image: "documents" } } }),
+  });
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ error: "Workspace provider is unavailable: example.remote" });
+  expect(await handle.deps.projectService.list()).toEqual([]);
 });
 
 test("retry requires an existing project and attached initial workspace", async () => {

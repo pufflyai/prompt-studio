@@ -20,11 +20,12 @@ test("conversation retains the complete history after delivery log eviction", ()
 test("snapshot and subscription share an exact patch boundary", async () => {
   const conversation = createSessionConversation(createEventStore(), [message("initial")]);
   const snapshot = conversation.snapshotAndSubscribe();
+  const iterator = snapshot.stream[Symbol.asyncIterator]();
+  const next = iterator.next();
   const patch = { op: "replace" as const, path: "/messages/0", value: message("updated") };
   conversation.push(patch);
   expect(snapshot.messages).toEqual([message("initial")]);
-  const iterator = snapshot.stream[Symbol.asyncIterator]();
-  expect(await iterator.next()).toEqual({ done: false, value: patch });
+  expect(await next).toEqual({ done: false, value: patch });
   await iterator.return?.();
 });
 

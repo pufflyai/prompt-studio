@@ -9,6 +9,15 @@ const baseDeps = {
 };
 
 describe("workspaces delete", () => {
+  test("passes the explicit forget option", async () => {
+    const deleteWorkspace = mock(async () => {});
+    await createHandler({ ...baseDeps, deleteWorkspace })({ id: "WS-5", forget: true, _: [], $0: "" } as never);
+    expect(deleteWorkspace).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      workspaceShorthand: "WS-5",
+      forget: true,
+    });
+  });
   test("deletes the selected workspace in the current project", async () => {
     const deleteWorkspace = mock(async () => {});
 

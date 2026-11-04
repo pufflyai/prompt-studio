@@ -3,6 +3,22 @@ import type { CreateWorkspaceInput } from "../api/workspaces";
 import type { RequestFn } from "./request";
 import { createWorkspaceClient } from "./workspaces";
 
+test("forgets an orphaned workspace only when explicitly requested", async () => {
+  const calls: Array<{ path: string; options?: unknown }> = [];
+  const client = createWorkspaceClient(((path, options) => {
+    calls.push({ path, options });
+    return Promise.resolve();
+  }) as RequestFn);
+
+  await client.delete("workspace 1");
+  await client.delete("workspace 1", { forget: true });
+
+  expect(calls).toEqual([
+    { path: "/v1/workspaces/workspace%201", options: { method: "DELETE" } },
+    { path: "/v1/workspaces/workspace%201?forget=true", options: { method: "DELETE" } },
+  ]);
+});
+
 test("creates a provider workspace with its resource anchors and shorthand prefix", async () => {
   const calls: Array<{ path: string; options?: unknown }> = [];
   const client = createWorkspaceClient(((path, options) => {

@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import type { TextEditingRequest } from "pstdio-api-contracts/extension-kernel";
 import type { RequestFn } from "./request";
+import type { ClientStreamSubscription, SessionStreamListener } from "./session-stream";
+import { readSseStream } from "./sse";
 import { createTextTransportClient } from "./text-editing";
 
 const gate = () => ({ entered: Promise.withResolvers<void>(), resume: Promise.withResolvers<void>() });
@@ -107,7 +109,23 @@ const fixture = async () => {
     if (path.endsWith("/active")) return applyParticipation(body.active);
     return answer(body.request);
   }) as RequestFn;
-  const connection = await createTextTransportClient(request).connect({
+  const transport = {
+    subscribe(input: string | ClientStreamSubscription, listener: SessionStreamListener) {
+      if (typeof input === "string" || !("text_editing" in input)) throw new Error("Expected a text subscription");
+      const controller = new AbortController();
+      const signal = controller.signal;
+      void request<ReadableStream<Uint8Array>>("/text-editing/stream", {
+        method: "POST",
+        body: { token: input.text_editing.token },
+        signal,
+        response: "stream",
+      })
+        .then((body) => readSseStream(body, ({ event, data }) => listener.onEvent(event, JSON.parse(data)), { signal }))
+        .catch(listener.onError);
+      return { close: () => controller.abort() };
+    },
+  };
+  const connection = await createTextTransportClient(request, transport).connect({
     projectId: "project",
     scope: { kind: "placement", viewId: "owner.view.editor" },
   });

@@ -1,13 +1,12 @@
 import { afterEach, expect, test } from "bun:test";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { OpenAPIHono } from "@hono/zod-openapi";
 import { createClient } from "@pstdio/sdk/client";
 import { createTextEditingClient } from "@pstdio/sdk/extensions";
 import type { TextEditingConnectionInput } from "pstdio-api-contracts";
 import type { TextOpenInput } from "pstdio-api-contracts/extension-kernel";
 import { editorView, selected, textEditingFixture } from "../../services/text-editing/text-editing.test-fixture";
-import { createTextEditingRoutes } from "./routes";
+import { createTextStreamTestApp } from "./stream.test-utils";
 
 const fixtures: Awaited<ReturnType<typeof textEditingFixture>>[] = [];
 afterEach(async () => {
@@ -18,7 +17,7 @@ const setup = async (
   source?: TextOpenInput,
 ) => {
   const fixture = await textEditingFixture();
-  const application = () => new OpenAPIHono().route("/v1", createTextEditingRoutes(fixture.text));
+  const application = () => createTextStreamTestApp(fixture.text);
   let app = application();
   let server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: app.fetch });
   const port = server.port;
@@ -38,7 +37,7 @@ const setup = async (
       // Each request must reach the current server, not a pooled socket from before its forced restart.
       request.headers.set("connection", "close");
       const response = await fetch(request.clone());
-      if (new URL(request.url).pathname.endsWith("/stream")) watching.resolve();
+      if (request.method === "POST" && new URL(request.url).pathname.endsWith("/subscriptions")) watching.resolve();
       await afterReply?.(request);
       return response;
     }) as typeof fetch,

@@ -62,7 +62,8 @@ export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
   moveEntry(workspaceId: string, path: string, destinationPath: string): Promise<void>;
   deleteEntry(workspaceId: string, path: string): Promise<void>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;
-  delete(workspaceId: string): Promise<void>;
+  /** Forget only a remote missing-provider record without a backing reference or local path. Abandons recovery; remote resources are not deleted. */
+  delete(workspaceId: string, options?: { forget?: boolean }): Promise<void>;
 };
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
@@ -146,5 +147,8 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
     }),
   rename: (workspaceId, input) => request(`/v1/workspaces/${workspaceId}`, { method: "PATCH", body: input }),
   removeWorktree: (workspaceId) => request(`/v1/workspaces/${workspaceId}/remove-worktree`, { method: "POST" }),
-  delete: (workspaceId) => request(`/v1/workspaces/${workspaceId}`, { method: "DELETE" }),
+  delete: (workspaceId, options) =>
+    request(`/v1/workspaces/${encodeURIComponent(workspaceId)}${options?.forget ? "?forget=true" : ""}`, {
+      method: "DELETE",
+    }),
 });

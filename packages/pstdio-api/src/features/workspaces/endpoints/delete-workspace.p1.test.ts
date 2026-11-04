@@ -3,7 +3,7 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { OpenAPIHono } from "@hono/zod-openapi";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
@@ -12,6 +12,7 @@ import {
   createTestHarnessRegistry,
   testHarnessId,
 } from "../../harnesses/test-harness-registry";
+import { createWorkspaceRoutes } from "../routes";
 
 let app: OpenAPIHono<AppBindings>;
 let appHandle: Awaited<ReturnType<typeof createTestApp>>;
@@ -165,4 +166,112 @@ test("archives all sessions within the workspace", async () => {
   const updatedSessionRes = await app.request(`/v1/sessions/${session.id}`);
   const updatedSession = await updatedSessionRes.json();
   expect(updatedSession.archived).toBe(true);
+});
+
+const createMissingProviderWorkspace = async (overrides = {}) => {
+  const workspace = await appHandle.deps.workspaceService.createStandalone({
+    project_id: projectId,
+    provider_id: "nope",
+  });
+  return (await appHandle.deps.workspaceService.updateProviderProjection(workspace.id, {
+    provider_state: "provider_missing",
+    execution_kind: "remote",
+    provider_operation_id: "lost-create-response",
+    provider_operation_kind: "delete",
+    ...overrides,
+  }))!;
+};
+
+test("explicitly forgets a missing-provider record without a backing reference", async () => {
+  const workspace = await createMissingProviderWorkspace();
+  const response = await app.request(`/v1/workspaces/${workspace.id}?forget=true`, { method: "DELETE" });
+
+  expect(response.status).toBe(200);
+  expect((await appHandle.deps.workspaceService.get(workspace.id))?.deleted_at).toBeTruthy();
+  expect(await appHandle.deps.workspaceService.list(projectId)).not.toContainEqual(
+    expect.objectContaining({ id: workspace.id }),
+  );
+});
+
+test("rejected forget leaves active and completed sessions untouched when recovery wins", async () => {
+  const workspace = await createMissingProviderWorkspace();
+  let cancelled = 0;
+  let archived = 0;
+  const recovering = new OpenAPIHono<AppBindings>();
+  recovering.route(
+    "/v1",
+    createWorkspaceRoutes({
+      ...appHandle.deps,
+      workspaceSessionService: {
+        ...appHandle.deps.workspaceSessionService,
+        listByWorkspace: async () => {
+          await appHandle.deps.workspaceService.updateProviderProjection(workspace.id, {
+            provider_ref_json: { version: 1, data: { remoteId: "recovered-before-delete" } },
+          });
+          return [
+            { id: "active-session", status: "in_progress", archived: false },
+            { id: "completed-session", status: "completed", archived: false },
+          ] as never;
+        },
+      },
+      sessionService: {
+        ...appHandle.deps.sessionService,
+        cancel: async () => {
+          cancelled++;
+          return null;
+        },
+        archive: async () => {
+          archived++;
+          return null;
+        },
+      },
+    }),
+  );
+
+  const response = await recovering.request(`/v1/workspaces/${workspace.id}?forget=true`, { method: "DELETE" });
+
+  expect(response.status).toBe(409);
+  expect(cancelled).toBe(0);
+  expect(archived).toBe(0);
+  expect(await appHandle.deps.workspaceService.get(workspace.id)).toMatchObject({
+    deleted_at: null,
+    provider_ref_json: { version: 1, data: { remoteId: "recovered-before-delete" } },
+  });
+});
+
+test.each([
+  undefined,
+  "false",
+])("normal deletion preserves unresolved remote recovery with forget=%s", async (forget) => {
+  const workspace = await createMissingProviderWorkspace();
+  const query = forget === undefined ? "" : `?forget=${forget}`;
+  const response = await app.request(`/v1/workspaces/${workspace.id}${query}`, { method: "DELETE" });
+
+  expect(response.status).toBe(409);
+  expect(await appHandle.deps.workspaceService.get(workspace.id)).toMatchObject({
+    deleted_at: null,
+    provider_operation_id: "lost-create-response",
+    provider_operation_kind: "delete",
+  });
+});
+
+test.each([
+  { provider_ref_json: { version: 1, data: { remoteId: "known-resource" } } },
+  { execution_kind: "local" },
+  { provider_state: "provisioning", provider_operation_kind: "create" },
+  { root_path: "/chosen/folder" },
+])("refuses to forget a workspace with protected backing or lifecycle state: %j", async (overrides) => {
+  const workspace = await createMissingProviderWorkspace(overrides);
+  const response = await app.request(`/v1/workspaces/${workspace.id}?forget=true`, { method: "DELETE" });
+
+  expect(response.status).toBe(409);
+  expect((await appHandle.deps.workspaceService.get(workspace.id))?.deleted_at).toBeNull();
+});
+
+test("cannot forget the default workspace", async () => {
+  const workspace = (await appHandle.deps.workspaceService.getDefault(projectId))!;
+  const response = await app.request(`/v1/workspaces/${workspace.id}?forget=true`, { method: "DELETE" });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({ error: "Default workspace cannot be deleted." });
+  expect((await appHandle.deps.workspaceService.get(workspace.id))?.deleted_at).toBeNull();
 });

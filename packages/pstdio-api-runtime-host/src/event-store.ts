@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { EventStore, JsonPatch } from "pstdio-api-contracts";
+import type { EventStore, EventSubscriptionOptions, JsonPatch } from "pstdio-api-contracts";
 
 const DEFAULT_MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 const PATCH_EVENT = "patch";
@@ -54,23 +54,40 @@ export const createEventStore = (options?: EventStoreOptions) => {
 
   const getHistory = () => history.map((entry) => entry.patch);
 
-  const subscribe = (): AsyncIterable<JsonPatch> => ({
+  const subscribe = (options?: EventSubscriptionOptions): AsyncIterable<JsonPatch> => ({
     [Symbol.asyncIterator]: () => {
       const queue: StoredPatch[] = [];
+      let queuedBytes = 0;
+      let conversationChanged = false;
+      let activityPending = false;
+      let controlsBeforeSnapshot = 0;
       let resolve: ((value: IteratorResult<JsonPatch>) => void) | null = null;
       let done = closed;
 
+      const deliver = (patch: JsonPatch) => {
+        if (!resolve) return false;
+        const ready = resolve;
+        resolve = null;
+        ready({ value: patch, done: false });
+        return true;
+      };
       const onPatch = (entry: StoredPatch) => {
-        if (resolve) {
-          const r = resolve;
-          resolve = null;
-          r({ value: entry.patch, done: false });
-        } else {
-          queue.push(entry);
+        if (options?.activityOnly) {
+          activityPending = !deliver({ op: "replace", path: "/activity" });
+          return;
         }
+        if (deliver(entry.patch)) return;
+        if (options?.conversationSnapshot && /^\/messages(?:\/|$)/.test(entry.patch.path)) {
+          // Keep the owner reference in options, never a snapshot per producer update.
+          if (!conversationChanged) controlsBeforeSnapshot = queue.length;
+          conversationChanged = true;
+          return;
+        }
+        queue.push(entry);
+        queuedBytes += entry.size;
       };
 
-      onPatch.diagnostics = () => ({ events: queue.length, bytes: byteLength(queue) });
+      onPatch.diagnostics = () => ({ events: queue.length, bytes: queuedBytes });
 
       const onClose = () => {
         done = true;
@@ -89,12 +106,26 @@ export const createEventStore = (options?: EventStoreOptions) => {
         emitter.on(CLOSE_EVENT, onClose);
       }
 
+      const takeQueued = () => {
+        const entry = queue.shift();
+        if (!entry) return;
+        queuedBytes -= entry.size;
+        if (conversationChanged) controlsBeforeSnapshot--;
+        return entry.patch;
+      };
+
       return {
         next: () => {
-          if (queue.length > 0) {
-            const entry = queue.shift()!;
-            return Promise.resolve({ value: entry.patch, done: false });
+          if (activityPending) {
+            activityPending = false;
+            return Promise.resolve({ value: { op: "replace" as const, path: "/activity" }, done: false });
           }
+          if (conversationChanged && controlsBeforeSnapshot === 0) {
+            conversationChanged = false;
+            return Promise.resolve({ value: options!.conversationSnapshot!(), done: false });
+          }
+          const queued = takeQueued();
+          if (queued) return Promise.resolve({ value: queued, done: false });
 
           if (done) {
             return Promise.resolve({ value: undefined as never, done: true });
@@ -106,6 +137,10 @@ export const createEventStore = (options?: EventStoreOptions) => {
         },
 
         return: () => {
+          conversationChanged = false;
+          activityPending = false;
+          queue.length = 0;
+          queuedBytes = 0;
           onClose();
           return Promise.resolve({ value: undefined as never, done: true });
         },
