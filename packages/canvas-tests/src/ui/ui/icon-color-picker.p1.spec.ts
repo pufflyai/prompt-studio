@@ -10,22 +10,22 @@ test("color and icon choices fit inside the popover with balanced horizontal pad
   await preview.getByRole("button", { name: "Pick color and icon", exact: true }).click();
   const dialog = preview.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  const frame = await dialog.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    return { x: rect.x, width: rect.width };
-  });
-  const choices = dialog.getByRole("button");
-  const bounds = await choices.evaluateAll((buttons) =>
-    buttons.map((button) => {
+  // Read parent and choices together so the opening animation cannot move between samples.
+  const { left, right } = await dialog.evaluate((element) => {
+    const frame = element.getBoundingClientRect();
+    const bounds = [...element.querySelectorAll("button")].map((button) => {
       const rect = button.getBoundingClientRect();
       return { left: rect.left, right: rect.right };
-    }),
-  );
-  const left = Math.min(...bounds.map((rect) => rect.left)) - frame.x;
-  const right = frame.x + frame.width - Math.max(...bounds.map((rect) => rect.right));
+    });
+    return {
+      left: Math.min(...bounds.map((rect) => rect.left)) - frame.left,
+      right: frame.right - Math.max(...bounds.map((rect) => rect.right)),
+    };
+  });
   expect(left).toBeGreaterThan(0);
   expect(right).toBeGreaterThan(0);
   expect(Math.abs(left - right)).toBeLessThanOrEqual(2);
+  const choices = dialog.getByRole("button");
   await choices.last().click();
   await expect(choices.last()).toHaveAttribute("aria-pressed", "true");
 });
