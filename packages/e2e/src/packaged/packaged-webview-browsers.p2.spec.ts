@@ -64,6 +64,7 @@ test.beforeAll(() => {
 const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[number], behavior: string) => {
   const browserAvailable = existsSync(browserCase.type.executablePath());
   const defaultExtensions = e2eExtensions(
+    "pstdio-home",
     "workbench-fixture",
     ...(browserCase.name === "Chromium" ? ["pstdio-artifacts", "pstdio-notes"] : []),
   );
