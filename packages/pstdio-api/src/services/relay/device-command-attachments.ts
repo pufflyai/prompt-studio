@@ -1,9 +1,11 @@
-import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import type { DeviceCommand, DeviceCommandAttachment } from "pstdio-api-contracts";
-import type { Json } from "pstdio-sync-contracts";
+import { DeviceCommandInputError } from "pstdio-sync/relay";
+import { deviceCommandInputLimit, type Json } from "pstdio-sync-contracts";
 import { uploadSessionAttachment } from "../../features/sessions/session-attachment-upload";
 import {
   getProjectSessionAttachment,
+  isMissingFileError,
   isSessionAttachmentSubmitted,
   toSessionAttachment,
 } from "../../features/sessions/session-attachments";
@@ -16,6 +18,22 @@ export class DeviceCommandAttachmentError extends Error {
     super("Session attachment not found on this device");
   }
 }
+
+const readDeviceAttachment = async (path: string, encodedLimit: number) => {
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  try {
+    for await (const chunk of createReadStream(path)) {
+      bytes += chunk.byteLength;
+      if (4 * Math.ceil(bytes / 3) > encodedLimit) throw new DeviceCommandInputError();
+      chunks.push(chunk);
+    }
+  } catch (error) {
+    if (isMissingFileError(error)) throw new DeviceCommandAttachmentError();
+    throw error;
+  }
+  return { data: Buffer.concat(chunks, bytes).toString("base64"), encodedBytes: 4 * Math.ceil(bytes / 3) };
+};
 
 const withAttachmentReservations = async <T>(deps: RelayDeps, fileIds: Set<string>, execute: () => Promise<T>) => {
   const reservations = submissions.get(deps.fileService) ?? new Map<string, Promise<void>>();
@@ -60,18 +78,38 @@ export const withDeviceCommandAttachments = async (
   send: (command: DeviceCommand) => Promise<Json>,
 ) => {
   if (command.type !== "session.create" && command.type !== "session.followUp") return send(command);
-  const attachmentContents: DeviceCommandAttachment[] = [];
-  for (const fileId of new Set(command.input.attachments?.map(({ fileId }) => fileId))) {
+  const fileIds = new Set(command.input.attachments?.map(({ fileId }) => fileId));
+  if (!fileIds.size) return send(command);
+  const files: Array<{ fileId: string; file: NonNullable<Awaited<ReturnType<typeof getProjectSessionAttachment>>> }> =
+    [];
+  let encodedBytes = Buffer.byteLength(JSON.stringify({ ...command, attachmentContents: [] }));
+  if (encodedBytes > deviceCommandInputLimit) throw new DeviceCommandInputError();
+  for (const fileId of fileIds) {
     const file = await getProjectSessionAttachment(deps, projectId, fileId);
     if (!file) throw new DeviceCommandAttachmentError();
+    const metadata = { fileId, name: file.file_name, mimeType: file.mime_type, data: "" };
+    encodedBytes +=
+      Buffer.byteLength(JSON.stringify(metadata)) + 4 * Math.ceil(file.size_bytes / 3) + (files.length ? 1 : 0);
+    if (encodedBytes > deviceCommandInputLimit) throw new DeviceCommandInputError();
+    files.push({ fileId, file });
+  }
+  // Admit the projected complete action before payload reads; bounded reads also cover concurrent blob changes.
+  const attachmentContents: DeviceCommandAttachment[] = [];
+  for (const { fileId, file } of files) {
+    const expectedBytes = 4 * Math.ceil(file.size_bytes / 3);
+    const contents = await readDeviceAttachment(
+      file.storage_path,
+      deviceCommandInputLimit - encodedBytes + expectedBytes,
+    );
+    encodedBytes += contents.encodedBytes - expectedBytes;
     attachmentContents.push({
       fileId,
       name: file.file_name,
       mimeType: file.mime_type,
-      data: (await readFile(file.storage_path)).toString("base64"),
+      data: contents.data,
     });
   }
-  return send(attachmentContents.length ? { ...command, attachmentContents } : command);
+  return send({ ...command, attachmentContents });
 };
 
 const removeUnsubmittedDeviceAttachment = async (deps: RelayDeps, projectId: string, fileId: string) => {

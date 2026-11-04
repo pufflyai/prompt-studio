@@ -33,7 +33,10 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
         params: params.extend({ deviceId: z.string().min(1) }),
         body: { required: true, ...json(deviceCommandSchema) },
       },
-      responses,
+      responses: {
+        ...responses,
+        413: { description: "The encoded remote command exceeds 64 MiB.", ...json(z.object({ error: z.string() })) },
+      },
     }),
     async (c) => {
       const { id, deviceId } = c.req.valid("param");
