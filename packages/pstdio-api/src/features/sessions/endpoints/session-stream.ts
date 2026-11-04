@@ -4,11 +4,13 @@ import { streamSSE } from "hono/streaming";
 import { commandExecuteBodySchema } from "pstdio-api-contracts";
 import { sessionLogger } from "../../../lib/logger";
 import type { AppBindings, AppRouteHandler } from "../../../types";
+import type { RouteDeps } from "../../deps";
 import { prepareCommandSubscription } from "../../extensions/command-stream-subscription";
 import type { ExtensionsRouteDeps } from "../../extensions/deps";
+import { streamTextEditingEvents } from "../../text-editing/shared-stream";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
-import type { SessionStreamConnections } from "../session-stream-connections";
+import type { SessionEventSink, SessionStreamConnections } from "../session-stream-connections";
 import { streamSession } from "./stream-session";
 
 // Bun closes connections that stay quiet for 20 seconds.
@@ -31,7 +33,7 @@ const connectionParamsSchema = z
 export const subscribeSessionStreamRoute = createRoute({
   method: "post",
   path: "/session-stream/{connectionId}/subscriptions",
-  description: "Stream a session's events on an open session stream.",
+  description: "Subscribe to session, command, or native text events on the shared client stream.",
   tags: ["Sessions"],
   request: {
     params: connectionParamsSchema,
@@ -39,6 +41,12 @@ export const subscribeSessionStreamRoute = createRoute({
       content: {
         "application/json": {
           schema: z.union([
+            z
+              .object({
+                subscription_id: z.string().min(1),
+                text_editing: z.object({ project_id: z.string().min(1), token: z.uuid() }).strict(),
+              })
+              .strict(),
             z.object({ subscription_id: z.string().min(1), retain_session_id: z.string().min(1) }).strict(),
             z.object({ subscription_id: z.string().min(1), session_id: z.string().min(1) }).strict(),
             z
@@ -71,39 +79,53 @@ export const subscribeSessionStreamRoute = createRoute({
   },
 });
 
+const subscriptionResponse = (c: Context<AppBindings>, connectionId: string, started: boolean) => {
+  if (!started)
+    return c.json({ error: `Session stream not found: ${connectionId}`, code: "SESSION_STREAM_NOT_FOUND" }, 404);
+  return c.body(null, 204);
+};
+
+const retainSessionSubscription = (deps: SessionsRouteDeps, sessionId: string) => async (sink: SessionEventSink) => {
+  const release = deps.harnessRegistry.retainSession(sessionId);
+  try {
+    await new Promise<void>((resolve) => {
+      if (sink.aborted) resolve();
+      else sink.onAbort(resolve);
+    });
+  } finally {
+    release();
+  }
+};
+
 export const subscribeSessionStreamHandler = (
-  deps: SessionsRouteDeps & ExtensionsRouteDeps,
+  deps: SessionsRouteDeps & ExtensionsRouteDeps & Pick<RouteDeps, "textEditing">,
   connections: SessionStreamConnections,
 ): AppRouteHandler<typeof subscribeSessionStreamRoute> => {
   return async (c) => {
     const { connectionId } = c.req.valid("param");
     const input = c.req.valid("json");
+    if ("text_editing" in input) {
+      const started = connections.subscribe(connectionId, input.subscription_id, (sink) =>
+        streamTextEditingEvents(deps.textEditing, input.text_editing, sink),
+      );
+      return subscriptionResponse(c, connectionId, started);
+    }
     if ("retain_session_id" in input) {
       const session = await deps.sessionService.get(input.retain_session_id);
       if (!session)
         return c.json({ error: `Session not found: ${input.retain_session_id}`, code: "SESSION_NOT_FOUND" }, 404);
-      const started = connections.subscribe(connectionId, input.subscription_id, async (sink) => {
-        const release = deps.harnessRegistry.retainSession(input.retain_session_id);
-        try {
-          await new Promise<void>((resolve) => {
-            if (sink.aborted) resolve();
-            else sink.onAbort(resolve);
-          });
-        } finally {
-          release();
-        }
-      });
-      if (!started)
-        return c.json({ error: `Session stream not found: ${connectionId}`, code: "SESSION_STREAM_NOT_FOUND" }, 404);
-      return c.body(null, 204);
+      const started = connections.subscribe(
+        connectionId,
+        input.subscription_id,
+        retainSessionSubscription(deps, input.retain_session_id),
+      );
+      return subscriptionResponse(c, connectionId, started);
     }
     if ("command" in input) {
       const prepared = await prepareCommandSubscription(deps, input.command);
       if ("error" in prepared) return c.json({ error: prepared.error, code: prepared.code }, prepared.status);
       const started = connections.subscribe(connectionId, input.subscription_id, prepared.run);
-      if (!started)
-        return c.json({ error: `Session stream not found: ${connectionId}`, code: "SESSION_STREAM_NOT_FOUND" }, 404);
-      return c.body(null, 204);
+      return subscriptionResponse(c, connectionId, started);
     }
     const { subscription_id, session_id } = input;
     const started = connections.subscribe(connectionId, subscription_id, (sink) =>
@@ -112,9 +134,7 @@ export const subscribeSessionStreamHandler = (
         await sink.write("error", { message: err instanceof Error ? err.message : String(err) });
       }),
     );
-    if (!started)
-      return c.json({ error: `Session stream not found: ${connectionId}`, code: "SESSION_STREAM_NOT_FOUND" }, 404);
-    return c.body(null, 204);
+    return subscriptionResponse(c, connectionId, started);
   };
 };
 

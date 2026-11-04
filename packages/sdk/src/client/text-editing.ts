@@ -7,8 +7,10 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import { textEditingFailure } from "../extensions/text-editing-codec";
 import type { RequestFn } from "./request";
-import { readSseStream } from "./sse";
+import type { createSessionStreamTransport } from "./session-stream";
+import { textEditingException } from "./text-editing-error";
 import { createTextConnectionGuest } from "./text-editing-guest";
+import { watchTextConnection } from "./text-editing-stream";
 export interface TextEditingConnection {
   request<Request extends TextEditingRequest>(input: Request): Promise<TextEditingResult<Request>>;
   watch(input: { signal: AbortSignal; onEvent: (event: TextEditingEvent) => void }): Promise<void>;
@@ -19,18 +21,16 @@ export interface TextEditingConnection {
 }
 type Reply<T> = { ok: true; value: T } | { ok: false; error: TextEditingError };
 const value = <T>(reply: Reply<T>) => {
-  if (!reply.ok)
-    throw Object.assign(new Error(reply.error.message), reply.error, {
-      data: {
-        retryable: reply.error.retryable,
-        ...(reply.error.cancelledBarrierId ? { cancelledBarrierId: reply.error.cancelledBarrierId } : {}),
-      },
-    });
+  if (!reply.ok) throw textEditingException(reply.error);
   return reply.value ?? undefined;
 };
-export const createTextTransportClient = (request: RequestFn) => ({
+export const createTextTransportClient = (
+  request: RequestFn,
+  transport: ReturnType<typeof createSessionStreamTransport>,
+) => ({
   async connect(input: { projectId: string; scope: TextEditingConnectionInput }): Promise<TextEditingConnection> {
-    const base = `/v1/projects/${encodeURIComponent(input.projectId)}/text-editing`;
+    const projectId = input.projectId;
+    const base = `/v1/projects/${encodeURIComponent(projectId)}/text-editing`;
     const connect = async () =>
       value(await request<Reply<TextEditingConnectionInfo>>(base, { method: "POST", body: input.scope }))!;
     let info = await connect();
@@ -109,19 +109,15 @@ export const createTextTransportClient = (request: RequestFn) => ({
         try {
           await syncParticipation();
           const token = info.token;
-          const stream = await request<ReadableStream<Uint8Array>>(`${base}/stream`, {
-            method: "POST",
-            body: { token },
-            signal,
-            response: "stream",
-          });
-          await readSseStream(
-            stream,
-            (event) => {
-              if (event.event === "text" && !signal.aborted && token === info.token && !release)
-                input.onEvent(JSON.parse(event.data));
+          await watchTextConnection(
+            transport,
+            { project_id: projectId, token },
+            {
+              signal,
+              onEvent: (event) => {
+                if (!signal.aborted && token === info.token && !release) input.onEvent(event);
+              },
             },
-            { signal },
           );
         } finally {
           streams.delete(abort);
