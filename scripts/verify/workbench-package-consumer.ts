@@ -1,7 +1,12 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const writeWorkbenchPackageConsumer = (directory: string, react: boolean) => {
+export const writeWorkbenchPackageConsumer = (
+  directory: string,
+  react: boolean,
+  selectedPackages: readonly string[],
+) => {
+  if (!selectedPackages.includes("@pstdio/workbench")) return;
   writeFileSync(
     join(directory, "workbench-consumer.ts"),
     `
@@ -80,4 +85,5 @@ await reloaded.dispose();
 await hidden.dispose();
 `,
   );
+  return "workbench-consumer.ts";
 };

@@ -5,12 +5,12 @@ import { join } from "node:path";
 import { recordStalledProcesses, stopProcessTree } from "./api-test-stall";
 
 const alive = (pid: number) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
+  // A killed orphan can remain as a zombie until a container's PID 1 reaps it.
+  // It cannot execute, even though kill(pid, 0) still succeeds.
+  const state = Bun.spawnSync(["ps", "-o", "stat=", "-p", String(pid)], { stdout: "pipe" })
+    .stdout.toString()
+    .trim();
+  return state !== "" && !state.startsWith("Z");
 };
 
 test.skipIf(process.platform === "win32")(

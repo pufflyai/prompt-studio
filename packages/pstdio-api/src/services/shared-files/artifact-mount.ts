@@ -222,5 +222,17 @@ export const createSharedArtifactMount = (
         await withoutStorageObservation(reconcile);
       }),
   };
-  return { ...api, root, refresh: () => run(async () => {}) };
+  return {
+    ...api,
+    root,
+    refresh: () => run(async () => {}),
+    async refreshText(documentKey: string) {
+      const copies = await deps.extensionStorageService.nativeFileProjections.copies({ owner, documentKey });
+      for (const copy of copies) {
+        if (!copy.startsWith('["artifact-file",')) continue;
+        const [, savedRoot, path] = JSON.parse(copy) as [string, string, string];
+        if (savedRoot === packageRoot && within(path, prefix)) await run(async () => {}, path);
+      }
+    },
+  };
 };

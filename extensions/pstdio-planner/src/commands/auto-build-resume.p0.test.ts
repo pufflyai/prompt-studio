@@ -165,19 +165,20 @@ test.each(["missing metadata", "deleted folder"])("an explicit user stop stays s
 test.each([
   "blocked status",
   "blocked reason",
-])("unfinished work waits for its %s without answered input", async (blocker) => {
-  const { ctx, storage, task, followups } = await stoppedAttempt("completed");
+])("unfinished work can resume to resolve its %s without answered input", async (blocker) => {
+  const { ctx, storage, task, started, followups } = await stoppedAttempt("completed");
   await putTicket(storage, {
     ...task,
     ...(blocker === "blocked status"
       ? { statusId: "blocked" }
       : { blockedReason: "Wait until the customer supplies access." }),
   });
-  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toMatchObject([{ id: task.id, action: "resume" }]);
   expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
-    decision: "wait",
+    decision: "started",
+    sessionId: started.session.id,
   });
-  expect(followups).toEqual([]);
+  expect(followups).toEqual([started.session.id]);
 });
 
 test("a stopped turn is resumed once while a later stopped turn can resume again", async () => {
