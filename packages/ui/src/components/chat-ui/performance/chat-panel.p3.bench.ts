@@ -29,9 +29,11 @@ declare global {
 }
 
 const VARIANT_IDS = {
-  largeConversation: "patterns-chat-chat-panel-performance--large-conversation",
-  sessionSwitching: "patterns-chat-chat-panel-performance--session-switching",
-  streamingScenario: "patterns-chat-chat-panel-performance--streaming-scenario",
+  largeConversation:
+    "packages/ui/src/components/chat-ui/components/chat-panel.performance.canvas.tsx#LargeConversation",
+  sessionSwitching: "packages/ui/src/components/chat-ui/components/chat-panel.performance.canvas.tsx#SessionSwitching",
+  streamingScenario:
+    "packages/ui/src/components/chat-ui/components/chat-panel.performance.canvas.tsx#StreamingScenario",
 } as const;
 
 const BUDGETS = {
