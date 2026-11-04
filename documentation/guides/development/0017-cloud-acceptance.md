@@ -290,13 +290,10 @@ Preserve the original package failure and RP-430's exact baseline RED; the focus
 GREEN is not a replacement for running the default package command on a qualified
 candidate. Keep separately owned enhanced remote-session failures visible as well.
 
-PR #1745 subsequently delivered the history authentication correction on main
-`c7ed8acad`. Rebase conflicts are resolved by preserving issued-token/live identity
-behavior and both the delivered private-history scope regression and the additional
-live identity regression (two cases, 27 assertions). Do not drop either test or
-reclassify the original 403/timeouts as passes. The separate production repair patch
-from `c723c17be` remains unchanged; its rebased integration SHA differs, so compare
-the production source blobs as well as recording the original PR #1748 identity.
+PR #1745 delivered the history authentication correction on main `c7ed8acad`.
+Keep issued-token/live identity behavior, the delivered private-history scope
+regression and the additional live identity regression (two cases, 27 assertions).
+Do not drop either test or reclassify the original 403/timeouts as passes.
 
 ## Focused preparation and final candidate commands
 
@@ -324,15 +321,19 @@ The green `createDocumentSync` checks exercise the text/document path and do not
 waive the record-stream failure. Cloud extension UI is also absent at this base; no
 UI selectors or passing production UI coverage are invented for its Canvas previews.
 
-Only after the delivery gate and candidate verification, run:
+Only after the delivery gate and candidate verification, run the block below. Its
+subshell stops at the first failed step, so a failed build is never followed by
+tests of an older `dist/pstdio`, and your own shell stays open:
 
 ```sh
-set -eu # A failed build must not let later steps test an older dist/pstdio.
-bun "$EVIDENCE/heavy-command.ts" bun run --cwd scripts build:host
-export E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
-bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts
-bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-document-sync-smoke.p1.test.ts src/packaged/packaged-two-device-sync-smoke.p2.test.ts src/packaged/packaged-cloud-extension-set-smoke.p2.test.ts src/packaged/packaged-account-smoke.p2.test.ts
-bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-public-text-sync.p2.spec.ts src/packaged/packaged-public-text-native-sync.p2.spec.ts
+(
+  set -eu
+  bun "$EVIDENCE/heavy-command.ts" bun run --cwd scripts build:host
+  export E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
+  bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts
+  bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-document-sync-smoke.p1.test.ts src/packaged/packaged-two-device-sync-smoke.p2.test.ts src/packaged/packaged-cloud-extension-set-smoke.p2.test.ts src/packaged/packaged-account-smoke.p2.test.ts
+  bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-public-text-sync.p2.spec.ts src/packaged/packaged-public-text-native-sync.p2.spec.ts
+)
 ```
 
 PS-1066 delivered the stable-writer storage prerequisite in
@@ -389,13 +390,13 @@ Build before measurement under the heavy lease. Arrange an acknowledged exclusiv
 timing window before using the following example shard:
 
 ```sh
-set -eu
 bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e perf:storage-scale:build
 bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output "$EVIDENCE/scale-rich" --home /absolute/disposable-rich-home --seed --timing-owner /absolute/owner.json
 bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output "$EVIDENCE/scale-rich-incoming-board" --home /absolute/disposable-rich-home --measure --profile native --operation board --background incoming --sync --timing-owner /absolute/owner.json
 ```
 
-The example is one shard, not full coverage. Run the remaining frozen matrix through
+Stop if the build fails; never measure an older build. The example is one shard,
+not full coverage. Run the remaining frozen matrix through
 the maintained supervisor with distinct evidence paths. Layer-only results and the
 current diagnostic controller's incomplete-coverage exit cannot become a passing
 full acceptance claim. Do not start a new hourly CPU experiment for this preparation.
@@ -407,9 +408,11 @@ transfer, not a wire-peer substitute. It needs about 30 GiB of free disk. Under 
 heavy lease, when ready to collect that separate evidence:
 
 ```sh
-set -eu
-bun "$EVIDENCE/heavy-command.ts" docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:acceptance .
-bun "$EVIDENCE/heavy-command.ts" bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts "$EVIDENCE/relay-reference" pstdio-relay:acceptance
+(
+  set -eu
+  bun "$EVIDENCE/heavy-command.ts" docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:acceptance .
+  bun "$EVIDENCE/heavy-command.ts" bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts "$EVIDENCE/relay-reference" pstdio-relay:acceptance
+)
 ```
 
 Do not select a smaller workload for a full claim. The reference is one user, two
