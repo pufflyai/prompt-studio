@@ -73,6 +73,7 @@ export {
   WORKBENCH_SETTINGS_PANEL_WIDGET_ID,
   WORKBENCH_SETTINGS_WIDGET_ID,
 } from "./settings/settings-module";
+export { useSettingsChanges } from "./settings/settings-page-context";
 export { WorkbenchIcon } from "./shared/icon";
 export { useWorkbenchStore } from "./shared/use-workbench-store";
 export { WorkbenchAttachedSidePanel, WorkbenchFloatingSidePanel } from "./side-panel/side-panel";

@@ -29,12 +29,14 @@ test("native workflow controls expose current status IDs, icons, colors, and sav
     color: "green",
   } as never);
   const result = await queryWorkflowSettings(ctx);
-  expect(result.values).toEqual({ ...selections, mergeTargetStatusId: "custom" });
+  expect(result.values).toMatchObject({ ...selections, mergeTargetStatusId: "custom" });
   expect(result.groups?.[0]?.params[0]).toMatchObject({
     type: "selection",
     multiSelect: true,
     options: [{ id: "custom", icon: "status-done", color: "green" }],
   });
   await saveWorkflowSettings(ctx, { ...result.values, mergeTargetStatusId: "" });
+  expect(settings["implementation.adversarialReview"]).toBe(true);
+  expect(settings["automation.maxInProgress"]).toBe(2);
   expect(settings["workflow.statuses"]).toEqual({ ...selections, mergeTargetStatusId: null });
 });

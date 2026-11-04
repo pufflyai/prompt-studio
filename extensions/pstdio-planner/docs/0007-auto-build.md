@@ -16,7 +16,7 @@ For example: “Prioritize small independent tickets for the next release. Leave
 
 The eligibility filter uses the same filter button, picker, and bubbles as Tickets, including status, title, other ticket properties, and And/Or groups. Status options keep their icons, colors, and IDs across renames. Empty eligibility includes every valid unfinished ticket. Use negative conditions such as **does not contain** to exclude tickets. Tickets in a completed status are always excluded. Eligibility governs new work only: a started ticket can continue after its agent changes the ticket status. An incomplete eligible filter, or one that uses a removed field, blocks new work until you fix it.
 
-Choose which statuses count as completed, blocked, and active, and the optional status after merge, in Planner's workflow settings. Open **Settings → Project → Extensions**, select **Project Planner**, and use its **Settings** tab. Each choice saves immediately. No status name or default column has a built-in meaning. Empty selections turn off only the matching feature.
+Choose which statuses count as completed, blocked, and active, and the optional status after merge, in Planner's workflow settings. Open **Settings → Project Planner → Workflow & automation**. Select **Save changes** in the header to apply your choices. No status name or default column has a built-in meaning. Empty selections turn off only the matching feature.
 
 The selected timeline view, search, and display filters only affect what you see. The supervisor uses your prompt to select its work scope. Its saved scope and eligibility filters apply to wake checks, work queries, and dispatch.
 

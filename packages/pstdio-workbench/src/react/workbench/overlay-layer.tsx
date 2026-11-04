@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
 import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
+import { settingsLeaveGuard } from "../settings/settings-leave-guard";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -156,8 +157,9 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
       />
     );
 
-  const handleOpenChange = (details: { open: boolean }) => {
+  const handleOpenChange = async (details: { open: boolean }) => {
     if (!details.open && canCloseOverlay) {
+      if (placement.viewId === "workbench.settings" && !(await settingsLeaveGuard(workbench).request())) return;
       setExitingPlacement(placement);
       workbench.layout.closePanel(placement.widgetId);
     }
@@ -208,7 +210,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
             {body}
             {canCloseOverlay ? (
               <Dialog.CloseTrigger asChild>
-                <CloseButton size="sm" aria-label={`Close ${closeLabel}`} />
+                <CloseButton position="absolute" top="2" right="2" size="sm" aria-label={`Close ${closeLabel}`} />
               </Dialog.CloseTrigger>
             ) : null}
           </Dialog.Content>

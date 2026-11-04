@@ -14,6 +14,7 @@ interface NumberInputProps {
   max?: number;
   onChange: (id: string, value: number) => void;
   description: string;
+  changeDelay?: number;
   readOnly?: boolean;
   hideLabel?: boolean;
   hideSlider?: boolean;
@@ -47,11 +48,16 @@ export const NumberInput = (props: NumberInputProps) => {
 
   const scheduleChange = (nextValue: number) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (props.changeDelay === 0) {
+      pendingRef.current = null;
+      onChange(id, nextValue);
+      return;
+    }
     pendingRef.current = nextValue;
     timeoutRef.current = setTimeout(() => {
       pendingRef.current = null;
       onChange(id, nextValue);
-    }, 540);
+    }, props.changeDelay ?? 540);
   };
   const flushChange = () => {
     if (pendingRef.current === null) return;

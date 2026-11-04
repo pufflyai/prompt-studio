@@ -1,7 +1,7 @@
-import { Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Stack } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { EmptyState, ScrollArea } from "@pstdio/ui";
-import { type ReactNode, useEffect, useState } from "react";
+import { EmptyState, ScrollArea, SettingsContentSkeleton, SettingsPage } from "@pstdio/ui";
+import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 import {
   type CollectionSettingsPanel,
   getWorkbenchRenderers,
@@ -11,7 +11,10 @@ import {
 } from "../../core";
 import { getSettingsPanels } from "../../core/registries/settings/settings-registry";
 import { WorkbenchPreferencesForm } from "../renderers/settings/preferences-form";
+import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { settingsLeaveGuard } from "./settings-leave-guard";
+import { SettingsPageContext } from "./settings-page-context";
 export interface SettingsSurfacePanelProps {
   input: WorkbenchPanelRenderInput;
   settings: SettingsRegistry;
@@ -54,7 +57,7 @@ const SettingsViewContent = (props: {
       viewId,
     },
   }) as ReactNode;
-  return props.embedded ? content : <ScrollableSettingsContent>{content}</ScrollableSettingsContent>;
+  return content;
 };
 // Resolve async collection data before rendering its registered View. The View
 // can read the current item from settings by the stable panel and item ids.
@@ -81,12 +84,7 @@ const CollectionItemView = (props: {
       alive = false;
     };
   }, [panel, itemId, resolveCollectionItem]);
-  if (state.status === "loading")
-    return (
-      <Centered>
-        <Spinner size="sm" />
-      </Centered>
-    );
+  if (state.status === "loading") return <SettingsContentSkeleton />;
   if (state.status === "missing")
     return (
       <Centered>
@@ -97,7 +95,7 @@ const CollectionItemView = (props: {
 };
 // The single main-region renderer for the settings surface. Dispatches the open
 // resource to a schema form, a custom view, or a collection item editor.
-export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
+const SettingsSurfaceContent = (props: SettingsSurfacePanelProps) => {
   const { input, settings, resolveScopeId } = props;
   const settingsState = useWorkbenchStore(settings.store, (state) => state);
   const resource = input.instance.resource;
@@ -146,21 +144,36 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
     );
   }
   return (
-    <ScrollArea h="full" minH="0" contentProps={{ p: "lg", display: "flex", flexDirection: "column", gap: "md" }}>
-      <Stack gap="xs">
-        <Text textStyle="heading/M/semibold">{panel.title}</Text>
-        {panel.description && (
-          <Text textStyle="paragraph/S/regular" color="fg.muted" maxW="640px">
-            {panel.description}
-          </Text>
-        )}
-      </Stack>
-      <WorkbenchPreferencesForm
-        preferences={input.workbench.preferences}
-        names={panel.preferences}
-        resolveScopeId={resolveScopeId}
-        mode={panel.save ?? "live"}
-      />
-    </ScrollArea>
+    <WorkbenchPreferencesForm
+      preferences={input.workbench.preferences}
+      names={panel.preferences}
+      resolveScopeId={resolveScopeId}
+      mode={panel.save ?? "live"}
+    />
+  );
+};
+
+export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
+  const { input, settings } = props;
+  const state = useWorkbenchStore(settings.store, (value) => value);
+  const panelId = input.instance.resource?.metadata?.panelId;
+  const panel = typeof panelId === "string" ? state.panels[panelId] : undefined;
+  const guard = settingsLeaveGuard(input.workbench);
+  const draft = useSyncExternalStore(guard.subscribe, guard.getActions);
+  const changes = draft
+    ? { dirty: draft.dirty, saving: draft.saving, disabled: draft.disabled, onSave: draft.save, onReset: draft.reset }
+    : undefined;
+  const title = input.instance.resource?.label ?? panel?.title ?? "Settings";
+  const [binding] = useState(() => ({ workbench: input.workbench, title }));
+  return (
+    <SettingsPageContext value={binding}>
+      <SettingsPage
+        title={title}
+        icon={<WorkbenchIcon name={panel?.icon ?? "settings"} size="1em" />}
+        changes={changes}
+      >
+        <SettingsSurfaceContent {...props} />
+      </SettingsPage>
+    </SettingsPageContext>
   );
 };

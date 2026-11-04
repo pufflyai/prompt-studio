@@ -38,7 +38,7 @@ Local ticket folders follow the current number. Planner preserves unsaved text a
 
 ## Refinement options
 
-Open Settings → Project → Extensions → Project Planner, then the Settings tab. **Update canvas designs for UI changes** is enabled by default. It applies to tickets that add or change UI, including changes to existing features.
+Open Settings → Project Planner → Workflow & automation. **Update canvas designs for UI changes** is enabled by default. It applies to tickets that add or change UI, including changes to existing features.
 
 The ticket skills read the project option with `pst pstdio-planner refinement-policy`. The result contains `updateCanvasDesign`. When enabled, the agent follows the project's canvas skill and updates the live design before completing the ticket or changing production UI. The ticket links the canvas page, exact preview names, source paths, and a short walkthrough. This replaces the artifact prototype requirement. If the option is off, the agent records why it skipped the design step. If Canvas is unavailable, the agent uses the project's existing design workflow and records why no canvas was linked. Tickets without UI changes do not require one.
 
@@ -46,7 +46,7 @@ Install the optional **Artifacts** extension from Extensions to use prototypes. 
 
 ## Implementation options
 
-Open Settings → Project → Extensions → Project Planner, then the Settings tab, to configure the `implement-ticket` workflow:
+Open Settings → Project Planner → Workflow & automation, to configure the `implement-ticket` workflow:
 
 - **Adversarial review** runs a review automatically before the final commit and handoff.
 - **Open PR** opens a draft pull request after validation and links it to the ticket.

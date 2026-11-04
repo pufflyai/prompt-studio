@@ -133,6 +133,13 @@ export {
   ThemePreferenceSurface,
   useThemePreference,
 } from "@/utils/theme-preference";
+export { SettingsContentSkeleton, SettingsNavigationSkeleton } from "./components/settings/settings-loading";
+export {
+  SettingsActions,
+  type SettingsChanges,
+  SettingsPage,
+  type SettingsPageProps,
+} from "./components/settings/settings-page";
 export { HostStorageScope } from "./utils/host-storage";
 export { ScopedDialog, ScopedMenu, ScopedPopover, ScopedTooltip, useScopedMenu } from "./utils/scoped-overlays";
 export { Portal, UiScopeProvider, UiScopeRoot, useUiScope } from "./utils/ui-scope";

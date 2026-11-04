@@ -56,11 +56,60 @@ export const workflowSettingsControls = (input: Awaited<ReturnType<typeof readWo
   } satisfies ControlsQueryResult;
 };
 
-export const queryWorkflowSettings = async (ctx: ExtensionContextBase) =>
-  workflowSettingsControls(await readWorkflowStatuses(ctx));
-
-export const saveWorkflowSettings = (ctx: ExtensionContextBase, values: ControlValueMap) =>
-  saveWorkflowStatusSelections(ctx, {
-    ...values,
+const automationFields = [
+  { id: "tickets.deleteLinkedWorkspaces", name: "Delete linked workspaces", type: "boolean", fallback: true },
+  { id: "tickets.markDoneOnMerge", name: "Mark done on merge", type: "boolean", fallback: true },
+  { id: "refinement.updateCanvasDesign", name: "Update Canvas design", type: "boolean", fallback: true },
+  { id: "implementation.adversarialReview", name: "Adversarial review", type: "boolean", fallback: true },
+  { id: "implementation.openPr", name: "Open pull requests", type: "boolean", fallback: true },
+  { id: "implementation.defaultTargetBranch", name: "Target branch", type: "text", fallback: "" },
+  { id: "automation.maxInProgress", name: "Maximum in-progress tickets", type: "number", fallback: 2 },
+] as const;
+export const queryWorkflowSettings = async (ctx: ExtensionContextBase) => {
+  const workflow = workflowSettingsControls(await readWorkflowStatuses(ctx));
+  const settings = await ctx.settings.all();
+  const values: ControlValueMap = {};
+  const params: ControlParam[] = automationFields.map((field) => {
+    const stored = settings[field.id];
+    if (field.type === "boolean") {
+      const value = typeof stored === "boolean" ? stored : field.fallback;
+      values[field.id] = value;
+      return { id: field.id, name: field.name, type: "boolean", defaultValue: value };
+    }
+    if (field.type === "number") {
+      const value = typeof stored === "number" ? stored : field.fallback;
+      values[field.id] = value;
+      return { id: field.id, name: field.name, type: "number", min: 0, defaultValue: value };
+    }
+    const value = typeof stored === "string" ? stored : field.fallback;
+    values[field.id] = value;
+    return { id: field.id, name: field.name, type: "text", singleLine: true, defaultValue: value };
+  });
+  return {
+    groups: [
+      ...workflow.groups,
+      {
+        id: "implementation",
+        title: "Implementation",
+        params: params.filter((field) => field.id !== "automation.maxInProgress"),
+      },
+      {
+        id: "automation",
+        title: "Automation",
+        params: params.filter((field) => field.id === "automation.maxInProgress"),
+      },
+    ],
+    values: { ...workflow.values, ...values },
+  } satisfies ControlsQueryResult;
+};
+export const saveWorkflowSettings = async (ctx: ExtensionContextBase, values: ControlValueMap) => {
+  await saveWorkflowStatusSelections(ctx, {
+    completedStatusIds: values.completedStatusIds,
+    blockedStatusIds: values.blockedStatusIds,
+    activeStatusIds: values.activeStatusIds,
     mergeTargetStatusId: values.mergeTargetStatusId || null,
   });
+  for (const field of automationFields) {
+    if (values[field.id] !== undefined) await ctx.settings.set(field.id, values[field.id]);
+  }
+};

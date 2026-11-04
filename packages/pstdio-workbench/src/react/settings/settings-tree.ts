@@ -21,7 +21,7 @@ const toTreeActions = (actions: SettingsAction[] | undefined): TreeAction[] | un
 const collectionItemNode = (panel: CollectionSettingsPanel, item: unknown): TreeNode => {
   const id = panel.itemId(item);
   const label = panel.itemLabel(item);
-  const icon = panel.itemIcon?.(item);
+  const icon = panel.itemIcon?.(item) ?? panel.icon;
   const resource = settingsItemResource(panel.id, { id, label, icon });
   return {
     id: resourceKey(resource),

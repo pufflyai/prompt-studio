@@ -46,7 +46,7 @@ const createTagSettingsView = (baseUrl: string) =>
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/tags-settings-panel.tsx", baseUrl),
-      capabilities: ["commands.execute"],
+      capabilities: ["commands.execute", "editing.session"],
     },
   });
 export const createPlannerUi = (baseUrl: string) => {
@@ -59,16 +59,17 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/status-settings-panel.tsx", baseUrl),
-      capabilities: ["commands.execute"],
+      capabilities: ["commands.execute", "editing.session"],
     },
   });
   const workflowSettings = defineView({
     id: "workflow-settings",
-    title: l10n("views.workflowSettings.title", "Planner workflow"),
+    title: "Workflow & automation",
+    icon: "Workflow",
     body: {
       kind: "controls",
       query: queryWorkflowSettings,
-      onValueChange: (ctx, input) => saveWorkflowSettings(ctx, input.values),
+      onApply: (ctx, input) => saveWorkflowSettings(ctx, input.values),
       refreshEvents: [plannerTicketsChanged],
     },
   });
@@ -247,7 +248,8 @@ export const createPlannerUi = (baseUrl: string) => {
       defineSettingsPanel({
         id: "workflow-settings",
         view: workflowSettings.ref,
-        slot: workbenchSlots.extensionSettings,
+        slot: workbenchSlots.projectSettings,
+        section: settingsSection.ref,
       }),
       defineSettingsPanel({
         id: "ticket-tags",

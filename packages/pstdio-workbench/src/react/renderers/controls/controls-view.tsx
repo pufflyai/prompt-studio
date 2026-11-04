@@ -1,10 +1,10 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import type { ControlValueMap } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { ScrollArea } from "@pstdio/ui";
+import { ScrollArea, SettingsContentSkeleton } from "@pstdio/ui";
 import { type InputGroup, type Param, ParamEditor, type ParamValue } from "@pstdio/ui/param-editor";
 import { controlValueSchema } from "pstdio-api-contracts";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   getWorkbenchRenderers,
   type RegisteredControlsRendererContribution,
@@ -14,6 +14,7 @@ import {
 } from "../../../core";
 import { runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
+import { SettingsPageContext, useSettingsChanges } from "../../settings/settings-page-context";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
@@ -51,6 +52,7 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
 const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
   const { workbench, contribution, placement, renderParamField } = props;
   const resource = placement.resource;
+  const settingsPage = useContext(SettingsPageContext);
   const pageParams = usePageParams(workbench, placement);
   const [state, setState] = useState<ControlsViewState>(initialState);
   const [pending, setPending] = useState(false);
@@ -142,10 +144,46 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
       await read.retry();
     } catch (error) {
       setState((previous) => ({ ...previous, error: error instanceof Error ? error.message : String(error) }));
+      if (settingsPage) throw error;
     } finally {
       setPending(false);
     }
   };
+  useSettingsChanges(
+    settingsPage && contribution.apply
+      ? {
+          dirty: Object.keys(state.changed).length > 0,
+          saving: pending,
+          onSave: () => submit(false),
+          onReset: () =>
+            setState((previous) => ({
+              ...previous,
+              changed: {},
+              error: undefined,
+              values: { ...contribution.defaultValues, ...read.value?.values },
+            })),
+        }
+      : undefined,
+  );
+  if (settingsPage)
+    return (
+      <Stack gap="md">
+        {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
+        {state.error ? (
+          <Text role="alert" color="fg.error">
+            {state.error}
+          </Text>
+        ) : null}
+        <SettingsControlsReset contribution={contribution} pending={pending} submit={submit} />
+        <ControlsContent
+          state={read.value ? state : initialState}
+          contribution={contribution}
+          readOnly={readOnly}
+          onChange={handleChange}
+          renderParamField={renderParamField}
+        />
+      </Stack>
+    );
   return (
     <Stack h="full" minH="0" gap="0" bg="bg" overflow="hidden">
       {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
@@ -167,44 +205,61 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
           />
         ) : null}
       </ScrollArea>
-      {showFooter ? (
-        <Flex
-          borderTopWidth="1px"
-          borderColor="border.muted"
-          pl="sm"
-          pr="4xl"
-          py="xs"
-          gap="xs"
-          justifyContent="flex-end"
-        >
-          {contribution.reset || contribution.apply ? (
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={pending}
-              onClick={() => {
-                void submit(true);
-              }}
-            >
-              Reset
-            </Button>
-          ) : null}
-          {contribution.apply ? (
-            <Button
-              size="xs"
-              variant="subtle"
-              disabled={pending}
-              onClick={() => {
-                void submit(false);
-              }}
-            >
-              Apply
-            </Button>
-          ) : null}
-        </Flex>
-      ) : null}
+      <ControlsFooter visible={showFooter} contribution={contribution} pending={pending} submit={submit} />
     </Stack>
   );
+};
+
+const SettingsControlsReset = (props: Omit<ControlsFooterProps, "visible">) => {
+  if (!props.contribution.reset || props.contribution.apply) return null;
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      alignSelf="end"
+      disabled={props.pending}
+      onClick={() => void props.submit(true).catch(() => undefined)}
+    >
+      Reset to defaults
+    </Button>
+  );
+};
+
+interface ControlsFooterProps {
+  visible: boolean;
+  contribution: RegisteredControlsRendererContribution;
+  pending: boolean;
+  submit: (reset: boolean) => Promise<void>;
+}
+const ControlsFooter = (props: ControlsFooterProps) => {
+  return props.visible ? (
+    <Flex borderTopWidth="1px" borderColor="border.muted" pl="sm" pr="4xl" py="xs" gap="xs" justifyContent="flex-end">
+      {props.contribution.reset || props.contribution.apply ? (
+        <Button
+          size="xs"
+          variant="ghost"
+          disabled={props.pending}
+          onClick={() => {
+            void props.submit(true);
+          }}
+        >
+          Reset
+        </Button>
+      ) : null}
+      {props.contribution.apply ? (
+        <Button
+          size="xs"
+          variant="subtle"
+          disabled={props.pending}
+          onClick={() => {
+            void props.submit(false);
+          }}
+        >
+          Apply
+        </Button>
+      ) : null}
+    </Flex>
+  ) : null;
 };
 
 interface ControlsContentProps {
@@ -234,18 +289,12 @@ const ControlsContent = (props: ControlsContentProps) => {
       ),
     };
   };
-  if (state.loading)
-    return (
-      <Box p="md">
-        <Text textStyle="label/S/regular" color="fg.muted">
-          Loading…
-        </Text>
-      </Box>
-    );
+  if (state.loading) return <SettingsContentSkeleton />;
   if (state.params.length || state.groups.length)
     return (
       <ParamEditor
-        variant="small"
+        changeDelay={contribution.apply ? 0 : undefined}
+        fullWidth
         params={state.params.map(hostParam)}
         groups={state.groups.map((group) => ({ ...group, params: group.params.map(hostParam) }))}
         defaultValues={state.values}

@@ -1,6 +1,10 @@
-import { Box, Card, HStack, Icon, Stack } from "@chakra-ui/react";
-import { filterHarnessParamValues, HarnessParamEditor, type HarnessParamValues } from "@pstdio/ui/param-editor";
-import { Bot } from "lucide-react";
+import { Box, Stack, Text } from "@chakra-ui/react";
+import {
+  filterHarnessParamValues,
+  HarnessParamEditor,
+  type HarnessParamValues,
+  ParamEditorRow,
+} from "@pstdio/ui/param-editor";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import { useTranslation } from "react-i18next";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
@@ -106,55 +110,49 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
   };
 
   return (
-    <Card.Root size="sm" borderRadius="0" data-testid="project-defaults-card">
-      <Card.Body>
-        {errorNotice}
-        <Stack gap="sm">
-          <HStack gap="4" alignItems="flex-start">
-            <Icon boxSize="1em" fontSize="2xl" flexShrink="0" color="fg.muted">
-              <Bot />
-            </Icon>
-            <Box flex="1" minW="0">
-              <Stack gap="1">
-                <Card.Title textStyle="sm">{t("harnessesPanel.defaultModelTitle")}</Card.Title>
-                <Card.Description>{t("harnessesPanel.defaultModelDescription")}</Card.Description>
-              </Stack>
-            </Box>
-            <HStack gap="2" flexShrink="0" alignItems="center">
-              <WorkspaceAgentMenu
-                agentOptions={harnessOptions}
-                selectedAgent={selectedHarnessId}
-                onSelectAgent={handleSelectHarness}
-                modelOptions={modelOptions}
-                selectedModel={selectedModelId}
-                onSelectModel={handleSelectModel}
-                offersModels={selectedHarness?.supportsModels ?? true}
-                isDisabled={updateProjectDefaults.isPending}
-                isAgentsLoading={isAgentsLoading}
-                isModelsLoading={isModelsLoading}
-                labels={{
-                  agentSelect: t("agentRow.defaultHarnessSelect"),
-                  agentUnknown: t("agentRow.defaultHarnessNone"),
-                  agentLoading: t("agentRow.harnessLoading"),
-                  modelSelect: t("agentRow.defaultModelSelect"),
-                  modelNone: t("agentRow.defaultModelNone"),
-                  modelNoneAvailable: t("agentRow.modelNoneAvailable"),
-                  modelLoading: t("agentRow.modelLoading"),
-                  modelSearchPlaceholder: t("agentRow.modelSearch"),
-                }}
-              />
-            </HStack>
-          </HStack>
-          <Box opacity={paramDefaults.isLoading ? 0.5 : 1} data-testid="project-run-defaults">
-            <HarnessParamEditor
-              schema={paramSchema}
-              overrides={paramValues}
-              onOverridesChange={handleParamsChange}
-              disabled={paramDefaults.isLoading || updateParamDefaults.isPending}
+    <Stack gap="sm" data-testid="project-defaults-card">
+      {errorNotice}
+      <Text textStyle="label/L/medium">{t("harnessesPanel.defaultModelTitle")}</Text>
+      <ParamEditorRow
+        fullWidth
+        param={{
+          id: "agent-model",
+          name: "Default agent and model",
+          type: "property",
+          value: (
+            <WorkspaceAgentMenu
+              agentOptions={harnessOptions}
+              selectedAgent={selectedHarnessId}
+              onSelectAgent={handleSelectHarness}
+              modelOptions={modelOptions}
+              selectedModel={selectedModelId}
+              onSelectModel={handleSelectModel}
+              offersModels={selectedHarness?.supportsModels ?? true}
+              isDisabled={updateProjectDefaults.isPending}
+              isAgentsLoading={isAgentsLoading}
+              isModelsLoading={isModelsLoading}
+              labels={{
+                agentSelect: t("agentRow.defaultHarnessSelect"),
+                agentUnknown: t("agentRow.defaultHarnessNone"),
+                agentLoading: t("agentRow.harnessLoading"),
+                modelSelect: t("agentRow.defaultModelSelect"),
+                modelNone: t("agentRow.defaultModelNone"),
+                modelNoneAvailable: t("agentRow.modelNoneAvailable"),
+                modelLoading: t("agentRow.modelLoading"),
+                modelSearchPlaceholder: t("agentRow.modelSearch"),
+              }}
             />
-          </Box>
-        </Stack>
-      </Card.Body>
-    </Card.Root>
+          ),
+        }}
+      />
+      <Box opacity={paramDefaults.isLoading ? 0.5 : 1} data-testid="project-run-defaults">
+        <HarnessParamEditor
+          schema={paramSchema}
+          overrides={paramValues}
+          onOverridesChange={handleParamsChange}
+          disabled={paramDefaults.isLoading || updateParamDefaults.isPending}
+        />
+      </Box>
+    </Stack>
   );
 };

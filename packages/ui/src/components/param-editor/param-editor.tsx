@@ -8,6 +8,8 @@ export interface ParamEditorProps {
   defaultValues?: ParamValueMap;
   onChange?: (id: string, value: ParamValue) => void;
   onOpenResource?: (ref: ResourceRefValue) => void;
+  /** Text and number notification delay in milliseconds. Use 0 for forms that stage edits before saving. */
+  changeDelay?: number;
   readOnly?: boolean;
   fullWidth?: boolean;
   variant?: "default" | "small";
@@ -34,6 +36,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
           defaultValues={defaultValues}
           onChange={handleChange}
           onOpenResource={onOpenResource}
+          changeDelay={props.changeDelay}
           readOnly={readOnly}
           fullWidth={fullWidth}
           variant={variant}
@@ -49,6 +52,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
           defaultValues={defaultValues}
           onChange={handleChange}
           onOpenResource={onOpenResource}
+          changeDelay={props.changeDelay}
           readOnly={readOnly}
           fullWidth={fullWidth}
           variant={variant}

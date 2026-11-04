@@ -1,7 +1,9 @@
-import { Button, HStack, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
-import { DeleteConfirmationModal, useToaster } from "@pstdio/ui";
+import { Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
+import { DeleteConfirmationModal, SettingsContentSkeleton, useToaster } from "@pstdio/ui";
+import { useSettingsChanges } from "@pstdio/workbench/react";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import type { ProjectTemplateAsset } from "../data/template-provider-api";
 import { useDeleteProjectTemplate, useProjectTemplate, useUpdateProjectTemplate } from "../data/use-templates";
 
@@ -30,30 +32,33 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
     toaster.create({ type: "success", title: "Template saved", description: template.title });
   };
 
+  useSettingsChanges({
+    dirty: Boolean(data) && content !== data?.content,
+    saving: updateTemplate.isPending,
+    onSave: save,
+    onReset: () => setContent(data?.content ?? ""),
+  });
   const remove = async () => {
     await deleteTemplate.mutateAsync(template);
+    flushSync(() => setContent(data?.content ?? ""));
     onDeleted();
   };
 
   return (
-    <Stack gap="md" h="full" p="lg" overflow="hidden">
-      <HStack justify="space-between" align="center">
-        <Text fontSize="lg" fontWeight="semibold" truncate>
-          {template.title}
-        </Text>
-        <HStack gap="sm">
-          <Button size="sm" variant="outline" onClick={() => setIsDeleteOpen(true)}>
-            <Trash2 size={14} />
-            Delete
-          </Button>
-          <Button size="sm" onClick={save} loading={updateTemplate.isPending}>
-            Save
-          </Button>
-        </HStack>
+    <Stack gap="md" h="full" minH="0">
+      <HStack justify="flex-end">
+        <Button size="sm" variant="ghost" onClick={() => setIsDeleteOpen(true)}>
+          <Trash2 size={14} />
+          Delete template
+        </Button>
       </HStack>
-
+      {updateTemplate.error ? (
+        <Text role="alert" color="fg.error">
+          {updateTemplate.error.message}
+        </Text>
+      ) : null}
       {isLoading ? (
-        <Spinner size="sm" />
+        <SettingsContentSkeleton />
       ) : (
         <Textarea
           value={content}

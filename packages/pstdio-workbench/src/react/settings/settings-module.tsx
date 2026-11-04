@@ -1,9 +1,11 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import {
   type PreferenceScope,
   standardResourceIcons,
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
 } from "../../core";
+import { settingsLeaveGuard } from "./settings-leave-guard";
 import { SettingsOverlay } from "./settings-overlay";
 import {
   isSettingsScopeVisible,
@@ -33,7 +35,7 @@ export { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "./settings-resources";
 
 const WIDGET_ID = WORKBENCH_SETTINGS_WIDGET_ID;
 
-const openSettings = (input: { args: unknown; ctx: WorkbenchModuleContext; hasProjectScope: () => boolean }) => {
+const openSettings = async (input: { args: unknown; ctx: WorkbenchModuleContext; hasProjectScope: () => boolean }) => {
   const { args, ctx, hasProjectScope } = input;
   const requested = args && typeof args === "object" ? args : undefined;
   const panelId = requested && "panelId" in requested ? requested.panelId : undefined;
@@ -49,6 +51,9 @@ const openSettings = (input: { args: unknown; ctx: WorkbenchModuleContext; hasPr
     panel.kind === "collection" && typeof itemId === "string"
       ? settingsItemResource(panel.id, { id: itemId, label: itemId })
       : settingsPanelResource(panel);
+  const current = ctx.layout.getLayout().regions.overlay.widgets.find((widget) => widget.viewId === WIDGET_ID);
+  if (current && resourceKey(current.resource) === resourceKey(resource)) return resource;
+  if (!(await settingsLeaveGuard(ctx).request())) return undefined;
   ctx.overlays.openOverlay(WIDGET_ID, {
     resource,
     title: resource.label,
