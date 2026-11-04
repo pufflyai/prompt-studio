@@ -10,13 +10,21 @@ import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 setupPackagedSmokeTests();
-const waitFor = async (read: () => Promise<boolean>) => {
-  while (!(await read())) await Bun.sleep(25);
-};
+const createWaitFor =
+  (deadline: number, signal: AbortSignal) => async (label: string, read: () => Promise<boolean>) => {
+    while (true) {
+      signal.throwIfAborted();
+      if (Date.now() >= deadline) throw new Error(`Timed out waiting for ${label}`);
+      if (await read()) return;
+      await Bun.sleep(25);
+    }
+  };
 
 test(
   "compiled devices run remote sessions, send large follow-ups and files, and interrupt only the target turn",
   async () => {
+    const polling = new AbortController();
+    const waitFor = createWaitFor(Date.now() + PACKAGED_TEST_TIMEOUT - 5_000, polling.signal);
     const root = await mkdtemp(join(tmpdir(), "packaged-device-commands-"));
     const key = join(root, "key.pem");
     const cert = join(root, "cert.pem");
@@ -114,6 +122,7 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
         await client.account.syncProject(projectId);
         process.stderr.write(`Device command fixture: register ${folder}\n`);
         await waitFor(
+          "the other device to become available",
           async () => peer.frames.filter((frame) => frame.includes('"type":"register"')).length >= (host === a ? 1 : 2),
         );
         return { client, id: identity.environmentId };
@@ -127,13 +136,16 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
         prompt: "Start",
         agent: "test.device-command-fixture.harness.worker",
       });
-      await waitFor(async () => (await on.client.sessions.get(session.id)).status === "in_progress");
+      await waitFor(
+        "the remote turn to start",
+        async () => (await on.client.sessions.get(session.id)).status === "in_progress",
+      );
       const unrelated = await on.client.sessions.create(projectId, {
         title: "Unrelated",
         prompt: "Stay running",
         agent: "test.device-command-fixture.harness.worker",
       });
-      await waitFor(async () =>
+      await waitFor("the remote session to appear in local history", async () =>
         (await from.client.sessions.query(projectId)).items.some((row) => row.id === session.id),
       );
       const attached = await from.client.sessions.uploadAttachment(projectId, {
@@ -150,12 +162,19 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
         expect.arrayContaining([expect.objectContaining({ prompt: `Long prompt: ${"a".repeat(100_000)}` })]),
       );
       await from.client.sessions.updateStatus(session.id, "cancelled");
-      await waitFor(async () => (await on.client.sessions.get(session.id)).status === "cancelled");
+      await waitFor(
+        "the target turn to stop",
+        async () => (await on.client.sessions.get(session.id)).status === "cancelled",
+      );
       expect((await on.client.sessions.get(unrelated.id)).status).toBe("in_progress");
-      await waitFor(async () => (await from.client.sessions.getConversation(session.id)).messages.length > 0);
+      await waitFor(
+        "remote history to arrive",
+        async () => (await from.client.sessions.getConversation(session.id)).messages.length > 0,
+      );
       expect(peer.frames.join("")).not.toContain("Remote file bytes");
       expect(peer.frames.join("")).not.toContain("Long prompt:");
     } finally {
+      polling.abort();
       await stopProcess(a.child);
       if (b) await stopProcess(b.child);
       await peer.close();
