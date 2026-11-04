@@ -1,19 +1,20 @@
 import { expect, test } from "bun:test";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
+import { createHomeModule } from "@/home-page.fixture";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardHomePage } from "@/shared/app/resources";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "../bootstrap";
 import { createExtensionsModule } from "../extensions/module";
 import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "../extensions/module-test-fixtures";
 import { createSessionsModule } from "../sessions/module";
-import { createStartModule } from "../start/module";
 import { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
 import { createProjectsModule } from "./module";
 
 test("opens the first created project without losing its active mode when the creation dialog closes", async () => {
-  const workbench = createWorkbench();
+  const workbench = createWorkbench({ startPage: dashboardHomePage });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   getWriter("projects")?.truncateAndWrite([]);
   markInitialCollectionsSyncComplete();
@@ -23,7 +24,7 @@ test("opens the first created project without losing its active mode when the cr
       loadMetadata: async () => metadataWithResourceExtension,
     }),
     createProjectsModule(),
-    createStartModule(),
+    createHomeModule(),
     createBootstrapModule(),
   ].map((module) => workbench.registerModule(module));
   try {
@@ -38,7 +39,7 @@ test("opens the first created project without losing its active mode when the cr
     expect(workbench.context.get("dashboard.project.id")).toBe("created-project");
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.pages.store.getState().projectId).toBe("created-project");
-    expect(workbench.pages.store.getState().location?.page.id).toBe("start");
+    expect(workbench.pages.store.getState().location?.page).toEqual(dashboardHomePage);
   } finally {
     workbench.pageLocations.clearProject();
     for (const module of modules.reverse()) module.dispose();
@@ -51,7 +52,7 @@ test.each([
   false,
   true,
 ])("project tabs preserve extension page context across switches (core child: %s)", async (coreChild) => {
-  const workbench = createWorkbench();
+  const workbench = createWorkbench({ startPage: dashboardHomePage });
   const tabs = new DesktopProjectTabsController([], async () => {});
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   getWriter("projects")?.truncateAndWrite([
@@ -66,7 +67,7 @@ test.each([
     }),
     createProjectsModule({ projectTabs: tabs }),
     createSessionsModule(),
-    createStartModule(),
+    createHomeModule(),
     createBootstrapModule(),
   ].map((module) => workbench.registerModule(module));
   const select = async (id: string) => {
@@ -119,7 +120,7 @@ test.each([
 });
 
 test("selects the URL project before the persisted project when opening a document", () => {
-  const workbench = createWorkbench();
+  const workbench = createWorkbench({ startPage: dashboardHomePage });
   let persistedProjectId: string | undefined = "source";
   getWriter("projects")?.truncateAndWrite([
     { id: "source", name: "Source" },

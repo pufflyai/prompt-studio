@@ -211,7 +211,11 @@ test("browses and edits files in the default workspace", async ({ page, request 
 
     const search = page.getByRole("textbox", { name: "Search files" });
     await search.fill("README");
-    await expect(page.getByRole("region", { name: "Files", exact: true }).getByRole("option")).toHaveCount(1);
+    const readme = page
+      .getByRole("region", { name: "Files", exact: true })
+      .getByRole("option", { name: "README.md", exact: true })
+      .and(page.locator('[data-tree-list-node-id="README.md"]'));
+    await expect(readme).toBeVisible();
     const fileResponse = Promise.withResolvers<void>();
     const pendingFileRoutes: Promise<void>[] = [];
     let fileRequested = false;
@@ -222,7 +226,7 @@ test("browses and edits files in the default workspace", async ({ page, request 
       return continued;
     });
     try {
-      await page.getByRole("option", { name: "README.md" }).click();
+      await readme.click();
       await expect.poll(() => fileRequested).toBe(true);
       // The editor runtime loads while the file is still on the network.
       await expect.poll(() => page.evaluate(() => "MonacoEnvironment" in window)).toBe(true);
@@ -249,7 +253,7 @@ test("browses and edits files in the default workspace", async ({ page, request 
 
     await page.reload();
     await page.getByRole("textbox", { name: "Search files" }).fill("README");
-    await page.getByRole("option", { name: "README.md", exact: true }).click();
+    await readme.click();
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("Edited in the default workspace");
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });

@@ -1,12 +1,11 @@
-import { expect, type Page, test } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const projectId = (page: Page) => new URL(page.url()).pathname.split("/")[2];
-const openExample = async (page: Page, name: string, resource?: string) => {
+const openExample = async (page: Page, projectId: string, name: string, resource?: string) => {
   const query = resource ? `?resource=${encodeURIComponent(`pstdio://extension-resource/${resource}`)}` : "";
   await page.goto(
-    `/projects/${projectId(page)}/extensions/pstdio.extension-lab/${name}${resource ? "/resource" : ""}${query}`,
+    `/projects/${projectId}/extensions/pstdio.extension-lab/${name}${resource ? "/resource" : ""}${query}`,
   );
   await expect(page.locator("html")).toHaveAttribute("data-theme", `pstdio.extension-lab.theme.${name}`);
 };
@@ -51,24 +50,26 @@ const editDocument = async (page: Page, content: string) => {
   await expect(view(page, "Document").locator('[contenteditable="true"]').first()).toContainText(content);
 };
 
-test.beforeEach(async ({ page, request }) => {
-  const response = await request.post(`${apiBase}/v1/projects`, {
-    data: folderProjectInput({ name: "Public showcases" }),
-  });
-  expect(response.ok()).toBe(true);
-  const project = await response.json();
-  await page.addInitScript((id: string) => {
-    if (window.top !== window) return;
-    localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("theme-preference", "pstdio-dark");
-    localStorage.setItem("dashboard-wb2:selected-project:global", id);
-  }, project.id);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`/projects/${project.id}`);
+const test = base.extend<{ projectId: string }>({
+  projectId: async ({ page, request }, use) => {
+    const response = await request.post(`${apiBase}/v1/projects`, {
+      data: folderProjectInput({ name: "Public showcases" }),
+    });
+    expect(response.ok()).toBe(true);
+    const project = await response.json();
+    await page.addInitScript((id: string) => {
+      if (window.top !== window) return;
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("theme-preference", "pstdio-dark");
+      localStorage.setItem("dashboard-wb2:selected-project:global", id);
+    }, project.id);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await use(project.id);
+  },
 });
 
-test("Scribble saves edits and creates documents", async ({ page }) => {
-  await openExample(page, "scribble", "scribble.document/north-star");
+test("Scribble saves edits and creates documents", async ({ page, projectId }) => {
+  await openExample(page, projectId, "scribble", "scribble.document/north-star");
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expect(sidenav.getByRole("option", { name: "North star", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(0);
@@ -105,8 +106,9 @@ test("Scribble saves edits and creates documents", async ({ page }) => {
 test("Boombox retains its player across selections and disposes it when its extension is disabled", async ({
   page,
   request,
+  projectId,
 }) => {
-  await openExample(page, "boombox");
+  await openExample(page, projectId, "boombox");
   await expect(page.getByRole("button", { name: "Enter Main fullscreen", exact: true })).toHaveCount(0);
   await expect(page.locator('[data-workbench-region="sidenav"]')).toBeHidden();
   await expect(view(page, "Player").getByRole("button", { name: "Pause", exact: true })).toBeVisible();
@@ -129,7 +131,7 @@ test("Boombox retains its player across selections and disposes it when its exte
   await view(page, "Library").getByRole("button", { name: "Liked songs", exact: true }).click();
   await expect(view(page, "Lazy Sunday").getByRole("button", { name: "Play Paper Moon by Mira Vale" })).toBeVisible();
   await expect(view(page, "Lazy Sunday").getByRole("button", { name: "Play Soft Focus by Low Island" })).toHaveCount(0);
-  const extensionsUrl = `${apiBase}/v1/projects/${projectId(page)}/extensions`;
+  const extensionsUrl = `${apiBase}/v1/projects/${projectId}/extensions`;
   const listed = await request.get(extensionsUrl);
   expect(listed.ok()).toBe(true);
   const { extensions } = await listed.json();
@@ -143,8 +145,8 @@ test("Boombox retains its player across selections and disposes it when its exte
   expect(await playerFrame!.evaluate((frame) => frame.isConnected)).toBe(false);
 });
 
-test("Zipline opens its inspector and persists a status change", async ({ page }) => {
-  await openExample(page, "zipline");
+test("Zipline opens its inspector and persists a status change", async ({ page, projectId }) => {
+  await openExample(page, projectId, "zipline");
   await page.getByText("ZIP-142", { exact: true }).click();
   const inspector = view(page, "Issue");
   await expect(inspector.getByText("ZIP-142", { exact: true })).toBeVisible();
@@ -162,8 +164,8 @@ test("Zipline opens its inspector and persists a status change", async ({ page }
   ).toBeVisible();
 });
 
-test("Pigeon sends a local message and keeps it in Sent", async ({ page }) => {
-  await openExample(page, "pigeon");
+test("Pigeon sends a local message and keeps it in Sent", async ({ page, projectId }) => {
+  await openExample(page, projectId, "pigeon");
   const folders = view(page, "Folders");
   const inbox = view(page, "Inbox");
   await expect(page.getByRole("button", { name: /Bottom Panel/ })).toHaveCount(0);
@@ -201,8 +203,8 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page }) => {
   await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
 });
 
-test("Kiln docks the inspector and persists object changes", async ({ page }) => {
-  await openExample(page, "kiln");
+test("Kiln docks the inspector and persists object changes", async ({ page, projectId }) => {
+  await openExample(page, projectId, "kiln");
   const inspector = view(page, "Scene and properties");
   const gridToggle = view(page, "3D viewport").getByRole("button", { name: "Toggle viewport grid", exact: true });
   await gridToggle.click();
@@ -231,12 +233,34 @@ test("Kiln docks the inspector and persists object changes", async ({ page }) =>
   await expect(inspector.getByRole("button", { name: "Hide Cube", exact: true })).toBeVisible();
 });
 
-test("mode defaults restore the global theme on leaving", async ({ page }) => {
-  await openExample(page, "pigeon");
-  await page.evaluate(() => localStorage.setItem("theme-preference:pstdio.extension-lab.mode.pigeon", "pstdio-light"));
-  await page.reload();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-light");
-  await view(page, "Pigeon").getByRole("button", { name: "Back to project", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-dark");
-  expect(await page.evaluate(() => localStorage.getItem("theme-preference"))).toBe("pstdio-dark");
+test("leaving a tool restores project mode and its theme even when Home is disabled", async ({
+  page,
+  request,
+  projectId,
+}) => {
+  const id = projectId;
+  const listed = await request.get(`${apiBase}/v1/projects/${id}/extensions`);
+  expect(listed.ok()).toBe(true);
+  const { extensions } = (await listed.json()) as { extensions: { id: string; installName: string }[] };
+  const home = extensions.find((extension) => extension.installName === "pstdio-home")!;
+  expect(home).toBeTruthy();
+  expect(
+    (await request.patch(`${apiBase}/v1/projects/${id}/extensions/${home.id}`, { data: { enabled: false } })).ok(),
+  ).toBe(true);
+  try {
+    await openExample(page, projectId, "pigeon");
+    await page.evaluate(() =>
+      localStorage.setItem("theme-preference:pstdio.extension-lab.mode.pigeon", "pstdio-light"),
+    );
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-light");
+    await view(page, "Pigeon").getByRole("button", { name: "Back to project", exact: true }).click();
+    await expect(page).toHaveURL(`/projects/${id}/workspaces`);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-dark");
+    expect(await page.evaluate(() => localStorage.getItem("theme-preference"))).toBe("pstdio-dark");
+  } finally {
+    expect(
+      (await request.patch(`${apiBase}/v1/projects/${id}/extensions/${home.id}`, { data: { enabled: true } })).ok(),
+    ).toBe(true);
+  }
 });

@@ -170,6 +170,7 @@
         "pstdio-artifacts",
         "pstdio-base-themes",
         "pstdio-dashboard",
+        "pstdio-home",
         "pstdio-notes",
         "pstdio-performance",
         "pstdio-planner",
@@ -359,6 +360,10 @@
       "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "opencode-ai"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
+    "extensions/pstdio-home": {
+      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/view.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
     "extensions/extension-lab": {
       "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/views/*.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]

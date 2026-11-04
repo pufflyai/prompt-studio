@@ -8,7 +8,7 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import { PromptEditor } from "./prompt-input";
 
 const reason = "Stop active or queued work before deleting.";
-const Preview = (props: { completion: "row" | "menu" }) => {
+const Preview = (props: { completion: "row" | "menu" | "selection" }) => {
   const [ready, setReady] = useState(false);
   const [completed, setCompleted] = useState(false);
   return (
@@ -17,7 +17,11 @@ const Preview = (props: { completion: "row" | "menu" }) => {
       <Box role="listbox" aria-label="Sessions">
         <ResourceContextMenu
           actions={[
-            { key: "rename", label: "Rename session" },
+            {
+              key: "rename",
+              label: "Rename session",
+              onSelect: props.completion === "selection" ? () => setReady(true) : undefined,
+            },
             {
               key: "delete",
               label: "Delete session",
@@ -51,12 +55,14 @@ const Preview = (props: { completion: "row" | "menu" }) => {
           </Button>
         </ResourceContextMenu>
       </Box>
-      <PromptEditor
-        defaultState={createSerializedPromptState("")}
-        isEditable={ready}
-        focusRequested={!completed}
-        onFocusRequestComplete={() => setCompleted(true)}
-      />
+      {(props.completion !== "selection" || ready) && (
+        <PromptEditor
+          defaultState={createSerializedPromptState("")}
+          isEditable={ready}
+          focusRequested={!completed}
+          onFocusRequestComplete={() => setCompleted(true)}
+        />
+      )}
       <Text role="status">{completed ? "Loading finished" : "Composer loading"}</Text>
     </Stack>
   );
@@ -65,7 +71,8 @@ export default {
   title: "Prompt input/Preserve chosen focus while loading",
   component: Preview,
   description:
-    "Synthetic loading completes when the session row or its Info explanation gets focus. Readiness must keep that chosen focus. Open the row menu with ContextMenu, then Tab to Info. Escape keeps the original keyboard context. The product adds no control or appearance.",
+    "Synthetic loading completes when the session row or its Info explanation gets focus, or when Rename is selected. Keep chosen focus in an open menu; after selecting an action, the ready composer accepts input. Open the row menu with ContextMenu. The product adds no control or appearance.",
 } satisfies CanvasMeta;
 export const ChosenRow: CanvasFrame = { args: { completion: "row" } };
 export const ChosenMenuHelp: CanvasFrame = { args: { completion: "menu" } };
+export const SelectedMenuAction: CanvasFrame = { args: { completion: "selection" } };

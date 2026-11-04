@@ -38,6 +38,7 @@ describe("isolated development paths", () => {
 
     expect(config.defaultExtensions).toEqual(
       [
+        ["pstdio-home", "extensions/pstdio-home"],
         ["harness-claude-code", "extensions/harness-claude-code"],
         ["harness-codex", "extensions/harness-codex"],
         ["harness-open-code", "extensions/harness-open-code"],

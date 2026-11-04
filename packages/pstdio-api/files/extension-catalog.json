@@ -2,6 +2,20 @@
   "version": 1,
   "extensions": [
     {
+      "installName": "pstdio-home",
+      "displayName": "Home",
+      "icon": "house",
+      "description": "Project home, recent conversations, and setup recovery.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-home",
+        "ref": "{hostRelease}"
+      },
+      "default": true,
+      "extensionId": "pstdio.pstdio-home"
+    },
+    {
       "installName": "harness-claude-code",
       "displayName": "Claude Code",
       "description": "Contributes the Claude Code agent harness.",

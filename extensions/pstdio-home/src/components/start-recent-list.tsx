@@ -1,7 +1,7 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import { ListRow } from "@pstdio/ui";
-import { WorkbenchIcon } from "@pstdio/workbench/react";
-import type { RecentProjectResource } from "@/shared/recents/recent-project-resources";
+import { ListRow, SessionIndicator } from "@pstdio/ui";
+import type { RecentProjectResource } from "../recent-resources";
+import { HomeIcon as WorkbenchIcon } from "./home-icon";
 
 interface StartRecentListProps {
   resources: RecentProjectResource[];
@@ -22,7 +22,16 @@ export const StartRecentList = (props: StartRecentListProps) => {
             id={resource.id}
             label={resource.title}
             tooltip={resource.title}
-            icon={<WorkbenchIcon name={resource.icon} size={14} />}
+            icon={
+              resource.resource.type === "session" ? (
+                <SessionIndicator
+                  status={resource.status}
+                  ariaLabel={resource.status ? `Session status: ${resource.status}` : "Session status"}
+                />
+              ) : (
+                <WorkbenchIcon name={resource.icon} size={14} />
+              )
+            }
             onActivate={() => onOpen(resource)}
           />
         ))}

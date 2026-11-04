@@ -1,3 +1,4 @@
+import { canvasTestOwner } from "./canvas-test-owner";
 import type { createPriorityPlan } from "./priority-plan";
 
 export const priorityPlanSetup = (
@@ -8,7 +9,7 @@ export const priorityPlanSetup = (
   const buildScopes = new Set(
     plan
       .map((run) => {
-        if (run.componentOwner) return packages.find((pkg) => pkg.dir === `packages/${run.componentOwner}`)!.name;
+        if (run.componentOwner) return canvasTestOwner(packages, run.componentOwner)!.name;
         return run.owner;
       })
       .filter((owner) => owner !== "repository"),

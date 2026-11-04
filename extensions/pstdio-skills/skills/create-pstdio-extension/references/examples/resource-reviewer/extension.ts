@@ -10,7 +10,6 @@ import {
   type NavigationTarget,
   packageAsset,
   workbenchModes,
-  workbenchPages,
 } from "@pstdio/sdk/extensions";
 import { catalog, getItem } from "./catalog";
 import { commands } from "./commands";
@@ -26,12 +25,20 @@ const preview = defineView({
     capabilities: ["commands.execute"],
   },
 });
+const rootPage = definePage({
+  id: "root",
+  title: l10n("review.title", "Resource reviewer"),
+  path: "root",
+  mode: workbenchModes.project,
+  main: { kind: "panels" },
+  slots: [],
+});
 const page = definePage({
+  parent: rootPage.ref,
   id: "review",
   title: l10n("review.title", "Resource reviewer"),
   path: "review",
   mode: workbenchModes.project,
-  parent: workbenchPages.start,
   resource: { kinds: [itemKind.ref] },
   main: { kind: "view", view: preview.ref, cardinality: "one" },
   slots: [],
@@ -83,7 +90,7 @@ const palette = defineCommandPaletteResource({
 export default defineExtension({
   commands: Object.values(commands),
   resourceKinds: [itemKind],
-  pages: [page],
+  pages: [rootPage, page],
   views: [preview, tree, inspector],
   viewMenus: [
     defineViewMenu({ id: "items", owner: preview.ref, view: tree.ref, side: "left" }),
