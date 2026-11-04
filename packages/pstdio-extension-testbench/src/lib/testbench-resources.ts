@@ -48,6 +48,7 @@ export const createBenchResources = async (
     ...context.resources,
     resolveMany: async (refs) =>
       refs.flatMap((ref) => {
+        if (ref.projectId && ref.projectId !== projectId) return [];
         const workspace =
           ref.type === "workspace" && ref.extensionId === "pstdio" ? workspaceById.get(ref.id) : undefined;
         if (!workspace) return [];

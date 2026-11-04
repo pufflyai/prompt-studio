@@ -53,12 +53,15 @@ export const loadTicketLinkedResources = async (resources: ExtensionResourcesApi
   }
   const unique = new Map([...byIdentity.values()].flatMap((refs) => [...refs]));
   const refs = [...unique.values()];
-  const resolved = new Map<string, ResourceResolution>();
+  const batches: ResourceRef[][] = [];
   for (let offset = 0; offset < refs.length; offset += 100) {
-    for (const item of await resources.resolveMany(refs.slice(offset, offset + 100))) {
-      resolved.set(resourceKey(item.resource), item);
-    }
+    batches.push(refs.slice(offset, offset + 100));
   }
+  const resolved = new Map<string, ResourceResolution>(
+    (await Promise.all(batches.map((batch) => resources.resolveMany(batch))))
+      .flat()
+      .map((item) => [resourceKey(item.resource), item]),
+  );
   return new Map(
     tickets.map((ticket) => [
       ticket.id,
