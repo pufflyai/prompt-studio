@@ -270,6 +270,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       retrySave={() => controllerRef.current?.retry()}
     />
   );
+  if (!open && editState.removed) return errorNotice;
   return (
     <Flex
       direction="column"
