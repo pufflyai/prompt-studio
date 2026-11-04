@@ -119,6 +119,7 @@ describe("extension catalog", () => {
       "pstdio-base-themes",
       "pstdio-skills",
       "pstdio-performance",
+      "pstdio-cloud",
     ]);
   });
 });

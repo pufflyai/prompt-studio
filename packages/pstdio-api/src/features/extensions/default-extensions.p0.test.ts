@@ -21,6 +21,7 @@ describe("resolveDefaultExtensionsConfig", () => {
       "pstdio-base-themes",
       "pstdio-skills",
       "pstdio-performance",
+      "pstdio-cloud",
     ]);
   });
 
@@ -283,6 +284,7 @@ describe("installDefaultExtensions sources", () => {
       "pstdio-base-themes",
       "pstdio-skills",
       "pstdio-performance",
+      "pstdio-cloud",
     ]);
     expect(
       calls.every(
