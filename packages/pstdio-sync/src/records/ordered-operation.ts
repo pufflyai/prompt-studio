@@ -46,6 +46,12 @@ export interface OrderedOperation {
     condition?: Observation;
   }[];
 }
+/** Delivery coordinates can change after true relay loss; authored conditions remain immutable. */
+export interface OrderedAdmission {
+  epoch: string;
+  operation: OrderedOperation;
+  dependencies: { operationId: string; fingerprint: string; epoch: string }[];
+}
 export interface OrderedDecision {
   epoch: string;
   operationId: string;

@@ -18,6 +18,7 @@ export {
 } from "./native-record-source";
 export {
   applyOrderedOperation,
+  type OrderedAdmission,
   type OrderedDecision,
   type OrderedEdit,
   type OrderedOperation,
