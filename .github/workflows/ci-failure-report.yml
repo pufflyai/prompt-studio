@@ -164,7 +164,20 @@ jobs:
       - name: Diagnose unsigned Intel desktop build
         if: ${{ !cancelled() && matrix.platform_pkg == 'cli-darwin-x64' }}
         shell: bash
-        run: bun run --cwd clients/desktop package -- --arch=x64 > native-desktop-build.log 2>&1
+        run: |
+          status=0
+          bun run --cwd clients/desktop package -- --arch=x64 > native-desktop-build.log 2>&1 || status=$?
+          if [[ "$status" != 0 ]]; then
+            python3 - <<'PYTHON'
+          import pathlib, re
+          text = pathlib.Path("native-desktop-build.log").read_text(errors="replace")[-12000:]
+          text = re.sub(r"https?://\S+", "[URL]", text)
+          text = re.sub(r"Bearer\s+\S+", "Bearer [REDACTED]", text)
+          text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+          print("::error title=Unsigned Intel desktop build::" + text)
+          PYTHON
+          fi
+          exit "$status"
       - name: Preserve native diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4

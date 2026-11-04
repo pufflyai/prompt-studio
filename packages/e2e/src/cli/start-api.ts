@@ -1,8 +1,8 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 import { stopChildProcess } from "../scripts/child-process";
 import { waitForProcessReady } from "../scripts/process-readiness";
@@ -52,6 +52,8 @@ export const startApi = async (options: StartApiOptions = {}) => {
   const port = await getFreePort();
   const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
   const storagePath = join(homePath, "storage");
+  const evidenceRoot = join(import.meta.dirname, "../../test-results/source-runtime");
+  mkdirSync(evidenceRoot, { recursive: true });
 
   const child = spawn("bun", ["run", "../../packages/pstdio-api/src/server.ts"], {
     cwd: join(import.meta.dirname, "../.."),
@@ -64,6 +66,7 @@ export const startApi = async (options: StartApiOptions = {}) => {
       PSTDIO_EVENT_BUS_BUFFER_SIZE:
         options.eventBusBufferSize !== undefined ? String(options.eventBusBufferSize) : undefined,
       PSTDIO_HOME: homePath,
+      PSTDIO_LOG_PATH: join(evidenceRoot, `${basename(homePath)}.jsonl`),
       HOME: homePath,
       ...options.env,
     },

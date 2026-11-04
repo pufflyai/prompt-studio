@@ -12,7 +12,12 @@ import type { CommandRegistry } from "../commands/command-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import { getNavigationTargetKey } from "../navigation/navigation-target-key";
 import type { PreferenceRegistry } from "../preferences/preference-registry";
-import { readShortcutPreferences, type ShortcutLayer, sharedShortcutLayer } from "./shortcut-preferences";
+import {
+  readShortcutPreferences,
+  type ShortcutLayer,
+  type ShortcutPreferences,
+  sharedShortcutLayer,
+} from "./shortcut-preferences";
 
 export interface Keybinding {
   id?: string;
@@ -97,8 +102,8 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
   const getId = (binding: Keybinding) =>
     binding.id ??
     `${binding.sourceExtensionId ?? "workbench"}:${binding.layer ?? "direct"}:${getNavigationTargetKey(binding.action)}`;
-  const resolve = (binding: RegisteredKeybinding) => {
-    const override = readShortcutPreferences(deps.preferences?.()).overrides[getId(binding)];
+  const resolveWithPreferences = (binding: RegisteredKeybinding, preferences: ShortcutPreferences) => {
+    const override = preferences.overrides[getId(binding)];
     const assigned = override?.layer === "direct" ? undefined : (override?.layer ?? binding.layer);
     const layer = assigned ? sharedShortcutLayer(assigned) : undefined;
     let defaultScope: Keybinding["targetScope"];
@@ -158,7 +163,7 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
   return {
     store,
     getId,
-    resolve,
+    resolve: (binding) => resolveWithPreferences(binding, readShortcutPreferences(deps.preferences?.())),
     listCatalog,
 
     registerKeybinding(keybinding, metadata) {
@@ -188,10 +193,13 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     },
 
     listActiveKeybindings() {
+      // Resolve a profile against one settings snapshot. In the browser every
+      // read can cross localStorage and parse the complete preference document.
+      const preferences = readShortcutPreferences(deps.preferences?.());
       const bindings = [...store.getState().keybindings].sort(byContributionPriority);
       const declared = new Set(bindings.map(getId));
       const assigned = new Set(
-        Object.entries(readShortcutPreferences(deps.preferences?.()).overrides)
+        Object.entries(preferences.overrides)
           .filter(
             ([id, value]) =>
               !declared.has(id) &&
@@ -205,7 +213,7 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       // Input dispatch must not enumerate page/menu providers on every layout change.
       if (assigned.size) bindings.push(...listCatalog().filter((binding) => assigned.has(getId(binding))));
       return bindings
-        .map(resolve)
+        .map((binding) => resolveWithPreferences(binding, preferences))
         .filter(
           (binding) =>
             !binding.disabled &&
@@ -216,9 +224,10 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     },
 
     listCommandKeybindings() {
+      const preferences = readShortcutPreferences(deps.preferences?.());
       return [...store.getState().keybindings]
         .sort(byContributionPriority)
-        .map(resolve)
+        .map((binding) => resolveWithPreferences(binding, preferences))
         .filter((record) => !record.layer && !record.disabled)
         .flatMap((record) =>
           record.action.kind === "command"

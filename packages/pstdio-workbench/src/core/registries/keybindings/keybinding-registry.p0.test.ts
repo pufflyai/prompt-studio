@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { createContextKeyService } from "../../shared/context/context-key-service";
 import { createWorkbench } from "../../workbench-core";
 import { createCommandRegistry } from "../commands/command-registry";
+import { createPreferenceRegistry } from "../preferences/preference-registry";
 import { createKeybindingRegistry } from "./keybinding-registry";
+import { SHORTCUT_PREFERENCE_KEY } from "./shortcut-preferences";
 
 test("direct input dispatch does not enumerate unassigned navigation actions", () => {
   const commands = createCommandRegistry();
@@ -135,3 +137,33 @@ test("only chords holding Alt, Ctrl or Cmd work while typing", () => {
   );
   expect(typing).toEqual({ plain: false, shifted: false, held: true, command: true });
 });
+
+for (const commandHints of [false, true]) {
+  test(`resolves ${commandHints ? "command hints" : "active shortcuts"} from one preference snapshot`, () => {
+    const commands = createCommandRegistry();
+    const preferences = createPreferenceRegistry();
+    let generation = 0;
+    preferences.registerValueAdapter(SHORTCUT_PREFERENCE_KEY, {
+      get: () => {
+        const keybinding = generation++ === 0 ? "Alt+J" : "Alt+K";
+        return {
+          overrides: Object.fromEntries(Array.from({ length: 20 }, (_, index) => [`open-${index}`, { keybinding }])),
+        };
+      },
+      set() {},
+    });
+    const keybindings = createKeybindingRegistry({
+      commands,
+      context: createContextKeyService(),
+      preferences: () => preferences,
+    });
+    for (let index = 0; index < 20; index++) {
+      const id = `open-${index}`;
+      commands.registerCommand({ id, label: id }, { execute() {} });
+      keybindings.registerKeybinding({ id, action: { kind: "command", commandId: id }, keybinding: "Alt+X" });
+    }
+    const read = () => (commandHints ? keybindings.listCommandKeybindings() : keybindings.listActiveKeybindings());
+    expect(new Set(read().map((binding) => binding.keybinding))).toEqual(new Set(["Alt+J"]));
+    expect(new Set(read().map((binding) => binding.keybinding))).toEqual(new Set(["Alt+K"]));
+  });
+}
