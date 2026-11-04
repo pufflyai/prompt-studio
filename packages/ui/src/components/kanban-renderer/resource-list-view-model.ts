@@ -42,6 +42,9 @@ interface ResourceListItemsInput {
   onCreate?: (groupKey: string) => void;
 }
 
+// List identities have separate namespaces; callbacks retain the provider resource ID.
+export const resourceListRowId = (id: string) => JSON.stringify(["resource", id]);
+
 /** Group headers and nested children are not parent-resource results. */
 export const countResourceListRows = (items: KanbanRendererListItem[]) =>
   items.reduce((total, item) => total + (item.isGroup ? (item.children?.length ?? 0) : 1), 0);
@@ -62,7 +65,7 @@ export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRen
   const properties = settings.displayProperties.filter((property) => property !== "id");
   const sorted = (values: KanbanRendererRow[]) => (input.page ? values : sortRowsByView(values, sorts, fields));
   const rowItem = (row: KanbanRendererRow, child = false): KanbanRendererListItem => ({
-    id: row.id,
+    id: resourceListRowId(row.id),
     title: row.title,
     expandOnClick: false,
     eyebrow: typeof row.attributes.id === "string" ? row.attributes.id : undefined,
@@ -102,7 +105,7 @@ export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRen
   ).map((group) => {
     const option = field ? findEnumOption(field.type, group.key) : undefined;
     return {
-      id: `group::${group.key}`,
+      id: JSON.stringify(["group", group.key]),
       title: group.label,
       isGroup: true,
       countBadge: group.count ?? group.rows.length,

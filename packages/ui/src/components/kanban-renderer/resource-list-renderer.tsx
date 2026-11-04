@@ -7,7 +7,12 @@ import type { KanbanRendererProps } from "./kanban-renderer";
 import { KanbanRendererContent } from "./kanban-renderer-content";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
 import { KanbanRendererToolbar } from "./kanban-renderer-toolbar";
-import { buildResourceListItems, countResourceListRows, resourceListSettings } from "./resource-list-view-model";
+import {
+  buildResourceListItems,
+  countResourceListRows,
+  resourceListRowId,
+  resourceListSettings,
+} from "./resource-list-view-model";
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 import { useResolvedAttributes } from "./use-resolved-attributes";
 
@@ -67,7 +72,7 @@ export const ResourceListRenderer = (props: ResourceListRendererProps) => {
         onBoardMoveToGroup={() => {}}
         listExpandedGroups={state.expandedGroups}
         onListExpandedGroupChange={state.setExpandedGroup}
-        selectedRowId={props.selectedRowId ?? null}
+        selectedRowId={props.selectedRowId == null ? null : resourceListRowId(props.selectedRowId)}
         emptyState={props.emptyState}
         emptyTitle={props.emptyTitle || "No resources found"}
         emptyDescription={props.emptyDescription ?? ""}

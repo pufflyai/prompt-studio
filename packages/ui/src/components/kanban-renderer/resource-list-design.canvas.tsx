@@ -26,11 +26,12 @@ export const GroupedAndNested = () => (
           title: "This device",
           isGroup: true,
           countBadge: 1,
+          onCreate: () => {},
           statusIcon: Circle,
           statusColorPalette: "green",
           children: [
             {
-              id: "workspace",
+              id: '["resource","group::local"]',
               eyebrow: "WS-12",
               title: "Improve search",
               statusIcon: FolderGit2,

@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, IconButton, Text, Wrap } from "@chakra-ui/react";
+import { Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
 import type { DragEvent } from "react";
 import { HighlightedText } from "../collection-view/highlighted-text";
@@ -67,19 +67,6 @@ const KanbanRendererListBadges = (props: KanbanRendererListItemContentProps) => 
 
   return (
     <HStack gap="xs" flexShrink={0}>
-      {item.onCreate ? (
-        <IconButton
-          aria-label={`Add to ${item.title}`}
-          variant="ghost"
-          size="2xs"
-          onClick={(event) => {
-            event.stopPropagation();
-            item.onCreate?.();
-          }}
-        >
-          <Plus />
-        </IconButton>
-      ) : null}
       <Wrap gap="2xs" flexShrink={0}>
         {item.badges?.map((badge) => (
           <KanbanRendererAttributeBadge key={badge.attributeId} badge={badge} onChange={item.onBadgeChange} />
@@ -92,7 +79,7 @@ const KanbanRendererListBadges = (props: KanbanRendererListItemContentProps) => 
 
 // ListRow only reserves end space when endContent is set, so rows without badges pass null.
 const hasEndContent = (item: KanbanRendererListItem) =>
-  Boolean(item.onCreate) || (item.badges?.length ?? 0) > 0 || (item.customSlots?.length ?? 0) > 0;
+  (item.badges?.length ?? 0) > 0 || (item.customSlots?.length ?? 0) > 0;
 
 const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): ListRowItem => ({
   id: item.id,
@@ -106,6 +93,10 @@ const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): L
       color={item.statusColor ?? (item.isGroup || item.statusColorPalette ? "colorPalette.solid" : "fg.muted")}
     />
   ) : undefined,
+  actions: item.onCreate
+    ? [{ id: "create", label: `Add to ${item.title}`, icon: <Plus />, onAction: item.onCreate }]
+    : undefined,
+  actionsVisibility: "always",
   endContent: hasEndContent(item) ? <KanbanRendererListBadges item={item} /> : null,
   isContainer: hasChildren,
   contextMenuItems: item.contextMenuActions?.map((action) => ({
