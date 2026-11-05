@@ -13,6 +13,11 @@ export const createMarkdownTextDocument = (shared: Y.Doc, beforeRemote?: () => v
   const listeners = new Set<(source: string, origin: ChangeOrigin) => void>();
   let composition: Y.Doc | undefined;
   let rendered = text.toString();
+  let inputGroup: object | undefined;
+  const stopCapturing = () => {
+    history.stopCapturing();
+    inputGroup = undefined;
+  };
   const deliver = (source: string, origin: ChangeOrigin) => {
     rendered = source;
     for (const listener of listeners) listener(source, origin);
@@ -45,34 +50,46 @@ export const createMarkdownTextDocument = (shared: Y.Doc, beforeRemote?: () => v
     get text() {
       return (composition ?? replica).getText("content");
     },
-    write(source: string) {
+    write(source: string, group?: object) {
       const document = composition ?? replica;
       const target = document.getText("content");
       const changes = diffChars(target.toString(), source);
-      document.transact(() => {
-        let index = 0;
-        for (const change of changes) {
-          if (change.removed) target.delete(index, change.value.length);
-          else {
-            if (change.added) target.insert(index, change.value);
-            index += change.value.length;
+      const changed = changes.some((change) => change.added || change.removed);
+      const captureTimeout = history.captureTimeout;
+      if (!composition && changed && group) {
+        // Publication cadence must not split one input-owned history group.
+        if (group === inputGroup) history.captureTimeout = Number.POSITIVE_INFINITY;
+        else stopCapturing();
+      }
+      try {
+        document.transact(() => {
+          let index = 0;
+          for (const change of changes) {
+            if (change.removed) target.delete(index, change.value.length);
+            else {
+              if (change.added) target.insert(index, change.value);
+              index += change.value.length;
+            }
           }
-        }
-      }, localOrigin);
+        }, localOrigin);
+      } finally {
+        history.captureTimeout = captureTimeout;
+      }
+      if (!composition && changed) inputGroup = group;
       rendered = target.toString();
       return !composition;
     },
     applyLocalUpdate(update: Uint8Array) {
       const document = composition ?? replica;
       const before = document.getText("content").toString();
-      history.stopCapturing();
+      stopCapturing();
       Y.applyUpdate(document, update, localOrigin);
-      history.stopCapturing();
+      stopCapturing();
       if (!composition && before !== text.toString()) publish("edit");
     },
     setComposing(value: boolean) {
       if (Boolean(composition) === value) return;
-      history.stopCapturing();
+      stopCapturing();
       if (value) {
         composition = new Y.Doc({ gc: false });
         Y.applyUpdate(composition, Y.encodeStateAsUpdate(replica));
@@ -92,7 +109,7 @@ export const createMarkdownTextDocument = (shared: Y.Doc, beforeRemote?: () => v
       } finally {
         committed.destroy();
       }
-      history.stopCapturing();
+      stopCapturing();
       applyRemote();
       publish("composition");
     },
@@ -103,10 +120,16 @@ export const createMarkdownTextDocument = (shared: Y.Doc, beforeRemote?: () => v
       };
     },
     undo() {
-      if (!composition) history.undo();
+      if (!composition) {
+        stopCapturing();
+        history.undo();
+      }
     },
     redo() {
-      if (!composition) history.redo();
+      if (!composition) {
+        stopCapturing();
+        history.redo();
+      }
     },
     destroy() {
       shared.off("update", receive);

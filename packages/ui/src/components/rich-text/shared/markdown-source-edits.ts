@@ -68,10 +68,8 @@ const withoutPosition = (value: unknown): unknown => {
 const sameMarkdownNode = (left: unknown, right: unknown) =>
   JSON.stringify(withoutPosition(left)) === JSON.stringify(withoutPosition(right));
 
-const tablesIn = (markdown: string) =>
-  parseMarkdownSource(markdown).children.filter(
-    (node): node is Table => node.type === "table" && Boolean(node.position),
-  );
+const tablesIn = (markdown: string, parse: typeof parseMarkdownSource) =>
+  parse(markdown).children.filter((node): node is Table => node.type === "table" && Boolean(node.position));
 
 const tableCells = (table: Table) => table.children.flatMap((row) => row.children);
 
@@ -163,10 +161,15 @@ const editsForTable = (
   ];
 };
 
-const collectTableChanges = (source: string, baseline: string, current: string): TableChanges => {
-  const sourceTables = tablesIn(source);
-  const baselineTables = tablesIn(baseline);
-  const currentTables = tablesIn(current);
+const collectTableChanges = (
+  source: string,
+  baseline: string,
+  current: string,
+  parse: typeof parseMarkdownSource,
+): TableChanges => {
+  const sourceTables = tablesIn(source, parse);
+  const baselineTables = tablesIn(baseline, parse);
+  const currentTables = tablesIn(current, parse);
 
   if (sourceTables.length !== baselineTables.length || baselineTables.length !== currentTables.length) {
     return { edits: [], normalizedCurrent: current };
@@ -200,22 +203,24 @@ export const applyMarkdownSourceChanges = (
   source: string,
   baseline: string,
   current: string,
-  sourceMap: SourceMap = buildSourceMap(baseline, source),
+  sourceMap?: SourceMap,
+  parse = parseMarkdownSource,
 ) => {
   if (baseline === current) return source;
 
-  const linkChanges = collectMarkdownLinkChanges(source, baseline, current);
-  const tableChanges = collectTableChanges(source, baseline, linkChanges.normalizedCurrent);
+  const sourceMapping = sourceMap ?? buildSourceMap(baseline, source, parse);
+  const linkChanges = collectMarkdownLinkChanges(source, baseline, current, parse);
+  const tableChanges = collectTableChanges(source, baseline, linkChanges.normalizedCurrent, parse);
 
   // Lexical reports semantic Markdown but normalizes its spelling. Map those
   // semantic edits back onto the loaded source so unrelated syntax never moves.
   const edits = collectEdits(baseline, tableChanges.normalizedCurrent)
     .map((edit) => {
       const start =
-        edit.start === edit.end ? mappedInsertion(sourceMap, edit.start) : mappedStart(sourceMap, edit.start);
+        edit.start === edit.end ? mappedInsertion(sourceMapping, edit.start) : mappedStart(sourceMapping, edit.start);
       return {
         start,
-        end: edit.start === edit.end ? start : mappedEnd(sourceMap, edit.end),
+        end: edit.start === edit.end ? start : mappedEnd(sourceMapping, edit.end),
         replacement: withSourceLineEndings(edit.replacement, source),
       };
     })

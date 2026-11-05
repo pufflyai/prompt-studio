@@ -122,6 +122,9 @@ test("native public editors preserve selection and table drafts retain foreign e
   await secondPage.route("**/text-editing/request", rightAdmission);
   try {
     await Promise.all([left.fill("Left: Shared source"), right.fill("Shared source: Right")]);
+    // Ordinary typing must not position or reveal the inactive link editor.
+    await expect(nativePage.locator(".link-editor").first()).not.toHaveClass(/active/);
+    await expect(nativePage.locator(".link-editor").first()).toHaveCSS("opacity", "0");
     await expect.poll(() => held.size).toBe(2);
     await expect(left).toHaveText("Left: Shared source");
     await expect(right).toHaveText("Shared source: Right");
