@@ -1,5 +1,5 @@
 import { Center, CloseButton } from "@chakra-ui/react";
-import { ScopedDialog as Dialog, Portal } from "@pstdio/ui";
+import { ScopedDialog as Dialog, Portal, ScrollArea } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
@@ -165,6 +165,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const renderer = widget ? renderers[widget.rendererId] : undefined;
   const canCloseOverlay = open && placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
+  const pageDialog = Boolean(placement.pageContext);
 
   const body = renderer ? (
     (renderer.render({
@@ -172,6 +173,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
       panel: toPanelContribution(widget),
       instance: toPanelInstance(placement),
       refresh: () => undefined,
+      sizing: pageDialog ? "content-height" : undefined,
     }) as ReactNode)
   ) : (
     <WorkbenchOverlayFallback label={`No renderer registered for ${widget.rendererId}.`} />
@@ -199,6 +201,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   return (
     <Dialog.Root
       {...dialogRootConfig}
+      variant={pageDialog ? "create" : undefined}
       open={open}
       onOpenChange={handleOpenChange}
       onInteractOutside={handleInteractOutside}
@@ -223,9 +226,27 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
             minH={contentMinHeight}
             w={contentWidth}
             maxW={contentMaxWidth}
+            display={pageDialog ? "flex" : undefined}
+            flexDirection={pageDialog ? "column" : undefined}
           >
-            {body}
-            {canCloseOverlay ? (
+            {pageDialog ? (
+              <>
+                <Dialog.Header>
+                  <Dialog.Title>{closeLabel}</Dialog.Title>
+                  {canCloseOverlay ? (
+                    <Dialog.CloseTrigger asChild>
+                      <CloseButton size="sm" aria-label={`Close ${closeLabel}`} />
+                    </Dialog.CloseTrigger>
+                  ) : null}
+                </Dialog.Header>
+                <Dialog.Body p="0" minH="0" overflow="hidden">
+                  <ScrollArea h="full">{body}</ScrollArea>
+                </Dialog.Body>
+              </>
+            ) : (
+              body
+            )}
+            {canCloseOverlay && !pageDialog ? (
               <Dialog.CloseTrigger asChild>
                 <CloseButton position="absolute" top="2" right="2" size="sm" aria-label={`Close ${closeLabel}`} />
               </Dialog.CloseTrigger>

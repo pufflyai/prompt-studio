@@ -80,7 +80,7 @@ const ResourceMenuContent = (props: {
   );
 };
 
-const useResourceMenuActions = (closeOnSelect: boolean | undefined) => {
+const useResourceMenuActions = (closeOnSelect: boolean | undefined, beforeAction?: () => void) => {
   const pendingAction = useRef<ResourceContextAction | null>(null);
   return {
     onSelect: (action: ResourceContextAction) => {
@@ -92,7 +92,10 @@ const useResourceMenuActions = (closeOnSelect: boolean | undefined) => {
       const action = pendingAction.current;
       pendingAction.current = null;
       // Closing menus finish their scheduled focus changes before an action focuses an input or dialog.
-      void action?.onClick?.();
+      if (action) {
+        beforeAction?.();
+        void action.onClick?.();
+      }
     },
   };
 };
@@ -139,6 +142,7 @@ interface ResourceContextMenuMachineProps {
   onEscapeKeyDown: () => void;
   onTriggerPropsChange: (triggerProps: ContextTriggerProps | null) => void;
   onOpeningSent: () => void;
+  restoreTriggerFocus: () => void;
 }
 
 /** The menu machine for one trigger, mounted when that trigger first asks for its menu. */
@@ -155,8 +159,9 @@ const ResourceContextMenuMachine = (props: ResourceContextMenuMachineProps) => {
     getAnchorRect,
     onEscapeKeyDown,
     onTriggerPropsChange,
+    restoreTriggerFocus,
   } = props;
-  const { onSelect, onExitComplete } = useResourceMenuActions(closeOnSelect);
+  const { onSelect, onExitComplete } = useResourceMenuActions(closeOnSelect, restoreTriggerFocus);
   const menu = useMenu({
     ids: { contextTrigger: triggerId },
     positioning: { ...positioning, strategy: "fixed", getAnchorRect },
@@ -211,6 +216,7 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
   } = props;
   const triggerId = useId();
   const keyboardTrigger = useRef<HTMLElement | null>(null);
+  const actionTrigger = useRef<HTMLElement | null>(null);
   const contextAnchor = useRef({ x: 0, y: 0, width: 0, height: 0 });
   // Lists draw many triggers, so each one starts its menu machine on its first use instead of on mount.
   const [machine, setMachine] = useState<{ opening: ContextMenuOpening | null } | null>(null);
@@ -219,6 +225,11 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
   if (actions.length === 0 && !keepMountedWhenEmpty) {
     return <>{children}</>;
   }
+
+  const rememberActionTrigger = (trigger: HTMLElement) => {
+    const focused = trigger.ownerDocument.activeElement;
+    actionTrigger.current = focused instanceof HTMLElement && trigger.contains(focused) ? focused : trigger;
+  };
 
   const startMachine = (nextOpening: ContextMenuOpening) => {
     if (!machine) setMachine({ opening: nextOpening });
@@ -233,6 +244,7 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
         onPointerDown={(event) => {
           if (actions.length === 0 || event.pointerType === "mouse") return;
           keyboardTrigger.current = null;
+          rememberActionTrigger(event.currentTarget);
           // Only the nearest populated menu starts the shared touch-hold gesture.
           event.stopPropagation();
           const point = { x: event.clientX, y: event.clientY };
@@ -263,6 +275,7 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
         onContextMenu={(event) => {
           keyboardTrigger.current = null;
           if (actions.length > 0 && !event.defaultPrevented) {
+            rememberActionTrigger(event.currentTarget);
             const point = { x: event.clientX, y: event.clientY };
             contextAnchor.current = { ...point, width: 0, height: 0 };
             event.stopPropagation();
@@ -282,6 +295,10 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
           triggerId={triggerId}
           opening={machine.opening}
           onOpeningSent={() => setMachine({ opening: null })}
+          restoreTriggerFocus={() => {
+            // Positioned menus have no normal trigger to restore. Restore their origin before an action opens a dialog.
+            if (actionTrigger.current?.isConnected) actionTrigger.current.focus({ preventScroll: true });
+          }}
           actions={actions}
           contentMinWidth={contentMinWidth}
           contentBackground={contentBackground}
