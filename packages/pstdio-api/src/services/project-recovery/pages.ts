@@ -77,7 +77,6 @@ const pageSchema = z.discriminatedUnion("kind", [
     children: z.array(recoveryChunkSchema).min(1).max(pageItems),
   }),
 ]);
-export type RecoveryPage = z.infer<typeof pageSchema>;
 type ChunkStore = Awaited<ReturnType<typeof createRecoveryChunkStore>>;
 const encoder = new TextEncoder();
 
