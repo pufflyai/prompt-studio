@@ -1,5 +1,5 @@
-import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, ScrollArea } from "@pstdio/ui";
+import { Box, Button, HStack, Icon, Stack, Text, useRecipe } from "@chakra-ui/react";
+import { AlertMessage, psTheme, ScrollArea } from "@pstdio/ui";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, TriangleAlert } from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";
@@ -64,6 +64,7 @@ const StepHeading = (props: { text: string; viewport: RefObject<HTMLDivElement |
 };
 export const Onboarding = (props: OnboardingProps) => {
   const { info, update, onComplete } = props;
+  const button = useRecipe({ recipe: psTheme.getRecipe("button") });
   const { t } = useTranslation("common");
   const [step, setStep] = useState<"harnesses" | "work">("harnesses");
   const [harnesses, setHarnesses] = useState(
@@ -159,7 +160,7 @@ export const Onboarding = (props: OnboardingProps) => {
         )}
         <Button
           size="sm"
-          variant="primary"
+          css={button({ variant: "primary", size: "sm" })}
           loading={saving}
           onClick={() =>
             void save(step === "harnesses" ? { step: "harnesses", harnesses } : { step: "complete", workAreas })
