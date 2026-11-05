@@ -6,14 +6,6 @@ on:
     - cron: "17 21 * * 0"
   workflow_dispatch:
     inputs:
-      native_diagnostics:
-        description: Diagnose release fixtures on their native platforms without publishing
-        type: boolean
-        default: false
-      bridge_diagnostics:
-        description: Exercise the relay process boundary on Windows without building a release
-        type: boolean
-        default: false
       run_id:
         description: Optional run whose failed job logs should be preserved instead of collecting the weekly report
         type: string
@@ -25,7 +17,7 @@ permissions:
 
 jobs:
   report:
-    if: inputs.run_id == '' && !inputs.native_diagnostics && !inputs.bridge_diagnostics
+    if: inputs.run_id == ''
     runs-on: ubuntu-latest
     # The week to 2026-11-01 needed about 2,700 API requests. The token's 1,000 per hour are
     # shared with every workflow, so the collector keeps 300 in reserve and waits for each reset.
@@ -51,7 +43,7 @@ jobs:
           if-no-files-found: warn
 
   failure_logs:
-    if: inputs.run_id != '' && !inputs.native_diagnostics && !inputs.bridge_diagnostics
+    if: inputs.run_id != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -111,78 +103,4 @@ jobs:
         with:
           name: failed-job-logs-${{ inputs.run_id }}
           path: failure-logs
-          if-no-files-found: error
-
-  native_diagnostics:
-    if: inputs.native_diagnostics
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: windows-2025, platform_pkg: cli-win-x64 }
-          - { os: windows-11-arm, platform_pkg: cli-win-arm64 }
-    env:
-      PSTDIO_BUILD_PLATFORM_PKG: ${{ matrix.platform_pkg }}
-      CI_PRIORITY: P2
-      CI_PROFILE: production
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24.22.1"
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          install-strategy: native
-          windows-dev-drive: "true"
-      - name: Build native diagnostic runtime and source fixtures
-        shell: bash
-        run: bun run --cwd scripts build:all > native-build.log 2>&1
-      - name: Diagnose Windows CLI project provisioning
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/pstdio.exe
-        working-directory: packages/e2e
-        shell: bash
-        run: bun test src/packaged/packaged.p1.test.ts > ../../native-fixtures.log 2>&1
-      - name: Preserve native diagnostic evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-release-diagnostics-${{ matrix.platform_pkg }}
-          path: |
-            native-*.log
-            packages/e2e/test-results
-            test-results/ci/bun/packages/e2e
-          if-no-files-found: error
-
-  bridge_diagnostics:
-    if: inputs.bridge_diagnostics
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-2025, windows-11-arm]
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          install-strategy: native
-          windows-dev-drive: "true"
-      - name: Await native process I/O before checking the rejection
-        shell: bash
-        run: bun test packages/e2e/src/packaged/packaged-cloud-peer.fixture.p0.test.ts > bridge-fixture.log 2>&1
-      - name: Preserve process boundary evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: bridge-diagnostics-${{ matrix.os }}
-          path: bridge-fixture.log
           if-no-files-found: error
