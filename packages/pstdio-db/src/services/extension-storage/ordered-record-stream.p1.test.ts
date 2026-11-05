@@ -169,6 +169,60 @@ test("ready saves share a bounded transport batch while keeping their individual
   expect(first.wire.requests.updates - before).toBeLessThan(126);
 });
 
+test("a page of small shared edits keeps large record values and refuses a stale conditional group", async () => {
+  const started = performance.now();
+  const phase = (phase: string) => console.log(JSON.stringify({ phase, elapsedMs: performance.now() - started }));
+  const [first, second] = await peers();
+  phase("large-marker-fixtures");
+  const value = "x".repeat(200_000);
+  await first.records.commit({
+    operationId: "large-marker-seed",
+    edits: Array.from({ length: 8 }, (_, index) => ({ recordId: `large-${index}`, replace: value })),
+  });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  phase("large-marker-seed-synced");
+  const observed = await second.records.read("large-0");
+  for (let tick = 0; tick < 126; tick++) {
+    await first.records.commit({
+      operationId: `large-marker-${tick}`,
+      edits: Array.from({ length: 8 }, (_, index) => ({
+        recordId: `large-${index}`,
+        shared: [{ kind: "map.set" as const, key: "compactionTick", value: tick }],
+      })),
+    });
+    if (tick % 32 === 31) phase(`large-markers-${tick + 1}`);
+  }
+  phase("large-marker-authored");
+  // A stale condition must still refuse the whole group after the small edits order.
+  await second.records.commit({
+    operationId: "large-marker-stale",
+    edits: [
+      {
+        recordId: "large-0",
+        expectedRevision: observed.revision,
+        shared: [{ kind: "map.set", key: "compactionTick", value: 999 }],
+      },
+      { recordId: "atomic-sibling", replace: "discard" },
+    ],
+  });
+  await first.sync.synchronize();
+  phase("large-marker-first-drained");
+  await second.sync.synchronize();
+  phase("large-marker-second-drained");
+  await first.sync.synchronize();
+  for (const device of [first, second]) {
+    expect(await device.records.read("large-7")).toMatchObject({
+      value,
+      shared: { kind: "map", value: { compactionTick: 125 } },
+    });
+    expect((await device.records.read("atomic-sibling")).exists).toBe(false);
+    expect(device.failures).toEqual([]);
+  }
+  // Save outcomes belong to the author; the peer observes the resulting records.
+  expect(await second.records.outcome("large-marker-stale")).toMatchObject({ state: "refused" });
+});
+
 test("a save larger than the transport batch stays whole through blob upload before the next save", async () => {
   const [first, second] = await peers();
   await first.records.commit({ operationId: "blob-batch-seed", edits: [{ recordId: "seed", replace: true }] });

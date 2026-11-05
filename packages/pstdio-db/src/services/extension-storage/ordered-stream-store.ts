@@ -1,11 +1,12 @@
 import type { StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
-import type { OrderedAdmission } from "pstdio-sync/records";
+import { coreOwnerId, type OrderedAdmission } from "pstdio-sync/records";
 import type { DocumentRelay, RecordFrame, RecordStreamCursor, RecordStreamStore } from "pstdio-sync/relay";
 import { createOrderedReceiptIndex, type OrderedIndexReference } from "pstdio-sync/relay";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
+import { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import { indexOrderedCheckpoint, stageOrderedCheckpoint } from "./ordered-checkpoint";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { applyOrderedNativeAdmission } from "./ordered-native-apply";
@@ -120,14 +121,26 @@ export const createOrderedStreamStore = (
         if (!epoch) throw new Error("An ordered stream has no epoch");
         const changed = new Set<string>();
         const rejected: number[] = [];
+        const batch = owner.extensionId === coreOwnerId ? undefined : createOrderedCanonicalBatch(journal);
+        const group: typeof applyAdmission = async (journal, tx, admission, epoch) => {
+          if (admission.operation.edits.some((edit) => edit.texts?.length)) {
+            await batch?.flush();
+            return applyAdmission(journal, tx, admission, epoch);
+          }
+          return applyAdmission(batch?.journal ?? journal, tx, admission, epoch);
+        };
+        const native: typeof applyNative = async (...args) => {
+          await batch?.flush();
+          return applyNative(...args);
+        };
         for (const [position, frame] of frames.entries()) {
           if (!frame || !(await admissibleOrderedFrame(frame))) {
             rejected.push(position);
             continue;
           }
-          for (const id of await applyOrderedStreamFrame(journal, tx, frame, epoch, applyAdmission, applyNative))
-            changed.add(id);
+          for (const id of await applyOrderedStreamFrame(journal, tx, frame, epoch, group, native)) changed.add(id);
         }
+        await batch?.flush();
         const saved = await rebaseOrderedProjection(journal, tx, owner, [...changed]);
         const next = await coverOrderedReceiptRoot(journal, tx, owner, receiptIndex(), {
           ...cursor,
