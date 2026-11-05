@@ -56,7 +56,9 @@ const toRecordParams = (params: object | undefined) =>
   params && !Array.isArray(params) ? (params as Record<string, unknown>) : undefined;
 const maxReusedTreeNodes = 5000;
 const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
-  const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
+  // Node previews clone with object spreads; keep callback ownership on those clones.
+  const originalNode = Symbol("extensionTreeNode");
+  const getOriginalNode = (node: TreeNode) => (node as TreeNode & { [originalNode]?: ExtensionTreeNode })[originalNode];
   const runnerCommandId = `workbench.extensionTreeRenderer.${record.id}.command`;
   const resolveResource: (resource: ExtensionTreeResource) => ResourceRef = (resource) => {
     const resolved = input.resolveNodeResource?.(resource);
@@ -178,7 +180,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       canDrag: node.canDrag,
       canDrop: node.canDrop,
     };
-    originalNodes.set(mapped, node);
+    Object.assign(mapped, { [originalNode]: node });
     previousMappings.nodes.set(node.id, { node, mapped });
     return mapped;
   };
@@ -195,7 +197,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     }));
   const mapNodes = (nodes: ExtensionTreeNode[], ctx: TreeContext): TreeNode[] =>
     nodes.map((node) => mapNode(node, ctx));
-  return { mapNodes, mapSections, originalNodes, runnerCommandId };
+  return { mapNodes, mapSections, getOriginalNode, runnerCommandId };
 };
 const isTreeSectionArray = (value: unknown): value is ExtensionTreeSection[] =>
   Array.isArray(value) && value.every((section) => section && typeof section === "object" && "nodes" in section);
@@ -279,8 +281,8 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
       },
       moveNode: record.moveHandlerId
         ? async (source, target, ctx) => {
-            const originalSource = mapper.originalNodes.get(source);
-            const originalTarget = target ? mapper.originalNodes.get(target) : undefined;
+            const originalSource = mapper.getOriginalNode(source);
+            const originalTarget = target ? mapper.getOriginalNode(target) : undefined;
             if (!originalSource?.canDrag || (target && !originalTarget?.canDrop)) return;
             await executeCallback(input, record, record.moveHandlerId!, {
               ...createQueryParams(input, record, ctx),
@@ -293,7 +295,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
         : undefined,
       getChildren: async (node, ctx) => {
         if (!record.childrenHandlerId) return node.children ?? [];
-        const originalNode = mapper.originalNodes.get(node);
+        const originalNode = mapper.getOriginalNode(node);
         if (!originalNode) return node.children ?? [];
         const result = await executeCallback(
           input,
