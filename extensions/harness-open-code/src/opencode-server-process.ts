@@ -16,7 +16,9 @@ export const startOpencodeServer = async (options: OpencodeServerOptions, comman
   signal.throwIfAborted();
   const [file, ...args] = command;
   const launcher = opencodeServerCommand(file!);
+  const password = crypto.randomUUID();
   const child = spawn(launcher.file, [...args, "serve", "--hostname", host, "--port", String(port)], {
+    env: { ...process.env, OPENCODE_PASSWORD: password },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
     signal,
@@ -39,14 +41,21 @@ export const startOpencodeServer = async (options: OpencodeServerOptions, comman
 
   try {
     const url = await new Promise<string>((resolve, reject) => {
+      let address: string | undefined;
       timeout = setTimeout(
         () => reject(new Error(`Timed out waiting for Opencode server URL.\n${stderrTail}`)),
         120_000,
       );
       child.once("error", reject);
       reader.on("line", (line) => {
-        const prefix = "opencode server listening on ";
-        if (line.trim().startsWith(prefix)) resolve(line.trim().slice(prefix.length).trim());
+        const prefix = "server listening on ";
+        if (line.trim().startsWith(prefix)) address = line.trim().slice(prefix.length).trim();
+        if (address && password) {
+          const endpoint = new URL(address);
+          endpoint.username = "opencode";
+          endpoint.password = password;
+          resolve(endpoint.href.replace(/\/$/, ""));
+        }
       });
       reader.once("close", () => reject(new Error(`Opencode server exited before publishing its URL.\n${stderrTail}`)));
     });

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { emptyMessages } from "./native-api.test-helpers";
 import { createServerConnection } from "./opencode-server";
 import { createOpencodeService } from "./opencode-service";
 
@@ -84,7 +85,7 @@ test("a stopped owned server is replaced when a later request reconnects", async
   const service = createOpencodeService({
     startServer: async () => {
       started += 1;
-      const server = Bun.serve({ port: 0, fetch: () => Response.json([]) });
+      const server = Bun.serve({ port: 0, fetch: () => emptyMessages() });
       current = server;
       return {
         url: server.url.origin,

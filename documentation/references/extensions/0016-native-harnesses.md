@@ -52,7 +52,7 @@ SDK/host support must ship before released extensions rely on `getAuthentication
 | --- | --- | --- |
 | Codex | 0.157.0 | Oldest release whose app-server protocol matches every request, notification, and item the harness uses. Older releases change thread, item, and tool output shapes. The comparison and live checks are recorded in [ADR 0064](../../adrs/0064-codex-app-server-runtime.md#supported-versions). |
 | Claude Code | 2.1.203 | First release that reports `background_tasks_changed` in stream JSON. Older releases end the run at the first result and kill the agent's background tasks. The flags, model discovery, and `AskUserQuestion` channel the harness uses work from 2.1.100. |
-| OpenCode | 1.0.175 | First release that serves `/global/health` and `/question`. The harness finds its server through the health check and asks the agent's questions through the question API. Every other endpoint it calls works from 1.0.0. |
+| OpenCode | 2.2.5 | Uses the OpenCode 2 `/api` protocol, asynchronous prompt admission, session forms, and integration-based sign-in. The private CLI is `@opencode/cli` 2.2.5. |
 
 No harness has a maximum. The CLIs ship every one to three days, and the harnesses ignore events and items they do not know. A maximum would report the newest CLI as not installed.
 

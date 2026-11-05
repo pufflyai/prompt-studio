@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { ctx } from "./harness.test-helpers";
+import { acceptedPrompt, emptyMessages } from "./native-api.test-helpers";
 
 test("project disposal waits for a native abort already started by cancellation", async () => {
   const abortEntered = Promise.withResolvers<void>();
@@ -14,8 +15,8 @@ test("project disposal waits for a native abort already started by cancellation"
     port: 0,
     async fetch(request) {
       const path = new URL(request.url).pathname;
-      if (path === "/session") return Response.json({ id: "native" });
-      if (path === "/session/native/abort") {
+      if (path === "/api/session") return Response.json({ data: { id: "native" } });
+      if (path === "/api/session/native/interrupt") {
         aborts++;
         abortEntered.resolve();
         await releaseAbort.promise;
@@ -23,9 +24,9 @@ test("project disposal waits for a native abort already started by cancellation"
       }
       if (request.method === "POST") {
         await releasePrompt.promise;
-        return Response.json({ info: {}, parts: [] });
+        return acceptedPrompt();
       }
-      return Response.json([]);
+      return emptyMessages();
     },
   });
   const harness = createOpencodeHarness(
@@ -95,7 +96,7 @@ test("concurrent discovery shares startup across project contexts", async () => 
       },
       pingServer: async (url) => healthy.has(url),
       isPortOpen: async ({ port }) => listening.has(port),
-      fetcher: async () => Response.json([]),
+      fetcher: async () => emptyMessages(),
     },
   );
   const first: HarnessContext = { ...ctx, projectId: "first" };
@@ -125,7 +126,7 @@ test("disabling the last project stops its worker and preserves other projects u
       }),
       pingServer: async () => false,
       isPortOpen: async () => false,
-      fetcher: async () => Response.json([]),
+      fetcher: async () => emptyMessages(),
     },
   );
   const first: HarnessContext = { ...ctx, projectId: "first" };
@@ -149,7 +150,7 @@ test("disabling a project leaves an externally started OpenCode server running",
       },
       pingServer: async () => true,
       isPortOpen: async () => true,
-      fetcher: async () => Response.json([]),
+      fetcher: async () => emptyMessages(),
     },
   );
   await harness.getCommandState!(ctx, { cwd: "/project" });
@@ -174,7 +175,7 @@ test("disabling a project while discovery starts releases the worker before clea
       },
       pingServer: async () => false,
       isPortOpen: async () => false,
-      fetcher: async () => Response.json([]),
+      fetcher: async () => emptyMessages(),
     },
   );
   const discovery = harness.getCommandState!(ctx, { cwd: "/project" });

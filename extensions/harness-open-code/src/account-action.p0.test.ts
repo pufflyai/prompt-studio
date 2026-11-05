@@ -9,7 +9,7 @@ test("cancelling OpenCode sign-in releases its own server without touching the s
   const server = Bun.serve({ port: 0, fetch: () => Response.json({}) });
   const operation = authenticateOpencode(
     { net: { findFreePort: async () => server.port } } as HarnessContext,
-    { action: "login", provider: "openai", method: "0" },
+    { action: "login", provider: "openai", method: "key" },
     {
       signal: controller.signal,
       emit: async () => {},
@@ -29,9 +29,9 @@ test("cancelling OpenCode sign-in releases its own server without touching the s
         },
       }),
       fetcher: async (input) =>
-        new URL(String(input)).pathname === "/provider"
-          ? Response.json({ all: [{ id: "openai", name: "OpenAI", source: "custom", models: {} }], connected: [] })
-          : Response.json({ openai: [{ type: "api", label: "API key" }] }),
+        new URL(String(input)).pathname === "/api/provider"
+          ? Response.json({ data: [{ id: "openai", name: "OpenAI", integrationID: "openai" }] })
+          : Response.json({ data: [{ id: "openai", methods: [{ type: "key", label: "API key" }], connections: [] }] }),
     },
   );
   const result = operation.catch((error) => error);

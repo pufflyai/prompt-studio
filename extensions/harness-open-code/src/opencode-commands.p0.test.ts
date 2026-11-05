@@ -2,14 +2,16 @@ import { expect, test } from "bun:test";
 import { createCommandApi } from "./opencode-commands";
 import { createOpencodeService } from "./opencode-service";
 
-test("native commands use the session command endpoint and compaction uses summarize", async () => {
+test("native commands use the session command endpoint and compaction uses the compact endpoint", async () => {
   const requests: Array<{ url: string; body: unknown }> = [];
   const server = Bun.serve({
     port: 0,
     fetch: async (request) => {
       const url = new URL(request.url);
-      if (url.pathname === "/command")
-        return Response.json([{ name: "review", description: "Review the changes", template: "private template" }]);
+      if (url.pathname === "/api/provider") return Response.json({ data: [] });
+      if (url.pathname === "/api/command")
+        return Response.json({ data: [{ name: "review", description: "Review the changes" }] });
+      if (url.pathname.endsWith("/wait")) return new Response(null, { status: 204 });
       requests.push({ url: url.pathname, body: await request.json() });
       return Response.json(true);
     },
@@ -23,10 +25,10 @@ test("native commands use the session command endpoint and compaction uses summa
   try {
     expect(await service.getCommands("/repo")).toEqual([{ name: "/review", description: "Review the changes" }]);
     await service.runCommand({ sessionId: "ses_one", text: "/review keep  spaces", cwd: "/repo" });
-    await service.runCommand({ sessionId: "ses_one", text: "/compact", model: "openai/gpt-5", cwd: "/repo" });
+    await service.runCommand({ sessionId: "ses_one", text: "/compact ", model: "openai/gpt-5", cwd: "/repo" });
     expect(requests).toEqual([
-      { url: "/session/ses_one/command", body: { command: "review", arguments: "keep  spaces" } },
-      { url: "/session/ses_one/summarize", body: { providerID: "openai", modelID: "gpt-5", auto: false } },
+      { url: "/api/session/ses_one/command", body: { name: "review", text: "keep  spaces" } },
+      { url: "/api/session/ses_one/compact", body: {} },
     ]);
   } finally {
     server.stop(true);
@@ -40,9 +42,10 @@ test("unchanged command definitions are reused, expire, and refresh after a nati
   const server = Bun.serve({
     port: 0,
     fetch: (request) => {
-      if (new URL(request.url).pathname === "/command") {
+      if (new URL(request.url).pathname === "/api/provider") return Response.json({ data: [] });
+      if (new URL(request.url).pathname === "/api/command") {
         reads += 1;
-        return Response.json([{ name }]);
+        return Response.json({ data: [{ name }] });
       }
       return Response.json(true);
     },

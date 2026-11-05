@@ -1,6 +1,6 @@
 import { connect } from "node:net";
 import type { HarnessStateApi } from "@pstdio/sdk/extensions";
-import { isConnectionError } from "./opencode-http";
+import { isConnectionError, requestJson } from "./opencode-http";
 import type { OpencodeServer, OpencodeServerStarter } from "./opencode-server-process";
 
 export type { OpencodeServerStarter } from "./opencode-server-process";
@@ -52,16 +52,19 @@ export const canConnectToHost = ({ host, port }: { host: string; port: number })
 
 export const defaultPingServer = async (url: string) => {
   try {
-    const healthUrl = new URL("/global/health", url);
+    const healthUrl = new URL("/api/info", url);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 750);
 
     try {
-      const response = await fetch(healthUrl, { signal: controller.signal });
+      const { response, parsed } = await requestJson<{ version?: string }>(fetch, healthUrl.href, {
+        method: "GET",
+        headers: {},
+        signal: controller.signal,
+      });
       if (!response.ok) return false;
 
-      const payload = (await response.json()) as { healthy?: boolean } | null;
-      return payload?.healthy === true;
+      return !!parsed?.version && Bun.semver.satisfies(parsed.version, ">=2.2.5");
     } finally {
       clearTimeout(timeout);
     }

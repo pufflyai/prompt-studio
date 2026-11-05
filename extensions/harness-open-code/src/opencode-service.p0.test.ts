@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { acceptedPrompt, emptyMessages } from "./native-api.test-helpers";
 import { createHarnessServerStore } from "./opencode-server";
 import { createOpencodeService } from "./opencode-service";
 
@@ -39,9 +40,10 @@ describe("request timeouts", () => {
       pingServer: async () => true,
       fetcher: async (input, init) => {
         const url = String(input);
+        if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
         const method = init?.method ?? "GET";
 
-        if (method === "POST" && url.includes("/session/session-1/message")) {
+        if (method === "POST" && url.includes("/api/session/session-1/prompt")) {
           postCalls++;
           throw new DOMException("The operation was aborted", "AbortError");
         }
@@ -69,14 +71,15 @@ describe("request timeouts", () => {
       pingServer: async () => true,
       fetcher: async (input, init) => {
         const url = String(input);
+        if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
         const method = init?.method ?? "GET";
 
-        if (method === "GET" && url.includes("/session/")) {
+        if (method === "GET" && url.includes("/api/session/")) {
           getCalls++;
           if (getCalls <= 1) {
             throw new TypeError("fetch failed");
           }
-          return new Response(JSON.stringify([]));
+          return emptyMessages();
         }
 
         throw new Error(`Unexpected: ${method} ${url}`);
@@ -96,13 +99,14 @@ describe("request timeouts", () => {
       pingServer: async () => false,
       fetcher: async (input, init) => {
         const url = String(input);
+        if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
         const method = init?.method ?? "GET";
 
-        if (method === "POST" && url.includes("/session?")) {
-          return new Response(JSON.stringify({ id: "session-1" }));
+        if (method === "POST" && url.includes("/api/session?")) {
+          return new Response(JSON.stringify({ data: { id: "session-1" } }));
         }
 
-        if (method === "POST" && url.includes("/session/session-1/message")) {
+        if (method === "POST" && url.includes("/api/session/session-1/prompt")) {
           throw new DOMException("The operation was aborted", "AbortError");
         }
 
@@ -125,13 +129,14 @@ describe("request timeouts", () => {
       pingServer: async () => false,
       fetcher: async (input, init) => {
         const url = String(input);
+        if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
         const method = init?.method ?? "GET";
 
-        if (method === "POST" && url.includes("/session?")) {
-          return new Response(JSON.stringify({ id: "session-1" }));
+        if (method === "POST" && url.includes("/api/session?")) {
+          return new Response(JSON.stringify({ data: { id: "session-1" } }));
         }
 
-        if (method === "POST" && url.includes("/session/session-1/message")) {
+        if (method === "POST" && url.includes("/api/session/session-1/prompt")) {
           return new Response("Internal Server Error", { status: 500 });
         }
 
@@ -159,13 +164,14 @@ test("the harness server store persists through host state", async () => {
     serverStore: store,
     fetcher: async (input) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
 
-      if (url.includes("/session?")) {
-        return new Response(JSON.stringify({ id: "session-1" }));
+      if (url.includes("/api/session?")) {
+        return new Response(JSON.stringify({ data: { id: "session-1" } }));
       }
 
-      if (url.includes("/session/session-1/message?")) {
-        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      if (url.includes("/api/session/session-1/prompt?")) {
+        return acceptedPrompt();
       }
 
       throw new Error(`Unexpected request URL: ${url}`);
@@ -187,16 +193,17 @@ test("startSession applies selected model to session creation and initial prompt
     pingServer: async () => false,
     fetcher: async (input, init) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      if (method === "POST" && url.includes("/session?")) {
+      if (method === "POST" && url.includes("/api/session?")) {
         createBodies.push(JSON.parse(String(init?.body)));
-        return new Response(JSON.stringify({ id: "session-1" }));
+        return new Response(JSON.stringify({ data: { id: "session-1" } }));
       }
 
-      if (method === "POST" && url.includes("/session/session-1/message")) {
+      if (method === "POST" && url.includes("/api/session/session-1/prompt")) {
         promptBodies.push(JSON.parse(String(init?.body)));
-        return new Response(JSON.stringify({ info: {}, parts: [] }));
+        return acceptedPrompt();
       }
 
       throw new Error(`Unexpected: ${method} ${url}`);
@@ -208,18 +215,19 @@ test("startSession applies selected model to session creation and initial prompt
 
   expect(createBodies).toEqual([
     {
+      location: { directory: "/repo" },
       model: { providerID: "openai", id: "gpt-5.5" },
     },
   ]);
   expect(promptBodies).toEqual([
     {
-      parts: [{ type: "text", text: "hello" }],
-      model: { providerID: "openai", modelID: "gpt-5.5" },
+      text: "hello",
     },
   ]);
 });
 
-test("startSession forwards the model thinking variant on the initial prompt", async () => {
+test("startSession selects the thinking variant before admitting the initial prompt", async () => {
+  const selections: unknown[] = [];
   const promptBodies: unknown[] = [];
   const service = createOpencodeService({
     startServer: async () => ({ url: "http://127.0.0.1:4900", dispose: async () => {} }),
@@ -228,15 +236,20 @@ test("startSession forwards the model thinking variant on the initial prompt", a
     pingServer: async () => false,
     fetcher: async (input, init) => {
       const url = String(input);
+      if (url.includes("/model")) {
+        selections.push(JSON.parse(String(init?.body)));
+        return new Response(null, { status: 204 });
+      }
+      if (url.includes("/wait")) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      if (method === "POST" && url.includes("/session?")) {
-        return new Response(JSON.stringify({ id: "session-1" }));
+      if (method === "POST" && url.includes("/api/session?")) {
+        return new Response(JSON.stringify({ data: { id: "session-1" } }));
       }
 
-      if (method === "POST" && url.includes("/session/session-1/message")) {
+      if (method === "POST" && url.includes("/api/session/session-1/prompt")) {
         promptBodies.push(JSON.parse(String(init?.body)));
-        return new Response(JSON.stringify({ info: {}, parts: [] }));
+        return acceptedPrompt();
       }
 
       throw new Error(`Unexpected: ${method} ${url}`);
@@ -251,11 +264,10 @@ test("startSession forwards the model thinking variant on the initial prompt", a
   });
   await result.messageComplete;
 
+  expect(selections).toEqual([{ model: { providerID: "anthropic", id: "claude-opus-4-6", variant: "max" } }]);
   expect(promptBodies).toEqual([
     {
-      parts: [{ type: "text", text: "hello" }],
-      model: { providerID: "anthropic", modelID: "claude-opus-4-6" },
-      variant: "max",
+      text: "hello",
     },
   ]);
 });
@@ -279,6 +291,6 @@ test("abortSession posts to the opencode abort endpoint", async () => {
   expect(requests[0]?.method).toBe("POST");
 
   const url = new URL(requests[0]!.url);
-  expect(url.pathname).toBe("/session/session-1/abort");
-  expect(url.searchParams.get("directory")).toBe("/repo");
+  expect(url.pathname).toBe("/api/session/session-1/interrupt");
+  expect(url.searchParams.get("location[directory]")).toBe("/repo");
 });

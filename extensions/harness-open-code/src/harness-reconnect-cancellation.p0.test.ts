@@ -27,11 +27,11 @@ test("final project retirement prevents reconnection after old-worker cleanup", 
         return { url: "http://127.0.0.1:4097", dispose: async () => {} };
       },
       fetcher: async (url, init) => {
-        if (new URL(String(url)).pathname === "/session" && !failed) {
+        if (new URL(String(url)).pathname === "/api/session" && !failed) {
           failed = true;
           throw Object.assign(new Error("connection failed"), { code: "ECONNREFUSED" });
         }
-        if (new URL(String(url)).pathname === "/session") return Response.json({ id: "late" });
+        if (new URL(String(url)).pathname === "/api/session") return Response.json({ data: { id: "late" } });
         return Response.json(init?.method === "POST" ? true : []);
       },
     },

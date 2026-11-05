@@ -20,7 +20,7 @@ test("an owned server drains both log pipes after readiness and stops exactly on
   const pidPath = join(root, "pid");
   const source = `
     await Bun.write(${JSON.stringify(pidPath)}, String(process.pid));
-    console.log("opencode server listening on http://127.0.0.1:4096");
+    console.log("server listening on http://127.0.0.1:4096");
     const { once } = await import("node:events");
     for (const stream of [process.stdout, process.stderr]) {
       for (let i = 0; i < 256; i++) {

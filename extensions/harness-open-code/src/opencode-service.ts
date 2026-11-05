@@ -1,15 +1,9 @@
 import { readFile } from "node:fs/promises";
+import type { SessionMessageInfo, SessionMessagesResponse } from "@opencode/client";
 import type { HarnessAttachment, HarnessParams } from "@pstdio/sdk/extensions";
 import { createOpencodeAuthentication } from "./authentication";
 import { createCommandApi } from "./opencode-commands";
-import {
-  buildHeaders,
-  buildRequestUrl,
-  type OpencodeFetcher,
-  parsePromptResponse,
-  requestJson,
-  requireResponseOk,
-} from "./opencode-http";
+import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
 import { createQuestionApi } from "./opencode-questions";
 import {
   canConnectToHost,
@@ -19,7 +13,7 @@ import {
   type OpencodeServerStarter,
   type OpencodeServerStore,
 } from "./opencode-server";
-import type { OpencodeSessionMessage } from "./opencode-types";
+import { toSessionSnapshot } from "./opencode-snapshot";
 
 type OpencodeServiceDeps = {
   reuseExisting?: boolean;
@@ -54,41 +48,15 @@ type OpencodeSessionMessageInput = {
   cwd?: string;
 };
 
-type OpencodeModelInput = {
-  providerID: string;
-  modelID: string;
-};
-
-type OpencodeSessionModelInput = {
-  providerID: string;
-  id: string;
-};
-
-const toOpencodeModelInput = (model?: string | null) => {
-  const trimmedModel = model?.trim();
-  if (!trimmedModel) return undefined;
-
-  const slashIndex = trimmedModel.indexOf("/");
-  if (slashIndex <= 0 || slashIndex === trimmedModel.length - 1) return undefined;
-
-  const providerID = trimmedModel.slice(0, slashIndex).trim();
-  const modelID = trimmedModel.slice(slashIndex + 1).trim();
-
-  if (!providerID || !modelID) return undefined;
-
-  return { providerID, modelID } satisfies OpencodeModelInput;
-};
-
-const toOpencodeSessionModelInput = (model?: string | null) => {
-  const selectedModel = toOpencodeModelInput(model);
-  if (!selectedModel) return undefined;
-
-  return { providerID: selectedModel.providerID, id: selectedModel.modelID } satisfies OpencodeSessionModelInput;
-};
-
-const toOpencodeVariant = (params: HarnessParams | undefined) => {
-  const variant = params?.variant;
-  return typeof variant === "string" ? variant : undefined;
+const toModel = (model?: string | null, params?: HarnessParams) => {
+  if (!model) return undefined;
+  const slash = model.indexOf("/");
+  if (slash <= 0 || slash === model.length - 1) return undefined;
+  return {
+    providerID: model.slice(0, slash),
+    id: model.slice(slash + 1),
+    ...(typeof params?.variant === "string" ? { variant: params.variant } : {}),
+  };
 };
 
 const resolveMockSessionId = () => {
@@ -106,18 +74,7 @@ const resolveMockSessionId = () => {
 const toFilePart = async (attachment: HarnessAttachment) => {
   const mime = attachment.mimeType || "application/octet-stream";
   const bytes = await readFile(attachment.localPath);
-  return {
-    type: "file",
-    fileId: attachment.fileId,
-    mime,
-    filename: attachment.fileName,
-    url: `data:${mime};base64,${bytes.toString("base64")}`,
-  };
-};
-
-const buildMessageParts = async (prompt: string, attachments: HarnessAttachment[]) => {
-  const fileParts = await Promise.all(attachments.map(toFilePart));
-  return [{ type: "text", text: prompt }, ...fileParts];
+  return { name: attachment.fileName, uri: `data:${mime};base64,${bytes.toString("base64")}` };
 };
 
 export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = {}) => {
@@ -143,27 +100,48 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     signal?: AbortSignal,
   ) => {
     const headers = buildHeaders(directory);
-    const selectedModel = toOpencodeModelInput(model);
-    const variant = toOpencodeVariant(params);
-    const messageUrl = buildRequestUrl(baseUrl, `/session/${sessionId}/message`, directory);
-
-    const messageResponse = await requestJson<Record<string, unknown>>(deps.fetcher, messageUrl, {
+    const selectedModel = toModel(model, params);
+    if (selectedModel) {
+      const selection = await requestJson(
+        deps.fetcher,
+        buildRequestUrl(baseUrl, `/api/session/${sessionId}/model`, directory),
+        {
+          method: "POST",
+          headers,
+          signal,
+          body: { model: selectedModel },
+        },
+      );
+      requireResponseOk(selection.response, selection.text, "OpenCode model selection failed");
+    }
+    const messageUrl = buildRequestUrl(baseUrl, `/api/session/${sessionId}/prompt`, directory);
+    const messageResponse = await requestJson<{ data?: { id?: string } }>(deps.fetcher, messageUrl, {
       method: "POST",
       headers,
       signal,
       body: {
-        // Keep the no-attachment path synchronous so it does not reorder against the poll loop.
-        parts:
-          attachments && attachments.length > 0
-            ? await buildMessageParts(prompt, attachments)
-            : [{ type: "text", text: prompt }],
-        ...(selectedModel ? { model: selectedModel } : {}),
-        ...(variant ? { variant } : {}),
+        text: prompt,
+        ...(attachments?.length
+          ? {
+              files: await Promise.all(attachments.map(toFilePart)),
+              metadata: { pstdioAttachments: attachments.map((attachment) => attachment.fileId) },
+            }
+          : {}),
       },
     });
-
     requireResponseOk(messageResponse.response, messageResponse.text, "OpenCode session.prompt failed");
-    parsePromptResponse(messageResponse.text);
+    if (!messageResponse.parsed?.data?.id) throw new Error("OpenCode did not accept the prompt.");
+    // Admission is asynchronous. Keep messageComplete pending until native execution becomes idle.
+    const waiting = await requestJson(
+      deps.fetcher,
+      buildRequestUrl(baseUrl, `/api/experimental/session/${sessionId}/wait`, directory),
+      {
+        method: "POST",
+        headers,
+        signal,
+      },
+    );
+    requireResponseOk(waiting.response, waiting.text, "OpenCode session wait failed");
   };
 
   const startSession = async (input: OpencodeSessionStartInput): Promise<OpencodeSessionStartResult> => {
@@ -178,17 +156,17 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
 
     const createAndPrompt = async (baseUrl: string) => {
       const headers = buildHeaders(directory);
-      const createUrl = buildRequestUrl(baseUrl, "/session", directory);
+      const createUrl = buildRequestUrl(baseUrl, "/api/session", directory);
 
-      const createResponse = await requestJson<{ id?: string }>(deps.fetcher, createUrl, {
+      const createResponse = await requestJson<{ data?: { id?: string } }>(deps.fetcher, createUrl, {
         method: "POST",
         headers,
-        body: { model: toOpencodeSessionModelInput(input.model) },
+        body: { location: { directory }, model: toModel(input.model, input.params) },
       });
 
       requireResponseOk(createResponse.response, createResponse.text, "OpenCode session.create failed");
 
-      const sessionId = createResponse.parsed?.id;
+      const sessionId = createResponse.parsed?.data?.id;
       if (!sessionId) throw new Error("Opencode session id not found.");
       if (input.signal?.aborted) {
         await abortSession(sessionId, directory);
@@ -237,18 +215,22 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
 
     const fetchMessages = async (baseUrl: string) => {
       const headers = buildHeaders(directory);
-      const url = buildRequestUrl(baseUrl, `/session/${sessionId}/message`, directory);
-
-      const { response, text, parsed } = await requestJson<OpencodeSessionMessage[]>(deps.fetcher, url, {
-        method: "GET",
-        headers,
-      });
-
-      requireResponseOk(response, text, "OpenCode getSessionMessages failed");
-
-      if (!parsed || !Array.isArray(parsed)) return [];
-
-      return parsed as OpencodeSessionMessage[];
+      const messages: SessionMessageInfo[] = [];
+      let cursor: string | null | undefined;
+      do {
+        const url = new URL(buildRequestUrl(baseUrl, `/api/session/${sessionId}/message`, directory));
+        if (cursor) url.searchParams.set("cursor", cursor);
+        else url.searchParams.set("order", "asc");
+        const { response, text, parsed } = await requestJson<SessionMessagesResponse>(deps.fetcher, url.href, {
+          method: "GET",
+          headers,
+        });
+        requireResponseOk(response, text, "OpenCode getSessionMessages failed");
+        if (!parsed || !Array.isArray(parsed.data)) throw new Error("OpenCode returned invalid session messages.");
+        messages.push(...parsed.data);
+        cursor = parsed.cursor?.next;
+      } while (cursor);
+      return toSessionSnapshot(messages);
     };
 
     return withServerUrl(fetchMessages);
@@ -259,7 +241,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
 
     const abortRunningSession = async (baseUrl: string) => {
       const headers = buildHeaders(directory);
-      const url = buildRequestUrl(baseUrl, `/session/${sessionId}/abort`, directory);
+      const url = buildRequestUrl(baseUrl, `/api/session/${sessionId}/interrupt`, directory);
 
       const { response, text } = await requestJson<boolean>(deps.fetcher, url, {
         method: "POST",
