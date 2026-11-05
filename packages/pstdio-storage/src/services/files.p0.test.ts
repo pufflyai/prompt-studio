@@ -123,3 +123,14 @@ test("failed legacy file streams remove temporary bytes", async () => {
   expect(error).toBeInstanceOf(Error);
   expect(existsSync(resolveFileStoragePath(storageRoot, "project", "file"))).toBe(false);
 });
+
+test("discarding an interrupted upload removes rowless bytes only from its owning project", () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-staged-file-"));
+  roots.push(root);
+  const storage = createFilesStorageService(root);
+  const abandoned = storage.writeFile("first", "staged", Buffer.from("unfinished"));
+  const other = storage.writeFile("second", "staged", Buffer.from("keep"));
+  storage.discardUpload("first", "staged");
+  expect(existsSync(abandoned)).toBe(false);
+  expect(readFileSync(other, "utf8")).toBe("keep");
+});

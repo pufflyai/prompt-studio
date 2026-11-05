@@ -65,5 +65,7 @@ export const createFilesStorageService = (storageRoot: string) => {
     }
   };
 
-  return { writeFile, writeFileAtPath, writeStream, deleteFile, computeHash };
+  const discardUpload = (projectId: string, fileId: string) =>
+    deleteFile(resolveFileStoragePath(storageRoot, projectId, fileId));
+  return { writeFile, writeFileAtPath, writeStream, deleteFile, computeHash, discardUpload };
 };

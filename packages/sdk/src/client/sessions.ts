@@ -30,6 +30,7 @@ import type {
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
 import type { ClientOptions, RequestFn } from "./request";
+import { createSessionImportsClient } from "./session-imports";
 import { createSessionQueryClient } from "./session-query";
 import { retainSessionResources } from "./session-resource-retention";
 import { createSessionStreamTransport } from "./session-stream";
@@ -49,6 +50,7 @@ export type ListSessionsInput = {
 };
 
 export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
+  imports: ReturnType<typeof createSessionImportsClient>;
   getDraftHarnessCommands(
     input: DraftHarnessCommandInput,
     signal?: AbortSignal,
@@ -181,6 +183,7 @@ export const createSessionClient = (
 ): SessionClient => {
   return {
     ...createSessionQueryClient(request),
+    imports: createSessionImportsClient(request),
     retainResources: (sessionId) => retainSessionResources(streams, sessionId),
     getDraftHarnessCommands: (input, signal) =>
       request("/v1/sessions/harness-command-state", { method: "POST", body: input, signal }),
