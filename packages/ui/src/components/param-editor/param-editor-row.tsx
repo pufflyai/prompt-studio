@@ -25,7 +25,7 @@ export const ParamEditorRow = (props: ParamEditorRowProps) => {
   const small = variant === "small";
 
   return (
-    <Box px="sm" py={small ? "2xs" : "xs"}>
+    <Box minW="0" maxW="full" px="sm" py={small ? "2xs" : "xs"}>
       <ParamEditorField
         param={param}
         defaultValues={values}

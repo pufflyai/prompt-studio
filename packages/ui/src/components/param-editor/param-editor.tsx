@@ -29,7 +29,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
   const handleChange = onChange ?? (() => undefined);
 
   return (
-    <Stack flex="1" maxW="full" gap="0">
+    <Stack flex="1" minW="0" maxW="full" gap="0">
       {params.length > 0 ? (
         <ParamEditorSection
           params={params}

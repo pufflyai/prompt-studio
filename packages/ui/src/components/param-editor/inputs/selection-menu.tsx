@@ -105,6 +105,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
         textStyle={size === "xs" ? "label/XS" : "label/S/regular"}
         width={fullWidth ? "100%" : undefined}
         minW="0"
+        maxW="full"
         flexShrink={1}
         _hover={{ bg: "bg.hover", borderColor: "border.accent-light" }}
         _active={{ bg: "bg.active", borderColor: "border.accent-light" }}
@@ -115,7 +116,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
           <Flex alignItems="center" gap="xs" minW="0">
             {triggerLabel}
           </Flex>
-          <ChevronDown size={14} />
+          <Icon as={ChevronDown} boxSize="3.5" flexShrink={0} />
         </Flex>
       </Button>
     );
@@ -199,7 +200,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
           panel's overflow and can extend past the viewport. */}
       <Portal>
         <Menu.Positioner>
-          <Menu.Content>
+          <Menu.Content minW="0" maxW="var(--available-width)">
             {options.map((option) => {
               const selected = selectedIds.includes(option.id);
               return (
