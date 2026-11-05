@@ -188,7 +188,8 @@ const mergePrivatePending = async (
   seed?: string,
 ) => {
   for await (const pending of pendingText(tx, owner, field.recordId))
-    for (const edit of pending.edits)
+    for (const edit of pending.edits) {
+      if (edit.recordId !== field.recordId) continue;
       for (const text of edit.texts ?? []) {
         if (jsonPointer(text.path) !== field.pointer || (seed && text.seed !== seed)) continue;
         const captured = (await readOrderedMarker<AuthoredText>(tx, owner, authoredId(pending.operationId)))?.value
@@ -196,6 +197,7 @@ const mergePrivatePending = async (
         if (captured?.generation !== generation) continue;
         Y.applyUpdate(document, Buffer.from(text.update, "base64"));
       }
+    }
 };
 
 const privateFieldState = async (
