@@ -92,6 +92,11 @@ const streamEntry = async (
     try {
       await queue.snapshot(current.messages);
       await snapshot(current.messages, sink);
+      await sink.write("patch", {
+        op: "replace",
+        path: "/approval_requests",
+        value: entry.approvalService.pendingRequests(),
+      });
       return await streamLivePatches({ [Symbol.asyncIterator]: () => iterator }, sink, queue);
     } finally {
       await iterator.return?.();

@@ -8,10 +8,20 @@ import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { createDashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import {
+  getDashboardExtensionsReadyProjectId,
+  subscribeDashboardExtensionsReadyProject,
+} from "@/shared/extensions/extension-readiness";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { registerHomePage } from "./home-page.test-support";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
-import { createDashboardWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
+import { createDashboardWorkbench as createWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
 
+const createDashboardWorkbench = (input: Parameters<typeof createWorkbench>[0] = {}) => {
+  const workbench = createWorkbench(input);
+  registerHomePage(workbench);
+  return workbench;
+};
 const createStorage = (): WorkbenchStorageLike => {
   const values = new Map<string, string>();
   return {
@@ -76,10 +86,22 @@ const sidePanelSessionUris = (workbench: ReturnType<typeof createDashboardWorkbe
     .listPanelInstances("side")
     .filter((panel) => panel.resource?.type === "session")
     .map((panel) => resourceKey(panel.resource));
-const selectProject = (workbench: ReturnType<typeof createDashboardWorkbench>, projectId = "project-1") =>
-  workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
-    project: { id: projectId, name: projectId },
-  });
+const selectProject = async (workbench: ReturnType<typeof createDashboardWorkbench>, projectId = "project-1") => {
+  const ready = Promise.withResolvers<void>();
+  const onReady = () => {
+    if (getDashboardExtensionsReadyProjectId(workbench) === projectId) ready.resolve();
+  };
+  const unsubscribe = subscribeDashboardExtensionsReadyProject(workbench, onReady);
+  try {
+    await workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
+      project: { id: projectId, name: projectId },
+    });
+    onReady();
+    await ready.promise;
+  } finally {
+    unsubscribe();
+  }
+};
 // Synced rows are process-wide; leave the tables empty so other suites start clean.
 afterEach(() => {
   getWriter("projects")?.truncateAndWrite([]);

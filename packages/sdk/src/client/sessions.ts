@@ -30,6 +30,7 @@ import type {
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
 import type { ClientOptions, RequestFn } from "./request";
+import { createSessionImportsClient } from "./session-imports";
 import { createSessionQueryClient } from "./session-query";
 import { retainSessionResources } from "./session-resource-retention";
 import { createSessionStreamTransport } from "./session-stream";
@@ -49,6 +50,7 @@ export type ListSessionsInput = {
 };
 
 export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
+  imports: ReturnType<typeof createSessionImportsClient>;
   getDraftHarnessCommands(
     input: DraftHarnessCommandInput,
     signal?: AbortSignal,
@@ -71,6 +73,7 @@ export type SessionClient = ReturnType<typeof createSessionQueryClient> & {
   /** @deprecated Pass projectId first and use camelCase input. */
   create(input: CreateSessionInput): Promise<SessionCreateResponse>;
   archive(sessionId: string): Promise<void>;
+  fork(sessionId: string, options?: { messageId?: string }): Promise<SessionCreateResponse>;
   delete(sessionId: string): Promise<void>;
   followUp(sessionId: string, input: SessionFollowUpRequest | FollowUpInput): Promise<SessionFollowUpResponse>;
   steer(sessionId: string, input: SessionSteeringInput): Promise<QueuedSteeringResult>;
@@ -180,6 +183,7 @@ export const createSessionClient = (
 ): SessionClient => {
   return {
     ...createSessionQueryClient(request),
+    imports: createSessionImportsClient(request),
     retainResources: (sessionId) => retainSessionResources(streams, sessionId),
     getDraftHarnessCommands: (input, signal) =>
       request("/v1/sessions/harness-command-state", { method: "POST", body: input, signal }),
@@ -218,6 +222,10 @@ export const createSessionClient = (
         body: typeof projectOrInput === "string" ? { ...input, projectId: projectOrInput } : projectOrInput,
       }),
     archive: (sessionId) => request(`/v1/sessions/${sessionId}/archive`, { method: "POST" }),
+    fork: (sessionId, options) => {
+      const query = options?.messageId === undefined ? "" : `?${new URLSearchParams({ messageId: options.messageId })}`;
+      return request(`/v1/sessions/${sessionId}/fork${query}`, { method: "POST" });
+    },
     delete: (sessionId) => request(`/v1/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }),
     followUp: (sessionId, input) => request(`/v1/sessions/${sessionId}/follow-up`, { method: "POST", body: input }),
     steer: (sessionId, input) => request(`/v1/sessions/${sessionId}/steer`, { method: "POST", body: input }),

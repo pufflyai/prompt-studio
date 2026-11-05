@@ -1,7 +1,10 @@
-import { Button, HStack, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
-import { DeleteConfirmationModal, useToaster } from "@pstdio/ui";
+import { Box, IconButton, Stack, Text } from "@chakra-ui/react";
+import { DeleteConfirmationModal, SettingsContentSkeleton, useToaster } from "@pstdio/ui";
+import { CodeEditor } from "@pstdio/ui/diff";
+import { SettingsHeaderContent, useSettingsChanges } from "@pstdio/workbench/react";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import type { ProjectTemplateAsset } from "../data/template-provider-api";
 import { useDeleteProjectTemplate, useProjectTemplate, useUpdateProjectTemplate } from "../data/use-templates";
 
@@ -30,39 +33,49 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
     toaster.create({ type: "success", title: "Template saved", description: template.title });
   };
 
+  useSettingsChanges({
+    dirty: Boolean(data) && content !== data?.content,
+    saving: updateTemplate.isPending || deleteTemplate.isPending,
+    onSave: save,
+    onReset: () => setContent(data?.content ?? ""),
+  });
   const remove = async () => {
     await deleteTemplate.mutateAsync(template);
+    flushSync(() => setContent(data?.content ?? ""));
     onDeleted();
   };
 
   return (
-    <Stack gap="md" h="full" p="lg" overflow="hidden">
-      <HStack justify="space-between" align="center">
-        <Text fontSize="lg" fontWeight="semibold" truncate>
-          {template.title}
+    <Stack gap="0" h="full" minH="0">
+      <SettingsHeaderContent>
+        <IconButton
+          size="sm"
+          variant="destructive-ghost"
+          aria-label="Delete template"
+          disabled={isLoading || updateTemplate.isPending || deleteTemplate.isPending}
+          onClick={() => setIsDeleteOpen(true)}
+        >
+          <Trash2 />
+        </IconButton>
+      </SettingsHeaderContent>
+      {updateTemplate.error ? (
+        <Text role="alert" color="fg.error">
+          {updateTemplate.error.message}
         </Text>
-        <HStack gap="sm">
-          <Button size="sm" variant="outline" onClick={() => setIsDeleteOpen(true)}>
-            <Trash2 size={14} />
-            Delete
-          </Button>
-          <Button size="sm" onClick={save} loading={updateTemplate.isPending}>
-            Save
-          </Button>
-        </HStack>
-      </HStack>
-
+      ) : null}
       {isLoading ? (
-        <Spinner size="sm" />
+        <SettingsContentSkeleton />
       ) : (
-        <Textarea
-          value={content}
-          onChange={(event) => setContent(event.target.value)}
-          flex="1"
-          resize="none"
-          fontFamily="mono"
-          fontSize="sm"
-        />
+        <Box flex="1" minH="0" minW="0">
+          <CodeEditor
+            language="markdown"
+            fileName={`${template.name}.md`}
+            code={content}
+            onChange={setContent}
+            isEditable={!updateTemplate.isPending && !deleteTemplate.isPending}
+            showLineNumbers
+          />
+        </Box>
       )}
 
       <DeleteConfirmationModal
@@ -70,7 +83,7 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
         onClose={() => setIsDeleteOpen(false)}
         onDelete={remove}
         headline="Delete template"
-        notificationText={`This permanently deletes "${template.title}".`}
+        notificationText={`This permanently deletes "${template.title}". Reset changes cannot restore a deleted template.`}
         buttonText="Delete template"
       />
     </Stack>

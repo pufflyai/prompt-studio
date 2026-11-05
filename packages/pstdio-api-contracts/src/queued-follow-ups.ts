@@ -36,6 +36,8 @@ export type MoveQueuedFollowUpInput = z.input<typeof moveQueuedFollowUpInputSche
 
 export const queuedFollowUpUpdateResponseSchema = z.object({ ok: z.literal(true), request: queuedFollowUpSchema });
 export const pendingQueuedFollowUpsResponseSchema = z.object({
+  /** True when this readable snapshot omits complete request data and cannot be edited. */
+  readOnly: z.boolean().optional(),
   requests: z.array(queuedFollowUpSchema),
   activeRunStartedAt: z.string().nullable(),
   steeringAvailable: z.boolean(),

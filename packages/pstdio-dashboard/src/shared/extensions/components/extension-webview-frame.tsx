@@ -32,6 +32,7 @@ import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } f
 import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
+  visible?: boolean;
   sizing?: "content-width" | "content-height";
   extensionId: string;
   extensionInstanceId?: string;
@@ -180,6 +181,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     <>
       {errorNotice}
       <BridgedWebviewSurface
+        visible={props.visible}
         workbench={props.workbench}
         sizing={props.sizing}
         key={view.id}

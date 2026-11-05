@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  combineQueuedFollowUpsInputSchema,
+  moveQueuedFollowUpInputSchema,
+  updateQueuedFollowUpInputSchema,
+} from "./queued-follow-ups";
 import { approvalInputSchema, sessionCreateRequestSchema, sessionFollowUpRequestSchema } from "./sessions";
 import { extensionWorkspaceCreateInputSchema } from "./workspaces";
 
@@ -22,8 +27,36 @@ const commandSchema = z.discriminatedUnion("type", [
     input: sessionFollowUpRequestSchema.strict(),
     attachmentContents: z.array(attachmentSchema).optional(),
   }),
+  z.strictObject({ type: z.literal("session.queuedMessages"), id }),
+  z.strictObject({ type: z.literal("session.queuedFollowUps"), id }),
+  z.strictObject({
+    type: z.literal("session.queueUpdate"),
+    id,
+    queuePosition: z.number().int().positive(),
+    input: updateQueuedFollowUpInputSchema.strict(),
+    attachmentContents: z.array(attachmentSchema).optional(),
+  }),
+  z.strictObject({
+    type: z.literal("session.queueDelete"),
+    id,
+    queuePosition: z.number().int().positive(),
+    expectedRevision: z.string().optional(),
+  }),
+  z.strictObject({
+    type: z.literal("session.queueMove"),
+    id,
+    queuePosition: z.number().int().positive(),
+    input: moveQueuedFollowUpInputSchema.strict(),
+  }),
+  z.strictObject({
+    type: z.literal("session.queueCombine"),
+    id,
+    queuePosition: z.number().int().positive(),
+    input: combineQueuedFollowUpsInputSchema.strict(),
+  }),
   z.strictObject({ type: z.literal("session.approve"), id, input: approvalInputSchema.strict() }),
   z.strictObject({ type: z.literal("session.interrupt"), id }),
+  z.strictObject({ type: z.literal("workspace.capacity") }),
   z.strictObject({
     type: z.literal("workspace.create"),
     input: extensionWorkspaceCreateInputSchema.omit({ deviceId: true }).strict(),

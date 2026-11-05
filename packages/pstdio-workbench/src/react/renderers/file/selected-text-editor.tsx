@@ -39,7 +39,7 @@ export const SelectedTextEditor = (props: SelectedTextEditorProps) => {
     props.pageParams,
   );
   const view = input.workbench.views.getView(input.instance.viewId);
-  if (view?.body.kind !== "react")
+  if (view?.body.kind !== "react" && view?.body.kind !== "webview")
     return <AlertMessage status="error" title="The selected text editor is unavailable" />;
   return view.body.render(input) as ReactNode;
 };

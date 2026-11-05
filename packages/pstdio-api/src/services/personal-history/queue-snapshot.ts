@@ -62,6 +62,7 @@ export const sharedQueueResponse = (sessionId: string, queue: SharedQueue): Sess
     }),
   ),
   queue: {
+    readOnly: true,
     requests: queue.map((request) => ({
       ...request,
       steeringUnavailableReason: otherDeviceQueueReason,

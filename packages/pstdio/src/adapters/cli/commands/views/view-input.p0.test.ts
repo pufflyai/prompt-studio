@@ -26,6 +26,18 @@ const fields = [
 ];
 const board = { kind: "kanban" as const, fields };
 const table = { kind: "dataTable" as const, fields };
+const resourceList = { kind: "resourceList" as const, fields };
+
+test("resource list views expose grouping, child visibility and properties to agents", () => {
+  expect(
+    buildViewInput({ group: "tag", children: "hidden", show: "score,updated", sort: ["title:asc"] }, resourceList),
+  ).toEqual({
+    settings: { columnGrouping: "tag", showChildren: false, displayProperties: ["score", "updated"] },
+    sorts: [{ attributeId: "title", direction: "asc" }],
+  });
+  expect(() => buildViewInput({ mode: "board" }, resourceList)).toThrow("--mode applies to board views only");
+  expect(() => buildViewInput({ children: "nested" }, table)).toThrow("--children applies to resource list views only");
+});
 
 test("accepts one ordering and rejects a second", () => {
   expect(() => buildViewInput({ sort: ["score:desc", "title:asc"] }, board)).toThrow("one sort");

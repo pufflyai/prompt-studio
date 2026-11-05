@@ -10,7 +10,7 @@ test("native harness probes read the current fixture state", async () => {
     const script = join(prefix, "cli.cjs");
     await Bun.write(script, "console.log('healthy');");
     await installNativeProbeFixture(prefix, "opencode", script);
-    const entry = join(prefix, "node_modules", "opencode-ai", "bin", "opencode.exe");
+    const entry = join(prefix, "node_modules", "@opencode", "cli", "bin", "opencode.exe");
     const healthy = Bun.spawn([entry], { stdout: "pipe", stderr: "pipe" });
     expect(await new Response(healthy.stdout).text()).toBe("healthy\n");
     expect(await healthy.exited).toBe(0);

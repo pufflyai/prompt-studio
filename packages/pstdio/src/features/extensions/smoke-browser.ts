@@ -63,7 +63,9 @@ export const exerciseSmokeDashboard = async (input: {
         });
       return;
     }
-    await page.locator('[data-workbench-panel="main"][data-workbench-page]').waitFor();
+    // The configured default page can be uninstalled. Registration and the Main
+    // panel establish shell readiness; each extension page is checked below.
+    await page.locator('[data-workbench-panel="main"]').waitFor();
     await checkSmokeComposition({ page, origin, projectId, inventory, result, signal, observation }, 0);
     for (const item of plan.pages)
       await visitSmokePage({ page, origin, projectId, inventory, result, signal, observation }, item);

@@ -1,4 +1,5 @@
 // packaged-page-params-during-mount.p2.test.ts covers host props changed during async guest initialization.
+// packaged-session-import.p1.test.ts restores JSONL session exports through the compiled CLI and API, including the on-disk metadata index.
 // packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 // packaged-collection-view-order-smoke.p2.test.ts keeps Save view clickable beneath explanatory tooltips.
 // packaged-extension-icons.p1.spec.ts covers public SVG assets and light/dark image colors.
@@ -12,7 +13,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
-// Native actions cover complete Kanban moves and independent schema dependencies.
+// Native actions cover complete Kanban moves, resource lists and independent schema dependencies.
 // packaged-native-settings.p2.spec.ts checks the Extensions nav page, direct routes, reload, native settings and scrolling.
 // packaged-marketplace-search.p1.spec.ts finds downloads by their visible full ID.
 // Git-free installation preserves bundled extension IDs, names and icon metadata.
@@ -25,6 +26,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs and complete offline history after restart.
 // packaged-tool-result-limit.p2.test.ts bounds a 76 MB failed result, including duplicate details, across restart.
 // Packaged harnesses expose scoped account state and a private interactive account channel.
+// packaged-session-fork.p1.test.ts checks independent conversation history through the compiled CLI and host.
 // harness-npm-detection.p1.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
@@ -43,9 +45,12 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.
 // packaged-notes-page.p2.spec.ts checks immediate palette creation, Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
 // packaged-planner-timeline-smoke.ts checks side-panel attention actions without leaving the board or timeline.
+// packaged-planner-smoke.p2.test.ts checks manual recovery of missing stopped work with Auto Build disabled.
 // packaged-lab-selection.p2.spec.ts checks tabless selection, retained frames, shared edits and saved transforms.
 // packaged-scribble-pages.p2.spec.ts checks native Scribble pages, drafts, favorites and group operations.
 // performance-observer.p2.test.ts checks native CPU units and memory through the compiled observer's direct startup path.
+// packaged-core-extensions-smoke.p1.test.ts checks Onboarding's setup contribution and bundled webview.
+// packaged-core-extensions-smoke.p1.test.ts installs Home through packed public SDK/UI packages and checks its landing declaration.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
 // packaged-artifact-watch-limit.p2.test.ts checks watched mounts refresh when an initial tree exceeds the folder limit.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
@@ -59,8 +64,13 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-board-panning-smoke.p2.test.ts retains card opening and dragging; the UI Card Gestures story covers nested-control pointer ownership.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
+import { expectPackagedProjectChoices, writePackagedChoiceSources } from "./packaged-project-setup-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import {
+  expectPackagedWorkspacePresentation,
+  writeWorkspacePresentationExtension,
+} from "./packaged-workspace-presentation-smoke";
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -79,6 +89,9 @@ test(
 );
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
+  const fork = spawnSync(PACKAGED_BINARY_PATH, ["sessions", "fork", "--help"], { encoding: "utf8" });
+  expect(fork.status).toBe(0);
+  expect(fork.stdout).toContain("--id");
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {
     encoding: "utf8",
   });
@@ -113,6 +126,7 @@ test(
         JSON.stringify({
           version: 1,
           extensions: [
+            ...writePackagedChoiceSources(tempRoot),
             {
               installName: "metadata-probe",
               extensionId: "test.metadata-probe",
@@ -140,6 +154,7 @@ test(
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
+          { source: writeWorkspacePresentationExtension(tempRoot), installName: "workspace-presentation" },
           { source: nativeActions, installName: "native-actions" },
           { source: writeNativeMarkdownExtension(tempRoot), installName: "native-markdown" },
           { source: otherNativeActions, installName: "other-native-actions" },
@@ -185,6 +200,13 @@ test(
 
       const project = (await createRes.json()) as { id: string };
       const peer = (await peerRes.json()) as { id: string };
+      await expectPackagedProjectChoices(
+        started.baseUrl,
+        runtimeAuthorization(started.descriptor),
+        project.id,
+        peer.id,
+        tempRoot,
+      );
       const peerExtensions = await fetch(`${started.baseUrl}/v1/projects/${peer.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),
       });
@@ -219,6 +241,11 @@ test(
       });
       await expectPackagedNativeMarkdown({
         projectFolder,
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      await expectPackagedWorkspacePresentation({
         baseUrl: started.baseUrl,
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),

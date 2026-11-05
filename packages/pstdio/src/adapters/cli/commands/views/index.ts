@@ -33,7 +33,8 @@ const edit = (yargs: Argv) =>
     .option("mode", { type: "string", choices: ["board", "list"] })
     .option("columns", { type: "string" })
     .option("rows", { type: "string" })
-    .option("group", { type: "string", describe: "Table grouping column, or none" })
+    .option("group", { type: "string", describe: "Table or resource list grouping field, or none" })
+    .option("children", { type: "string", choices: ["nested", "hidden"], describe: "Resource list child visibility" })
     .option("row-numbers", { type: "string", choices: ["show", "hide"] })
     .option("wrap-rows", { type: "string", choices: ["on", "off"] })
     .option("stats", { type: "string", choices: ["on", "off"] });

@@ -12,6 +12,7 @@ export interface SessionDeviceOption {
 interface SessionDeviceMenuProps {
   devices: SessionDeviceOption[];
   selectedDeviceId: string;
+  selectedDeviceName?: string;
   onSelectDevice?: (deviceId: string) => void;
   /** An existing session stays on the device that runs it. */
   isDisabled?: boolean;
@@ -28,13 +29,13 @@ const DeviceLabel = (props: { label: string }) => (
 
 /** The device a session runs on, shown before the workspace it runs in. */
 export const SessionDeviceMenu = (props: SessionDeviceMenuProps) => {
-  const { devices, selectedDeviceId, onSelectDevice, isDisabled = false } = props;
+  const { devices, selectedDeviceId, selectedDeviceName, onSelectDevice, isDisabled = false } = props;
   const selected = devices.find((device) => device.id === selectedDeviceId);
-  const label = !selected || selected.current ? "This device" : selected.name;
+  const label = selected?.current ? "This device" : (selected?.name ?? selectedDeviceName ?? "This device");
 
   if (isDisabled) {
     return (
-      <Tooltip content={!selected || selected.current ? "Runs on this device" : `Runs on ${selected.name}`}>
+      <Tooltip content={`Runs on ${label.toLowerCase() === "this device" ? "this device" : label}`}>
         <HStack gap="2xs" px="2xs" minW="0" tabIndex={0} data-testid="session-device">
           <DeviceLabel label={label} />
         </HStack>

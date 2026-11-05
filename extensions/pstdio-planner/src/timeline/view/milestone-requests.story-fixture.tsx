@@ -21,7 +21,7 @@ export function MilestoneNeedsAttentionPreview(props: { rows: PlanRow[] }) {
       counts: {
         total: rows.length,
         done: 0,
-        humanNeeded: rows.filter((row) => row.requests.some((request) => request.state === "open")).length,
+        reviewNeeded: rows.filter((row) => row.requests.some((request) => request.state === "open")).length,
         blocked: 0,
         atRisk: 0,
       },
@@ -59,7 +59,7 @@ export function MilestoneNeedsAttentionPreview(props: { rows: PlanRow[] }) {
                       outcome: {
                         kind: "answered",
                         at: "2026-11-03T12:00:00.000Z",
-                        by: { type: "human", id: "demo", displayName: "Human" },
+                        by: { type: "human", id: "demo", displayName: "User" },
                         response,
                       },
                     }

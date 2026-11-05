@@ -92,7 +92,7 @@ export function CardNeedsAttentionPreview(props: { row: PlanRow }) {
                     outcome: {
                       kind: "answered",
                       at: "2026-11-03T12:00:00.000Z",
-                      by: { type: "human", id: "demo", displayName: "Human" },
+                      by: { type: "human", id: "demo", displayName: "User" },
                       response,
                     },
                   }

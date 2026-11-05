@@ -64,6 +64,7 @@ test.beforeAll(() => {
 const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[number], behavior: string) => {
   const browserAvailable = existsSync(browserCase.type.executablePath());
   const defaultExtensions = e2eExtensions(
+    "pstdio-home",
     "workbench-fixture",
     ...(browserCase.name === "Chromium" ? ["pstdio-artifacts", "pstdio-notes"] : []),
   );
@@ -156,7 +157,7 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
     }
     if (behavior === "documents, collections and preview") {
       phase("notes start");
-      await verifyPackagedNoteHeadings(page, started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
+      await verifyPackagedNoteHeadings(page, started.baseUrl, project.id, started.descriptor.token);
       phase("notes checked; preview selection start");
       await verifyPackagedPreviewSelection(page, project.id, started.descriptor);
       phase("preview checked; panel menus start");

@@ -165,6 +165,7 @@ Start **Release Packages** manually with the `stable` channel.
 
 A source-built diagnostic cannot certify a stable release app. Other channels:
 
+- `verify`: build and validate the current Changesets version candidate without placing a release tag, publishing, or updating the version PR. Supply the full Version Packages commit as `source_sha`; its parent records the original source. It uses the complete stable platform matrix, signing, Windows update checks, and exact-artifact certification. Run the workflow from `main` to retain signing trust. Reports and candidate build artifacts remain available on the run.
 - `patch`: fixes for the current stable release without other changes from `main`. Use the `patch-release` skill.
 - `packages`: SDK and UI previews only. See [SDK and UI previews](0014-sdk-ui-previews.md).
 

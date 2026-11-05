@@ -16,6 +16,7 @@ import type { createNativeAccount } from "../services/account/native-account";
 import type { createAssetTransferService } from "../services/asset-transfer-service";
 import type { createExtensionAutomationPreferencesService } from "../services/extension-automation-preferences-service";
 import type { createExtensionFileService } from "../services/extension-file-service";
+import type { ExtensionInstallations } from "../services/extension-installations";
 import type { createExtensionService } from "../services/extension-service";
 import type { createExtensionUpgradeService } from "../services/extension-upgrade-service";
 import type { createFileService } from "../services/file-service";
@@ -39,6 +40,7 @@ import type { ExtensionWebviewAccess } from "./extensions/extension-webview-acce
 import type { ProjectExtensionRuntimeCatalog } from "./extensions/project-extension-runtime-catalog";
 import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
 import type { RuntimeRouteDeps } from "./runtime/routes";
+import type { createSessionImportService } from "./sessions/imports/service";
 import type { createSessionQueueLifecycle } from "./sessions/session-queue-lifecycle";
 import type { EventBus } from "./sync/event-bus";
 
@@ -65,6 +67,7 @@ export interface RouteDeps {
   harnessRegistry: HarnessRegistryService;
   projectService: ReturnType<typeof createProjectService>;
   sessionService: ReturnType<typeof createSessionService>;
+  sessionImports: ReturnType<typeof createSessionImportService>;
   sessionQueueEntriesService: ReturnType<typeof createSessionQueueEntriesDBService>;
   sessionQueueLifecycle: ReturnType<typeof createSessionQueueLifecycle>;
   settingsService: ReturnType<typeof createSettingsService>;
@@ -87,6 +90,7 @@ export interface RouteDeps {
   webviewPreferencesDBService: ReturnType<typeof createWebviewPreferencesDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
   extensionUpgradeService: ReturnType<typeof createExtensionUpgradeService>;
+  extensionInstallations: ExtensionInstallations;
   ensureExtensionWebviews: (installedExtensionId: string, webviewId?: string) => Promise<void>;
   extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionSettingsService: ReturnType<typeof createExtensionSettingsService>;

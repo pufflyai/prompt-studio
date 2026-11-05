@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 
@@ -178,7 +179,10 @@ test("project picker stays open when the background is clicked", async ({ page, 
   await expect(picker).toBeVisible();
 });
 
-test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
+test("dashboard opens Home for a selected project and resumes a resource after its first visit", async ({
+  page,
+  request,
+}) => {
   test.setTimeout(20_000);
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Dashboard Start Test");
@@ -207,7 +211,7 @@ test("dashboard opens the start page for a selected project without a saved loca
   await page.goto("/");
 
   await expect(page.getByRole("option", { name: "Start", exact: true })).toHaveCount(0);
-  await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
+  await expect(homePage(page)).toBeVisible();
   expect(
     await page.evaluate(
       () =>
@@ -215,13 +219,14 @@ test("dashboard opens the start page for a selected project without a saved loca
           .__projectPickerAppearedDuringStartup,
     ),
   ).toBe(false);
-  await page
-    .getByLabel("Main")
-    .getByRole("button", { name: /Recent start session/ })
-    .click();
+  const sidenav = page.getByRole("region", { name: "Sidenav" }).first();
+  await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+  await sidenav.getByRole("option", { name: session.title, exact: true }).click();
+  await sidenav.getByRole("option", { name: "Home", exact: true }).click();
+  await homePage(page).getByRole("button", { name: session.title, exact: true }).click();
 
   await expect(
-    page.getByLabel("Main").getByText(session.title, { exact: true }).filter({ visible: true }),
+    page.getByLabel("Main", { exact: true }).getByText(session.title, { exact: true }).filter({ visible: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Breadcrumb").getByText(session.title, { exact: true })).toBeVisible();
 });

@@ -51,7 +51,12 @@ export const createSessionStore = () => {
     }
 
     const eventStore = createEventStore();
-    const approvalService = createApprovalService(hooks.onApprovalRequest);
+    const approvalService = createApprovalService(hooks.onApprovalRequest, {
+      onChange: () => {
+        eventStore.push({ op: "replace", path: "/approval_requests", value: approvalService.pendingRequests() });
+        changed(sessionId, { op: "replace", path: "/approval_requests", value: approvalService.pendingRequests() });
+      },
+    });
     const questionService = createQuestionService({ onAsk: hooks.onQuestionAsked, onAnswer: hooks.onQuestionAnswered });
     const ready = Promise.withResolvers<SessionConversation>();
 

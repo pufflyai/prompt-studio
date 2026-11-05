@@ -12,22 +12,30 @@ export interface ViewFlags {
   columns?: string;
   rows?: string;
   group?: string;
+  children?: string;
   "row-numbers"?: string;
   "wrap-rows"?: string;
   stats?: string;
 }
 type Board = Pick<BoardSummary, "kind" | "fields">;
-const kindFlags = {
+const kindFlags: Record<Board["kind"], readonly (keyof ViewFlags)[]> = {
   kanban: ["mode", "columns", "rows"],
+  resourceList: ["group", "children"],
   dataTable: ["group", "row-numbers", "wrap-rows", "stats"],
 } as const;
-const kindNames = { kanban: "board", dataTable: "data table" };
+const kindNames = { kanban: "board", resourceList: "resource list", dataTable: "data table" };
 const refuseOtherKindFlags = (flags: ViewFlags, kind: Board["kind"]) => {
-  const other = kind === "kanban" ? "dataTable" : "kanban";
-  const flag = kindFlags[other].find((flag) => flags[flag] !== undefined);
+  const flag = Object.values(kindFlags)
+    .flat()
+    .find((flag) => flags[flag] !== undefined && !kindFlags[kind].includes(flag));
+  const supported = (flag: keyof ViewFlags) =>
+    (Object.keys(kindFlags) as Board["kind"][])
+      .filter((key) => kindFlags[key].includes(flag))
+      .map((key) => kindNames[key])
+      .join(" or ");
   if (flag)
     throw new Error(
-      `--${flag} applies to ${kindNames[other]} views only. A ${kindNames[kind]} view takes ${[...kindFlags[kind], "show"].map((name) => `--${name}`).join(", ")}`,
+      `--${flag} applies to ${supported(flag)} views only. A ${kindNames[kind]} view takes ${[...kindFlags[kind], "show"].map((name) => `--${name}`).join(", ")}`,
     );
 };
 const toggle = (value: string, on: string, off: string, flag: string) => {
@@ -42,6 +50,13 @@ const buildBoardSettings = (flags: ViewFlags) => {
   }
   if (flags.columns !== undefined) settings.columnGrouping = flags.columns;
   if (flags.rows !== undefined) settings.rowGrouping = flags.rows;
+  if (flags.show !== undefined) settings.displayProperties = flags.show.split(",").filter(Boolean);
+  return settings;
+};
+const buildResourceListSettings = (flags: ViewFlags) => {
+  const settings: Partial<KanbanRendererSettings> = {};
+  if (flags.group !== undefined) settings.columnGrouping = flags.group;
+  if (flags.children !== undefined) settings.showChildren = toggle(flags.children, "nested", "hidden", "children");
   if (flags.show !== undefined) settings.displayProperties = flags.show.split(",").filter(Boolean);
   return settings;
 };
@@ -75,7 +90,12 @@ export const buildViewInput = (flags: ViewFlags, board: Board) => {
   refuseOtherKindFlags(flags, board.kind);
   const input: BoardViewUpdate = {};
   if (flags.title !== undefined) input.title = flags.title;
-  const settings = board.kind === "kanban" ? buildBoardSettings(flags) : buildTableSettings(flags, board);
+  const builders = {
+    kanban: () => buildBoardSettings(flags),
+    resourceList: () => buildResourceListSettings(flags),
+    dataTable: () => buildTableSettings(flags, board),
+  };
+  const settings = builders[board.kind]();
   if (Object.keys(settings).length) input.settings = settings;
   const filter = buildFilter(flags, board.fields);
   if (filter) input.filter = filter;

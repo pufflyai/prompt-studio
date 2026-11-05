@@ -103,7 +103,10 @@ API. The workbench package itself does not depend on the API host.
 
 5. **Primitive UI**
    `@pstdio/ui` owns reusable React primitives, visual components, theme tokens,
-   editor widgets, and terminal-specific React UI through its `./terminal`
+   editor widgets, and command form fields, value normalization and dynamic option loading
+   through `./command-form`. Workbench supplies contextual resource defaults and custom
+   host selectors; extensions resolve their own localized labels and command references.
+   UI owns terminal-specific React UI through its `./terminal`
    subpath. UI packages consume public terminal contracts through `@pstdio/sdk`
    and bundle shared table field helpers from `pstdio-api-contracts` rather than
    depending on deprecated SDK host helpers. Its private `/collections` entry groups pure

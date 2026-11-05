@@ -21,18 +21,16 @@ import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-
 // --- Detection ---
 
 const readOpencodeModels = async (ctx: HarnessContext) => {
-  try {
-    const result = await ctx.process.run({ command: [resolveOpencodeCommand(), "models", "--verbose"] });
-    if (result.exitCode !== 0) return "";
-    return result.stdout.trim();
-  } catch {
-    return "";
-  }
+  const args = ["api", "GET", "/api/model", "--standalone"];
+  const result = await ctx.process.run({ command: [resolveOpencodeCommand(), ...args] });
+  // Native API output may contain provider credentials. Never include it in diagnostics.
+  if (result.exitCode !== 0) throw new Error("OpenCode model command failed. Check the OpenCode installation.");
+  return result.stdout.trim();
 };
 
 type OpencodeHarnessDeps = {
   detect: NonNullable<HarnessProvider["detect"]>;
-  getModelsOutput: (ctx: HarnessContext) => Promise<string>;
+  getModelsOutput: (ctx: HarnessContext, version?: string) => Promise<string>;
   // Tests shorten the session poll interval; the pollers own the default.
   pollIntervalMs?: number;
 };
@@ -122,15 +120,16 @@ export const createOpencodeHarness = (
   let modelCache: { expiresAt: number; value: Promise<ReturnType<typeof parseOpencodeModels>> } | undefined;
 
   const listModels = async (ctx: HarnessContext) => {
-    if (!(await deps.detect(ctx)).available) return [];
+    const detection = await deps.detect(ctx);
+    if (!detection.available) return [];
     if (modelCache && modelCache.expiresAt > Date.now()) return modelCache.value;
 
     const value = deps
-      .getModelsOutput(ctx)
+      .getModelsOutput(ctx, detection.version)
       .then(parseOpencodeModels)
-      .catch((error) => {
+      .catch(() => {
         modelCache = undefined;
-        ctx.logger.warn(`OpenCode model discovery failed: ${error instanceof Error ? error.message : String(error)}`);
+        ctx.logger.warn("OpenCode model discovery failed. Check the OpenCode installation and provider configuration.");
         return [];
       });
     modelCache = { expiresAt: Date.now() + MODEL_CACHE_TTL_MS, value };
@@ -154,10 +153,10 @@ export const createOpencodeHarness = (
     signal: AbortSignal,
   ) => {
     const opencode = await serviceFor(ctx);
-    const pendingQuestions = await opencode.listPendingQuestions(input.cwd);
+    const pendingQuestions = await opencode.listPendingQuestions(input.agentSessionId, input.cwd);
     const pendingQuestion = pendingQuestions.find((question) => question.sessionID === input.agentSessionId);
     const messageComplete = pendingQuestion
-      ? opencode.replyQuestion(pendingQuestion.id, questionResponse.answers, input.cwd, signal)
+      ? opencode.replyQuestion(input.agentSessionId, pendingQuestion.id, questionResponse.answers, input.cwd, signal)
       : Promise.reject(new Error("OpenCode pending question request not found."));
     const abortController = new AbortController();
     const done = pollOpencodeQuestionReply({

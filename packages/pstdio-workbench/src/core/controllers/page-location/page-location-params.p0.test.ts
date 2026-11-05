@@ -201,3 +201,33 @@ test("removing a contextual parent preserves the active page params", () => {
   expect(h.persistence.values.get("p1")?.location.params).toEqual({ range: "now-6h" });
   expect(h.browser.current().url).toContain("range=now-6h");
 });
+
+test("updating page parameters preserves the selected panel", async () => {
+  const { createResourceViewerFixture, viewerPage } = await import("../resource-viewers/resource-viewer-test-fixture");
+  const { w } = createResourceViewerFixture();
+  w.pages.registerPage({
+    id: "comparison",
+    ref: viewerPage("comparison"),
+    title: "Comparison",
+    path: "comparison",
+    modeId: "project",
+    params: { comparison: { type: "string", default: "fork_point" } },
+    main: { kind: "panels", landing: "files" },
+    slots: [
+      { id: "files", region: "main", item: { kind: "view", view: { kind: "view", id: "reader" }, presence: "open" } },
+      {
+        id: "changes",
+        region: "main",
+        item: { kind: "view", view: { kind: "view", id: "browser" }, presence: "open" },
+      },
+    ],
+  });
+  w.pageLocations.navigate({ kind: "page", page: viewerPage("comparison") });
+  const changes = w.layout.listPanelInstances("main").find((panel) => panel.viewId === "browser")!;
+  w.layout.activatePanel(changes.instanceId);
+  expect(w.layout.getActivePanel("main")?.instanceId).toBe(changes.instanceId);
+  w.pageLocations.updateParams({ comparison: "current" });
+  expect(w.layout.getActivePanel("main")?.instanceId).toBe(changes.instanceId);
+  expect(w.pages.store.getState().location?.params).toEqual({ comparison: "current" });
+  w.dispose();
+});

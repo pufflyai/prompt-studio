@@ -25,12 +25,12 @@ import { validateLegacyAnchors } from "./features/extensions/command-environment
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
+import { createSessionImportService } from "./features/sessions/imports/service";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
-import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
 import { createNativeDocumentService } from "./services/native-documents/documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
 import { resolveNativeTextAccess } from "./services/native-documents/source-access";
@@ -142,7 +142,6 @@ const buildApp = async (
   const {
     activityEventsDBService,
     automationDBService,
-    extensionAutomationPreferencesDBService,
     extensionConnectionsDBService,
     extensionInstancesDBService,
     extensionSettingsDBService,
@@ -163,31 +162,18 @@ const buildApp = async (
     sessionQueueEntriesDBService,
     sessionQueueChanged(sessionsDBService, eventBus),
   );
-  const extensionAutomationPreferencesService = createExtensionAutomationPreferencesService({
-    db: extensionAutomationPreferencesDBService,
-    eventBus,
-  });
-
-  const {
-    assetTransferService,
-    extensionFileService,
-    extensionSettingsService,
-    fileService,
-    notificationService,
-    projectService,
-    syncService,
-    workspaceSessionService,
-    workspaceService,
-  } = createCoreDomainServices({
+  const core = createCoreDomainServices({
     getCommandDeps: () => deps,
     db,
     dbs,
     eventBus,
     storageRoot,
   });
+  const { fileService, notificationService, projectService, workspaceSessionService, workspaceService } = core;
   let deps!: RouteDeps;
   const {
     extensionConnectionService,
+    extensionInstallations,
     extensionRuntime,
     extensionStartup,
     extensionRuntimeCatalog,
@@ -206,6 +192,7 @@ const buildApp = async (
     installedExtensionSourcesDBService,
     projectService,
     provisionWorkspacesUsingSource: (sourcePath) => provisionWorkspacesUsingSource(deps, sourcePath),
+    getProjectExtensionDeps: () => deps,
     workspaceService,
     storageRoot,
   });
@@ -259,6 +246,7 @@ const buildApp = async (
   );
 
   deps = {
+    ...core,
     personalHistoryService: createPersonalHistoryService({
       eventBus,
       documents: extensionStorageDBService.documents,
@@ -267,7 +255,6 @@ const buildApp = async (
       logs: createSessionLogFiles(storageRoot),
     }),
     accountService: account.accountService,
-    assetTransferService,
     environmentService: dbs.environmentDBService,
     storagePositions,
     artifactMountWrites,
@@ -279,32 +266,28 @@ const buildApp = async (
     eventBus,
     automationService,
     harnessRegistry,
-    projectService,
     sessionQueueEntriesService,
     sessionQueueLifecycle,
     sessionService,
+    sessionImports: createSessionImportService(
+      { sessionService, fileService, projectService, workspaceService },
+      join(storageRoot, "session-imports"),
+    ),
     settingsService,
     workspaceCapacityService,
-    workspaceService,
-    workspaceSessionService,
     skillService,
-    fileService,
     boardViewsService: boardViewsDBService,
-    notificationService,
     nativeDocuments,
     textEditing,
     installedExtensionSourcesService: installedExtensionSourcesDBService,
-    extensionAutomationPreferencesService,
     extensionConnectionService,
-    extensionFileService,
     extensionRuntimeCatalog,
     webviewPreferencesDBService: dbs.webviewPreferencesDBService,
     extensionSettingsDBService,
     extensionService,
     extensionUpgradeService,
-    extensionSettingsService,
+    extensionInstallations,
     extensionStorageService: extensionStorageDBService,
-    syncService,
     activityEventsService: activityEventsDBService,
     ensureExtensionWebviews: extensionRuntime.ensureWebviews,
     terminal: terminalSupervisor.api,
@@ -337,7 +320,10 @@ const buildApp = async (
     artifactMountWatch,
     automationService,
     terminalSupervisor,
-    closeDb: () => closeAppDatabase(deps, closeDb),
+    closeDb: async () => {
+      await deps.sessionImports.close();
+      await closeAppDatabase(deps, closeDb);
+    },
   });
   return account.connectAccountRelay({ app, close, deps, eventBus });
 };

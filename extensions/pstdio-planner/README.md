@@ -38,7 +38,7 @@ Local ticket folders follow the current number. Planner preserves unsaved text a
 
 ## Refinement options
 
-Open Settings → Project → Extensions → Project Planner, then the Settings tab. **Update canvas designs for UI changes** is enabled by default. It applies to tickets that add or change UI, including changes to existing features.
+Open Settings → Project Planner → Workflow & automation. **Update canvas designs for UI changes** is enabled by default. It applies to tickets that add or change UI, including changes to existing features.
 
 The ticket skills read the project option with `pst pstdio-planner refinement-policy`. The result contains `updateCanvasDesign`. When enabled, the agent follows the project's canvas skill and updates the live design before completing the ticket or changing production UI. The ticket links the canvas page, exact preview names, source paths, and a short walkthrough. This replaces the artifact prototype requirement. If the option is off, the agent records why it skipped the design step. If Canvas is unavailable, the agent uses the project's existing design workflow and records why no canvas was linked. Tickets without UI changes do not require one.
 
@@ -46,7 +46,7 @@ Install the optional **Artifacts** extension from Extensions to use prototypes. 
 
 ## Implementation options
 
-Open Settings → Project → Extensions → Project Planner, then the Settings tab, to configure the `implement-ticket` workflow:
+Open Settings → Project Planner → Workflow & automation, to configure the `implement-ticket` workflow:
 
 - **Adversarial review** runs a review automatically before the final commit and handoff.
 - **Open PR** opens a draft pull request after validation and links it to the ticket.
@@ -57,7 +57,7 @@ Choose **Auto Build** in Project Timeline to open its modal. Enter a prompt, cho
 
 The supervisor ends its turn between checks and resumes when more work can run. The mode keeps running when the timeline is closed and resumes its checks after restarting Prompt Studio. Click the active **Auto Build** button to open its activity popover. Review requests appear above sessions, and the footer stays visible while the activity list scrolls. **Pause** suspends new dispatches and wake-ups while current agents continue. **Resume** continues the same supervisor and scope. While paused, **Stop Auto Build** cancels all linked sessions, including queued follow-ups. The selected view, filters, and search only affect the display. A supervisor wake-up failure pauses the run and shows the error. Resolve it before resuming.
 
-Auto build leaves gates, blocked work, open human requests, and existing attempts for review. Agents that get stuck use Planner's **Request human input** action so the timeline shows Needs attention.
+Auto build leaves gates, blocked work, open review requests, and existing attempts for review. Agents that get stuck use Planner's **Request review** action so the timeline shows Needs attention.
 
 The options apply only to the current project. Adversarial review and Open PR are on by default. Projects without a local Git folder can still set the review and pull request options. Turning off Adversarial review does not change the optional managed reviews described in [Attempts](docs/0002-attempts.md).
 

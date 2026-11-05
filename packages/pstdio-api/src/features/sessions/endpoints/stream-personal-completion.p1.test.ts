@@ -46,7 +46,11 @@ test.each([
       deviceId: (await destination.deps.environmentService.get()).environmentId,
       token: "offline-credential",
     };
+    // Prime the anonymous reader before injecting the fixture's native login.
+    // A file write bypasses the normal account owner's identity notification.
+    await destination.deps.personalHistoryService.refreshIdentity();
     await createNativeStore(join(root, "native-account.json")).save(login);
+    await destination.deps.personalHistoryService.refreshIdentity();
     const history = createPersonalHistoryStore({
       ...login,
       projectId: project.id,

@@ -39,6 +39,7 @@ export interface KanbanRendererContribution<
 > {
   id: string;
   title: string;
+  presentation?: "kanban" | "resourceList";
   toolbarActions?: ViewToolbarAction[];
   /** Authored row actions for discovery without querying rows or evaluating a row menu. */
   listRowActions?: () => Pick<ViewToolbarAction, "commandId" | "label" | "args">[];

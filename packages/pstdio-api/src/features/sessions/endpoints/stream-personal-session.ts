@@ -34,6 +34,16 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
     wake?.();
   });
   let sentQueue: string | undefined;
+  let sentApprovals: string | undefined;
+  const sendApprovals = async () => {
+    const current = await deps.personalHistoryService.getSession(id, projectId);
+    if (!current || sink.aborted) return;
+    const requests = current.approval_requests ?? [];
+    const next = JSON.stringify(requests);
+    if (next === sentApprovals || sink.aborted) return;
+    sentApprovals = next;
+    await sink.write("patch", { op: "replace", path: "/approval_requests", value: requests });
+  };
   const sendQueue = async () => {
     if (!queueChanged) return;
     queueChanged = false;
@@ -48,6 +58,7 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
     let messages = (await deps.personalHistoryService.messages(id, projectId)) ?? [];
     await sink.write("patch", { op: "replace", path: "/messages", value: messages });
     await sendQueue();
+    await sendApprovals();
     let pendingLive: Update | undefined;
     const apply = async ({ index, message, live }: Update) => {
       if (sink.aborted || !(await deps.personalHistoryService.getSession(id, projectId))) return;
@@ -96,6 +107,7 @@ export const streamPersonalSession = async (id: string, deps: SessionsRouteDeps,
       if (!(await deps.personalHistoryService.getSession(id, projectId))) break;
       await flush();
       await sendQueue();
+      await sendApprovals();
       if (sink.aborted) break;
       if (await complete()) break;
       if (!arrived.size && !queueChanged) {

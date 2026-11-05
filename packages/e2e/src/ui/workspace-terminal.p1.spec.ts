@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 import { uiOrigin as apiBase } from "../ui-server";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
@@ -114,7 +115,7 @@ test("restores the first terminal when the hidden launcher was persisted active"
   try {
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}`);
-    await expect(page.getByTestId("start-page")).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
 
     const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
     if (await showSecondary.isVisible()) await showSecondary.click();
@@ -125,7 +126,7 @@ test("restores the first terminal when the hidden launcher was persisted active"
     await page.getByRole("button", { name: "Hide Bottom Panel" }).click();
     await persistHiddenLauncherAsActive(page);
     await page.reload();
-    await expect(page.getByTestId("start-page")).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
     await page.getByRole("button", { name: "Show Bottom Panel" }).click();
 
     await expect(page.locator(".xterm:visible")).toHaveCount(1);
@@ -223,9 +224,7 @@ test("closing a terminal tab leaves no shell process behind", async ({ page, req
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}`);
     // The project layout replaces the initial layout after its data loads.
-    await expect(
-      page.getByRole("region", { name: "Main", exact: true }).getByText("Terminal Cleanup", { exact: true }),
-    ).toBeVisible();
+    await expect(homePage(page).getByText("Terminal Cleanup", { exact: true })).toBeVisible();
 
     const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
     if (await showSecondary.isVisible()) await showSecondary.click();

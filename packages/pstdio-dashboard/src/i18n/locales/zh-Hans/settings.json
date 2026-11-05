@@ -10,11 +10,12 @@
     "retry": "重试",
     "maxConcurrentSessions": {
       "label": "最大并发会话数",
-      "helper": "留空表示不限制会话数。对于一次只能运行一个会话的本地 LLM 设置，请设为 1。",
+      "limit": "限制并发会话数",
+      "helper": "关闭后允许无限数量的并发会话。",
       "placeholder": "none",
       "none": "无",
       "current": "当前值：{{value}}",
-      "invalid": "请输入大于 0 的整数，或留空表示无。"
+      "invalid": "请输入大于 0 的整数。"
     }
   },
   "agentRow": {

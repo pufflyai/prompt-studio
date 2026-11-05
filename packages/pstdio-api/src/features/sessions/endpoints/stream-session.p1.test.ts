@@ -373,7 +373,7 @@ describe("session stream active session replay", () => {
     expect(streamRes.status).toBe(200);
 
     const sse = createSSEReader(streamRes);
-    const events = await sse.readEvents(3);
+    const events = await sse.readEvents(4);
     sse.close();
 
     expect(events[0]?.event).toBe("ready");
@@ -385,7 +385,8 @@ describe("session stream active session replay", () => {
     });
     expect(getPatchTextParts(snapshotPatch)).toEqual(["FIRST", "DONE"]);
 
-    const livePatch = events[2]?.data as JsonPatch;
+    expect(events[2]?.data).toEqual({ op: "replace", path: "/approval_requests", value: [] });
+    const livePatch = events[3]?.data as JsonPatch;
     expect(livePatch).toMatchObject({
       op: "add",
       path: "/messages/2",
@@ -441,7 +442,7 @@ describe("session stream active session replay", () => {
     expect(streamRes.status).toBe(200);
 
     const sse = createSSEReader(streamRes);
-    const events = await sse.readEvents(3);
+    const events = await sse.readEvents(4);
     sse.close();
 
     expect(events[0]?.event).toBe("ready");
@@ -453,7 +454,8 @@ describe("session stream active session replay", () => {
     });
     expect(getPatchTextParts(snapshotPatch)).toEqual(["FIRST", "FIRST DONE", "SECOND"]);
 
-    const livePatch = events[2]?.data as JsonPatch;
+    expect(events[2]?.data).toEqual({ op: "replace", path: "/approval_requests", value: [] });
+    const livePatch = events[3]?.data as JsonPatch;
     expect(livePatch).toMatchObject({
       op: "add",
       path: "/messages/3",

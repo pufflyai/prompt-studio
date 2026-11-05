@@ -6,5 +6,5 @@ export const actorFromSource = (source: CommandSource | undefined, id = "planner
     return { type: "automation", id, displayName: "Planner automation" };
   }
   if (source === "cli") return { type: "agent", id, displayName: "Agent" };
-  return { type: "human", id, displayName: "Human" };
+  return { type: "human", id, displayName: "User" };
 };

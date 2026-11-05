@@ -106,15 +106,14 @@ describe("extension catalog", () => {
     }
   });
 
-  test("ships only platform extensions as defaults", () => {
+  test("ships onboarding and platform defaults so projects choose their own harnesses", () => {
     const defaults = packagedExtensionCatalog.extensions
       .filter((catalogEntry) => catalogEntry.default)
       .map((catalogEntry) => catalogEntry.installName);
 
     expect(defaults).toEqual([
-      "harness-claude-code",
-      "harness-codex",
-      "harness-open-code",
+      "pstdio-home",
+      "pstdio-onboarding",
       "pstdio-base-themes",
       "pstdio-skills",
       "pstdio-performance",

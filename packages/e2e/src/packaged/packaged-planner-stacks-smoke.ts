@@ -263,3 +263,29 @@ export async function expectPackagedDraftAdoption(input: { baseUrl: string; head
     await execute("auto-build.configure", { enabled: false });
   }
 }
+
+export async function expectPackagedManualWorkspaceRecovery(input: {
+  baseUrl: string;
+  headers: Record<string, string>;
+}) {
+  const { execute, request, started, stop, child } = await expectDependencyStack(input, false);
+  await execute("auto-build.configure", { enabled: false });
+  const stopped = await request(`/sessions/${started.session.id}/status`, "PATCH", { status: "cancelled" });
+  expect(stopped).toMatchObject({ status: "cancelled" });
+  const before = await execute("read-attempt-history", { workspaceId: started.workspace.id });
+  const path = started.workspace.root_path;
+  await rename(path, `${path}.missing`);
+  try {
+    const recovery = await execute("run-attempt", { ticket: child.id });
+    expect(recovery.workspace.id).not.toBe(started.workspace.id);
+    expect(recovery.session.original_session_id).toBe(started.session.id);
+    await stop(recovery.session.id);
+    expect(await git(recovery.workspace.root_path, "show", "HEAD:child.ts")).toContain("true");
+    const after = await execute("read-attempt-history", { workspaceId: started.workspace.id });
+    expect(after.variant).toEqual(before.variant);
+    expect(after.attempt.state).toBe("abandoned");
+    expect(await execute("auto-build.read")).toMatchObject({ enabled: false });
+  } finally {
+    await rename(`${path}.missing`, path);
+  }
+}

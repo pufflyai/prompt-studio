@@ -224,3 +224,162 @@ test("recovery honors an explicit feature target without changing project settin
   expect((await readAttempt(f.storage, "workspace-2"))?.base.headSha).toBe("feature-head");
   expect(await f.ctx.settings.all()).toEqual(settings);
 });
+
+test("manual resume recovers missing stopped work with Auto Build disabled and preserves its revision", async () => {
+  const f = await lostWorkspace();
+  await f.storage.set("auto-build", { revision: "manual", enabled: false });
+  const mode = await f.storage.get("auto-build");
+  f.ctx.sessions.get = async (id) =>
+    sessionRecord({
+      ...f.old.session,
+      id,
+      status: "cancelled",
+      last_exit: { cause: "user_stop", startedAt: null, endedAt: "2026-10-22T10:00:00.000Z" },
+    });
+  const result = await runAttemptCommand.run(f.ctx, { ticket: f.ticket.id });
+  expect(result).toMatchObject({ decision: "started", workspace: { id: "workspace-2" } });
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+  expect((await readAttempt(f.storage, "workspace-2"))?.revisions).toEqual([]);
+  expect(await readRetiredWorkspaceIds(f.storage)).toContain(f.old.workspace.id);
+  expect(await attemptSelectionsCollection(f.storage).get(f.ticket.id)).toMatchObject({ workspaceId: "workspace-2" });
+  expect(f.created[0]?.originalSessionId).toBe(f.old.session.id);
+  expect(f.created[0]?.prompt).toContain("old-report");
+  expect(f.created[0]?.prompt).toContain("https://github.com/acme/tools/pull/1");
+  expect(await f.storage.get("auto-build")).toEqual(mode);
+});
+
+test.each(["branch", "missing owner", "restart"])("manual recovery uses surviving code: %s", async (source) => {
+  const f = await lostWorkspace(source);
+  await f.storage.set("auto-build", { revision: "manual", enabled: false });
+  const result = await runAttemptCommand.run(f.ctx, { ticket: f.ticket.id });
+  expect(result.workspace.id).toBe("workspace-2");
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+  expect(f.created[0]?.prompt).toContain(source === "branch" ? "branch-head" : "submitted-head");
+});
+
+test.each([
+  "capacity",
+  "dependency",
+  "live owner",
+  "competing owner",
+  "ambiguous",
+])("manual recovery preserves launch eligibility: %s", async (reason) => {
+  const f = await lostWorkspace();
+  if (reason === "capacity") await f.ctx.settings.set("automation.maxInProgress", 0);
+  if (reason === "dependency") {
+    const { createTicketCommand } = await import("./create-ticket");
+    const prerequisite = await createTicketCommand.run(f.ctx, { title: "Unfinished prerequisite", statusId: "ready" });
+    await putTicket(f.storage, { ...f.ticket, dependsOn: [prerequisite.id] });
+  }
+  if (reason === "live owner")
+    f.ctx.sessions.get = async () => sessionRecord({ ...f.old.session, status: "in_progress" });
+  if (reason === "competing owner")
+    f.ctx.sessions.query = sessionQuery(async () => [
+      sessionRecord({ ...f.old.session, id: "other", status: "in_progress" }),
+    ]);
+  if (reason === "ambiguous") await putAttempt(f.storage, { ...f.previous, workspaceId: "other" });
+  await expect(runAttemptCommand.run(f.ctx, { ticket: f.ticket.id })).rejects.toThrow();
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+  expect(f.created).toHaveLength(0);
+  expect(await attemptSelectionsCollection(f.storage).get(f.ticket.id)).toBeUndefined();
+});
+
+test.each([
+  "new stop",
+  "live owner",
+  "capacity",
+  "restored workspace",
+])("manual recovery rechecks changes during workspace creation: %s", async (change) => {
+  const f = await lostWorkspace();
+  let stoppedAt = "2026-10-22T10:00:00.000Z";
+  f.ctx.sessions.get = async (id) =>
+    sessionRecord({
+      ...f.old.session,
+      id,
+      status: "cancelled",
+      last_exit: { cause: "user_stop", startedAt: null, endedAt: stoppedAt },
+    });
+  const create = f.ctx.workspaces.create;
+  f.ctx.workspaces.create = async (input) => {
+    const workspace = await create(input);
+    if (change === "new stop") stoppedAt = "2026-10-22T11:00:00.000Z";
+    if (change === "live owner")
+      f.ctx.sessions.get = async () => sessionRecord({ ...f.old.session, status: "in_progress" });
+    if (change === "capacity") await f.ctx.settings.set("automation.maxInProgress", 0);
+    if (change === "restored workspace")
+      f.ctx.workspaces.get = async (id) =>
+        ({ id, root_path: "/restored", execution_kind: "local", provider_capabilities_json: { diff: true } }) as never;
+    return workspace;
+  };
+  await expect(runAttemptCommand.run(f.ctx, { ticket: f.ticket.id })).rejects.toThrow();
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+  expect(f.created).toHaveLength(0);
+  expect(await attemptSelectionsCollection(f.storage).get(f.ticket.id)).toBeUndefined();
+});
+
+test.each([
+  "selected alternative",
+  "ambiguous alternatives",
+])("manual recovery preserves a changed target assignment: %s", async (change) => {
+  const f = await lostWorkspace();
+  let pendingSelection: Promise<unknown> | undefined;
+  const create = f.ctx.workspaces.create;
+  f.ctx.workspaces.create = async (input) => {
+    const workspace = await create(input);
+    await putAttempt(f.storage, { ...f.previous, workspaceId: "other", implementationSessionId: "other-owner" });
+    if (change === "selected alternative") {
+      const { selectAttemptCommand } = await import("./attempt-history");
+      pendingSelection = Promise.resolve(
+        selectAttemptCommand.run(f.ctx, { ticket: f.ticket.id, workspaceId: "other" }),
+      );
+    }
+    return workspace;
+  };
+  await expect(runAttemptCommand.run(f.ctx, { ticket: f.ticket.id })).rejects.toThrow("variant");
+  await pendingSelection;
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+  expect(await readAttempt(f.storage, "workspace-2")).toBeNull();
+  expect(f.created).toHaveLength(0);
+  const selection = await attemptSelectionsCollection(f.storage).get(f.ticket.id);
+  expect(selection?.workspaceId).toBe(change === "selected alternative" ? "other" : undefined);
+});
+
+test("a concurrent selection keeps its final choice after manual recovery launches", async () => {
+  const f = await lostWorkspace();
+  const { selectAttemptCommand } = await import("./attempt-history");
+  await putAttempt(f.storage, { ...f.previous, workspaceId: "other", implementationSessionId: "other-owner" });
+  await selectAttemptCommand.run(f.ctx, { ticket: f.ticket.id, workspaceId: f.old.workspace.id });
+  let selection: ReturnType<typeof selectAttemptCommand.run> | undefined;
+  const create = f.ctx.sessions.create;
+  f.ctx.sessions.create = async (input) => {
+    selection = selectAttemptCommand.run(f.ctx, { ticket: f.ticket.id, workspaceId: "other" });
+    // Let the concurrent command run while launch is still awaiting its host session.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return create(input);
+  };
+  const recovery = await runAttemptCommand.run(f.ctx, { ticket: f.ticket.id });
+  await selection;
+  expect(recovery.workspace.id).toBe("workspace-2");
+  expect((await attemptSelectionsCollection(f.storage).get(f.ticket.id))?.workspaceId).toBe("other");
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+});
+
+test.each([
+  "automation",
+  "schedule",
+  "event",
+])("automatic run-attempt does not treat a stopped run as manual authority: %s", async (source) => {
+  const f = await lostWorkspace();
+  Object.assign(f.ctx, { source });
+  f.ctx.sessions.get = async (id) =>
+    sessionRecord({
+      ...f.old.session,
+      id,
+      status: "cancelled",
+      last_exit: { cause: "user_stop", startedAt: null, endedAt: "2026-10-22T10:00:00.000Z" },
+    });
+  await expect(runAttemptCommand.run(f.ctx, { ticket: f.ticket.id })).rejects.toThrow();
+  expect(f.created).toHaveLength(0);
+  expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
+  expect(await attemptSelectionsCollection(f.storage).get(f.ticket.id)).toBeUndefined();
+});

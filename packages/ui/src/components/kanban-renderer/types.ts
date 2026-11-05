@@ -10,6 +10,9 @@ export interface EnumOption {
   label: string;
   color?: string;
   icon?: string | null;
+  note?: string;
+  onNoteClick?: () => void;
+  canCreate?: boolean;
 }
 
 /**
@@ -104,6 +107,8 @@ export const isAttributesSource = (
 ): attributes is AttributesSource => !Array.isArray(attributes);
 
 export interface KanbanRendererRow {
+  icon?: string;
+  children?: KanbanRendererRow[];
   id: string;
   title: string;
   /**
@@ -121,6 +126,7 @@ export interface KanbanRendererSettings {
   columnGrouping: string | typeof NO_GROUPING;
   rowGrouping: string | typeof NO_GROUPING;
   displayProperties: string[];
+  showChildren?: boolean;
 }
 
 export type KanbanRendererSavedView = CollectionSavedView<KanbanRendererSettings>;
@@ -159,6 +165,8 @@ export interface KanbanRendererCreateLabels {
 }
 
 export interface KanbanRendererCreateRowConfig {
+  /** Run the creation command directly when it owns its own form. Defaults to inline. */
+  presentation?: "inline" | "command";
   title: string;
   submitLabel: string;
   fields: KanbanRendererCreateField[];

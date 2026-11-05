@@ -1,88 +1,62 @@
+import type { FormValue, IntegrationInfo, IntegrationMethod, ProviderInfo } from "@opencode/client";
 import {
   chooseHarnessAuthentication,
   type HarnessAuthentication,
   type HarnessAuthenticationChannel,
   type HarnessAuthenticationInput,
 } from "@pstdio/sdk/extensions";
-import { type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
-import { readStoredOpencodeProviders } from "./stored-providers";
+import { collectFormAnswers } from "./opencode-forms";
+import { buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
+import type { WithServerUrl } from "./opencode-server";
+import { waitForNextPoll } from "./opencode-session-poller";
 
-type Prompt = {
-  type: "text" | "select";
-  key: string;
-  message: string;
-  placeholder?: string;
-  options?: { value: string; label: string; hint?: string }[];
-  when?: { key: string; op: "eq" | "neq"; value: string };
-};
-type Method = { type: "oauth" | "api"; label: string; prompts?: Prompt[] };
-type Provider = { id: string; name: string; source: string; models: Record<string, unknown> };
-type Catalog = { all: Provider[]; connected: string[]; default: Record<string, string> };
 interface AuthenticationDeps {
-  storedProviders?: () => Promise<string[]>;
   fetcher: OpencodeFetcher;
-  withServerUrl: <T>(invoke: (url: string) => Promise<T>) => Promise<T>;
+  withServerUrl: WithServerUrl;
 }
-
-const collectInputs = async (native: Method, channel: HarnessAuthenticationChannel) => {
-  const inputs: Record<string, string> = {};
-  for (const prompt of native.prompts ?? []) {
-    if (prompt.when) {
-      const equal = inputs[prompt.when.key] === prompt.when.value;
-      if ((prompt.when.op === "eq") !== equal) continue;
-    }
-    inputs[prompt.key] = await channel.request(
-      prompt.type === "select"
-        ? {
-            type: "select",
-            title: prompt.message,
-            options: (prompt.options ?? []).map((option) => ({
-              id: option.value,
-              label: option.label,
-              description: option.hint,
-            })),
-          }
-        : { type: "input", title: prompt.message, placeholder: prompt.placeholder, secret: true },
-    );
-  }
-  return inputs;
-};
+const methodId = (method: IntegrationMethod) => ("id" in method ? method.id : method.type);
+const interactiveMethods = (integration?: IntegrationInfo) =>
+  integration?.methods.filter((method) => method.type !== "env") ?? [];
 
 export const createOpencodeAuthentication = (deps: AuthenticationDeps) => {
   const request = <T>(path: string, method = "GET", body?: unknown, signal?: AbortSignal) =>
-    deps.withServerUrl(async (base) => {
-      const response = await requestJson<T>(deps.fetcher, new URL(path, base).href, {
-        method,
-        body,
-        signal,
-        headers: { "content-type": "application/json" },
-      });
-      // Native errors may contain submitted credentials. Keep them within the harness.
-      requireResponseOk(response.response, "", "OpenCode account request failed");
-      return response.parsed as T;
-    });
+    deps.withServerUrl(
+      async (base) => {
+        const response = await requestJson<T>(deps.fetcher, buildRequestUrl(base, path, process.cwd()), {
+          method,
+          body,
+          signal,
+          headers: { "content-type": "application/json" },
+        });
+        // Native errors may contain submitted credentials. Keep them within the harness.
+        requireResponseOk(response.response, "", "OpenCode account request failed");
+        return response.parsed as T;
+      },
+      { retry: method === "GET" || method === "DELETE" },
+    );
   const catalog = async () => {
-    const [providers, methods, stored] = await Promise.all([
-      request<Catalog>("/provider"),
-      request<Record<string, Method[]>>("/provider/auth"),
-      (deps.storedProviders ?? readStoredOpencodeProviders)(),
+    const [providers, integrations] = await Promise.all([
+      request<{ data: ProviderInfo[] }>("/api/provider"),
+      request<{ data: IntegrationInfo[] }>("/api/integration"),
     ]);
-    return { providers, methods, stored };
+    return { providers: providers.data, integrations: integrations.data };
   };
   const state = (data: Awaited<ReturnType<typeof catalog>>, model?: string) => {
-    const providers = data.providers.all.map((provider) => {
-      const connected = data.providers.connected.includes(provider.id);
-      let status: HarnessAuthentication["status"] = "signed_out";
+    const providers = data.providers.map((provider) => {
+      const integration = data.integrations.find((item) => item.id === provider.integrationID);
+      const connections = integration?.connections ?? [];
+      const connected = connections.length > 0 && !connections[0]!.status;
+      let status: HarnessAuthentication["status"] = integration ? "signed_out" : "not_required";
+      if (!connections.length && provider.activation === "enabled") status = "not_required";
       if (connected) status = "signed_in";
-      if (connected && provider.source === "custom" && !data.stored.includes(provider.id)) status = "not_required";
       return {
         id: provider.id,
         label: provider.name,
         status,
-        canLogout: data.stored.includes(provider.id) && !["env", "config"].includes(provider.source),
-        methods: (data.methods[provider.id] ?? [{ type: "api", label: "API key" }]).map((method, index) => ({
-          id: String(index),
-          label: method.label,
+        canLogout: connections.some((connection) => connection.type === "credential"),
+        methods: interactiveMethods(integration).map((method) => ({
+          id: methodId(method),
+          label: method.label ?? "API key",
           kind: method.type === "oauth" ? ("oauth" as const) : ("api_key" as const),
         })),
       };
@@ -94,48 +68,89 @@ export const createOpencodeAuthentication = (deps: AuthenticationDeps) => {
       providers,
     } satisfies HarnessAuthentication;
   };
+  const connectAttempt = async (
+    endpoint: string,
+    native: Extract<IntegrationMethod, { type: "oauth" | "command" }>,
+    answer: Record<string, FormValue>,
+    channel: HarnessAuthenticationChannel,
+  ) => {
+    const kind = native.type;
+    const { data: attempt } = await request<{
+      data: { attemptID: string; url?: string; instructions?: string; mode?: string };
+    }>(endpoint + kind, "POST", { methodID: native.id, answer }, channel.signal);
+    const path = `${endpoint + kind}/${encodeURIComponent(attempt.attemptID)}`;
+    let lastMessage: string | undefined;
+    try {
+      if (attempt.url) await channel.emit({ type: "browser", url: attempt.url, message: attempt.instructions });
+      if (attempt.mode === "code") {
+        const code = await channel.request({
+          type: "input",
+          title: attempt.instructions || "Paste the authorization code",
+          secret: true,
+        });
+        await request(`${path}/complete`, "POST", { code }, channel.signal);
+      }
+      while (true) {
+        channel.signal.throwIfAborted();
+        const result = await request<{ data: { status: string; message?: string } }>(
+          path,
+          "GET",
+          undefined,
+          channel.signal,
+        );
+        if (result.data.status === "complete") return;
+        if (result.data.message && result.data.message !== lastMessage) {
+          lastMessage = result.data.message;
+          await channel.emit({ type: "message", message: lastMessage });
+        }
+        if (result.data.status !== "pending")
+          throw new Error("OpenCode sign-in did not complete. Start sign-in again.");
+        await waitForNextPoll(channel.signal, 1000);
+      }
+    } finally {
+      // Cancellation releases native callback listeners even when a shared process stays alive.
+      await request(path, "DELETE").catch(() => {});
+    }
+  };
+  const authenticateMethod = async (
+    integration: IntegrationInfo,
+    native: IntegrationMethod,
+    channel: HarnessAuthenticationChannel,
+  ) => {
+    const answer = await collectFormAnswers("form" in native ? (native.form ?? []) : [], channel);
+    const endpoint = `/api/integration/${encodeURIComponent(integration.id)}/connect/`;
+    if (native.type === "key") {
+      const key = (await channel.request({ type: "input", title: "API key", secret: true })).trim();
+      if (!key) throw new Error("Enter an API key.");
+      await request(`${endpoint}key`, "POST", { key, answer }, channel.signal);
+      return;
+    }
+    if (native.type === "external") {
+      await request(`${endpoint}external`, "POST", { methodID: native.id, answer }, channel.signal);
+      return;
+    }
+    if (native.type !== "oauth" && native.type !== "command") throw new Error("Unsupported OpenCode sign-in method.");
+    await connectAttempt(endpoint, native, answer, channel);
+  };
   const getAuthentication = async (input: { model?: string } = {}) => state(await catalog(), input.model);
   const authenticate = async (input: HarnessAuthenticationInput, channel: HarnessAuthenticationChannel) => {
     const data = await catalog();
     channel.signal.throwIfAborted();
     const choice = await chooseHarnessAuthentication(state(data, input.model), input, channel);
     if (!choice) return;
-    const path = "/auth/" + encodeURIComponent(choice.provider);
+    const provider = data.providers.find((item) => item.id === choice.provider);
+    const integration = data.integrations.find((item) => item.id === provider?.integrationID);
+    if (!integration) throw new Error("This provider does not require sign-in.");
     if (input.action === "logout") {
-      await request(path, "DELETE", undefined, channel.signal);
+      for (const connection of integration.connections) {
+        if (connection.type === "credential")
+          await request(`/api/credential/${encodeURIComponent(connection.id)}`, "DELETE", undefined, channel.signal);
+      }
       return;
     }
-    const method = Number(choice.method);
-    const native = data.methods[choice.provider]?.[method] ?? { type: "api", label: "API key" };
-    const inputs = await collectInputs(native, channel);
-    if (native.type === "api") {
-      const key = (await channel.request({ type: "input", title: "API key", secret: true })).trim();
-      if (!key) throw new Error("Enter an API key.");
-      await request(
-        path,
-        "PUT",
-        { type: "api", key, ...(Object.keys(inputs).length ? { metadata: inputs } : {}) },
-        channel.signal,
-      );
-      return;
-    }
-    const endpoint = "/provider/" + encodeURIComponent(choice.provider) + "/oauth/";
-    const result = await request<{ url: string; method: "auto" | "code"; instructions: string }>(
-      endpoint + "authorize",
-      "POST",
-      { method, inputs },
-      channel.signal,
-    );
-    await channel.emit({ type: "browser", url: result.url, message: result.instructions });
-    const code =
-      result.method === "code"
-        ? await channel.request({
-            type: "input",
-            title: result.instructions || "Paste the authorization code",
-            secret: true,
-          })
-        : undefined;
-    await request(endpoint + "callback", "POST", { method, ...(code ? { code } : {}) }, channel.signal);
+    const native = interactiveMethods(integration).find((method) => methodId(method) === choice.method);
+    if (!native) throw new Error("Select an OpenCode sign-in method.");
+    await authenticateMethod(integration, native, channel);
   };
   return { getAuthentication, authenticate };
 };

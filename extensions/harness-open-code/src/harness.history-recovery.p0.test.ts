@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { ctx, harnessDefaults, serviceOverrides } from "./harness.test-helpers";
+import { nativeMessagesResponse } from "./native-api.test-helpers";
 import {
   completedAssistant,
   inFlightAssistant,
@@ -26,29 +27,30 @@ test.each([
   const readMessages = () => {
     reads += 1;
     const users = [userMessage("again"), userMessage("again")];
-    if (operation === "resume" && reads === 1) return new Response(JSON.stringify(users));
+    if (operation === "resume" && reads === 1) return nativeMessagesResponse(users);
     const lastRead = operation === "resume" ? 3 : 2;
     const assistant = reads >= lastRead ? completedAssistant("done") : inFlightAssistant("working");
-    return new Response(JSON.stringify([...users, assistant]));
+    return nativeMessagesResponse([...users, assistant]);
   };
   const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? "GET";
-    if (method === "POST" && url.includes("/session?")) return new Response(JSON.stringify({ id: "oc-1" }));
-    if (method === "POST" && url.includes("/session/oc-1/message")) return new Promise<Response>(() => {});
-    if (method === "POST" && url.includes("/session/oc-1/abort")) {
+    if (method === "POST" && url.includes("/api/session?"))
+      return new Response(JSON.stringify({ data: { id: "oc-1" } }));
+    if (method === "POST" && url.includes("/api/session/oc-1/prompt")) return new Promise<Response>(() => {});
+    if (method === "POST" && url.includes("/session/oc-1/interrupt")) {
       abortCalls += 1;
       return new Response("true");
     }
     // Two identical prompts leave the saved failure without a single owner.
-    if (method === "GET" && url.includes("/session/oc-1/message")) {
+    if (method === "GET" && url.includes("/api/session/oc-1/message")) {
       return readMessages();
     }
     return new Response("{}", { status: 404 });
   };
   const { sink, patches } = recordingSink();
   const user: SessionMessage = {
-    id: "old-user",
+    id: "opencode-msg-0",
     role: "user",
     parts: [
       { type: "text", text: "again" },
@@ -75,7 +77,7 @@ test.each([
   expect(warnings).toHaveLength(1);
   expect(warnings[0]).toContain("oc-1");
   expect(warnings[0]).not.toContain("again");
-  expect(sink.getMessages()).toContainEqual(user);
+  expect(sink.getMessages()).toContainEqual(expect.objectContaining({ role: user.role, parts: user.parts }));
   expect(sink.getMessages().filter((message) => message.id === failure.id)).toEqual([failure]);
   expect(sink.getMessages().at(-1)?.parts).toEqual([{ type: "text", text: "done" }]);
   expect(patches.some((patch) => patch.path === "/history_issue")).toBe(false);

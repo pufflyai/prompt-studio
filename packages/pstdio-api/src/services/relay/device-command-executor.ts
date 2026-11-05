@@ -4,6 +4,24 @@ import { type Json, jsonSchema } from "pstdio-sync-contracts";
 import { approveSessionHandler, approveSessionRoute } from "../../features/sessions/endpoints/approve-session";
 import { createSessionHandler, createSessionRoute } from "../../features/sessions/endpoints/create-session";
 import { followUpSessionHandler, followUpSessionRoute } from "../../features/sessions/endpoints/follow-up-session";
+import {
+  getQueuedMessagesHandler,
+  getQueuedMessagesRoute,
+} from "../../features/sessions/endpoints/get-queued-messages";
+import {
+  combineQueuedFollowUpsHandler,
+  combineQueuedFollowUpsRoute,
+  pendingQueuedFollowUpsHandler,
+  pendingQueuedFollowUpsRoute,
+} from "../../features/sessions/endpoints/pending-queued-follow-ups";
+import {
+  deleteQueuedFollowUpHandler,
+  deleteQueuedFollowUpRoute,
+  moveQueuedFollowUpHandler,
+  moveQueuedFollowUpRoute,
+  updateQueuedFollowUpHandler,
+  updateQueuedFollowUpRoute,
+} from "../../features/sessions/endpoints/queued-follow-ups";
 import { resolveCreateWorkspace } from "../../features/sessions/endpoints/resolve-create-workspace";
 import {
   updateSessionStatusHandler,
@@ -23,6 +41,10 @@ import {
   getWorkspaceDiffSummaryRoute,
 } from "../../features/workspaces/endpoints/get-workspace-diff-summary";
 import {
+  getWorkspaceCapacityHandler,
+  getWorkspaceCapacityRoute,
+} from "../../features/workspaces/endpoints/workspace-capacity";
+import {
   getWorkspaceFileHandler,
   getWorkspaceFileRoute,
   listWorkspaceFilesHandler,
@@ -33,10 +55,38 @@ import type { RelayDeps } from "./deps";
 import { executeWithDeviceAttachments } from "./device-command-attachments";
 
 const requestFor = (command: DeviceCommand) => {
+  if (command.type === "workspace.capacity") return { path: "/workspaces/capacity", method: "GET" };
   if (command.type === "session.create") return { path: "/sessions", method: "POST", body: command.input };
   if (command.type === "workspace.create") return { path: "/workspaces", method: "POST", body: command.input };
   const id = encodeURIComponent(command.id);
   switch (command.type) {
+    case "session.queuedMessages":
+      return { path: `/sessions/${id}/queued-messages`, method: "GET" };
+    case "session.queuedFollowUps":
+      return { path: `/sessions/${id}/queued-follow-ups`, method: "GET" };
+    case "session.queueUpdate":
+      return {
+        path: `/sessions/${id}/queued-follow-ups/${command.queuePosition}`,
+        method: "PATCH",
+        body: command.input,
+      };
+    case "session.queueDelete":
+      return {
+        path: `/sessions/${id}/queued-follow-ups/${command.queuePosition}?${new URLSearchParams(command.expectedRevision ? { expectedRevision: command.expectedRevision } : {})}`,
+        method: "DELETE",
+      };
+    case "session.queueMove":
+      return {
+        path: `/sessions/${id}/queued-follow-ups/${command.queuePosition}/move`,
+        method: "POST",
+        body: command.input,
+      };
+    case "session.queueCombine":
+      return {
+        path: `/sessions/${id}/queued-follow-ups/${command.queuePosition}/combine`,
+        method: "POST",
+        body: command.input,
+      };
     case "session.interrupt":
       return { path: `/sessions/${id}/status`, method: "PATCH", body: { status: "cancelled" } };
     case "session.followUp":
@@ -69,11 +119,18 @@ const requestFor = (command: DeviceCommand) => {
 /** Reuse the local actions and their validation. The relay cannot select an arbitrary host route. */
 export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.openapi(getQueuedMessagesRoute, getQueuedMessagesHandler(deps));
+  routes.openapi(pendingQueuedFollowUpsRoute, pendingQueuedFollowUpsHandler(deps));
+  routes.openapi(updateQueuedFollowUpRoute, updateQueuedFollowUpHandler(deps));
+  routes.openapi(deleteQueuedFollowUpRoute, deleteQueuedFollowUpHandler(deps));
+  routes.openapi(moveQueuedFollowUpRoute, moveQueuedFollowUpHandler(deps));
+  routes.openapi(combineQueuedFollowUpsRoute, combineQueuedFollowUpsHandler(deps));
   routes.openapi(createSessionRoute, createSessionHandler(deps));
   routes.openapi(followUpSessionRoute, followUpSessionHandler(deps));
   routes.openapi(approveSessionRoute, approveSessionHandler(deps));
   routes.openapi(updateSessionStatusRoute, updateSessionStatusHandler(deps));
   routes.openapi(createWorkspaceRoute, createWorkspaceHandler(deps));
+  routes.openapi(getWorkspaceCapacityRoute, getWorkspaceCapacityHandler(deps));
   routes.openapi(listWorkspaceFilesRoute, listWorkspaceFilesHandler(deps));
   routes.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
   routes.openapi(getWorkspaceDiffRoute, getWorkspaceDiffHandler(deps));
@@ -83,6 +140,7 @@ export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) 
   const localSession = async (id: string) => (await deps.sessionService.get(id))?.project_id === projectId;
   const localWorkspace = async (id: string) => (await deps.workspaceService.get(id))?.project_id === projectId;
   const inScope = async (command: DeviceCommand) => {
+    if (command.type === "workspace.capacity") return Boolean(await deps.projectService.get(projectId));
     if (command.type === "session.create") {
       const input = command.input;
       return (

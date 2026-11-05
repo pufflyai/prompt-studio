@@ -1,4 +1,4 @@
-import type { CommandContext } from "@pstdio/sdk/extensions";
+import type { CommandContext, ExtensionSessionsApi } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import {
   appendAttemptEvent,
@@ -15,7 +15,15 @@ export interface WorkspaceRecovery {
   previous: AttemptRecord;
   headSha: string;
   detail: string;
+  resumedStoppedRun?: ReturnType<typeof recoveryOwnerRun>;
 }
+
+export const recoveryOwnerRun = (owner: NonNullable<Awaited<ReturnType<ExtensionSessionsApi["get"]>>>) => ({
+  status: owner.status,
+  startedAt: owner.last_request_started ?? null,
+  endedAt: owner.last_request_ended ?? null,
+  stoppedAt: owner.last_exit?.endedAt ?? null,
+});
 
 export async function readRecoveryBase(ctx: CommandContext, attempt: AttemptRecord, base?: string) {
   const home = await ctx.workspaces.getDefault();
@@ -73,11 +81,11 @@ export async function recoveryPrompt(
   const ticket = await findTicket(ctx, old.ticketId);
   return [
     [
-      `Recover ${old.ticketShorthand}. The old workspace ${old.workspaceShorthand} (${old.workspaceId}) is unavailable: ${recovery.detail}. This is a recovery assignment, not a reason to block the ticket or ask for human permission.`,
+      `Recover ${old.ticketShorthand}. The old workspace ${old.workspaceShorthand} (${old.workspaceId}) is unavailable: ${recovery.detail}. This is a recovery assignment, not a reason to block the ticket or ask for permission.`,
       `This fresh managed workspace starts at available commit ${recovery.headSha}; required dependency base: ${requiredBase}. This starting point does not prove the previous work was recovered. Keep this workspace's assigned branch. Read the ticket, old attempt history, reports and review findings. Old implementation session: ${old.implementationSessionId}. Old recorded base: ${old.base.headSha}.`,
       `Old revisions: ${old.revisions.map((revision) => `R${revision.revision}: ${revision.headSha}, base ${revision.baseSha}, report ${revision.changeRequestReportId}`).join("; ") || "No submitted revisions"}. Linked PRs: ${(ticket?.reviewLinks ?? []).map(({ url }) => url).join(", ") || "None"}.`,
       "Find the previous code in the surviving Git branch, saved commits, PR branches and reports. Fetch the PR code when needed and restore it here. If no code survives, restart implementation from the ticket requirements. State what was recovered and what had to be redone; do not claim missing uncommitted files were restored. The old workspace and its review history remain available as evidence.",
-      `Commit recovered changes, run update-stack with this workspace's current HEAD and your owner session, and verify the required code before continuing. Run affected checks and configured review, save a fresh change request report and submit the exact new HEAD. Old approvals stay on old commits; recovery does not approve work or merge the target. Preserve the ticket's PR target. Request human input only for a real unresolved requirements decision or missing access you cannot repair.`,
+      `Commit recovered changes, run update-stack with this workspace's current HEAD and your owner session, and verify the required code before continuing. Run affected checks and configured review, save a fresh change request report and submit the exact new HEAD. Old approvals stay on old commits; recovery does not approve work or merge the target. Preserve the ticket's PR target. Request review only for a real unresolved requirements decision or missing access you cannot repair.`,
     ].join("\n\n"),
   ];
 }
@@ -90,7 +98,7 @@ export async function finishWorkspaceRecovery(ctx: CommandContext, old: AttemptR
     ticketId: old.ticketId,
     workspaceId: replacement.workspaceId,
     selectedBy: actor,
-    humanRequestId: null,
+    reviewRequestId: null,
     selectedAt: new Date().toISOString(),
   });
   await appendAttemptEvent(ctx.storage, {
@@ -138,7 +146,10 @@ export async function recoverySessionInput(
     throw new Error("The recovery attempt changed before launch.");
   if (isLiveSession(owner))
     throw new Error("The previous implementation session is running. Continue its existing owner.");
-  if (owner?.last_exit?.cause === "user_stop")
+  if (
+    owner?.last_exit?.cause === "user_stop" &&
+    JSON.stringify(recovery.resumedStoppedRun) !== JSON.stringify(recoveryOwnerRun(owner))
+  )
     throw new Error("The previous implementation session was stopped. Keep its work paused.");
   return owner ? { originalSessionId: owner.id } : {};
 }

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { createTicketParentLookup, createTicketWorkspaceLookup, ticketToRow } from "./mappers";
+import { createTicketParentLookup, ticketToRow } from "./mappers";
 import { observeStorageReads } from "./storage-reads.fixture";
 import { ticketContext, ticketsCollection } from "./ticket-context.fixture";
 import { readTicketParentLookup } from "./ticket-resource-hierarchy";
@@ -23,7 +23,7 @@ const ticket = (id: string, parentId?: string): Ticket => ({
   parentId,
 });
 
-test("summary rows preserve full-ticket values, hierarchy, tags, archives and workspace badges", () => {
+test("summary rows preserve full-ticket values, hierarchy, tags, archives and linked resources", () => {
   const tickets = [
     ticket("root"),
     { ...ticket("child", "root"), archived: true },
@@ -47,15 +47,13 @@ test("summary rows preserve full-ticket values, hierarchy, tags, archives and wo
       })),
     },
   ];
-  const workspaces = createTicketWorkspaceLookup([
-    { id: "workspace", name: "Working copy", anchors_json: [{ type: "ticket", id: "child", shorthand: "T-child" }] },
-  ]);
+  const resources = new Map([["child", [{ id: "workspace", label: "Working copy", icon: "folder" }]]]);
   const fullLookup = createTicketParentLookup(tickets);
   const summaries = tickets.map(ticketSummary);
   const summaryLookup = createTicketParentLookup(summaries);
 
-  expect(summaries.map((summary) => ticketToRow(summary, "project", tags, workspaces, summaryLookup))).toEqual(
-    tickets.map((full) => ticketToRow(full, "project", tags, workspaces, fullLookup)),
+  expect(summaries.map((summary) => ticketToRow(summary, "project", tags, resources, summaryLookup))).toEqual(
+    tickets.map((full) => ticketToRow(full, "project", tags, resources, fullLookup)),
   );
 });
 

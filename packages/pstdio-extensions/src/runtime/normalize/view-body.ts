@@ -11,7 +11,7 @@ const handler = (input: {
   index: RegistryIndex;
   viewId: string;
   localId: string;
-  kind: "controls" | "dataTable" | "file" | "kanban" | "tree";
+  kind: "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "tree";
   operation: string;
   value: unknown;
 }) =>
@@ -69,26 +69,31 @@ export const normalizeViewBody = (input: {
       resetHandlerId: handler({ ...input, kind: "controls", operation: "onReset", value: body.onReset }),
     };
   }
-  if (body.kind === "kanban") {
+  if (body.kind === "kanban" || body.kind === "resourceList") {
     return {
       ...body,
-      queryHandlerId: handler({ ...input, kind: "kanban", operation: "query", value: body.query }),
+      queryHandlerId: handler({ ...input, kind: body.kind, operation: "query", value: body.query }),
       attributeChangeHandlerId: handler({
         ...input,
-        kind: "kanban",
+        kind: body.kind,
         operation: "onAttributeChange",
         value: body.onAttributeChange,
       }),
-      moveHandlerId: handler({ ...input, kind: "kanban", operation: "onMove", value: body.onMove }),
+      moveHandlerId: handler({
+        ...input,
+        kind: body.kind,
+        operation: "onMove",
+        value: "onMove" in body ? body.onMove : undefined,
+      }),
       columnActionHandlerId: handler({
         ...input,
-        kind: "kanban",
+        kind: body.kind,
         operation: "onColumnAction",
         value: body.onColumnAction,
       }),
       rowActivationHandlerId: handler({
         ...input,
-        kind: "kanban",
+        kind: body.kind,
         operation: "onRowActivate",
         value: body.onRowActivate,
       }),

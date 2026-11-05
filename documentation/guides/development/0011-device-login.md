@@ -23,6 +23,17 @@ This repository supplies no live Google OAuth client or account service. The com
 5. The host loads the account's cloud projects and starts syncing the ones that exist locally.
 
 Closing a pending login stops its in-flight exchange and the write that follows it.
+The native account owner serializes starts, cancellation and sign-out across all
+clients and projects on this device. Starting another login closes and drains the
+previous pending callback before opening its replacement. Signing out also closes
+the callback, so an older browser window cannot sign the device in afterward.
+
+`account.status().loginAttempt` exposes only the latest request ID and its
+`pending`, `complete` or `failed` state. It contains no URL, callback state or
+credential. `accountEvents.changed` announces operation changes, including callback
+completion, cancellation and expiry. Views read this owner instead of storing a
+second request ID in extension settings. The field is absent before a login starts,
+after sign-out and after a runtime restart.
 
 Signing in, registering a device, presence, listing devices, renaming and removing devices stay available without early access. Cloud sync requires the account's `relay` feature. Without it, the manager lists no cloud projects, hands out no encryption keys and issues no relay access. The operator grants or revokes it by verified Google email after the first sign-in; see [Cloud early access](0007-account-manager.md#cloud-early-access). Plans, billing and the Coming soon UI are separate work.
 

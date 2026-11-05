@@ -1,17 +1,18 @@
 import { expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchLayout } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { dashboardHomePage } from "@/shared/app/resources";
 import { resolveDashboardPersistenceScope } from "@/shared/workbench/dashboard-persistence-scope";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadata } from "./module-test-fixtures";
 
-test("keeps a Start terminal alive while an open Lab page receives fresh webview metadata", async () => {
+test("keeps a Home terminal alive while an open Lab page receives fresh webview metadata", async () => {
   const layouts = new Map<string | undefined, WorkbenchLayout>();
   const workbench = createWorkbench({
+    startPage: dashboardHomePage,
     layoutPersistence: {
       getLayout: (scope) => layouts.get(scope),
       setLayout: (layout, scope) => {
@@ -22,13 +23,13 @@ test("keeps a Start terminal alive while an open Lab page receives fresh webview
   });
   workbench.modes.registerMode({ id: "project", panels: ["main", "secondary", "side"], activate() {} });
   workbench.modes.registerMode({ id: "sessions", panels: ["main", "side"], activate() {} });
-  for (const id of ["start", "sessions"]) {
+  for (const id of ["home", "sessions"]) {
     workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });
     workbench.pages.registerPage({
       id,
-      ref: { extensionId: "pstdio", kind: "page", id },
-      path: id === "start" ? "" : id,
-      modeId: id === "start" ? "project" : "sessions",
+      ref: id === "home" ? dashboardHomePage : { extensionId: "pstdio", kind: "page", id },
+      path: id,
+      modeId: id === "home" ? "project" : "sessions",
       main: { kind: "view", view: { kind: "view", id }, cardinality: "one" },
       slots: [],
     });
@@ -52,7 +53,7 @@ test("keeps a Start terminal alive while an open Lab page receives fresh webview
     await flushMicrotasks();
     await flushMicrotasks();
     workbench.pageLocations.setProject("terminal-refresh");
-    expect(workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.start }).ok).toBe(true);
+    expect(workbench.pageLocations.navigate({ kind: "page", page: dashboardHomePage }).ok).toBe(true);
     workbench.terminal.setSessionOpener(async () => ({
       id: "terminal-child",
       write() {},
@@ -96,7 +97,7 @@ test("keeps a Start terminal alive while an open Lab page receives fresh webview
     expect(workbench.pages.store.getState().activePageId).toBe(metadata.pages[0]!.id);
     expect(kills).toEqual([]);
     expect(child.exitCode).toBeNull();
-    expect(workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.start }).ok).toBe(true);
+    expect(workbench.pageLocations.navigate({ kind: "page", page: dashboardHomePage }).ok).toBe(true);
     const restored = workbench.layout
       .listPanelInstances("secondary")
       .find((panel) => panel.instanceId === placement.instanceId);

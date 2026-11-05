@@ -12,6 +12,7 @@ import type {
   ExtensionContextBase,
   ExtensionFilesApi,
   ExtensionLoggerApi,
+  ExtensionManagementApi,
   ExtensionNetApi,
   ExtensionNotifyApi,
   ExtensionPackageFilesApi,
@@ -57,6 +58,7 @@ export type ScopedHostApis = Pick<
   | "files"
   | "skills"
   | "settings"
+  | "extensions"
 >;
 
 export interface CommandRunnerEnvironment {
@@ -73,6 +75,7 @@ export interface CommandRunnerEnvironment {
   extensionFiles?: ArtifactMount;
   files: ExtensionFilesApi;
   skills?: ExtensionSkillsApi;
+  extensions?: ExtensionManagementApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   activity: ExtensionActivityApi;

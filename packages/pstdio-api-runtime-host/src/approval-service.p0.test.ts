@@ -121,3 +121,24 @@ describe("createApprovalService", () => {
     expect(r2.decision).toBe("timeout");
   });
 });
+
+test("current approvals remain available to a reconnected reader and change independently", async () => {
+  let changes = 0;
+  const service = createApprovalService(() => {}, { onChange: () => changes++ });
+  const first = { id: "first", toolName: "Read", toolInput: { path: "a" }, toolUseId: "tool-a" };
+  const second = { id: "second", toolName: "Write", toolInput: { path: "b" }, toolUseId: "tool-b" };
+  const firstReply = service.requestApproval(first);
+  const secondReply = service.requestApproval(second);
+  try {
+    expect(service.pendingRequests()).toEqual([first, second]);
+    service.handleResponse({ id: "first", decision: "approve" });
+    expect(await firstReply).toEqual({ id: "first", decision: "approve" });
+    expect(service.pendingRequests()).toEqual([second]);
+    expect(changes).toBe(3);
+  } finally {
+    service.dispose();
+    await secondReply;
+  }
+  expect(service.pendingRequests()).toEqual([]);
+  expect(changes).toBe(4);
+});

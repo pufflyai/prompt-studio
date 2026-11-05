@@ -21,3 +21,14 @@ export const resolutionFromResult = (
     (entry) => entry?.resource && input.identityOf(entry.resource) === input.identityOf(input.open),
   );
 };
+
+export const sameResourceReference = (left: ResourceRef, right: ResourceRef) =>
+  left.type === right.type &&
+  left.id === right.id &&
+  left.extensionId === right.extensionId &&
+  left.projectId === right.projectId &&
+  left.label === right.label &&
+  left.icon === right.icon &&
+  left.shorthand === right.shorthand &&
+  JSON.stringify(left.device ?? null) === JSON.stringify(right.device ?? null) &&
+  JSON.stringify(left.metadata ?? {}) === JSON.stringify(right.metadata ?? {});

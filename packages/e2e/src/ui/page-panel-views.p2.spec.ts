@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homePage } from "../helpers/home-loading";
 import { uiOrigin } from "../ui-server";
 
 const panel = (page: Page, id: string) => page.locator(`[data-workbench-panel="${id}"]`);
@@ -28,7 +29,7 @@ test("tabless pages render their content without tab headers", async ({ page, re
   try {
     await prepare(page);
     await page.goto(`/projects/${id}`);
-    await expect(page.getByTestId("start-page")).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
     await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
     await expect(panel(page, "main").getByRole("group", { name: "Available tabs" })).toHaveCount(0);
     await page.getByRole("option", { name: "Sessions", exact: true }).click();
@@ -36,7 +37,7 @@ test("tabless pages render their content without tab headers", async ({ page, re
     await expect(panel(page, "main").getByRole("tab")).toHaveCount(0);
     await expect(panel(page, "main").getByRole("button", { name: "Add panel", exact: true })).toHaveCount(0);
     await page.goBack();
-    await expect(page.getByTestId("start-page")).toBeVisible();
+    await expect(homePage(page)).toBeVisible();
     await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
     for (const path of ["tickets", "ticket-timeline"]) {
       await page.goto(`/projects/${id}/extensions/pstdio.pstdio-planner/${path}`);

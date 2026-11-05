@@ -1,127 +1,99 @@
-import { Box, Button, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
-import { useToaster } from "@pstdio/ui";
+import { Button, Stack, Text } from "@chakra-ui/react";
+import { NumberInputField, NumberInputRoot, SettingsContentSkeleton, Switch } from "@pstdio/ui";
+import { ParamEditorRow } from "@pstdio/ui/param-editor";
+import { useSettingsChanges } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useActionError } from "@/shared/components/use-action-error";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
 import { ProjectDefaultsCard } from "./project-defaults-card";
 
-const parseLimit = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed) || parsed < 1) return undefined;
-  return parsed;
+const parseLimit = (value: string | null) => {
+  if (value === null) return null;
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined;
 };
-
-// Global runtime settings (session queue concurrency) plus the selected project's
-// default harness, model, and run options when a project is in scope.
 export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
-  const toaster = useToaster();
-  const { projectId } = props;
-  const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("settings");
-  const { data: settings, error, isError, isLoading, refetch } = useSettings();
-  const updateSettings = useUpdateSettings();
-  const [value, setValue] = useState("");
-
+  const { data: settings, error, isLoading, refetch } = useSettings();
+  const update = useUpdateSettings();
+  const [value, setValue] = useState<string | null>(null);
   useEffect(() => {
-    if (settings) {
-      setValue(settings.max_concurrent_sessions?.toString() ?? "");
-    }
+    if (settings) setValue(settings.max_concurrent_sessions?.toString() ?? null);
   }, [settings]);
-
-  const parsedLimit = parseLimit(value);
-  const isInvalid = parsedLimit === undefined;
-  const isUnchanged = (settings?.max_concurrent_sessions ?? null) === parsedLimit;
-  const isSaveDisabled = isLoading || isInvalid || isUnchanged || updateSettings.isPending;
-
-  const handleSave = () => {
-    if (parsedLimit === undefined) return;
-    clearError();
-
-    updateSettings.mutate(
-      { max_concurrent_sessions: parsedLimit },
-      {
-        onSuccess: () => {
-          toaster.create({ type: "success", title: t("runtimeSettings.saveSuccess") });
-        },
-        onError: (error) => {
-          showError({ title: t("runtimeSettings.saveError"), description: error.message });
-        },
-      },
-    );
-  };
-
+  const parsed = parseLimit(value);
+  useSettingsChanges({
+    dirty: Boolean(settings) && value !== (settings?.max_concurrent_sessions?.toString() ?? null),
+    saving: update.isPending,
+    disabled: parsed === undefined,
+    onSave: async () => {
+      if (parsed === undefined) throw new Error(t("runtimeSettings.maxConcurrentSessions.invalid"));
+      await update.mutateAsync({ max_concurrent_sessions: parsed });
+    },
+    onReset: () => {
+      setValue(settings?.max_concurrent_sessions?.toString() ?? null);
+      update.reset();
+    },
+  });
+  if (isLoading) return <SettingsContentSkeleton />;
   return (
-    <Stack gap="md" padding="lg" maxW="720px">
-      {errorNotice}
-      <Stack gap="2xs">
-        <Text textStyle="heading/S">{t("runtimeSettings.title")}</Text>
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("runtimeSettings.description")}
+    <Stack gap="lg">
+      {(update.error ?? error) ? (
+        <Text role="alert" color="fg.error">
+          {(update.error ?? error)?.message}
         </Text>
-      </Stack>
-
-      {isLoading ? (
-        <Box py="md" display="flex" justifyContent="center">
-          <Spinner size="sm" />
-        </Box>
       ) : null}
-      {!isLoading && isError ? (
-        <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
-          <Stack gap="2xs">
-            <Text textStyle="label/S/medium" color="fg.error">
-              {t("runtimeSettings.loadError")}
-            </Text>
-            <Text textStyle="paragraph/XS/regular" color="fg.muted">
-              {error instanceof Error ? error.message : t("runtimeSettings.loadErrorDescription")}
-            </Text>
-          </Stack>
-          <Button size="sm" alignSelf="start" variant="outline" onClick={() => refetch()}>
-            {t("runtimeSettings.retry")}
-          </Button>
-        </Stack>
+      {error ? (
+        <Button alignSelf="start" variant="outline" onClick={() => void refetch()}>
+          {t("runtimeSettings.retry")}
+        </Button>
       ) : null}
-      {!isLoading && !isError ? (
-        <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
-          <Stack gap="2xs">
-            <Text textStyle="label/S/medium">{t("runtimeSettings.maxConcurrentSessions.label")}</Text>
-            <Text textStyle="paragraph/XS/regular" color="fg.muted">
-              {t("runtimeSettings.maxConcurrentSessions.helper")}
-            </Text>
-          </Stack>
-
-          <HStack alignItems="start" gap="sm">
-            <Stack gap="2xs" flex="1">
-              <Input
-                value={value}
-                type="number"
-                min={1}
-                placeholder={t("runtimeSettings.maxConcurrentSessions.placeholder")}
-                disabled={updateSettings.isPending}
-                onChange={(event) => setValue(event.target.value)}
+      {settings ? (
+        <ParamEditorRow
+          param={{
+            id: "limit-concurrency",
+            name: t("runtimeSettings.maxConcurrentSessions.limit"),
+            description: t("runtimeSettings.maxConcurrentSessions.helper"),
+            type: "property",
+            value: (
+              <Switch
+                aria-label={t("runtimeSettings.maxConcurrentSessions.limit")}
+                checked={value !== null}
+                disabled={update.isPending}
+                onCheckedChange={({ checked }) => setValue(checked ? "1" : null)}
               />
-              <Text textStyle="paragraph/XS/regular" color={isInvalid ? "fg.error" : "fg.muted"}>
-                {isInvalid
-                  ? t("runtimeSettings.maxConcurrentSessions.invalid")
-                  : t("runtimeSettings.maxConcurrentSessions.current", {
-                      value:
-                        settings?.max_concurrent_sessions == null
-                          ? t("runtimeSettings.maxConcurrentSessions.none")
-                          : settings.max_concurrent_sessions,
-                    })}
-              </Text>
-            </Stack>
-            <Button size="sm" onClick={handleSave} disabled={isSaveDisabled} loading={updateSettings.isPending}>
-              {t("runtimeSettings.save")}
-            </Button>
-          </HStack>
-        </Stack>
+            ),
+          }}
+        />
       ) : null}
-
-      {projectId ? <ProjectDefaultsCard projectId={projectId} /> : null}
+      {settings && value !== null ? (
+        <ParamEditorRow
+          param={{
+            id: "concurrency",
+            name: t("runtimeSettings.maxConcurrentSessions.label"),
+            type: "property",
+            value: (
+              <NumberInputRoot
+                size="sm"
+                width="20"
+                min={1}
+                step={1}
+                value={value}
+                disabled={update.isPending}
+                onValueChange={({ value }) => setValue(value)}
+              >
+                <NumberInputField aria-label={t("runtimeSettings.maxConcurrentSessions.label")} />
+              </NumberInputRoot>
+            ),
+          }}
+        />
+      ) : null}
+      {parsed === undefined ? (
+        <Text role="alert" color="fg.error">
+          {t("runtimeSettings.maxConcurrentSessions.invalid")}
+        </Text>
+      ) : null}
+      {props.projectId ? <ProjectDefaultsCard projectId={props.projectId} /> : null}
     </Stack>
   );
 };

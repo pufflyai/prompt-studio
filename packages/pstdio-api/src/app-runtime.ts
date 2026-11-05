@@ -122,6 +122,7 @@ const createAppCloser = (input: {
   stopQueueReadiness: () => Promise<void>;
   sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
   harnessRegistry: RouteDeps["harnessRegistry"];
+  extensionInstallations: RouteDeps["extensionInstallations"];
   nativeDocuments: Pick<RouteDeps["nativeDocuments"], "dispose">;
   textEditing: Pick<RouteDeps["textEditing"], "dispose">;
 }) => {
@@ -129,6 +130,8 @@ const createAppCloser = (input: {
   return async () => {
     closePromise ??= (async () => {
       const hooksStopped = input.closeSessionHooks();
+      const installationsStopped = input.extensionInstallations.dispose();
+      installationsStopped.catch(() => {});
       const nativeDocumentsStopped = input.textEditing.dispose().finally(() => input.nativeDocuments.dispose());
       try {
         input.startupAbort.abort();
@@ -154,7 +157,7 @@ const createAppCloser = (input: {
       } finally {
         // A part that fails to stop must not leave PGlite open (lessons 0002 and 0014).
         try {
-          await hooksStopped;
+          await Promise.all([hooksStopped, installationsStopped]);
         } finally {
           try {
             await nativeDocumentsStopped;
@@ -229,6 +232,8 @@ export const startAppLifecycle = async (input: {
     if (!startupAbort.signal.aborted) apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed");
   });
 
+  // Recovered extension selections need every dependency and the closer that stops them.
+  input.deps.extensionInstallations.start();
   return createAppCloser({
     ...input,
     unsubscribeExtensionEvents: () => {
@@ -239,6 +244,7 @@ export const startAppLifecycle = async (input: {
     stopQueueReadiness,
     sessionQueueLifecycle: input.deps.sessionQueueLifecycle,
     harnessRegistry: input.deps.harnessRegistry,
+    extensionInstallations: input.deps.extensionInstallations,
     nativeDocuments: input.deps.nativeDocuments,
     textEditing: input.deps.textEditing,
     startupDone,

@@ -3,7 +3,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerDashboardSidenav } from "./dashboard-sidenav";
-import { treeViewSections } from "./workbench-view-test-helpers";
+import { treeViewBody, treeViewSections } from "./workbench-view-test-helpers";
 
 const registerModePage = (workbench: WorkbenchCore, modeId: string, pageId: string, resourceKind?: string) => {
   const viewId = `test.${pageId}.view`;
@@ -173,4 +173,53 @@ describe("registerDashboardSidenav", () => {
     ]);
     expect(resourceReads).toEqual([undefined, resourceKey(workspace), undefined]);
   });
+});
+
+test("the default project header puts ordinary Home before Search and keeps Search when Home is removed", async () => {
+  const core = createWorkbench();
+  core.modes.registerMode({ id: "project", activate() {} });
+  const page = registerModePage(core, "project", "home-order");
+  registerDashboardSidenav(core);
+  core.pageLocations.setProject("one");
+  core.pageLocations.navigate({ kind: "page", page });
+  const owner = { kind: "mode" as const, id: "project", extensionId: "pstdio" };
+  const search = { id: "search", label: "Search" };
+  core.navigationTrees.registerContribution({
+    id: "search",
+    owner,
+    slot: "header",
+    sourceExtensionId: "pstdio",
+    declarationIndex: 0,
+    getSections: () => [{ id: "navigation.header", nodes: [search] }],
+  });
+  const home = core.navigationTrees.registerContribution({
+    id: "home",
+    owner,
+    slot: "header",
+    sourceExtensionId: "pstdio.pstdio-home",
+    declarationIndex: 0,
+    getSections: () => [
+      {
+        id: "navigation.header",
+        nodes: [
+          {
+            id: "home",
+            label: "Home",
+            target: { kind: "page", page: { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" } },
+          },
+        ],
+      },
+    ],
+  });
+  const body = treeViewBody(core, dashboardWidgetIds.dashboardSidenav);
+  const header = () =>
+    body.getHeader!({
+      viewId: dashboardWidgetIds.dashboardSidenav,
+      state: core.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav),
+      refresh() {},
+      setSelectedNode() {},
+    });
+  expect((await header()).flatMap((section) => section.nodes).map((node) => node.id)).toEqual(["home", "search"]);
+  home.dispose();
+  expect((await header()).flatMap((section) => section.nodes).map((node) => node.id)).toEqual(["search"]);
 });

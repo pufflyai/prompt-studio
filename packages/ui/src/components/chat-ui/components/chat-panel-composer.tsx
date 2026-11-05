@@ -108,6 +108,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           <>
             <QueuedFollowUpList
               items={queuedFollowUps}
+              readOnly={readOnlyQueue}
               editor={editing ? editor : undefined}
               retainedEditor={editing && queuedComposer.createNew ? editor : undefined}
               retainedEditorPosition={queuedComposer.editingItem?.position}

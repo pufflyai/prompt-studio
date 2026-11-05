@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { writeCliHelpExtension } from "../helpers/cli-help-extension";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
@@ -25,6 +26,7 @@ test("packaged command help translates parameter descriptions", async () => {
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
+    await enablePackagedProjectExtension(started, project.id, "help-fixture");
     for (const [locale, description] of [
       ["en_US.UTF-8", "Compare the current revision."],
       ["fr_FR.UTF-8", "Comparer la révision actuelle."],

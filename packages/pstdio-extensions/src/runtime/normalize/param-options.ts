@@ -84,8 +84,8 @@ export const validateParamOptions = (runtime: ExtensionRuntime) => {
   for (const command of runtime.commands) command.params = normalize(command.params, command) ?? {};
   for (const view of runtime.views) {
     const body = view.contribution.body;
-    if (body.kind === "kanban") rejectUnsupported(body.createRow?.params, view);
-    if (body.kind !== "dataTable" && body.kind !== "kanban") continue;
+    if (body.kind === "kanban" || body.kind === "resourceList") rejectUnsupported(body.createRow?.params, view);
+    if (body.kind !== "dataTable" && body.kind !== "kanban" && body.kind !== "resourceList") continue;
     if ((body.toolbarActions?.filter((action) => action.presentation === "primary").length ?? 0) > 1) {
       runtime.diagnostics.push(
         createDiagnostic({

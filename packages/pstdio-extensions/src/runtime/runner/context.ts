@@ -186,6 +186,7 @@ export const createContextFactory = (
       extensionFiles: hostApis.extensionFiles,
       files: hostApis.files,
       skills: hostApis.skills,
+      extensions: hostApis.extensions,
       sessions: hostApis.sessions,
       workspaces: hostApis.workspaces,
       commands: buildCommandsApi(createExecute, origin),

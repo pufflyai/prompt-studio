@@ -13,6 +13,14 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Use Ubuntu archive mirrors
+      if: runner.os == 'Linux'
+      shell: bash
+      # Azure can trickle archives without activating APT failover. See ADR 0134.
+      run: |
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+        fi
     - name: Locate the Bun download cache
       id: bun_cache
       shell: bash

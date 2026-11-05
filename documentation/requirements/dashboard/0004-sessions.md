@@ -107,6 +107,7 @@ The [sessions module](../../../packages/pstdio-dashboard/src/modules/sessions/mo
 | Download | Exports the current session as JSON. |
 | Archive | Archives the selected session and returns to the list state. |
 
+
 ## Rules & Constraints
 
 - The shipped panel supports both creating a session from the no-session state and continuing existing sessions.
@@ -144,3 +145,7 @@ Checked on 2026-10-18 against main commit `45580feb`. The newest stable release 
 | Availability | #958 shipped in `pstdio@0.42.0` and #1045 in `pstdio@0.43.1`. #1100 and #1113 are in the nightly only. #1120 is on `main` only. |
 | Remaining work | Validate real authenticated sessions, follow-ups, steering, and approvals for each supported provider. This is W6 in the [documentation reliability plan](../platform/0013-documentation-and-skills-reliability.md#w6-close-acceptance-and-usability-gaps). |
 | Evidence | Playwright specs that use the `workbench-fixture` fake harness, for example `session-live-follow-ups.p2.spec.ts`, `session-chat-state.p1.spec.ts`, and `session-panel-restore.p2.spec.ts`, run in the full CI stage on `main`. Real-provider specs were removed on 2026-11-01: they needed provider credentials and no CI workflow ran them. None of these were rerun for this record. |
+
+### Fork from a reply
+
+Every completed agent reply offers time, Copy, and Fork in its message footer. Fork opens an independent conversation through that reply, preserving agent, model, parameters, and workspace. Later turns stay in the source. It waits for a new prompt. The harness must support native forks. Forking through an earlier reply leaves later running or queued work in the source untouched. Failures appear beside the Fork control.

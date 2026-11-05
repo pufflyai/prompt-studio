@@ -65,7 +65,7 @@ const commandActions = <
 const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensionMetadata["kanbanRenderers"] =>
   metadata.views.flatMap((view) => {
     const body = view.body;
-    if (body.kind !== "kanban") return [];
+    if (body.kind !== "kanban" && body.kind !== "resourceList") return [];
     return [
       {
         ...body,
@@ -78,6 +78,7 @@ const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenc
           ? {
               title: body.createRow.title,
               submitLabel: body.createRow.submitLabel,
+              presentation: body.createRow.presentation,
               columnParam: body.createRow.columnParam,
               params: body.createRow.params as ParamObjectSchema | undefined,
               attributesParam: body.createRow.attributesParam,
@@ -263,7 +264,6 @@ export const toInternalWorkbenchExtensionMetadata = (
           scope: ["global.settings", "global.settingsPanels", "developer.settings"].includes(panel.slot.id)
             ? ("global" as const)
             : ("project" as const),
-          parentPanelId: panel.slot.id === "developer.settings" ? "developer-tools" : undefined,
           title: view.title,
           icon: view.icon,
           section: panel.section ? contributionRefId(panel.section) : undefined,

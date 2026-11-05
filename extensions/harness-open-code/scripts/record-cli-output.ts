@@ -19,11 +19,16 @@ for (const dir of ["DATA", "CONFIG", "STATE", "CACHE"]) process.env[`XDG_${dir}_
 const cwd = realpathSync(mkdtempSync(join(tmpdir(), "opencode-record-")));
 
 let lastMessages = "[]";
+let messagePages: unknown[] = [];
 const fetcher: typeof fetch = async (input, init) => {
   const response = await fetch(input, init);
   const url = new URL(String(input));
-  if ((init?.method ?? "GET") === "GET" && /\/session\/[^/]+\/message$/.test(url.pathname))
-    lastMessages = await response.clone().text();
+  if (response.ok && (init?.method ?? "GET") === "GET" && /\/session\/[^/]+\/message$/.test(url.pathname)) {
+    const page = (await response.clone().json()) as { data: unknown[] };
+    if (!url.searchParams.has("cursor")) messagePages = [];
+    messagePages.push(...page.data);
+    lastMessages = JSON.stringify({ data: messagePages, cursor: {} });
+  }
   return response;
 };
 const values = new Map<string, unknown>();
@@ -46,6 +51,7 @@ const session = await harness.start(context, {
   events: { getMessages: () => [], push: () => {} },
 });
 const exit = await session.done;
+await harness.dispose!(context);
 if (exit.status !== "completed") throw new Error(`The recorded turn ended as ${exit.status}. Try again.`);
 
 // Never keep machine paths in the recording.
@@ -56,4 +62,3 @@ const scrubbed = lastMessages
 const output = resolve(import.meta.dirname, `../src/mocks/recorded/${version}-shell-turn.json`);
 writeFileSync(output, `${JSON.stringify(JSON.parse(scrubbed), null, 2)}\n`);
 console.log(`Recorded OpenCode ${version} messages in ${output}`);
-process.exit(0);

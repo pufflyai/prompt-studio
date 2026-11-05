@@ -7,7 +7,7 @@ import { MilestoneNeedsAttentionPreview } from "./milestone-requests.story-fixtu
 import { RequestsPanel } from "./requests-panel";
 import { AutoBuildPreview, CardNeedsAttentionPreview } from "./requests-panel.story-fixture";
 
-const person = { type: "human" as const, id: "person", displayName: "Human" };
+const person = { type: "human" as const, id: "person", displayName: "User" };
 const agent = { type: "agent" as const, id: "agent", displayName: "Agent" };
 const context = { reason: null, workspaceId: null, attemptRevision: null, sessionId: null, relatedSessionId: null };
 const task: ReviewRequestView = {
@@ -135,7 +135,7 @@ const row: PlanRow = {
   dependsOn: [],
   blocks: [],
   laterDependencies: [],
-  flags: ["human-needed"],
+  flags: ["review-needed"],
   tagIds: [],
   requests: [],
   requestErrors: [],

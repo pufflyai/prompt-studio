@@ -63,6 +63,7 @@ const kanbanCreateRowSchema = z.object({
   command: commandRefSchema,
   title: localizableStringSchema.optional(),
   submitLabel: localizableStringSchema.optional(),
+  presentation: z.enum(["inline", "command"]).optional(),
   columnParam: z.string().optional(),
   params: z.record(z.string(), z.unknown()).optional(),
   attributesParam: z.string().optional(),
@@ -110,6 +111,7 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
   fileBodySchema,
   controlsBodySchema,
   kanbanBodySchema,
+  kanbanBodySchema.extend({ kind: z.literal("resourceList") }),
   dataTableBodySchema,
 ]);
 
@@ -226,6 +228,9 @@ const workbenchExtensionStatusBarItemRecordSchema = z.object({
 });
 
 export const workbenchExtensionMetadataSchema = z.object({
+  projectSetups: z
+    .array(z.object({ extensionId: z.string(), view: viewRefSchema, hiddenSetting: z.string().optional() }))
+    .optional(),
   extensions: z.array(extensionRecordSchema),
   commands: z.array(extensionCommandRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),
