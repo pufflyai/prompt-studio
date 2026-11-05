@@ -16,7 +16,7 @@ RUN update-ca-certificates
 # Fail the layer when a download in a piped installer fails, instead of running an empty script.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN BUN_INSTALL=/opt/bun bun add -g @opencode/cli@2.2.5 @openai/codex@0.160.1
+RUN BUN_INSTALL=/opt/bun bun add -g --trust @opencode/cli@2.2.5 @openai/codex@0.160.1
 RUN ln -sf /opt/bun/install/global/node_modules/@opencode/cli/bin/opencode.exe /usr/local/bin/opencode
 RUN ln -sf /opt/bun/install/global/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex
 
