@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { createSyncSpace, openBlob, openUpdate } from "pstdio-sync/encryption";
 import { createRecordStreamSync, decodeOrderedEntry, decodeRecordFrame, recordFrameLimit } from "pstdio-sync/relay";
 import type { Json } from "pstdio-sync-contracts";
@@ -51,7 +52,19 @@ const peers = async (textFields: { prefix: string; fields: string[] }[] = []) =>
 };
 
 test("ready saves share a bounded transport batch while keeping their individual atomic outcomes", async () => {
+  const started = performance.now();
+  const phases: { phase: string; elapsedMs: number }[] = [];
+  const phase = (name: string) => {
+    if (!process.env.CI) return;
+    phases.push({ phase: name, elapsedMs: performance.now() - started });
+    mkdirSync("test-results", { recursive: true });
+    writeFileSync(
+      `test-results/ready-upload-batch-phases-${process.pid}.json`,
+      JSON.stringify({ bun: Bun.version, groups: 126, recordsPerGroup: 8, phases }, null, 2),
+    );
+  };
   const [first, second] = await peers();
+  phase("fixtures-ready");
   await first.records.commit({
     operationId: "batch-seed",
     edits: [
@@ -62,9 +75,10 @@ test("ready saves share a bounded transport batch while keeping their individual
   });
   await first.sync.synchronize();
   await second.sync.synchronize();
+  phase("seed-synced");
   const before = first.wire.requests.updates;
   const observed = await first.records.read("atomic-a");
-  for (let tick = 0; tick < 126; tick++)
+  for (let tick = 0; tick < 126; tick++) {
     await first.records.commit({
       operationId: `batch-marker-${tick}`,
       edits: Array.from({ length: 8 }, (_, index) => ({
@@ -72,6 +86,9 @@ test("ready saves share a bounded transport batch while keeping their individual
         shared: [{ kind: "map.set" as const, key: "compactionTick", value: tick }],
       })),
     });
+    if (tick % 32 === 31) phase(`markers-${tick + 1}`);
+  }
+  phase("markers-126");
   await first.records.commit({
     operationId: "batch-conditional",
     edits: [
@@ -81,8 +98,11 @@ test("ready saves share a bounded transport batch while keeping their individual
   });
   await second.records.commit({ operationId: "batch-peer", edits: [{ recordId: "atomic-a", replace: 1 }] });
   await second.sync.synchronize();
+  phase("peer-synced");
   await first.sync.synchronize();
+  phase("first-drained");
   await second.sync.synchronize();
+  phase("second-drained");
   for (const device of [first, second]) {
     expect((await device.records.read("large-7")).shared).toMatchObject({
       kind: "map",
@@ -95,6 +115,7 @@ test("ready saves share a bounded transport batch while keeping their individual
   for (let tick = 0; tick < 126; tick++)
     expect(await first.records.outcome(`batch-marker-${tick}`)).toMatchObject({ state: "synced" });
   expect(await first.records.outcome("batch-conditional")).toMatchObject({ state: "refused" });
+  phase("outcomes-read");
   // The original 126 authored marker saves remain distinct. A bounded wire frame can carry
   // several complete admissions, without one network round trip for each tiny save.
   expect(first.wire.requests.updates - before).toBeLessThan(126);
