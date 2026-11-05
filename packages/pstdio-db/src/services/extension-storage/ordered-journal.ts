@@ -206,17 +206,9 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     async recordDecision(decision: OrderedDecision, admissionFingerprint: string, options: { indexed?: boolean } = {}) {
       const row = await bind(decision.operationId, decision.fingerprint);
       if (isOrderedNativeRequest(row.request_fingerprint)) throw identityError();
-      const where = and(
-        ownerWhere(receipts, owner),
-        eq(receipts.epoch, decision.epoch),
-        eq(receipts.operation_id, decision.operationId),
-      );
-      const [previous] = await tx.select().from(receipts).where(where);
-      if (previous && (previous.state !== decision.state || previous.admission_fingerprint !== admissionFingerprint))
-        throw new Error("An ordered decision is immutable");
       if (row.admission_epoch === decision.epoch && row.admission_fingerprint !== admissionFingerprint)
         throw new Error("The decision does not match the admitted identity");
-      await tx
+      const [retained] = await tx
         .insert(receipts)
         .values({
           ...address,
@@ -226,8 +218,14 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
           admission_fingerprint: admissionFingerprint,
           indexed: options.indexed ?? false,
         })
-        .onConflictDoNothing();
-      if (options.indexed) await tx.update(receipts).set({ indexed: true }).where(where);
+        .onConflictDoUpdate({
+          target: [receipts.workbench_id, receipts.extension_id, receipts.epoch, receipts.operation_id],
+          // Return the retained decision without replacing its immutable contents.
+          set: { indexed: options.indexed ? true : receipts.indexed },
+        })
+        .returning({ state: receipts.state, admissionFingerprint: receipts.admission_fingerprint });
+      if (retained!.state !== decision.state || retained!.admissionFingerprint !== admissionFingerprint)
+        throw new Error("An ordered decision is immutable");
       await dependencies.remember(decision);
       // Historical decisions remain queryable but never settle a wrapper admitted in another epoch.
       if (row.envelope && row.admission_epoch === decision.epoch && !row.settled_epoch) {

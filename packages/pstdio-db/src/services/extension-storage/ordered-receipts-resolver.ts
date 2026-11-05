@@ -16,11 +16,13 @@ export const createOrderedReceiptResolver = (
   };
   const exact = async (id: string, epoch: string) =>
     (await journal.cachedReceipt(id, epoch)) ?? cache(await index.receipt(root, epoch, id));
-  const identity = async (id: string, fingerprint: string) => {
+  const retainedIdentity = async (id: string, fingerprint: string) => {
     const known = await index.identity(root, id);
     if (known && known !== fingerprint) throw new Error("Operation identity reused with changed payload");
-    await journal.bindIdentity(id, known ?? fingerprint);
+    return known ?? fingerprint;
   };
+  const identity = async (id: string, fingerprint: string) =>
+    journal.bindIdentity(id, await retainedIdentity(id, fingerprint));
   const findDependency = async (id: string, fingerprint: string, epoch: string) => {
     await identity(id, fingerprint);
     const coordinates = await journal.operationCoordinates(id);
@@ -84,7 +86,9 @@ export const createOrderedReceiptResolver = (
       return known;
     },
     async admission(admission: OrderedAdmission) {
-      await identity(admission.operation.operationId, admission.operation.fingerprint);
+      // recordDecision binds the SQL identity in this same owner transaction.
+      // Verify retained history here without writing the same row twice per save.
+      await retainedIdentity(admission.operation.operationId, admission.operation.fingerprint);
       const previous = await exact(admission.operation.operationId, admission.epoch);
       await hydrateDependencies(admission);
       return previous?.decision;

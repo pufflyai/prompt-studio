@@ -117,21 +117,23 @@ export const createOrderedStreamStore = (
       }),
     async apply(frames: (RecordFrame | null)[], cursor: RecordStreamCursor) {
       const result = await run(async (journal, tx) => {
-        const { epoch } = await readOrderedOwner(tx, owner);
+        const row = await readOrderedOwner(tx, owner);
+        const { epoch } = row;
         if (!epoch) throw new Error("An ordered stream has no epoch");
+        const root = receiptRoots(row.receipt_root).root;
         const changed = new Set<string>();
         const rejected: number[] = [];
         const batch = owner.extensionId === coreOwnerId ? undefined : createOrderedCanonicalBatch(journal);
         const group: typeof applyAdmission = async (journal, tx, admission, epoch) => {
           if (admission.operation.edits.some((edit) => edit.texts?.length)) {
             await batch?.flush();
-            return applyAdmission(journal, tx, admission, epoch);
+            return applyAdmission(journal, tx, admission, epoch, root);
           }
-          return applyAdmission(batch?.journal ?? journal, tx, admission, epoch);
+          return applyAdmission(batch?.journal ?? journal, tx, admission, epoch, root);
         };
-        const native: typeof applyNative = async (...args) => {
+        const native: typeof applyNative = async (journal, tx, admission, epoch) => {
           await batch?.flush();
-          return applyNative(...args);
+          return applyNative(journal, tx, admission, epoch, root);
         };
         for (const [position, frame] of frames.entries()) {
           if (!frame || !(await admissibleOrderedFrame(frame))) {

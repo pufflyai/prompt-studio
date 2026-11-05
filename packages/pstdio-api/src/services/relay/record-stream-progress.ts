@@ -1,6 +1,42 @@
 import type { StorageOwner } from "pstdio-sync";
-import type { RecordStreamStore } from "pstdio-sync/relay";
+import type { createDocumentSync, RecordStreamStore } from "pstdio-sync/relay";
 import { apiLogger } from "../../lib/logger";
+import type { documentProgress } from "./document-progress";
+
+export const traceDocumentSync = (
+  owner: StorageOwner,
+  role: "directory" | "document",
+  sync: ReturnType<typeof createDocumentSync>,
+) => ({
+  ...sync,
+  async synchronize() {
+    const started = performance.now();
+    try {
+      await sync.synchronize();
+    } finally {
+      apiLogger.debug(
+        { event: "relay.document.phase", ...owner, role, elapsedMs: performance.now() - started },
+        "Document storage progress",
+      );
+    }
+  },
+});
+
+export const traceDocumentProgress = (
+  owner: StorageOwner,
+  names: string[],
+  statuses: Parameters<typeof documentProgress>[0],
+) => {
+  const roles = [...names.map((name) => (name === "records" ? "directory" : "document")), "record-stream", "logs"];
+  apiLogger.debug(
+    {
+      event: "relay.document.status",
+      ...owner,
+      streams: statuses.map((status, index) => ({ role: roles[index], ...status })),
+    },
+    "Document storage status",
+  );
+};
 
 /** Report the slow storage phase without logging record IDs, paths or content. */
 export const traceRecordStreamStore = (owner: StorageOwner, store: RecordStreamStore) => {

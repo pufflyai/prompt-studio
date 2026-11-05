@@ -7,7 +7,7 @@ import { createRelayDocumentJobs, RelayDocumentRetiredError } from "./document-j
 import { documentProgress } from "./document-progress";
 import { createRelayLogs } from "./logs";
 import { createSyncQuarantine } from "./quarantine";
-import { traceRecordStreamStore } from "./record-stream-progress";
+import { traceDocumentProgress, traceDocumentSync, traceRecordStreamStore } from "./record-stream-progress";
 import type { RelayWorkbench } from "./runtime";
 
 export const createExtensionDocumentSync = (input: {
@@ -50,18 +50,16 @@ export const createExtensionDocumentSync = (input: {
       create: async (name) => {
         const documentId =
           name === "records" ? ownerId : await space.documentId(JSON.stringify([owner.extensionId, name]));
-        return {
+        const sync = createDocumentSync({
+          owner,
+          space,
           documentId,
-          sync: createDocumentSync({
-            owner,
-            space,
-            documentId,
-            store: deps.extensionStorageService.documents.open(name),
-            assets: createRecordAssets(deps.assetTransferService, owner, workSignal),
-            relay: relay(documentId),
-            quarantine: quarantine(documentId),
-          }),
-        };
+          store: deps.extensionStorageService.documents.open(name),
+          assets: createRecordAssets(deps.assetTransferService, owner, workSignal),
+          relay: relay(documentId),
+          quarantine: quarantine(documentId),
+        });
+        return { documentId, sync: traceDocumentSync(owner, name === "records" ? "directory" : "document", sync) };
       },
     });
     const records = createRecordStreamSync({
@@ -119,6 +117,7 @@ export const createExtensionDocumentSync = (input: {
       status: async () => {
         const names = [...new Set(["records", ...jobs.names(), ...(directory ?? [])])];
         const statuses = [...(await jobs.statuses(names)), await records.status(), await logs.status()];
+        traceDocumentProgress(owner, names, statuses);
         return documentProgress(statuses, directory !== undefined);
       },
       synchronize,
