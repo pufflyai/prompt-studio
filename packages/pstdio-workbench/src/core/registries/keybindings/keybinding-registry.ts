@@ -65,7 +65,7 @@ export interface KeybindingRegistry {
   listCatalog(): RegisteredKeybinding[];
   resolve(binding: RegisteredKeybinding): RegisteredKeybinding & { disabled: boolean };
   getId(binding: Keybinding): string;
-  listActiveKeybindings(): RegisteredKeybinding[];
+  listActiveKeybindings(action?: NavigationTarget): RegisteredKeybinding[];
   /** Chords bound to plain command actions, for rendering shortcut hints beside commands. */
   listCommandKeybindings(): { commandId: string; keybinding: KeybindingSequence }[];
 }
@@ -192,12 +192,16 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       return [...store.getState().keybindings].sort(byContributionPriority);
     },
 
-    listActiveKeybindings() {
+    listActiveKeybindings(action) {
       // Resolve a profile against one settings snapshot. In the browser every
       // read can cross localStorage and parse the complete preference document.
       const preferences = readShortcutPreferences(deps.preferences?.());
-      const bindings = [...store.getState().keybindings].sort(byContributionPriority);
-      const declared = new Set(bindings.map(getId));
+      const registered = store.getState().keybindings;
+      const actionKey = action ? getNavigationTargetKey(action) : undefined;
+      const matchesAction = (binding: RegisteredKeybinding) =>
+        actionKey === undefined || getNavigationTargetKey(binding.action) === actionKey;
+      const bindings = registered.filter(matchesAction).sort(byContributionPriority);
+      const declared = new Set(registered.map(getId));
       const assigned = new Set(
         Object.entries(preferences.overrides)
           .filter(
@@ -211,7 +215,8 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       );
       // Generated discovery actions have no chord until a person assigns one.
       // Input dispatch must not enumerate page/menu providers on every layout change.
-      if (assigned.size) bindings.push(...listCatalog().filter((binding) => assigned.has(getId(binding))));
+      if (assigned.size)
+        bindings.push(...listCatalog().filter((binding) => assigned.has(getId(binding)) && matchesAction(binding)));
       return bindings
         .map((binding) => resolveWithPreferences(binding, preferences))
         .filter(
