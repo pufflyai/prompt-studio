@@ -225,9 +225,13 @@ test("a receipt learned while a checkpoint uploads is not marked indexed by that
 test("founding settles an exact retained old receipt before replaying its immutable envelope", async () => {
   const f = await fixture();
   const author = await f.device();
-  await author.records.commit(save("old-save", "old"));
+  await author.records.commit(save("first-join", "base"));
   await author.sync.synchronize();
-  const [original] = await author.db.select().from(storage_ordered_operations);
+  await author.records.commit(save("old-save", "old"));
+  const original = (await author.db.select().from(storage_ordered_operations)).find(
+    (row) => row.operation_id === "old-save",
+  );
+  await author.sync.synchronize();
   await author.records.commit(save("later-save", "current"));
   await author.sync.synchronize();
   const recovered = await f.device();

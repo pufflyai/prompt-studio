@@ -1,6 +1,6 @@
 import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { jsonPointer, type OrderedOperation, type OrderedRecord } from "pstdio-sync/records";
+import { jsonPointer, type OrderedOperation, type OrderedRecord, orderedBody } from "pstdio-sync/records";
 import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint } from "pstdio-sync-contracts";
 import * as Y from "yjs";
@@ -173,12 +173,13 @@ const privateFieldState = async (
   owner: StorageOwner,
   field: { key: string; recordId: string; pointer: string },
   generation?: string,
+  before?: OrderedRecord,
 ) => {
   const [row] = await tx
     .select({ state: canonical.state })
     .from(canonical)
     .where(and(orderedOwnerWhere(canonical, owner), eq(canonical.record_id, field.recordId)));
-  const record = row ? decodeOrderedJson<OrderedRecord>(row.state) : undefined;
+  const record = before ?? (row ? decodeOrderedJson<OrderedRecord>(row.state) : undefined);
   const document = new Y.Doc();
   try {
     const saved = record?.texts?.[field.pointer];
@@ -199,16 +200,25 @@ export const fenceOrderedNativeText = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   operation: OrderedOperation,
+  before?: OrderedRecord,
 ) => {
   const authored = (await readOrderedMarker<AuthoredText>(tx, owner, authoredId(operation.operationId)))?.value;
   if (authored?.projected === false) return;
   const captured = authored?.fields ?? {};
-  for (const field of await fieldsFor(tx, owner, operation)) {
+  const fields = before
+    ? Object.entries(orderedBody(before).nativeSources).flatMap(([key, source]) =>
+        "field" in source &&
+        operation.edits.some((edit) => edit.texts?.some((text) => jsonPointer(text.path) === `/value${source.field}`))
+          ? [{ key, recordId: before.recordId, field: source.field, pointer: `/value${source.field}` }]
+          : [],
+      )
+    : await fieldsFor(tx, owner, operation);
+  for (const field of fields) {
     const marker = await readOrderedMarker<OrderedFieldMarker>(tx, owner, orderedFieldMarkerId(field.key));
     if (!marker) continue;
-    const generation = captured[field.key]?.generation;
+    const generation = before ? marker.value.generation : captured[field.key]?.generation;
     if (marker.value.generation !== generation) continue; // A fresh replica never observed this rejected lineage.
-    const state = await privateFieldState(tx, owner, field, generation);
+    const state = await privateFieldState(tx, owner, field, generation, before);
     await tx
       .insert(sources)
       .values({

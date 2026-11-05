@@ -169,7 +169,7 @@ export const createOrderedStreamStore = (
     async snapshot(options?: { found: boolean; relayEmpty?: boolean }) {
       const draft = await run(async (journal, tx) => {
         const row = await readOrderedOwner(tx, owner);
-        const found = options?.found ?? !row.epoch;
+        const found = options?.found ?? !row.joined;
         const root = receiptRoots(row.receipt_root).root;
         const resolver = createOrderedReceiptResolver(journal, root, receiptIndex());
         const epoch = found ? crypto.randomUUID() : row.epoch!;

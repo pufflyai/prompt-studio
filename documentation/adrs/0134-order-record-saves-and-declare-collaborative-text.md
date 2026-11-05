@@ -19,13 +19,17 @@ This changes record merging from [ADR 0102](0102-record-stream-sync.md), retaini
 
 ## Canonical state and pending saves
 
+A device that has never joined Cloud settles saves in its own durable local order. Each save becomes canonical immediately, including its conditional outcome, and drops its envelope. Keep compact identity and outcome receipts for retries and portable observations; record values and text are not copied once per save. Local acceptance still reports saved locally until its receipt reaches Cloud. This is the user-approved option A in decision `01a1a827-0e5a-74b0-9dc4-0a91270562c5`.
+
+On first join, an empty relay is founded from this canonical state. If a stream already exists, adopt it and submit each differing local record as a new unconditional save after its tail, including tombstones, assets and declared/native fields. Rebase declared text onto the adopted text history. Pre-join conditions are not checked against remote history again. Preserve saves made during a founding upload by submitting their differences after publication. A successful join permanently ends local settlement; later offline saves retain the pending semantics below.
+
 Store canonical state per record separately from the indexed optimistic query projection. Persist each immutable local group before transport opens, including its identity, fingerprint, changed paths, conditions and text dependencies. An outbox is delivery bookkeeping, not the sole copy of a save.
 
 Local commits update only affected records. Applying relay input changes canonical state and settles exact outcomes in the same owner transaction as its cursor. Rebase affected pending work over that canonical state. Accepting the writer's pending prefix need not replay its remaining overlay. A delivery acknowledgment alone never settles a condition or deletes its envelope.
 
 Unlike [ADR 0102](0102-record-stream-sync.md)'s Yjs states, a latest state's receipt root states which decisions it covers. A device that already applied the updates a compaction covers merges only that root. When the root lacks decisions the device holds, the device publishes a complete replacement. When the root holds decisions the device never applied, its records came from an incomplete state, so it loads the compaction. Loading any state compares it with canonical records first: paths written by accepted saves the state does not cover are saved again as new unconditional groups, unless the state holds a write the device never saw. Their upload blocks compaction until relay order restores them. Assets, native sources and declared text are not repaired this way.
 
-Founding publishes a complete base and an explicitly included pending prefix atomically. Adoption preserves remaining envelopes and their original conditions. A founding state is not one author commit: preserve per-record limits and bounded SQL batches instead of imposing the 4 MiB group limit on an entire project.
+Founding publishes a complete base and an explicitly included pending prefix atomically. After first join, adoption preserves remaining envelopes and their original conditions. A founding state is not one author commit: preserve per-record limits and bounded SQL batches instead of imposing the 4 MiB group limit on an entire project.
 
 ## Observations and retries
 

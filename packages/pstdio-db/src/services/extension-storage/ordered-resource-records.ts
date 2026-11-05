@@ -21,6 +21,7 @@ import { initializeOrderedOwner, orderedProjection } from "./ordered-projection"
 import { knownDependencies, rebaseOrderedProjection } from "./ordered-rebase";
 import { compileOrderedGroup } from "./ordered-record-compiler";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
 import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
 import type { createResourceRecords as createLegacyResourceRecords } from "./resource-records";
@@ -28,12 +29,28 @@ import type { createResourceRecords as createLegacyResourceRecords } from "./res
 const savedOutcome = async (journal: OrderedJournal, operationId: string) => {
   const decision = await journal.outcome(operationId);
   let state: StorageSaveOutcome["state"] = "saved-locally";
-  if (decision) state = decision.state === "refused" ? "refused" : "synced";
+  if (decision?.state === "refused") state = "refused";
+  else if (decision && (!decision.epoch.startsWith("local:") || (await journal.isIndexed(operationId, decision.epoch))))
+    state = "synced";
   return {
     operationId,
     state,
     status: "saved-locally",
   } as StorageSaveOutcome;
+};
+
+// Settled local records already are the visible baseline. Avoid publishing the same
+// unchanged projection and recomputing every observation before each local save.
+const prepareCommitViews = async (
+  journal: OrderedJournal,
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  ids: string[],
+) => {
+  const row = await readOrderedOwner(tx, owner);
+  if (!row.joined && !(await journal.pendingFor(ids, { limit: 1 })).length)
+    return { views: await journal.canonical(ids), events: [] };
+  return rebaseOrderedProjection(journal, tx, owner, ids);
 };
 
 /** The public record facade owns immutable saves independently of a live connection. */
@@ -73,14 +90,14 @@ export const createOrderedResourceRecords = (
     // Capture before the first asynchronous boundary; retries bind the entire authored request.
     const group = structuredClone(input);
     const identity = await fingerprint(group as unknown as Json);
-    const previous = await journal.localOperation(group.operationId);
+    const previous = await journal.requestIdentity(group.operationId);
     if (previous) {
-      if (previous.requestFingerprint !== identity) throw new Error("Operation identity reused with changed payload");
+      if (previous !== identity) throw new Error("Operation identity reused with changed payload");
       return { records: [], projected: 0, events: [], outcome: await savedOutcome(journal, group.operationId) };
     }
     const ids = group.edits.map((edit) => edit.recordId);
     const authored = new Set(ids);
-    const prepared = await rebaseOrderedProjection(journal, tx, owner, ids);
+    const prepared = await prepareCommitViews(journal, tx, owner, ids);
     const expected = new Map(
       ids.flatMap((id) => {
         const revision = deps.observer?.expected?.(owner, id);
@@ -205,7 +222,7 @@ export const createOrderedResourceRecords = (
     outcome: (id: string) =>
       withOrderedOwner(db, owner, async (journal, tx, created) => {
         await initializeOrderedOwner(journal, tx, owner, created);
-        return (await journal.localOperation(id)) ? savedOutcome(journal, id) : undefined;
+        return (await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined;
       }),
     transaction: async <T>(
       run: (
