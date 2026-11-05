@@ -9,7 +9,7 @@ export const createNativeRoomOpener = (deps: {
   source: Parameters<typeof initializeNativeRoomSource>[0];
   projection: ReturnType<typeof createNativeFileProjector>;
   snapshot: ReturnType<typeof createNativeRoomSnapshot>;
-  integrate: (owner: StorageOwner, roomId: string) => Promise<void>;
+  integrate: (owner: StorageOwner, roomId: string) => Promise<number>;
   opened: (room: Room, roomId: string) => void;
 }) => {
   const storage = deps.source.storage;
@@ -57,7 +57,7 @@ export const createNativeRoomOpener = (deps: {
       await storage.nativeRooms.apply({ owner: room.owner, roomId, update: input.pendingUpdate });
     // A reconnect can carry edits from a retired source history. Preserve that history
     // first; recovery can finish integration if the process stops here.
-    await deps.integrate(room.owner, roomId);
+    room.integratedRevision = await deps.integrate(room.owner, roomId);
     const initial = await deps.snapshot(room, roomId);
     deps.opened(room, roomId);
     return {

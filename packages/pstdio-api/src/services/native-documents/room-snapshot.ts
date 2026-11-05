@@ -13,6 +13,8 @@ export interface Room {
   generation?: string;
   syncDocument?: string;
   recordField?: boolean;
+  /** Room history already integrated durably; received canonical frames are also clean. */
+  integratedRevision?: number;
   queue: Promise<unknown>;
   closeWatchers: Set<() => void>;
 }
@@ -46,11 +48,12 @@ export const createNativeRoomSnapshot = (
         if (sourceSeedId === seedId) {
           // Persist the history sent to this browser before it can anchor its next edit.
           // Received updates retain their existing provenance rather than becoming local intent.
-          await storage.nativeRooms.receive({
+          const received = await storage.nativeRooms.receive({
             owner: room.owner,
             roomId,
             update: Y.encodeStateAsUpdate(document, Y.encodeStateVector(source.document)),
           });
+          if (source.revision === room.integratedRevision) room.integratedRevision = received.revision;
         }
         if (room.editable && !room.recordField) void files.request(room).catch(() => {});
         return {
