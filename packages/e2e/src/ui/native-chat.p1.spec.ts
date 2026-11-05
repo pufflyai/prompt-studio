@@ -135,7 +135,7 @@ test("independent native chat paints and accepts input before history, then reta
     await expect(main.getByRole("button", { name: "Remove draft.txt" })).toBeVisible();
     // Critical risk: answering a question must not send or consume the saved message draft.
     await main.getByRole("button", { name: "Ask a question", exact: true }).click();
-    await main.getByText("Browser", { exact: true }).click();
+    await main.getByRole("radiogroup").getByText("Browser", { exact: true }).click();
     await main.getByRole("button", { name: "Send answer", exact: true }).click();
     await expect(main.getByText("Question answered", { exact: true })).toBeVisible();
     await expect(composer).toContainText("Unsent native draft");
