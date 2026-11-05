@@ -50,6 +50,14 @@ test(
         ({ items }) => items.some(({ id }) => id === project.id),
       );
       await second.client.projects.chooseFolder(project.id, { path: second.folder, clone: false });
+      await waitFor(
+        () => second.client.account.projectSyncStatus(project.id),
+        (status) => status.offlineReady,
+      );
+      await waitFor(
+        () => second.client.extensions.listCommands(project.id),
+        ({ commands }) => commands.some(({ id }) => id === `${owner}.command.read-tickets`),
+      );
       const read = (device: typeof first) => device.command<Ticket[]>(project.id, owner, "read-tickets");
       await waitFor(
         () => read(second),
