@@ -20,6 +20,22 @@ test("direct input dispatch does not enumerate unassigned navigation actions", (
   expect(keybindings.listActiveKeybindings()).toMatchObject([{ keybinding: "Alt+J" }]);
 });
 
+test("a hint resolves only the requested navigation target, including its arguments", () => {
+  const commands = createCommandRegistry();
+  commands.registerCommand({ id: "open", label: "Open" }, { execute() {} });
+  const context = createContextKeyService();
+  const keybindings = createKeybindingRegistry({ commands, context });
+  const first = { kind: "command" as const, commandId: "open", args: { id: "first" } };
+  const second = { kind: "command" as const, commandId: "open", args: { id: "second" } };
+  keybindings.registerKeybinding({ id: "first", action: first, keybinding: "Alt+J", when: "available" });
+  keybindings.registerKeybinding({ id: "second", action: second, keybinding: "Alt+K" });
+  context.set("available", true);
+  expect(keybindings.listActiveKeybindings(first).map((binding) => binding.id)).toEqual(["first"]);
+  expect(keybindings.listActiveKeybindings(second).map((binding) => binding.id)).toEqual(["second"]);
+  context.set("available", false);
+  expect(keybindings.listActiveKeybindings(first)).toEqual([]);
+});
+
 test("assigning a chord makes a discovered command active without an explicit binding", async () => {
   const core = createWorkbench();
   core.commands.registerCommand({ id: "discovered", label: "Discovered" }, { execute() {} });
