@@ -46,6 +46,7 @@ test("host storage exposes document groups, verified assets, legacy access, and 
       });
     };
     const [first, other] = await Promise.all([context("First"), context("Other")]);
+    expect(await first.canMigrate()).toBe(true);
     const tickets = first.collection<{ title: string; position?: string }>("tickets");
     await tickets.put("a", { title: "Original" });
     const old = (await tickets.read("a"))!;

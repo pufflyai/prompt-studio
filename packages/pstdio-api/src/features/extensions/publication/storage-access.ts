@@ -86,6 +86,7 @@ export const guardPublicationStorage = (
     });
   return {
     ...guard(storage, ["set", "delete"]),
+    canMigrate: () => access.migrate(),
     // The access check runs only when a migration is due, after the stored version was read.
     migrate: async (version, run) => {
       try {

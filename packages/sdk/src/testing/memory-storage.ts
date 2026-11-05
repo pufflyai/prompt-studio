@@ -116,6 +116,7 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
     const { records, legacy } = owner.scope(scopeType, scopeId);
     const blobKey = JSON.stringify([scopeType, scopeId]);
     const api: ExtensionStorageApi = {
+      canMigrate: async () => true,
       migrate: (version, run) =>
         migrateFor(blobKey)(version, (previous) =>
           owner.duringMigration(JSON.stringify([owner.extensionId, scopeType, scopeId, version]), () =>

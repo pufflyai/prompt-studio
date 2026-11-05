@@ -60,3 +60,15 @@ test("recreating identical collection data invalidates the previous lifetime's o
   expect(await collection.updateIfUnchanged("a", observed.revision, { title: "Stale edit" })).toBe(false);
   expect(await collection.get("a")).toEqual({ title: "Original" });
 });
+
+test("an untyped caller cannot omit the observation and perform a blind update", async () => {
+  const pair = await createMemoryStorageDevices();
+  const collection = pair.devices[0].collection<{ title: string }>("tickets");
+  await collection.put("a", { title: "Original" });
+  await expect(
+    Promise.resolve().then(() =>
+      Reflect.apply(collection.updateIfUnchanged, collection, ["a", undefined, { title: "Unobserved edit" }]),
+    ),
+  ).rejects.toThrow("revision");
+  expect(await collection.get("a")).toEqual({ title: "Original" });
+});

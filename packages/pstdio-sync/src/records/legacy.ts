@@ -140,7 +140,10 @@ export const createLegacyRecordStorage = (input: { records: LegacyRecords }) => 
             set: (id: string, value: Json, sortOrder: number | null = null) =>
               items.set(id, valueFor(value, sortOrder)),
             update: (id: string, value: Json) => update(id, value),
-            updateIfUnchanged: (id: string, revision: string, value: Json) => update(id, value, revision),
+            updateIfUnchanged: (id: string, revision: string, value: Json) => {
+              if (typeof revision !== "string") throw new TypeError("A collection observation revision is required");
+              return update(id, value, revision);
+            },
             createIfAbsent: (id: string, value: Json, sortOrder: number | null = null) =>
               items.createIfAbsent(id, valueFor(value, sortOrder)),
             delete: items.delete,

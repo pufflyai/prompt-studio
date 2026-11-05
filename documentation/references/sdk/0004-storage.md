@@ -346,3 +346,9 @@ These methods require the host and SDK release containing this addition.
 A newer SDK alone does not add them to an older host.
 New data should use the records API. Existing collection methods keep their prior
 behavior; an ordinary `put` or `update` does not check an earlier caller's read.
+
+Before an incremental data upgrade outside a once-only `storage.migrate` callback,
+check `await storage.canMigrate()`. It returns false for a private override when
+the synced extension owns migrations, or a published extension's Cloud membership is unknown.
+This is a fresh policy read, not a stored flag. Ordinary edits still use the
+existing publication write permissions.

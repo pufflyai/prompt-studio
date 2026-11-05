@@ -2,4 +2,4 @@
 "pstdio": minor
 "@pstdio/sdk": minor
 ---
-Preserve received collection edits with observed reads and atomic conditional updates.
+Preserve received collection edits and check which source may upgrade shared data.

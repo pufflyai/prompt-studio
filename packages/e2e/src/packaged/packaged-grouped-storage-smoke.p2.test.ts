@@ -60,6 +60,7 @@ test(
       expect(await command(project.id, "collection-observation")).toEqual({
         stale: false,
         saved: true,
+        migrationAllowed: true,
         value: { title: "Newer title", position: "position" },
       });
       const initial = await read(project.id);

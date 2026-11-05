@@ -11,6 +11,6 @@ export const collectionObservation = defineCommand({
     const stale = await collection.updateIfUnchanged("a", old.revision, { ...old.value, position: "position" });
     const current = (await collection.read("a"))!;
     const saved = await collection.updateIfUnchanged("a", current.revision, { ...current.value, position: "position" });
-    return { stale, saved, value: await collection.get("a") };
+    return { stale, saved, migrationAllowed: await ctx.storage.canMigrate(), value: await collection.get("a") };
   },
 });

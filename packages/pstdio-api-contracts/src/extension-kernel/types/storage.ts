@@ -40,6 +40,8 @@ export interface ExtensionStoragePositionsApi {
 }
 
 export interface ExtensionStorageApi {
+  /** Whether this source may run data upgrades now; false when the synced extension owns migrations. */
+  canMigrate(): Promise<boolean>;
   /** Upgrade this storage scope once. Saves the version after success; failed work must be safe to retry. */
   migrate(
     version: number,

@@ -42,6 +42,7 @@ export const createStorageApi = (
   };
 
   const api: CommandRunnerEnvironment["storage"] = {
+    canMigrate: async () => true,
     migrate: (version, run) =>
       deps.extensionStorageService.migrate(scope, version, async (previous) => {
         input.signal?.throwIfAborted();
