@@ -20,7 +20,6 @@
     "perf:subnav": "bun src/perf/subnav.p3.bench.ts",
     "report": "playwright show-report",
     "perf:planner-board-cold-open": "bun src/perf/planner-board-cold-open.p3.bench.ts",
-    "perf:planner-linked-resources": "bun src/perf/planner-linked-resources.p3.bench.ts",
     "perf:storage-scale": "bun src/perf/storage-scale.diagnostic.ts",
     "perf:storage-scale:build": "bun build src/perf/storage-scale-extension.ts --target bun --external @pstdio/sdk/extensions --outfile dist/storage-scale/scale.js",
     "perf:timing-window": "bun src/perf/storage-timing-window.ts",

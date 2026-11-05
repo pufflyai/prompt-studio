@@ -176,10 +176,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "planner",
     label: "Planner board",
-    files: [
-      "packages/e2e/src/perf/planner-board-cold-open.p3.bench.ts",
-      "packages/e2e/src/perf/planner-linked-resources.p3.bench.ts",
-    ],
+    files: ["packages/e2e/src/perf/planner-board-cold-open.p3.bench.ts"],
     prepare: () => [
       {
         command: [

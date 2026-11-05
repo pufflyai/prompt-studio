@@ -1,11 +1,7 @@
 import { strict as assert } from "node:assert";
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
-import { folderProjectInput } from "../helpers/folder-project";
-import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
-import { preparePlannerSource } from "../packaged/packaged-planner-source";
 
 export const linkedResourceCount = 200;
 export const linkedResourceOwner = "test.planner-linked-resources";
@@ -128,47 +124,4 @@ export const seedLinkedResources = async (api: Api, projectId: string) => {
   });
   await api.request(`${path}/views/default`, { viewId: view.id }, "PUT");
   return { projectId, tickets } satisfies LinkedFixture;
-};
-
-export const seedPackagedLinkedResources = async (api: Api, root: string, baseUrl: string, token: string) => {
-  const folder = join(root, "project");
-  mkdirSync(folder, { recursive: true });
-  const git = (args: string[]) => execFileSync("git", ["-C", folder, ...args], { stdio: "pipe" });
-  if (!existsSync(join(folder, ".git"))) {
-    git(["init", "-b", "main"]);
-    git([
-      "-c",
-      "user.email=benchmark@example.com",
-      "-c",
-      "user.name=Benchmark",
-      "commit",
-      "--allow-empty",
-      "-qm",
-      "Linked resource fixture",
-    ]);
-  }
-  const projects = await api.request<{ id: string; name: string }[]>("/projects");
-  const project =
-    projects.find((project) => project.name === "Linked resource performance") ??
-    (await api.request<{ id: string }>(
-      "/projects",
-      folderProjectInput({ name: "Linked resource performance" }, folder),
-    ));
-  const install = (source: string, name: string) =>
-    execFileSync(PACKAGED_BINARY_PATH, ["extensions", "add", source, "--name", name, "--force"], {
-      cwd: folder,
-      env: { ...process.env, HOME: root, PSTDIO_HOME: root, PSTDIO_API_URL: baseUrl, PSTDIO_API_TOKEN: token },
-      stdio: "pipe",
-    });
-  const planner = await preparePlannerSource(join(root, "planner"));
-  install(planner, "pstdio-planner");
-  await installLinkedResourceFixture(api, project.id, root, install);
-  const fixture = await seedLinkedResources(api, project.id);
-  writeFileSync(join(root, "linked-fixture.json"), JSON.stringify(fixture));
-  return fixture;
-};
-
-export const readLinkedFixture = (root: string): LinkedFixture | undefined => {
-  const path = join(resolve(root), "linked-fixture.json");
-  return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as LinkedFixture) : undefined;
 };
