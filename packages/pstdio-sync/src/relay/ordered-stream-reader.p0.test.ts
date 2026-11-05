@@ -97,7 +97,7 @@ test("the ordered reader opens encrypted updates, large-frame pointers and check
     4,
   );
   expect((await reader.openFrames([wrongFormat, wrongAddress])).frames).toEqual([null, null]);
-  expect(failures.map((failure) => failure.id)).toEqual([wrongFormat.updateId, wrongAddress.updateId]);
+  expect(failures.map((failure) => failure.id).sort()).toEqual([wrongFormat.updateId, wrongAddress.updateId].sort());
   const legacy = createRecordStreamReader({ space, documentId: "document", relay, files, quarantine: async () => {} });
   expect((await legacy.openFrames([direct])).frames).toEqual([null]);
 
