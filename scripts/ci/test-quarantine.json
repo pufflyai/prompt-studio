@@ -360,20 +360,6 @@
     "removeWhen": "Identify and fix the shared PowerShell fixture variability, then pass all three PATH registry cases in ten independent Windows x64 runs within their existing 15 second allowances, without retries or prewarming."
   },
   {
-    "runner": "playwright-ui",
-    "file": "packages/e2e/src/ui/ticket-session-status.p2.spec.ts",
-    "name": "follows the latest workspace session status and opens it in the Side Panel",
-    "platforms": ["darwin"],
-    "arch": "arm64",
-    "owner": "PS-954 / ticket workspace session navigation",
-    "reason": "On macOS ARM64, both a full suite and a focused unchanged-main run opened the session Side Panel but unexpectedly replaced the ticket board. Other unchanged-main and PS-932 runs pass. The retargeted nested-control defect in PS-954 is proven separately; it has not been established as the cause of this intermittent failure. PS-954 retains main-reproduction.log and main-trace.zip. Quarantine authorized on 2026-10-26; preserve status transitions, board visibility, panel closing and keyboard navigation.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/pull/1477",
-      "https://github.com/pufflyai/prompt-studio/pull/1455"
-    ],
-    "removeWhen": "Trace and fix the navigation that replaces the board, then pass ten independent macOS ARM64 runs with all original assertions and limits, without retries."
-  },
-  {
     "runner": "bun",
     "file": "clients/desktop/src/cli/windows-user-path.p0.test.ts",
     "name": "Windows PATH uninstall preserves long values and environment references",

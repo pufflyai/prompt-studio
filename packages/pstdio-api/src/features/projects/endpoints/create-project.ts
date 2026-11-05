@@ -85,7 +85,7 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
       try {
         return await withFolderCreation(initial.path, async () => {
           const existing = await openExistingProject(deps, initial);
-          if (existing) return c.json(existing, 200);
+          if (existing) return c.json({ ...existing, created: false }, 200);
           const existingProjects = await deps.projectService.list();
           // A visible first project means its shared defaults are ready for later
           // projects to discover. Concurrent first requests join the install queue.
@@ -99,7 +99,7 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
               return extensionWarnings;
             });
           });
-          const response = toProjectResponse(project);
+          const response = { ...toProjectResponse(project), created: true };
           return c.json(
             extensionWarnings.length
               ? { ...response, extension_warnings: extensionWarnings, extensionWarnings }

@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { resolveOverlayDialogConfig, resolveOverlayDialogRenderState } from "./overlay-layer";
+import type { WorkbenchWidgetPlacement } from "../../core";
+import {
+  resolveActiveOverlayPlacement,
+  resolveOverlayDialogConfig,
+  resolveOverlayDialogRenderState,
+} from "./overlay-layer";
 
 describe("resolveOverlayDialogConfig", () => {
   test("disables dialog close interactions for placements that are not closeable", () => {
@@ -112,4 +117,22 @@ describe("resolveOverlayDialogRenderState", () => {
       placement: activePlacement,
     });
   });
+});
+
+test("orphan overlays stay hidden without masking live dialogs or blocking late registration", () => {
+  const orphan: WorkbenchWidgetPlacement = {
+    widgetId: "restored-setup",
+    contributionId: "old-setup",
+    viewId: "example.view.setup",
+  };
+  const ordinary: WorkbenchWidgetPlacement = {
+    widgetId: "settings",
+    contributionId: "settings",
+    viewId: "example.view.settings",
+  };
+  expect(resolveActiveOverlayPlacement([orphan], orphan.widgetId, {})).toBeUndefined();
+  expect(resolveActiveOverlayPlacement([orphan, ordinary], orphan.widgetId, { settings: {} })).toBe(ordinary);
+  expect(resolveActiveOverlayPlacement([orphan, ordinary], orphan.widgetId, { settings: {}, "old-setup": {} })).toBe(
+    orphan,
+  );
 });

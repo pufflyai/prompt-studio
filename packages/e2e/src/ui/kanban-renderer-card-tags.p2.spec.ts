@@ -103,7 +103,7 @@ test("ticket card tag badges update selected values without opening the card", a
   await selectProjectAndDisplayTicketProperties(page, {
     projectId: project.id,
     showProperties: ["ID", "surface"],
-    hideProperties: ["Workspace", "Type", "Priority"],
+    hideProperties: ["Linked resources", "Type", "Priority"],
   });
 
   const card = page.getByTestId("renderer-card").filter({ hasText: "Card tag dropdown regression" }).first();
@@ -153,7 +153,7 @@ test("ticket card single-select tag badges update and clear selected values", as
   await selectProjectAndDisplayTicketProperties(page, {
     projectId: project.id,
     showProperties: ["ID", "Type", "Complexity"],
-    hideProperties: ["Workspace", "Priority"],
+    hideProperties: ["Linked resources", "Priority"],
   });
 
   const card = page.getByTestId("renderer-card").filter({ hasText: "Default tag dropdown regression" }).first();
@@ -240,7 +240,7 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
   await selectProjectAndDisplayTicketProperties(page, {
     projectId: project.id,
     showProperties: ["ID", "Type", "Priority"],
-    hideProperties: ["Workspace"],
+    hideProperties: ["Linked resources"],
     viewMode: "list",
   });
 

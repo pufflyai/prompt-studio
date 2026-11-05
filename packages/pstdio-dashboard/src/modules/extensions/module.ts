@@ -177,7 +177,6 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         // `metadata` holds only what registered, so a refresh after a failure always retries.
         if (hasSameSerializedMetadata(metadata, nextResolvedMetadata)) {
           commitMetadata(nextProjectId, nextResolvedMetadata);
-          setDashboardExtensionsReadyProject(ctx, nextProjectId);
           return;
         }
         const pageLocationBeforeRefresh = displacedPageLocation ?? ctx.pages.store.getState().location;
@@ -197,11 +196,11 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
         }
         activityRail.sync();
-        setDashboardExtensionsReadyProject(ctx, nextProjectId);
       };
 
       const metadataRefresh = createExtensionRefreshQueue({
         apply: applyMetadata,
+        onComplete: (id) => setDashboardExtensionsReadyProject(ctx, id),
         fallback: () => emptyDashboardExtensionMetadata,
         getGeneration: () => projectGeneration,
         getProjectId: () => projectId,
@@ -247,6 +246,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         }
 
         if (!projectId) return;
+        // Keep existing tools live, but do not treat pending or superseded metadata as setup eligibility.
+        clearDashboardExtensionsReadyProject(ctx);
         metadataRefresh.refresh(projectId);
         appearanceRefresh.refresh(projectId);
       };

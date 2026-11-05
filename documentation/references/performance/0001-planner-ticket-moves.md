@@ -79,7 +79,7 @@ CPU profiles show substantial work in Chakra's style hashing/cache lookups, Reac
 
 ### Board reads load more data than the visible action needs
 
-[runTicketsQuery](../../../extensions/pstdio-planner/src/data/query.ts) reads full stored tickets, tags, statuses, the plan, and review requests. It rebuilds the plan and maps every ticket for each refresh. [queryTickets](../../../extensions/pstdio-planner/src/commands/query-tickets.ts) also reloads workspaces and sessions for linked workspaces.
+[runTicketsQuery](../../../extensions/pstdio-planner/src/data/query.ts) reads full stored tickets, tags, statuses, the plan, and review requests. It rebuilds the plan and maps every ticket for each refresh. At the time of this measurement, [queryTickets](../../../extensions/pstdio-planner/src/commands/query-tickets.ts) also reloaded workspaces and sessions for linked workspaces. Ticket cards now project generic linked resources in batches.
 
 The synthetic project had no linked ticket workspaces, dependencies, review requests, or large attached files. Those paths can add cost in real projects and need a later representative workload.
 

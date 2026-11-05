@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeWebviewSettingsExtension } from "../helpers/webview-settings-extension";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
+import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 test("typed webview settings delete restores the fallback across reloads", async () => {
@@ -25,6 +26,7 @@ test("typed webview settings delete restores the fallback across reloads", async
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
+    await enablePackagedProjectExtension(started, project.id, "settings-fixture");
     browser = await chromium.launch();
     const page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
