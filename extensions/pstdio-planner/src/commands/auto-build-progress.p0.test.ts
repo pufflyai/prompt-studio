@@ -323,7 +323,7 @@ test.each([
   expect(followups).toEqual(["supervisor", dispatched.sessionId]);
 });
 
-test("unchanged PR evidence wakes once while a human request prevents repair, then new evidence wakes again", async () => {
+test("unchanged PR evidence wakes once while a review request prevents repair, then new evidence wakes again", async () => {
   const { ctx, task, dispatched, collection, supervisor, followups } = await monitorFixture();
   const attempt = (await collection<AttemptRecord>("planner-attempts").get(dispatched.workspaceId))!;
   await putAttempt(ctx.storage, {

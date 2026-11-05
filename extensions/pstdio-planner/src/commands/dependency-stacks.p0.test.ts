@@ -101,7 +101,7 @@ test("automatic stack repair honors the merge requirement and keeps stopped owne
   }
 });
 
-test("the owner can reconcile conflicting dependencies and submit without a human request", async () => {
+test("the owner can reconcile conflicting dependencies and submit without a review request", async () => {
   const f = await independentDependencies(true);
   try {
     await expect(updateStackCommand.run(f.ctx, f.input)).rejects.toThrow("conflict");

@@ -164,7 +164,7 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     content: "# Review request smoke",
     deadline: deadlineId,
   });
-  const handoff = await execute("request-human", {
+  const handoff = await execute("request-review", {
     ticket: ticket.id,
     reason: "approved-revision",
     title: "Approve the revision",
@@ -174,13 +174,13 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
       questions: [{ id: "result", label: "Result", required: true, input: { kind: "text" } }],
     },
   });
-  const task = await execute("request-human", {
+  const task = await execute("request-review", {
     ticket: ticket.id,
     title: "Check the preview",
     instructions: "Confirm its layout.",
     request: { kind: "task" },
   });
-  const decision = await execute("request-human", {
+  const decision = await execute("request-review", {
     ticket: ticket.id,
     title: "Choose platforms",
     instructions: "Pick the release platforms.",
@@ -230,7 +230,7 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
   const row = mixed.sections
     .flatMap((section: { rows: Array<{ id: string }> }) => section.rows)
     .find((entry: { id: string }) => entry.id === ticket.id);
-  expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
+  expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["review-needed"]) });
   expect(mixed.ticketRows).toContainEqual(
     expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ reviewRequests: "requested" }) }),
   );

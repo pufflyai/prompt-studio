@@ -99,7 +99,7 @@ export interface TicketAttemptSelection {
   ticketId: string;
   workspaceId: string;
   selectedBy: ActorRef;
-  humanRequestId: string | null;
+  reviewRequestId: string | null;
   selectedAt: string;
 }
 

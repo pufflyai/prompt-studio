@@ -30,7 +30,7 @@ export async function readPendingPullRequestRepair(ctx: CommandContext, ticket: 
   if (!(await attemptEventsCollection(ctx.storage).get(evidence))) return evidence;
 }
 
-// Delivery is acknowledged even when human input or capacity prevents accepting a repair.
+// Delivery is acknowledged even when review input or capacity prevents accepting a repair.
 export async function acknowledgePullRequestNotifications(
   ctx: CommandContext,
   supervisorId: string,
