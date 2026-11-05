@@ -17,6 +17,7 @@ test("final project retirement prevents reconnection after old-worker cleanup", 
         starts += 1;
         if (starts === 1)
           return {
+            running: false,
             url: "http://127.0.0.1:4096",
             dispose: async () => {
               retiring.resolve();
@@ -24,7 +25,7 @@ test("final project retirement prevents reconnection after old-worker cleanup", 
             },
           };
         await ready.promise;
-        return { url: "http://127.0.0.1:4097", dispose: async () => {} };
+        return { running: true, url: "http://127.0.0.1:4097", dispose: async () => {} };
       },
       fetcher: async (url, init) => {
         if (new URL(String(url)).pathname === "/api/session" && !failed) {

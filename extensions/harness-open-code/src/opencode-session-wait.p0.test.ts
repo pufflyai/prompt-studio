@@ -1,6 +1,51 @@
 import { expect, test } from "bun:test";
 import { createOpencodeService } from "./opencode-service";
 
+test("a wait socket reset leaves the owned server executing admitted work", async () => {
+  let starts = 0;
+  let disposals = 0;
+  let submissions = 0;
+  let waits = 0;
+  const service = createOpencodeService({
+    serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
+    isPortOpen: async () => false,
+    pingServer: async () => true,
+    startServer: async () => {
+      starts++;
+      const server = Bun.serve({
+        port: 0,
+        fetch(request) {
+          if (new URL(request.url).pathname.endsWith("/wait")) return new Response(null, { status: 204 });
+          submissions++;
+          return new Response(null, { status: 204 });
+        },
+      });
+      return {
+        url: server.url.origin,
+        running: true,
+        dispose: async () => {
+          disposals++;
+          await server.stop(true);
+        },
+      };
+    },
+    fetcher: async (input, init) => {
+      if (new URL(String(input)).pathname.endsWith("/wait") && ++waits === 1)
+        throw new Error("fetch failed", { cause: { code: "ECONNRESET" } });
+      return fetch(input, init);
+    },
+  });
+  try {
+    await service.runCommand({ sessionId: "session", text: "/review" });
+    expect(starts).toBe(1);
+    expect(disposals).toBe(0);
+    expect(submissions).toBe(1);
+    expect(waits).toBe(2);
+  } finally {
+    await service.dispose();
+  }
+});
+
 test("cancelling a completion wait does not retry it", async () => {
   const controller = new AbortController();
   const reason = new DOMException("Cancelled by the user", "AbortError");

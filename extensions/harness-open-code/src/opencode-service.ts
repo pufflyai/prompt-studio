@@ -4,6 +4,7 @@ import type { HarnessAttachment, HarnessParams } from "@pstdio/sdk/extensions";
 import { createOpencodeAuthentication } from "./authentication";
 import { createCommandApi } from "./opencode-commands";
 import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
+import { toOpencodeModel } from "./opencode-model";
 import { createQuestionApi } from "./opencode-questions";
 import {
   canConnectToHost,
@@ -49,17 +50,6 @@ type OpencodeSessionMessageInput = {
   cwd?: string;
 };
 
-const toModel = (model?: string | null, params?: HarnessParams) => {
-  if (!model) return undefined;
-  const slash = model.indexOf("/");
-  if (slash <= 0 || slash === model.length - 1) return undefined;
-  return {
-    providerID: model.slice(0, slash),
-    id: model.slice(slash + 1),
-    ...(typeof params?.variant === "string" ? { variant: params.variant } : {}),
-  };
-};
-
 const resolveMockSessionId = () => {
   const fixed = process.env.OPENCODE_MOCK_SESSION_ID?.trim();
   if (fixed) return fixed;
@@ -101,7 +91,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     signal?: AbortSignal,
   ) => {
     const headers = buildHeaders(directory);
-    const selectedModel = toModel(model, params);
+    const selectedModel = toOpencodeModel(model, params);
     if (selectedModel) {
       const selection = await requestJson(
         deps.fetcher,
@@ -154,7 +144,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       const createResponse = await requestJson<{ data?: { id?: string } }>(deps.fetcher, createUrl, {
         method: "POST",
         headers,
-        body: { location: { directory }, model: toModel(input.model, input.params) },
+        body: { location: { directory }, model: toOpencodeModel(input.model, input.params) },
       });
 
       requireResponseOk(createResponse.response, createResponse.text, "OpenCode session.create failed");

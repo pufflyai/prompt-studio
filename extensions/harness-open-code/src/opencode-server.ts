@@ -168,6 +168,8 @@ export const createServerConnection = (deps: OpencodeServerDeps) => {
     } catch (error) {
       lifetime.signal.throwIfAborted();
       if (!isConnectionError(error)) throw error;
+      // A dropped request socket does not mean the process executing native work has exited.
+      if (current.owned?.running) return action(current.url);
       current.replacement ??= track(
         connect(async () => {
           await current.owned?.dispose();

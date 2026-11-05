@@ -1,4 +1,6 @@
+import type { HarnessParams } from "@pstdio/sdk/extensions";
 import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
+import { toOpencodeModel } from "./opencode-model";
 import { waitForOpencodeIdle } from "./opencode-session-wait";
 export const createCommandApi = (deps: {
   fetcher: OpencodeFetcher;
@@ -42,6 +44,20 @@ export const createCommandApi = (deps: {
       const directory = input.cwd ?? process.cwd();
       await deps.withServerUrl(async (baseUrl) => {
         const { body, compact } = commandRequest(input);
+        const model = toOpencodeModel(input.model, input.params);
+        if (model) {
+          const selection = await requestJson(
+            deps.fetcher,
+            buildRequestUrl(baseUrl, `/api/session/${input.sessionId}/model`, directory),
+            {
+              method: "POST",
+              headers: buildHeaders(directory),
+              body: { model },
+              signal: input.signal,
+            },
+          );
+          requireResponseOk(selection.response, selection.text, "OpenCode model selection failed");
+        }
         const path = `/api/session/${input.sessionId}/${compact ? "compact" : "command"}`;
         const { response, text } = await requestJson(deps.fetcher, buildRequestUrl(baseUrl, path, directory), {
           method: "POST",
@@ -62,6 +78,7 @@ interface CommandInput {
   sessionId: string;
   text: string;
   model?: string | null;
+  params?: HarnessParams;
   cwd?: string;
 }
 const commandRequest = (input: CommandInput) => {

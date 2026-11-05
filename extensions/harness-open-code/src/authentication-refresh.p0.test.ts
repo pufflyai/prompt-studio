@@ -45,6 +45,7 @@ test("account refresh uses a new provider snapshot without stopping active sessi
         },
       });
       return {
+        running: true,
         url: server.url.origin,
         dispose: async () => {
           await server.stop(true);
@@ -102,6 +103,7 @@ test("an owned server cleanup failure does not prevent reconnecting", async () =
     startServer: async () => {
       const generation = ++starts;
       return {
+        running: true,
         url: `http://localhost:${4095 + generation}`,
         dispose: async () => {
           if (generation === 1) throw new Error("transient cleanup failure");
@@ -140,6 +142,7 @@ test.each(["authentication", "history"])("cleanup preserves an in-flight %s read
     ...serviceOverrides(),
     isPortOpen: async () => false,
     startServer: async () => ({
+      running: true,
       url: server.url.origin,
       dispose: async () => {
         stops++;

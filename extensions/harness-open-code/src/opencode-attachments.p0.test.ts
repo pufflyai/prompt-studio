@@ -42,7 +42,7 @@ const attachment: HarnessAttachment = {
 };
 
 const serviceOverrides = (messages: Record<string, unknown[]>) => ({
-  startServer: async () => ({ url: "http://localhost:4096", dispose: async () => {} }),
+  startServer: async () => ({ running: true, url: "http://localhost:4096", dispose: async () => {} }),
   serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
   pingServer: async () => true,
   isPortOpen: async () => true,

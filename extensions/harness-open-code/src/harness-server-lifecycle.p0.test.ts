@@ -92,7 +92,7 @@ test("concurrent discovery shares startup across project contexts", async () => 
         await release.promise;
         const url = `http://${host}:${port}`;
         healthy.add(url);
-        return { url, dispose: async () => {} };
+        return { running: true, url, dispose: async () => {} };
       },
       pingServer: async (url) => healthy.has(url),
       isPortOpen: async ({ port }) => listening.has(port),
@@ -119,6 +119,7 @@ test("disabling the last project stops its worker and preserves other projects u
     {},
     {
       startServer: async () => ({
+        running: true,
         url: "http://127.0.0.1:4096",
         dispose: async () => {
           stopped += 1;
@@ -167,6 +168,7 @@ test("disabling a project while discovery starts releases the worker before clea
       startServer: async () => {
         started += 1;
         return {
+          running: true,
           url: "http://127.0.0.1:4096",
           dispose: async () => {
             stopped += 1;

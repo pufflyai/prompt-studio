@@ -17,7 +17,7 @@ test("native commands use the session command endpoint and compaction uses the c
     },
   });
   const service = createOpencodeService({
-    startServer: async () => ({ url: server.url.origin, dispose: async () => {} }),
+    startServer: async () => ({ running: true, url: server.url.origin, dispose: async () => {} }),
     serverStore: { read: async () => server.url.origin, write: async () => {}, clear: async () => {} },
     pingServer: async () => true,
     isPortOpen: async () => false,
@@ -28,10 +28,42 @@ test("native commands use the session command endpoint and compaction uses the c
     await service.runCommand({ sessionId: "ses_one", text: "/compact ", model: "openai/gpt-5", cwd: "/repo" });
     expect(requests).toEqual([
       { url: "/api/session/ses_one/command", body: { name: "review", text: "keep  spaces" } },
+      { url: "/api/session/ses_one/model", body: { model: { providerID: "openai", id: "gpt-5" } } },
       { url: "/api/session/ses_one/compact", body: {} },
     ]);
   } finally {
     server.stop(true);
+  }
+});
+
+test("native commands apply a newly selected model before admission", async () => {
+  const requests: Array<{ path: string; body: unknown }> = [];
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const path = new URL(request.url).pathname;
+      if (path.endsWith("/wait")) return new Response(null, { status: 204 });
+      requests.push({ path, body: await request.json() });
+      return new Response(null, { status: 204 });
+    },
+  });
+  try {
+    const api = createCommandApi({ fetcher: fetch, withServerUrl: (action) => action(server.url.origin) });
+    await api.runCommand({
+      sessionId: "session",
+      text: "/review",
+      model: "opencode-go/minimax-m3",
+      params: { variant: "thinking" },
+    });
+    expect(requests).toEqual([
+      {
+        path: "/api/session/session/model",
+        body: { model: { providerID: "opencode-go", id: "minimax-m3", variant: "thinking" } },
+      },
+      { path: "/api/session/session/command", body: { name: "review", text: "" } },
+    ]);
+  } finally {
+    await server.stop(true);
   }
 });
 

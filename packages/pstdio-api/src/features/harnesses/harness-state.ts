@@ -8,6 +8,8 @@ const writes = new Map<string, Promise<void>>();
 
 const readValues = async (path: string) => {
   try {
+    await chmod(join(path, ".."), 0o700);
+    await chmod(path, 0o600);
     const value = JSON.parse(await readFile(path, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       throw new Error(`Harness state must contain a JSON object: ${path}`);

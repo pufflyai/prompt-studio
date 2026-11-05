@@ -39,7 +39,9 @@ test("an owned server drains both log pipes after readiness and stops exactly on
     ]);
     for (let attempt = 0; attempt < 100 && !existsSync(marker); attempt++) await Bun.sleep(10);
     expect(existsSync(marker)).toBe(true);
+    expect(server.running).toBe(true);
     await Promise.all([server.dispose(), server.dispose()]);
+    expect(server.running).toBe(false);
     expect(() => process.kill(Number(readFileSync(pidPath, "utf8")), 0)).toThrow();
   } finally {
     await server?.dispose();

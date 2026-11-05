@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { resolveOpencodeCommand } from "./cli";
 
-export type OpencodeServer = { url: string; dispose: () => Promise<void> };
+export type OpencodeServer = { url: string; readonly running: boolean; dispose: () => Promise<void> };
 export type OpencodeServerOptions = { host: string; port: number; signal: AbortSignal };
 export type OpencodeServerStarter = (options: OpencodeServerOptions) => Promise<OpencodeServer>;
 
@@ -59,7 +59,13 @@ export const startOpencodeServer = async (options: OpencodeServerOptions, comman
       });
       reader.once("close", () => reject(new Error(`Opencode server exited before publishing its URL.\n${stderrTail}`)));
     });
-    return { url, dispose };
+    return {
+      url,
+      get running() {
+        return child.exitCode === null && child.signalCode === null;
+      },
+      dispose,
+    };
   } catch (error) {
     await dispose();
     throw error;

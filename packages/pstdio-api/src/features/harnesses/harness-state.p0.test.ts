@@ -6,6 +6,22 @@ import { createHarnessStateApi } from "./harness-state";
 
 const roots: string[] = [];
 
+test.skipIf(process.platform === "win32")("tightens existing credential state before read-only reuse", async () => {
+  const home = mkdtempSync(join(tmpdir(), "pstdio-legacy-harness-state-"));
+  roots.push(home);
+  const directory = join(home, "state");
+  const path = join(directory, "pstdio.private.json");
+  const serverUrl = "http://opencode:private@127.0.0.1:4096";
+  mkdirSync(directory);
+  writeFileSync(path, JSON.stringify({ serverUrl }));
+  chmodSync(directory, 0o755);
+  chmodSync(path, 0o644);
+  const state = createHarnessStateApi("pstdio.private", { env: { PSTDIO_HOME: home } });
+  expect(await state.get("serverUrl")).toBe(serverUrl);
+  expect(statSync(directory).mode & 0o777).toBe(0o700);
+  expect(statSync(path).mode & 0o777).toBe(0o600);
+});
+
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });

@@ -15,6 +15,7 @@ test("fresh account connections leave a discovered server owned by its caller", 
     startServer: async ({ port }) => {
       startedPort = port;
       return {
+        running: true,
         url: "http://127.0.0.1:4097",
         dispose: async () => {
           stopped++;
@@ -43,7 +44,7 @@ test("concurrent requests share a failed replacement and later requests can reco
     startServer: async () => {
       starts++;
       if (starts > 1 && failReplacement) throw new Error("replacement startup failed");
-      return { url: "http://127.0.0.1:4096", dispose: async () => {} };
+      return { running: false, url: "http://127.0.0.1:4096", dispose: async () => {} };
     },
     serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
     pingServer: async () => false,
@@ -81,13 +82,18 @@ test("a stopped owned server is replaced when a later request reconnects", async
   let started = 0;
   let stopped = 0;
   let current: ReturnType<typeof Bun.serve> | undefined;
+  let running = false;
   let stored: string | null = null;
   const service = createOpencodeService({
     startServer: async () => {
       started += 1;
       const server = Bun.serve({ port: 0, fetch: () => emptyMessages() });
       current = server;
+      running = true;
       return {
+        get running() {
+          return running;
+        },
         url: server.url.origin,
         dispose: async () => {
           stopped += 1;
@@ -117,6 +123,7 @@ test("a stopped owned server is replaced when a later request reconnects", async
   try {
     await service.getSessionMessages("native-session", "/project");
     await current!.stop(true);
+    running = false;
     expect(await service.getSessionMessages("native-session", "/project")).toEqual([]);
     expect(started).toBe(2);
   } finally {

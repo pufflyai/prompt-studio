@@ -22,6 +22,7 @@ test("cancelling OpenCode sign-in releases its own server without touching the s
     },
     {
       startServer: async () => ({
+        running: true,
         url: server.url.href,
         dispose: async () => {
           disposed = true;

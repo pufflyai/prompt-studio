@@ -12,7 +12,7 @@ test("retiring the final project cancels an owned OpenCode launch before readine
       startServer: async ({ signal }) => {
         entered.resolve(signal);
         await release.promise;
-        return { url: "http://127.0.0.1:4096", dispose: async () => {} };
+        return { running: true, url: "http://127.0.0.1:4096", dispose: async () => {} };
       },
       pingServer: async () => false,
       isPortOpen: async () => false,
