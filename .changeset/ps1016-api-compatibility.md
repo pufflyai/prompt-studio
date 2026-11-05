@@ -9,6 +9,7 @@
 "pstdio-base-themes": patch
 "pstdio-home": patch
 "pstdio-notes": patch
+"pstdio-onboarding": patch
 "pstdio-performance": patch
 "pstdio-planner": patch
 "pstdio-reports": patch
