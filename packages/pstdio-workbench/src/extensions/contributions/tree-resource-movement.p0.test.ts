@@ -161,3 +161,24 @@ test("tree callbacks reject clones belonging to a different mapper with the same
   });
   expect(calls).toHaveLength(before);
 });
+
+test("extension tree reads refresh when the selected document changes within one workspace", () => {
+  const workbench = createWorkbench();
+  workbench.registerModule({
+    id: "document-context",
+    activate: (context) =>
+      registerWorkbenchExtensionTreeRenderers({
+        metadata,
+        projectId: "project-1",
+        workbench: context,
+        executeCommand: () => [],
+      }),
+  });
+  const renderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeId)!;
+  const resource = { type: "workspace", id: "workspace", extensionId: "pstdio", projectId: "project-1" };
+  const before = renderer.getReadKey!({ resource: { ...resource, metadata: { workspaceFilePath: "old.txt" } } });
+  const after = renderer.getReadKey!({
+    resource: { ...resource, metadata: { workspaceFilePath: "folder/selected.txt" } },
+  });
+  expect(after).not.toBe(before);
+});

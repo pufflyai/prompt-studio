@@ -227,6 +227,8 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     icon: record.icon,
     body: {
       kind: "tree",
+      // Callback results include document selection and other bound resource metadata.
+      getReadKey: (ctx) => JSON.stringify([ctx.resource, ctx.pageParams]),
       getStructure: record.structure ? (ctx) => extensionTreeStructure(record, ctx.resource) : undefined,
       searchable: record.searchable,
       searchPlaceholder: text(record.searchPlaceholder, "Search files"),
