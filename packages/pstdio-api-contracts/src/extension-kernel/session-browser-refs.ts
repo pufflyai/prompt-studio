@@ -12,8 +12,8 @@ const ref = <K extends "page" | "placement" | "view">(kind: K, id: string) => ({
  */
 export const sessionBrowser = {
   pages: {
-    sessions: ref("page", "sessions"),
-    session: ref("page", "session"),
+    sessions: ref("page", "browse"),
+    session: ref("page", "conversation"),
     compose: ref("page", "compose"),
     draft: ref("page", "draft"),
   },

@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
-import { workbenchCommands, workbenchPages, workbenchPanels } from "./builtin-refs";
+import { workbenchCommands, workbenchPageDefinitions, workbenchPages, workbenchPanels } from "./builtin-refs";
 import { sessionBrowser, sessionBrowserId } from "./session-browser-refs";
 
 test("Sessions provider targets are qualified without importing its implementation", () => {
-  expect(sessionBrowser.pages.session).toEqual({ kind: "page", extensionId: sessionBrowserId, id: "session" });
+  expect(sessionBrowser.pages.session).toEqual({ kind: "page", extensionId: sessionBrowserId, id: "conversation" });
   expect(sessionBrowser.views.list).toEqual({ kind: "view", extensionId: sessionBrowserId, id: "list" });
   expect(sessionBrowser.panels.conversation).toEqual({
     kind: "placement",
@@ -17,4 +17,9 @@ test("deprecated host refs retain their published identity", () => {
   expect(workbenchPages.session).toEqual({ kind: "page", extensionId: "pstdio", id: "session" });
   expect(workbenchPanels.projectSession).toEqual({ kind: "placement", extensionId: "pstdio", id: "project-session" });
   expect(workbenchCommands.newConversation.id).toBe("dashboard.createSession");
+});
+
+test("provider page IDs remain outside the legacy host reservation", () => {
+  const reserved = Object.values(workbenchPageDefinitions).map((page) => page.ref.id);
+  for (const page of Object.values(sessionBrowser.pages)) expect(reserved).not.toContain(page.id);
 });
