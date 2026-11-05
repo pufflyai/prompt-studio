@@ -307,6 +307,14 @@ ships in the release after 0.44.0. It shares the core generator with
 
 ### Cloud account and sync status
 
+On `main`, `ctx.account.status().loginAttempt` and the webview account client expose
+the native device owner's latest sign-in request ID and `pending`, `complete` or
+`failed` status. No URL or credential is included. Listen to `accountEvents.changed`
+for start, completion, cancellation and expiry. A new sign-in replaces and drains
+the previous pending callback; sign-out closes it too. Different projects and
+extension copies observe the same operation. Do not persist another sign-in request
+in extension settings. Production consumers need a compatible published host and SDK.
+
 On `main`, `ctx.account` reads this device's Cloud account, the account's devices, and each project's sync status. It is an additive part of extension API 0.2.1 and ships in the release after 0.44.0. The native host owns the device credential; extensions never see it. Methods that take a `projectId` use the current project when it is omitted.
 
 | Method | What it does |
