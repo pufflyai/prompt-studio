@@ -1,0 +1,164 @@
+import {
+  defineCommandPaletteResource,
+  type ExtensionContextBase,
+  l10n,
+  type TreeNode,
+  type TreeRendererChildrenParams,
+  type TreeRendererQueryParams,
+  type TreeViewSection,
+  viewDataEvents,
+  workbenchResourceKinds,
+} from "@pstdio/sdk/extensions";
+import { sessionBrowser } from "../refs";
+import { archive, create, remove, rename } from "./navigation";
+import { sessionResource, sessionTarget } from "./resource";
+
+const icons: Record<string, string> = {
+  completed: "circle-check",
+  failed: "circle-alert",
+  cancelled: "circle-stop",
+  disconnected: "circle-pause",
+  queued: "clock-alert",
+  awaiting_input: "circle-dot",
+};
+const sessionNodes = (
+  ctx: ExtensionContextBase,
+  sessions: Awaited<ReturnType<typeof ctx.sessions.query>>["items"],
+  cursor?: string,
+  workspaceId?: string,
+) => {
+  const nodes: TreeNode[] = [];
+  let date = "";
+  for (const session of sessions) {
+    const day = new Date(session.lastRequestStarted ?? session.updatedAt).toLocaleDateString(undefined, {
+      dateStyle: "medium",
+    });
+    if (day !== date) {
+      date = day;
+      nodes.push({ id: `date:${cursor ?? "root"}:${date}`, label: date, disabled: true });
+    }
+    const resource = sessionResource(session, ctx.projectId);
+    nodes.push({
+      id: session.id,
+      label: session.title,
+      icon: icons[session.status] ?? "circle-dashed",
+      resource,
+      target: workspaceId
+        ? { kind: "panel", panel: sessionBrowser.panels.conversation, resource, open: "preview" }
+        : sessionTarget(resource),
+      contextMenuActions: [
+        {
+          id: "rename",
+          label: l10n("actions.rename", "Rename session"),
+          icon: "pencil",
+          command: rename.ref,
+          params: { sessionId: session.id },
+          input: { title: { type: "text", label: "Session name", required: true, defaultValue: session.title } },
+        },
+        {
+          id: "archive",
+          label: l10n("actions.archive", "Archive session"),
+          icon: "archive",
+          command: archive.ref,
+          params: { sessionId: session.id },
+        },
+        {
+          id: "delete",
+          label: l10n("actions.delete", "Delete session"),
+          icon: "trash-2",
+          command: remove.ref,
+          params: { sessionId: session.id },
+          disabled: ["in_progress", "awaiting_input", "queued"].includes(session.status),
+        },
+      ],
+    });
+  }
+  return nodes;
+};
+const queryPage = async (ctx: ExtensionContextBase, input: TreeRendererQueryParams, cursor?: string) => {
+  const workspaceId = input.renderer.resource?.type === "workspace" ? input.renderer.resource.id : undefined;
+  const page = await ctx.sessions.query({
+    limit: 50,
+    orderBy: "lastActivity",
+    workspaceId,
+    search: input.filter?.trim() || undefined,
+    ...(cursor ? { cursor } : {}),
+  });
+  const nodes = sessionNodes(ctx, page.items, cursor, workspaceId);
+  if (page.nextCursor)
+    nodes.push({
+      id: `more:${page.nextCursor}`,
+      label: l10n("sessions.more", "More sessions"),
+      collapsible: true,
+      metadata: { cursor: page.nextCursor },
+    });
+  return { nodes, workspaceId };
+};
+export const browseChildren = async (ctx: ExtensionContextBase, input: TreeRendererChildrenParams) => {
+  const cursor = input.node.metadata?.cursor;
+  if (typeof cursor !== "string") return [];
+  return (await queryPage(ctx, input, cursor)).nodes;
+};
+export const browse = async (ctx: ExtensionContextBase, input: TreeRendererQueryParams): Promise<TreeViewSection[]> => {
+  const { nodes, workspaceId } = await queryPage(ctx, input);
+  let visibleNodes: TreeNode[] = nodes.length
+    ? nodes
+    : [{ id: "empty", label: l10n("sessions.empty", "No sessions yet"), disabled: true }];
+  if (workspaceId)
+    visibleNodes = [
+      {
+        id: "workspace-sessions",
+        label: l10n("sessions.title", "Sessions"),
+        collapsible: true,
+        canHide: true,
+        children: nodes,
+        actions: [
+          {
+            id: "new",
+            label: l10n("commands.new", "New session"),
+            icon: "plus",
+            command: create.ref,
+            params: { workspaceId, side: true },
+          },
+        ],
+      },
+    ];
+  return [
+    {
+      id: "sessions",
+      label: l10n("sessions.title", "Sessions"),
+      collapsible: false,
+      actions: [
+        {
+          id: "new",
+          label: l10n("commands.new", "New session"),
+          icon: "plus",
+          command: create.ref,
+          params: workspaceId ? { workspaceId } : {},
+        },
+      ],
+      nodes: visibleNodes,
+    },
+  ];
+};
+export const search = defineCommandPaletteResource({
+  id: "sessions",
+  title: l10n("sessions.title", "Sessions"),
+  resourceKind: workbenchResourceKinds.session,
+  refreshEvents: [viewDataEvents.sessionsChanged],
+  async query(ctx, input) {
+    const page = await ctx.sessions.query({
+      limit: input.limit,
+      orderBy: "lastActivity",
+      search: input.query.trim() || undefined,
+    });
+    return {
+      items: page.items.map((session) => ({
+        id: session.id,
+        label: session.title,
+        icon: "message-circle",
+        target: sessionTarget(sessionResource(session, ctx.projectId)),
+      })),
+    };
+  },
+});

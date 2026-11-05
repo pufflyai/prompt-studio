@@ -1,0 +1,21 @@
+{
+  "conversation.title": "Conversation",
+  "commands.new": "Nouvelle conversation",
+  "sessions.title": "Conversations",
+  "sessions.search": "Rechercher des conversations",
+  "commands.switch": "Changer de conversation",
+  "commands.open": "Ouvrir la conversation",
+  "commands.rename": "Renommer la conversation",
+  "commands.archive": "Archiver la conversation",
+  "actions.stopBeforeDelete": "Arrêtez le travail actif ou en attente avant de supprimer.",
+  "commands.delete": "Supprimer la conversation",
+  "commands.fork": "Créer une branche de la conversation",
+  "actions.waitBeforeFork": "Attendez la fin du travail en cours avant de créer une branche de toute la conversation.",
+  "commands.stop": "Arrêter la conversation",
+  "commands.switchOptions": "Rechercher des conversations",
+  "actions.rename": "Renommer la conversation",
+  "actions.archive": "Archiver la conversation",
+  "actions.delete": "Supprimer la conversation",
+  "sessions.more": "Plus de conversations",
+  "sessions.empty": "Aucune conversation"
+}

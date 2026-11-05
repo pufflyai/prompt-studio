@@ -16,6 +16,7 @@ const e2eExtension = (name: string) => ({
 // pstdio-reports stays out so the Marketplace lifecycle spec can install it.
 const e2eDefaultExtensions = [
   e2eExtension("pstdio-home"),
+  e2eExtension("pstdio-session-browser"),
   e2eExtension("pstdio-base-themes"),
   e2eExtension("canvas"),
   e2eExtension("pstdio-artifacts"),
