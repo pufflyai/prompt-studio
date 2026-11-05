@@ -32,6 +32,7 @@ interface PageLocationControllerActionsInput<Value> {
   locationsEqual(left: PageLocation | undefined, right: PageLocation | undefined): boolean;
   replay(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
   select(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
+  replaceParams(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
   commit(
     projectId: string,
     resolved: ResolvedPageLocation,
@@ -131,7 +132,7 @@ export const createPageLocationControllerActions = <Value>(
       const { params: previous, ...location } = current.location;
       const resolved = actions.normalizeStored({ ...location, ...(params ? { params } : {}) });
       if (actions.locationsEqual(current.location, resolved.location)) return current.location;
-      const result = actions.commit(current.projectId, resolved, "replace", "updatePageParams");
+      const result = actions.replaceParams(current.projectId, resolved);
       if (!result.ok) throw new Error(result.diagnostic.message);
       return result.location;
     },

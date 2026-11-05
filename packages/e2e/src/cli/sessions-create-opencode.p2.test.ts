@@ -8,7 +8,7 @@ import { type ApiInstance, getFreePort, startApi } from "./start-api";
 import { FLOW_TIMEOUT, SETUP_TIMEOUT } from "./timeouts";
 
 type OpencodeRequest = {
-  type: "session.create" | "session.message";
+  type: "session.create" | "session.model" | "session.message";
   directory: string | null;
   body: unknown;
 };
@@ -60,10 +60,10 @@ const createOpencodeBinary = () => {
     [
       "#!/bin/sh",
       'if [ "$1" = "--version" ]; then',
-      '  echo "opencode 1.0.175"',
+      '  echo "opencode 2.2.5"',
       "  exit 0",
       "fi",
-      'if [ "$1" = "models" ]; then',
+      'if [ "$1" = "api" ]; then',
       '  echo \'[{"id":"openai/gpt-5.5"},{"id":"openai/gpt-5.3-codex"}]\'',
       "  exit 0",
       "fi",
@@ -85,11 +85,6 @@ const isCreateModel = (body: unknown) => {
   return body.model.providerID === "openai" && body.model.id === "gpt-5.5";
 };
 
-const isMessageModel = (body: unknown) => {
-  if (!isRecord(body) || !isRecord(body.model)) return false;
-  return body.model.providerID === "openai" && body.model.modelID === "gpt-5.5";
-};
-
 const invalidModelResponse = (body: unknown) =>
   new Response(JSON.stringify({ success: false, error: "invalid model payload", body }), {
     status: 400,
@@ -103,26 +98,16 @@ const jsonResponse = (body: unknown, status = 200) =>
   });
 
 const completedMessages = () => [
+  { type: "user", id: "msg_e2e_user", time: { created: 1 }, text: "external repo session smoke" },
   {
-    info: {
-      id: "opencode-e2e-user",
-      role: "user",
-      sessionID: sessionId,
-      time: { created: Date.now(), completed: Date.now() },
-    },
-    parts: [{ type: "text", text: "external repo session smoke" }],
+    type: "assistant",
+    id: "msg_e2e_assistant",
+    agent: "build",
+    model: { id: "gpt-5.5", providerID: "openai" },
+    time: { created: 2 },
+    content: [{ type: "text", text: "done" }],
   },
-  {
-    info: {
-      id: "opencode-e2e-assistant",
-      role: "assistant",
-      sessionID: sessionId,
-      modelID: "gpt-5.5",
-      providerID: "openai",
-      time: { created: Date.now(), completed: Date.now() },
-    },
-    parts: [{ type: "text", text: "done" }],
-  },
+  { type: "idle", id: "msg_e2e_idle", outcome: "succeeded", time: { created: 3 } },
 ];
 
 // This is a protocol mock for the OpenCode HTTP server. The test exercises
@@ -135,29 +120,43 @@ const startOpencodeServer = async () => {
     port,
     async fetch(request) {
       const url = new URL(request.url);
+      const route = `${request.method} ${url.pathname}`;
 
-      if (url.pathname === "/global/health") {
-        return jsonResponse({ healthy: true });
+      if (url.pathname === "/api/info") {
+        return jsonResponse({ version: "2.2.5" });
       }
 
-      if (url.pathname === "/session" && request.method === "POST") {
+      if (route === "POST /api/session") {
         const body = await request.json();
-        opencodeRequests.push({ type: "session.create", directory: url.searchParams.get("directory"), body });
+        opencodeRequests.push({ type: "session.create", directory: url.searchParams.get("location[directory]"), body });
 
         if (!isCreateModel(body)) return invalidModelResponse(body);
-        return jsonResponse({ id: sessionId });
+        return jsonResponse({ data: { id: sessionId } });
       }
 
-      if (url.pathname === `/session/${sessionId}/message` && request.method === "POST") {
+      if (route === `POST /api/session/${sessionId}/model`) {
         const body = await request.json();
-        opencodeRequests.push({ type: "session.message", directory: url.searchParams.get("directory"), body });
+        opencodeRequests.push({ type: "session.model", directory: url.searchParams.get("location[directory]"), body });
+        if (!isCreateModel(body)) return invalidModelResponse(body);
+        return new Response(null, { status: 204 });
+      }
+      if (url.pathname.endsWith("/wait")) return new Response(null, { status: 204 });
+      if (["/api/provider", "/api/integration", "/api/command"].includes(url.pathname))
+        return jsonResponse({ data: [] });
 
-        if (!isMessageModel(body)) return invalidModelResponse(body);
-        return jsonResponse({ info: { id: "opencode-e2e-prompt" }, parts: [] });
+      if (route === `POST /api/session/${sessionId}/prompt`) {
+        const body = await request.json();
+        opencodeRequests.push({
+          type: "session.message",
+          directory: url.searchParams.get("location[directory]"),
+          body,
+        });
+
+        return jsonResponse({ data: { id: "msg_e2e_prompt" } });
       }
 
-      if (url.pathname === `/session/${sessionId}/message` && request.method === "GET") {
-        return jsonResponse(completedMessages());
+      if (route === `GET /api/session/${sessionId}/message`) {
+        return jsonResponse({ data: completedMessages(), cursor: {} });
       }
 
       return jsonResponse({ error: `Unexpected OpenCode request ${request.method} ${url.pathname}` }, 404);
@@ -240,15 +239,21 @@ describe("pstdio sessions create with mocked OpenCode protocol", () => {
         {
           type: "session.create",
           directory: repoPath,
-          body: { model: { providerID: "openai", id: "gpt-5.5" } },
+          body: {
+            location: { directory: repoPath },
+            model: { providerID: "openai", id: "gpt-5.5", variant: "medium" },
+          },
+        },
+        {
+          type: "session.model",
+          directory: repoPath,
+          body: { model: { providerID: "openai", id: "gpt-5.5", variant: "medium" } },
         },
         {
           type: "session.message",
           directory: repoPath,
           body: {
-            parts: [{ type: "text", text: "external repo session smoke" }],
-            model: { providerID: "openai", modelID: "gpt-5.5" },
-            variant: "medium",
+            text: "external repo session smoke",
           },
         },
       ]);

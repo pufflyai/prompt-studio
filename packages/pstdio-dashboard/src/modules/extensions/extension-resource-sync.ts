@@ -15,21 +15,17 @@ import {
   refreshWorkbenchResource,
   watchExtensionPlacementResources,
 } from "./extension-placement-resource-sync";
-import { resolutionFromResult, resourceResolutionRequest } from "./extension-resource-resolution";
+import {
+  resolutionFromResult,
+  resourceResolutionRequest,
+  sameResourceReference,
+} from "./extension-resource-resolution";
 
 interface WatchOpenExtensionResourceInput {
   executeCommand: ExecuteDashboardExtensionCommand;
   metadata: Pick<DashboardExtensionMetadata, "resourceKinds">;
   projectId: string;
 }
-
-const sameReference = (left: ResourceRef, right: ResourceRef) =>
-  left.extensionId === right.extensionId &&
-  left.projectId === right.projectId &&
-  left.label === right.label &&
-  left.icon === right.icon &&
-  left.shorthand === right.shorthand &&
-  JSON.stringify(left.metadata ?? {}) === JSON.stringify(right.metadata ?? {});
 
 const ownerPageTarget = (input: {
   target?: ResourceResolution["target"];
@@ -96,8 +92,50 @@ export const watchOpenExtensionResource = (
     const key = documentKey();
     return JSON.stringify([identityOf(resource), page, key ? resource?.metadata?.[key] : undefined]);
   };
+  const sameAncestry = (left: PageLocation | undefined, right: PageLocation | undefined) => {
+    let a = left;
+    let b = right;
+    while (a && b) {
+      const resourceA = toDashboardExtensionResource(a.resource, input.projectId, input.metadata.resourceKinds);
+      const resourceB = toDashboardExtensionResource(b.resource, input.projectId, input.metadata.resourceKinds);
+      if (
+        a.page.id !== b.page.id ||
+        a.page.extensionId !== b.page.extensionId ||
+        (resourceA && resourceB ? !sameResourceReference(resourceA, resourceB) : resourceA !== resourceB) ||
+        JSON.stringify(a.params ?? {}) !== JSON.stringify(b.params ?? {}) ||
+        JSON.stringify(a.position ?? null) !== JSON.stringify(b.position ?? null) ||
+        JSON.stringify(a.section ?? null) !== JSON.stringify(b.section ?? null)
+      )
+        return false;
+      a = a.parent;
+      b = b.parent;
+    }
+    return a === b;
+  };
   let openIdentity: string | undefined;
   let pending: AbortController | undefined;
+
+  const refreshOwnerAncestry = (
+    resolution: ReturnType<typeof resolutionFromResult>,
+    extensionId: string,
+    current: ResourceRef,
+    route: string,
+  ) => {
+    const location = ctx.pages.store.getState().location;
+    const target = ownerPageTarget({
+      target: resolution && "target" in resolution ? resolution.target : undefined,
+      extensionId,
+      projectId: input.projectId,
+      location,
+    });
+    if (target && location && routeOf(target.resource) === route) {
+      // The owner supplies ancestry. The current location keeps its source position and page state.
+      if (!sameAncestry(location.parent, target.parent))
+        ctx.pageLocations.replay({ ...location, resource: current, parent: target.parent });
+      return true;
+    }
+    return false;
+  };
 
   const applyResolution = (
     value: unknown,
@@ -123,20 +161,10 @@ export const watchOpenExtensionResource = (
       shorthand: resolved.shorthand,
       metadata: resolved.metadata,
     };
+    const referenceChanged = !sameResourceReference(latest, current);
     refreshWorkbenchResource(ctx, current);
-    const location = ctx.pages.store.getState().location;
-    const target = ownerPageTarget({
-      target: resolution && "target" in resolution ? resolution.target : undefined,
-      extensionId: resolver.extensionId,
-      projectId: input.projectId,
-      location,
-    });
-    if (target && location && routeOf(target.resource) === route) {
-      // The owner supplies ancestry. The current location keeps its source position and page state.
-      ctx.pageLocations.replay({ ...location, resource: current, parent: target.parent });
-    } else if (!sameReference(latest, current)) {
+    if (!refreshOwnerAncestry(resolution, resolver.extensionId, current, route) && referenceChanged)
       setResourceBreadcrumb(ctx, current);
-    }
   };
 
   const resolveOpenResource = async () => {

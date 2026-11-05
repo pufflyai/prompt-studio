@@ -24,9 +24,9 @@ test("does not delegate resource moves from another workbench registry", async (
   first.registerContribution(contribution);
   second.registerContribution(contribution);
   const [section] = await first.getSections(project);
-  await second.moveNode(section.nodes[0], undefined);
+  await second.moveNode({ ...section.nodes[0] }, undefined);
   expect(moves).toBe(0);
-  await first.moveNode(section.nodes[0], undefined);
+  await first.moveNode({ ...section.nodes[0] }, undefined);
   expect(moves).toBe(1);
 });
 

@@ -7,7 +7,11 @@ import {
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { toDashboardExtensionResource } from "./extension-kanban-adapter";
-import { resolutionFromResult, resourceResolutionRequest } from "./extension-resource-resolution";
+import {
+  resolutionFromResult,
+  resourceResolutionRequest,
+  sameResourceReference,
+} from "./extension-resource-resolution";
 
 interface PlacementResourceSyncInput {
   projectId: string;
@@ -37,8 +41,25 @@ export const refreshWorkbenchResource = (ctx: WorkbenchModuleContext, resource: 
   const placements = Object.values(ctx.layout.getLayout().regions)
     .flatMap((region) => region.widgets)
     .filter((placement) => placement.resource && referenceKey(placement.resource) === referenceKey(resource));
-  ctx.pages.refreshResource(resource);
+  const merged = (current: ResourceRef) => ({
+    ...current,
+    ...resource,
+    metadata: { ...current.metadata, ...resource.metadata },
+  });
+  const needsRefresh = (current: ResourceRef) =>
+    referenceKey(current) === referenceKey(resource) && !sameResourceReference(current, merged(current));
+  const state = ctx.pages.store.getState();
+  const retained = Object.values(state.pageStates).flatMap((page) =>
+    Object.values(page.resourceInstances).flatMap((instances) => instances.map((instance) => instance.resource)),
+  );
+  let location = state.location;
+  while (location) {
+    if (location.resource) retained.push(location.resource);
+    location = location.parent;
+  }
+  if (retained.some(needsRefresh)) ctx.pages.refreshResource(resource);
   for (const placement of placements) {
+    if (!needsRefresh(placement.resource!)) continue;
     const identity = placement.placementIdentity;
     const updated = {
       ...placement.resource,

@@ -3,6 +3,7 @@ import { exportLexicalToMarkdown } from "./markdown-export";
 import { importMarkdownToLexical } from "./markdown-import";
 import { applyMarkdownSourceChanges } from "./markdown-source-edits";
 import { buildSourceMap, type SourceMap } from "./markdown-source-map";
+import { createMarkdownSourceParser } from "./markdown-source-parser";
 import { reconcileMarkdownSource } from "./markdown-source-reconcile";
 import type { MarkdownTableProjection } from "./markdown-source-tables";
 import type { MarkdownUrlResolver } from "./markdown-url";
@@ -19,18 +20,21 @@ export const createMarkdownSourceDocument = (
 ): MarkdownSourceDocument => {
   let baseline: string | null = null;
   let sourceMap: SourceMap | null = null;
+  let parse = createMarkdownSourceParser([source]);
 
   return {
     importToLexical() {
       importMarkdownToLexical(source, resolver);
       baseline = exportLexicalToMarkdown($getRoot());
-      sourceMap = buildSourceMap(baseline, source);
+      parse = createMarkdownSourceParser([baseline, source]);
+      sourceMap = buildSourceMap(baseline, source, parse);
     },
     reconcileFromSource(nextSource, projection) {
       reconcileMarkdownSource(nextSource, resolver, projection);
       source = nextSource;
       baseline = exportLexicalToMarkdown($getRoot());
-      sourceMap = buildSourceMap(baseline, source);
+      parse = createMarkdownSourceParser([baseline, source]);
+      sourceMap = buildSourceMap(baseline, source, parse);
     },
     exportFromLexical(root) {
       const current = exportLexicalToMarkdown(root);
@@ -39,7 +43,8 @@ export const createMarkdownSourceDocument = (
         source,
         loadedBaseline,
         current,
-        sourceMap ?? buildSourceMap(loadedBaseline, source),
+        sourceMap ?? buildSourceMap(loadedBaseline, source, parse),
+        parse,
       );
     },
   };

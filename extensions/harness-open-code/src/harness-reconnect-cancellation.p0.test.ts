@@ -17,6 +17,7 @@ test("final project retirement prevents reconnection after old-worker cleanup", 
         starts += 1;
         if (starts === 1)
           return {
+            running: false,
             url: "http://127.0.0.1:4096",
             dispose: async () => {
               retiring.resolve();
@@ -24,14 +25,14 @@ test("final project retirement prevents reconnection after old-worker cleanup", 
             },
           };
         await ready.promise;
-        return { url: "http://127.0.0.1:4097", dispose: async () => {} };
+        return { running: true, url: "http://127.0.0.1:4097", dispose: async () => {} };
       },
       fetcher: async (url, init) => {
-        if (new URL(String(url)).pathname === "/session" && !failed) {
+        if (new URL(String(url)).pathname === "/api/session" && !failed) {
           failed = true;
           throw Object.assign(new Error("connection failed"), { code: "ECONNREFUSED" });
         }
-        if (new URL(String(url)).pathname === "/session") return Response.json({ id: "late" });
+        if (new URL(String(url)).pathname === "/api/session") return Response.json({ data: { id: "late" } });
         return Response.json(init?.method === "POST" ? true : []);
       },
     },

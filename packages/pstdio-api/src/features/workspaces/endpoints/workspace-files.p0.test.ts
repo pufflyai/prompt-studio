@@ -1,11 +1,21 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { folderWorkspaceCapabilities } from "pstdio-db";
 import type { AppBindings } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
+import { resolveWorkspaceEntryHandler, resolveWorkspaceEntryRoute } from "./resolve-workspace-entry";
 import {
   createWorkspaceDirectoryHandler,
   createWorkspaceDirectoryRoute,
@@ -66,6 +76,7 @@ beforeEach(() => {
   workspaces.set("orphan", { id: "orphan", project_id: "project-without-repos", root_path: null });
   app = new OpenAPIHono<AppBindings>();
   app.openapi(listWorkspaceFilesRoute, listWorkspaceFilesHandler(deps));
+  app.openapi(resolveWorkspaceEntryRoute, resolveWorkspaceEntryHandler(deps));
   app.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
   app.openapi(createWorkspaceDirectoryRoute, createWorkspaceDirectoryHandler(deps));
   app.openapi(createWorkspaceFileRoute, createWorkspaceFileHandler(deps));
@@ -319,4 +330,22 @@ describe("workspace file mutations", () => {
     expect(existsSync(join(root, ".git/config"))).toBe(true);
     expect((await app.request(entryPath("workspace-1", "../outside.md"), { method: "DELETE" })).status).toBe(400);
   });
+});
+
+test("host entry resolution protects symlink ancestors and supports files and directories", async () => {
+  mkdirSync(join(root, "src"));
+  writeFileSync(join(root, "src", "one.bin"), new Uint8Array([0, 1, 2]));
+  writeFileSync(join(outside, "secret.txt"), "private");
+  symlinkSync(outside, join(root, "alias"), "dir");
+  expect(await (await app.request(entryPath("workspace-1", "src/one.bin"))).json()).toEqual({
+    absolutePath: realpathSync(join(root, "src", "one.bin")),
+    type: "file",
+  });
+  expect(await (await app.request(entryPath("workspace-1", "src"))).json()).toEqual({
+    absolutePath: realpathSync(join(root, "src")),
+    type: "directory",
+  });
+  for (const path of ["alias/secret.txt", "../private", ".git/config", "missing"])
+    expect((await app.request(entryPath("workspace-1", path))).status).toBe(404);
+  expect((await app.request(entryPath("orphan", "src"))).status).toBe(404);
 });

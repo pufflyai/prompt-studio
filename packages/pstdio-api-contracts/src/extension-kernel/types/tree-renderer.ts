@@ -47,6 +47,10 @@ export interface TreeAction {
   command?: CommandRef<Struct, unknown>;
   params?: Struct;
   input?: ParamObjectSchema;
+  /** A single text parameter edited in the tree, without a modal. */
+  inputPresentation?: { kind: "inline"; field: string; placement: "replace" | "child" };
+  /** Copied by the host during the user gesture. */
+  copyText?: string;
   // Confirm-button label for the action's params dialog (defaults to "Run").
   submitLabel?: string;
   when?: string;
@@ -59,13 +63,16 @@ export interface TreeSectionEmptyState {
   icon?: string;
 }
 
-export type TreeNodeRowVariant = "empty-state";
+export type TreeNodeRowVariant = "empty-state" | "file";
 
 export interface TreeNode {
   id: string;
   label: Localizable<string>;
   icon?: string;
   iconColor?: string;
+  /** File icon theme hint for native file rows. */
+  fileName?: string;
+  showContextMenuTrigger?: boolean;
   /** Trailing count, using the same badge as notification counts. */
   badge?: { label: string; color?: string };
   iconTooltip?: string;

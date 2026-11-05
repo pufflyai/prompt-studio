@@ -53,7 +53,19 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
     } else if (body.kind === "kanban" || body.kind === "resourceList") {
       metadataBody = {
         kind: body.kind,
-        attributes: body.attributes,
+        attributes: body.attributes?.map((attribute) => ({
+          ...attribute,
+          type:
+            attribute.type.kind === "enum" || attribute.type.kind === "enum-multi"
+              ? {
+                  ...attribute.type,
+                  options: attribute.type.options.map((option) => ({
+                    ...option,
+                    noteAction: option.noteAction ? previewNavigationTarget(option.noteAction) : undefined,
+                  })),
+                }
+              : attribute.type,
+        })),
         queryHandlerId: handler(id, body.kind, "query", body.query)!,
         attributeChangeHandlerId: handler(id, body.kind, "onAttributeChange", body.onAttributeChange),
         moveHandlerId: handler(id, body.kind, "onMove", "onMove" in body ? body.onMove : undefined),
@@ -64,6 +76,8 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
     } else if (body.kind === "file") {
       metadataBody = {
         kind: "file",
+        saveMode: body.saveMode,
+        document: body.document,
         loadHandlerId: handler(id, "file", "load", body.load)!,
         saveHandlerId: handler(id, "file", "save", body.save),
       };

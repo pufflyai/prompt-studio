@@ -43,7 +43,19 @@ const body = z.discriminatedUnion("kind", [
       defaultValues: controlValuesSchema.optional(),
     })
     .strict(),
-  z.object({ kind: z.literal("file"), ...native, load: callbackSchema, save: callbackSchema.optional() }).strict(),
+  z
+    .object({
+      kind: z.literal("file"),
+      ...native,
+      load: callbackSchema,
+      save: callbackSchema.optional(),
+      saveMode: z.enum(["auto", "manual"]).optional(),
+      document: z
+        .object({ metadataKey: z.string().min(1) })
+        .strict()
+        .optional(),
+    })
+    .strict(),
   z
     .object({
       kind: z.literal("tree"),

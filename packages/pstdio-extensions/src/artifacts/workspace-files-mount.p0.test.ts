@@ -1,9 +1,20 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createWorkspaceFilesMount } from "./artifact-mount";
+import { createSafeFileRoot } from "./safe-file-root";
+import { createWorkspaceFileAccess } from "./workspace-file-access";
 import type { KeptWorkspaceFile } from "./workspace-sync-dir";
 
 const tempDirs: string[] = [];
@@ -29,6 +40,46 @@ const readWorkspaceFile = (root: string, path: string) => readFileSync(join(root
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
+test("workspace entry operations protect real Git metadata and symlink aliases", async () => {
+  const root = createTempDir();
+  mkdirSync(join(root, ".git/hooks"), { recursive: true });
+  writeFileSync(join(root, ".git/config"), "protected");
+  writeFileSync(join(root, "notes.txt"), "keep");
+  symlinkSync(join(root, ".git"), join(root, "metadata-alias"), "dir");
+  const mount = createWorkspaceFilesMount(root);
+  for (const directory of [".git", "metadata-alias"]) {
+    await expect(mount.readFile(`${directory}/config`, 1024)).rejects.toThrow("Git metadata");
+    await expect(mount.writeTextFile(`${directory}/config`, "changed", 1024)).rejects.toThrow("Git metadata");
+    await expect(mount.createTextFile(`${directory}/hooks/new-hook`, "changed", 1024)).rejects.toThrow("Git metadata");
+    await expect(mount.createDirectory(`${directory}/new-dir`)).rejects.toThrow("Git metadata");
+    await expect(mount.listEntries(directory)).rejects.toThrow("Git metadata");
+    await expect(mount.searchEntries("config", 10, directory)).rejects.toThrow("Git metadata");
+    await expect(mount.moveEntry("notes.txt", `${directory}/notes.txt`)).rejects.toThrow("Git metadata");
+    await expect(mount.deleteEntry(`${directory}/config`)).rejects.toThrow("Git metadata");
+  }
+  expect((await mount.listEntries()).map((entry) => entry.path)).toEqual(["notes.txt"]);
+  expect((await mount.searchEntries("config", 10)).entries).toEqual([]);
+  expect(readFileSync(join(root, ".git/config"), "utf8")).toBe("protected");
+});
+
+test("workspace saves do not recreate a file deleted after path resolution", async () => {
+  const root = createTempDir();
+  const path = join(root, "notes.txt");
+  writeFileSync(path, "keep");
+  const filesRoot = createSafeFileRoot(root);
+  let resolves = 0;
+  const mount = createWorkspaceFileAccess({
+    ...filesRoot,
+    resolveExisting: async (entry) => {
+      const resolved = await filesRoot.resolveExisting(entry);
+      if (entry === "notes.txt" && ++resolves === 2) rmSync(path);
+      return resolved;
+    },
+  });
+  await expect(mount.writeTextFile("notes.txt", "saved", 1024)).rejects.toThrow();
+  expect(existsSync(path)).toBe(false);
 });
 
 describe("createWorkspaceFilesMount.syncDir", () => {

@@ -1,6 +1,10 @@
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { posix } from "node:path";
 import { normalizeMountRelativePath, type SafeFileRoot } from "./safe-file-root";
+import { WorkspaceFileAccessError } from "./workspace-file-access-error";
+import { protectWorkspaceFileRoot } from "./workspace-file-root";
+
+export { WorkspaceFileAccessError } from "./workspace-file-access-error";
 
 export interface WorkspaceMountEntry {
   path: string;
@@ -23,16 +27,6 @@ export interface WorkspaceMountFile {
 export interface WorkspaceMountResolvedEntry {
   absolutePath: string;
   type: "file" | "directory";
-}
-
-export class WorkspaceFileAccessError extends Error {
-  readonly code: "already-exists" | "invalid-target" | "not-found" | "not-file" | "too-large";
-
-  constructor(message: string, code: "already-exists" | "invalid-target" | "not-found" | "not-file" | "too-large") {
-    super(message);
-    this.name = "WorkspaceFileAccessError";
-    this.code = code;
-  }
 }
 
 const sortedDirectoryEntries = async (directory: string) =>
@@ -61,6 +55,7 @@ const workspaceEntry = async (
     resolved = await safeRoot.resolveExisting(path);
   } catch (error) {
     if (error instanceof Error && error.message.includes("escapes mount root")) return undefined;
+    if (error instanceof WorkspaceFileAccessError && error.code === "git-metadata") return undefined;
     throw error;
   }
 
@@ -176,123 +171,132 @@ async function searchWorkspaceDirectory(context: WorkspaceSearchContext, directo
   return true;
 }
 
-export const createWorkspaceFileAccess = (safeRoot: SafeFileRoot) => ({
-  async resolveEntryPath(path: string): Promise<WorkspaceMountResolvedEntry> {
-    const { entryStats, resolved } = await requireExistingEntry(safeRoot, path);
-    return { absolutePath: resolved.realPath, type: entryStats.isDirectory() ? "directory" : "file" };
-  },
+export const createWorkspaceFileAccess = (fileRoot: SafeFileRoot) => {
+  const safeRoot = protectWorkspaceFileRoot(fileRoot);
+  return {
+    async resolveEntryPath(path: string): Promise<WorkspaceMountResolvedEntry> {
+      const { entryStats, resolved } = await requireExistingEntry(safeRoot, path);
+      return { absolutePath: resolved.realPath, type: entryStats.isDirectory() ? "directory" : "file" };
+    },
 
-  async listEntries(path = "") {
-    const directory = await safeRoot.resolveExisting(path);
-    const directoryStats = await stat(directory.operationPath);
-    if (!directoryStats.isDirectory()) {
-      throw new WorkspaceFileAccessError(`Workspace directory not found: ${path}`, "not-found");
-    }
-    const entries = await sortedDirectoryEntries(directory.operationPath);
-    const results = await Promise.all(entries.map((entry) => workspaceEntry(safeRoot, path, entry.name)));
-    return results.filter((entry): entry is WorkspaceMountEntry => Boolean(entry));
-  },
+    async listEntries(path = "") {
+      const directory = await safeRoot.resolveExisting(path);
+      const directoryStats = await stat(directory.operationPath);
+      if (!directoryStats.isDirectory()) {
+        throw new WorkspaceFileAccessError(`Workspace directory not found: ${path}`, "not-found");
+      }
+      const entries = await sortedDirectoryEntries(directory.operationPath);
+      const results = await Promise.all(entries.map((entry) => workspaceEntry(safeRoot, path, entry.name)));
+      return results.filter((entry): entry is WorkspaceMountEntry => Boolean(entry));
+    },
 
-  async searchEntries(query: string, limit: number, path = ""): Promise<WorkspaceMountSearchResult> {
-    const matches: WorkspaceMountEntry[] = [];
-    await searchWorkspaceDirectory(
-      {
-        safeRoot,
-        normalizedQuery: query.toLocaleLowerCase(),
-        limit,
-        matches,
-        visitedDirectories: new Set(),
-      },
-      path,
-    );
-    return { entries: matches.sort(compareWorkspaceEntries).slice(0, limit), truncated: matches.length > limit };
-  },
+    async searchEntries(query: string, limit: number, path = ""): Promise<WorkspaceMountSearchResult> {
+      const matches: WorkspaceMountEntry[] = [];
+      await searchWorkspaceDirectory(
+        {
+          safeRoot,
+          normalizedQuery: query.toLocaleLowerCase(),
+          limit,
+          matches,
+          visitedDirectories: new Set(),
+        },
+        path,
+      );
+      return { entries: matches.sort(compareWorkspaceEntries).slice(0, limit), truncated: matches.length > limit };
+    },
 
-  async readFile(path: string, maxBytes: number): Promise<WorkspaceMountFile> {
-    const { fileStats } = await requireExistingFile(safeRoot, path);
-    if (fileStats.size > maxBytes) {
-      throw new WorkspaceFileAccessError(`Workspace file is too large: ${path}`, "too-large");
-    }
-    const resolved = await safeRoot.resolveExisting(path);
-    return { bytes: new Uint8Array(await readFile(resolved.operationPath)), size: fileStats.size };
-  },
+    async readFile(path: string, maxBytes: number): Promise<WorkspaceMountFile> {
+      const { fileStats } = await requireExistingFile(safeRoot, path);
+      if (fileStats.size > maxBytes) {
+        throw new WorkspaceFileAccessError(`Workspace file is too large: ${path}`, "too-large");
+      }
+      const resolved = await safeRoot.resolveExisting(path);
+      return { bytes: new Uint8Array(await readFile(resolved.operationPath)), size: fileStats.size };
+    },
 
-  async writeTextFile(path: string, value: string, maxBytes: number) {
-    fileSize(value, maxBytes, path);
-    await requireExistingFile(safeRoot, path);
-    const resolved = await safeRoot.resolveExisting(path);
-    await writeFile(resolved.operationPath, value, "utf8");
-  },
+    async writeTextFile(path: string, value: string, maxBytes: number) {
+      fileSize(value, maxBytes, path);
+      await requireExistingFile(safeRoot, path);
+      const resolved = await safeRoot.resolveExisting(path);
+      const file = await open(resolved.operationPath, "r+");
+      try {
+        await file.writeFile(value, "utf8");
+        await file.truncate(Buffer.byteLength(value, "utf8"));
+      } finally {
+        await file.close();
+      }
+    },
 
-  async createTextFile(path: string, value: string, maxBytes: number) {
-    fileSize(value, maxBytes, path);
-    const normalizedPath = await requireExistingParent(safeRoot, path);
-    if (await safeRoot.tryResolveExisting(normalizedPath)) {
-      throw new WorkspaceFileAccessError(`Workspace file already exists: ${path}`, "already-exists");
-    }
-    const resolved = await safeRoot.resolveForWrite(normalizedPath);
-    try {
-      await writeFile(resolved.operationPath, value, { encoding: "utf8", flag: "wx" });
-    } catch (error) {
-      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") {
+    async createTextFile(path: string, value: string, maxBytes: number) {
+      fileSize(value, maxBytes, path);
+      const normalizedPath = await requireExistingParent(safeRoot, path);
+      if (await safeRoot.tryResolveExisting(normalizedPath)) {
         throw new WorkspaceFileAccessError(`Workspace file already exists: ${path}`, "already-exists");
       }
-      throw error;
-    }
-  },
+      const resolved = await safeRoot.resolveForWrite(normalizedPath);
+      try {
+        await writeFile(resolved.operationPath, value, { encoding: "utf8", flag: "wx" });
+      } catch (error) {
+        if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") {
+          throw new WorkspaceFileAccessError(`Workspace file already exists: ${path}`, "already-exists");
+        }
+        throw error;
+      }
+    },
 
-  async createDirectory(path: string) {
-    const normalizedPath = await requireExistingParent(safeRoot, path);
-    if (await safeRoot.tryResolveExisting(normalizedPath)) {
-      throw new WorkspaceFileAccessError(`Workspace entry already exists: ${path}`, "already-exists");
-    }
-    const resolved = await safeRoot.resolveForWrite(normalizedPath);
-    try {
-      await mkdir(resolved.operationPath);
-    } catch (error) {
-      if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") {
+    async createDirectory(path: string) {
+      const normalizedPath = await requireExistingParent(safeRoot, path);
+      if (await safeRoot.tryResolveExisting(normalizedPath)) {
         throw new WorkspaceFileAccessError(`Workspace entry already exists: ${path}`, "already-exists");
       }
-      throw error;
-    }
-  },
+      const resolved = await safeRoot.resolveForWrite(normalizedPath);
+      try {
+        await mkdir(resolved.operationPath);
+      } catch (error) {
+        if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EEXIST") {
+          throw new WorkspaceFileAccessError(`Workspace entry already exists: ${path}`, "already-exists");
+        }
+        throw error;
+      }
+    },
 
-  async moveEntry(sourcePath: string, destinationPath: string) {
-    const normalizedSource = normalizeMountRelativePath(sourcePath);
-    const normalizedDestination = await requireExistingParent(safeRoot, destinationPath);
-    if (rejectsGitMetadata(normalizedSource) || rejectsGitMetadata(normalizedDestination)) {
-      throw new WorkspaceFileAccessError("Git metadata cannot be moved.", "not-file");
-    }
-    const { entryStats, resolved: source } = await requireExistingEntry(safeRoot, normalizedSource);
-    if (!source.relativePath) {
-      throw new WorkspaceFileAccessError("The workspace root cannot be moved.", "invalid-target");
-    }
-    if (normalizedDestination === normalizedSource) return;
-    if (entryStats.isDirectory() && normalizedDestination.startsWith(`${normalizedSource}/`)) {
-      throw new WorkspaceFileAccessError("A workspace directory cannot be moved inside itself.", "invalid-target");
-    }
-    if (await safeRoot.tryResolveExisting(normalizedDestination)) {
-      throw new WorkspaceFileAccessError(`Workspace entry already exists: ${destinationPath}`, "already-exists");
-    }
-    const destination = await safeRoot.resolveForWrite(normalizedDestination);
-    try {
-      await rename(source.operationPath, destination.operationPath);
-    } catch (error) {
-      throwWorkspaceMoveError(error, destinationPath);
-    }
-  },
+    async moveEntry(sourcePath: string, destinationPath: string) {
+      const normalizedSource = normalizeMountRelativePath(sourcePath);
+      const normalizedDestination = await requireExistingParent(safeRoot, destinationPath);
+      if (rejectsGitMetadata(normalizedSource) || rejectsGitMetadata(normalizedDestination)) {
+        throw new WorkspaceFileAccessError("Git metadata cannot be moved.", "not-file");
+      }
+      const { entryStats, resolved: source } = await requireExistingEntry(safeRoot, normalizedSource);
+      if (!source.relativePath) {
+        throw new WorkspaceFileAccessError("The workspace root cannot be moved.", "invalid-target");
+      }
+      if (normalizedDestination === normalizedSource) return;
+      if (entryStats.isDirectory() && normalizedDestination.startsWith(`${normalizedSource}/`)) {
+        throw new WorkspaceFileAccessError("A workspace directory cannot be moved inside itself.", "invalid-target");
+      }
+      if (await safeRoot.tryResolveExisting(normalizedDestination)) {
+        throw new WorkspaceFileAccessError(`Workspace entry already exists: ${destinationPath}`, "already-exists");
+      }
+      const destination = await safeRoot.resolveForWrite(normalizedDestination);
+      try {
+        await rename(source.operationPath, destination.operationPath);
+      } catch (error) {
+        throwWorkspaceMoveError(error, destinationPath);
+      }
+    },
 
-  async deleteEntry(path: string) {
-    const normalizedPath = normalizeMountRelativePath(path);
-    if (rejectsGitMetadata(normalizedPath)) {
-      throw new WorkspaceFileAccessError("Git metadata cannot be deleted.", "not-file");
-    }
-    const { resolved } = await requireExistingEntry(safeRoot, normalizedPath);
-    if (!resolved.relativePath) {
-      throw new WorkspaceFileAccessError("The workspace root cannot be deleted.", "not-file");
-    }
-    await rm(resolved.operationPath, { recursive: true });
-  },
-});
+    async deleteEntry(path: string) {
+      const normalizedPath = normalizeMountRelativePath(path);
+      if (rejectsGitMetadata(normalizedPath)) {
+        throw new WorkspaceFileAccessError("Git metadata cannot be deleted.", "not-file");
+      }
+      const { resolved } = await requireExistingEntry(safeRoot, normalizedPath);
+      if (!resolved.relativePath) {
+        throw new WorkspaceFileAccessError("The workspace root cannot be deleted.", "not-file");
+      }
+      await rm(resolved.operationPath, { recursive: true });
+    },
+  };
+};
 
 export type WorkspaceFileAccess = ReturnType<typeof createWorkspaceFileAccess>;

@@ -67,12 +67,17 @@ export function LinkEditor({
     const selection = $getSelection();
     updateLinkSelection(selection);
     const editorElem = editorRef.current;
-    const nativeSelection = window.getSelection();
-    const activeElement = document.activeElement;
 
     if (editorElem === null) {
       return;
     }
+    if (!isActive) {
+      setFloatingElemPos(null, editorElem, anchorElem);
+      setLastSelection(null);
+      return;
+    }
+    const nativeSelection = window.getSelection();
+    const activeElement = document.activeElement;
 
     const rootElement = editor.getRootElement();
     const hasNativeRange = Boolean(nativeSelection?.rangeCount && rootElement?.contains(nativeSelection.anchorNode));

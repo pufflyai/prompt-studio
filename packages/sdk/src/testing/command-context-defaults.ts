@@ -79,6 +79,17 @@ export const createCommandContextDefaults = (input: {
     },
     skills: { list: async () => [] },
     workspaces: {
+      rename: unavailable,
+      listFiles: unavailable,
+      readFile: unavailable,
+      createDirectory: unavailable,
+      createFile: unavailable,
+      writeFile: unavailable,
+      moveEntry: unavailable,
+      deleteEntry: unavailable,
+      diffFiles: unavailable,
+      diffFile: unavailable,
+      diffSummary: unavailable,
       addAnchors: async (id, anchors) => {
         await resources.addAnchors(coreResource("workspace", id), anchors);
       },

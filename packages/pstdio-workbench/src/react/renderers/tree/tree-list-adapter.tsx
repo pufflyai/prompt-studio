@@ -1,5 +1,11 @@
 import { Badge, Box, Spinner } from "@chakra-ui/react";
-import { Tooltip, type TreeListActionMenuItem, type TreeListNode } from "@pstdio/ui";
+import {
+  resolveFileIconElement,
+  Tooltip,
+  type TreeListActionMenuItem,
+  type TreeListNode,
+  useFileIconThemePreference,
+} from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { ReactNode } from "react";
 import {
@@ -56,10 +62,18 @@ const wrapTreeNodeIcon = (icon: ReactNode, iconTooltip: string | undefined) => {
     </Tooltip>
   );
 };
+const NativeTreeFileIcon = (props: { fileName: string }) => {
+  const { activeFileIconTheme } = useFileIconThemePreference();
+  return resolveFileIconElement(props.fileName, {
+    theme: activeFileIconTheme,
+  });
+};
 const resolveTreeNodeIcon = (node: TreeNode): ReactNode | undefined => {
   let icon: ReactNode | undefined;
   if (node.iconElement !== undefined) {
     icon = node.iconElement as ReactNode;
+  } else if (node.fileName) {
+    icon = <NativeTreeFileIcon fileName={node.fileName} />;
   } else if (node.icon) {
     icon = <WorkbenchIcon name={node.icon} />;
   }
@@ -216,6 +230,11 @@ export const toTreeListSection = (
   childrenByNodeId: Record<string, TreeNode[]>,
   context: TreeNodeRenderContext,
 ) => {
+  const sectionContext = {
+    ...context,
+    onRequestParams: (request: TreeActionParamsRequest) =>
+      context.onRequestParams?.({ ...request, sectionId: section.id }),
+  };
   const emptyNode = toTreeListSectionEmptyNode(section);
   return {
     id: section.id,
@@ -226,12 +245,14 @@ export const toTreeListSection = (
       actions: context.shortcutHints ? undefined : section.actions,
       workbench: context.workbench,
       onCommandError: context.onCommandError,
-      onRequestParams: context.onRequestParams,
+      onRequestParams: sectionContext.onRequestParams,
     }),
     collapsible: section.collapsible,
     canHide: section.canHide,
     canReorder: section.canReorder,
     hiddenByDefault: section.hiddenByDefault,
-    nodes: emptyNode ? [emptyNode] : section.nodes.map((node) => toTreeListNode(node, childrenByNodeId, context)),
+    nodes: emptyNode
+      ? [emptyNode]
+      : section.nodes.map((node) => toTreeListNode(node, childrenByNodeId, sectionContext)),
   };
 };
