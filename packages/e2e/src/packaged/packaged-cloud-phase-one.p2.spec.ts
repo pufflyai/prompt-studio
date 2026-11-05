@@ -96,6 +96,7 @@ const setup = async (resources: Resources) => {
     folderProjectInput({ name: "phase-one-secret-project" }, first.folder),
   );
   resources.projectId = project.id;
+  expect(project.extensionWarnings ?? [], "first device installs every acceptance extension").toEqual([]);
   await first.command(project.id, acceptanceOwner, "seed-acceptance");
   await signInCloudAcceptanceDevice(first, fixture.peer.origin);
   await first.client.account.syncProject(project.id);
