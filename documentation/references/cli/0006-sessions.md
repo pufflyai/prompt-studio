@@ -12,6 +12,12 @@ pst sessions list [options]
 pst sessions view --id <session-id>
 pst sessions follow-up --id <session-id> [options]
 pst sessions fork --id <session-id>
+pst sessions import --source <backup-folder> --dry-run
+pst sessions import --source <backup-folder> --project-map <mapping.json> [--storage <folder>]
+pst sessions imports status --id <import-id>
+pst sessions imports pause --id <import-id>
+pst sessions imports resume --id <import-id>
+pst sessions imports errors --id <import-id> [--offset <n>] [--limit <n>]
 pst sessions stream --id <session-id>
 pst sessions approve --id <session-id> --approval-id <approval-id>
 pst sessions deny --id <session-id> --approval-id <approval-id>
@@ -19,6 +25,40 @@ pst sessions stop --id <session-id>
 pst sessions archive --id <session-id>
 pst sessions resolve-session-id --agent <agent-id> --agent-session-id <external-id> [--cwd <path>] [--json]
 ```
+
+## Import saved conversations
+
+Agents can restore history from the JSONL export created when a pre-0.46 database was retired. `--source` accepts the backup folder, its `export` folder, or its `tables` folder. It must contain `public.sessions.jsonl` and `public.files.jsonl` in the selected tables directory. Raw databases and database archives are not accepted.
+
+```sh
+pst sessions import --source /backups/pre-0.46-backup --dry-run
+```
+
+The preview returns JSON with source project IDs, session counts, recoverable histories, and up to 100 error samples. It creates no live sessions or files. Supply `--storage /path/to/original/storage` if conversation and attachment bytes are outside the backup. Paths identify files on the API host; the project-map file is read by the CLI. The importer confines file reads to the declared backup/storage roots.
+
+Create a JSON file mapping selected source project IDs to existing destination project IDs:
+
+```json
+{
+  "old-project-id": "current-project-id"
+}
+```
+
+```sh
+pst sessions import --source /backups/pre-0.46-backup --storage /backups/storage --project-map mapping.json
+pst sessions imports status --id <import-id>
+pst sessions imports errors --id <import-id> --offset 0 --limit 100
+pst sessions imports pause --id <import-id>
+pst sessions imports resume --id <import-id>
+```
+
+Import returns a durable job immediately. `phase: preparing` indexes file metadata on disk and reports `indexedFiles`; `phase: importing` copies one conversation at a time. One import runs per host. Pause finishes the current conversation or cancels preparation. Interrupted jobs appear paused after restart and resume only when requested.
+
+Titles, original creation/update dates, archived state, messages, attachments, and agent/model settings are preserved. Session and file IDs are new; the same source session ID mapped to the same destination project always resolves to the same imported session. Repeated imports skip that existing session without modifying it. Imported sessions use the destination's default workspace when one exists. Previous native conversation IDs, queued work, and lifecycle hooks are not restored; old active statuses become cancelled.
+
+Missing/corrupt histories fail per session while healthy rows continue. Failure pages return `nextOffset` for the next request. Repair missing bytes, then resume a completed job with failures to start another pass; already restored sessions are skipped. Counters describe the current pass, while resuming a paused pass retains its counts and cursor. If exported tables change, the resumed job fails before copying more sessions; start a new import for that revised export.
+
+Resume rebuilds the temporary metadata index and checks the exported tables' fingerprint. Memory is bounded by the file-index batch plus the largest individual transcript and its attachment references, rather than all conversation histories. A staging ledger removes unfinished uploads after process interruption and preserves files belonging to committed sessions. Backups are never modified.
 
 ## Create a session
 
