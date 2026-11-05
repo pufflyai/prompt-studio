@@ -142,6 +142,7 @@ const createSessions = () => {
     clean(document);
   };
   const flush = (document: EditingDocument) => {
+    if (!document.writing && document.savedRevision === document.revision) return Promise.resolve();
     if (!document.writing) {
       document.writing = Promise.resolve()
         .then(async () => {
