@@ -358,7 +358,7 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
 }) => {
   const { fixture, first, second, third, devices, projectId } = await setup(resources);
   const space = await createSyncSpace({ projectId, spaceOwner: null, keys: [packagedProjectKey] });
-  const documentId = await space.documentId(JSON.stringify([acceptanceOwner, "record-stream"]));
+  const documentId = await space.documentId(JSON.stringify([acceptanceOwner, "record-stream-v2"]));
   const group = (round: string) =>
     Array.from({ length: 8 }, (_, index) => ({
       recordId: `large-${index}`,

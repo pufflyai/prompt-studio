@@ -123,24 +123,43 @@ test("restart retains a deleted record's pending text and continues recovering a
     fileRendererId: "cached-record",
     resource: undefined,
   });
-  await service.close({ projectId: storage.projectAId, roomId: retired.roomId });
+  const author = new Y.Doc();
+  try {
+    Y.applyUpdate(author, retired.state);
+    const before = Y.encodeStateVector(author);
+    saveTextDocument(author, "retained late text");
+    await storage.svc.nativeRooms.apply({
+      owner,
+      roomId: retired.roomId,
+      update: Y.encodeStateAsUpdate(author, before),
+    });
+  } finally {
+    author.destroy();
+  }
   const healthy = await open(service);
   await service.close({ projectId: storage.projectAId, roomId: healthy.roomId });
   await service.dispose();
   await records.commit({ operationId: "delete-source", edits: [{ recordId: "retired", deleted: true }] });
-  await storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).save("retained late text");
+  await expect(
+    storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).save("cannot revive"),
+  ).rejects.toMatchObject({ code: "native_source_retired" });
   await storage.svc.openNativeTextDocument({ owner, fileId: healthy.documentKey }).save("healthy pending text");
   // This fresh service resolves the same cached declaration; deletion is a known source error.
   const reopened = createService({ storage: storage.svc, load, save });
   await reopened.recover();
   expect((await records.read("retired")).deleted).toBe(true);
-  expect(await storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).read()).toBe(
-    "retained late text",
+  await expect(storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).read()).rejects.toMatchObject(
+    { code: "native_source_retired" },
   );
-  expect(await Array.fromAsync(storage.svc.nativeFileProjections.pending())).toContainEqual({
-    owner,
-    documentKey: retired.documentKey,
-  });
+  const retained = await storage.svc.nativeRooms.read({ owner, roomId: retired.roomId });
+  try {
+    expect(retained.document.getText("content").toString()).toBe("retained late text");
+  } finally {
+    retained.document.destroy();
+  }
+  expect(await Array.fromAsync(storage.svc.nativeRooms.pending())).toContainEqual(
+    expect.objectContaining({ owner, id: retired.roomId }),
+  );
   expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("healthy pending text");
 });
 

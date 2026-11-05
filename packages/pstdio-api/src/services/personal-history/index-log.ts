@@ -27,11 +27,22 @@ const importIndexPages = async (input: PersonalHistoryInput, latest: Map<string,
 
 /** A bounded delta page and its materialized SQL cursor commit together. Legacy input is kept intact. */
 export const createPersonalIndexLog = (input: PersonalHistoryInput, owner: StorageOwner, records: DocumentStore) => {
-  const log = input.logs.open(owner, { name: "index", writer: "device" }, "project");
-  const write = async (delta: PersonalIndexDelta) => {
-    const entry = await log.append(delta as unknown as Json);
-    await input.index.apply(owner, null, [delta], entry.id);
+  const writeMany = async (deltas: PersonalIndexDelta[]) => {
+    for (let offset = 0; offset < deltas.length; offset += 100) {
+      const page = deltas.slice(offset, offset + 100);
+      const entries = await input.logs.appendMany(
+        owner,
+        { name: "index", writer: "device" },
+        "project",
+        page as unknown as Json[],
+      );
+      await input.index.applyPending(
+        owner,
+        page.map((delta, index) => ({ delta, pendingId: entries[index]!.id })),
+      );
+    }
   };
+  const write = (delta: PersonalIndexDelta) => writeMany([delta]);
   let preparing: Promise<void> | undefined;
   const migrate = async () => {
     if (await input.index.migrated(owner)) return;
@@ -74,7 +85,7 @@ export const createPersonalIndexLog = (input: PersonalHistoryInput, owner: Stora
     );
     const latest = new Map(deltas.map((delta) => [JSON.stringify([delta.deviceId, delta.kind, delta.id]), delta]));
     await importIndexPages(input, latest);
-    for (const delta of latest.values()) await write({ ...delta, seedId: deviceId });
+    await writeMany([...latest.values()].map((delta) => ({ ...delta, seedId: deviceId })));
     await input.index.markMigrated(owner);
   };
   const recoverPending = async () => {
@@ -83,10 +94,14 @@ export const createPersonalIndexLog = (input: PersonalHistoryInput, owner: Stora
     while (true) {
       const page = await input.index.pendingPage(owner, writer, after);
       if (!page.length) return;
-      for (const { entry, sequence } of page) {
-        await input.index.apply(owner, null, [readPersonalIndexDelta(entry.value, writer, input.accountId)], entry.id);
-        after = sequence;
-      }
+      await input.index.applyPending(
+        owner,
+        page.map(({ entry }) => ({
+          delta: readPersonalIndexDelta(entry.value, writer, input.accountId),
+          pendingId: entry.id,
+        })),
+      );
+      after = page.at(-1)!.sequence;
     }
   };
   const ready = () =>
@@ -135,5 +150,5 @@ export const createPersonalIndexLog = (input: PersonalHistoryInput, owner: Stora
       .catch(() => {});
     return work;
   };
-  return { ready, write, synchronizeIndex };
+  return { ready, write, writeMany, synchronizeIndex };
 };

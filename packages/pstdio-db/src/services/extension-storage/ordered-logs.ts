@@ -2,7 +2,7 @@ import type { DocumentStore, StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { createLogCollection, type LogDirectoryEntry, type LogRemote, type LogStreamStore } from "pstdio-sync/logs";
 import type { OrderedIndexBlobs } from "pstdio-sync/relay";
-import type { StorageLogDefinition } from "pstdio-sync-contracts";
+import type { Json, StorageLogDefinition } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createEnvironmentDBService } from "../environment/environment";
 import type { LogPayloads } from "./ordered-log-sql";
@@ -54,6 +54,12 @@ export const createOrderedLogs = (
       payloads,
       changed: () => changed(owner),
     });
+  const register = (owner: StorageOwner, entry: LogDirectoryEntry) =>
+    deps.metadata(owner, async ({ document }) => {
+      const map = document.getMap<LogDirectoryEntry>("append-logs");
+      const key = entryKey(entry);
+      if (JSON.stringify(map.get(key)) !== JSON.stringify(entry)) map.set(key, structuredClone(entry));
+    });
   const watch = (owner: StorageOwner, listener: () => void) => {
     const key = ownerKey(owner);
     const callbacks = listeners.get(key) ?? new Set();
@@ -65,6 +71,13 @@ export const createOrderedLogs = (
     };
   };
   return {
+    async appendMany(owner: StorageOwner, definition: StorageLogDefinition, scope: string, values: Json[]) {
+      if (!values.length) return [];
+      const owned = structuredClone({ ...definition, writer: definition.writer ?? "project" });
+      const entry = { ...owned, scope, stream: owned.writer === "device" ? await this.writerId() : "project" };
+      await register(owner, entry);
+      return (await stream(owner, entry)).appendMany(values.map((value) => ({ value })));
+    },
     flushStatistics: orderedLogStatistics(db).flush,
     writerId: async () => (await environment.get()).environmentId,
     directory,
@@ -111,12 +124,7 @@ export const createOrderedLogs = (
           const entries = await directory(owner);
           return allowed ? entries.filter((entry) => allowed.has(entry.stream)) : entries;
         },
-        register: (entry) =>
-          deps.metadata(owner, async ({ document }) => {
-            const map = document.getMap<LogDirectoryEntry>("append-logs");
-            const key = entryKey(entry);
-            if (JSON.stringify(map.get(key)) !== JSON.stringify(entry)) map.set(key, structuredClone(entry));
-          }),
+        register: (entry) => register(owner, entry),
         open: (entry) => stream(owner, { ...entry, ...owned, scope }),
         remote: async (entry, store) => connectors.get(ownerKey(owner))?.(entry, store),
         watch: (listener) => watch(owner, listener),

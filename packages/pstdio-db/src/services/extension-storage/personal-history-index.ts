@@ -31,23 +31,31 @@ const positionWhere = (owner: StorageOwner) =>
 export const createPersonalHistoryIndex = (db: DbClient) => {
   const cache = createPersonalIndexCache(db);
   const state = async (owner: StorageOwner) => (await db.select().from(positions).where(positionWhere(owner)))[0];
+  const apply = async (
+    owner: StorageOwner,
+    cursor: string | null,
+    changes: { delta: PersonalIndexDelta; pendingId?: string }[],
+  ) => {
+    const owned = structuredClone(changes);
+    const current = await cache(owner);
+    const applied = await db.transaction(async (tx) => {
+      await tx.insert(positions).values(address(owner)).onConflictDoNothing();
+      await tx.select().from(positions).where(positionWhere(owner)).for("update");
+      const changed = await applyPersonalIndexRows(tx, owner, owned);
+      if (cursor !== null) await tx.update(positions).set({ cursor }).where(positionWhere(owner));
+      return changed;
+    });
+    current.apply(applied);
+  };
   return {
-    async apply(owner: StorageOwner, cursor: string | null, changes: PersonalIndexDelta[], pendingId?: string) {
-      const owned = structuredClone(changes);
-      const current = await cache(owner);
-      const applied = await db.transaction(async (tx) => {
-        await tx.insert(positions).values(address(owner)).onConflictDoNothing();
-        await tx.select().from(positions).where(positionWhere(owner)).for("update");
-        const changed = await applyPersonalIndexRows(
-          tx,
-          owner,
-          owned.map((delta) => ({ delta, pendingId })),
-        );
-        if (cursor !== null) await tx.update(positions).set({ cursor }).where(positionWhere(owner));
-        return changed;
-      });
-      current.apply(applied);
-    },
+    apply: (owner: StorageOwner, cursor: string | null, changes: PersonalIndexDelta[], pendingId?: string) =>
+      apply(
+        owner,
+        cursor,
+        changes.map((delta) => ({ delta, pendingId })),
+      ),
+    applyPending: (owner: StorageOwner, changes: { delta: PersonalIndexDelta; pendingId: string }[]) =>
+      apply(owner, null, changes),
     sourcePosition: (owner: StorageOwner, sourceId: string) => readPersonalSourcePosition(db, owner, sourceId),
     pendingPage: (owner: StorageOwner, sourceId: string, after: number) =>
       personalPendingPage(db, owner, sourceId, after),

@@ -80,3 +80,22 @@ test("the newest page includes optimistic appends ahead of cached canonical hist
   expect(page.entries.at(-1)?.id).toBe("latest");
   expect(page.entries).toHaveLength(10);
 });
+
+test("a local append batch retains distinct immutable identities and rolls back a conflicting page", async () => {
+  const { store } = await fixture();
+  const items = [
+    { id: "first", value: { run: 1 } },
+    { id: "second", value: { run: 2 } },
+  ];
+  const saved = await store.appendMany(items);
+  expect(saved.map(({ id }) => id)).toEqual(["first", "second"]);
+  expect(await store.appendMany(items)).toEqual(saved);
+  expect((await store.pending(10)).map(({ entry }) => entry.id)).toEqual(["first", "second"]);
+  await expect(
+    store.appendMany([
+      { id: "rollback", value: null },
+      { id: "first", value: "changed" },
+    ]),
+  ).rejects.toThrow("identity");
+  expect((await store.read()).entries).toEqual(saved);
+});

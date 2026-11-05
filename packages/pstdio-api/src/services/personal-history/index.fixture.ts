@@ -36,6 +36,13 @@ export const memoryPersonalIndexFixture = () => {
       rows.set(key(owner), values);
       if (cursor !== null) positions.set(key(owner), cursor);
     },
+    async applyPending(owner: StorageOwner, changes: { delta: PersonalIndexDelta; pendingId: string }[]) {
+      await this.apply(
+        owner,
+        null,
+        changes.map(({ delta }) => delta),
+      );
+    },
     read: async (owner: StorageOwner, kind: string) =>
       (rows.get(key(owner)) ?? [])
         .filter((row) => row.kind === kind)
@@ -74,6 +81,8 @@ export const memoryPersonalIndexFixture = () => {
     },
   } satisfies PersonalHistoryInput["index"];
   const logs = {
+    appendMany: async (_owner: StorageOwner, _definition: unknown, _scope: string, values: unknown[]) =>
+      values.map((value) => ({ id: crypto.randomUUID(), value })),
     pending: async () => false,
     writerId: async () => "device-a",
     open: () => ({ append: async () => ({}), read: async () => ({ entries: [], cursor: "empty", more: false }) }),
