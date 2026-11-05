@@ -1,19 +1,23 @@
 import type { FormInfo } from "@opencode/client";
+import { parseFormAnswer } from "./opencode-forms";
 import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
 import type { WithServerUrl } from "./opencode-server";
 
 export const createQuestionApi = (input: { fetcher: OpencodeFetcher; withServerUrl: WithServerUrl }) => {
   const request = <T>(path: string, cwd = process.cwd(), method = "GET", body?: unknown, signal?: AbortSignal) =>
-    input.withServerUrl(async (base) => {
-      const result = await requestJson<T>(input.fetcher, buildRequestUrl(base, path, cwd), {
-        method,
-        body,
-        signal,
-        headers: buildHeaders(cwd),
-      });
-      requireResponseOk(result.response, result.text, "OpenCode question request failed");
-      return result.parsed as T;
-    });
+    input.withServerUrl(
+      async (base) => {
+        const result = await requestJson<T>(input.fetcher, buildRequestUrl(base, path, cwd), {
+          method,
+          body,
+          signal,
+          headers: buildHeaders(cwd),
+        });
+        requireResponseOk(result.response, result.text, "OpenCode question request failed");
+        return result.parsed as T;
+      },
+      { retry: method === "GET" },
+    );
   const listPendingQuestions = async (sessionId: string, cwd?: string) => {
     const { data } = await request<{ data: FormInfo[] }>(`/api/session/${sessionId}/form`, cwd);
     return data
@@ -54,8 +58,8 @@ export const createQuestionApi = (input: { fetcher: OpencodeFetcher; withServerU
         });
         let value: string | string[] | number | boolean = values[0] ?? "";
         if (field.type === "multiselect") value = values;
-        if (field.type === "boolean") value = value === "true";
-        if (field.type === "number" || field.type === "integer") value = Number(value);
+        if (field.type === "boolean" || field.type === "number" || field.type === "integer")
+          value = parseFormAnswer(field, values[0] ?? "");
         return [[field.key, value]];
       }),
     );

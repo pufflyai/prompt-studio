@@ -12,7 +12,7 @@ const isVisible = (field: FormField, answer: Record<string, FormValue>) =>
     })
   );
 
-const parseAnswer = (field: InputField, value: string) => {
+export const parseFormAnswer = (field: InputField, value: string) => {
   if (field.type === "integer" || field.type === "number") {
     const number = Number(value);
     if (!value.trim() || !Number.isFinite(number) || (field.type === "integer" && !Number.isInteger(number)))
@@ -51,7 +51,7 @@ const readField = async (field: InputField, channel: HarnessAuthenticationChanne
           placeholder: "placeholder" in field ? field.placeholder : field.description,
         },
   );
-  return parseAnswer(field, value);
+  return parseFormAnswer(field, value);
 };
 
 export const collectFormAnswers = async (fields: FormField[], channel: HarnessAuthenticationChannel) => {

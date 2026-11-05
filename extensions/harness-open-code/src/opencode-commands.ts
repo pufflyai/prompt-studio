@@ -1,32 +1,36 @@
 import type { HarnessParams } from "@pstdio/sdk/extensions";
 import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
 import { toOpencodeModel } from "./opencode-model";
+import type { WithServerUrl } from "./opencode-server";
 import { waitForOpencodeIdle } from "./opencode-session-wait";
 export const createCommandApi = (deps: {
   fetcher: OpencodeFetcher;
-  withServerUrl: <T>(fn: (url: string) => Promise<T>) => Promise<T>;
+  withServerUrl: WithServerUrl;
   now?: () => number;
 }) => {
   const now = deps.now ?? Date.now;
   const loadCommands = (directory: string) =>
-    deps.withServerUrl(async (baseUrl) => {
-      // OpenCode's command catalog does not await location plugins. See ADR 0135.
-      const ready = await requestJson(deps.fetcher, buildRequestUrl(baseUrl, "/api/provider", directory), {
-        method: "GET",
-        headers: buildHeaders(directory),
-      });
-      requireResponseOk(ready.response, "", "OpenCode command initialization failed");
-      const { response, text, parsed } = await requestJson<{ data: Array<{ name: string; description?: string }> }>(
-        deps.fetcher,
-        buildRequestUrl(baseUrl, "/api/command", directory),
-        { method: "GET", headers: buildHeaders(directory) },
-      );
-      requireResponseOk(response, text, "OpenCode command discovery failed");
-      return (parsed?.data ?? []).map((command) => ({
-        name: `/${command.name}`,
-        description: command.description ?? "Native OpenCode command",
-      }));
-    });
+    deps.withServerUrl(
+      async (baseUrl) => {
+        // OpenCode's command catalog does not await location plugins. See ADR 0135.
+        const ready = await requestJson(deps.fetcher, buildRequestUrl(baseUrl, "/api/provider", directory), {
+          method: "GET",
+          headers: buildHeaders(directory),
+        });
+        requireResponseOk(ready.response, "", "OpenCode command initialization failed");
+        const { response, text, parsed } = await requestJson<{ data: Array<{ name: string; description?: string }> }>(
+          deps.fetcher,
+          buildRequestUrl(baseUrl, "/api/command", directory),
+          { method: "GET", headers: buildHeaders(directory) },
+        );
+        requireResponseOk(response, text, "OpenCode command discovery failed");
+        return (parsed?.data ?? []).map((command) => ({
+          name: `/${command.name}`,
+          description: command.description ?? "Native OpenCode command",
+        }));
+      },
+      { retry: true },
+    );
   const commands = new Map<string, { expiresAt: number; value: ReturnType<typeof loadCommands> }>();
   return {
     getCommands: (cwd?: string) => {

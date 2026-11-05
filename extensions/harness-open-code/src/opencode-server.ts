@@ -20,7 +20,7 @@ export type OpencodeServerDeps = {
   isPortOpen: (options: { host: string; port: number }) => Promise<boolean>;
 };
 
-export type WithServerUrl = <T>(action: (url: string) => Promise<T>) => Promise<T>;
+export type WithServerUrl = <T>(action: (url: string) => Promise<T>, options?: { retry?: boolean }) => Promise<T>;
 
 const defaultServerHost = "127.0.0.1";
 const defaultServerPort = 4096;
@@ -158,7 +158,7 @@ export const createServerConnection = (deps: OpencodeServerDeps) => {
     return tracked;
   };
 
-  const withServerUrl: WithServerUrl = async (action) => {
+  const withServerUrl: WithServerUrl = async (action, options) => {
     lifetime.signal.throwIfAborted();
     const pending = connection ?? track(connect());
     const current = await pending;
@@ -169,7 +169,10 @@ export const createServerConnection = (deps: OpencodeServerDeps) => {
       lifetime.signal.throwIfAborted();
       if (!isConnectionError(error)) throw error;
       // A dropped request socket does not mean the process executing native work has exited.
-      if (current.owned?.running) return action(current.url);
+      if (current.owned?.running) {
+        if (!options?.retry) throw error;
+        return action(current.url);
+      }
       current.replacement ??= track(
         connect(async () => {
           await current.owned?.dispose();
@@ -178,6 +181,8 @@ export const createServerConnection = (deps: OpencodeServerDeps) => {
       );
       const replacement = await current.replacement;
       lifetime.signal.throwIfAborted();
+      // Only callers that explicitly permit replay may repeat an ambiguous request.
+      if (!options?.retry) throw error;
       return action(replacement.url);
     }
   };

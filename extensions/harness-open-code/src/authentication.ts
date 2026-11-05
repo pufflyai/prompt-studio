@@ -7,11 +7,12 @@ import {
 } from "@pstdio/sdk/extensions";
 import { collectFormAnswers } from "./opencode-forms";
 import { buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
+import type { WithServerUrl } from "./opencode-server";
 import { waitForNextPoll } from "./opencode-session-poller";
 
 interface AuthenticationDeps {
   fetcher: OpencodeFetcher;
-  withServerUrl: <T>(invoke: (url: string) => Promise<T>) => Promise<T>;
+  withServerUrl: WithServerUrl;
 }
 const methodId = (method: IntegrationMethod) => ("id" in method ? method.id : method.type);
 const interactiveMethods = (integration?: IntegrationInfo) =>
@@ -19,17 +20,20 @@ const interactiveMethods = (integration?: IntegrationInfo) =>
 
 export const createOpencodeAuthentication = (deps: AuthenticationDeps) => {
   const request = <T>(path: string, method = "GET", body?: unknown, signal?: AbortSignal) =>
-    deps.withServerUrl(async (base) => {
-      const response = await requestJson<T>(deps.fetcher, buildRequestUrl(base, path, process.cwd()), {
-        method,
-        body,
-        signal,
-        headers: { "content-type": "application/json" },
-      });
-      // Native errors may contain submitted credentials. Keep them within the harness.
-      requireResponseOk(response.response, "", "OpenCode account request failed");
-      return response.parsed as T;
-    });
+    deps.withServerUrl(
+      async (base) => {
+        const response = await requestJson<T>(deps.fetcher, buildRequestUrl(base, path, process.cwd()), {
+          method,
+          body,
+          signal,
+          headers: { "content-type": "application/json" },
+        });
+        // Native errors may contain submitted credentials. Keep them within the harness.
+        requireResponseOk(response.response, "", "OpenCode account request failed");
+        return response.parsed as T;
+      },
+      { retry: method === "GET" || method === "DELETE" },
+    );
   const catalog = async () => {
     const [providers, integrations] = await Promise.all([
       request<{ data: ProviderInfo[] }>("/api/provider"),

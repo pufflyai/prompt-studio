@@ -216,7 +216,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       return toSessionSnapshot(messages);
     };
 
-    return withServerUrl(fetchMessages);
+    return withServerUrl(fetchMessages, { retry: true });
   };
 
   const abortSession = async (sessionId: string, cwd?: string) => {
@@ -234,7 +234,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       requireResponseOk(response, text, "OpenCode session.abort failed");
     };
 
-    return withServerUrl(abortRunningSession);
+    return withServerUrl(abortRunningSession, { retry: true });
   };
 
   const { listPendingQuestions, replyQuestion } = createQuestionApi({ fetcher: deps.fetcher, withServerUrl });
