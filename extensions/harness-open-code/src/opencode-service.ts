@@ -13,6 +13,7 @@ import {
   type OpencodeServerStarter,
   type OpencodeServerStore,
 } from "./opencode-server";
+import { waitForOpencodeIdle } from "./opencode-session-wait";
 import { toSessionSnapshot } from "./opencode-snapshot";
 
 type OpencodeServiceDeps = {
@@ -131,18 +132,10 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     });
     requireResponseOk(messageResponse.response, messageResponse.text, "OpenCode session.prompt failed");
     if (!messageResponse.parsed?.data?.id) throw new Error("OpenCode did not accept the prompt.");
-    // Admission is asynchronous. Keep messageComplete pending until native execution becomes idle.
-    const waiting = await requestJson(
-      deps.fetcher,
-      buildRequestUrl(baseUrl, `/api/experimental/session/${sessionId}/wait`, directory),
-      {
-        method: "POST",
-        headers,
-        signal,
-      },
-    );
-    requireResponseOk(waiting.response, waiting.text, "OpenCode session wait failed");
   };
+
+  const waitForIdle = (sessionId: string, directory: string, signal?: AbortSignal) =>
+    waitForOpencodeIdle({ fetcher: deps.fetcher, withServerUrl, sessionId, directory, signal });
 
   const startSession = async (input: OpencodeSessionStartInput): Promise<OpencodeSessionStartResult> => {
     const mockSessionId = resolveMockSessionId();
@@ -182,7 +175,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
         input.model,
         input.params,
         input.signal,
-      );
+      ).then(() => waitForIdle(sessionId, directory, input.signal));
 
       return { sessionId, messageComplete };
     };
@@ -194,7 +187,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     const directory = input.cwd?.trim() || process.cwd();
     const prompt = input.prompt.trim();
 
-    const messageComplete = withServerUrl((baseUrl) =>
+    const admitted = withServerUrl((baseUrl) =>
       postSessionMessage(
         baseUrl,
         input.sessionId,
@@ -207,7 +200,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
       ),
     );
 
-    return { messageComplete };
+    return { messageComplete: admitted.then(() => waitForIdle(input.sessionId, directory, input.signal)) };
   };
 
   const getSessionMessages = async (sessionId: string, cwd?: string) => {

@@ -1,4 +1,5 @@
 import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
+import { waitForOpencodeIdle } from "./opencode-session-wait";
 export const createCommandApi = (deps: {
   fetcher: OpencodeFetcher;
   withServerUrl: <T>(fn: (url: string) => Promise<T>) => Promise<T>;
@@ -37,10 +38,10 @@ export const createCommandApi = (deps: {
       commands.set(directory, { expiresAt: now() + 30_000, value });
       return value;
     },
-    runCommand: (input: CommandInput) =>
-      deps.withServerUrl(async (baseUrl) => {
+    runCommand: async (input: CommandInput) => {
+      const directory = input.cwd ?? process.cwd();
+      await deps.withServerUrl(async (baseUrl) => {
         const { body, compact } = commandRequest(input);
-        const directory = input.cwd ?? process.cwd();
         const path = `/api/session/${input.sessionId}/${compact ? "compact" : "command"}`;
         const { response, text } = await requestJson(deps.fetcher, buildRequestUrl(baseUrl, path, directory), {
           method: "POST",
@@ -49,18 +50,10 @@ export const createCommandApi = (deps: {
           signal: input.signal,
         });
         requireResponseOk(response, text, "OpenCode native command failed");
-        const wait = await requestJson(
-          deps.fetcher,
-          buildRequestUrl(baseUrl, `/api/experimental/session/${input.sessionId}/wait`, directory),
-          {
-            method: "POST",
-            headers: buildHeaders(directory),
-            signal: input.signal,
-          },
-        );
-        requireResponseOk(wait.response, wait.text, "OpenCode command wait failed");
-        commands.delete(directory);
-      }),
+      });
+      commands.delete(directory);
+      await waitForOpencodeIdle({ ...deps, directory, sessionId: input.sessionId, signal: input.signal });
+    },
   };
 };
 

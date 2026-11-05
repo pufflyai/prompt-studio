@@ -1,6 +1,20 @@
 import { expect, test } from "bun:test";
 import { collectFormAnswers } from "./opencode-forms";
 
+for (const type of ["number", "integer"] as const) {
+  for (const value of ["", "   "]) {
+    test(`rejects blank ${type} input (${JSON.stringify(value)})`, async () => {
+      await expect(
+        collectFormAnswers([{ type, key: "count" }], {
+          signal: new AbortController().signal,
+          emit: async () => {},
+          request: async () => value,
+        }),
+      ).rejects.toThrow("Enter a valid number.");
+    });
+  }
+}
+
 test("custom and empty native choices allow input, while fixed choices keep their values", async () => {
   const prompts: unknown[] = [];
   const replies = ["work", "default", "region-id"];

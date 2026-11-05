@@ -46,7 +46,8 @@ export const createQuestionApi = (input: { fetcher: OpencodeFetcher; withServerU
     const path = `/api/session/${sessionId}/form/${encodeURIComponent(requestId)}`;
     const { data: form } = await request<{ data: FormInfo }>(path, cwd, "GET", undefined, signal);
     const answer = Object.fromEntries(
-      form.fields.map((field, index) => {
+      form.fields.flatMap((field, index) => {
+        if (!answers[index]?.length) return [];
         const values = (answers[index] ?? []).map((label) => {
           const options = "options" in field ? field.options : undefined;
           return options?.find((option) => option.label === label)?.value ?? label;
@@ -55,7 +56,7 @@ export const createQuestionApi = (input: { fetcher: OpencodeFetcher; withServerU
         if (field.type === "multiselect") value = values;
         if (field.type === "boolean") value = value === "true";
         if (field.type === "number" || field.type === "integer") value = Number(value);
-        return [field.key, value];
+        return [[field.key, value]];
       }),
     );
     await request(`${path}/reply`, cwd, "POST", { answer }, signal);

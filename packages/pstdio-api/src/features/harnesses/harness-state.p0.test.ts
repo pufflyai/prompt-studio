@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHarnessStateApi } from "./harness-state";
@@ -9,6 +9,21 @@ const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
+
+test.skipIf(process.platform === "win32")(
+  "keeps saved credentials private and tightens existing state directories",
+  async () => {
+    const home = mkdtempSync(join(tmpdir(), "pstdio-private-harness-state-"));
+    roots.push(home);
+    const directory = join(home, "state");
+    mkdirSync(directory);
+    chmodSync(directory, 0o755);
+    const state = createHarnessStateApi("pstdio.private", { env: { PSTDIO_HOME: home } });
+    await state.set("serverUrl", "http://opencode:private@127.0.0.1:4096");
+    expect(statSync(directory).mode & 0o777).toBe(0o700);
+    expect(statSync(join(directory, "pstdio.private.json")).mode & 0o777).toBe(0o600);
+  },
+);
 
 test("stores harness state under the active pstdio home and isolates extensions", async () => {
   const home = mkdtempSync(join(tmpdir(), "pstdio-harness-state-"));

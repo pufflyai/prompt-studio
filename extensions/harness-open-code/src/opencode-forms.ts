@@ -15,7 +15,7 @@ const isVisible = (field: FormField, answer: Record<string, FormValue>) =>
 const parseAnswer = (field: InputField, value: string) => {
   if (field.type === "integer" || field.type === "number") {
     const number = Number(value);
-    if (!Number.isFinite(number) || (field.type === "integer" && !Number.isInteger(number)))
+    if (!value.trim() || !Number.isFinite(number) || (field.type === "integer" && !Number.isInteger(number)))
       throw new Error("Enter a valid number.");
     return number;
   }

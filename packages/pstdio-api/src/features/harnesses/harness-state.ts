@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { HarnessStateApi } from "pstdio-api-contracts/extension-kernel";
 import { extensionStorageDirectory } from "pstdio-extensions";
@@ -20,9 +20,11 @@ const readValues = async (path: string) => {
 };
 
 const writeValues = async (path: string, values: Record<string, unknown>) => {
-  await mkdir(join(path, ".."), { recursive: true });
+  const directory = join(path, "..");
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  await chmod(directory, 0o700);
   const temporaryPath = `${path}.${crypto.randomUUID()}.tmp`;
-  await writeFile(temporaryPath, `${JSON.stringify(values, null, 2)}\n`, "utf8");
+  await writeFile(temporaryPath, `${JSON.stringify(values, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   await rename(temporaryPath, path);
 };
 
