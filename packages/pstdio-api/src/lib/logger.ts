@@ -22,6 +22,14 @@ const resolveRootLogger = () => {
 const forComponent = (component: string, level?: string) => {
   const options = level ? { level } : undefined;
   return {
+    debug: (data: Record<string, unknown>, message?: string) => {
+      const logger = resolveRootLogger().child({ component }, options);
+      if (message === undefined) {
+        logger.debug(data);
+        return;
+      }
+      logger.debug(data, message);
+    },
     error: (data: Record<string, unknown>, message?: string) => {
       const logger = resolveRootLogger().child({ component }, options);
       if (message === undefined) {

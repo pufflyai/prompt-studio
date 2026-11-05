@@ -49,6 +49,31 @@ const watchRuntimeChanges = (deps: RelayDeps, refresh: () => Promise<void>) =>
       void refresh();
   });
 
+const missingOwnerStatus = {
+  firstDownloaded: false,
+  downloaded: false,
+  pending: false,
+  needsAttention: false,
+  connected: false,
+  busy: false,
+};
+const projectOwnerProgress = (
+  workbenchId: string,
+  statuses: Parameters<typeof projectSyncStatus>[0],
+  extensionIds: string[],
+) => {
+  const names = ["core", "publications", "automations", "personal", ...extensionIds];
+  apiLogger.debug(
+    {
+      event: "relay.project.status",
+      workbenchId,
+      owners: statuses.map((status, index) => ({ owner: names[index], ...status })),
+    },
+    "Project data owner progress",
+  );
+  return projectSyncStatus(statuses);
+};
+
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
 export const startRelayRuntime = async (input: {
@@ -205,15 +230,11 @@ export const startRelayRuntime = async (input: {
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),
       ];
-      const missing = {
-        firstDownloaded: false,
-        downloaded: false,
-        pending: false,
-        needsAttention: false,
-        connected: false,
-        busy: false,
-      };
-      return projectSyncStatus(await Promise.all(owners.map((owner) => owner?.status() ?? missing)));
+      return projectOwnerProgress(
+        workbenchId,
+        await Promise.all(owners.map((owner) => owner?.status() ?? missingOwnerStatus)),
+        snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id),
+      );
     },
     // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.
     async update(next: RelayWorkbench[]) {

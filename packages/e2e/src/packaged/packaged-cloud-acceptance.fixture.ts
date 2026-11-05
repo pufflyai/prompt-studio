@@ -64,6 +64,7 @@ export const createCloudAcceptanceFixture = async (root: string, children: Set<C
       NODE_EXTRA_CA_CERTS: cert,
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults),
       PSTDIO_LOG_PATH: logPath,
+      PSTDIO_LOG_LEVEL: "debug",
       PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
     });
     children.add(host.child);
