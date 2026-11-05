@@ -1,9 +1,4 @@
-import type {
-  ExtensionStorageApi,
-  ExtensionWorkspace,
-  KanbanRendererQueryResult,
-  ViewFilterGroup,
-} from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi, KanbanRendererQueryResult, ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { attentionPanelTarget } from "../attention-panel";
 import { readStoredPlan } from "../timeline/commands/plan-store";
 import { buildPlan } from "../timeline/model/build-plan";
@@ -15,7 +10,6 @@ import {
   buildTicketAttributes,
   createTicketParentLookup,
   createTicketRowMapper,
-  createTicketWorkspaceLookup,
   statusToColumnConfig,
   TICKET_ARCHIVE_STATE_ACTIVE,
   TICKET_ARCHIVE_STATE_ARCHIVED,
@@ -25,9 +19,9 @@ import { hasPendingInput, readTicketReviewRequests } from "./review-request-stor
 import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "./review-request-summary";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import type { TicketContext } from "./ticket-identity";
+import { loadTicketLinkedResources } from "./ticket-linked-resources";
 import { ticketActivationTarget } from "./ticket-page-target";
 import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "./workflow-statuses";
-import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
 interface TicketsQueryInput {
   storage: ExtensionStorageApi;
@@ -35,8 +29,6 @@ interface TicketsQueryInput {
   projectId: string;
   workflow?: WorkflowStatusSelections;
   filter?: ViewFilterGroup;
-  workspaces?: ExtensionWorkspace[];
-  workspaceSessions?: TicketWorkspaceSessionLookup;
 }
 
 // The renderer re-applies filter, sort, and grouping locally. The query returns the
@@ -47,8 +39,6 @@ export const runTicketsQuery = async ({
   projectId,
   filter,
   workflow = emptyWorkflowStatuses(),
-  workspaces = [],
-  workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
   const [tickets, tags, statuses, storedPlan, requests] = await Promise.all([
     ticketsCollection({ storage, resources }).list(),
@@ -70,12 +60,6 @@ export const runTicketsQuery = async ({
     }),
   );
 
-  const toTicketRow = createTicketRowMapper(
-    projectId,
-    tags,
-    createTicketWorkspaceLookup(workspaces, workspaceSessions),
-    createTicketParentLookup(tickets),
-  );
   const archiveRule =
     filter?.conjunction === "and"
       ? filter.rules.find(
@@ -88,11 +72,27 @@ export const runTicketsQuery = async ({
       ? selectedArchiveStates
       : [TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ARCHIVED],
   );
-  const rows = sortedBySortOrder(
+  const visibleTickets = sortedBySortOrder(
     tickets.filter((ticket) =>
       requestedArchiveStates.has(ticket.archived ? TICKET_ARCHIVE_STATE_ARCHIVED : TICKET_ARCHIVE_STATE_ACTIVE),
     ),
-  ).map((ticket) => {
+  );
+
+  const toTicketRow = createTicketRowMapper(
+    projectId,
+    tags,
+    await loadTicketLinkedResources(
+      resources,
+      visibleTickets.map((ticket) => ({
+        type: "ticket",
+        id: ticket.id,
+        extensionId: "pstdio.pstdio-planner",
+        projectId,
+      })),
+    ),
+    createTicketParentLookup(tickets),
+  );
+  const rows = visibleTickets.map((ticket) => {
     const row = toTicketRow(ticket);
     return {
       ...row,
