@@ -178,8 +178,8 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
         })
         .where(operationWhere(row.operation_id));
     },
-    async delivered(ids: string[], epoch: string) {
-      for (let offset = 0; offset < ids.length; offset += 1_000)
+    async deliveredSequences(sequences: number[], epoch: string) {
+      for (let offset = 0; offset < sequences.length; offset += 1_000)
         await tx
           .update(operations)
           .set({ delivered: true })
@@ -187,7 +187,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
             and(
               pendingWhere(),
               eq(operations.admission_epoch, epoch),
-              inArray(operations.operation_id, ids.slice(offset, offset + 1_000)),
+              inArray(operations.local_sequence, sequences.slice(offset, offset + 1_000)),
             ),
           );
     },

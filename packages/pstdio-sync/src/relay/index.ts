@@ -16,6 +16,6 @@ export {
   type OrderedStreamEntry,
 } from "./ordered-stream-entry";
 export type { AssetReferences } from "./record-assets";
-export { decodeRecordFrame, encodeRecordFrame, type RecordFrame } from "./record-frames";
+export { decodeRecordFrame, encodeRecordFrame, type RecordFrame, recordFrameCost } from "./record-frames";
 export { createRecordStreamSync, recordFrameLimit } from "./record-stream";
 export type { RecordBytes, RecordStreamCursor, RecordStreamStore } from "./record-stream-types";

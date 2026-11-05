@@ -1,7 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedOperation } from "pstdio-sync/records";
 import type { createOrderedReceiptIndex } from "pstdio-sync/relay";
-import { encodeOrderedEntry } from "pstdio-sync/relay";
+import { encodeOrderedEntry, recordFrameCost } from "pstdio-sync/relay";
 import { assetSchema } from "pstdio-sync-contracts";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
@@ -36,10 +36,13 @@ export const nextOrderedUpload = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   index: ReturnType<typeof createOrderedReceiptIndex>,
+  limit: number,
 ) => {
   const row = await readOrderedOwner(tx, owner);
   if (!row.epoch) return [];
   const resolver = createOrderedReceiptResolver(journal, receiptRoots(row.receipt_root).root, index);
+  const uploads = [];
+  let bytes = 0;
   for await (const local of pendingOrderedOperations(journal)) {
     if (await resolver.reconcile(local, row.epoch)) {
       await rebaseOrderedProjection(
@@ -58,18 +61,22 @@ export const nextOrderedUpload = async (
       local.admission?.epoch === row.epoch
         ? local.admission
         : await prepareOrderedAdmission(journal, local.operation, row.epoch, known);
-    return [
-      {
-        sequence: local.sequence,
-        records: [
-          encodeOrderedEntry({
-            type: isOrderedNativeRequest(local.requestFingerprint) ? "text" : "admission",
-            admission,
-          }),
-        ],
-        assets: await authoredAssets(journal, local.operation),
-      },
-    ];
+    const entry = {
+      sequence: local.sequence,
+      records: [
+        encodeOrderedEntry({
+          type: isOrderedNativeRequest(local.requestFingerprint) ? "text" : "admission",
+          admission,
+        }),
+      ],
+      assets: await authoredAssets(journal, local.operation),
+    };
+    const cost = entry.records.reduce((total, record) => total + recordFrameCost(record.recordId, record.bytes), 0);
+    // Keep a large first save whole for the transport's existing blob fallback.
+    if (uploads.length && bytes + cost > limit) break;
+    uploads.push(entry);
+    bytes += cost;
+    if (bytes >= limit) break;
   }
-  return [];
+  return uploads;
 };

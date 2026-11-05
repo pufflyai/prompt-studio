@@ -254,7 +254,10 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       blobIds.push(sealed.blobId);
     }
     await relay.update(await sealUpdate(space, documentId, frame, blobIds));
-    await store.sent(entries.at(-1)!.sequence);
+    await store.sent(
+      entries.at(-1)!.sequence,
+      entries.map((entry) => entry.sequence),
+    );
     return true;
   };
 

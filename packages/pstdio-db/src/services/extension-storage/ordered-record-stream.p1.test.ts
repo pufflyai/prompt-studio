@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
-import { createSyncSpace } from "pstdio-sync/encryption";
-import { createRecordStreamSync } from "pstdio-sync/relay";
+import { createSyncSpace, openBlob, openUpdate } from "pstdio-sync/encryption";
+import { createRecordStreamSync, decodeOrderedEntry, decodeRecordFrame, recordFrameLimit } from "pstdio-sync/relay";
 import type { Json } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
@@ -23,7 +23,8 @@ const peers = async (textFields: { prefix: string; fields: string[] }[] = []) =>
     keys: [{ generation: 1, secret: "A".repeat(43) }],
   });
   const documentId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream"]));
-  const { relay } = createRelay();
+  const wire = createRelay();
+  const { relay } = wire;
   const device = async () => {
     const { db, close } = await createDb({ path: ":memory:" });
     cleanup.push(close);
@@ -34,19 +35,108 @@ const peers = async (textFields: { prefix: string; fields: string[] }[] = []) =>
     const service = createDocumentStorageDBService(db);
     const records = service.open({ owner, textFields }).records;
     const failures: unknown[] = [];
+    const store = service.documents.recordStream(owner);
     const sync = createRecordStreamSync({
       space,
       documentId,
       relay,
-      store: service.documents.recordStream(owner),
+      store,
       quarantine: async (failure) => {
         failures.push(failure);
       },
     });
-    return { records, sync, failures, service, db, owner };
+    return { records, sync, failures, service, db, owner, wire, space, documentId, store };
   };
   return [await device(), await device()] as const;
 };
+
+test("ready saves share a bounded transport batch while keeping their individual atomic outcomes", async () => {
+  const [first, second] = await peers();
+  await first.records.commit({
+    operationId: "batch-seed",
+    edits: [
+      ...Array.from({ length: 8 }, (_, index) => ({ recordId: `large-${index}`, replace: 0 })),
+      { recordId: "atomic-a", replace: 0 },
+      { recordId: "atomic-b", replace: 0 },
+    ],
+  });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  const before = first.wire.requests.updates;
+  const observed = await first.records.read("atomic-a");
+  for (let tick = 0; tick < 126; tick++)
+    await first.records.commit({
+      operationId: `batch-marker-${tick}`,
+      edits: Array.from({ length: 8 }, (_, index) => ({
+        recordId: `large-${index}`,
+        shared: [{ kind: "map.set" as const, key: "compactionTick", value: tick }],
+      })),
+    });
+  await first.records.commit({
+    operationId: "batch-conditional",
+    edits: [
+      { recordId: "atomic-a", expectedRevision: observed.revision, replace: 2 },
+      { recordId: "atomic-b", replace: 2 },
+    ],
+  });
+  await second.records.commit({ operationId: "batch-peer", edits: [{ recordId: "atomic-a", replace: 1 }] });
+  await second.sync.synchronize();
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  for (const device of [first, second]) {
+    expect((await device.records.read("large-7")).shared).toMatchObject({
+      kind: "map",
+      value: { compactionTick: 125 },
+    });
+    expect((await device.records.read("atomic-a")).value).toBe(1);
+    expect((await device.records.read("atomic-b")).value).toBe(0);
+    expect(device.failures).toEqual([]);
+  }
+  for (let tick = 0; tick < 126; tick++)
+    expect(await first.records.outcome(`batch-marker-${tick}`)).toMatchObject({ state: "synced" });
+  expect(await first.records.outcome("batch-conditional")).toMatchObject({ state: "refused" });
+  // The original 126 authored marker saves remain distinct. A bounded wire frame can carry
+  // several complete admissions, without one network round trip for each tiny save.
+  expect(first.wire.requests.updates - before).toBeLessThan(126);
+});
+
+test("a save larger than the transport batch stays whole through blob upload before the next save", async () => {
+  const [first, second] = await peers();
+  await first.records.commit({ operationId: "blob-batch-seed", edits: [{ recordId: "seed", replace: true }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  const before = first.wire.updates().length;
+  const edits = Array.from({ length: 8 }, (_, index) => ({ recordId: `large-${index}`, replace: "x".repeat(200_000) }));
+  await first.records.commit({ operationId: "blob-batch-large", edits });
+  await first.records.commit({ operationId: "blob-batch-next", edits: [{ recordId: "after", replace: true }] });
+  const outbox = await first.store.outbox(recordFrameLimit);
+  expect(outbox).toHaveLength(1);
+  expect(outbox[0]!.records).toHaveLength(1);
+  expect(outbox[0]!.records[0]!.bytes.length).toBeGreaterThan(recordFrameLimit);
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  const updates = first.wire.updates().slice(before);
+  expect(updates).toHaveLength(2);
+  const frame = decodeRecordFrame(await openUpdate(first.space, first.documentId, updates[0]!));
+  expect(frame.records).toEqual([]);
+  expect(frame.blob).toBeDefined();
+  const body = decodeRecordFrame(
+    await openBlob(first.space, frame.blob!.blobId, await first.wire.relay.blobs.get(frame.blob!.blobId)),
+  );
+  expect(body.records).toHaveLength(1);
+  const entry = await decodeOrderedEntry(body.records[0]!.bytes);
+  expect(entry.type).toBe("admission");
+  if (entry.type !== "admission") throw new Error("Expected one complete admission");
+  expect(entry.admission.operation.operationId).toBe("blob-batch-large");
+  expect(entry.admission.operation.edits).toHaveLength(8);
+  for (const device of [first, second]) {
+    for (const edit of edits) expect((await device.records.read(edit.recordId)).value).toBe(edit.replace);
+    expect((await device.records.read("after")).value).toBe(true);
+    expect(device.failures).toEqual([]);
+  }
+  expect(await first.records.outcome("blob-batch-large")).toMatchObject({ state: "synced" });
+  expect(await first.records.outcome("blob-batch-next")).toMatchObject({ state: "synced" });
+});
 
 const scenarios: { name: string; initial: Json; firstValue: Json; lastValue: Json }[] = [
   {
