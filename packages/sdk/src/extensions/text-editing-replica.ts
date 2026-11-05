@@ -13,12 +13,14 @@ export const createTextReceiveHandlers = () => {
         handlers.delete(handler);
       };
     },
-    run(context?: TextEditingReceiveContext) {
+    run(context?: TextEditingReceiveContext | (() => TextEditingReceiveContext)) {
       if (receiving) throw textEditingFailure("source_unavailable", "A renderer cannot receive text recursively", true);
+      if (!handlers.size) return;
       receiving = true;
       try {
+        const incoming = typeof context === "function" ? context() : context;
         for (const handler of handlers) {
-          const result: unknown = handler(context);
+          const result: unknown = handler(incoming);
           if (result && typeof result === "object" && "then" in result) {
             void Promise.resolve(result).catch(() => {});
             throw textEditingFailure("source_unavailable", "Text receive handlers must finish synchronously", true);
@@ -50,17 +52,17 @@ const changesText = (document: Y.Doc, snapshot: TextReplicaSnapshot) => {
 /** All callbacks retain their ingress barrier; metadata distinguishes pure receipts from incoming edits. */
 export const createTextEditingReplica = (
   initial: TextReplicaSnapshot & { editable: boolean },
-  beforeReceive: (context: TextEditingReceiveContext) => void,
+  beforeReceive: (context: () => TextEditingReceiveContext) => void,
   editable: () => boolean,
 ) => {
   const replica = createTextReplica(initial);
   const before = (snapshot: typeof initial) => {
     const historyChanged = snapshot.seedId !== initial.seedId;
-    beforeReceive({
+    beforeReceive(() => ({
       historyChanged,
       editableChanged: snapshot.editable !== editable(),
       textChanged: historyChanged || changesText(replica.document, snapshot),
-    });
+    }));
   };
   return {
     ...replica,

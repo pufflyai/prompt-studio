@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import * as Y from "yjs";
-import { createTextEditingReplica } from "./text-editing-replica";
+import { createTextEditingReplica, createTextReceiveHandlers } from "./text-editing-replica";
 import type { TextEditingReceiveContext } from "./text-editing-types";
 
 const fixture = () => {
@@ -15,7 +15,7 @@ const fixture = () => {
   const contexts: TextEditingReceiveContext[] = [];
   const replica = createTextEditingReplica(
     snapshot(),
-    (context) => contexts.push(context),
+    (context) => contexts.push(context()),
     () => true,
   );
   return {
@@ -118,4 +118,26 @@ test("a refused receive leaves the live document untouched and can be received a
     replica.dispose();
     host.destroy();
   }
+});
+
+test("receive metadata is computed once for active handlers and not computed after they unsubscribe", () => {
+  const handlers = createTextReceiveHandlers();
+  const context = { textChanged: false, historyChanged: false, editableChanged: false };
+  let computations = 0;
+  const received: unknown[] = [];
+  const read = () => {
+    computations++;
+    return context;
+  };
+  handlers.run(read);
+  expect(computations).toBe(0);
+  const first = handlers.add((value) => received.push(value));
+  const second = handlers.add((value) => received.push(value));
+  handlers.run(read);
+  expect(computations).toBe(1);
+  expect(received).toEqual([context, context]);
+  first();
+  second();
+  handlers.run(read);
+  expect(computations).toBe(1);
 });
