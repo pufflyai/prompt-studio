@@ -7,7 +7,12 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
-import { projects, storage_ordered_operations, storage_ordered_touches } from "../../db/schemas.pg";
+import {
+  projects,
+  storage_ordered_operations,
+  storage_ordered_touches,
+  storage_record_sync,
+} from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";
 
@@ -74,6 +79,43 @@ const peers = async (path = ":memory:", single = false) => {
   const first = await device(path);
   return [first, single ? first : await device()] as const;
 };
+
+test("pending progress isolates every project and extension including unrelated legacy admission", async () => {
+  const [first] = await peers(":memory:", true);
+  const emptyOwner = { ...first.owner, extensionId: "example.empty" };
+  const empty = first.service.documents.recordStream(emptyOwner);
+  const otherProjectId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await first.db
+    .insert(projects)
+    .values({ id: otherProjectId, name: "Other", shorthand: "O", created_at: now, updated_at: now });
+  const crossProject = first.service.documents.recordStream({ ...first.owner, workbenchId: otherProjectId });
+  expect(await empty.pending()).toBe(false);
+  expect(await crossProject.pending()).toBe(false);
+  await first.records.commit({ operationId: "isolation-local", edits: [{ recordId: "card", replace: 1 }] });
+  expect(await first.store.pending()).toBe(true);
+  expect(await empty.pending()).toBe(false);
+  expect(await crossProject.pending()).toBe(false);
+  await first.sync.synchronize();
+  expect(await first.store.pending()).toBe(false);
+  await first.records.commit({ operationId: "isolation-queued", edits: [{ recordId: "card", replace: 2 }] });
+  expect(await first.store.pending()).toBe(true);
+  expect(await empty.pending()).toBe(false);
+  expect(await crossProject.pending()).toBe(false);
+  await first.sync.synchronize();
+  const localOwner = { ...first.owner, extensionId: "example.prejoin" };
+  const local = first.service.open({ owner: localOwner }).records;
+  const localStream = first.service.documents.recordStream(localOwner);
+  await local.commit({ operationId: "prejoin-isolation", edits: [{ recordId: "local", replace: true }] });
+  expect(await localStream.pending()).toBe(true);
+  // A historical cursor belongs only to its own project/extension, like canonical and pending rows.
+  await first.db
+    .insert(storage_record_sync)
+    .values({ workbench_id: otherProjectId, extension_id: "example.legacy", joined: true });
+  expect(await localStream.pending()).toBe(true);
+  expect(await empty.pending()).toBe(false);
+  expect(await crossProject.pending()).toBe(false);
+});
 
 test("pending progress reads stay read-only after initialization across local and Cloud settlement", async () => {
   const [first, second] = await peers();

@@ -9,14 +9,14 @@ export const readOrderedPending = async (db: Pick<OrderedTransaction, "select">,
     .select({
       pending: sql<boolean>`
     EXISTS (SELECT 1 FROM storage_ordered_operations p
-      WHERE p.workbench_id = ${owners.workbench_id} AND p.extension_id = ${owners.extension_id}
+      WHERE p.workbench_id = ${owner.workbenchId} AND p.extension_id = ${owner.extensionId}
       AND p.envelope IS NOT NULL AND p.settled_epoch IS NULL)
     OR (
       NOT (${owners.joined} OR (${owners.epoch} IS NOT NULL AND ${owners.epoch} <> '' AND ${owners.epoch} NOT LIKE 'local:%'))
       AND NOT EXISTS (SELECT 1 FROM storage_record_sync l
-        WHERE l.workbench_id = ${owners.workbench_id} AND l.extension_id = ${owners.extension_id} AND l.joined)
+        WHERE l.workbench_id = ${owner.workbenchId} AND l.extension_id = ${owner.extensionId} AND l.joined)
       AND EXISTS (SELECT 1 FROM storage_ordered_records c
-        WHERE c.workbench_id = ${owners.workbench_id} AND c.extension_id = ${owners.extension_id})
+        WHERE c.workbench_id = ${owner.workbenchId} AND c.extension_id = ${owner.extensionId})
     )
   `,
     })
