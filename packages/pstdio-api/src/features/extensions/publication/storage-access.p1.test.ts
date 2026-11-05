@@ -249,6 +249,7 @@ test("local overrides sync their edits but never run data migrations; older vers
       }),
     ).rejects.toThrow("Update");
     await expect(storage.collection("notes").put("one", {})).rejects.toThrow("Update");
+    await expect(storage.collection("notes").updateIfUnchanged("one", "revision", {})).rejects.toThrow("Update");
     await expect(storage.files.put({ name: "old.txt", data: new Uint8Array([1]) })).rejects.toThrow("Update");
     await expect(
       app.deps.extensionFileService.upload({

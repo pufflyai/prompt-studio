@@ -57,6 +57,11 @@ test(
       const created = await post("/projects", folderProjectInput({ name: "Shared notes" }, root));
       expect(created.status).toBe(201);
       const project = (await created.json()) as { id: string };
+      expect(await command(project.id, "collection-observation")).toEqual({
+        stale: false,
+        saved: true,
+        value: { title: "Newer title", position: "position" },
+      });
       const initial = await read(project.id);
       await command(project.id, "seed-query-records");
       const expectSelected = async () => {

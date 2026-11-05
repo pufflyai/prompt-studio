@@ -103,7 +103,15 @@ export const guardPublicationStorage = (
     collection: <TItem = unknown>(name: string) => {
       const collection = storage.collection<TItem>(name);
       return {
-        ...guard(collection, ["put", "update", "create", "createIfAbsent", "delete", "deleteIfValue"]),
+        ...guard(collection, [
+          "put",
+          "update",
+          "updateIfUnchanged",
+          "create",
+          "createIfAbsent",
+          "delete",
+          "deleteIfValue",
+        ]),
         attachments: (id: string) => guard(collection.attachments(id), ["put", "update", "delete"]),
       };
     },
