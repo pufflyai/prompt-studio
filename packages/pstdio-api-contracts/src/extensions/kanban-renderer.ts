@@ -67,7 +67,7 @@ const extensionKanbanRendererCreateRowSchema = z.object({
   commandId: z.string(),
   title: localizableStringSchema.optional(),
   submitLabel: localizableStringSchema.optional(),
-  presentation:z.enum(["inline","command"]).optional(),
+  presentation: z.enum(["inline", "command"]).optional(),
   columnParam: z.string().optional(),
   params: extensionParamObjectSchema.optional(),
   attributesParam: z.string().optional(),

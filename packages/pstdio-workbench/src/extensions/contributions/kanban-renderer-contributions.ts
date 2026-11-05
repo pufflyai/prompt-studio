@@ -36,7 +36,7 @@ const toCreateRowConfig = (record: WorkbenchExtensionKanbanRendererRecord, local
   if (!record.createRow) return undefined;
   return {
     title: localize(record.createRow.title, "Create row"),
-    presentation:record.createRow.presentation,
+    presentation: record.createRow.presentation,
     submitLabel: localize(record.createRow.submitLabel, "Create"),
     fields: toCreateFields(record, localize),
     labels: {
