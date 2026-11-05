@@ -51,7 +51,7 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
     .limit(1);
   return !!record;
 };
-type StorageChange = StorageOwner & { documentId?: string; origin?: "relay" };
+type StorageChange = StorageOwner & { documentId?: string };
 
 const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
   const [row] = await db
@@ -92,7 +92,7 @@ export const createDocumentStorageDBService = (
   diagnostics?: StorageDiagnostics,
 ) => {
   const cache = createDocumentCache();
-  const listeners = new Set<(owner: StorageChange) => void>();
+  const listeners = new Set<(owner: StorageChange, origin?: "relay") => void>();
   const documentListeners = new Map<string, Set<() => void>>();
   const numberListeners = new Set<(event: NumberChange) => void>();
   const notifyOwnerNative = (owner: StorageOwner) => {
@@ -170,7 +170,7 @@ export const createDocumentStorageDBService = (
           metadata: transaction,
           changed: () => {
             notifyOwnerNative(owner);
-            for (const listener of listeners) listener({ ...owner, origin: "relay" });
+            for (const listener of listeners) listener(owner, "relay");
           },
         }),
       list: (owner: StorageOwner) => directory.list(owner),
@@ -192,7 +192,7 @@ export const createDocumentStorageDBService = (
       }
       return false;
     },
-    watch(listener: (owner: StorageChange) => void) {
+    watch(listener: (owner: StorageChange, origin?: "relay") => void) {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
