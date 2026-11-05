@@ -42,7 +42,7 @@ test("the process bridge preserves snapshot fault controls and aborts diagnostic
     await peer.blockDevice("third-runtime", false);
     phase("device controls complete; capture missing snapshot");
     // Await process I/O before invoking Bun's synchronous rejection matcher. On
-    // Windows the matcher can leave the child's pipe unread until test teardown (ADR 0135).
+    // Windows the matcher can leave the child's pipe unread until test teardown (ADR 0136).
     const snapshotError = await peer.captureSnapshot("missing").then(
       () => undefined,
       (error: unknown) => error,
