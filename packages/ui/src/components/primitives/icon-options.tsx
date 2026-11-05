@@ -30,6 +30,7 @@ import {
   ListChecks,
   ListTree,
   MessageSquare,
+  Monitor,
   Pause,
   Pencil,
   Play,
@@ -153,6 +154,7 @@ export const optionIcons = [
 ] satisfies IconColorPickerIconOption[];
 
 const actionIcons: Record<string, ComponentType> = {
+  monitor: Monitor,
   pause: Pause,
   pencil: Pencil,
   trash: Trash2,
