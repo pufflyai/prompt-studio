@@ -14,6 +14,7 @@ import type {
   WorkspaceFileEntry,
   WorkspaceFilesResponse,
   WorkspaceProviderDescriptor,
+  WorkspaceResolvedEntry,
   WriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
 import type { ExtensionWorkspace, ExtensionWorkspaceCreateInput } from "pstdio-api-contracts/extension-kernel";
@@ -23,6 +24,8 @@ import type { RequestFn } from "./request";
 import { createWorkspaceDiffClient } from "./workspace-diffs";
 
 export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
+  /** Resolve a protected existing local entry for platform integrations. */
+  resolveEntry(workspaceId: string, path: string): Promise<WorkspaceResolvedEntry>;
   getCapacity(): Promise<WorkspaceCapacity>;
   updateCapacity(input: UpdateWorkspaceCapacityInput): Promise<WorkspaceCapacity>;
   queryProviders(
@@ -68,6 +71,8 @@ export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
   ...createWorkspaceDiffClient(request),
+  resolveEntry: (workspaceId, path) =>
+    request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/entry?${new URLSearchParams({ path })}`),
   getCapacity: () => request("/v1/workspaces/capacity"),
   updateCapacity: (input) => request("/v1/workspaces/capacity", { method: "PATCH", body: input }),
   queryProviders: (projectId, input, options) =>

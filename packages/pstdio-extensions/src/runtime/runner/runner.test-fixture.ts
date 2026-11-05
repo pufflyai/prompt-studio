@@ -91,6 +91,39 @@ export const stubEnvironment = (
       removeAnchors: async () => {},
     },
     workspaces: {
+      rename: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      listFiles: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      readFile: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      createDirectory: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      createFile: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      writeFile: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      moveEntry: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      deleteEntry: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      diffFiles: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      diffFile: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
+      diffSummary: async () => {
+        throw new Error("Workspace operations require the host runtime.");
+      },
       addAnchors: async () => {},
       removeAnchors: async () => {},
       getCapacity: async () => ({ deviceId: "test-device", deviceName: "Test device", activeCount: 0, limit: null }),

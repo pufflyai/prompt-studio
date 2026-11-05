@@ -18,7 +18,7 @@ import type { SidenavContextActionsChange } from "../../shared/sidenav-context-a
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
-import type { TreeActionParamsRequest } from "./tree-actions";
+import { useTreeActionInput } from "./tree-inline-input";
 import { findNodeInSections, toTreeListSection } from "./tree-list-adapter";
 import { TreeModeReturn } from "./tree-mode-return";
 import { TreeParamsDialog } from "./tree-params-dialog";
@@ -124,7 +124,7 @@ const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string
 
   const expanded = context.expandedNodeIds.includes(nodeId);
   getWorkbenchRenderers(context.workbench).setNodeExpanded(context.treeViewId, nodeId, !expanded);
-  if (expanded || context.childrenByNodeId[nodeId] || node.children) return;
+  if (expanded) return;
 
   context.loadChildren(node);
 };
@@ -158,18 +158,20 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     onOpenResourceError,
     props.placement,
   );
-  const [paramsRequest, setParamsRequest] = useState<TreeActionParamsRequest | null>(null);
-
+  const actionInput = useTreeActionInput(`${treeViewId}:${projectId}:${resource?.id}`, treeState.expandedNodeIds);
+  const paramsRequest = actionInput.request;
   const shortcutHints = useWorkbenchStore(workbench.keyboard.store, (state) => state.active || state.preview);
   const adapterContext = {
     workbench,
     shortcutHints,
     onCommandError: onOpenResourceError,
-    onRequestParams: setParamsRequest,
+    onRequestParams: actionInput.setRequest,
   };
-  const rawSections = body.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext));
-  const rawHeaderSections = header.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext));
-  const rawFooterSections = footer.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext));
+  const adaptSections = (sections: TreeViewSection[]) =>
+    actionInput.sections(sections.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext)));
+  const rawSections = adaptSections(body);
+  const rawHeaderSections = adaptSections(header);
+  const rawFooterSections = adaptSections(footer);
   const {
     visibleHeaderSections,
     visibleSections,
@@ -258,7 +260,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             <TreeList
               sections={visibleHeaderSections}
               draggable={isSidenav}
-              expandedNodeIds={treeState.expandedNodeIds}
+              expandedNodeIds={actionInput.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
               activeNodeId={activeNodeSelection}
               rowVariant="compact"
@@ -306,7 +308,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               draggable={isSidenav}
               customizationAvailable={isSidenav}
               activeNodeId={activeNodeSelection}
-              expandedNodeIds={treeState.expandedNodeIds}
+              expandedNodeIds={actionInput.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
               scrollRef={scrollRef}
               onToggleSection={toggleSection}
@@ -324,7 +326,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             <TreeList
               sections={visibleFooterSections}
               draggable={isSidenav}
-              expandedNodeIds={treeState.expandedNodeIds}
+              expandedNodeIds={actionInput.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
               activeNodeId={activeNodeSelection}
               rowVariant="compact"
@@ -340,10 +342,10 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           </Flex>
         ) : null}
         <TreeParamsDialog
-          request={paramsRequest}
+          request={paramsRequest?.inlineInput ? null : paramsRequest}
           renderParamField={renderParamField}
           workbench={workbench}
-          onClose={() => setParamsRequest((current) => (current === paramsRequest ? null : current))}
+          onClose={actionInput.close}
         />
       </Flex>
     </TreeListDragProvider>

@@ -10,7 +10,14 @@ test("group creation is an independent button rather than a button nested in the
       <KanbanRendererListRow
         row={{
           id: "group",
-          item: { id: "group", title: "This device", isGroup: true, onCreate: () => {} },
+          item: {
+            id: "group",
+            title: "This device",
+            isGroup: true,
+            onCreate: () => {},
+            note: "2 / 6",
+            onNoteClick: () => {},
+          },
           depth: 0,
           isGroup: true,
           canExpand: true,
@@ -26,6 +33,7 @@ test("group creation is an independent button rather than a button nested in the
     </ChakraProvider>,
   );
   expect(html).toContain('aria-label="Add to This device"');
+  expect(html).toContain('aria-label="This device: 2 / 6"');
   let buttonDepth = 0;
   for (const [tag] of html.matchAll(/<\/?button\b[^>]*>/g)) {
     buttonDepth += tag.startsWith("</") ? -1 : 1;

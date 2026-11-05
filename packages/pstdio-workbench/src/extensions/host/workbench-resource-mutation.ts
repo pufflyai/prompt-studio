@@ -14,7 +14,13 @@ export const runResourceMutation = async (
   if (!mutation) return persist();
   const id = params?.[mutation.idParam] ?? execution?.resource?.id;
   if (typeof id !== "string") return persist();
-  const resource = { type: mutation.resourceType, id, extensionId: command.extensionId, projectId: context.projectId };
+  const subject = execution?.resource;
+  const resource =
+    subject?.type === mutation.resourceType &&
+    subject.id === id &&
+    (!subject.projectId || subject.projectId === context.projectId)
+      ? { ...subject, projectId: context.projectId }
+      : { type: mutation.resourceType, id, extensionId: command.extensionId, projectId: context.projectId };
   if (mutation.kind === "remove") {
     if (!(await context.workbench.commandPalette.requestConfirmation(text(command.title, "Delete")))) return;
   }
