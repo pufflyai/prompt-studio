@@ -25,7 +25,7 @@ import {
 import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 const authoredId = (id: string) => JSON.stringify(["ordered-native-authored", id]);
-type Captured = Record<string, { generation?: string; recordId: string; field: string }>;
+type Captured = Record<string, { generation?: string; recordId: string; field: string; state?: string }>;
 interface AuthoredText {
   projected: boolean;
   fields: Captured;
@@ -78,6 +78,35 @@ export const rememberOrderedTextGeneration = async (
       fields: captured,
     } satisfies AuthoredText);
 };
+/** A first-join replacement can outlive its adopted text history. Retain its actual
+ * projected source only while this synthetic save is pending, beside its lineage. */
+export const rememberOrderedAdoptionText = async (
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  operation: OrderedOperation,
+  local: OrderedRecord,
+  projected: OrderedRecord | undefined,
+) => {
+  const fields: Captured = {};
+  for (const [key, source] of Object.entries(orderedBody(local).nativeSources)) {
+    if (!("field" in source)) continue;
+    const pointer = `/value${source.field}`;
+    if (!operation.edits.some((edit) => edit.texts?.some((text) => jsonPointer(text.path) === pointer))) continue;
+    const marker = await readOrderedMarker<OrderedFieldMarker>(tx, owner, orderedFieldMarkerId(key));
+    fields[key] = {
+      recordId: local.recordId,
+      field: source.field,
+      generation: marker?.value.generation,
+      state: projected?.texts?.[pointer]?.state,
+    };
+  }
+  if (Object.keys(fields).length)
+    await saveOrderedMarker(tx, owner, authoredId(operation.operationId), {
+      projected: !!projected,
+      fields,
+    } satisfies AuthoredText);
+};
+
 export const forgetOrderedTextGeneration = (tx: OrderedTransaction, owner: StorageOwner, id: string) =>
   tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, authoredId(id))));
 
@@ -156,11 +185,12 @@ const mergePrivatePending = async (
   field: { key: string; recordId: string; pointer: string },
   document: Y.Doc,
   generation?: string,
+  seed?: string,
 ) => {
   for await (const pending of pendingText(tx, owner, field.recordId))
     for (const edit of pending.edits)
       for (const text of edit.texts ?? []) {
-        if (jsonPointer(text.path) !== field.pointer) continue;
+        if (jsonPointer(text.path) !== field.pointer || (seed && text.seed !== seed)) continue;
         const captured = (await readOrderedMarker<AuthoredText>(tx, owner, authoredId(pending.operationId)))?.value
           .fields[field.key];
         if (captured?.generation !== generation) continue;
@@ -174,6 +204,7 @@ const privateFieldState = async (
   field: { key: string; recordId: string; pointer: string },
   generation?: string,
   before?: OrderedRecord,
+  capturedState?: string,
 ) => {
   const [row] = await tx
     .select({ state: canonical.state })
@@ -183,9 +214,11 @@ const privateFieldState = async (
   const document = new Y.Doc();
   try {
     const saved = record?.texts?.[field.pointer];
-    if (saved) Y.applyUpdate(document, Buffer.from(saved.state, "base64"));
-    await mergePrivateRooms(tx, owner, field, document, generation, saved?.seed);
-    await mergePrivatePending(tx, owner, field, document, generation);
+    const state = capturedState ?? saved?.state;
+    if (state) Y.applyUpdate(document, Buffer.from(state, "base64"));
+    const seed = capturedState ? (await readTextDocumentSeed(document)).id : saved?.seed;
+    await mergePrivateRooms(tx, owner, field, document, generation, seed);
+    await mergePrivatePending(tx, owner, field, document, generation, capturedState ? seed : undefined);
     if (document.store.pendingStructs || document.store.pendingDs)
       throw new Error("Private text recovery is missing authored causal history");
     await readTextDocumentSeed(document);
@@ -212,13 +245,27 @@ export const fenceOrderedNativeText = async (
           ? [{ key, recordId: before.recordId, field: source.field, pointer: `/value${source.field}` }]
           : [],
       )
-    : await fieldsFor(tx, owner, operation);
+    : [
+        ...new Map(
+          [
+            ...(await fieldsFor(tx, owner, operation)),
+            ...Object.entries(captured).map(([key, value]) => ({
+              key,
+              recordId: value.recordId,
+              field: value.field,
+              pointer: `/value${value.field}`,
+            })),
+          ].map((field) => [field.key, field]),
+        ).values(),
+      ];
   for (const field of fields) {
     const marker = await readOrderedMarker<OrderedFieldMarker>(tx, owner, orderedFieldMarkerId(field.key));
     if (!marker) continue;
     const generation = before ? marker.value.generation : captured[field.key]?.generation;
-    if (marker.value.generation !== generation) continue; // A fresh replica never observed this rejected lineage.
-    const state = await privateFieldState(tx, owner, field, generation, before);
+    const capturedState = captured[field.key]?.state;
+    const current = marker.value.generation === generation;
+    if (!current && !capturedState) continue;
+    const state = await privateFieldState(tx, owner, field, generation, before, capturedState);
     await tx
       .insert(sources)
       .values({
@@ -233,6 +280,7 @@ export const fenceOrderedNativeText = async (
       .insert(rooms)
       .values({ id, workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_key: field.key, state });
     if (generation !== undefined) await saveOrderedMarker(tx, owner, orderedRoomMarkerId(id), { generation });
+    if (!current) continue; // Preserve the old private lineage without fencing a fresh replica.
     const next = await fingerprint({
       owner: [owner.workbenchId, owner.extensionId],
       key: field.key,

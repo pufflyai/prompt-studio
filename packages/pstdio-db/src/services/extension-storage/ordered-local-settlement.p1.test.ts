@@ -295,3 +295,54 @@ for (const remoteDeleted of [false, true]) {
     expect(second.failures).toEqual([]);
   });
 }
+
+test("refusing a delayed first-join text save preserves its captured native lineage after peer retirement", async () => {
+  const [first, second] = await peers();
+  await first.records.commit({
+    operationId: "remote-base",
+    edits: [{ recordId: "card", replace: { model: "base", description: "base" } }],
+  });
+  await first.sync.synchronize();
+  await first.records.commit({ operationId: "remote-first-retire", edits: [{ recordId: "card", deleted: true }] });
+  await first.records.commit({
+    operationId: "remote-first-recreate",
+    edits: [{ recordId: "card", deleted: false, replace: { model: "remote", description: "remote" } }],
+  });
+  await first.sync.synchronize();
+  await second.records.commit({
+    operationId: "local-base",
+    edits: [{ recordId: "card", replace: { model: "base", description: "base" } }],
+  });
+  const key = "9".repeat(64);
+  await second.records.bindText({ recordId: "card", field: "/description", documentKey: key });
+  const native = second.service.openNativeTextDocument({ owner: second.owner, fileId: key });
+  await second.records.commit({
+    operationId: "local-kept",
+    edits: [{ recordId: "card", set: { "/description": "local" } }],
+  });
+  const update = second.relay.update;
+  second.relay.update = async () => {
+    throw new Error("Upload paused");
+  };
+  await expect(second.sync.synchronize()).rejects.toThrow("Upload paused");
+  expect((await native.snapshot()).generation).toBeDefined();
+  await native.save("local!");
+  second.relay.update = update;
+  await first.records.commit({ operationId: "retire-before-upload", edits: [{ recordId: "card", deleted: true }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  const { native_document_rooms } = await import("../../db/schemas.pg");
+  const privateText: string[] = [];
+  for (const room of await second.db.select().from(native_document_rooms)) {
+    if (room.document_key !== key) continue;
+    const copy = new Y.Doc();
+    try {
+      Y.applyUpdate(copy, room.state);
+      privateText.push(copy.getText("content").toString());
+    } finally {
+      copy.destroy();
+    }
+  }
+  expect(privateText).toContain("local!");
+  expect(second.failures).toEqual([]);
+});

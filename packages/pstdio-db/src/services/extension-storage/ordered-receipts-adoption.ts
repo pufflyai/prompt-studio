@@ -5,6 +5,7 @@ import {
   type OrderedOperation,
   type OrderedRecord,
   prepareOrderedLocalAdoption,
+  projectBoundedOrderedOperation,
 } from "pstdio-sync/records";
 import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sync/relay";
 import { decodeOrderedEntry, type OrderedStreamEntry, type RecordStreamCursor } from "pstdio-sync/relay";
@@ -18,7 +19,7 @@ import { dirtyOrderedReceipts } from "./ordered-checkpoint";
 import { queueOrderedCheckpointRepairs } from "./ordered-checkpoint-repair";
 import type { OrderedJournal } from "./ordered-journal";
 import { settleLocalOrderedSaves } from "./ordered-local-settlement";
-import { fenceOrderedNativeText } from "./ordered-native-recovery";
+import { fenceOrderedNativeText, rememberOrderedAdoptionText } from "./ordered-native-recovery";
 import { resetCanonicalNumberIndex } from "./ordered-number-canonical";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
@@ -63,6 +64,11 @@ const queueLocalRecords = async (
     const operation = await prepareOrderedLocalAdoption(record, remote);
     if (operation) {
       if (replacedTextHistory(record, operation)) await fenceOrderedNativeText(tx, owner, operation, record);
+      const projected = await projectBoundedOrderedOperation(
+        remote ? new Map([[remote.recordId, remote]]) : new Map(),
+        operation,
+      );
+      await rememberOrderedAdoptionText(tx, owner, operation, record, projected[0]);
       await journal.queue(operation, await fingerprint(operation as unknown as Json));
       ids.push(record.recordId);
     }
