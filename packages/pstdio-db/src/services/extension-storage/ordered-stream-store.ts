@@ -162,13 +162,12 @@ export const createOrderedStreamStore = (
       notify(result.events);
       return { rejected: result.rejected, rejectedFrames, cursor: result.cursor };
     },
-    outbox: (_limit: number) => run((journal, tx) => nextOrderedUpload(journal, tx, owner, receiptIndex())),
-    sent: (sequence: number) =>
+    outbox: (limit: number) => run((journal, tx) => nextOrderedUpload(journal, tx, owner, receiptIndex(), limit)),
+    sent: (sequence: number, included = [sequence]) =>
       run(async (journal, tx) => {
         const { epoch } = await readOrderedOwner(tx, owner);
         if (!epoch) throw new Error("Delivery requires an admitted order");
-        const [local] = await journal.pending({ after: sequence - 1, limit: 1 });
-        if (local && local.sequence === sequence) await journal.delivered([local.operation.operationId], epoch);
+        await journal.deliveredSequences(included, epoch);
       }),
     async snapshot(options?: { found: boolean; relayEmpty?: boolean }) {
       const draft = await run(async (journal, tx) => {

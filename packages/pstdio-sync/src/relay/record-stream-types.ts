@@ -68,8 +68,9 @@ export interface RecordStreamStore {
   ): Promise<{ rejected: string[]; rejectedFrames: number[]; cursor: RecordStreamCursor }>;
   /** Saved local changes not on the relay yet, oldest first, within `limit` bytes but at least one entry. */
   outbox(limit: number): Promise<{ sequence: number; records: RecordBytes[]; assets: Asset[] }[]>;
-  /** Marks entries through `sequence` delivered. Ordered saves stay durable until their exact decision. */
-  sent(sequence: number): Promise<void>;
+  /** Legacy stores drop the delivered prefix; ordered stores mark exactly the included sequences.
+   * Delivery never settles an ordered save without its exact decision. */
+  sent(sequence: number, included?: number[]): Promise<void>;
   /**
    * Every record's full state and current file at one moment, and the newest outbox entry those
    * states include. Read together, so a latest state never lists a file its records do not use.

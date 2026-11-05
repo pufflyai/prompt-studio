@@ -58,9 +58,59 @@ test("a pre-open save survives restart and delivery acknowledgement retains its 
     expect(await journal.pendingFor(["unrelated"])).toEqual([]);
     expect(await journal.pendingFor(["audit"])).toHaveLength(1);
     await journal.admit(admission);
-    await journal.delivered([input.operationId], "first");
+    const local = await journal.localOperation(input.operationId);
+    await journal.deliveredSequences([local!.sequence], "first");
     expect(await journal.pending()).toMatchObject([{ operation: input, delivered: true, admission }]);
     expect(await journal.outcome(input.operationId)).toBeUndefined();
+  });
+});
+
+test("delivery acknowledges only selected saves in this owner and admission epoch", async () => {
+  const f = await fixture();
+  const inputs = await Promise.all(
+    ["first", "gap", "last", "old-epoch", "unadmitted", "other-owner"].map((id) =>
+      prepareOrderedOperation({ operationId: id, edits: [{ recordId: id, replace: true }] }, new Map()),
+    ),
+  );
+  const sequences = await f.run(async (journal) => {
+    const selected = [];
+    for (const input of inputs.slice(0, 5)) {
+      const local = await journal.queue(input, input.fingerprint);
+      selected.push(local.sequence);
+      if (input.operationId !== "unadmitted")
+        await journal.admit({
+          epoch: input.operationId === "old-epoch" ? "old" : "current",
+          operation: input,
+          dependencies: [],
+        });
+    }
+    return selected;
+  });
+  const other = { ...f.owner, extensionId: "example.other" };
+  const otherSequence = await withOrderedOwner(f.db, other, async (journal) => {
+    const input = inputs[5]!;
+    const local = await journal.queue(input, input.fingerprint);
+    await journal.admit({ epoch: "current", operation: input, dependencies: [] });
+    return local.sequence;
+  });
+  await f.run(async (journal) => {
+    await journal.deliveredSequences(
+      [sequences[0]!, sequences[2]!, sequences[3]!, sequences[4]!, otherSequence],
+      "current",
+    );
+    await journal.deliveredSequences([], "current");
+    expect((await journal.pending()).map((local) => [local.operation.operationId, local.delivered])).toEqual([
+      ["first", true],
+      ["gap", false],
+      ["last", true],
+      ["old-epoch", false],
+      ["unadmitted", false],
+    ]);
+    for (const input of inputs.slice(0, 5)) expect(await journal.outcome(input.operationId)).toBeUndefined();
+  });
+  await withOrderedOwner(f.db, other, async (journal) => {
+    expect((await journal.pending()).map((local) => local.delivered)).toEqual([false]);
+    expect(await journal.outcome("other-owner")).toBeUndefined();
   });
 });
 
