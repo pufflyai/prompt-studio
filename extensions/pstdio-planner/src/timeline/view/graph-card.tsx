@@ -1,5 +1,6 @@
 // Draw one ticket card in the graph: gate marker, shorthand, status, and title.
 import { Box, Flex, Icon, Text } from "@chakra-ui/react";
+import type { CollectionBadgeItem } from "@pstdio/sdk/extensions";
 import { DropIndicator, ResourceContextMenu, Tooltip } from "@pstdio/ui";
 import {
   collectDisplayBadges,
@@ -9,7 +10,6 @@ import {
 } from "@pstdio/ui/kanban-renderer";
 import { ShieldCheck } from "lucide-react";
 import { useRef } from "react";
-import type { TicketWorkspaceBadgeItem } from "../../data/mappers";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES } from "../../data/ticket-board";
 import type { PlanRow } from "../contracts";
 import { timelineTicketPreviewTarget } from "../ticket-preview";
@@ -60,8 +60,9 @@ export function GraphCard(props: GraphCardProps) {
         )
         .map((field) =>
           renderBadgeListDisplay(field, getAttributeValue(source, field), source, undefined, (id) => {
-            const items = source.attributes[field.display!.itemsAttributeId] as TicketWorkspaceBadgeItem[];
-            const target = items.find((item) => item.id === id)?.target;
+            const items = source.attributes[field.display!.itemsAttributeId] as CollectionBadgeItem[];
+            const item = items.find((item) => item.id === id);
+            const target = item?.action ?? item?.target;
             return target ? () => void interaction?.host.call("navigation.open", { target }) : undefined;
           }),
         )

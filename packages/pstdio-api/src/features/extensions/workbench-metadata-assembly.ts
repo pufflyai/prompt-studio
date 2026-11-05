@@ -103,16 +103,34 @@ export const assembleWorkbenchMetadata = async (
   const webviewCacheRoot = join(resolvePstdioHome({ env: process.env }), "cache", "extension-webviews");
   const automations = await buildAutomationRecords(deps, projectId, runtime, sources);
 
-  return {
-    ...buildWorkbenchExtensionMetadata({
-      extensionInstanceIdsByExtensionId,
-      installedExtensionIdsByExtensionId,
-      installNamesByExtensionId,
-      runtime,
-      assetRevisionsByExtensionId,
-      webviewUrlIssuer: deps.extensionWebviewAccess,
-      webviewCacheRoot,
+  const metadata = buildWorkbenchExtensionMetadata({
+    extensionInstanceIdsByExtensionId,
+    installedExtensionIdsByExtensionId,
+    installNamesByExtensionId,
+    runtime,
+    assetRevisionsByExtensionId,
+    webviewUrlIssuer: deps.extensionWebviewAccess,
+    webviewCacheRoot,
+  });
+  const projectSetups = await Promise.all(
+    (metadata.projectSetups ?? []).map(async (setup) => {
+      if (!setup.hiddenSetting) return setup;
+      const setting = await deps.extensionSettingsService.get(
+        {
+          extensionId: setup.extensionId,
+          extensionInstanceId: extensionInstanceIdsByExtensionId.get(setup.extensionId)!,
+          installedExtensionId: installedExtensionIdsByExtensionId.get(setup.extensionId)!,
+          definitions: metadata.settingsDefinitions ?? [],
+        },
+        setup.hiddenSetting,
+      );
+      return setting.value === true ? undefined : setup;
     }),
+  );
+
+  return {
+    ...metadata,
+    projectSetups: projectSetups.filter((setup) => setup !== undefined),
     automations,
     ...supplementalMetadata(runtime),
   };

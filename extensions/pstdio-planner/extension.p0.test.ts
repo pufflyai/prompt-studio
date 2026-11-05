@@ -95,7 +95,13 @@ describe("pstdio planner extension contributions", () => {
       "ticket-editor": [tickets],
       "ticket-properties": [tickets, plan],
       "ticket-files": [tickets, ...linkedResources],
-      tickets: [tickets, plan, ...linkedResources],
+      tickets: [
+        tickets,
+        plan,
+        ...linkedResources,
+        viewDataEvents.resourceAnchorsChanged,
+        viewDataEvents.resourcesChanged,
+      ],
     };
     for (const [id, events] of Object.entries(dependencies)) {
       expect(extension.views?.find((view) => view.id === id)?.body.refreshEvents).toEqual(events);

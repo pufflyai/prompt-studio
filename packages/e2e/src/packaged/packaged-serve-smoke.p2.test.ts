@@ -62,6 +62,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-board-panning-smoke.p2.test.ts retains card opening and dragging; the UI Card Gestures story covers nested-control pointer ownership.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
+import { expectPackagedProjectChoices, writePackagedChoiceSources } from "./packaged-project-setup-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
@@ -119,6 +120,7 @@ test(
         JSON.stringify({
           version: 1,
           extensions: [
+            ...writePackagedChoiceSources(tempRoot),
             {
               installName: "metadata-probe",
               extensionId: "test.metadata-probe",
@@ -191,6 +193,13 @@ test(
 
       const project = (await createRes.json()) as { id: string };
       const peer = (await peerRes.json()) as { id: string };
+      await expectPackagedProjectChoices(
+        started.baseUrl,
+        runtimeAuthorization(started.descriptor),
+        project.id,
+        peer.id,
+        tempRoot,
+      );
       const peerExtensions = await fetch(`${started.baseUrl}/v1/projects/${peer.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),
       });

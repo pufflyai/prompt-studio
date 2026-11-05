@@ -1,3 +1,4 @@
+import type { ListProjectExtensionsResponse } from "../../extensions/install";
 import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { Skill } from "../../skills";
@@ -75,6 +76,13 @@ export interface ExtensionFilesApi {
   writeText(fileId: string, value: string): Promise<void>;
   createText(input: { name: string; content: string; metadata?: JsonObject }): Promise<{ id: string }>;
   delete(fileId: string): Promise<void>;
+}
+
+export interface ExtensionManagementApi {
+  /** Installed instances and current catalog for this invocation's project. */
+  list(): Promise<ListProjectExtensionsResponse>;
+  /** Queue an explicit catalog selection for this project without waiting for installation. */
+  install(installNames: string[]): Promise<void>;
 }
 
 export interface ExtensionSkillsApi {
@@ -213,6 +221,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   connections: ExtensionConnectionsApi;
   logger: ExtensionLoggerApi;
   settings: ExtensionSettingsApi<TSettings>;
+  /** Available on hosts supporting project extension management. */
+  extensions?: ExtensionManagementApi;
   /** This device's Cloud account, its devices and each project's sync status. */
   account: ExtensionAccountApi;
 }

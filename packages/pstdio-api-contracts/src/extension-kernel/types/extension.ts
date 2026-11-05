@@ -2,7 +2,7 @@ import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { ResourceHierarchyProvider, ResourceKindDefinition } from "./composition";
 import type { CommandMiddlewareHandler, CommandRunHandler, EventContext, ExtensionContextBase } from "./context";
-import type { ContributionDefinition } from "./contribution-identity";
+import type { ContributionDefinition, ViewRef } from "./contribution-identity";
 import type {
   ActivityItemContribution,
   ArtifactMountContribution,
@@ -301,6 +301,14 @@ export interface ExtensionDefinition
   // biome-ignore lint/suspicious/noExplicitAny: each source retains its own inferred parameter schema
   textSources?: readonly import("./text-source").TextSourceDefinition<any>[];
   settings?: ExtensionSettingsContribution;
+  /** Offered once after a new project opens, only while this extension is enabled.
+   * The host owns the dialog; the view supplies self-contained content, without a nested modal.
+   */
+  projectSetup?: {
+    view: ViewRef;
+    /** Optional extension-owned boolean setting. True suppresses automatic setup. */
+    hiddenSetting?: string;
+  };
   /** Local query indexes. The host installs these before publishing this extension's runtime. */
   storageIndexes?: StorageRecordIndex[];
   /** Explicit collaborative text and append-only log declarations. Other record fields are plain values. */

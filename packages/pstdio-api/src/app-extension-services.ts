@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import {
   type createExtensionConnectionsDBService,
   type createExtensionInstancesDBService,
@@ -8,6 +9,7 @@ import {
 } from "pstdio-db";
 import type { AppConfig } from "./app-config";
 import type { AppDependencies } from "./app-contracts";
+import { createCatalogInstaller } from "./features/extensions/catalog-installation";
 import { createFileConnectionSecretStore } from "./features/extensions/connection-secret-store";
 import {
   createExtensionConnectionService,
@@ -17,12 +19,14 @@ import { subscribeExtensionEnablementInvalidation } from "./features/extensions/
 import type { LoadedExtensionSnapshot } from "./features/extensions/extension-runtime";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
+import { completeProjectExtensionInstallation } from "./features/extensions/project-extension-lifecycle";
 import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
 import { subscribeProjectWorkspaceExtensionRefresh } from "./features/extensions/project-workspace-extension-refresh";
 import { createHarnessRegistryService } from "./features/harnesses/harness-registry-service";
 import type { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
+import { createExtensionInstallations } from "./services/extension-installations";
 import { createExtensionService } from "./services/extension-service";
 import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
 import type { createProjectService } from "./services/project-service";
@@ -39,6 +43,7 @@ interface WireExtensionServicesInput {
   installedExtensionSourcesDBService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectService: ReturnType<typeof createProjectService>;
   provisionWorkspacesUsingSource: (sourcePath: string) => Promise<void>;
+  getProjectExtensionDeps: () => Parameters<typeof completeProjectExtensionInstallation>[0];
   workspaceService: ReturnType<typeof createWorkspaceService>;
   storageRoot: string;
 }
@@ -49,6 +54,13 @@ export const productionAppDependencies: AppDependencies = {
 };
 
 export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
+  let installCatalog: ReturnType<typeof createCatalogInstaller>;
+  const extensionInstallations = createExtensionInstallations({
+    path: join(input.storageRoot, "extension-installations.json"),
+    installCatalog: (name, signal, projectId) => installCatalog(name, signal, projectId),
+    afterCatalogInstall: (name, projectId) =>
+      completeProjectExtensionInstallation(input.getProjectExtensionDeps(), projectId, name),
+  });
   let refreshInstalledExtensionProcesses: (
     sourcePath?: string,
     validatedSource?: LoadedExtensionSnapshot,
@@ -74,6 +86,12 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     release: input.config.release,
     workspaceService: input.workspaceService,
   });
+  installCatalog = createCatalogInstaller({
+    extensionService,
+    installedExtensionSourcesService: input.installedExtensionSourcesDBService,
+    releaseRef: extensionUpgradeService.releaseRef,
+  });
+
   const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
     extensionService,
     extensionStorageService: input.extensionStorageDBService,
@@ -159,6 +177,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     .catch((err) => apiLogger.error({ err, event: "extensions.startup.error" }, "Extension startup failed"));
 
   return {
+    extensionInstallations,
     extensionStartup,
     extensionRuntime,
     extensionRuntimeCatalog,

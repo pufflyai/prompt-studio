@@ -30,7 +30,13 @@ export type PlanClient = ReturnType<typeof createWebviewClient<PlanCommands>>;
 const readPlan = (client: PlanClient) => client.commands["timeline.plan.read"]();
 
 // Planner reports tag changes as ticket changes, so track names stay current too.
-const planEvents = [plannerTicketsChanged, planChanged, viewDataEvents.boardViewsChanged];
+const planEvents = [
+  plannerTicketsChanged,
+  planChanged,
+  viewDataEvents.boardViewsChanged,
+  viewDataEvents.resourceAnchorsChanged,
+  viewDataEvents.resourcesChanged,
+];
 
 export function usePlan(host: GuestHost) {
   const [client] = useState(() => createWebviewClient<PlanCommands>(host));

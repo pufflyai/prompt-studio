@@ -97,6 +97,8 @@ export const createPlannerUi = (baseUrl: string) => {
         planChanged,
         viewDataEvents.sessionsChanged,
         viewDataEvents.workspacesChanged,
+        viewDataEvents.resourceAnchorsChanged,
+        viewDataEvents.resourcesChanged,
       ],
       onRowActivate: async (ctx, { row }) => {
         if (!row.resource) return;
