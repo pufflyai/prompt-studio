@@ -1,6 +1,7 @@
 import { defineCommand, defineExtension } from "@pstdio/sdk/extensions";
 import { readExampleState, writeExampleState } from "./example-state";
 import { readScribbleState, saveScribblePage } from "./scribble-pages-storage";
+import { exampleDefaults } from "./state-defaults";
 
 const read = defineCommand({
   id: "read",
@@ -22,8 +23,10 @@ const write = defineCommand({
       value: "Favorites",
     });
     await ctx.storage.collection("examples:scribble").put("legacy-title", {
-      path: ["documents", 0, "title"],
-      value: "Migrated page",
+      path: ["documents"],
+      value: exampleDefaults.scribble.documents.map((document) =>
+        document.id === "north-star" ? { ...document, title: "Migrated page" } : document,
+      ),
     });
     const migrated = await readScribbleState(ctx.storage);
     await writeExampleState(ctx.storage, "boombox", [{ path: ["query"], value: "Saved search" }]);
