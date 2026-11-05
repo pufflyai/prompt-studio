@@ -131,7 +131,15 @@ export const createOrderedResourceRecords = (
     }
     await rememberOrderedTextGeneration(tx, owner, operation, records.length > 0);
     await journal.queue(operation, identity);
-    const saved = await publishCommittedOrderedGroup({ journal, tx, owner, operation, projected });
+    const saved = await publishCommittedOrderedGroup({
+      journal,
+      tx,
+      owner,
+      operation,
+      projected,
+      before: views,
+      records,
+    });
     return {
       ...saved,
       cache: await commitCache.stage(tx, ids, views, projected, saved),

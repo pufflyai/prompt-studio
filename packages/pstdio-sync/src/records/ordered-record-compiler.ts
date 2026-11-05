@@ -9,10 +9,10 @@ import { compileOrderedText } from "./ordered-text-compiler";
 const valueChanges = async (edit: StorageGroup["edits"][number], current: OrderedRecord | undefined) => {
   if (edit.replace !== undefined && (edit.set !== undefined || edit.unset !== undefined))
     throw new Error("Choose a replacement or explicit paths");
-  const token = edit.observedRevision ?? edit.expectedRevision;
-  const observed = token ? readOrderedObservation(token).value : await observeJson(current?.value ?? null);
-  const baseline = observed.kind === "object" ? observed.fields : {};
   if (Object.hasOwn(edit, "replace")) {
+    const token = edit.observedRevision ?? edit.expectedRevision;
+    const observed = token ? readOrderedObservation(token).value : await observeJson(current?.value ?? null);
+    const baseline = observed.kind === "object" ? observed.fields : {};
     canonicalJson(edit.replace!);
     return replacementChanges(baseline.value, edit.replace!);
   }
