@@ -91,6 +91,64 @@ const target = { fileRendererId: "example.context.view.document", resource: unde
 const open = (service: ReturnType<typeof createNativeDocumentService>) =>
   service.open({ ...target, projectId: storage.projectAId });
 
+test.each([
+  "clean",
+  "acknowledged",
+  "received",
+  "unintegrated",
+])("closing a deleted record source releases only integrated room history: %s", async (state) => {
+  const { deps } = setup();
+  const owner = { workbenchId: storage.projectAId, extensionId: "example.context" };
+  const records = (await storage.svc.open({ owner })).records;
+  await records.commit({ operationId: "create-source", edits: [{ recordId: "source", replace: { body: "saved" } }] });
+  const source = { kind: "record" as const, recordId: "source", field: "/body" };
+  const service = createService({
+    storage: storage.svc,
+    load: async () => ({
+      ...(await resolveNativeLoadedSource(deps, { owner, source, content: "saved", versions: {} })),
+      owner,
+      content: { content: "saved", documentSource: source },
+      saveHandlerId: "record-save",
+      projectionTarget: target,
+    }),
+    save: async () => ({ fileStorageVersions: {} }),
+  });
+  const room = await service.open({ ...target, projectId: storage.projectAId });
+  const address = { projectId: storage.projectAId, roomId: room.roomId };
+  if (state === "received") {
+    await storage.svc.openNativeTextDocument({ owner, fileId: room.documentKey }).save("remote work");
+    await service.snapshot(address);
+  } else if (state !== "clean") {
+    const author = new Y.Doc();
+    try {
+      Y.applyUpdate(author, room.state);
+      const before = Y.encodeStateVector(author);
+      saveTextDocument(author, "editor work");
+      const update = Y.encodeStateAsUpdate(author, before);
+      if (state === "acknowledged") await service.submit({ ...address, update });
+      else await storage.svc.nativeRooms.apply({ owner, roomId: room.roomId, update });
+    } finally {
+      author.destroy();
+    }
+  }
+  await records.commit({ operationId: "remove-source", edits: [{ recordId: "source", deleted: true }] });
+  if (state === "unintegrated") {
+    await expect(service.release(address)).rejects.toMatchObject({ code: "native_source_retired" });
+    const retained = await storage.svc.nativeRooms.read({ owner, roomId: room.roomId });
+    try {
+      expect(retained.document.getText("content").toString()).toBe("editor work");
+    } finally {
+      retained.document.destroy();
+    }
+  } else {
+    await service.release(address);
+    await expect(storage.svc.nativeRooms.read({ owner, roomId: room.roomId })).rejects.toMatchObject({
+      code: "not_found",
+    });
+  }
+  expect((await records.read("source")).deleted).toBe(true);
+});
+
 test("restart retains a deleted record's pending text and continues recovering a healthy source", async () => {
   const { deps } = setup();
   const owner = { workbenchId: storage.projectAId, extensionId: "example.context" };

@@ -80,7 +80,12 @@ export const createNativeDocumentService = (deps: {
   const stopProjectionWatch = watchNativeProjections(storage, files.request, track, deps.catalog);
   const canonical = (room: Pick<Room, "owner" | "documentKey">) =>
     storage.openNativeTextDocument({ owner: room.owner, fileId: room.documentKey });
-  const integrate = (owner: StorageOwner, roomId: string) => integrateNativeRoom(storage, owner, roomId);
+  const integrate = async (owner: StorageOwner, roomId: string) => {
+    const room = rooms.get(roomId);
+    const revision = await integrateNativeRoom(storage, owner, roomId, room?.integratedRevision);
+    if (room) room.integratedRevision = revision;
+    return revision;
+  };
   const snapshot = createNativeRoomSnapshot(storage, files);
   const openRoom = createNativeRoomOpener({
     source: deps,
