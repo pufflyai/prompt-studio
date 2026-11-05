@@ -34,7 +34,7 @@ test("legacy writes and records share one record and a stale caller revision doe
       })
     ).status,
   ).toBe("saved-locally");
-  // The overlapping legacy write came first, so the conditional save is refused when ordered (ADR 0135).
+  // The overlapping legacy write came first, so the conditional save is refused when ordered (ADR 0137).
   expect((await svc.getKv(scope, "setting"))?.value_json).toBe("newer");
 });
 

@@ -1,6 +1,6 @@
 # Upgrade ordered records and logs
 
-PS-1016 changes the client storage format under [ADR 0135](../../adrs/0135-order-record-saves-and-declare-collaborative-text.md).
+PS-1016 changes the client storage format under [ADR 0137](../../adrs/0137-order-record-saves-and-declare-collaborative-text.md).
 The relay remains an encrypted ordered-update and latest-state store. Extension
 API 0.4 changes the documented merge behavior and adds explicit text/log declarations.
 
