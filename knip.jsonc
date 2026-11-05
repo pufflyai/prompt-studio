@@ -336,7 +336,8 @@
       "entry": [
         "extension.ts",
         "src/view/main.tsx",
-        "src/**/*.fixture.ts",
+        // The packaged host compatibility test bundles this entry by path.
+        "src/legacy-layout.fixture.ts",
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "scripts/**/*.{ts,tsx}"
@@ -377,7 +378,8 @@
         "extension.ts",
         "*.test.ts",
         "src/**/*.test.ts",
-        "src/**/*.fixture.ts",
+        // The packaged host compatibility test bundles this entry by path.
+        "src/legacy-state.fixture.ts",
         "src/views/*.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
