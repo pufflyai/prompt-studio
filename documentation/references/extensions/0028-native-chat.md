@@ -15,8 +15,8 @@ const conversation = defineView({
     draftKey: "compose",
     initial: { messages: [], values: {} },
     query: async () => ({ messages: [] }),
-    onAction: async (_ctx, { action }) => {
-      // Bind actions to the existing public scoped services.
+    onAction: async () => {
+      throw new Error("Connect conversation actions to your tool before use.");
     },
   },
 });
