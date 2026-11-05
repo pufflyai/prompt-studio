@@ -73,7 +73,7 @@ export const createResourceStreamFixture = async (request: APIRequestContext, ba
     "bun",
     [
       "build",
-      join(import.meta.dirname, "resource-stream-client.ts"),
+      join(import.meta.dirname, "resource-stream-client.fixture.ts"),
       "--target=browser",
       "--format=esm",
       "--outfile",
