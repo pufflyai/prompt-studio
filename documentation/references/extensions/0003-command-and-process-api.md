@@ -623,4 +623,3 @@ Use `workbenchCommands.openWorkspaceTerminal` with a workspace resource to open 
 Installation continues in the background and survives a runtime restart. Selecting an extension again while it is pending has no effect. Selecting it again after it finished re-enables it in this project; after it failed, it runs again. Restarting the runtime does not replay finished work or retry failures on its own. Use `ctx.extensions.list()` to see which extensions the project has enabled.
 
 The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.
-
