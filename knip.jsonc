@@ -357,7 +357,7 @@
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"],
       // Harnesses resolve these native executables through package metadata rather than imports.
-      "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "opencode-ai"]
+      "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "@opencode/cli"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
     "extensions/pstdio-onboarding": {

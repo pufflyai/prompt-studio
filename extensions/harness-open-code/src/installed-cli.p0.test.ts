@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessContext } from "@pstdio/sdk/extensions";
@@ -12,6 +12,11 @@ import { createOpencodeHarness } from "./harness";
 const enabled = process.env.INSTALLED_CLI_TESTS === "1";
 // Keep OpenCode's sessions and settings out of the developer's own OpenCode data.
 const home = mkdtempSync(join(tmpdir(), "opencode-home-"));
+mkdirSync(join(home, ".opencode", "commands"), { recursive: true });
+writeFileSync(
+  join(home, "opencode.json"),
+  JSON.stringify({ commands: { review: { template: "Review the current changes." } } }),
+);
 for (const dir of ["DATA", "CONFIG", "STATE", "CACHE"]) process.env[`XDG_${dir}_HOME`] = join(home, dir.toLowerCase());
 
 const run: HarnessContext["process"]["run"] = async (input) => {
@@ -42,6 +47,10 @@ describe.if(enabled)("installed OpenCode CLI", () => {
 
   test("lists its models", async () => {
     expect((await harness.listModels!(context)).length).toBeGreaterThan(0);
+  });
+
+  test("keeps native free models available without sign-in", async () => {
+    expect((await harness.getAuthentication!(context, { model: "opencode/big-pickle" })).status).toBe("not_required");
   });
 
   test("starts its server and reads OpenCode's native commands", async () => {

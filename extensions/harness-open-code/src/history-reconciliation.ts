@@ -54,11 +54,11 @@ export const composeOpencodeSnapshot = (
   }
   const matches = newTurns.map((turn) => {
     const exact = synthetic(turn[0]) ? undefined : byId.get(turn[0].id);
-    if (exact) return { previous: exact, uncertain: [] };
     const prompt = submittedPrompt(turn[0]);
     const candidates = (byPrompt.get(prompt) ?? []).filter(
       (candidate) => synthetic(candidate[0]) || synthetic(turn[0]),
     );
+    if (exact) return { previous: exact, uncertain: candidates.filter(hasHostMetadata) };
     if (candidates.length === 1 && newCounts.get(prompt) === 1) return { previous: candidates[0], uncertain: [] };
     return { previous: undefined, uncertain: candidates.filter(hasHostMetadata) };
   });

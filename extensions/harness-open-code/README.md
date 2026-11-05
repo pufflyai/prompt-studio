@@ -15,13 +15,13 @@ Prompt Studio installs a private OpenCode CLI with this extension. It uses an ex
 
 Cancelling sign-in stops its native worker. The CLI stores its own credentials; Prompt Studio does not copy them into extension settings. Installing the CLI does not sign you in automatically. The session background asks you to sign in and sending stays disabled when the native CLI reports that you are signed out. Use `/logout` to remove stored credentials; OpenCode asks which provider to disconnect. Credentials supplied by the runtime environment must be changed there. OpenCode lets you choose which model provider to connect.
 
-Prompt Studio supports OpenCode 1.0.175 and newer. An older CLI on PATH shows as unavailable with its version and the minimum required version. Update that CLI, or remove it from PATH to use the private installation. Private CLI versions update with the extension.
+Prompt Studio supports OpenCode 2.2.5 and newer. The extension bundles `@opencode/cli` 2.2.5. OpenCode 1 is no longer supported. An older CLI on PATH shows as unavailable with its version and the minimum required version. Update that CLI, or remove it from PATH to use the private installation. Private CLI versions update with the extension.
 
 If you removed the extension, install it again from **Settings → Project → Extensions** or run `pst extensions add harness-open-code`.
 
 ## Choose OpenCode
 
-Prompt Studio shares one OpenCode server across projects that use this extension. It reuses a healthy server you started yourself. If Prompt Studio starts the server, disabling the extension in its last active project or shutting down the runtime stops that server. Disabling one project stops its turns while other projects can keep working. Servers started outside Prompt Studio stay running.
+Prompt Studio shares one OpenCode server across projects that use this extension. It reconnects to its authenticated server while the runtime is running. If Prompt Studio starts the server, disabling the extension in its last active project or shutting down the runtime stops that server. Disabling one project stops its turns while other projects can keep working. Servers started outside Prompt Studio stay running.
 
 Native command definitions are cached for up to 30 seconds per working directory and refreshed after a native command runs. An untouched new conversation does not keep polling command discovery.
 
@@ -39,13 +39,13 @@ If neither CLI installation can run, OpenCode shows as unavailable in the model 
 
 ## Models and thinking
 
-The model menu lists the models from `opencode models`. Add or remove providers in OpenCode to change the list.
+The model menu lists enabled models from OpenCode 2's native model catalog (`opencode api GET /api/model --standalone`). Add or remove providers in OpenCode to change the list.
 
 The **Thinking** option picks the model's thinking level: None, Minimal, Low, Medium, High, XHigh, or Max. The default is Medium. Each model offers only the levels it supports, and models without levels hide the option.
 
 ## How it runs
 
-- Prompt Studio talks to a local OpenCode server on `127.0.0.1`. It uses an OpenCode server that already answers on port 4096. Otherwise it starts one with `opencode serve`, and tries the next ports up to 4115 when a port is taken.
+- Prompt Studio talks to a local OpenCode server on `127.0.0.1`. It starts an authenticated server with `opencode serve` on port 4096, and tries the next ports up to 4115 when a port is taken.
 - OpenCode works in the session's folder. Prompt Studio does not change OpenCode's permission settings, so your OpenCode configuration decides what it may do without asking.
 - When OpenCode asks you a question, the session waits until you answer it in Prompt Studio.
 - After Prompt Studio restarts, it can reconnect to an OpenCode session that is still running.

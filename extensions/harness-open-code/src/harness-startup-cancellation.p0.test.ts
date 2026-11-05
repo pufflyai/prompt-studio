@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createOpencodeHarness } from "./harness";
 import { ctx } from "./harness.test-helpers";
+import { emptyMessages } from "./native-api.test-helpers";
 
 test("retiring the final project cancels an owned OpenCode launch before readiness", async () => {
   const entered = Promise.withResolvers<AbortSignal>();
@@ -11,14 +12,14 @@ test("retiring the final project cancels an owned OpenCode launch before readine
       startServer: async ({ signal }) => {
         entered.resolve(signal);
         await release.promise;
-        return { url: "http://127.0.0.1:4096", dispose: async () => {} };
+        return { running: true, url: "http://127.0.0.1:4096", dispose: async () => {} };
       },
       pingServer: async () => false,
       isPortOpen: async () => false,
       fetcher: async (url, init) => {
-        if (new URL(String(url)).pathname === "/session") return Response.json({ id: "late" });
+        if (new URL(String(url)).pathname === "/api/session") return Response.json({ data: { id: "late" } });
         if (init?.method === "POST") return Response.json(true);
-        return Response.json([]);
+        return emptyMessages();
       },
     },
   );
