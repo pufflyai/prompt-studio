@@ -38,6 +38,7 @@ export const createPersonalIndexLog = (input: PersonalHistoryInput, owner: Stora
       );
       await input.index.applyPending(
         owner,
+        entries[0]!.writerId,
         page.map((delta, index) => ({ delta, pendingId: entries[index]!.id })),
       );
     }
@@ -96,6 +97,7 @@ export const createPersonalIndexLog = (input: PersonalHistoryInput, owner: Stora
       if (!page.length) return;
       await input.index.applyPending(
         owner,
+        writer,
         page.map(({ entry }) => ({
           delta: readPersonalIndexDelta(entry.value, writer, input.accountId),
           pendingId: entry.id,

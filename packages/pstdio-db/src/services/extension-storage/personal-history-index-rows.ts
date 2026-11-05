@@ -9,10 +9,24 @@ export const personalIndexAddress = (owner: StorageOwner) => ({
   workbench_id: owner.workbenchId,
   extension_id: owner.extensionId,
 });
+const pendingIndexOrder = (owner: StorageOwner, sourceId: string | undefined, pendingId: string) => {
+  if (sourceId === undefined) return;
+  return sql`NOT EXISTS (
+          SELECT 1 FROM storage_log_entries candidate
+          INNER JOIN storage_log_entries newer
+            ON newer.workbench_id = candidate.workbench_id AND newer.extension_id = candidate.extension_id
+              AND newer.log_name = candidate.log_name AND newer.scope = candidate.scope AND newer.stream = candidate.stream
+          WHERE candidate.workbench_id = ${owner.workbenchId} AND candidate.extension_id = ${owner.extensionId}
+            AND candidate.log_name = 'index' AND candidate.scope = 'project' AND candidate.stream = ${sourceId}
+            AND candidate.entry_id = ${pendingId} AND newer.entry_id = ${rows.pending_id}
+            AND newer.local_sequence > candidate.local_sequence
+        )`;
+};
 export const applyPersonalIndexRows = async (
   tx: PersonalIndexTransaction,
   owner: StorageOwner,
   changes: { delta: PersonalIndexDelta; pendingId?: string; settledId?: string }[],
+  sourceId?: string,
 ) => {
   const changed: (typeof rows.$inferSelect)[] = [];
   for (const { delta, pendingId, settledId } of changes) {
@@ -24,7 +38,7 @@ export const applyPersonalIndexRows = async (
         )
       : undefined;
     const overlay = pendingId
-      ? undefined
+      ? pendingIndexOrder(owner, sourceId, pendingId)
       : or(
           isNull(rows.pending_id),
           samePending,
