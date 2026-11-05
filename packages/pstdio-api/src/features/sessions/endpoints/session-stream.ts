@@ -7,6 +7,7 @@ import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { RouteDeps } from "../../deps";
 import { prepareCommandSubscription } from "../../extensions/command-stream-subscription";
 import type { ExtensionsRouteDeps } from "../../extensions/deps";
+import { streamNativeDocumentEvents } from "../../native-documents/shared-stream";
 import { streamTextEditingEvents } from "../../text-editing/shared-stream";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
@@ -41,6 +42,18 @@ export const subscribeSessionStreamRoute = createRoute({
       content: {
         "application/json": {
           schema: z.union([
+            z
+              .object({
+                subscription_id: z.string().min(1),
+                native_document: z
+                  .object({
+                    project_id: z.string().min(1),
+                    document_key: z.string().regex(/^[a-f0-9]{64}$/),
+                    room_id: z.uuid(),
+                  })
+                  .strict(),
+              })
+              .strict(),
             z
               .object({
                 subscription_id: z.string().min(1),
@@ -98,12 +111,18 @@ const retainSessionSubscription = (deps: SessionsRouteDeps, sessionId: string) =
 };
 
 export const subscribeSessionStreamHandler = (
-  deps: SessionsRouteDeps & ExtensionsRouteDeps & Pick<RouteDeps, "textEditing">,
+  deps: SessionsRouteDeps & ExtensionsRouteDeps & Pick<RouteDeps, "textEditing" | "nativeDocuments">,
   connections: SessionStreamConnections,
 ): AppRouteHandler<typeof subscribeSessionStreamRoute> => {
   return async (c) => {
     const { connectionId } = c.req.valid("param");
     const input = c.req.valid("json");
+    if ("native_document" in input) {
+      const started = connections.subscribe(connectionId, input.subscription_id, (sink) =>
+        streamNativeDocumentEvents(deps.nativeDocuments, input.native_document, sink),
+      );
+      return subscriptionResponse(c, connectionId, started);
+    }
     if ("text_editing" in input) {
       const started = connections.subscribe(connectionId, input.subscription_id, (sink) =>
         streamTextEditingEvents(deps.textEditing, input.text_editing, sink),

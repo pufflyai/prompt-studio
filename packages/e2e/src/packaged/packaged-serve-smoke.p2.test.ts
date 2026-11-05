@@ -30,7 +30,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./packaged-native-markdown-smoke";
-// The Markdown fixture resolves/projects a registered source and uses the public SDK session through authenticated agent admission, preserving front matter and one Yjs runtime.
+// The Markdown fixture resolves/projects a registered source and uses the public SDK session through authenticated agent admission, preserving front matter and one Yjs runtime. Native observations share that client event stream and cancel without stopping the editor.
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
 // packaged-canvas-install.p2.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
 // Catalog IDs and extension icons remain available through the compiled host.
