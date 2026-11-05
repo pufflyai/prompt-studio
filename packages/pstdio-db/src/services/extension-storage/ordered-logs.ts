@@ -5,6 +5,7 @@ import type { OrderedIndexBlobs } from "pstdio-sync/relay";
 import type { Json, StorageLogDefinition } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createEnvironmentDBService } from "../environment/environment";
+import { hasOrderedLogPending } from "./ordered-log-pending";
 import type { LogPayloads } from "./ordered-log-sql";
 import { orderedLogStatistics } from "./ordered-log-statistics";
 import { createOrderedLogStore } from "./ordered-log-store";
@@ -103,6 +104,7 @@ export const createOrderedLogs = (
       }
     },
     async pending(owner: StorageOwner) {
+      if (!(await hasOrderedLogPending(db, owner))) return false;
       for (const entry of await directory(owner))
         if ((await (await stream(owner, entry)).pending(1)).length) return true;
       return false;

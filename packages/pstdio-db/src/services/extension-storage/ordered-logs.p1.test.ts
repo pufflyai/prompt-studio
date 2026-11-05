@@ -44,6 +44,38 @@ const fixture = async () => {
   return { owner, first: await device(), second: await device() };
 };
 
+test("empty log progress stays available while owner metadata work is held", async () => {
+  const { db, close } = await createDb({ path: ":memory:" });
+  const owner = { workbenchId: crypto.randomUUID(), extensionId: "example.idle-logs" };
+  const now = new Date().toISOString();
+  await db
+    .insert(projects)
+    .values({ id: owner.workbenchId, name: "Idle logs", shorthand: "I", created_at: now, updated_at: now });
+  const documents = createDocumentStorageDBService(db);
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const logs = createOrderedLogs(db, {
+    metadata: (async (...args: Parameters<typeof documents.transaction>) => {
+      entered.resolve();
+      await release.promise;
+      return documents.transaction(...args);
+    }) as typeof documents.transaction,
+    changed: () => {},
+  });
+  const pending = logs.pending(owner);
+  try {
+    const result = await Promise.race([
+      pending.then((pending) => ({ pending })),
+      entered.promise.then(() => ({ waitingForMetadata: true })),
+    ]);
+    expect(result).toEqual({ pending: false });
+  } finally {
+    release.resolve();
+    await pending;
+    await close();
+  }
+});
+
 test("independent device logs discover both writers and page all entries without skipping a writer", async () => {
   const { owner, first, second } = await fixture();
   const definition = { name: "runs", writer: "device" as const };
@@ -52,6 +84,8 @@ test("independent device logs discover both writers and page all entries without
   await left.append("left one", { id: "left-one" });
   await right.append("right one", { id: "right-one" });
   await left.append("left two", { id: "left-two" });
+  expect(await first.logs.pending(owner)).toBe(true);
+  expect(await second.logs.pending(owner)).toBe(true);
   const a = await first.documents.transaction(owner, async ({ document }) => Y.encodeStateAsUpdate(document));
   const b = await second.documents.transaction(owner, async ({ document }) => Y.encodeStateAsUpdate(document));
   await first.documents.transaction(owner, async ({ document }) => Y.applyUpdate(document, b));
@@ -60,6 +94,8 @@ test("independent device logs discover both writers and page all entries without
   second.connect();
   await first.logs.publish(owner);
   await second.logs.publish(owner);
+  expect(await first.logs.pending(owner)).toBe(false);
+  expect(await second.logs.pending(owner)).toBe(false);
   const seen = [];
   let after: string | 0 = 0;
   for (let page = 0; page < 4; page++) {
