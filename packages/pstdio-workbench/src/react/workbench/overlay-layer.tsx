@@ -94,8 +94,15 @@ export const resolveOverlayDialogConfig = (placement: Pick<WorkbenchWidgetPlacem
   } satisfies WorkbenchOverlayWidgetConfig;
 };
 
-const resolveActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
-  widgets.find((entry) => entry.widgetId === activeWidgetId) ?? widgets[0];
+/** Restored placements wait for a live owner, without hiding a registered dialog behind them. */
+export const resolveActiveOverlayPlacement = (
+  placements: WorkbenchWidgetPlacement[],
+  activeWidgetId: string | undefined,
+  registered: Readonly<Record<string, unknown>>,
+) => {
+  const eligible = placements.filter((placement) => Boolean(registered[placement.contributionId]));
+  return eligible.find((entry) => entry.widgetId === activeWidgetId) ?? eligible[0];
+};
 
 export const resolveOverlayDialogRenderState = (
   activePlacement: WorkbenchWidgetPlacement | undefined,
@@ -119,12 +126,13 @@ interface WorkbenchOverlayLayerProps {
 export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const { workbench } = props;
   const overlayRegion = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.overlay);
+  const widgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const renderers = useWorkbenchStore(getWorkbenchRenderers(workbench).store, (state) => state.renderers);
   useWorkbenchStore(getWorkbenchRenderers(workbench).store, (state) => state.refreshKeys);
   const [exitingPlacement, setExitingPlacement] = useState<WorkbenchWidgetPlacement | undefined>();
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const activePlacement = resolveActivePlacement(overlayRegion.widgets, overlayRegion.activeWidgetId);
+  const activePlacement = resolveActiveOverlayPlacement(overlayRegion.widgets, overlayRegion.activeWidgetId, widgets);
   const renderState = resolveOverlayDialogRenderState(activePlacement, exitingPlacement);
   const exitingWidgetId = activePlacement ? undefined : exitingPlacement?.widgetId;
 
@@ -149,7 +157,8 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   if (!renderState) return null;
 
   const { open, placement } = renderState;
-  const widget = workbench.layout.getWidget(placement.contributionId);
+  const widget = widgets[placement.contributionId];
+  if (!widget) return null;
   const overlayConfig = resolveOverlayDialogConfig(placement, widget?.config);
   const { contentHeight, contentMaxHeight, contentMinHeight, contentWidth, contentMaxWidth, ...dialogRootConfig } =
     overlayConfig;
@@ -157,21 +166,16 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const canCloseOverlay = open && placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
 
-  const body =
-    widget && renderer ? (
-      (renderer.render({
-        workbench,
-        panel: toPanelContribution(widget),
-        instance: toPanelInstance(placement),
-        refresh: () => undefined,
-      }) as ReactNode)
-    ) : (
-      <WorkbenchOverlayFallback
-        label={
-          widget ? `No renderer registered for ${widget.rendererId}.` : "Widget contribution is no longer registered."
-        }
-      />
-    );
+  const body = renderer ? (
+    (renderer.render({
+      workbench,
+      panel: toPanelContribution(widget),
+      instance: toPanelInstance(placement),
+      refresh: () => undefined,
+    }) as ReactNode)
+  ) : (
+    <WorkbenchOverlayFallback label={`No renderer registered for ${widget.rendererId}.`} />
+  );
 
   const handleOpenChange = async (details: { open: boolean }) => {
     if (!details.open && canCloseOverlay) {
