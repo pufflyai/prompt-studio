@@ -186,8 +186,9 @@ const resolveTargets = (input: CreateLoggerInput): ResolvedTarget[] => {
 
 const createStreams = (targets: ReturnType<typeof resolveTargets>) =>
   targets.map((target) => {
+    // The logger and its children filter levels; destinations must also carry debug/trace entries.
     if (target.type === "stdout") {
-      return { stream: process.stdout };
+      return { level: "trace" as const, stream: process.stdout };
     }
 
     // Logs can hold paths, prompts, and error details, so only the user may read them. The file
@@ -196,6 +197,7 @@ const createStreams = (targets: ReturnType<typeof resolveTargets>) =>
     closeSync(openSync(target.path, "a", 0o600));
     chmodSync(target.path, 0o600);
     return {
+      level: "trace" as const,
       stream: pino.destination({
         dest: target.path,
         mkdir: true,
