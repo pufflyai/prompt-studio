@@ -1,9 +1,8 @@
 import { dlopen, ptr, toArrayBuffer } from "bun:ffi";
 import { type BigIntStats, constants, fstat, read } from "node:fs";
-import { realpath } from "node:fs/promises";
+import { open, realpath, unlink } from "node:fs/promises";
+import { join } from "node:path";
 import { getSystemErrorName } from "node:util";
-import { createDarwinRecoveryFileOpener } from "./source-darwin-create";
-import { writeRecoverySourceFile } from "./source-file-io";
 
 const component = (name: string) => {
   if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\0"))
@@ -23,7 +22,8 @@ export const openRecoverySource = async (selected: string) => {
     throw new Error("Recovery requires a qualified native source adapter for this platform");
   const darwin = process.platform === "darwin";
   const library = dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
-    openat: { args: ["int", "ptr", "int", "u32"], returns: "int" },
+    openat: { args: ["int", "ptr", "int"], returns: "int" },
+    linkat: { args: ["int", "ptr", "int", "ptr", "int"], returns: "int" },
     close: { args: ["int"], returns: "int" },
     fdopendir: { args: ["int"], returns: "ptr" },
     readdir: { args: ["ptr"], returns: "ptr" },
@@ -32,7 +32,6 @@ export const openRecoverySource = async (selected: string) => {
     [darwin ? "__error" : "__errno_location"]: { args: [], returns: "ptr" },
   });
   const native = library.symbols;
-  const creating = createDarwinRecoveryFileOpener();
   const handles = new Set<number>();
   const streams = new Set<NonNullable<ReturnType<typeof native.fdopendir>>>();
   const errno = new DataView(toArrayBuffer(native[darwin ? "__error" : "__errno_location"]!()!, 0, 4));
@@ -51,15 +50,12 @@ export const openRecoverySource = async (selected: string) => {
     if (!handles.delete(fd)) return;
     if (native.close(fd) !== 0) throw failure();
   };
-  const openAt = (parent: number, name: Buffer, flags: number, mode = 0) => {
+  const openAt = (parent: number, name: Buffer, flags: number) => {
     ensureOpen();
     // Darwin's O_SYMLINK opens the link itself; combining O_NOFOLLOW rejects it.
     const nofollow = darwin && flags & 0x200000 ? 0 : constants.O_NOFOLLOW;
     const combined = common | nofollow | flags;
-    const fd =
-      flags & constants.O_CREAT && creating
-        ? creating.open(parent, ptr(name), combined, mode)
-        : native.openat(parent, ptr(name), combined, mode);
+    const fd = native.openat(parent, ptr(name), combined);
     if (fd < 0) throw failure();
     handles.add(fd);
     return fd;
@@ -90,13 +86,22 @@ export const openRecoverySource = async (selected: string) => {
       if (ended || !handles.has(fd)) throw new Error("Recovery source handle is closed");
     };
     return {
-      async create(name: string, bytes: Uint8Array) {
+      async create(name: string, bytes: Uint8Array, stagingRoot: string) {
         active();
-        const created = openAt(fd, component(name), constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600);
+        const target = component(name);
+        const temporary = join(stagingRoot, `${crypto.randomUUID()}.policy-pending`);
+        const prepared = await open(temporary, "wx", 0o600);
         try {
-          await writeRecoverySourceFile(created, bytes);
+          await prepared.writeFile(bytes);
+          await prepared.sync();
+          active();
+          // Linking a complete file refuses an existing destination atomically.
+          // EXDEV blocks setup; there is no direct-write fallback.
+          if (native.linkat(darwin ? -2 : -100, ptr(Buffer.from(`${temporary}\0`)), fd, ptr(target), 0) !== 0)
+            throw failure();
         } finally {
-          closeFd(created);
+          await prepared.close();
+          await unlink(temporary);
         }
       },
       stat: async () => {
@@ -179,7 +184,6 @@ export const openRecoverySource = async (selected: string) => {
       streams.clear();
       for (const fd of [...handles]) closeFd(fd);
     } finally {
-      creating?.close();
       library.close();
     }
   };

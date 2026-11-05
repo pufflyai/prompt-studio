@@ -7,21 +7,29 @@ export const recoverySourceIdentity = (stat: BigIntStats) =>
 export const unchangedRecoverySource = (stat: BigIntStats, identity: string[]) =>
   recoverySourceIdentity(stat).every((value, index) => value === identity[index]);
 
-export const sourceRecoveryPolicy = async (root: RecoverySourceHandle, firstEnrollment: boolean) => {
-  if (firstEnrollment) {
-    try {
-      await root.create(".pstignore", new TextEncoder().encode("node_modules/\n"));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    }
-  }
-  let file: RecoverySourceHandle;
+const openPolicy = async (root: RecoverySourceHandle, firstEnrollment: boolean, stagingRoot?: string) => {
   try {
-    file = await root.open(".pstignore", true);
+    return await root.open(".pstignore", true);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return createRecoveryPolicy(null);
-    throw error;
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
+  if (!firstEnrollment) return null;
+  if (!stagingRoot) throw new Error("First enrollment needs recovery staging outside the source folder");
+  try {
+    await root.create(".pstignore", new TextEncoder().encode("node_modules/\n"), stagingRoot);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+  return root.open(".pstignore", true);
+};
+
+export const sourceRecoveryPolicy = async (
+  root: RecoverySourceHandle,
+  firstEnrollment: boolean,
+  stagingRoot?: string,
+) => {
+  const file = await openPolicy(root, firstEnrollment, stagingRoot);
+  if (!file) return createRecoveryPolicy(null);
   try {
     const before = await file.stat();
     if (!before.isFile() || before.size > 768n * 1024n)

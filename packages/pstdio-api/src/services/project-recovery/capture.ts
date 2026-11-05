@@ -96,7 +96,7 @@ export const captureRecoveryFolder = async (input: {
     if (within(source.rootPath, cache) || within(cache, source.rootPath))
       throw new Error("Recovery working storage must be outside the captured folder");
     check();
-    const policy = await sourceRecoveryPolicy(source.root, input.firstEnrollment ?? false);
+    const policy = await sourceRecoveryPolicy(source.root, input.firstEnrollment ?? false, input.chunks.directory);
     const rootStat = await source.root.stat();
     await observe("", rootStat);
     const captureEntry = async (directory: RecoverySourceHandle, name: string, path: string) => {

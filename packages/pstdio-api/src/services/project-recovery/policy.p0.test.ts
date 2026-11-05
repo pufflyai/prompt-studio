@@ -17,9 +17,10 @@ const folder = async () => {
 };
 
 const readRecoveryPolicy = async (root: string, firstEnrollment = false) => {
+  const staging = await folder();
   const source = await openRecoverySource(root);
   try {
-    return await sourceRecoveryPolicy(source.root, firstEnrollment);
+    return await sourceRecoveryPolicy(source.root, firstEnrollment, staging);
   } finally {
     source.close();
   }
@@ -74,4 +75,17 @@ test("an invalid or linked policy blocks capture instead of broadening coverage"
   await symlink("rules", join(root, ".pstignore"));
   await expect(readRecoveryPolicy(root)).rejects.toThrow();
   expect(() => createRecoveryPolicy("private\u0000data")).toThrow();
+});
+
+test("an existing policy does not require staging or permission to create a replacement", async () => {
+  const root = await folder();
+  const blockedStage = join(root, "not-a-directory");
+  await writeFile(blockedStage, "existing bytes");
+  await writeFile(join(root, ".pstignore"), "private/\n");
+  const source = await openRecoverySource(root);
+  try {
+    expect((await sourceRecoveryPolicy(source.root, true, blockedStage)).text).toBe("private/\n");
+  } finally {
+    source.close();
+  }
 });
