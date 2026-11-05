@@ -2,13 +2,6 @@ import type { FormInfo } from "@opencode/client";
 import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requireResponseOk } from "./opencode-http";
 import type { WithServerUrl } from "./opencode-server";
 
-export type OpencodeQuestionRequest = {
-  id: string;
-  sessionID: string;
-  questions: unknown[];
-  tool?: { messageID?: string; callID?: string };
-};
-
 export const createQuestionApi = (input: { fetcher: OpencodeFetcher; withServerUrl: WithServerUrl }) => {
   const request = <T>(path: string, cwd = process.cwd(), method = "GET", body?: unknown, signal?: AbortSignal) =>
     input.withServerUrl(async (base) => {
@@ -25,25 +18,23 @@ export const createQuestionApi = (input: { fetcher: OpencodeFetcher; withServerU
     const { data } = await request<{ data: FormInfo[] }>(`/api/session/${sessionId}/form`, cwd);
     return data
       .filter((form) => form.metadata?.kind === "question")
-      .map(
-        (form): OpencodeQuestionRequest => ({
-          id: form.id,
-          sessionID: sessionId,
-          tool:
-            form.metadata?.tool && typeof form.metadata.tool === "object" && !Array.isArray(form.metadata.tool)
-              ? { messageID: String(form.metadata.tool.messageID), callID: String(form.metadata.tool.id) }
-              : undefined,
-          questions: form.fields.map((field) => ({
-            question: field.description ?? field.title ?? form.title,
-            header: field.title ?? form.title,
-            options:
-              "options" in field
-                ? (field.options?.map((option) => ({ label: option.label, description: option.description })) ?? [])
-                : [],
-            multiple: field.type === "multiselect",
-          })),
-        }),
-      );
+      .map((form) => ({
+        id: form.id,
+        sessionID: sessionId,
+        tool:
+          form.metadata?.tool && typeof form.metadata.tool === "object" && !Array.isArray(form.metadata.tool)
+            ? { messageID: String(form.metadata.tool.messageID), callID: String(form.metadata.tool.id) }
+            : undefined,
+        questions: form.fields.map((field) => ({
+          question: field.description ?? field.title ?? form.title,
+          header: field.title ?? form.title,
+          options:
+            "options" in field
+              ? (field.options?.map((option) => ({ label: option.label, description: option.description })) ?? [])
+              : [],
+          multiple: field.type === "multiselect",
+        })),
+      }));
   };
   const replyQuestion = async (
     sessionId: string,

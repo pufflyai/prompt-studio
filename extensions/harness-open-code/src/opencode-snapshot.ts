@@ -1,8 +1,8 @@
 import type { SessionMessageInfo } from "@opencode/client";
-import type { OpencodeSessionMessage, OpencodeSessionMessagePart } from "./opencode-types";
+import type { OpencodeSessionMessage } from "./opencode-types";
 
 // Keep native transport details at this boundary. Polling and history share this snapshot format.
-export const toSessionSnapshot = (messages: SessionMessageInfo[]): OpencodeSessionMessage[] => {
+export const toSessionSnapshot = (messages: SessionMessageInfo[]) => {
   const snapshot: OpencodeSessionMessage[] = [];
   for (const message of messages) {
     if (message.type === "idle") {
@@ -33,7 +33,7 @@ export const toSessionSnapshot = (messages: SessionMessageInfo[]): OpencodeSessi
   return snapshot;
 };
 
-const convertMessage = (message: Exclude<SessionMessageInfo, { type: "idle" }>): OpencodeSessionMessage => {
+const convertMessage = (message: Exclude<SessionMessageInfo, { type: "idle" }>) => {
   const info = { id: message.id, role: "system", time: { created: message.time.created } };
   switch (message.type) {
     case "assistant":
@@ -46,7 +46,7 @@ const convertMessage = (message: Exclude<SessionMessageInfo, { type: "idle" }>):
           tokens: message.tokens,
           error: message.error ? { name: message.error.type, data: { message: message.error.message } } : undefined,
         },
-        parts: message.content.map((part): OpencodeSessionMessagePart => {
+        parts: message.content.map((part) => {
           if (part.type !== "tool") return part;
           const state = part.state;
           const content = "content" in state ? state.content : undefined;
