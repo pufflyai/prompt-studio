@@ -40,7 +40,13 @@ export const controlValueSchema = z.union([primitive, z.array(z.string()), range
 export const controlValuesSchema = z.record(z.string(), controlValueSchema);
 export const controlParamSchema = z.discriminatedUnion("type", [
   z.strictObject({ ...base, type: z.literal("harness"), defaultValue: harness }),
-  z.strictObject({ ...base, ...numeric, type: z.literal("number"), defaultValue: z.number() }),
+  z.strictObject({
+    ...base,
+    ...numeric,
+    type: z.literal("number"),
+    defaultValue: z.number(),
+    enabledBy: z.string().optional(),
+  }),
   z.strictObject({ ...base, type: z.literal("boolean"), defaultValue: z.boolean() }),
   z.strictObject({ ...base, type: z.literal("text"), defaultValue: z.string(), singleLine: z.boolean().optional() }),
   z.strictObject({

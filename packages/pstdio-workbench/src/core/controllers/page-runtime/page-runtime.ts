@@ -12,6 +12,7 @@ import { applyModePanelPolicy } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
+import type { WorkbenchOverlayRegistry } from "../../registries/overlays/overlay-registry";
 import { resolvePageContent } from "../../registries/pages/page-content";
 import { isSingleViewPage, pageSlots } from "../../registries/pages/page-main";
 import {
@@ -29,6 +30,7 @@ import type { WorkbenchViewMenuRegistry } from "../../registries/view-menus/view
 import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../../registries/views/view-placement";
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
+import { registerPageDialog } from "../navigation/page-dialog";
 import { restoreModePanelLayout } from "./mode-panel-layout";
 import { preparePageContentTrays } from "./page-content-layout";
 import { validatePageLandingDeclaration } from "./page-landing-declaration";
@@ -233,6 +235,7 @@ export interface CreateLiveWorkbenchPageRegistryInput {
   resources?: WorkbenchPageResourceCodec;
   views: WorkbenchViewRegistry;
   viewMenus?: WorkbenchViewMenuRegistry;
+  overlays?: WorkbenchOverlayRegistry;
 }
 export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRegistryInput) => {
   const resources = input.resources ?? defaultPageResourceCodec;
@@ -275,7 +278,9 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
           input.viewMenus,
         );
       });
+      const dialog = input.overlays && registerPageDialog(page, input.overlays);
       return createDisposable(() => {
+        dialog?.dispose();
         for (const registration of registrations.reverse()) registration.dispose();
       });
     },
@@ -287,6 +292,9 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     saveModeLayout: input.saveModeLayout,
     savePageMain: input.savePageMain,
     beforeApply: (state) => {
+      if (state.projectId !== registry.store.getState().projectId)
+        for (const placement of input.layout.getLayout().regions.overlay.widgets)
+          if (placement.pageContext) input.layout.closePanel(placement.widgetId);
       input.beforeApply?.(state);
       const shell = getOwnedPlacementPreparation(input.shellPlacements);
       shell.apply(

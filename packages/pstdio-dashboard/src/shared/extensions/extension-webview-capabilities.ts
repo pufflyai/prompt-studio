@@ -25,16 +25,19 @@ export const createDashboardExtensionWebviewAdapters = (input: CreateDashboardEx
     input.projectId && input.extensionInstanceId
       ? { projectId: input.projectId, extensionInstanceId: input.extensionInstanceId }
       : undefined;
+  const workbenchAdapters = input.workbench
+    ? createWorkbenchWebviewHostAdapters({
+        ...input,
+        workbench: input.workbench,
+        hostEvents: input.base.hostEvents,
+        textEditing: getApiClient().textEditing,
+        executeCommand: input.base.executeCommand,
+      })
+    : undefined;
   return {
-    ...(input.workbench
-      ? createWorkbenchWebviewHostAdapters({
-          ...input,
-          workbench: input.workbench,
-          hostEvents: input.base.hostEvents,
-          textEditing: getApiClient().textEditing,
-        })
-      : {}),
+    ...workbenchAdapters,
     ...input.base,
+    executeCommand: workbenchAdapters?.executeCommand ?? input.base.executeCommand,
     performance: input.workbench ? getPerformanceDiagnosticsAdapter(input.workbench.settings) : undefined,
     harnesses: input.projectId ? { read: createHarnessReadCapability(input.projectId) } : undefined,
     account: input.projectId ? createAccountAdapter(input.projectId) : undefined,

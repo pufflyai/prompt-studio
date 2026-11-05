@@ -28,3 +28,50 @@ test("only the active page extension can update its params", () => {
     location: { params: { range: "now-6h" } },
   });
 });
+
+test("dialog params belong to the calling form and cannot update the page behind it", async () => {
+  const workbench = createWorkbench();
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  workbench.views.registerView({ id: "view", title: "View", body: { kind: "react", render: () => null } });
+  const home = { kind: "page" as const, id: "home", extensionId: "acme.home" };
+  const dialog = { kind: "page" as const, id: "dialog", extensionId: "acme.form" };
+  for (const page of [home, dialog])
+    workbench.pages.registerPage({
+      id: page.id,
+      ref: page,
+      path: page.id,
+      modeId: "project",
+      params: { name: { type: "string", default: "New" } },
+      main: { kind: "view", view: { kind: "view", id: "view" }, cardinality: "one" },
+      slots: [],
+    });
+  workbench.pageLocations.setProject("p1");
+  workbench.pageLocations.navigate({ kind: "page", page: home, params: { name: "Main" } });
+  await workbench.navigation.openTarget({ kind: "dialog", page: dialog, params: { name: "Draft" } });
+  const widget = workbench.layout.getLayout().regions.overlay.widgets[0]!;
+  const placement = { ...widget, panelId: widget.contributionId, instanceId: widget.widgetId, closable: true };
+  const owner = createWorkbenchWebviewHostCapabilities({
+    workbench,
+    placement,
+    projectId: "p1",
+    extensionId: "acme.form",
+  });
+  const other = createWorkbenchWebviewHostCapabilities({
+    workbench,
+    placement,
+    projectId: "p1",
+    extensionId: "acme.home",
+  });
+  expect(() => other["page.params.update"]({ params: { name: "Wrong" } })).toThrow("page_params_not_owner");
+  expect(owner["page.params.update"]({ params: { name: "Edited" } })).toMatchObject({
+    location: { page: dialog, params: { name: "Edited" } },
+  });
+  expect(workbench.pages.store.getState().location).toMatchObject({ page: home, params: { name: "Main" } });
+  expect(() => owner["page.params.update"]({ params: { invalid: true } })).toThrow("page_param_invalid");
+  expect(owner["page.params.update"]({ params: { name: null } })).toMatchObject({
+    location: { page: dialog, params: undefined },
+  });
+  workbench.layout.closePanel(widget.widgetId);
+  await workbench.navigation.openTarget({ kind: "dialog", page: dialog });
+  expect(() => owner["page.params.update"]({ params: { name: "Stale" } })).toThrow("no longer open");
+});

@@ -1,6 +1,7 @@
 import { Stack } from "@chakra-ui/react";
 import type { InputGroup, Param, ParamValue, ParamValueMap, ResourceRefValue } from "./param-editor.types";
 import { ParamEditorSection } from "./param-editor-section";
+import { resolveParamEditorValues } from "./param-editor-values";
 
 export interface ParamEditorProps {
   params?: Param[];
@@ -26,6 +27,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
     fullWidth = false,
     variant = "default",
   } = props;
+  const values = resolveParamEditorValues(params, groups, defaultValues);
   const handleChange = onChange ?? (() => undefined);
 
   return (
@@ -33,7 +35,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
       {params.length > 0 ? (
         <ParamEditorSection
           params={params}
-          defaultValues={defaultValues}
+          defaultValues={values}
           onChange={handleChange}
           onOpenResource={onOpenResource}
           changeDelay={props.changeDelay}
@@ -49,7 +51,7 @@ export const ParamEditor = (props: ParamEditorProps) => {
           title={group.title}
           description={group.description}
           params={group.params}
-          defaultValues={defaultValues}
+          defaultValues={values}
           onChange={handleChange}
           onOpenResource={onOpenResource}
           changeDelay={props.changeDelay}

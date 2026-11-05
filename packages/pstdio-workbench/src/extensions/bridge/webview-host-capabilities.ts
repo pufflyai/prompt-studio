@@ -1,6 +1,7 @@
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
+import { updateOverlayPageParams } from "./overlay-page-params";
 import { createWorkbenchEditingSessionAdapter } from "./webview-editing-session";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
 import { createWebviewResourceActions } from "./webview-resource-actions";
@@ -10,11 +11,17 @@ interface CreateWorkbenchWebviewHostAdaptersInput extends WorkbenchTextEditingIn
   extensionId?: string;
   ownedPreferences?: WebviewOwnedPreferences;
   warn?: (message: string) => void;
+  executeCommand?: ExtensionWebviewHostAdapters["executeCommand"];
 }
 
 export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebviewHostAdaptersInput) => {
   const { workbench, placement, extensionId, projectId, hostEvents } = input;
-  const invocation = workbench.viewers.captureContext(placement?.placementIdentity);
+  const captured = workbench.viewers.captureContext(placement?.placementIdentity);
+  const overlayCurrent = placement && workbench.overlays.captureInvocation(placement.instanceId);
+  const invocation = {
+    ...captured,
+    isViewerCurrent: () => captured.isViewerCurrent?.() !== false && overlayCurrent?.() !== false,
+  };
   const requireCurrentViewer = () => {
     if (projectId && projectId !== workbench.pages.store.getState().projectId)
       throw new Error("The calling view belongs to another project");
@@ -33,6 +40,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
     editing: createWorkbenchEditingSessionAdapter(input),
     executeCommand: async (request, signal) => {
       requireCurrentViewer();
+      if (input.executeCommand) return input.executeCommand(request, signal, invocation);
       return {
         outcome: {
           ok: true,
@@ -62,6 +70,8 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
     pageParams: {
       update: (patch) => {
         requireCurrentViewer();
+        if (placement?.pageContext && isOverlay())
+          return updateOverlayPageParams(workbench, placement, extensionId, patch);
         const state = workbench.pages.store.getState();
         if (!state.location) throw new Error("page_params_no_page");
         if (!extensionId || extensionId !== state.location.page.extensionId) throw new Error("page_params_not_owner");
@@ -69,11 +79,13 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       },
     },
     navigation: {
-      open: (target) =>
-        workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId }), {
+      open: (target) => {
+        if (overlayCurrent?.() === false) throw new Error("The calling viewer is no longer open");
+        return workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { extensionId, projectId }), {
           ...invocation,
           projectId: projectId ?? invocation.projectId,
-        }),
+        });
+      },
     },
     notifications: {
       show: (notice) => {

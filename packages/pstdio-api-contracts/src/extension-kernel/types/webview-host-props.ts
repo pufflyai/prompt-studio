@@ -3,6 +3,8 @@ import type { ResourceRef } from "./resources";
 
 export interface WebviewHostProps {
   projectId?: string;
+  /** Present only when this view is hosted in a modal dialog. */
+  presentation?: "dialog";
   themePreference: string;
   locale: string;
   resource?: ResourceRef;

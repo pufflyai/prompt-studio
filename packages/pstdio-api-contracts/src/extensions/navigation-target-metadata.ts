@@ -71,7 +71,20 @@ const navigationOperationSchema: z.ZodType<MetadataNavigationOperation> = z.unio
   }),
 ]);
 
+export interface MetadataDialogTarget extends Pick<MetadataPageTarget, "page" | "resource" | "params"> {
+  kind: "dialog";
+}
+const dialogTargetSchema: z.ZodType<MetadataDialogTarget> = z
+  .object({
+    kind: z.literal("dialog"),
+    page: pageRefSchema,
+    resource: extensionResourceRefSchema.optional(),
+    params: z.record(z.string(), pageParamValueSchema).optional(),
+  })
+  .strict();
+
 export const navigationTargetSchema = z.union([
+  dialogTargetSchema,
   navigationOperationSchema,
   z
     .object({

@@ -78,6 +78,7 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
         <NumberInput
           changeDelay={props.changeDelay}
           {...common}
+          disabled={param.enabledBy !== undefined && defaultValues[param.enabledBy] !== true}
           name={param.name}
           description={param.description || ""}
           defaultValue={resolveParamValue(defaultValues, param.id, param.defaultValue)}

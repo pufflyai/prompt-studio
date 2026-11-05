@@ -34,6 +34,7 @@ export function normalizeTarget(target: NavigationTarget, extensionId: string): 
       parent: target.parent ? (normalizeTarget(target.parent, extensionId) as typeof target.parent) : undefined,
     } as MetadataNavigationTarget;
   }
+  if (target.kind === "dialog") return { ...target, page: normalizedRef(target.page, extensionId) };
   if (target.kind === "panel") {
     return {
       ...target,
