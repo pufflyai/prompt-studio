@@ -76,3 +76,15 @@ test("webview close keeps the resource page open with empty Main", async () => {
   expect(workbench.pages.store.getState().location?.resource?.id).toBe("one");
   expect(workbench.layout.listPanelInstances("main")).toEqual([]);
 });
+
+test("an extension may close its own host overlay even when user chrome is nonclosable", async () => {
+  const workbench = createWorkbench();
+  workbench.views.registerView({ id: "setup", title: "Setup", body: { kind: "react", render: () => null } });
+  workbench.overlays.registerOverlay({ id: "setup", viewId: "setup", closable: false });
+  workbench.overlays.openOverlay("setup");
+  const calling = workbench.layout.getLayout().regions.overlay.widgets[0]!;
+  const capabilities = createWorkbenchWebviewHostCapabilities({ workbench, placement: toPanelInstance(calling) });
+  const gate = createHostCapabilityGate({ capabilities, declaredCapabilities: ["placement.close"] });
+  await gate.call({ method: "placement.close" });
+  expect(workbench.layout.getLayout().regions.overlay.widgets).toEqual([]);
+});

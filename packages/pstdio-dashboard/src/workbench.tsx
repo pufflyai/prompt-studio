@@ -22,6 +22,7 @@ import { createNotificationsModule } from "./modules/notifications/module";
 import { createPerformanceModule } from "./modules/performance/module";
 import type { DesktopProjectTabsController } from "./modules/projects/desktop-project-tabs-controller";
 import { createProjectsModule } from "./modules/projects/module";
+import { createProjectOpeningModule } from "./modules/projects/setup/module";
 import { createRecentResourcesModule } from "./modules/recent-resources/module";
 import { createResourceLinksModule } from "./modules/resource-links/module";
 import { createSessionsModule } from "./modules/sessions/module";
@@ -50,34 +51,39 @@ type CreateDashboardModulesInput = {
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
 };
 
-export const createDashboardModules = (input: CreateDashboardModulesInput & { settings: SettingsRegistry }) => [
-  createSidenavModule(),
-  createWorkspacesModule(),
-  createExtensionsModule(),
-  createResourceLinksModule(),
-  createRecentResourcesModule(),
-  createProjectsModule({
-    initialProjectId: input.initialProjectId,
-    projectSelectionPersistence: input.projectSelectionPersistence,
-    projectTabs: input.projectTabs,
-  }),
-  createHeadersModule(input.projectTabs),
-  createKeyboardShortcutsModule(),
-  createHelpModule(),
-  createCommandPaletteModule(),
-  createSessionsModule({
-    sessionDraftPersistence: input.sessionDraftPersistence,
-  }),
-  createNotificationsModule(),
-  createSettingsModule(),
-  createPerformanceModule(input.settings),
-  createUpdatesModule(),
-  createWorkbenchTerminalModule(),
-  createTerminalModule(),
-  createBootstrapModule({
-    projectSelectionPersistence: input.projectSelectionPersistence,
-  }),
-];
+export const createDashboardModules = (input: CreateDashboardModulesInput & { settings: SettingsRegistry }) => {
+  const projectOpening = createProjectOpeningModule();
+  return [
+    createSidenavModule(),
+    createWorkspacesModule(),
+    createExtensionsModule(),
+    createResourceLinksModule(),
+    createRecentResourcesModule(),
+    createProjectsModule({
+      onProjectOpening: projectOpening.open,
+      initialProjectId: input.initialProjectId,
+      projectSelectionPersistence: input.projectSelectionPersistence,
+      projectTabs: input.projectTabs,
+    }),
+    createHeadersModule(input.projectTabs),
+    createKeyboardShortcutsModule(),
+    createHelpModule(),
+    createCommandPaletteModule(),
+    createSessionsModule({
+      sessionDraftPersistence: input.sessionDraftPersistence,
+    }),
+    createNotificationsModule(),
+    createSettingsModule(),
+    createPerformanceModule(input.settings),
+    createUpdatesModule(),
+    createWorkbenchTerminalModule(),
+    createTerminalModule(),
+    projectOpening.module,
+    createBootstrapModule({
+      projectSelectionPersistence: input.projectSelectionPersistence,
+    }),
+  ];
+};
 
 export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = {}) => {
   const storage = resolveDashboardStorage(input.storage);

@@ -20,6 +20,8 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       throw new Error("The calling view belongs to another project");
     if (invocation.isViewerCurrent?.() === false) throw new Error("The calling viewer is no longer open");
   };
+  const isOverlay = () =>
+    workbench.layout.getLayout().regions.overlay.widgets.some((widget) => widget.widgetId === placement?.instanceId);
   const resourceActions = createWebviewResourceActions(workbench, projectId, hostEvents, placement?.placementIdentity);
   return {
     resourceActions: async (request) => {
@@ -46,14 +48,17 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
         },
       };
     },
-    placement: placement?.placementIdentity
-      ? {
-          close: () => {
-            requireCurrentViewer();
-            return workbench.closePlacement(placement.placementIdentity!);
-          },
-        }
-      : undefined,
+    placement:
+      placement && (placement.placementIdentity || isOverlay())
+        ? {
+            close: () => {
+              requireCurrentViewer();
+              if (placement.placementIdentity) return workbench.closePlacement(placement.placementIdentity);
+              if (!isOverlay()) throw new Error("The calling viewer is no longer open");
+              workbench.overlays.closeOverlay(placement.instanceId);
+            },
+          }
+        : undefined,
     pageParams: {
       update: (patch) => {
         requireCurrentViewer();

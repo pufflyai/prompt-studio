@@ -14,18 +14,19 @@ test("workspace badges follow stable ticket IDs even when an anchor has a shared
     { id: second.id, kind: "ticket", shorthand: "T-2", aliases: ["T-1"] },
   ];
   ctx.resources.identity = async ({ id }) => identities.find((entry) => entry.id === id) ?? null;
-  const result = await runTicketsQuery({
-    storage,
-    resources: ctx.resources,
-    projectId: ctx.projectId,
-    workspaces: [
+  await ctx.resources.addAnchors(
+    { type: "workspace", id: "workspace", extensionId: "pstdio", projectId: ctx.projectId },
+    [
       {
-        id: "workspace",
-        workspace_shorthand: "T-1_A1",
-        anchors_json: [{ type: "ticket", id: second.id, shorthand: "T-1" }],
+        type: "ticket",
+        id: second.id,
+        shorthand: "T-1",
+        extensionId: "pstdio.pstdio-planner",
+        projectId: ctx.projectId,
       },
     ],
-  });
-  expect(result.rows.find(({ id }) => id === first.id)?.attributes.workspace).toBe("");
-  expect(result.rows.find(({ id }) => id === second.id)?.attributes.workspace).toBe("workspace");
+  );
+  const result = await runTicketsQuery({ storage, resources: ctx.resources, projectId: ctx.projectId });
+  expect(result.rows.find(({ id }) => id === first.id)?.attributes.linkedResourceItems).toEqual([]);
+  expect(result.rows.find(({ id }) => id === second.id)?.attributes.linkedResourceItems).toHaveLength(1);
 });

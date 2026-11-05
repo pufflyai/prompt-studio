@@ -5,4 +5,9 @@ export const skeletonRecipe = defineRecipe({
     "--start-color": "fg",
     "--end-color": "fg.muted",
   },
+  variants: {
+    variant: {
+      none: { bg: "bg.emphasized" },
+    },
+  },
 });

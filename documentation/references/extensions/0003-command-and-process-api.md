@@ -613,3 +613,14 @@ Native file views can declare `saveMode: "manual"` to retain drafts until an exp
 Native tree nodes support `rowVariant: "file"`, a `fileName` icon hint and `showContextMenuTrigger`. An action with a single text input can declare `inputPresentation: { kind: "inline", field: "name", placement: "child" }` to create under the row, or `placement: "replace"` to rename it. The host owns pending input, Escape, validation errors and command submission. `copyText` copies a declared string during the user gesture.
 
 Use `workbenchCommands.openWorkspaceTerminal` with a workspace resource to open the persistent platform terminal. `workbenchCommands.revealWorkspaceEntry` takes `{ path }`, relative to that resource's authorized local workspace, and appears only when desktop reveal is available. Extensions must not call desktop globals. Resource-list enum options can declare `noteAction` to open details from a group note independently of expanding the group or Add.
+
+## Project extension management (API 0.3.1 on main)
+
+`ctx.extensions.list()` returns the invoking project's installed instances, including disabled ones, and the configured catalog with resolved icons.
+
+`ctx.extensions.install(installNames)` accepts catalog extensions for the invoking project and returns once the selection is saved, without waiting for installation. It rejects the whole call if any name is not in the catalog. The host installs each source once, reuses an installed source, enables it only in this project, and provisions the project's workspaces when the extension needs it. Other projects keep their own choices.
+
+Installation continues in the background and survives a runtime restart. Selecting an extension again while it is pending has no effect. Selecting it again after it finished re-enables it in this project; after it failed, it runs again. Restarting the runtime does not replay finished work or retry failures on its own. Use `ctx.extensions.list()` to see which extensions the project has enabled.
+
+The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.
+

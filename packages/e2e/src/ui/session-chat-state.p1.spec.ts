@@ -53,7 +53,8 @@ test("turns a New session tab into the created session when the request ends aft
 }) => {
   const { header, project } = await openSessionsInOneSidePanelTab(page, request, "Background session start");
   const side = page.locator('[data-workbench-region="side"]');
-  const editor = side.getByTestId("content-editable").last();
+  const editor = side.getByTestId("content-editable").filter({ visible: true }).last();
+  const send = side.getByTestId("send-message-button").filter({ visible: true }).last();
   await header.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "New session", exact: true }).click();
   const draftTab = header.getByRole("tab", { name: "New session", exact: true });
@@ -72,13 +73,13 @@ test("turns a New session tab into the created session when the request ends aft
   );
   const prompt = "Start while away";
   await editor.fill(prompt);
-  await expect(side.getByTestId("send-message-button").last()).toBeEnabled();
-  await side.getByTestId("send-message-button").last().click();
+  await expect(send).toBeEnabled();
+  await send.click();
   await expect(editor).toBeEmpty();
   await header.getByRole("tab", { name: "Session B", exact: true }).click();
   await draftTab.click();
   await expect(editor).toHaveAttribute("contenteditable", "false");
-  await expect(side.getByTestId("send-message-button").last()).toBeDisabled();
+  await expect(send).toBeDisabled();
   await header.getByRole("tab", { name: "Session B", exact: true }).click();
   release();
   expect((await created).ok()).toBe(true);

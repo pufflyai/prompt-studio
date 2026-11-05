@@ -99,10 +99,11 @@ const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["s
   return wrap(createMemoryStorage(seed));
 };
 
-export const createBenchEnvironment = (
+export const createBenchEnvironment = async (
   seed?: BenchStorageSeed,
   prefixes: Record<string, string> = {},
-): CommandRunnerEnvironment => {
+  projectId = "bench-project",
+) => {
   const queuedRequestsRequireHost = async () => {
     throw new Error("Queued requests require the host runtime.");
   };
@@ -110,9 +111,9 @@ export const createBenchEnvironment = (
     throw new Error("Workspace file and change operations require the host runtime.");
   };
   const environment: CommandRunnerEnvironment = {
-    project: { id: "bench-project", name: "Bench Project", shorthand: "BP" },
+    project: { id: projectId, name: "Bench Project", shorthand: "BP" },
     storage: createStorage(seed),
-    resources: createBenchResources(prefixes, seed?.resourceIdentities),
+    resources: await createBenchResources(prefixes, seed?.resourceIdentities, projectId, seed?.workspaces),
     artifacts: { mount: () => ({}) as never },
     packageFiles: {
       exists: async () => false,

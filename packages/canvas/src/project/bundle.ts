@@ -104,7 +104,12 @@ const bunBuild = (root: string, entry: string, canvases: CanvasEntry[], outdir?:
     throw: false,
     // Frames load modules from blob URLs, so relative preload links cannot resolve.
     modulePreload: false,
-    define: { "process.env.NODE_ENV": '"production"' },
+    // Project previews can import Vite-configured modules outside Vite's server.
+    define: {
+      "process.env.NODE_ENV": '"production"',
+      "import.meta.env.DEV": "false",
+      "import.meta.env.PROD": "true",
+    },
     naming: { entry: "[name]-[hash].[ext]", chunk: "chunk-[hash].[ext]", asset: "[name]-[hash].[ext]" },
     loader,
     plugins: [projectReact(reactBase(root, canvases)), ownPackage, queryImports],

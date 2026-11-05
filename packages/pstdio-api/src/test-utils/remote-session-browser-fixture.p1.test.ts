@@ -10,7 +10,7 @@ const startFixture = () => {
     process.execPath,
     ["--conditions=source", join(import.meta.dirname, "remote-session-browser.fixture.ts")],
     {
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("PSTDIO_"))),
         NODE_ENV: "production",
@@ -40,7 +40,8 @@ const startFixture = () => {
     output: () => output,
     stop: async () => {
       const exited = once(child, "close");
-      child.kill("SIGTERM");
+      // Windows terminates SIGTERM recipients without running their signal handler.
+      child.stdin.end("shutdown\n");
       return exited;
     },
     cleanup: async () => {

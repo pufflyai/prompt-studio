@@ -17,6 +17,8 @@ interface ChatMessageListProps {
   expandedStickyMessageIds: Set<string>;
   onToggleStickyMessage: (messageId: string) => void;
   onReady?: () => void;
+  onForkMessage?: (messageId: string) => void | Promise<void>;
+  forkDisabledReason?: string;
 }
 
 const ESTIMATED_MESSAGE_HEIGHT = 360;
@@ -32,6 +34,8 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     expandedStickyMessageIds,
     onToggleStickyMessage,
     onReady,
+    onForkMessage,
+    forkDisabledReason,
   } = props;
   const { scrollRef } = useStickToBottomContext();
   const rows = buildChatMessageRows(leadingResponses, groups);
@@ -116,6 +120,8 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                 hideQuestionForms={!row.isActiveTurn || hideActiveQuestionForms}
                 animatedKeys={animatedKeys}
                 showAssistantActions={row.showAssistantActions}
+                onForkMessage={onForkMessage}
+                forkDisabledReason={forkDisabledReason}
               />
             </Box>
           );

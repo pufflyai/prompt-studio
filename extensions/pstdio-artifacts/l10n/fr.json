@@ -1,4 +1,5 @@
 {
+  "commands.resolveMany": "Résoudre les artefacts liés",
   "mounts.sites": "HTML publié",
   "navigation.artifacts": "Artefacts",
   "skills.publish": "Publier un artefact",

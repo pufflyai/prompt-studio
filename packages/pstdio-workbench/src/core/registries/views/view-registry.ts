@@ -19,6 +19,8 @@ type NativeViewBody<Kind extends string, Contribution> = { kind: Kind } & Omit<C
 
 export interface WorkbenchReactViewBody {
   kind: "react";
+  /** Fill the available settings body; full-width also expands its header. Views own scrolling. */
+  layout?: "fill" | "full-width";
   render: WorkbenchRendererRegistration["render"];
 }
 

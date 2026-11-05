@@ -10,6 +10,7 @@ import type { RouteDeps } from "../deps";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "./deps";
 import { setDeviceAutomationEnabled } from "./device-automations";
+import { findExtensionCatalogEntry } from "./extension-catalog";
 import { extensionChangesWorkspaceProvisioning } from "./extension-skill-cleanup";
 import { toExtensionEnableInput } from "./install-extension-source";
 import { toProjectExtensionInstance } from "./project-extension-instance";
@@ -29,6 +30,24 @@ export type ProjectExtensionLifecycleRouteDeps = ExtensionsRouteDeps & {
 };
 
 export class ExtensionProviderInUseError extends Error {}
+
+export const completeProjectExtensionInstallation = async (
+  deps: LifecycleDeps,
+  projectId: string,
+  installName: string,
+) => {
+  const enabled = (await deps.extensionService.listProjectExtensionInstances(projectId)).filter(
+    (record) => record.instance.enabled,
+  );
+  let selected = enabled.find((record) => record.installedSource.install_name === installName);
+  if (!selected) {
+    const catalog = await findExtensionCatalogEntry(installName);
+    const extensionId = catalog?.extensionId ?? `pstdio.${installName}`;
+    selected = enabled.find((record) => record.installedSource.extension_id === extensionId);
+  }
+  if (selected && (await extensionChangesWorkspaceProvisioning(deps, selected.installedSource)))
+    await (deps.provisionProjectWorkspaces ?? provisionProjectWorkspaces)(deps, projectId);
+};
 
 export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
   const changesWorkspaceProvisioning = (

@@ -1,9 +1,10 @@
 import { Center, CloseButton } from "@chakra-ui/react";
 import { ScopedDialog as Dialog, Portal } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
 import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
+import { settingsLeaveGuard } from "../settings/settings-leave-guard";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -93,8 +94,15 @@ export const resolveOverlayDialogConfig = (placement: Pick<WorkbenchWidgetPlacem
   } satisfies WorkbenchOverlayWidgetConfig;
 };
 
-const resolveActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
-  widgets.find((entry) => entry.widgetId === activeWidgetId) ?? widgets[0];
+/** Restored placements wait for a live owner, without hiding a registered dialog behind them. */
+export const resolveActiveOverlayPlacement = (
+  placements: WorkbenchWidgetPlacement[],
+  activeWidgetId: string | undefined,
+  registered: Readonly<Record<string, unknown>>,
+) => {
+  const eligible = placements.filter((placement) => Boolean(registered[placement.contributionId]));
+  return eligible.find((entry) => entry.widgetId === activeWidgetId) ?? eligible[0];
+};
 
 export const resolveOverlayDialogRenderState = (
   activePlacement: WorkbenchWidgetPlacement | undefined,
@@ -118,21 +126,39 @@ interface WorkbenchOverlayLayerProps {
 export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const { workbench } = props;
   const overlayRegion = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.overlay);
+  const widgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const renderers = useWorkbenchStore(getWorkbenchRenderers(workbench).store, (state) => state.renderers);
   useWorkbenchStore(getWorkbenchRenderers(workbench).store, (state) => state.refreshKeys);
   const [exitingPlacement, setExitingPlacement] = useState<WorkbenchWidgetPlacement | undefined>();
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  const activePlacement = resolveActivePlacement(overlayRegion.widgets, overlayRegion.activeWidgetId);
+  const activePlacement = resolveActiveOverlayPlacement(overlayRegion.widgets, overlayRegion.activeWidgetId, widgets);
   const renderState = resolveOverlayDialogRenderState(activePlacement, exitingPlacement);
+  const exitingWidgetId = activePlacement ? undefined : exitingPlacement?.widgetId;
 
   useEffect(() => {
     if (activePlacement) setExitingPlacement(undefined);
   }, [activePlacement]);
 
+  useLayoutEffect(() => {
+    if (!exitingWidgetId) return;
+    let active = true;
+    // A finished CSS animation can precede a presence listener in WebKit. Its
+    // completion promise also handles cancellation and already-finished exits.
+    const animations = contentRef.current?.getAnimations() ?? [];
+    void Promise.all(animations.map((animation) => animation.finished.catch(() => undefined))).then(() => {
+      if (active) setExitingPlacement((current) => (current?.widgetId === exitingWidgetId ? undefined : current));
+    });
+    return () => {
+      active = false;
+    };
+  }, [exitingWidgetId]);
+
   if (!renderState) return null;
 
   const { open, placement } = renderState;
-  const widget = workbench.layout.getWidget(placement.contributionId);
+  const widget = widgets[placement.contributionId];
+  if (!widget) return null;
   const overlayConfig = resolveOverlayDialogConfig(placement, widget?.config);
   const { contentHeight, contentMaxHeight, contentMinHeight, contentWidth, contentMaxWidth, ...dialogRootConfig } =
     overlayConfig;
@@ -140,31 +166,23 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const canCloseOverlay = open && placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
 
-  const body =
-    widget && renderer ? (
-      (renderer.render({
-        workbench,
-        panel: toPanelContribution(widget),
-        instance: toPanelInstance(placement),
-        refresh: () => undefined,
-      }) as ReactNode)
-    ) : (
-      <WorkbenchOverlayFallback
-        label={
-          widget ? `No renderer registered for ${widget.rendererId}.` : "Widget contribution is no longer registered."
-        }
-      />
-    );
+  const body = renderer ? (
+    (renderer.render({
+      workbench,
+      panel: toPanelContribution(widget),
+      instance: toPanelInstance(placement),
+      refresh: () => undefined,
+    }) as ReactNode)
+  ) : (
+    <WorkbenchOverlayFallback label={`No renderer registered for ${widget.rendererId}.`} />
+  );
 
-  const handleOpenChange = (details: { open: boolean }) => {
+  const handleOpenChange = async (details: { open: boolean }) => {
     if (!details.open && canCloseOverlay) {
+      if (placement.viewId === "workbench.settings" && !(await settingsLeaveGuard(workbench).request())) return;
       setExitingPlacement(placement);
       workbench.layout.closePanel(placement.widgetId);
     }
-  };
-
-  const handleExitComplete = () => {
-    setExitingPlacement((current) => (current?.widgetId === placement.widgetId ? undefined : current));
   };
 
   // Nested overlays (confirmation dialogs, popovers, menus) portal outside this
@@ -182,7 +200,6 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
     <Dialog.Root
       {...dialogRootConfig}
       open={open}
-      onExitComplete={handleExitComplete}
       onOpenChange={handleOpenChange}
       onInteractOutside={handleInteractOutside}
     >
@@ -195,6 +212,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
           pointerEvents="auto"
         >
           <Dialog.Content
+            ref={contentRef}
             position="relative"
             overflow="hidden"
             borderWidth="1px"
@@ -208,7 +226,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
             {body}
             {canCloseOverlay ? (
               <Dialog.CloseTrigger asChild>
-                <CloseButton size="sm" aria-label={`Close ${closeLabel}`} />
+                <CloseButton position="absolute" top="2" right="2" size="sm" aria-label={`Close ${closeLabel}`} />
               </Dialog.CloseTrigger>
             ) : null}
           </Dialog.Content>
