@@ -13,7 +13,7 @@ export const registerMarkdownEditUnload = (input: MarkdownEditUnloadInput) => {
   const beforeUnload = (event: BeforeUnloadEvent) => {
     if (!pending() && !session.getSnapshot().pending) return;
     drain();
-    if (!session.getSnapshot().pending) return;
+    if (!pending() && !session.getSnapshot().pending) return;
     void session.flush().catch(() => {});
     event.preventDefault();
     event.returnValue = "";

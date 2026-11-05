@@ -155,7 +155,12 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
     });
     queueMicrotask(releaseComposition);
   });
-  const stopUnload = registerMarkdownEditUnload({ session, pending: edits.pending, drain });
+  const hasPrivateDraft = () => "isFinishing" in binding && (binding.isFinishing() || binding.isComposing());
+  const stopUnload = registerMarkdownEditUnload({
+    session,
+    pending: () => edits.pending() || hasPrivateDraft(),
+    drain,
+  });
   const stopRemote = binding.subscribe((value, origin) => {
     if (origin === "reset") {
       selection = null;
@@ -165,7 +170,7 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
     if (origin !== "remote" && origin !== "reset") callbacks.current.onChange?.(value);
   });
   const flushCommandEdits = () => {
-    if (!session || ("isFinishing" in binding && (binding.isFinishing() || binding.isComposing()))) return;
+    if (!session || hasPrivateDraft()) return;
     // Commands already run in Lexical's update context, including edits whose listener has not run yet.
     if (!edits.pending()) edits.schedule();
     edits.cancel();
