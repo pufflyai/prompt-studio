@@ -22,6 +22,7 @@ export { getIconComponent, optionColors, optionIcons } from "./icon-options";
 export { IconPicker, type IconPickerProps } from "./icon-picker";
 export type { IntegrationCardProps } from "./integration-card";
 export { IntegrationCard } from "./integration-card";
+export { NumberInputField, NumberInputRoot } from "./number-input";
 export type { RadioProps } from "./radio";
 export { Radio, RadioGroup } from "./radio";
 export { ResourceBadge } from "./resource-badge";

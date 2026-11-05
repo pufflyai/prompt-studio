@@ -2,7 +2,7 @@ import { test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -27,6 +27,12 @@ test(
     try {
       const runtime = await startPackagedServe(root, {
         PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner"),
+        // Keep the measured setup phases after timeout cleanup removes the disposable home.
+        PSTDIO_LOG_PATH: join(
+          import.meta.dirname,
+          "../../test-results/packaged-board-panning",
+          `${basename(root)}.jsonl`,
+        ),
       });
       child = runtime.child;
       phase("runtime ready");

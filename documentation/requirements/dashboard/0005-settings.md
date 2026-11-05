@@ -15,12 +15,26 @@ Settings open in the workbench overlay. Dashboard contributions register section
 
 | Scope | Panels |
 | --- | --- |
-| Global | Workbench → Runtime, Appearance, Update channel (desktop only), Developer tools; Experimental → Beta features |
+| Global | Workbench → Runtime, Appearance, Update channel (desktop only); Experimental → Beta features |
 | Project | Project folder, Skills, Templates, Machine tokens (beta), Danger zone |
 
-Developer tools holds device-local controls that extensions contribute. Extension controls appear only while a project with that extension is open. Performance monitoring runs while the Prompt Studio Performance Monitoring extension is enabled; it has no setting. Machine tokens shows only while its Beta features switch is on.
+Device-local controls contributed by extensions appear as their own settings entries. Extension controls appear only while a project with that extension is open. Performance monitoring runs while the Prompt Studio Performance Monitoring extension is enabled; it has no setting. Machine tokens shows only while its Beta features switch is on. Experimental switches include visible descriptions of what enabling them does.
 
 Extensions can contribute settings through public APIs. Template editors call commands declared by the owning extension. Ticket statuses and tags belong to Planner; core does not own a generic ticket-settings page.
+
+## Consistent layout and pending changes
+
+Settings pages share one centered content width and parameter-editor controls. Each page title uses the same icon as its navigation entry. Save changes and Reset changes stay in the page header, above scrolling content. Native content uses the page scroll area. Extension editors fill the body and center their fields inside a full-width scroll area, placing the scrollbar at the right edge while keeping pickers and confirmation dialogs in a bounded viewport. The overlay close button stays at the top right of the modal header.
+
+Leaving a page with pending changes, including closing settings, offers Stay, Discard changes, and Save and leave. A failed save keeps the page and its draft open with the error visible. Settings that save immediately do not prompt. Navigation and content loading use visible static skeletons.
+
+Planner contributes **Project Planner → Workflow & automation**, **Ticket status**, and **Ticket tags**. Status and tag editors share the same collection editor and staged editing sessions. Saves preserve concurrent additions and untouched fields; deleted entries are explicit. Selecting a default status leaves exactly one default. A draft targeting an entry removed elsewhere must fail with recovery guidance rather than recreate it.
+
+Workflow & automation shows Automation first, followed by Implementation and Planner workflow. Each field uses a single label/control row. Target branch is a searchable dropdown of remote branches; clearing it uses the repository default. A saved branch no longer fetched remains visible until changed.
+
+Template headings use their display name rather than their resource ID.
+
+Danger zone shows a red delete-project action card with a trash icon and a separate confirmation. Error-only controls appear only when an action actually fails.
 
 ## Folder requirements
 
@@ -32,6 +46,7 @@ Extensions can contribute settings through public APIs. Template editors call co
 
 ## Runtime settings
 
+- Max concurrent sessions uses an inline number input. Default agent and model shares one row. Collaboration is not offered as a project runtime default.
 - `max_concurrent_sessions` is global. An empty limit means unlimited concurrency.
 - Active capacity includes `in_progress` and `awaiting_input`; queued sessions do not consume a slot.
 - Lowering the limit must not cancel active sessions. It affects later dispatches.

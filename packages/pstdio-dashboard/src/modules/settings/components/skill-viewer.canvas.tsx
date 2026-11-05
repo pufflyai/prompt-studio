@@ -1,5 +1,5 @@
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { FileIconThemePreferenceProvider } from "@pstdio/ui";
+import { FileIconThemePreferenceProvider, SettingsPage } from "@pstdio/ui";
 import type { ProjectSkillDetails } from "../data/skills-api";
 import { SkillViewerContent } from "./skill-viewer";
 
@@ -7,11 +7,15 @@ const meta: CanvasMeta<typeof SkillViewerContent> = {
   title: "ProjectSettings/SkillViewer",
   component: SkillViewerContent,
   fullscreen: true,
+  description:
+    "Full-width preview with a top divider. Info and Files tabs switch the sidebar while preserving the selected file.",
   decorators: [
     (Story) => (
       <FileIconThemePreferenceProvider>
         <div style={{ height: "640px" }}>
-          <Story />
+          <SettingsPage title="Create Ticket" contentLayout="full-width">
+            <Story />
+          </SettingsPage>
         </div>
       </FileIconThemePreferenceProvider>
     ),
@@ -25,10 +29,15 @@ const baseSkill: ProjectSkillDetails = {
   project_id: "project-1",
   name: "create-ticket",
   title: "Create Ticket",
-  description: "Create planner tickets from a short request.",
+  description: "",
   source_kind: "extension",
   files: [
-    { path: "SKILL.md", content: "---\nmetadata:\n  version: 1.2.0\n---\n\n# Create Ticket\n", encoding: "utf8" },
+    {
+      path: "SKILL.md",
+      content:
+        "---\nname: create-ticket\ndescription: >-\n  Create planner tickets from a short request, with a clear problem,\n  expected behavior and validation steps.\nmetadata:\n  version: 1.2.0\n---\n\n# Create Ticket\n",
+      encoding: "utf8",
+    },
     { path: "references/examples.md", content: "# Examples\n", encoding: "utf8" },
   ],
   editable: true,

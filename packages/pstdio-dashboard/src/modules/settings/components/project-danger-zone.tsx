@@ -1,7 +1,7 @@
-import { Box, Button, Card, HStack, Icon, Stack } from "@chakra-ui/react";
-import { DeleteConfirmationModal, useToaster } from "@pstdio/ui";
+import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { DeleteConfirmationModal, SimpleCard, SimpleCardBody, useToaster } from "@pstdio/ui";
+import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { useMutation } from "@tanstack/react-query";
-import { TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { getApiClient } from "@/lib/api";
 import { useActionError } from "@/shared/components/use-action-error";
@@ -60,37 +60,24 @@ export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
 
   return (
     <>
-      <Stack padding="lg">
-        <Card.Root size="sm" borderRadius="0" borderColor="red.300" data-testid="project-danger-zone-card">
-          <Card.Body>
-            <HStack gap="4" alignItems="flex-start">
-              <Icon boxSize="1em" fontSize="2xl" flexShrink="0" color="red.600">
-                <TriangleAlert />
-              </Icon>
-              <Box flex="1" minW="0">
-                <Stack gap="1">
-                  <Card.Title textStyle="sm" color="red.700">
-                    Danger zone
-                  </Card.Title>
-                  <Card.Description color="red.700">
-                    Delete this project and all related data. This action cannot be undone.
-                  </Card.Description>
-                </Stack>
-              </Box>
-              <Button
-                size="sm"
-                variant="outline"
-                colorPalette="red"
-                flexShrink="0"
-                onClick={handleOpenDelete}
-                disabled={!canDeleteProject}
-              >
+      <SimpleCard variant="destructive" data-testid="project-danger-zone-card">
+        <SimpleCardBody>
+          <HStack gap="md" align="center" justify="space-between" flexWrap="wrap">
+            <Stack gap="xs" flex="1">
+              <Text textStyle="label/M/medium" color="fg.error">
                 Delete project
-              </Button>
-            </HStack>
-          </Card.Body>
-        </Card.Root>
-      </Stack>
+              </Text>
+              <Text textStyle="paragraph/S/regular" color="fg.muted">
+                Delete this project and all related data. This action cannot be undone.
+              </Text>
+            </Stack>
+            <Button size="sm" variant="destructive" onClick={handleOpenDelete} disabled={!canDeleteProject}>
+              <WorkbenchIcon name="Trash2" size="1em" />
+              Delete project
+            </Button>
+          </HStack>
+        </SimpleCardBody>
+      </SimpleCard>
 
       <DeleteConfirmationModal
         open={isDeleteOpen}

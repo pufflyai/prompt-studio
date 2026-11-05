@@ -263,7 +263,6 @@ export const toInternalWorkbenchExtensionMetadata = (
           scope: ["global.settings", "global.settingsPanels", "developer.settings"].includes(panel.slot.id)
             ? ("global" as const)
             : ("project" as const),
-          parentPanelId: panel.slot.id === "developer.settings" ? "developer-tools" : undefined,
           title: view.title,
           icon: view.icon,
           section: panel.section ? contributionRefId(panel.section) : undefined,

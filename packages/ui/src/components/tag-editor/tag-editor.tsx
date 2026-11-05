@@ -251,7 +251,7 @@ export const TagEditor = (props: TagEditorProps) => {
           gap="none"
           borderWidth={framed ? "1px" : undefined}
           borderColor={framed ? "border.subtle" : undefined}
-          borderRadius={framed ? "md" : undefined}
+          borderRadius={framed ? "xs" : undefined}
           overflow={framed ? "hidden" : undefined}
         >
           {showColumnHeaders ? (

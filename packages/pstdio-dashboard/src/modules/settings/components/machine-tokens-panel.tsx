@@ -1,5 +1,7 @@
-import { Box, Button, HStack, Input, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { AutomationTokenRecord } from "@pstdio/sdk/api";
+import { SettingsContentSkeleton } from "@pstdio/ui";
+import { ParamEditor } from "@pstdio/ui/param-editor";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActionError } from "@/shared/components/use-action-error";
@@ -44,14 +46,7 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
   const canIssue = Boolean(name.trim() && scopes.trim() && validExpiry);
 
   return (
-    <Stack gap="md" padding="lg" maxW="720px">
-      <Stack gap="2xs">
-        <Text textStyle="heading/S">{t("projectSettings.machineTokens.title")}</Text>
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("projectSettings.machineTokens.description")}
-        </Text>
-      </Stack>
-
+    <Stack gap="md">
       {issuedToken && (
         <Stack gap="sm" borderWidth="1px" borderColor="border.success" borderRadius="md" padding="md">
           <Stack gap="0">
@@ -69,29 +64,40 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
         </Stack>
       )}
 
-      <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
-        <Text textStyle="label/S/medium">{t("projectSettings.machineTokens.issueTitle")}</Text>
-        <Stack gap="2xs">
-          <Text textStyle="label/XS/medium">{t("projectSettings.machineTokens.name")}</Text>
-          <Input value={name} onChange={(event) => onNameChange(event.target.value)} />
-        </Stack>
-        <Stack gap="2xs">
-          <Text textStyle="label/XS/medium">{t("projectSettings.machineTokens.scopes")}</Text>
-          <Textarea value={scopes} onChange={(event) => onScopesChange(event.target.value)} minH="24" />
-          <Text textStyle="paragraph/XS/regular" color="fg.muted">
-            {t("projectSettings.machineTokens.scopesHint")}
-          </Text>
-        </Stack>
-        <Stack gap="2xs">
-          <Text textStyle="label/XS/medium">{t("projectSettings.machineTokens.expiry")}</Text>
-          <Input
-            value={expiresInDays}
-            type="number"
-            min={1}
-            max={365}
-            onChange={(event) => onExpiresInDaysChange(event.target.value)}
-          />
-        </Stack>
+      <Stack gap="sm">
+        <Text textStyle="label/L/medium">{t("projectSettings.machineTokens.issueTitle")}</Text>
+        <ParamEditor
+          fullWidth
+          readOnly={issuing}
+          params={[
+            {
+              id: "name",
+              name: t("projectSettings.machineTokens.name"),
+              type: "text",
+              singleLine: true,
+              defaultValue: name,
+            },
+            {
+              id: "scopes",
+              name: t("projectSettings.machineTokens.scopes"),
+              description: t("projectSettings.machineTokens.scopesHint"),
+              type: "text",
+              defaultValue: scopes,
+            },
+            {
+              id: "expiry",
+              name: t("projectSettings.machineTokens.expiry"),
+              type: "text",
+              singleLine: true,
+              defaultValue: expiresInDays,
+            },
+          ]}
+          onChange={(id, value) => {
+            if (id === "name") onNameChange(String(value));
+            if (id === "scopes") onScopesChange(String(value));
+            if (id === "expiry") onExpiresInDaysChange(String(value));
+          }}
+        />
         <Button size="sm" alignSelf="start" disabled={!canIssue} loading={issuing} onClick={onIssue}>
           {t("projectSettings.machineTokens.issue")}
         </Button>
@@ -99,11 +105,7 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
 
       <Stack gap="sm">
         <Text textStyle="label/S/medium">{t("projectSettings.machineTokens.activeTitle")}</Text>
-        {loading ? (
-          <Box py="md" display="flex" justifyContent="center">
-            <Spinner size="sm" />
-          </Box>
-        ) : null}
+        {loading ? <SettingsContentSkeleton /> : null}
         {!loading && tokens.length === 0 ? (
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
             {t("projectSettings.machineTokens.empty")}

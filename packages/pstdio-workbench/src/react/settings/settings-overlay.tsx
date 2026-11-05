@@ -1,9 +1,10 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { ResizableSplitLayout } from "@pstdio/ui";
+import { ResizableSplitLayout, SettingsNavigationSkeleton } from "@pstdio/ui";
 import type { PreferenceScope, SettingsRegistry, WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchTreeView } from "../renderers/tree/tree-view";
 import { WorkbenchIcon } from "../shared/icon";
+import { SettingsLeaveWarning } from "./settings-leave-warning";
 import { SettingsSurfacePanel } from "./settings-surface-panel";
 import { useSettingsRevision } from "./use-settings-revision";
 export interface SettingsOverlayProps {
@@ -24,16 +25,27 @@ export const SettingsOverlay = (props: SettingsOverlayProps) => {
   const resource = input.instance.resource;
   const nav = (
     <Box h="full" minH="0" minW="0" w="full" bg="bg.subtle">
-      <WorkbenchTreeView workbench={input.workbench} treeViewId={navTreeId} activeNodeId={resourceKey(resource)} />
+      <WorkbenchTreeView
+        loadingContent={<SettingsNavigationSkeleton />}
+        workbench={input.workbench}
+        treeViewId={navTreeId}
+        activeNodeId={resourceKey(resource)}
+      />
     </Box>
   );
   const content = (
     <Box flex="1" h="full" minH="0" minW="0">
-      <SettingsSurfacePanel input={input} settings={settings} resolveScopeId={resolveScopeId} />
+      <SettingsSurfacePanel
+        key={resourceKey(resource)}
+        input={input}
+        settings={settings}
+        resolveScopeId={resolveScopeId}
+      />
     </Box>
   );
   return (
     <Flex direction="column" position="absolute" inset="0" minH="0" minW="0" overflow="hidden">
+      <SettingsLeaveWarning workbench={input.workbench} />
       <Flex
         align="center"
         bg="bg.subtle"
@@ -43,6 +55,7 @@ export const SettingsOverlay = (props: SettingsOverlayProps) => {
         gap="2"
         h="12"
         px="3.5"
+        pr="12"
       >
         <Box color="fg.accent" display="inline-flex">
           <WorkbenchIcon name="settings" size={16} />

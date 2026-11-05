@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { createInterface } from "node:readline";
 import type { HarnessExit, HarnessStartInput, SessionMessage, ToolPart } from "pstdio-api-contracts";
 import { jsonSchema } from "pstdio-sync-contracts";
 import {
@@ -319,6 +320,7 @@ console.log(
 const close = async () => {
   if (closing) return;
   closing = true;
+  control.close();
   unsubscribe();
   unwatch();
   server.stop(true);
@@ -352,3 +354,7 @@ process.removeListener("SIGTERM", earlyExit);
 process.removeListener("SIGINT", earlyExit);
 process.on("SIGTERM", () => void close());
 process.on("SIGINT", () => void close());
+const control = createInterface({ input: process.stdin });
+control.on("line", (line) => {
+  if (line === "shutdown") void close();
+});

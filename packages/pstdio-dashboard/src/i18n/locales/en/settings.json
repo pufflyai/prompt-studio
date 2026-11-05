@@ -10,11 +10,12 @@
     "retry": "Retry",
     "maxConcurrentSessions": {
       "label": "Max concurrent sessions",
-      "helper": "Leave blank for unlimited sessions. Set 1 for local LLM setups that can only run one session at a time.",
+      "limit": "Limit concurrent sessions",
+      "helper": "Turn off to allow unlimited concurrent sessions.",
       "placeholder": "none",
       "none": "none",
       "current": "Current value: {{value}}",
-      "invalid": "Enter a whole number greater than 0, or leave blank for none."
+      "invalid": "Enter a whole number greater than 0."
     }
   },
   "harnessesPanel": {
@@ -38,7 +39,9 @@
     "title": "Beta features",
     "description": "Try beta features. This setting applies to every project and dashboard connected to this installation.",
     "notifications": "Notifications",
+    "notificationsDescription": "Show notifications when work needs your attention or finishes.",
     "machineTokens": "Machine tokens",
+    "machineTokensDescription": "Create project tokens that let another machine connect to this installation.",
     "loading": "Loading settings…"
   },
   "developerTools": {

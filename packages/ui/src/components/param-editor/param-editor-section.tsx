@@ -11,6 +11,8 @@ interface ParamEditorSectionProps {
   defaultValues: ParamValueMap;
   onChange: (id: string, value: ParamValue) => void;
   onOpenResource?: (ref: ResourceRefValue) => void;
+  /** Text and number notification delay in milliseconds. Use 0 for forms that stage edits before saving. */
+  changeDelay?: number;
   readOnly?: boolean;
   fullWidth?: boolean;
   collapsible?: boolean;
@@ -96,6 +98,7 @@ const ParamEditorSectionBody = (props: Omit<ParamEditorSectionProps, "title" | "
           values={defaultValues}
           onChange={onChange}
           onOpenResource={onOpenResource}
+          changeDelay={props.changeDelay}
           readOnly={readOnly}
           fullWidth={fullWidth}
           variant={variant}
@@ -143,6 +146,7 @@ export const ParamEditorSection = (props: ParamEditorSectionProps) => {
             defaultValues={defaultValues}
             onChange={onChange}
             onOpenResource={onOpenResource}
+            changeDelay={props.changeDelay}
             readOnly={readOnly}
             fullWidth={fullWidth}
             defaultCollapsed={defaultCollapsed}
