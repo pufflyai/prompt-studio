@@ -97,7 +97,9 @@ export function createCommandOptionResolver(
     const version = (requests.get(key) ?? 0) + 1;
     requests.set(key, version);
     const requestKey = queryKey(source, values);
-    publish(key, { key: requestKey, status: "loading", options: [] });
+    // Keep the visible picker mounted while its choices refresh. Validation still
+    // rejects stale choices until this request becomes ready.
+    publish(key, { key: requestKey, status: "loading", options: snapshot[key]?.options ?? [] });
     try {
       const options = readOptions(
         source,

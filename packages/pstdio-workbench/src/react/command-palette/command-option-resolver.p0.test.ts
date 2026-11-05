@@ -176,3 +176,30 @@ test("keeps available multi-select choices when dependencies change", async () =
   expect(resolver.validate({ region: "us", locale: ["en"] })).toEqual({});
   resolver.dispose();
 });
+
+test("retains visible choices during refresh without accepting their stale selection", async () => {
+  const requests: Array<(value: unknown) => void> = [];
+  const cleared: unknown[] = [];
+  const resolver = createCommandOptionResolver(
+    schema,
+    () => new Promise((resolve) => requests.push(resolve)),
+    (_key, value) => cleared.push(value),
+  );
+  resolver.update({ region: "eu", locale: "de" });
+  requests[0]!([{ id: "de", name: "German" }]);
+  await tick();
+  resolver.update({ region: "us", locale: "de" });
+  expect(resolver.getSnapshot().locale).toMatchObject({
+    status: "loading",
+    options: [{ value: "de", label: "German" }],
+  });
+  expect(resolver.validate({ region: "us", locale: "de" })).toHaveProperty("locale");
+  requests[1]!([{ id: "en", name: "English" }]);
+  await tick();
+  expect(resolver.getSnapshot().locale).toMatchObject({
+    status: "ready",
+    options: [{ value: "en", label: "English" }],
+  });
+  expect(cleared).toEqual([""]);
+  resolver.dispose();
+});
