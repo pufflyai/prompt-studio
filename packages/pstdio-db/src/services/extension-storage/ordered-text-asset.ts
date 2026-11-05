@@ -1,6 +1,7 @@
 import { type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
 import { nativeTextAssetKey } from "pstdio-sync/records";
 import { readTextDocumentSeed, saveTextDocument } from "pstdio-sync/text";
+import type { StorageGroup } from "pstdio-sync-contracts";
 import { runDocumentTransaction } from "./document-persistence";
 import { nativeDocumentId, refreshNativeRecordText } from "./native-record-projection";
 import type { OrderedTransaction } from "./ordered-sql";
@@ -12,6 +13,7 @@ export const writeOrderedTextAsset = async <T>(input: {
   owner: StorageOwner;
   recordId: string;
   content: string;
+  replace: StorageGroup["edits"][number]["replace"];
   observer?: StorageObserver;
   commit(): Promise<T>;
 }) => {
@@ -21,7 +23,9 @@ export const writeOrderedTextAsset = async <T>(input: {
   if (expected !== undefined && expected !== record!.revision) throw new StorageRevisionChangedError();
   const key = nativeTextAssetKey(record!);
   if (!key || record!.deleted) throw new Error("This file has no native text source");
-  const result = await input.commit();
+  // The native text owner persists file bytes. Projection of those bytes must
+  // not author another record save when its metadata is unchanged.
+  const result = isDeepStrictEqual(input.replace, record!.value) ? undefined : await input.commit();
   const native = await runDocumentTransaction(
     tx,
     {
@@ -34,6 +38,14 @@ export const writeOrderedTextAsset = async <T>(input: {
     },
   );
   native.document.destroy();
-  if (native.changed) await refreshNativeRecordText(tx, owner, key, input.content);
-  return { result, key, records: await readProjectedRecords(tx, owner, [recordId]) };
+  const projected = native.changed ? await refreshNativeRecordText(tx, owner, key, input.content) : 0;
+  return {
+    result,
+    key,
+    changed: native.changed,
+    projected,
+    records: await readProjectedRecords(tx, owner, [recordId]),
+  };
 };
+
+import { isDeepStrictEqual } from "node:util";
