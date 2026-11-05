@@ -15,6 +15,8 @@ import { type LegacyChatDraftTransfer, transferLegacyChatDraft } from "./chat-le
 import { type ChatSession, createChatSession } from "./chat-session";
 
 export interface ChatCommandTransport {
+  /** Retain unchanged native owners when the host rebuilds a project contribution set. */
+  chatRendererOwners?: ChatRendererOwners;
   readLegacySessionDraft?: (projectId: string, draftKey: string) => LegacyChatDraftTransfer | undefined;
   createChatHost?: (workbench: WorkbenchCore, projectId?: string) => ComponentType<NativeChatHostProps>;
   streamChatCommand?(
@@ -24,11 +26,12 @@ export interface ChatCommandTransport {
   ): AsyncIterable<unknown> & { result?: Promise<unknown> };
   createChatParamField?: (workbench: WorkbenchCore) => CommandParamFieldRenderer;
 }
-type ChatRecord = WorkbenchExtensionMetadata["views"][number] & {
+export type ChatRecord = WorkbenchExtensionMetadata["views"][number] & {
   body: Extract<WorkbenchExtensionMetadata["views"][number]["body"], { kind: "chat" }>;
 };
 
-const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view: ChatRecord) => {
+const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContributionsInput, view: ChatRecord) => {
+  let input = initialInput;
   const body = view.body;
   let Host: ComponentType<NativeChatHostProps> | undefined;
   const sessions = new Map<string, { session: ChatSession; render: WorkbenchPanelRenderInput }>();
@@ -129,37 +132,39 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
       action: (action: Parameters<ChatSession["run"]>[0]) => run(body.actionHandlerId, { action }),
     };
   };
-  const registration = input.workbench.views.registerView(
-    {
-      id: view.id,
-      title: text(view.title, view.id),
-      icon: view.icon,
-      body: {
-        kind: "react",
-        render: (render) => {
-          Host ??= input.createChatHost?.(render.workbench, input.projectId);
-          const { session, key, action, linkHandler } = sessionFor(render);
-          return createElement(NativeChatView, {
-            key,
-            Host,
-            session,
-            action,
-            linkHandler,
-            conversationKey: key,
-            extensionId: view.extensionId,
-            refreshKey: getWorkbenchRenderers(render.workbench).store.getState().refreshKeys[view.id],
-            emptyTitle: text(body.emptyTitle),
-            emptyDescription: text(body.emptyDescription),
-            renderParamField: input.createChatParamField?.(render.workbench),
-          });
-        },
-      },
-    },
-    { source: "extension", ownerId: view.extensionId },
-  );
   return {
+    register(nextInput: RegisterWorkbenchExtensionContributionsInput) {
+      input = nextInput;
+      return input.workbench.views.registerView(
+        {
+          id: view.id,
+          title: text(view.title, view.id),
+          icon: view.icon,
+          body: {
+            kind: "react",
+            render: (render) => {
+              Host ??= input.createChatHost?.(render.workbench, input.projectId);
+              const { session, key, action, linkHandler } = sessionFor(render);
+              return createElement(NativeChatView, {
+                key,
+                Host,
+                session,
+                action,
+                linkHandler,
+                conversationKey: key,
+                extensionId: view.extensionId,
+                refreshKey: getWorkbenchRenderers(render.workbench).store.getState().refreshKeys[view.id],
+                emptyTitle: text(body.emptyTitle),
+                emptyDescription: text(body.emptyDescription),
+                renderParamField: input.createChatParamField?.(render.workbench),
+              });
+            },
+          },
+        },
+        { source: "extension", ownerId: view.extensionId },
+      );
+    },
     dispose() {
-      registration.dispose();
       for (const { session } of sessions.values()) session.dispose();
       sessions.clear();
     },
@@ -167,12 +172,56 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
 };
 
 export const registerWorkbenchExtensionChatRenderers = (input: RegisterWorkbenchExtensionContributionsInput) => {
+  const localOwners = input.chatRendererOwners ? undefined : createWorkbenchExtensionChatRendererOwners();
+  const owners = input.chatRendererOwners ?? localOwners!;
   const registrations = input.metadata.views.flatMap((view) =>
-    view.body.kind === "chat" ? [registerChat(input, view as ChatRecord)] : [],
+    view.body.kind === "chat" ? [owners.register(input, view as ChatRecord)] : [],
   );
   return {
     dispose() {
       for (const registration of registrations.reverse()) registration.dispose();
+      localOwners?.dispose();
     },
   };
 };
+
+const ownerKey = (projectId: string, view: ChatRecord) => JSON.stringify([projectId, view.id]);
+const ownerDeclaration = (metadata: WorkbenchExtensionMetadata, view: ChatRecord) =>
+  JSON.stringify([metadata.extensions.find((extension) => extension.id === view.extensionId), view]);
+
+/** One project contribution lifecycle owns this collection; registration disposal only detaches views. */
+export const createWorkbenchExtensionChatRendererOwners = () => {
+  const owners = new Map<string, { declaration: string; owner: ReturnType<typeof createChatRendererOwner> }>();
+  return {
+    reconcile(projectId: string, metadata: WorkbenchExtensionMetadata) {
+      const current = new Map(
+        metadata.views.flatMap((view) =>
+          view.body.kind === "chat"
+            ? [[ownerKey(projectId, view as ChatRecord), ownerDeclaration(metadata, view as ChatRecord)]]
+            : [],
+        ),
+      );
+      for (const [key, entry] of owners) {
+        if (current.get(key) === entry.declaration) continue;
+        entry.owner.dispose();
+        owners.delete(key);
+      }
+    },
+    register(input: RegisterWorkbenchExtensionContributionsInput, view: ChatRecord) {
+      const key = ownerKey(input.projectId, view);
+      const declaration = ownerDeclaration(input.metadata, view);
+      let entry = owners.get(key);
+      if (entry?.declaration !== declaration) {
+        entry?.owner.dispose();
+        entry = { declaration, owner: createChatRendererOwner(input, view) };
+        owners.set(key, entry);
+      }
+      return entry.owner.register(input);
+    },
+    dispose() {
+      for (const entry of owners.values()) entry.owner.dispose();
+      owners.clear();
+    },
+  };
+};
+export type ChatRendererOwners = ReturnType<typeof createWorkbenchExtensionChatRendererOwners>;

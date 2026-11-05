@@ -10,9 +10,11 @@ import { createSessionsApi } from "./sessions";
 
 test("the scoped public fork copies a settled native conversation and rejects foreign identity without running it", async () => {
   let starts = 0;
+  let forks = 0;
   const controlEntered = Promise.withResolvers<void>();
   const releaseControl = Promise.withResolvers<void>();
   let pendingControl: Promise<unknown> | undefined;
+  let sourceId: string | undefined;
   const messages = [
     { id: "answer", role: "assistant" as const, parts: [{ type: "text" as const, text: "Remember blue" }] },
   ];
@@ -36,7 +38,7 @@ test("the scoped public fork copies a settled native conversation and rejects fo
           }),
           fork: (_ctx, input) => {
             expect(input.messageId).toBe("answer");
-            return { agentSessionId: "independent" };
+            return { agentSessionId: `independent-${++forks}` };
           },
         },
       }),
@@ -51,6 +53,7 @@ test("the scoped public fork copies a settled native conversation and rejects fo
       agent: testHarnessId("fork"),
       status: "completed",
     });
+    sourceId = source.id;
     await handle.deps.sessionService.update(source.id, {
       agent_session_id: "original",
       last_selected_model: "saved",
@@ -67,7 +70,7 @@ test("the scoped public fork copies a settled native conversation and rejects fo
       status: "completed",
       lastSelectedModel: "saved",
     });
-    expect((await api.get(fork.id))?.agentSessionId).toBe("independent");
+    expect((await api.get(fork.id))?.agentSessionId).toBe("independent-1");
     expect((await api.getConversation(fork.id)).messages).toEqual(messages);
     expect(starts).toBe(0);
     const foreign = await handle.deps.projectService.create({ name: "Foreign" });
@@ -75,12 +78,41 @@ test("the scoped public fork copies a settled native conversation and rejects fo
     await expect(other.fork(source.id, "answer")).rejects.toThrow("Session not found");
     // Keep a real public control owner alive across both reads; an ownerless status can recover to settled.
     pendingControl = api.invokeHarnessOperation(source.id, { kind: "command", text: "/status" });
-    await controlEntered.promise;
+    await Promise.race([
+      controlEntered.promise,
+      pendingControl.then(() => {
+        throw new Error("The control finished before its busy assertions.");
+      }),
+    ]);
     expect((await api.getForkState(source.id)).disabledReason).toContain("pending work");
-    await expect(api.fork(source.id, "answer")).rejects.toThrow("pending work");
+    await expect(api.fork(source.id)).rejects.toThrow("pending work");
+    expect(await api.getForkState(source.id, { scope: "reply" })).toEqual({ supported: true, disabledReason: null });
+    await expect(api.fork(source.id, "answer")).rejects.toThrow("completed agent reply");
+    const owner = handle.deps.sessionService.store.get(source.id)!;
+    const conversation = await owner.conversationReady;
+    conversation.push({
+      op: "add",
+      path: "/messages/1",
+      value: { id: "later", role: "user", parts: [{ type: "text", text: "Later work" }] },
+    });
+    conversation.push({
+      op: "add",
+      path: "/messages/2",
+      value: { id: "partial", role: "assistant", parts: [{ type: "text", text: "Still working" }] },
+    });
+    const earlier = await api.fork(source.id, "answer");
+    expect(earlier.status).toBe("completed");
+    expect(handle.deps.sessionService.store.get(source.id)).toBe(owner);
+    await expect(api.fork(source.id, "partial")).rejects.toThrow("completed agent reply");
   } finally {
     releaseControl.resolve();
-    await pendingControl;
-    await handle.close();
+    try {
+      await pendingControl;
+      // The operation acknowledgement precedes its host checkpoint. Finish owned work before closing its database.
+      for (let i = 0; i < 100 && sourceId && handle.deps.sessionService.store.get(sourceId); i++) await Bun.sleep(10);
+      if (sourceId) expect(handle.deps.sessionService.store.get(sourceId)).toBeNull();
+    } finally {
+      await handle.close();
+    }
   }
 });

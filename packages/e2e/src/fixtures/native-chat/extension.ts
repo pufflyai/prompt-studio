@@ -1,21 +1,58 @@
 import {
   type ChatDraft,
+  type ChatRendererAction,
   type ChatRendererEvent,
   type ChatRendererSnapshot,
   defineCommand,
   defineExtension,
   definePage,
   defineView,
+  type JsonObject,
+  type SessionMessage,
   streamOf,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+
+const fixtureDecision = (id: string) => ({
+  id,
+  actions: [
+    { id: "skip", label: "Skip", variant: "ghost" as const },
+    { id: "continue", label: "Cancel", variant: "subtle" as const },
+    { id: "approve", label: "Approve native decision", variant: "primary" as const },
+  ],
+});
+const fixturePresentation = (action: ChatRendererAction) => {
+  if (action.type === "decision") return { snapshot: { decision: null } };
+  if (action.type === "operation" && ["decisions", "refresh-decisions"].includes(action.id))
+    return { snapshot: { streaming: false, decisions: [fixtureDecision("plan-1"), fixtureDecision("goal-1")] } };
+  if (action.type === "operation" && action.id === "reopen-decision")
+    return { snapshot: { decision: fixtureDecision("goal-1") } };
+  if (action.type === "operation" && action.id === "revise-decisions")
+    return { snapshot: { decisions: [fixtureDecision("plan-2"), fixtureDecision("goal-1")] } };
+  if (action.type === "operation" && action.id === "fork-history")
+    return {
+      snapshot: {
+        streaming: true,
+        fork: { disabledReason: null },
+        messages: [
+          { id: "completed-reply", role: "assistant", parts: [{ type: "text", text: "Completed earlier reply" }] },
+          { id: "later-request", role: "user", parts: [{ type: "text", text: "Later work" }] },
+          { id: "in-flight-reply", role: "assistant", parts: [{ type: "text", text: "Still working" }] },
+        ] satisfies SessionMessage[],
+      },
+    };
+  if (action.type === "fork") {
+    if (action.messageId !== "completed-reply") throw new Error("An unfinished reply cannot be forked.");
+    return { snapshot: { notice: "Earlier reply forked while work continues" } };
+  }
+};
 
 const fixtureHarnessId = "pstdio.workbench-fixture.harness.fake";
 const initial: ChatRendererSnapshot = { messages: [], values: {}, controls: [] };
 const watch = defineCommand({
   id: "watch",
   title: "Watch conversation",
-  stream: streamOf<ChatRendererEvent>(),
+  stream: streamOf<ChatRendererEvent & JsonObject>(),
   async run(ctx) {
     await ctx.stream.write({ revision: 0, snapshot: { notice: "Live stream connected" } });
     if (!ctx.signal.aborted)
@@ -38,6 +75,11 @@ const conversation = defineView({
         operations: [
           { id: "ask", label: "Ask a question" },
           { id: "queue", label: "Show saved queue" },
+          { id: "fork-history", label: "Show running replies" },
+          { id: "decisions", label: "Show pending decisions" },
+          { id: "refresh-decisions", label: "Refresh pending decisions" },
+          { id: "reopen-decision", label: "Reopen goal decision" },
+          { id: "revise-decisions", label: "Revise plan decision" },
         ],
         controls: [
           {
@@ -77,6 +119,8 @@ const conversation = defineView({
         : null;
     },
     async onAction(ctx, { action }) {
+      const fork = fixturePresentation(action);
+      if (fork) return fork;
       if (action.type === "operation" && action.id === "queue")
         return {
           snapshot: {

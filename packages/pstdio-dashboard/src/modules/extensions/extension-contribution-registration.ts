@@ -1,6 +1,7 @@
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   fileRendererRefreshEnvelopeFromCommand,
+  type RegisterWorkbenchExtensionContributionsInput,
   registerWorkbenchExtensionContributions,
   toWorkbenchWhenExpression,
 } from "@pstdio/workbench/extensions";
@@ -60,6 +61,7 @@ export const disposeExtensionContributions = (disposables: Disposable[]) => {
 };
 
 interface RegisterExtensionContributionsInput {
+  chatRendererOwners?: RegisterWorkbenchExtensionContributionsInput["chatRendererOwners"];
   ctx: WorkbenchModuleContext;
   executeCommand: ExecuteDashboardExtensionCommand;
   metadata: ResolvedWorkbenchExtensionMetadata;
@@ -111,6 +113,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     });
     disposables.push(
       registerWorkbenchExtensionContributions({
+        chatRendererOwners: input.chatRendererOwners,
         readLegacySessionDraft: readLegacySessionChatDraft,
         createChatHost: createDashboardChatHost,
         createChatParamField: createDashboardParamFieldRenderer,

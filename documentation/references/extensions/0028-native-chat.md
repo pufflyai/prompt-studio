@@ -66,6 +66,16 @@ and close its hold in `finally`. The host aborts reads and watches when the last
 view releases them or the extension unregisters. Cancellation releases holds and
 subscriptions; it must never invoke `ctx.sessions.stop`.
 
+Declare all pending native confirmations in `decisions`, with a stable ID for each
+revision. The native view owner displays the first available decision and retains
+successful Skip, Cancel and approval dismissals across query/stream refreshes. A
+revised ID becomes eligible again; other simultaneous decisions remain available.
+An action result's explicit `decision` reopens only that revision. The singular
+`decision` field remains supported for providers with one current decision.
+Dismissals belong to the native owner, never durable draft values; reload or
+extension unregister creates a fresh owner. Providers must omit `decision` from
+routine responses and send their current catalog through `decisions`.
+
 ## Actions and durable drafts
 
 `onAction` receives `ChatRendererAction` and `draftKey`. Bind submission, stop,
@@ -152,8 +162,12 @@ persisted nondefault value is actually replaced. The default `"overrides"` mode
 keeps generic settings forms sparse, including removing an override on reset.
 
 Set `snapshot.fork` to expose per-message fork actions, with a nullable
-`disabledReason`. Use `ctx.sessions.getForkState` and `ctx.sessions.fork` to reuse
-the native fork service, its idle/queue guards and independent transcript identity.
+`disabledReason`. For per-reply controls use `ctx.sessions.getForkState(id, { scope: "reply" })`
+and `ctx.sessions.fork(id, messageId)`: completed earlier replies remain available
+while later work runs. The shared native UI hides the current streaming reply's
+fork control; the service authoritatively rejects that unfinished reply. Omit the
+scope (or use `"conversation"`) for a whole-conversation copy, which retains its
+idle/queue guards. Both paths preserve independent transcript identity.
 Queue steering must pass the `activeRunStartedAt` captured with the selected
 request along with its revision, rather than reading a newer run when clicked.
 
@@ -171,3 +185,5 @@ Adoption owns their supported transition, default installation, navigation refs
 and consumer updates, using published supporting packages. Use a published SDK
 containing this contract and a compatible host; see [API versioning](0014-api-versioning.md).
 The independent fixture is `packages/e2e/src/fixtures/native-chat/extension.ts`.
+
+Native conversation owners survive unrelated tool installation or metadata refresh in the same project. The host retains an owner only while its extension and chat view declarations are unchanged. Changing or removing that declaration, switching projects, or disposing the host releases its subscriptions; re-enabling creates a new owner and loads the durable draft. This preserves edits made before asynchronous draft hydration finishes.

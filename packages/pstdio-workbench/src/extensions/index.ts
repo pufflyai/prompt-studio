@@ -26,6 +26,7 @@ export {
   createWorkbenchWebviewHostAdapters,
   createWorkbenchWebviewHostCapabilities,
 } from "./bridge/webview-host-capabilities";
+export { createWorkbenchExtensionChatRendererOwners } from "./contributions/chat-renderer-contributions";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
 export {
   registerWorkbenchExtensionControlsRenderers,

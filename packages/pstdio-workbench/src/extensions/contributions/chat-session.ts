@@ -8,7 +8,7 @@ import {
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
 import { hydrateChatDraft, recoverChatDraft, restoreChatDraft } from "./chat-draft-recovery";
-import { createChatDraftValues } from "./chat-draft-values";
+import { createChatSnapshot } from "./chat-snapshot";
 
 export interface ChatSessionInput {
   initial?: ChatRendererSnapshot;
@@ -22,23 +22,11 @@ export interface ChatSessionInput {
 const emptyChatDraft = (draft: ChatDraft) =>
   !draft.text && !draft.attachments.length && !draft.recovered?.length && !Object.keys(draft.values).length;
 
-const latestChatFields = (incoming: ChatRendererSnapshot, fieldClocks: Map<string, number>, issued: number) => {
-  const current = (key: string) => {
-    if ((fieldClocks.get(key) ?? -1) > issued) return false;
-    fieldClocks.set(key, issued);
-    return true;
-  };
-  const { values, ...fields } = incoming;
-  return {
-    ...Object.fromEntries(Object.entries(fields).filter(([key]) => current(key))),
-    ...(values && {
-      values: Object.fromEntries(Object.entries(values).filter(([key]) => current(`values.${key}`))),
-    }),
-  } as ChatRendererSnapshot;
-};
-
 const initialChatState = (initial?: ChatRendererSnapshot) => ({
-  conversation: chatRendererSnapshotSchema.parse(initial ?? {}),
+  conversation: {
+    ...chatRendererSnapshotSchema.parse(initial ?? {}),
+    ...(initial?.decisions && !initial.decision ? { decision: initial.decisions[0] ?? null } : {}),
+  },
   draft: { text: "", attachments: [], values: { ...initial?.values } } as ChatDraft,
   loading: false,
   sending: false,
@@ -51,12 +39,6 @@ const assertChatActionAvailable = (conversation: ChatRendererSnapshot, action: C
   if (conversation.queueReadOnly && action.type === "queue")
     throw new Error("This queue is read-only. Refresh it before editing.");
 };
-
-const mergeChatConversation = (previous: ChatRendererSnapshot, next: ChatRendererSnapshot) => ({
-  ...previous,
-  ...next,
-  values: { ...previous.values, ...next.values },
-});
 
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
@@ -73,32 +55,26 @@ export const createChatSession = (input: ChatSessionInput) => {
   let revision = -1;
   let streamHasMessages = false;
   let clock = 0;
-  const fieldClocks = new Map<string, number>();
   let changes = 0;
   let localEdits = 0;
   let hydrated = !input.loadDraft;
   let hydrating = false;
   let hydration = Promise.resolve();
-  const draftValues = createChatDraftValues();
+  const snapshots = createChatSnapshot(state.conversation);
   let save = Promise.resolve();
   let persistedChanges = 0;
   let persistenceError: string | undefined;
   let submission: Promise<void> | undefined;
   let recoverableDraft: ChatDraft | undefined;
-  const merge = (incoming: ChatRendererSnapshot, issued = ++clock, expectedValues?: Map<string, number>) => {
-    const snapshot = latestChatFields(incoming, fieldClocks, issued);
-    // Presentation clocks include ignored defaults; action draft ownership follows actual control changes.
-    const values = draftValues.snapshot(
-      state.draft,
-      expectedValues ? incoming.values : snapshot.values,
-      expectedValues,
-    );
-    publish({
-      conversation: mergeChatConversation(state.conversation, snapshot),
-      loading: false,
-      draft: values.draft,
-    });
-    if (expectedValues && values.changed) {
+  const merge = (
+    incoming: ChatRendererSnapshot,
+    issued = ++clock,
+    expectedValues?: Map<string, number>,
+    action?: ChatRendererAction,
+  ) => {
+    const merged = snapshots.merge(state, incoming, issued, expectedValues, action);
+    publish({ ...merged.state, loading: false });
+    if (expectedValues && merged.valuesChanged) {
       changes++;
       saveDraft();
     }
@@ -146,7 +122,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     const draft = chatDraftSchema.parse({ ...state.draft, ...update });
     changes++;
     localEdits++;
-    if (update.values) draftValues.replace(state.draft.values, draft.values);
+    if (update.values) snapshots.values.replace(state.draft.values, draft.values);
     publish({ draft });
     // Saving follows edits even when the presentation unmounts. A failed save remains visible.
     saveDraft();
@@ -184,7 +160,7 @@ export const createChatSession = (input: ChatSessionInput) => {
           const draft = chatDraftSchema.parse(value);
           hydrated = true;
           if (changes === started) {
-            draftValues.hydrate(draft.values);
+            snapshots.values.hydrate(draft.values);
             publish({ draft: { ...draft, values: { ...state.draft.values, ...draft.values } } });
           } else publish({ draft: hydrateChatDraft(state.draft, draft) });
         })
@@ -214,10 +190,10 @@ export const createChatSession = (input: ChatSessionInput) => {
     assertChatActionAvailable(state.conversation, action);
     const issued = ++clock;
     const changed = localEdits;
-    const expectedValues = draftValues.capture();
+    const expectedValues = snapshots.values.capture();
     const parsed = chatRendererActionSchema.parse(action);
     const result = chatRendererActionResultSchema.parse((await handler(parsed)) ?? {});
-    if (result.snapshot) merge(result.snapshot, issued, expectedValues);
+    if (result.snapshot) merge(result.snapshot, issued, expectedValues, parsed);
     if (result.draft) changeDraft(localEdits === changed ? result.draft : hydrateChatDraft(state.draft, result.draft));
     return result;
   };

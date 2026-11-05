@@ -56,6 +56,20 @@ const chatInputTagSchema = z.object({
   clearActionId: z.string(),
   closeLabel: z.string().optional(),
 });
+const chatDecisionSchema = z.object({
+  id: z.string(),
+  model: z.string().optional(),
+  modeSnapshot: harnessModeSchema.optional(),
+  actions: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      variant: z.enum(["primary", "subtle", "ghost"]),
+      disabled: z.boolean().optional(),
+    }),
+  ),
+});
+
 /** Public wire messages retain the existing session protocol; no second transcript format. */
 export const chatRendererSnapshotSchema = z.strictObject({
   messages: z.array(sessionMessageSchema).optional(),
@@ -78,22 +92,9 @@ export const chatRendererSnapshotSchema = z.strictObject({
   draftTag: chatInputTagSchema.nullable().optional(),
   /** A submitted native input reference, distinct from any new tagged draft. Hiding it does not cancel work. */
   sentTag: chatInputTagSchema.nullable().optional(),
-  decision: z
-    .object({
-      id: z.string(),
-      model: z.string().optional(),
-      modeSnapshot: harnessModeSchema.optional(),
-      actions: z.array(
-        z.object({
-          id: z.string(),
-          label: z.string(),
-          variant: z.enum(["primary", "subtle", "ghost"]),
-          disabled: z.boolean().optional(),
-        }),
-      ),
-    })
-    .nullable()
-    .optional(),
+  /** All pending decision revisions. The native owner keeps dismissals per view, without persisting them in drafts. */
+  decisions: z.array(chatDecisionSchema).optional(),
+  decision: chatDecisionSchema.nullable().optional(),
   resources: z
     .array(
       z.object({

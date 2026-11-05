@@ -34,6 +34,7 @@ test("independent native chat paints and accepts input before history, then reta
   const projectPath = join(sourcePath, "project");
   mkdirSync(projectPath);
   let projectId: string | undefined;
+  const blockedNativeReads = new Set<string>();
   let release!: () => void;
   const delayed = new Promise<void>((done) => {
     release = done;
@@ -70,13 +71,17 @@ test("independent native chat paints and accepts input before history, then reta
       localStorage.setItem("dashboard-wb2:selected-project:global", id!);
     }, projectId);
     await page.route("**/extensions/commands/acme.native-chat.view.conversation.chat.query/execute", async (route) => {
+      blockedNativeReads.add("query");
       await delayed;
+      blockedNativeReads.delete("query");
       await route.continue();
     });
     await page.route(
       "**/extensions/commands/acme.native-chat.view.conversation.chat.loadDraft/execute",
       async (route) => {
+        blockedNativeReads.add("draft");
         await delayed;
+        blockedNativeReads.delete("draft");
         await route.continue();
       },
     );
@@ -84,7 +89,10 @@ test("independent native chat paints and accepts input before history, then reta
     const main = page.locator('[data-workbench-region="main"]');
     const composer = main.locator('[data-testid="content-editable"][contenteditable="true"]');
     await expect(composer).toBeVisible();
+    // Project provisioning owns a blocking modal; native history and hydration are still independently held.
+    await expect(page.getByRole("dialog", { name: "Opening Native chat", exact: true })).toHaveCount(0);
     await composer.fill("Unsent native draft");
+    expect(blockedNativeReads).toEqual(new Set(["query", "draft"]));
     await expect(page.locator('iframe[title="Native conversation"]')).toHaveCount(0);
     release();
     await expect(main.getByText("Native transcript", { exact: true })).toBeVisible();
@@ -157,6 +165,27 @@ test("independent native chat paints and accepts input before history, then reta
     await composer.fill("Edited prompt only");
     await main.getByRole("button", { name: "Update", exact: true }).click();
     await expect(main.getByText("Queue update kept B", { exact: true })).toBeVisible();
+    // Critical risk: later streaming must not disable forks of completed earlier replies.
+    await main.getByRole("button", { name: "Show running replies", exact: true }).click();
+    const fork = main.getByRole("button", { name: "Fork conversation", exact: true });
+    await expect(fork).toHaveCount(1);
+    await main.locator('[data-chat-message-id="completed-reply"]').hover();
+    await fork.click();
+    await expect(main.getByText("Earlier reply forked while work continues", { exact: true })).toBeVisible();
+    await expect(main.getByText("Still working", { exact: true })).toBeVisible();
+    // Critical risk: polling must not undo Skip/Cancel/approval or dismiss another pending mode.
+    await main.getByRole("button", { name: "Show pending decisions", exact: true }).click();
+    await main.getByRole("button", { name: "Skip", exact: true }).click();
+    await main.getByRole("button", { name: "Cancel", exact: true }).click();
+    await main.getByRole("button", { name: "Refresh pending decisions", exact: true }).click();
+    await expect(main.getByRole("button", { name: "Skip", exact: true })).toHaveCount(0);
+    await main.getByRole("button", { name: "Reopen goal decision", exact: true }).click();
+    await main.getByRole("button", { name: "Approve native decision", exact: true }).click();
+    await main.getByRole("button", { name: "Refresh pending decisions", exact: true }).click();
+    await expect(main.getByRole("button", { name: "Skip", exact: true })).toHaveCount(0);
+    await main.getByRole("button", { name: "Revise plan decision", exact: true }).click();
+    await main.getByRole("button", { name: "Skip", exact: true }).click();
+    await expect(main.getByRole("button", { name: "Skip", exact: true })).toHaveCount(0);
     await expect(composer).toContainText("Unsent native draft");
   } finally {
     release();

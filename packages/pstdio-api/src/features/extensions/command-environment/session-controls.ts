@@ -42,7 +42,7 @@ export const createSessionControls = (deps: ExtensionsRouteDeps, input: SessionA
       const result = await forkSession(deps, id, messageId);
       return toExtensionSession(result.session, result.workspaceId);
     },
-    getForkState: (id) =>
+    getForkState: (id, options) =>
       read(async () => {
         const session = await requireProjectSession(id);
         const harness = await getSessionHarness(deps.harnessRegistry, session);
@@ -56,7 +56,7 @@ export const createSessionControls = (deps: ExtensionsRouteDeps, input: SessionA
           (await deps.sessionQueueEntriesService.hasEntries(id));
         let disabledReason: string | null = null;
         if (!supported) disabledReason = "This harness does not support forking conversations.";
-        else if (pending) disabledReason = "Finish or stop pending work before forking.";
+        else if (pending && options?.scope !== "reply") disabledReason = "Finish or stop pending work before forking.";
         else if (!session.agent_session_id) disabledReason = "Send a message before forking this conversation.";
         return { supported, disabledReason };
       }),
