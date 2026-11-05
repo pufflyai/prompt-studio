@@ -360,20 +360,6 @@
     "removeWhen": "Identify and fix the shared PowerShell fixture variability, then pass all three PATH registry cases in ten independent Windows x64 runs within their existing 15 second allowances, without retries or prewarming."
   },
   {
-    "runner": "playwright-ui",
-    "file": "packages/e2e/src/ui/ticket-session-status.p2.spec.ts",
-    "name": "follows the latest workspace session status and opens it in the Side Panel",
-    "platforms": ["darwin"],
-    "arch": "arm64",
-    "owner": "PS-954 / ticket workspace session navigation",
-    "reason": "On macOS ARM64, both a full suite and a focused unchanged-main run opened the session Side Panel but unexpectedly replaced the ticket board. Other unchanged-main and PS-932 runs pass. The retargeted nested-control defect in PS-954 is proven separately; it has not been established as the cause of this intermittent failure. PS-954 retains main-reproduction.log and main-trace.zip. Quarantine authorized on 2026-10-26; preserve status transitions, board visibility, panel closing and keyboard navigation.",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/pull/1477",
-      "https://github.com/pufflyai/prompt-studio/pull/1455"
-    ],
-    "removeWhen": "Trace and fix the navigation that replaces the board, then pass ten independent macOS ARM64 runs with all original assertions and limits, without retries."
-  },
-  {
     "runner": "bun",
     "file": "clients/desktop/src/cli/windows-user-path.p0.test.ts",
     "name": "Windows PATH uninstall preserves long values and environment references",
@@ -703,6 +689,21 @@
       "https://github.com/pufflyai/prompt-studio/pull/1697"
     ],
     "removeWhen": "Identify and fix the cold dependency-download stall on Apple Silicon, then use first-attempt normal native CI observations to show the complete fresh-cache fixture finishes within its unchanged120000ms allowance. Keep every core extension, asset/storage assertion and cleanup; do not retry, prewarm or run reliability loops."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-core-extension-features.p2.test.ts",
+    "name": "packaged core extension features preserve their settings, resources and templates",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-93 / core extension installation",
+    "reason": "The shared cold-install fixture exhausted 120000ms before project creation in PS-90 verification; the unchanged-main control passed in 95839ms with 260 assertions. Codex dependency installation varied from 61.0s to 106.6s, Claude 28.0s to 43.4s and OpenCode 14.5s to 25.2s. PS-75 already tracks the sibling smoke case on this setup path; the precise transfer stall remains unresolved. Preserve all nine extensions, fresh home/cache, feature assertions and cleanup.",
+    "evidence": [
+      "Planner PS-93 files/packages.log and branch-install.jsonl: original 120002ms timeout after 138 passes/79 files on settings 3ed354453",
+      "Planner PS-93 files/main-control.log and main-install.jsonl: unchanged main 5c1e728b8 single cold control 95839ms, 260 assertions",
+      "https://github.com/pufflyai/prompt-studio/pull/1699"
+    ],
+    "removeWhen": "Identify and fix the cold dependency-install stall on Apple Silicon, then use ordinary first-attempt native CI observations to show the complete fresh-cache fixture finishes within its unchanged120000ms allowance. Retain all nine real extensions, feature assertions and cleanup; do not retry, prewarm or run reliability loops."
   },
   {
     "runner": "bun",

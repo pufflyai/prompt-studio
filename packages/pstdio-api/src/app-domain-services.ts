@@ -9,6 +9,7 @@ import { selectPublicationSource } from "./features/extensions/publication/prepa
 import { createPublicationStorageAccess } from "./features/extensions/publication/storage-access";
 import type { EventBus } from "./features/sync/event-bus";
 import { createAssetTransferService } from "./services/asset-transfer-service";
+import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
 import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
@@ -47,6 +48,10 @@ export const createCoreDomainServices = (input: {
   });
 
   return {
+    extensionAutomationPreferencesService: createExtensionAutomationPreferencesService({
+      db: dbs.extensionAutomationPreferencesDBService,
+      eventBus,
+    }),
     fileService,
     assetTransferService,
     projectService: createProjectService({ projectsDBService: dbs.projectsDBService, syncService, eventBus }),

@@ -50,11 +50,11 @@ export function EditableCardPreview(props: EditableCardPreviewProps) {
     attributes: {
       ...values,
       workspace: "workspace",
-      workspaceItems: [
+      linkedResourceItems: [
         {
           id: "workspace",
           label: "P-1_A1",
-          target: { kind: "page", page: workbenchPages.workspace, resource: { type: "workspace", id: "workspace" } },
+          action: { kind: "page", page: workbenchPages.workspace, resource: { type: "workspace", id: "workspace" } },
         },
       ],
     },
@@ -70,10 +70,10 @@ export function EditableCardPreview(props: EditableCardPreviewProps) {
         attributes: [
           {
             id: "workspace",
-            label: "Workspace",
+            label: "Linked resources",
             type: { kind: "string" },
             displayable: true,
-            display: { kind: "badge-list", itemsAttributeId: "workspaceItems" },
+            display: { kind: "badge-list", itemsAttributeId: "linkedResourceItems" },
           },
           {
             id: "status",

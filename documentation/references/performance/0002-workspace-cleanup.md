@@ -23,7 +23,7 @@ The renderer already coalesces refresh events and allows only one running query 
 - The host owns a FIFO queue with **two active workspace deletions** per workspace service. HTTP, CLI calls through HTTP, and extension deletions share it across projects and overlapping archive batches.
 - A slot covers session cancellation, provider/Git cleanup, session archival, and workspace deletion. Duplicate requests for the same workspace share a promise. Success and failure both release the slot; a failed request can be retried.
 - Session archive writes run sequentially within each workspace. Normal queued deletion therefore contributes at most two in-flight archive writes. This does not limit unrelated session operations elsewhere in the app.
-- Planner badge lookups share **four active lookups** per loaded module. Each asks for the newest ongoing session with `limit: 1`, then the newest session with `limit: 1` if none is ongoing. Archived sessions remain eligible, preserving the existing badge behavior.
+- Planner reads linked-resource anchors in batches of at most 100 tickets, follows every result page, and resolves deduplicated resources in batches of at most 100 references.
 - Column archival still returns after saving the tickets. Cleanup failures retain the existing persistent notification, and workspaces linked to an active ticket remain protected.
 
 Two deletion slots retain overlap between filesystem and database waits without starting a Git process for every workspace. A per-command limit would allow overlapping commands to multiply the work again. Moving promises to a worker thread would not reduce Git's CPU or filesystem work. Arbitrary sleeps would slow completion without removing the avoidable queries.
@@ -82,10 +82,10 @@ For the reported macOS case, run the same filesystem workload on the same volume
 
 ## Regression coverage
 
-Tests cover 28 mixed HTTP and extension requests sharing two slots through finalization; duplicate deletion; failed slots draining and retrying; sequential session archival before workspace deletion; immediate column archival with background cleanup and failure reporting; shared-workspace protection; correct ongoing/completed badge selection; and overlapping badge refreshes sharing the read limit.
+Tests cover 28 mixed HTTP and extension requests sharing two slots through finalization; duplicate deletion; failed slots draining and retrying; sequential session archival before workspace deletion; immediate column archival with background cleanup and failure reporting; shared-workspace protection. Ticket badges now use the separate batched linked-resource lookup.
 
 The packaged smoke test uses a disposable remote provider to hold cleanup open, observes two active deletions from six HTTP requests, releases them, and checks that all six finish. It verifies the queue survives compilation and host wiring without relying on filesystem timing.
 
 Targeted API and Planner tests, API/DB/Planner type checks, scoped Biome checks, and documentation link checks passed. Package verification built all platform binaries and passed published-type and package-consumer checks. Its CLI suite passed 92 tests. Six browser checks initially could not launch because the separate Playwright headless shell was absent; after installing that dependency, all six passed on rerun. The other seven browser checks passed on the initial run; four existing Firefox/WebKit cases were skipped by their environment conditions. The final host binary was rebuilt, its cleanup smoke passed again, and the remaining compiled-Bun smoke stage passed separately. The entire verification command was not repeated after fixing the browser dependency.
 
-See [workspace lifecycle ownership](../architecture/0023-worktrees.md), the [host deletion queue](../../../packages/pstdio-api/src/features/workspaces/workspace-deletion.ts), and [Planner session lookups](../../../extensions/pstdio-planner/src/data/workspace-sessions.ts).
+See [workspace lifecycle ownership](../architecture/0023-worktrees.md), the [host deletion queue](../../../packages/pstdio-api/src/features/workspaces/workspace-deletion.ts), and [Planner linked-resource lookups](../../../extensions/pstdio-planner/src/data/ticket-linked-resources.ts).

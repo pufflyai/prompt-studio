@@ -10,6 +10,8 @@ const kanbanRendererEnumOptionSchema = z.object({
   label: localizableStringSchema,
   color: z.string().optional(),
   icon: z.string().nullable().optional(),
+  note: localizableStringSchema.optional(),
+  canCreate: z.boolean().optional(),
 });
 
 const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
@@ -48,6 +50,7 @@ export const kanbanViewSettingsSchema = z.object({
   columnGrouping: z.string(),
   rowGrouping: z.string(),
   displayProperties: z.array(z.string()),
+  showChildren: z.boolean().optional(),
 });
 
 export const kanbanRendererSavedViewSchema = z.object({
@@ -91,6 +94,7 @@ const extensionKanbanRendererRowActionSchema = z.object({
 });
 
 export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
+  kind: z.enum(["kanban", "resourceList"]).optional(),
   queryMode: z.literal("paged").optional(),
   toolbarActions: z.array(viewToolbarActionRecordSchema).optional(),
   extensionInstanceId: z.string().optional(),

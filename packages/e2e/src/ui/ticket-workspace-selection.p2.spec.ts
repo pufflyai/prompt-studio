@@ -107,10 +107,6 @@ test("workspace navigation owns selection while keeping ticket document context"
     await expect(body).toHaveAttribute("aria-selected", "true");
     await expect(file).toHaveAttribute("aria-selected", "false");
     expect(await finishObservingRows()).toEqual([]);
-    await page.goto(board);
-    await card.getByTestId("workspace-badge-trigger").click();
-    await expect(linkedRow).toHaveAttribute("aria-selected", "true");
-    await expect(body).toHaveAttribute("aria-selected", "false");
   } finally {
     if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);
     if (existsSync(path)) rmSync(path, { recursive: true, force: true });

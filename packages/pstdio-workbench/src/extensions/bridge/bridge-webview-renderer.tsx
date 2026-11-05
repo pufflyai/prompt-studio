@@ -82,6 +82,7 @@ export const getBridgeWebviewHostEventPublisher = (workbench: WorkbenchCore, ins
 };
 
 export const renderBridgeWebviewFrame = (input: {
+  visible?: boolean;
   sizing?: "content-width" | "content-height";
   context: BridgeWebviewRenderContext;
   createHostAdapters: CreateBridgeWebviewHostAdapters;
@@ -94,6 +95,7 @@ export const renderBridgeWebviewFrame = (input: {
   const { context, createHostAdapters, createProps, createTheme = createLightTheme, ownerId, title, webview } = input;
   return (
     <BridgeWebviewFrame
+      visible={input.visible}
       sizing={input.sizing}
       view={{
         extensionId: ownerId ?? "workbench",
@@ -135,6 +137,7 @@ const renderBridgeWebview = (
   if (!webview) return null;
 
   return renderBridgeWebviewFrame({
+    visible: input.visible,
     sizing: input.sizing ?? (panel.region === "status" ? "content-width" : undefined),
     context: {
       workbench,

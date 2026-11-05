@@ -91,7 +91,9 @@ planner ticket ──┐
 
 ## Session management
 
-Saved sessions have shared Rename, Archive, and Delete commands on their breadcrumb and navigation rows. Commands use the explicit session ID or the row or tab context before the active session. Drafts have no saved-session actions.
+Saved sessions have shared Rename, Fork conversation, Archive, and Delete commands on their breadcrumb, tab, and navigation rows. Commands use the explicit session ID or the row or tab context before the active session. Drafts have no saved-session actions.
+
+`POST /v1/sessions/{id}/fork`, `client.sessions.fork(id)`, and `pst sessions fork --id <id>` copy a settled local conversation into the same workspace. The optional `messageId` query parameter, SDK option, and CLI `--message-id` choose an inclusive agent-reply boundary. The host copies that history into a separately owned file, keeps the agent, model and parameters, and records `original_session_id`. The optional harness `fork` method copies provider history and returns a different native ID without starting a turn. Active, pending, and queued work must settle first. Unsupported harnesses return 400; pending work or missing native history returns 409.
 
 Rename trims the name and uses `PATCH /v1/sessions/{id}/title`. Archive keeps the conversation, cancels queued work, and allows live work to continue. Both operations update the synced session row.
 

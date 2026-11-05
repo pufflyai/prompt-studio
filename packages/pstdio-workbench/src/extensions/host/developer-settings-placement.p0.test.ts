@@ -44,20 +44,8 @@ const metadata = (extensionId: string): WorkbenchExtensionMetadata => ({
   diagnostics: [],
 });
 
-test("independent controls target Developer settings on this device and dispose independently", () => {
+test("device-local extension settings remain independent navigable entries", () => {
   const workbench = createWorkbench();
-  workbench.views.registerView({
-    id: "developer-view",
-    title: "Developer",
-    body: { kind: "react", render: () => null },
-  });
-  workbench.settings.registerPanel({
-    id: "developer-tools",
-    title: "Developer",
-    kind: "view",
-    viewId: "developer-view",
-    scope: "global",
-  });
   const first = registerWorkbenchExtensionContributions({
     metadata: metadata("first"),
     workbench,
@@ -72,11 +60,11 @@ test("independent controls target Developer settings on this device and dispose 
   });
   expect(workbench.settings.getPanel("first.settings-panel.control")).toMatchObject({
     scope: "global",
-    parentPanelId: "developer-tools",
+    title: "Control",
   });
+  expect(workbench.settings.getPanel("first.settings-panel.control")?.parentPanelId).toBeUndefined();
   first.dispose();
   expect(workbench.settings.getPanel("first.settings-panel.control")).toBeUndefined();
   expect(workbench.settings.getPanel("second.settings-panel.control")).toBeDefined();
-  expect(workbench.settings.getPanel("developer-tools")).toBeDefined();
   second.dispose();
 });

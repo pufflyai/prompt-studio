@@ -20,7 +20,13 @@ afterEach(async () => {
   if (root) rmSync(root, { recursive: true, force: true });
 });
 
-test("extension commands manage the same saved views as the project API", async () => {
+test.each([
+  "kanban",
+  "resourceList",
+  "pagedResourceList",
+] as const)("%s extension commands manage the same saved views as the project API", async (kind) => {
+  const resourceList = kind !== "kanban";
+  const paged = kind === "pagedResourceList";
   root = mkdtempSync(join(tmpdir(), "extension-views-"));
   priorHome = process.env.PSTDIO_HOME;
   priorExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
@@ -42,10 +48,10 @@ test("extension commands manage the same saved views as the project API", async 
     join(source, "extension.ts"),
     `
 const board={kind:"view",id:"tasks"};
-const settings={viewMode:"board",columnGrouping:"none",rowGrouping:"none",displayProperties:[]};
+const settings={viewMode:"${resourceList ? "list" : "board"}",columnGrouping:"none",rowGrouping:"none",displayProperties:[],${resourceList ? "showChildren:false" : ""}};
 const filter={conjunction:"and",rules:[{attributeId:"title",condition:"contains",value:"Ready"}]};
 export default {
- views:["tasks","other"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"kanban",query:()=>({rows:[]})}})),
+ views:["tasks","other"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"${resourceList ? "resourceList" : "kanban"}",${paged ? 'queryMode:"paged",' : ""}query:(_ctx,{page})=>{${paged ? 'if(!page || page.limit < 1 || page.offset !== 0 || page.search !== "" || !Array.isArray(page.fields)) throw Error("Missing bounded schema request");' : ""}return {rows:[]};}}})),
  commands:[{id:"exercise",ref:{kind:"command",id:"exercise"},title:"Exercise",mutating:true,params:{},async run(ctx){
    const initial=await ctx.views.list(board);
    const created=await ctx.views.create(board,{title:"Ready",settings,filter,sorts:[]});
@@ -102,6 +108,7 @@ export default {
   expect(value.invalidUpdate).toBe(true);
   expect(value.saved.views.map((view: { title: string }) => view.title)).toEqual(["Ready work", "All"]);
   expect(value.saved.defaultViewId).toBe(value.saved.views[0].id);
+  if (resourceList) expect(value.saved.views[0].settings.showChildren).toBe(false);
   expect(value.saved.views[0].filter.rules).toEqual([{ attributeId: "title", condition: "contains", value: "Ready" }]);
   expect(value.outsideBoard).toBe("View does not belong to this board");
   expect(value.lastView).toContain("at least one");

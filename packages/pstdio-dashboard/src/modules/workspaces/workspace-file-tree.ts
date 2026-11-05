@@ -173,9 +173,12 @@ const fileNode = (
   actions: WorkspaceFileTreeActions,
   options: { revealInFinder: boolean },
 ): TreeNode => {
-  const copyActions = [copyPathAction(ctx, resource, entry.path), copyRelativePathAction(ctx, entry.path)];
+  const readOnly = resource.metadata?.workspaceReadOnly === true;
+  const copyActions = readOnly
+    ? [copyRelativePathAction(ctx, entry.path)]
+    : [copyPathAction(ctx, resource, entry.path), copyRelativePathAction(ctx, entry.path)];
   const renameAction = renameEntryAction(resource, entry.path, entry.name, entry.type, actions);
-  const revealAction = options.revealInFinder ? [revealInFinderAction(resource, entry.path)] : [];
+  const revealAction = !readOnly && options.revealInFinder ? [revealInFinderAction(resource, entry.path)] : [];
   const deleteAction = deleteEntryAction(ctx, resource, entry.path, entry.type);
   if (entry.type === "directory") {
     const createActions = [
@@ -187,9 +190,11 @@ const fileNode = (
       rowVariant: "file",
       label: entry.name,
       collapsible: true,
-      canDrag: true,
-      canDrop: true,
-      contextMenuActions: [...createActions, renameAction, ...copyActions, ...revealAction, deleteAction],
+      canDrag: !readOnly,
+      canDrop: !readOnly,
+      contextMenuActions: readOnly
+        ? copyActions
+        : [...createActions, renameAction, ...copyActions, ...revealAction, deleteAction],
       showContextMenuTrigger: false,
     };
   }
@@ -200,9 +205,9 @@ const fileNode = (
     label: entry.name,
     iconElement: createElement(WorkspaceFileTreeIcon, { name: entry.name }),
     target: { kind: "command", commandId: OPEN_WORKSPACE_FILE_COMMAND, args: { path: entry.path } },
-    contextMenuActions: [renameAction, ...copyActions, ...revealAction, deleteAction],
+    contextMenuActions: readOnly ? copyActions : [renameAction, ...copyActions, ...revealAction, deleteAction],
     showContextMenuTrigger: false,
-    canDrag: true,
+    canDrag: !readOnly,
   };
 };
 
@@ -239,7 +244,7 @@ export const loadWorkspaceFileEntries = async (
   // A tree keeps the resource it opened with. The synced workspace row says whether its files are here now,
   // for example after a project without a folder gets one.
   const current = createDashboardWorkspaces().find((workspace) => workspace.id === workspaceId)?.resource;
-  const resource = current ? { ...opened, metadata: { ...opened.metadata, ...current.metadata } } : opened;
+  const resource: ResourceRef = current ? { ...opened, metadata: { ...opened.metadata, ...current.metadata } } : opened;
   const unavailable = workspaceFilesUnavailableState(resource);
   if (unavailable === projectFolderMissingState) return projectFolderSection;
   if (unavailable) return unsupportedSection(unavailable.title, unavailable.description);
@@ -272,10 +277,13 @@ export const loadWorkspaceFileEntries = async (
     {
       id: "workspace-files",
       label: "Files",
-      actions: [
-        createEntryAction(resource, actions.beginCreate, "file"),
-        createEntryAction(resource, actions.beginCreate, "directory"),
-      ],
+      actions:
+        resource.metadata?.workspaceReadOnly === true
+          ? []
+          : [
+              createEntryAction(resource, actions.beginCreate, "file"),
+              createEntryAction(resource, actions.beginCreate, "directory"),
+            ],
       collapsible: false,
       emptyState: {
         title: context.filter ? "No matching files" : "No files",

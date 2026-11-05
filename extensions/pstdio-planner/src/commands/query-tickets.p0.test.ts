@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ExtensionSessionsApi, ExtensionWorkspace } from "@pstdio/sdk/extensions";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { seedDefaultStatuses } from "../data/seed";
 import { countStorageWrites } from "../data/storage-writes.fixture";
@@ -7,7 +7,6 @@ import { putTicket } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { queryTicketsCommand } from "./query-tickets";
-import { sessionQuery } from "./session-query.fixture";
 
 const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: "ticket-1",
@@ -20,22 +19,6 @@ const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   ...overrides,
-});
-
-type WorkspaceSession = Partial<Awaited<ReturnType<ExtensionSessionsApi["query"]>>["items"][number]> & {
-  id: string;
-  title: string;
-  status: "completed" | "failed" | "in_progress";
-};
-
-const makeWorkspace = (id: string, shorthand: string, createdAt: string): ExtensionWorkspace => ({
-  id,
-  anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
-  workspace_shorthand: shorthand,
-  root_path: `/worktrees/${shorthand}`,
-  provider_id: "pstdio.worktree",
-  execution_kind: "local",
-  created_at: createdAt,
 });
 
 describe("queryTicketsCommand", () => {
@@ -84,78 +67,40 @@ describe("queryTicketsCommand", () => {
     expect(result.rows.map((row) => row.title)).toEqual(["Archived"]);
   });
 
-  test("pairs each workspace badge item with that workspace's latest session", async () => {
+  test("projects incoming workspaces and outgoing artifacts into the same display preference", async () => {
     const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
     await putTicket(storage, makeTicket({}));
-
-    const sessionsByWorkspace: Record<string, WorkspaceSession[]> = {
-      "workspace-1": [
-        { id: "session-old", title: "Old", status: "completed" },
-        { id: "session-new", title: "New", status: "failed" },
-      ],
-      "workspace-2": [{ id: "session-latest", title: "Latest", status: "in_progress" }],
+    const ctx = makeCommandContext({ storage, params: {} });
+    const ticket = { type: "ticket", id: "ticket-1", extensionId: "pstdio.pstdio-planner", projectId: ctx.projectId };
+    const workspace = {
+      type: "workspace",
+      id: "workspace",
+      extensionId: "pstdio",
+      projectId: ctx.projectId,
+      label: "Working copy",
     };
-
-    const ctx = makeCommandContext({
-      storage,
-      params: {},
-      overrides: {
-        workspaces: {
-          list: async () => [
-            makeWorkspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z"),
-            makeWorkspace("workspace-2", "T-1_A2", "2026-01-03T00:00:00.000Z"),
-          ],
-        },
-        sessions: {
-          query: sessionQuery(
-            async () => [],
-            async (workspaceId: string) => sessionsByWorkspace[workspaceId] ?? [],
-          ),
-        },
-      },
-    });
-
+    const artifact = {
+      type: "artifact",
+      id: "artifact",
+      extensionId: "example.artifacts",
+      projectId: ctx.projectId,
+      label: "Prototype",
+    };
+    await ctx.resources.addAnchors(workspace, [ticket]);
+    await ctx.resources.addAnchors(ticket, [artifact]);
+    ctx.resources.resolveMany = async (refs) =>
+      refs.map((resource) => ({
+        resource: { ...resource, icon: "folder" },
+        target: { kind: "page", page: { kind: "page", id: "resource", extensionId: resource.extensionId }, resource },
+      }));
     const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
-
-    expect(result.rows[0]?.attributes.workspaceItems).toMatchObject([
-      { id: "workspace-2", session: { id: "session-latest", status: "in_progress" } },
-      { id: "workspace-1", session: { id: "session-new", status: "failed" } },
-    ]);
-  });
-
-  test("leaves workspace items without sessions unchanged", async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
-    await putTicket(storage, makeTicket({}));
-
-    const ctx = makeCommandContext({
-      storage,
-      params: {},
-      overrides: {
-        workspaces: { list: async () => [makeWorkspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z")] },
-      },
+    expect(result.rows[0]?.attributes.linkedResourceItems).toHaveLength(2);
+    expect((result.rows[0]?.attributes.linkedResourceItems as { id: string }[]).map((item) => item.id).sort()).toEqual(
+      [resourceKey(workspace), resourceKey(artifact)].sort(),
+    );
+    expect(result.attributes?.find((field) => field.id === "workspace")?.display).toEqual({
+      kind: "badge-list",
+      itemsAttributeId: "linkedResourceItems",
     });
-
-    const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
-
-    expect(result.rows[0]?.attributes.workspaceItems).toMatchObject([
-      {
-        id: "workspace-1",
-        label: "T-1_A1",
-        icon: "GitBranch",
-        resource: { type: "workspace", id: "workspace-1", label: "T-1_A1" },
-        createdAt: "2026-01-02T00:00:00.000Z",
-        resourceParent: {
-          type: "ticket",
-          id: "ticket-1",
-          label: "T-1 Ticket",
-          shorthand: "T-1",
-          metadata: {
-            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
-          },
-        },
-      },
-    ]);
   });
 });

@@ -11,6 +11,7 @@ import type { NavigationTarget } from "./navigation-target";
 import type { PageSlotRef } from "./pages";
 import type { RendererEventReference } from "./renderer-base";
 import type { ResourceBinding } from "./resource-binding";
+import type { ResourceListRendererContribution } from "./resource-list-renderer";
 import type { TreeRendererContribution } from "./tree-renderer";
 
 type NativeViewBody<Kind extends string, Definition> = {
@@ -23,6 +24,7 @@ export type TreeViewBody = NativeViewBody<"tree", TreeRendererContribution>;
 export type FileViewBody = NativeViewBody<"file", FileRendererContribution>;
 export type ControlsViewBody = NativeViewBody<"controls", ControlsRendererContribution>;
 export type KanbanViewBody = NativeViewBody<"kanban", KanbanRendererContribution>;
+export type ResourceListViewBody = NativeViewBody<"resourceList", ResourceListRendererContribution>;
 export type DataTableViewBody = NativeViewBody<"dataTable", DataTableRendererContribution>;
 
 export type ViewBody =
@@ -31,6 +33,7 @@ export type ViewBody =
   | FileViewBody
   | ControlsViewBody
   | KanbanViewBody
+  | ResourceListViewBody
   | DataTableViewBody;
 
 export interface ViewContribution extends ContributionDefinition<"view"> {

@@ -5,6 +5,7 @@ import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { pendingQueuedRequests } from "../pending-queued-requests";
 import { queuedMessagesFromRequests } from "../queued-session-messages";
+import { remoteSessionAction } from "../remote-session-action";
 
 export const getQueuedMessagesRoute = createRoute({
   method: "get",
@@ -17,6 +18,10 @@ export const getQueuedMessagesRoute = createRoute({
       description: "Pending queued prompts.",
       content: { "application/json": { schema: sessionQueuedMessagesResponseSchema } },
     },
+    400: {
+      description: "Remote device unavailable.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
     404: { description: "Session not found.", content: { "application/json": { schema: notFoundResponseSchema } } },
   },
 });
@@ -26,6 +31,14 @@ export const getQueuedMessagesHandler =
     const { id } = c.req.valid("param");
     const session = await deps.sessionService.get(id);
     if (!session) {
+      const forwarded = await remoteSessionAction(
+        getQueuedMessagesRoute,
+        deps,
+        id,
+        { type: "session.queuedMessages", id },
+        c.req.raw.signal,
+      );
+      if (forwarded instanceof Response && forwarded.ok) return forwarded;
       const shared = await deps.personalHistoryService.queuedMessages(id);
       if (shared) return c.json(shared, 200);
       return c.json({ error: `Session not found: ${id}` }, 404);

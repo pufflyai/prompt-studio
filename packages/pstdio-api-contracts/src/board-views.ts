@@ -19,7 +19,7 @@ export const boardFieldSchema = z.object({
 export const boardSummarySchema = z.object({
   id: z.string(),
   title: z.string(),
-  kind: z.enum(["kanban", "dataTable"]),
+  kind: z.enum(["kanban", "resourceList", "dataTable"]),
   extensionId: z.string().nullable(),
   fields: z.array(boardFieldSchema),
 });

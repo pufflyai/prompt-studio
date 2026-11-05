@@ -134,12 +134,7 @@ const expectExtensionSettingsViewsToLoad = async (page: import("@playwright/test
   await expect(settings.getByRole("option", { name: "Templates", exact: true })).toBeVisible();
   await expectSettingsViewToLoad(page, settings, "Lab (global)", "Greeting tone");
   await expectSettingsViewToLoad(page, settings, "Lab (project)", "Counter step");
-  await expectSettingsViewToLoad(
-    page,
-    settings,
-    "Ticket tags",
-    "Configure the tag definitions and options available on tickets.",
-  );
+  await expectSettingsViewToLoad(page, settings, "Ticket tags", "Add tag");
 };
 
 test.describe

@@ -29,15 +29,16 @@ export const useSessionHarness = (props: SessionHarnessInput) => {
   const noHarnessAvailable = access === "missing";
   const needsLogin = access === "signed_out";
   const canSubmit =
-    !needsLogin &&
-    !account.checking &&
-    !account.progress &&
-    canSubmitSessionMessage({
-      agentOptions: agents.map((item) => ({ value: item.id, disabled: item.availability.type === "NOT_FOUND" })),
-      selectedAgent,
-      selectedModel,
-      requiresModel: agent?.supportsModels ?? true,
-    });
+    otherDevice ||
+    (!needsLogin &&
+      !account.checking &&
+      !account.progress &&
+      canSubmitSessionMessage({
+        agentOptions: agents.map((item) => ({ value: item.id, disabled: item.availability.type === "NOT_FOUND" })),
+        selectedAgent,
+        selectedModel,
+        requiresModel: agent?.supportsModels ?? true,
+      }));
   let setup: ReactNode;
   if (noHarnessAvailable)
     setup = (

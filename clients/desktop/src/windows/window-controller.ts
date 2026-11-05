@@ -32,6 +32,10 @@ export class DesktopWindowController {
       // Painted before the lifecycle document, so the window never flashes another theme.
       ...(appearance ? { backgroundColor: appearance.backgroundColor } : {}),
     });
+    // The workbench covers the retained lifecycle renderer. Keep it responsive to
+    // recovery and IPC while this window owns focus; throttle it again on blur.
+    this.window.on("focus", () => this.window.webContents.setBackgroundThrottling(false));
+    this.window.on("blur", () => this.window.webContents.setBackgroundThrottling(true));
     secureWebContents(this.window.webContents, {
       lifecycleUrl: this.lifecycleUrl,
       runtimeOrigin: () => null,

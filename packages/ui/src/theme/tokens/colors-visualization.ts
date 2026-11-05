@@ -1,3 +1,8 @@
+import { chartAlerts, chartCategorical, chartDiverging, chartSequential } from "../primitives/chart-palettes";
+
+const steps = ["low-3", "low-2", "low-1", "default", "high-1", "high-2", "high-3"];
+const modeColor = (light: string, dark: string) => ({ value: { _light: light, _dark: dark } });
+
 export const vis = {
   text: {
     primary: {
@@ -28,139 +33,25 @@ export const vis = {
     },
   },
 
-  categorical: {
-    1: {
-      value: {
-        _light: "{colors.blue.700}",
-        _dark: "{colors.blue.300}",
-      },
-    },
-    2: {
-      value: {
-        _light: "{colors.orange.700}",
-        _dark: "{colors.orange.300}",
-      },
-    },
-    3: {
-      value: {
-        _light: "{colors.purple.700}",
-        _dark: "{colors.purple.300}",
-      },
-    },
-    4: {
-      value: {
-        _light: "{colors.red.700}",
-        _dark: "{colors.red.300}",
-      },
-    },
-    5: {
-      value: {
-        _light: "{colors.pink.700}",
-        _dark: "{colors.pink.300}",
-      },
-    },
-    6: {
-      value: {
-        _light: "{colors.teal.700}",
-        _dark: "{colors.teal.300}",
-      },
-    },
-    7: {
-      value: {
-        _light: "{colors.cyan.700}",
-        _dark: "{colors.cyan.300}",
-      },
-    },
-  },
-
-  sequential: {
-    blue: {
-      "low-3": {
-        value: {
-          _light: "{colors.blue.200}",
-          _dark: "{colors.blue.800}",
-        },
-      },
-      "low-2": {
-        value: {
-          _light: "{colors.blue.300}",
-          _dark: "{colors.blue.700}",
-        },
-      },
-      "low-1": {
-        value: {
-          _light: "{colors.blue.400}",
-          _dark: "{colors.blue.600}",
-        },
-      },
-      default: {
-        value: {
-          _light: "{colors.blue.500}",
-          _dark: "{colors.blue.500}",
-        },
-      },
-      "high-1": {
-        value: {
-          _light: "{colors.blue.600}",
-          _dark: "{colors.blue.400}",
-        },
-      },
-      "high-2": {
-        value: {
-          _light: "{colors.blue.700}",
-          _dark: "{colors.blue.300}",
-        },
-      },
-      "high-3": {
-        value: {
-          _light: "{colors.blue.800}",
-          _dark: "{colors.blue.200}",
-        },
-      },
-    },
-    red: {
-      "low-3": {
-        value: {
-          _light: "{colors.red.200}",
-          _dark: "{colors.red.800}",
-        },
-      },
-      "low-2": {
-        value: {
-          _light: "{colors.red.300}",
-          _dark: "{colors.red.700}",
-        },
-      },
-      "low-1": {
-        value: {
-          _light: "{colors.red.400}",
-          _dark: "{colors.red.600}",
-        },
-      },
-      default: {
-        value: {
-          _light: "{colors.red.500}",
-          _dark: "{colors.red.500}",
-        },
-      },
-      "high-1": {
-        value: {
-          _light: "{colors.red.600}",
-          _dark: "{colors.red.400}",
-        },
-      },
-      "high-2": {
-        value: {
-          _light: "{colors.red.700}",
-          _dark: "{colors.red.300}",
-        },
-      },
-      "high-3": {
-        value: {
-          _light: "{colors.red.800}",
-          _dark: "{colors.red.200}",
-        },
-      },
-    },
-  },
+  categorical: Object.fromEntries(
+    chartCategorical.light.map((light, index) => [index + 1, modeColor(light, chartCategorical.dark[index])]),
+  ),
+  sequential: Object.fromEntries(
+    Object.entries(chartSequential).map(([name, ramp]) => [
+      name,
+      Object.fromEntries(steps.map((step, index) => [step, modeColor(ramp[index], ramp[ramp.length - index - 1])])),
+    ]),
+  ),
+  diverging: Object.fromEntries(
+    Object.entries(chartDiverging).map(([name, ramp]) => [
+      name,
+      Object.fromEntries(ramp.map((color, index) => [index + 1, { value: color }])),
+    ]),
+  ),
+  alert: Object.fromEntries(
+    ["danger", "seriousWarning", "warning", "success"].map((name, index) => [
+      name,
+      modeColor(chartAlerts.light[index], chartAlerts.dark[index]),
+    ]),
+  ),
 };

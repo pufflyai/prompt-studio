@@ -89,3 +89,39 @@ test("keeps a new draft when no agent is selected", async () => {
   expect(submitted).toBe(false);
   expect(getPendingFollowUp("draft-no-agent")).toBeNull();
 });
+
+test("a selected remote device owns only new session creation", async () => {
+  const created: unknown[] = [];
+  const followed: unknown[] = [];
+  const input = {
+    conversationKey: "remote-draft",
+    sessionId: null,
+    projectId: "project",
+    agent: "remote-harness",
+    model: undefined,
+    deviceId: "laptop",
+    workspaceId: "target-workspace",
+    text: "Start on laptop",
+    messages: [],
+    createSession: {
+      mutateAsync: async (value: unknown) => {
+        created.push(value);
+        return { sessionId: "remote-session", status: "queued" };
+      },
+    },
+    followUp: {
+      mutateAsync: async (value: unknown) => {
+        followed.push(value);
+        return { status: "queued" };
+      },
+    },
+    reconnect: () => {},
+    refreshQueue: async () => undefined,
+  };
+  await submitSessionMessage(input);
+  expect(created).toEqual([expect.objectContaining({ deviceId: "laptop", workspaceId: "target-workspace" })]);
+  await submitSessionMessage({ ...input, sessionId: "remote-session", deviceId: "other-device" });
+  expect(followed).toEqual([expect.objectContaining({ sessionId: "remote-session" })]);
+  expect(followed[0]).not.toHaveProperty("deviceId");
+  expect(created).toHaveLength(1);
+});

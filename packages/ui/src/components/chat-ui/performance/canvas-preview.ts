@@ -1,10 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 
-export const openPerformancePreview = async (page: Page, variant: string) => {
-  const id = `ui-${variant}`;
+export const openPerformancePreview = async (page: Page, id: string) => {
   const viewport = page.viewportSize()!;
   await page.goto(
-    `/?preview=${encodeURIComponent(id)}&viewport-width=${viewport.width}&viewport-height=${viewport.height}`,
+    `/?frame=${encodeURIComponent(id)}&viewport-width=${viewport.width}&viewport-height=${viewport.height}`,
   );
   const shell = page.frameLocator("[data-verification-host]");
   const panel = shell.locator(`[data-canvas-item="${id}"]`);

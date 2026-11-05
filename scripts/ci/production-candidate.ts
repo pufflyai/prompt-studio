@@ -83,17 +83,37 @@ export const requiredProductionChecks = (channel: string) => {
 };
 
 if (import.meta.main) {
-  const candidate: ProductionCandidate = JSON.parse(readFileSync(process.argv[2]!, "utf8"));
+  let candidate: ProductionCandidate | null = null;
+  const errors: string[] = [];
+  try {
+    candidate = JSON.parse(readFileSync(process.argv[2]!, "utf8"));
+  } catch {
+    errors.push("candidate: identity unavailable");
+  }
   const results: Record<string, { result: string }> = JSON.parse(process.env.PRODUCTION_RESULTS ?? "{}");
   const required = requiredProductionChecks(process.env.CHANNEL ?? "stable");
   const evidence: ProductionEvidence[] = [];
-  for await (const path of new Bun.Glob("production-evidence/**/*.json").scan("."))
-    evidence.push(JSON.parse(readFileSync(path, "utf8")));
-  const errors = certifyProduction(candidate, required, evidence);
+  for await (const path of new Bun.Glob("production-evidence/**/*.json").scan(".")) {
+    try {
+      evidence.push(JSON.parse(readFileSync(path, "utf8")));
+    } catch {
+      errors.push(`${path}: invalid evidence`);
+    }
+  }
+  if (candidate) {
+    try {
+      errors.push(...certifyProduction(candidate, required, evidence));
+    } catch {
+      candidate = null;
+      errors.push("candidate: invalid identity or evidence");
+    }
+  }
+  if (!candidate) errors.push(...required.map((check) => `${check}: missing`));
   for (const check of ["candidate", "functional", "signed_functional", "performance", "services"])
     if (results[check]?.result !== "success") errors.push(`${check}: ${results[check]?.result ?? "missing"}`);
   const releaseEligible =
     errors.length === 0 &&
+    candidate !== null &&
     evidence.every((entry) => entry.artifactMode !== "source-diagnostic") &&
     candidate.artifacts.some((artifact) => artifact.name === "desktop-win32-x64");
   const certificate = { candidate, evidence, complete: errors.length === 0, releaseEligible, errors };

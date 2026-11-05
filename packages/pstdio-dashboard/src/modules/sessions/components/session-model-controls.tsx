@@ -20,6 +20,7 @@ import { HarnessParamInlineControls } from "./harness-param-inline-controls";
 
 interface SessionModelControlsProps {
   selectionScope?: "draft" | "request";
+  remote?: boolean;
   view: DashboardSessionView;
   projectId: string | undefined;
   selectedAgent: string;
@@ -34,6 +35,7 @@ interface SessionModelControlsProps {
 export const SessionModelControls = (props: SessionModelControlsProps) => {
   const {
     view,
+    remote,
     selectionScope = "draft",
     projectId,
     selectedAgent,
@@ -48,7 +50,7 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
   const agentOptions = agents.map((agent) => ({
     label: agent.name,
     value: agent.id,
-    disabled: agent.availability.type === "NOT_FOUND",
+    disabled: !remote && agent.availability.type === "NOT_FOUND",
     description: agent.availability.reason,
   }));
   const selectedAgentInfo = agents.find((agent) => agent.id === selectedAgent);

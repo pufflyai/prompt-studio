@@ -1,9 +1,14 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import {
+  verifyEncryptedApproval,
+  verifyEncryptedQuestion,
+  verifyEncryptedWorkspaceFile,
+} from "./packaged-device-command-acceptance";
 import { createDeviceCommandPolling } from "./packaged-device-command-polling";
 import { createDeviceCommandPeer } from "./packaged-device-commands.fixture";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -55,13 +60,15 @@ test(
     );
     await Bun.write(
       join(source, "extension.ts"),
-      `const running = new Map();
-const start = (_ctx, input) => {
-  input.events.push({ op: "add", path: "/messages/0", value: { id: "first", role: "assistant", parts: [{ type: "text", text: "Remote fixture is running" }] } });
+      `const start = (_ctx, input) => {
+  const emit = (id, text) => input.events.push({ op: "add", path: "/messages/" + input.events.getMessages().length, value: { id, role: "assistant", parts: [{ type: "text", text }] } });
+  emit("first-" + crypto.randomUUID(), "Remote fixture is running");
+  if (input.prompt === "Start") void input.questions.ask({ id: "question", toolUseId: "remote-question", questions: [{ question: "Which color?", options: [{ label: "Blue" }] }] }).then(answer => emit("question-answer", "Question answered: " + JSON.stringify(answer)), () => {});
+  if (input.prompt === "Require approval") void input.approvals.requestApproval({ id: "remote-approval", toolName: "shell", toolUseId: "remote-shell", toolInput: { command: "private approval fixture" } }).then(answer => emit("approval-answer", "Approval answered: " + answer.decision), () => {});
   let resolve; const done = new Promise(r => { resolve = r; });
   return { agentSessionId: "native-" + crypto.randomUUID(), done, stop() { resolve({ status: "cancelled" }); } };
 };
-export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker", capabilities: () => [], start, resume: start, getMessages: () => [], recoverMessages(_ctx, input) { return { kind: "recovered", messages: input.knownMessages }; } }] };`,
+export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker", capabilities: () => ["Approvals"], start, resume: start, getMessages: () => [], recoverMessages(_ctx, input) { return { kind: "recovered", messages: input.knownMessages }; } }] };`,
     );
     const env = {
       NODE_EXTRA_CA_CERTS: cert,
@@ -128,6 +135,10 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
         prompt: "Start",
         agent: "test.device-command-fixture.harness.worker",
       });
+      await waitFor("the remote session to appear in local history", async () =>
+        (await from.client.sessions.query(projectId)).items.some((row) => row.id === session.id),
+      );
+      await verifyEncryptedQuestion(from.client, on.client, session.id, waitFor);
       await waitFor(
         "the remote turn to start",
         async () => (await on.client.sessions.get(session.id)).status === "in_progress",
@@ -137,8 +148,14 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
         prompt: "Stay running",
         agent: "test.device-command-fixture.harness.worker",
       });
-      await waitFor("the remote session to appear in local history", async () =>
-        (await from.client.sessions.query(projectId)).items.some((row) => row.id === session.id),
+      await Bun.write(join(root, "project-b", "target-note.md"), "Private target file content.\n");
+      await verifyEncryptedWorkspaceFile(
+        from.client,
+        on.client,
+        projectId,
+        on.id,
+        await realpath(join(root, "project-b")),
+        waitFor,
       );
       const attached = await from.client.sessions.uploadAttachment(projectId, {
         name: "context.txt",
@@ -153,6 +170,25 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
       expect((await on.client.sessions.getQueuedFollowUps(session.id)).requests).toEqual(
         expect.arrayContaining([expect.objectContaining({ prompt: `Long prompt: ${"a".repeat(100_000)}` })]),
       );
+      const remoteQueue = await from.client.sessions.getQueuedFollowUps(session.id);
+      const saved = remoteQueue.requests.find((request) => request.prompt === `Long prompt: ${"a".repeat(100_000)}`);
+      expect(saved).toBeDefined();
+      expect(saved!.attachments).toEqual([{ file_id: attached.fileId }]);
+      const editedPrompt = `${saved!.prompt}\nKeep the attachment.`;
+      const updated = await from.client.sessions.updateQueuedFollowUp(session.id, saved!.queuePosition, {
+        prompt: editedPrompt,
+        expectedRevision: saved!.revision,
+        attachments: saved!.attachments,
+      });
+      expect(updated.request).toMatchObject({ prompt: editedPrompt, attachments: [{ file_id: attached.fileId }] });
+      expect(updated.request.revision).not.toBe(saved!.revision);
+      expect((await on.client.sessions.getQueuedFollowUps(session.id)).requests).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ prompt: editedPrompt, attachments: [{ file_id: attached.fileId }] }),
+        ]),
+      );
+      expect((await from.client.sessions.get(session.id)).device?.id).toBe(on.id);
+      expect((await on.client.sessions.get(session.id)).status).toBe("in_progress");
       await from.client.sessions.updateStatus(session.id, "cancelled");
       await waitFor(
         "the target turn to stop",
@@ -163,6 +199,9 @@ export default { harnesses: [{ id: "worker", ref: { kind: "harness", id: "worker
         "remote history to arrive",
         async () => (await from.client.sessions.getConversation(session.id)).messages.length > 0,
       );
+      await verifyEncryptedApproval(from.client, on.client, session.id, unrelated.id, on.id, waitFor);
+      expect(peer.frames.join("")).not.toContain("private approval fixture");
+      expect(peer.frames.join("")).not.toContain("Private target file content.");
       expect(peer.frames.join("")).not.toContain("Remote file bytes");
       expect(peer.frames.join("")).not.toContain("Long prompt:");
     } finally {

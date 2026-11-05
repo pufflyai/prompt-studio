@@ -114,6 +114,7 @@ export interface RuntimePrivateHandlerRecord {
     | "dataTable"
     | "file"
     | "kanban"
+    | "resourceList"
     | "status"
     | "tab"
     | "tree"

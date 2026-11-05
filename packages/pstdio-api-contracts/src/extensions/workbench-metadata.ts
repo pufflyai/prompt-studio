@@ -110,6 +110,7 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
   fileBodySchema,
   controlsBodySchema,
   kanbanBodySchema,
+  kanbanBodySchema.extend({ kind: z.literal("resourceList") }),
   dataTableBodySchema,
 ]);
 
@@ -226,6 +227,9 @@ const workbenchExtensionStatusBarItemRecordSchema = z.object({
 });
 
 export const workbenchExtensionMetadataSchema = z.object({
+  projectSetups: z
+    .array(z.object({ extensionId: z.string(), view: viewRefSchema, hiddenSetting: z.string().optional() }))
+    .optional(),
   extensions: z.array(extensionRecordSchema),
   commands: z.array(extensionCommandRecordSchema),
   menuContributions: z.array(extensionMenuContributionSchema),

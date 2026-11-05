@@ -23,6 +23,8 @@ export const projectSchema = z.object({
   updated_at: z.string(),
   deleted_at: z.string().nullable(),
   extension_warnings: z.array(extensionSetupWarningSchema).optional(),
+  /** Set by project creation: true when the request created the project, false when it reopened one. */
+  created: z.boolean().optional(),
 });
 
 export const createProjectInputSchema = z.object({

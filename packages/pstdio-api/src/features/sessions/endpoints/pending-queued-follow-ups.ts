@@ -8,6 +8,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { pendingQueuedRequests } from "../pending-queued-requests";
 import { combineQueuedRequests, QueuedRequestConflict } from "../queued-request-operations";
+import { remoteSessionAction } from "../remote-session-action";
 import { SessionAttachmentError } from "../session-attachments";
 import { queuedFollowUpParamsSchema, queueErrorResponses } from "./queued-follow-ups";
 
@@ -46,6 +47,14 @@ export const pendingQueuedFollowUpsHandler =
   async (c) => {
     const { id } = c.req.valid("param");
     if (!(await deps.sessionService.get(id))) {
+      const forwarded = await remoteSessionAction(
+        pendingQueuedFollowUpsRoute,
+        deps,
+        id,
+        { type: "session.queuedFollowUps", id },
+        c.req.raw.signal,
+      );
+      if (forwarded instanceof Response && forwarded.ok) return forwarded;
       const shared = await deps.personalHistoryService.queuedMessages(id);
       return shared ? c.json(shared.queue, 200) : c.json({ error: "Session not found." }, 404);
     }
@@ -56,6 +65,16 @@ export const combineQueuedFollowUpsHandler =
   async (c) => {
     const { id, queuePosition } = c.req.valid("param");
     const input = c.req.valid("json");
+    if (!(await deps.sessionService.get(id))) {
+      const forwarded = await remoteSessionAction(
+        combineQueuedFollowUpsRoute,
+        deps,
+        id,
+        { type: "session.queueCombine", id, queuePosition, input },
+        c.req.raw.signal,
+      );
+      return forwarded ?? c.json({ error: `Session not found: ${id}` }, 404);
+    }
     try {
       return c.json({ ok: true as const, request: await combineQueuedRequests(deps, id, queuePosition, input) }, 200);
     } catch (error) {

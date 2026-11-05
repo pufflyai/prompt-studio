@@ -239,14 +239,15 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
       const logs = progress.status(pending);
       return personalHistoryProgress(indexStatus, logs, firstDownloaded, connection.status());
     },
-    done: connection.done.finally(() => {
+    done: connection.done.finally(async () => {
+      await stopWatching();
       channel.close();
       documents.close();
       publisher.close();
       liveReceiver.close();
     }),
     close() {
-      stopWatching();
+      void stopWatching();
       controller.abort();
       channel.close();
       if (!input.live) live.close();

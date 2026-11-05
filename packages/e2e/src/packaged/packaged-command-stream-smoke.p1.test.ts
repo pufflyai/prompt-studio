@@ -7,6 +7,7 @@ import { createClient } from "@pstdio/sdk/client";
 import { writeCommandStreamExtension } from "../helpers/command-stream-extension";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
@@ -29,6 +30,7 @@ test("packaged commands stream chunks and their final outcome", async () => {
     });
     expect(created.status).toBe(201);
     const project = (await created.json()) as { id: string };
+    await enablePackagedProjectExtension(started, project.id, "stream-fixture");
     const client = createClient({ baseUrl: started.baseUrl, token: started.descriptor.token });
     const events = await Array.fromAsync(
       client.extensions.stream("test.stream-fixture.command.progress", { projectId: project.id }),

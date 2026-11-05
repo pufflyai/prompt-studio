@@ -28,11 +28,13 @@ const watchOneFolder: WatchDirectory = (path, listener, onError) => {
 };
 
 const startWatch = async (
-  options: { maxFolders?: number; onFolderLimit?: () => void; watch?: WatchDirectory } = {},
+  options: { initialFolders?: string[]; maxFolders?: number; onFolderLimit?: () => void; watch?: WatchDirectory } = {},
 ) => {
+  const { initialFolders = [], ...watchOptions } = options;
   const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-mount-watch-"));
   const location = { repoRoot, extensionId: "pstdio.dashboards", mountPath: "boards" };
   const root = resolveArtifactMountRoot(location);
+  for (const folder of initialFolders) mkdirSync(join(root, folder), { recursive: true });
   const ledger = createArtifactMountWriteLedger();
   const changes: string[][] = [];
   const watcher = watchArtifactMount({
@@ -43,7 +45,7 @@ const startWatch = async (
       throw error;
     },
     onFolderLimit: () => {},
-    ...options,
+    ...watchOptions,
   });
   cleanups.push(() => {
     watcher.close();
@@ -189,15 +191,16 @@ describe("watchArtifactMount", () => {
   test("asks listeners to reload everything once the folder limit is reached", async () => {
     let limits = 0;
     const { changes, root } = await startWatch({
+      initialFolders: ["a", "b", "c"],
       maxFolders: 2,
       onFolderLimit: () => limits++,
       watch: watchOneFolder,
     });
 
-    for (const name of ["a", "b", "c"]) mkdirSync(join(root, name));
     await waitFor(() => limits === 1 && changes.some((paths) => paths.length === 0));
     const changesAtLimit = changes.length;
-    writeFileSync(join(root, "a", "x.json"), "{}");
+    // The root stays watched even when child folders exceed the limit.
+    writeFileSync(join(root, "x.json"), "{}");
     await waitFor(() => changes.length > changesAtLimit);
 
     expect(changes.slice(changesAtLimit)).toEqual([[]]);

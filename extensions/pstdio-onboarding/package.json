@@ -1,0 +1,43 @@
+{
+  "name": "pstdio-onboarding",
+  "version": "0.1.0",
+  "displayName": "Onboarding",
+  "description": "Choose harnesses and default tools when opening a new project.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^0.3.1"
+  },
+  "pstdio": {
+    "scope": "user"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "bun check",
+    "lint": "bun run typecheck && biome check ."
+  },
+  "dependencies": {
+    "@chakra-ui/react": "3.32.0",
+    "@emotion/react": "^11.0.0",
+    "@pstdio/sdk": "0.47.0-nightly.20261105030234",
+    "@pstdio/ui": "0.47.0-nightly.20261105030234",
+    "lucide-react": "^0.556.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "@tanstack/react-query": "^5.90.21",
+    "i18next": "^25.8.0",
+    "react-i18next": "^16.5.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "6.0.2"
+  },
+  "icon": "Sparkles",
+  "exports": {
+    "./preview": "./src/preview.tsx"
+  }
+}
