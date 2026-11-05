@@ -40,19 +40,23 @@ const fixture = async () => {
       .values({ id: projectId, name: "Native", shorthand: "N", created_at: now, updated_at: now });
     const service = createDocumentStorageDBService(db);
     const records = service.open({ owner, textFields: [{ prefix: "card:", fields: ["/body"] }] }).records;
+    const failures: unknown[] = [];
     const start = () =>
       createRecordStreamSync({
         space,
         documentId,
         relay: relay.relay,
         store: wrap(service.documents.recordStream(owner)),
-        quarantine: async () => {},
+        quarantine: async (failure) => {
+          failures.push(failure);
+        },
       });
     return {
       db,
       service,
       records,
       sync: start(),
+      failures,
       restart: start,
       native: (key: string) => service.openNativeTextDocument({ owner, fileId: key }),
     };
@@ -73,6 +77,77 @@ const type = async (
     source.destroy();
   }
 };
+
+test("refused multi-record text saves retain each private history without crossing record boundaries", async () => {
+  const f = await fixture();
+  const first = await f.device();
+  const second = await f.device();
+  await first.records.commit({
+    operationId: "seed-two-fields",
+    edits: [
+      { recordId: "card:one", replace: { body: "first base", model: "small" } },
+      { recordId: "card:two", replace: { body: "second base" } },
+    ],
+  });
+  const firstKey = "a".repeat(64);
+  const secondKey = "b".repeat(64);
+  await first.records.bindText({ recordId: "card:one", field: "/body", documentKey: firstKey });
+  await first.records.bindText({ recordId: "card:two", field: "/body", documentKey: secondKey });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect(first.failures).toEqual([]);
+  expect(second.failures).toEqual([]);
+  expect(await first.sync.status()).toMatchObject({ downloaded: true });
+  const observed = await first.records.read("card:one");
+  await first.records.commit({
+    operationId: "careful-two-fields",
+    edits: [
+      {
+        recordId: "card:one",
+        expectedRevision: observed.revision,
+        set: { "/model": "careful" },
+        text: { "/body": [{ kind: "text.insert", index: 0, text: "FIRST private " }] },
+      },
+      {
+        recordId: "card:two",
+        text: { "/body": [{ kind: "text.insert", index: 0, text: "SECOND private " }] },
+      },
+    ],
+  });
+  await second.records.commit({
+    operationId: "competing-first-field",
+    edits: [{ recordId: "card:one", set: { "/model": "remote" } }],
+  });
+  await second.sync.synchronize();
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect(await first.records.outcome("careful-two-fields")).toMatchObject({ state: "refused" });
+  for (const device of [first, second]) {
+    expect((await device.records.read("card:one")).value).toEqual({ body: "first base", model: "remote" });
+    expect((await device.records.read("card:two")).value).toEqual({ body: "second base" });
+  }
+  const retained = await first.db.select().from(native_document_rooms);
+  for (const [key, text] of [
+    [firstKey, "FIRST private first base"],
+    [secondKey, "SECOND private second base"],
+  ]) {
+    const room = retained.find((row) => row.document_key === key);
+    expect(room).toBeDefined();
+    const document = new Y.Doc();
+    try {
+      Y.applyUpdate(document, room!.state);
+      expect(document.store.pendingStructs).toBeNull();
+      expect(document.store.pendingDs).toBeNull();
+      expect(document.getText("content").toString()).toBe(text);
+    } finally {
+      document.destroy();
+    }
+  }
+  await first.records.commit({ operationId: "after-two-field-refusal", edits: [{ recordId: "after", replace: true }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect((await second.records.read("after")).value).toBe(true);
+});
 
 test("native typing uses idempotent text frames without permanent operation receipts per keystroke", async () => {
   const f = await fixture();
