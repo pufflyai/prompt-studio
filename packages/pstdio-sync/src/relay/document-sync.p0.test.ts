@@ -89,6 +89,75 @@ const device = (relay: ReturnType<typeof relayFixture>["relay"], limits?: { byte
   };
 };
 
+test("referenced blob roots upload before publication and download before local merge", async () => {
+  const f = relayFixture();
+  const root = await createSyncId();
+  const store = createMemoryDocumentStore();
+  await store.transaction(owner, async ({ document }) => {
+    document.getMap("sources").set("device", root);
+  });
+  let uploadAvailable = false;
+  const source = createDocumentSync({
+    owner,
+    store,
+    space,
+    documentId,
+    relay: f.relay,
+    limits: { bytes: 0, updates: 0 },
+    quarantine: async () => {},
+    references: {
+      validate: () => {},
+      upload: async (document: Y.Doc) => {
+        if (!uploadAvailable) throw new Error("Referenced upload incomplete");
+        return [...document.getMap<string>("sources").values()];
+      },
+      download: async () => {},
+    },
+  });
+  try {
+    await expect(source.synchronize()).rejects.toThrow("Referenced upload incomplete");
+    expect(f.writes).toHaveLength(0);
+    uploadAvailable = true;
+    await source.synchronize();
+    expect(f.writes.at(-1)?.blobIds).toEqual([root]);
+    expect(f.states.at(-1)?.blobIds).toEqual([root]);
+    const targetStore = createMemoryDocumentStore();
+    let downloaded = false;
+    const target = createDocumentSync({
+      owner,
+      store: targetStore,
+      space,
+      documentId,
+      relay: f.relay,
+      quarantine: async () => {},
+      references: {
+        validate: () => {},
+        upload: async () => [root],
+        download: async () => {
+          if (!downloaded) throw new Error("Referenced download incomplete");
+        },
+      },
+    });
+    try {
+      await expect(target.synchronize()).rejects.toThrow("Referenced download incomplete");
+      expect(await targetStore.transaction(owner, async ({ document }) => document.getMap("sources").size)).toBe(0);
+      expect((await target.status()).downloaded).toBe(false);
+      downloaded = true;
+      await target.synchronize();
+      expect(
+        await targetStore.transaction(owner, async ({ document }) => document.getMap("sources").get("device")),
+      ).toBe(root);
+      downloaded = false;
+      await expect(target.synchronize()).rejects.toThrow("Referenced download incomplete");
+      expect((await target.status()).downloaded).toBe(false);
+    } finally {
+      target.close();
+    }
+  } finally {
+    source.close();
+  }
+});
+
 const textDevice = async (relay: ReturnType<typeof relayFixture>["relay"], source?: string) => {
   const state = memoryDocumentState(new Y.Doc());
   const store: DocumentStore = { transaction: async (_owner, action) => action(state) };

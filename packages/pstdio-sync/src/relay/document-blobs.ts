@@ -51,7 +51,8 @@ const encryptedBytes = async (input: DocumentSyncInput, reference: BlobReference
   return read(assets, reference.encrypted);
 };
 
-export const validateDocumentBlobs = (document: Y.Doc) => {
+export const validateDocumentBlobs = (document: Y.Doc, references?: DocumentSyncInput["references"]) => {
+  references?.validate(document);
   for (const hash of assetsOf(document).keys()) {
     const reference = blobMap(document).get(hash);
     if (!reference) throw new Error("Synced asset has no blob ID");
@@ -108,9 +109,11 @@ export const downloadDocumentBlobs = async (input: DocumentSyncInput, document: 
     const bytes = await encryptedBytes(input, reference);
     await save(assets, asset, await openBlob(input.space, reference.blobId, bytes));
   }
+  await input.references?.download(document);
 };
 
 export const uploadDocumentBlobs = async (input: DocumentSyncInput, document: Y.Doc) => {
+  input.references?.validate(document);
   const ids: string[] = [];
   for (const hash of assetsOf(document).keys()) {
     const reference = blobMap(document).get(hash);
@@ -119,5 +122,5 @@ export const uploadDocumentBlobs = async (input: DocumentSyncInput, document: Y.
     await blobs.put(reference.blobId, await encryptedBytes(input, reference));
     ids.push(reference.blobId);
   }
-  return [...new Set(ids)];
+  return [...new Set([...ids, ...((await input.references?.upload(document)) ?? [])])];
 };
