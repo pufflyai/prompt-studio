@@ -4,17 +4,19 @@ import { apiLogger } from "../../lib/logger";
 
 /** Report the slow storage phase without logging record IDs, paths or content. */
 export const traceRecordStreamStore = (owner: StorageOwner, store: RecordStreamStore) => {
+  const finished = (phase: string, started: number) =>
+    apiLogger.debug(
+      { event: "relay.record-stream.phase", ...owner, phase, elapsedMs: performance.now() - started },
+      "Record storage progress",
+    );
   const trace =
-    <A extends unknown[], T>(phase: string, run: (...args: A) => T) =>
+    <A extends unknown[], T>(phase: string, run: (...args: A) => Promise<T>) =>
     async (...args: A) => {
       const started = performance.now();
       try {
         return await run(...args);
       } finally {
-        apiLogger.debug(
-          { event: "relay.record-stream.phase", ...owner, phase, elapsedMs: performance.now() - started },
-          "Record storage progress",
-        );
+        finished(phase, started);
       }
     };
   return {
@@ -24,6 +26,9 @@ export const traceRecordStreamStore = (owner: StorageOwner, store: RecordStreamS
     merge: trace("merge", store.merge),
     outbox: trace("outbox", store.outbox),
     snapshot: trace("snapshot", store.snapshot),
-    published: trace("published", store.published),
+    published: (...args: Parameters<RecordStreamStore["published"]>) => {
+      const started = performance.now();
+      return store.published(...args).finally(() => finished("published", started));
+    },
   };
 };
