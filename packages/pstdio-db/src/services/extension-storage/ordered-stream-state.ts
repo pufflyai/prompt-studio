@@ -45,3 +45,10 @@ export const joinedLegacyOrderedOwner = async (tx: Pick<OrderedTransaction, "sel
   const [row] = await tx.select({ joined: legacy.joined }).from(legacy).where(orderedOwnerWhere(legacy, owner));
   return row?.joined ?? false;
 };
+
+/** A lost relay cursor does not undo a device's earlier Cloud admission. */
+export const orderedOwnerJoinedCloud = async (
+  tx: Pick<OrderedTransaction, "select">,
+  owner: StorageOwner,
+  row: Pick<typeof owners.$inferSelect, "joined" | "epoch">,
+) => row.joined || (!!row.epoch && !row.epoch.startsWith("local:")) || (await joinedLegacyOrderedOwner(tx, owner));
