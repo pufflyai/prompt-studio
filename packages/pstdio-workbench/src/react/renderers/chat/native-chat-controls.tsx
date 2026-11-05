@@ -18,6 +18,16 @@ interface NativeChatControlsProps {
   changeValues(values: ControlValueMap): void;
 }
 
+const inputTag = (tag: ChatRendererSnapshot["draftTag"], run: ChatSession["run"], values: ControlValueMap) =>
+  tag
+    ? {
+        ...tag,
+        onClose: () => {
+          void run({ type: "operation", id: tag.clearActionId, values }).catch(() => undefined);
+        },
+      }
+    : undefined;
+
 export const NativeChatControls = (props: NativeChatControlsProps) => {
   const { run, conversation, draft, renderParamField, changeValues } = props;
   const change = (id: string, value: unknown) => {
@@ -44,24 +54,12 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
   };
   return (
     <Flex direction="column" gap="xs">
-      {conversation.harness ? (
+      {conversation.harness || conversation.draftTag || conversation.sentTag ? (
         <HarnessControls
-          modes={conversation.harness.modes}
+          modes={conversation.harness?.modes ?? []}
           unavailable={conversation.readOnly || props.unavailable}
-          draftTag={
-            conversation.draftTag
-              ? {
-                  ...conversation.draftTag,
-                  onClose: () => {
-                    void run({
-                      type: "operation",
-                      id: conversation.draftTag!.clearActionId,
-                      values: draft.values,
-                    }).catch(() => undefined);
-                  },
-                }
-              : undefined
-          }
+          draftTag={inputTag(conversation.draftTag, run, draft.values)}
+          sentTag={inputTag(conversation.sentTag, run, draft.values)}
           onRequestConfirmation={(modeId) => {
             void run({ type: "confirmation", modeId, values: draft.values }).catch(() => undefined);
           }}

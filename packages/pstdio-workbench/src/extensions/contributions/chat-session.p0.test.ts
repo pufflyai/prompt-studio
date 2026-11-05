@@ -395,3 +395,156 @@ test("answering a native question preserves the unsent message and its files", a
   expect(actions).toEqual([action]);
   expect(session.getSnapshot().draft).toEqual(draft);
 });
+
+test("restoring fewer controls releases removed ownership and keeps the recovered draft editable", () => {
+  const session = createChatSession({ query: async () => ({}), action: async () => undefined });
+  session.changeDraft({ text: "Current", values: { model: "A", effort: "high" } });
+  session.accept({ revision: 1, recoverDraft: { text: "Legacy", attachments: [], values: { effort: "low" } } });
+  session.restoreDraft(0);
+  session.accept({ revision: 2, snapshot: { values: { model: "B", effort: "default" } } });
+  expect(() => session.changeDraft({ text: "Legacy edited" })).not.toThrow();
+  expect(session.getSnapshot().draft.values).toEqual({ model: "B", effort: "low" });
+  session.accept({ revision: 3, snapshot: { values: { model: "C", effort: "default" } } });
+  expect(session.getSnapshot().draft.values).toEqual({ model: "C", effort: "low" });
+  expect(session.getSnapshot().draft.recovered).toEqual([
+    { text: "Current", attachments: [], values: { model: "A", effort: "high" } },
+  ]);
+});
+
+test("provider values can clear an unchanged intent and persist without another keystroke", async () => {
+  let saved: unknown;
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => ({ snapshot: { values: { intent: "" } } }),
+    saveDraft: async (draft) => {
+      saved = draft;
+    },
+  });
+  session.changeDraft({
+    text: "Keep objective",
+    attachments: [{ id: "A", name: "A.txt" }],
+    values: { intent: "/goal", model: "A" },
+  });
+  await session.run({ type: "operation", id: "clear-intent", values: session.getSnapshot().draft.values });
+  await session.flushDraft();
+  expect(saved).toMatchObject({
+    text: "Keep objective",
+    attachments: [{ id: "A" }],
+    values: { intent: "", model: "A" },
+  });
+  const untouched = createChatSession({
+    query: async () => ({}),
+    action: async () => ({ snapshot: { values: { intent: "/goal" } } }),
+    saveDraft: async (draft) => {
+      saved = draft;
+    },
+  });
+  await untouched.run({ type: "selectCommand", name: "/goal", values: {} });
+  await untouched.flushDraft();
+  expect(saved).toMatchObject({ values: { intent: "/goal" } });
+});
+
+test("delayed provider values preserve newer controls, text and files while updating untouched keys", async () => {
+  const response = deferred<unknown>();
+  const session = createChatSession({ query: async () => ({}), action: () => response.promise });
+  session.changeDraft({ text: "Objective", values: { model: "A", intent: "" } });
+  const selecting = session.run({ type: "selectCommand", name: "/goal", values: session.getSnapshot().draft.values });
+  session.changeDraft({
+    text: "New objective",
+    attachments: [{ id: "B", name: "B.txt" }],
+    values: { model: "B", intent: "" },
+  });
+  response.resolve({ snapshot: { values: { model: "A", intent: "/goal" } } });
+  await selecting;
+  expect(session.getSnapshot().draft).toMatchObject({
+    text: "New objective",
+    attachments: [{ id: "B" }],
+    values: { model: "B", intent: "/goal" },
+  });
+});
+
+test("provider-only metadata updates do not prevent a successful submission from clearing its unchanged body", async () => {
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => ({ snapshot: { values: { intent: "" } } }),
+  });
+  session.changeDraft({ text: "Objective", attachments: [{ id: "A", name: "A.txt" }], values: { intent: "/goal" } });
+  await session.run({
+    type: "submit",
+    text: "Objective",
+    attachments: session.getSnapshot().draft.attachments,
+    values: session.getSnapshot().draft.values,
+  });
+  expect(session.getSnapshot().draft).toEqual({ text: "", attachments: [], values: { intent: "" } });
+});
+
+test("delayed command values survive unrelated live controls and persist after closing", async () => {
+  const response = deferred<unknown>();
+  let saved: unknown;
+  const session = createChatSession({
+    query: async () => ({}),
+    action: () => response.promise,
+    saveDraft: async (draft) => {
+      saved = draft;
+    },
+  });
+  const close = session.retain();
+  session.accept({ revision: 0, snapshot: { values: { model: "A" } } });
+  const selecting = session.run({ type: "selectCommand", name: "/goal", values: { model: "A" } });
+  session.accept({ revision: 1, snapshot: { values: { workspace: "W" } } });
+  close();
+  response.resolve({ snapshot: { values: { intent: "/goal" } } });
+  await selecting;
+  await session.flushDraft();
+  expect(session.getSnapshot().draft.values).toEqual({ model: "A", workspace: "W", intent: "/goal" });
+  expect(saved).toMatchObject({ values: { model: "A", workspace: "W", intent: "/goal" } });
+});
+
+test("a newer query value protects only its own key from an older action", async () => {
+  const response = deferred<unknown>();
+  const query = deferred<unknown>();
+  const session = createChatSession({ query: () => query.promise, action: () => response.promise });
+  session.accept({ revision: 0, snapshot: { values: { model: "A" } } });
+  const selecting = session.run({ type: "selectCommand", name: "/goal", values: { model: "A" } });
+  const close = session.retain();
+  query.resolve({ values: { model: "B" } });
+  await query.promise;
+  await Promise.resolve();
+  response.resolve({ snapshot: { values: { model: "A", intent: "/goal" } } });
+  await selecting;
+  expect(session.getSnapshot().draft.values).toEqual({ model: "B", intent: "/goal" });
+  close();
+});
+
+test("changing a control away and back still protects it from an older action", async () => {
+  const response = deferred<unknown>();
+  const session = createChatSession({ query: async () => ({}), action: () => response.promise });
+  session.changeDraft({ values: { model: "A" } });
+  const selecting = session.run({ type: "selectCommand", name: "/goal", values: { model: "A" } });
+  session.changeDraft({ values: { model: "B" } });
+  session.changeDraft({ values: { model: "A" } });
+  response.resolve({ snapshot: { values: { model: "outdated", intent: "/goal" } } });
+  await selecting;
+  expect(session.getSnapshot().draft.values).toEqual({ model: "A", intent: "/goal" });
+});
+
+test("a query echo of a locally owned value does not suppress an unchanged delayed command intent", async () => {
+  const response = deferred<unknown>();
+  let saved: unknown;
+  const session = createChatSession({
+    query: async () => ({ values: { intent: "" } }),
+    action: () => response.promise,
+    saveDraft: async (draft) => {
+      saved = draft;
+    },
+  });
+  session.changeDraft({ values: { intent: "" } });
+  const selecting = session.run({ type: "selectCommand", name: "/goal", values: { intent: "" } });
+  const close = session.retain();
+  await Promise.resolve();
+  response.resolve({ snapshot: { values: { intent: "/goal" } } });
+  await selecting;
+  await session.flushDraft();
+  expect(saved).toMatchObject({ values: { intent: "/goal" } });
+  close();
+});

@@ -52,13 +52,16 @@ export const createSessionReaders = (deps: ExtensionsRouteDeps, input: SessionAp
     getConversation: (id) =>
       read(async () => {
         const session = await requireReadableSession(id);
-        const workspace = await read(() => deps.workspaceSessionService.getWorkspaceBySessionId(id));
+        const local = await read(() => getProjectSession(id));
+        const workspace = local ? await read(() => deps.workspaceSessionService.getWorkspaceBySessionId(id)) : null;
+        let workspaceId = workspace?.project_id === input.projectId ? workspace.id : null;
+        if (!local && "workspace_id" in session) workspaceId = session.workspace_id;
         const messages = await read(() => getSessionHistory(id, deps));
         const queued = (await getProjectSession(id))
           ? await read(() => getQueuedSessionMessages(deps, input.projectId, id))
           : (await remoteQueue(id)).messages;
         return {
-          session: toExtensionSessionDetails(session, workspace?.project_id === input.projectId ? workspace.id : null),
+          session: toExtensionSessionDetails(session, workspaceId),
           messages: [...messages, ...queued],
         };
       }),

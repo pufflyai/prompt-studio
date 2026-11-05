@@ -37,7 +37,11 @@ Placements sharing a resource must refer to the same conversation.
 `query` returns a `ChatRendererSnapshot`: canonical session messages, queue entries,
 controls and values, streaming/read-only state, approvals, harness state, decisions
 and resource actions. Optional fields update only that field. Clear nullable
-approvals, decisions and draft tags with `null`; clear lists with empty arrays.
+approvals, decisions and input tags with `null`; clear lists with empty arrays.
+`draftTag` describes the current unsent input; `sentTag` independently describes a
+submitted native operation. Both use `label`, `description`, `clearActionId` and an
+optional `closeLabel`. Closing a submitted reference dispatches its provider action;
+it must not stop execution or discard recoverable input.
 
 `stream` references an ordinary command with `stream: { kind: "stream" }`. Write
 `ChatRendererEvent` chunks through `ctx.stream.write`. Each connection has increasing
@@ -77,6 +81,15 @@ validation. Read fresh service state before executing a captured decision.
 Service permissions and queue revision checks remain authoritative. Question replies
 send no draft attachments and leave the unsent message and its files intact.
 
+An action result's `snapshot.values` is a partial control update, including provider
+intent metadata. Each key applies only if that control has not changed since the
+action began. Unrelated live/query controls do not suppress it; newer values for
+the same control win. Accepted action values are saved without requiring another
+keystroke, including after unmount. Query/stream values supply defaults for controls
+not locally owned. Replacing the complete draft values (including restoring a
+recovered draft) releases ownership of removed keys, allowing current defaults to
+fill those keys again.
+
 `loadDraft` and `saveDraft` use extension-owned project storage. Persist the complete
 `ChatDraft`, including `recovered`. Saves wait for hydration and follow edit order.
 When typing races an older saved draft, both texts and attachment lists survive.
@@ -94,6 +107,10 @@ Remote queues support editing, reordering, combining and removal, but exclude li
 steering: display “Live steering is unavailable on another device.”
 `ctx.sessions.create({ deviceId, ... })` targets an account device; omission targets
 this host. Attachment forwarding, project checks and permissions stay in core.
+Readable personal-history sessions retain their linked `workspaceId` in both
+`get` and `getConversation`, even when this host has no local execution link. Use
+that public context for workspace navigation and scoped links; it grants no local
+execution ownership or cross-project access.
 A logical default workspace can have no local folder. Harnesses with optional cwd
 can start there; harnesses requiring files receive the existing folder setup error.
 Use project `ctx.storage.files` and a small record pointer for durable draft bodies

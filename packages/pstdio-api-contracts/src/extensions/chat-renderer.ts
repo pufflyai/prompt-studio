@@ -50,6 +50,12 @@ export const chatDraftSchema = chatDraftContentSchema.extend({
   /** Unsent drafts recovered after editing raced an asynchronous read. */
   recovered: z.array(chatDraftContentSchema).optional(),
 });
+const chatInputTagSchema = z.object({
+  label: z.string(),
+  description: z.string(),
+  clearActionId: z.string(),
+  closeLabel: z.string().optional(),
+});
 /** Public wire messages retain the existing session protocol; no second transcript format. */
 export const chatRendererSnapshotSchema = z.strictObject({
   messages: z.array(sessionMessageSchema).optional(),
@@ -69,7 +75,9 @@ export const chatRendererSnapshotSchema = z.strictObject({
   /** Opt in to trusted host account UI and its dedicated authentication channel. */
   nativeHarnessAccount: z.object({ controlId: z.string().min(1), remote: z.boolean().optional() }).optional(),
   harness: harnessCommandStateSchema.optional(),
-  draftTag: z.object({ label: z.string(), description: z.string(), clearActionId: z.string() }).nullable().optional(),
+  draftTag: chatInputTagSchema.nullable().optional(),
+  /** A submitted native input reference, distinct from any new tagged draft. Hiding it does not cancel work. */
+  sentTag: chatInputTagSchema.nullable().optional(),
   decision: z
     .object({
       id: z.string(),
