@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { type ResourceContextAction, ScrollArea, TreeList, TreeListDragProvider } from "@pstdio/ui";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type {
   NavigationTarget,
   ResourceRef,
@@ -33,6 +33,7 @@ import { useTreeViewCustomization } from "./use-tree-view-customization";
 
 interface WorkbenchTreeViewProps {
   readOwnerKey?: string;
+  loadingContent?: ReactNode;
   placement?: WorkbenchPanelInstance;
   workbench: WorkbenchCore;
   treeViewId: string;
@@ -296,6 +297,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         >
           <Box w="full" minW="0" flex="1 0 auto" display="flex" flexDirection="column">
             <TreeViewBody
+              loadingContent={props.loadingContent}
               error={error}
               loading={loading}
               moduleLoading={treeState.loading}

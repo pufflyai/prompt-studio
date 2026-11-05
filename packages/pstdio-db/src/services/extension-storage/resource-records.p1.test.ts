@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "../../db/schemas.pg";
-import { storage_document_operations, storage_documents } from "../../db/schemas.pg";
+import { storage_documents, storage_ordered_operations } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
@@ -21,7 +21,7 @@ const fixture = async () => {
   return { ...f, owner, service, storage: service.open({ owner }) };
 };
 
-test("each record is its own document and a group commit writes all of its records or none", async () => {
+test("a group commit writes all of its records or none", async () => {
   const f = await fixture();
   await f.storage.records.commit({
     operationId: "seed",
@@ -30,10 +30,6 @@ test("each record is its own document and a group commit writes all of its recor
       { recordId: "b", replace: "text" },
     ],
   });
-  const documents = (await f.db.select({ id: storage_documents.document_id }).from(storage_documents)).map(
-    (row) => row.id,
-  );
-  expect(documents).toEqual(expect.arrayContaining([resourceDocumentId("a"), resourceDocumentId("b")]));
 
   const failure = await f.storage.records
     .commit({
@@ -61,8 +57,8 @@ test("a retried operation keeps its first result and rejects a changed payload",
   ).rejects.toThrow("changed payload");
   const receipts = await f.db
     .select()
-    .from(storage_document_operations)
-    .where(eq(storage_document_operations.operation_id, "once"));
+    .from(storage_ordered_operations)
+    .where(eq(storage_ordered_operations.operation_id, "once"));
   expect(receipts).toHaveLength(1);
 });
 
@@ -93,6 +89,37 @@ test("transactions read and commit under one owner lock and notify watchers afte
   expect(created).toBe(true);
   expect(changed).toEqual(["ext.example"]);
   expect((await f.storage.records.read("job")).value).toEqual({ state: "new" });
+});
+
+test("a rolled-back writer can save again alongside another open handle without leaking its aborted edits", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({
+    operationId: "seed",
+    edits: [{ recordId: "note", replace: { title: "Draft", body: "" } }],
+  });
+  await expect(
+    f.storage.records.transaction(async (records) => {
+      await records.commit({
+        operationId: "aborted",
+        edits: [{ recordId: "note", replace: { title: "Must roll back", body: "" } }],
+      });
+      throw new Error("Cancel transaction");
+    }),
+  ).rejects.toThrow("Cancel transaction");
+  const other = f.service.open({ owner: f.owner }).records;
+  await other.commit({
+    operationId: "other",
+    edits: [{ recordId: "note", replace: { title: "Draft", body: "Saved by another handle" } }],
+  });
+  await f.storage.records.commit({
+    operationId: "continued",
+    edits: [{ recordId: "note", replace: { title: "Saved after rollback", body: "Saved by another handle" } }],
+  });
+  expect((await other.read("note")).value).toEqual({
+    title: "Saved after rollback",
+    body: "Saved by another handle",
+  });
+  expect(await f.storage.records.outcome("aborted")).toBeUndefined();
 });
 
 test("unfiltered totals follow live records without reading them", async () => {
@@ -129,7 +156,6 @@ test("a group commit larger than one write statement is saved in statements of b
   };
   const db = drizzle(f.db.$client, { schema, logger: { logQuery } });
   const records = createDocumentStorageDBService(db as unknown as typeof f.db).open({ owner: f.owner }).records;
-  // Batched by row count, one statement would carry all twenty records into PGlite's heap at once.
   const content = "x".repeat(100_000);
   await records.commit({
     operationId: "large",
@@ -139,8 +165,141 @@ test("a group commit larger than one write statement is saved in statements of b
     })),
   });
   expect(await records.list()).toHaveLength(20);
-  const documentWrites = statements.filter(({ bytes }) => bytes > 100_000);
-  expect(documentWrites.length).toBeGreaterThan(1);
-  // A statement holds several rows only while it stays under the 4 MB cap; a larger row stands alone.
-  for (const { rows, bytes } of documentWrites) if (rows > 1) expect(bytes).toBeLessThanOrEqual(4_000_000);
+  const projectionWrites = statements.filter(({ bytes }) => bytes > 100_000);
+  expect(projectionWrites.length).toBeGreaterThan(0);
+  // A statement holds several rows only while it stays under the 4 MB cap (json-batches.p0 covers
+  // splitting); a larger row stands alone.
+  for (const { rows, bytes } of projectionWrites) if (rows > 1) expect(bytes).toBeLessThanOrEqual(4_000_000);
+});
+
+// Plain record values are canonical JSON, so saves add no per-record Yjs document or writer.
+const recordDocuments = async (f: Awaited<ReturnType<typeof fixture>>) =>
+  (await f.db.select({ id: storage_documents.document_id }).from(storage_documents)).filter(({ id }) =>
+    id.startsWith(resourceDocumentId("").slice(0, -2)),
+  );
+
+test("concurrent saves through one handle preserve every edit without creating record writers", async () => {
+  const f = await fixture();
+  const records = f.storage.records;
+  await records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { title: "Shared" } }] });
+  const saves = Array.from({ length: 128 }, (_, index) => ({
+    operationId: `concurrent-${index}`,
+    edits: [{ recordId: "note", shared: [{ kind: "map.set" as const, key: `field-${index}`, value: index }] }],
+  }));
+  await Promise.all(saves.map((save) => records.commit(save)));
+  const record = await records.read("note");
+  expect(record.value).toEqual({ title: "Shared" });
+  expect(record.shared).toEqual({
+    kind: "map",
+    value: Object.fromEntries(saves.map((_, index) => [`field-${index}`, index])),
+  });
+  for (const save of saves)
+    expect(await records.outcome(save.operationId)).toMatchObject({ operationId: save.operationId });
+  expect(await recordDocuments(f)).toEqual([]);
+});
+
+test("concurrent handles preserve their accepted edits to the same record", async () => {
+  const f = await fixture();
+  const handles = [f.storage.records, f.service.open({ owner: f.owner }).records];
+  await handles[0]!.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Shared" }] });
+  const saves = handles.flatMap((records, handle) =>
+    Array.from({ length: 16 }, (_, index) => {
+      const key = `handle-${handle}-field-${index}`;
+      return { records, key, operationId: `save-${key}`, value: index };
+    }),
+  );
+  await Promise.all(
+    saves.map(({ records, key, operationId, value }) =>
+      records.commit({
+        operationId,
+        edits: [{ recordId: "note", shared: [{ kind: "map.set", key, value }] }],
+      }),
+    ),
+  );
+  const record = await handles[0]!.read("note");
+  expect(record.value).toBe("Shared");
+  expect(record.shared).toEqual({
+    kind: "map",
+    value: Object.fromEntries(saves.map(({ key, value }) => [key, value])),
+  });
+  for (const { records, operationId } of saves)
+    expect(await records.outcome(operationId)).toMatchObject({ operationId });
+  expect(await recordDocuments(f)).toEqual([]);
+});
+
+test("concurrent commits inside one transaction preserve every accepted edit", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Shared" }] });
+  await f.storage.records.transaction(async (records) => {
+    await expect(
+      records.commit({
+        operationId: "invalid",
+        edits: [{ recordId: "note", shared: [{ kind: "text.delete", index: 99, count: 1 }] }],
+      }),
+    ).rejects.toThrow("outside");
+    await Promise.all(
+      ["first", "second"].map((key) =>
+        records.commit({
+          operationId: key,
+          edits: [{ recordId: "note", shared: [{ kind: "map.set", key, value: key }] }],
+        }),
+      ),
+    );
+  });
+  expect((await f.storage.records.read("note")).shared).toEqual({
+    kind: "map",
+    value: { first: "first", second: "second" },
+  });
+  expect(await f.storage.records.outcome("invalid")).toBeUndefined();
+  expect(await f.storage.records.outcome("first")).toBeDefined();
+  expect(await f.storage.records.outcome("second")).toBeDefined();
+  expect(await recordDocuments(f)).toEqual([]);
+});
+
+test("a rejected concurrent transaction drains its saves before rollback and the handle can continue", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Shared" }] });
+  await expect(
+    f.storage.records.transaction(async (records) => {
+      await Promise.all([
+        records.commit({
+          operationId: "invalid",
+          edits: [{ recordId: "note", shared: [{ kind: "text.delete", index: 99, count: 1 }] }],
+        }),
+        records.commit({ operationId: "rolled-back", edits: [{ recordId: "note", replace: "Must roll back" }] }),
+      ]);
+    }),
+  ).rejects.toThrow("outside");
+  expect((await f.storage.records.read("note")).value).toBe("Shared");
+  expect(await f.storage.records.outcome("invalid")).toBeUndefined();
+  expect(await f.storage.records.outcome("rolled-back")).toBeUndefined();
+  await f.storage.records.commit({ operationId: "continued", edits: [{ recordId: "note", replace: "Continued" }] });
+  expect((await f.storage.records.read("note")).value).toBe("Continued");
+  expect(await recordDocuments(f)).toEqual([]);
+});
+
+test("a save started while a failed transaction drains is rolled back with it instead of escaping", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Shared" }] });
+  let late: Promise<unknown> | undefined;
+  const outcome = f.storage.records.transaction(async (records) => {
+    const chain = (async () => {
+      await records.commit({ operationId: "first", edits: [{ recordId: "other", replace: "X" }] });
+      late = records.commit({ operationId: "late", edits: [{ recordId: "note", replace: "Y" }] });
+      return late;
+    })();
+    chain.catch(() => {});
+    await Promise.all([
+      chain,
+      (async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        throw new Error("Cancel transaction");
+      })(),
+    ]);
+  });
+  await expect(outcome).rejects.toThrow("Cancel transaction");
+  await late?.catch(() => {});
+  expect((await f.storage.records.read("other")).exists).toBe(false);
+  expect((await f.storage.records.read("note")).value).toBe("Shared");
+  expect(await f.storage.records.outcome("late")).toBeUndefined();
 });

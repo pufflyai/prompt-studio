@@ -98,7 +98,7 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
         edits: [
           {
             recordId: id,
-            expectedRevision: initialRecordRevision(owner, id),
+            expectedRevision: initialRecordRevision(),
             replace: {
               name: file.file_name,
               mimeType: file.mime_type,

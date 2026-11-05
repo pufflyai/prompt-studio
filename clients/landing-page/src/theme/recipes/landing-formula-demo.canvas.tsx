@@ -1,21 +1,16 @@
-import { Box, chakra, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Slider } from "@pstdio/ui";
 import { useState } from "react";
+import { FormulaPlot } from "../../components/examples/formula-plot";
+import { calculateFormula } from "../../services/financial-formulas";
 import { landingStorySlotRecipe } from "./landing-story";
-import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
 
 const FormulaDemo = () => {
-  const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
   const story = useSlotRecipe({ recipe: landingStorySlotRecipe })({});
   const [years, setYears] = useState(10);
-  const balance = (year: number) => 10000 * 1.005 ** (year * 12) + (300 * (1.005 ** (year * 12) - 1)) / 0.005;
-  const result = balance(years);
-  const maximum = result * 1.1;
-  const points = Array.from(
-    { length: 101 },
-    (_, index) => `${24 + index * 3.52},${200 - (balance((years * index) / 100) / maximum) * 176}`,
-  ).join(" ");
+  const calculation = calculateFormula("savings", { principal: 10000, monthly: 300, rate: 6, years, inflation: 2 });
+  const result = calculation.value;
   return (
     <Box css={story.page}>
       <Box css={story.panel}>
@@ -30,27 +25,7 @@ const FormulaDemo = () => {
               result,
             )}
           </Text>
-          <chakra.svg
-            css={styles.plot}
-            viewBox="0 0 400 224"
-            role="img"
-            aria-label="Savings with contributions over time"
-          >
-            <chakra.path
-              css={styles.plotGrid}
-              d="M24 24H376 M24 112H376 M24 200H376 M24 24V200 M200 24V200 M376 24V200"
-            />
-            <chakra.polyline
-              css={styles.plotComparison}
-              points={`24,${200 - (10000 / maximum) * 176} 376,${200 - ((10000 + 300 * years * 12) / maximum) * 176}`}
-            />
-            <chakra.polyline css={styles.plotCurve} points={points} />
-            <chakra.circle css={styles.plotPoint} cx="376" cy={200 - (result / maximum) * 176} r="5" />
-          </chakra.svg>
-          <HStack justify="space-between" textStyle="label/S/regular">
-            <Text>Today</Text>
-            <Text>Year {years}</Text>
-          </HStack>
+          <FormulaPlot result={calculation} years={years} />
           <Slider
             aria-label={["Years"]}
             min={1}

@@ -3,4 +3,4 @@
 "@pstdio/sdk": minor
 ---
 
-Apply record fields in relay order with atomic conditional outcomes, explicit collaborative text and indexed append-only logs.
+Apply records in relay order with atomic conditional outcomes, explicit collaborative text and paged logs; settle local saves before first Cloud join.

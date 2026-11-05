@@ -65,6 +65,19 @@ test("a build with no changed input is skipped", async () => {
   expect(rebuilt.manifest.builtAt).not.toBe(first.manifest.builtAt);
 });
 
+test("Vite environment flags are available when a preview module starts", async () => {
+  const root = project({
+    "src/environment.canvas.tsx": `const flags = { dev: import.meta.env.DEV, prod: import.meta.env.PROD };
+export const Default = () => flags;
+`,
+  });
+  const { manifest } = await buildCanvases({ root });
+  const script = manifest.frames.sources["src/environment.canvas.tsx"]!.script;
+  const code = moduleCode(resolveOut(root), manifest.frames.modules[script]!.file);
+  const preview = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
+  expect(preview.Default()).toEqual({ dev: false, prod: true });
+});
+
 test("a canvas with a broken import fails alone", async () => {
   const root = project({
     ...sampleProject,

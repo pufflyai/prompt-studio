@@ -16,6 +16,11 @@ import {
   storage_ordered_receipts as receipts,
   storage_ordered_touches as touches,
 } from "../../db/schemas.pg";
+import {
+  createOrderedAuthorship,
+  orderedLocalOperation as local,
+  retryOrderedLocalOperation,
+} from "./ordered-authorship";
 import { createOrderedCanonical } from "./ordered-canonical";
 import { createOrderedDependencyCache } from "./ordered-dependency-cache";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
@@ -30,17 +35,6 @@ import {
 import { lockRecordOwner } from "./record-changes";
 
 const identityError = () => new Error("Operation identity reused with changed payload");
-
-const local = (row: typeof operations.$inferSelect) =>
-  row.envelope
-    ? {
-        sequence: row.local_sequence,
-        operation: decode<OrderedOperation>(row.envelope),
-        requestFingerprint: row.request_fingerprint,
-        admission: row.admission ? decode<OrderedAdmission>(row.admission) : null,
-        delivered: row.delivered,
-      }
-    : undefined;
 
 /** All calls run inside the same project/owner lock as their projection and relay cursor. */
 export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
@@ -86,14 +80,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     knownDependency: dependencies.known,
     cachedDecision,
     bindIdentity: bind,
-    async operationCoordinates(id: string) {
-      const row = await operation(id);
-      return row && { admission: row.admission_epoch, settled: row.settled_epoch };
-    },
-    async localOperation(id: string) {
-      const row = await operation(id);
-      return row ? local(row) : undefined;
-    },
+    ...createOrderedAuthorship(tx, owner, operation),
     async queue(input: OrderedOperation, requestFingerprint: string) {
       input = await verifyOrderedOperation(input);
       if (isOrderedNativeRequest(requestFingerprint)) {
@@ -102,10 +89,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
         if (previous && !isOrderedNativeRequest(previous.request_fingerprint)) throw identityError();
       }
       const row = await bind(input.operationId, input.fingerprint);
-      if (row.envelope) {
-        if (row.request_fingerprint !== requestFingerprint) throw identityError();
-        return local(row)!;
-      }
+      if (row.envelope || row.settled_epoch) return retryOrderedLocalOperation(row, input, requestFingerprint);
       const [saved] = await tx
         .update(operations)
         .set({

@@ -5,7 +5,7 @@ import { hasUpdateChannelBridge } from "./update-channel-bridge";
 const SETTINGS_PANEL_ID = "update-channel";
 const SETTINGS_VIEW_ID = "dashboard.settings.update-channel";
 
-// The Update channel setting under Developer tools. It appears only in desktop
+// The device-local Update channel setting. It appears only in desktop
 // builds that can switch channel, which the desktop reports asynchronously.
 export const createUpdatesModule = (
   bridge: unknown = (globalThis as { promptStudioDesktop?: unknown }).promptStudioDesktop,

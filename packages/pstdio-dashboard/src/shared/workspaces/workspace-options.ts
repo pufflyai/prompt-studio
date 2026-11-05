@@ -1,3 +1,4 @@
+import type { Session } from "pstdio-api-contracts";
 import { createDashboardResource } from "@/shared/app/resources";
 import {
   type DashboardRows,
@@ -9,6 +10,7 @@ import { workspaceIcon, workspaceKind } from "./workspace-kind";
 import { workspaceState } from "./workspace-state";
 
 export interface DashboardWorkspaceOption {
+  device?: Session["device"];
   id: string;
   title: string;
   shorthand: string;
@@ -49,6 +51,7 @@ const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): Dash
 
   return {
     id: workspace.id,
+    device: workspace.device as Session["device"],
     title: (workspace.name as string | null) ?? (workspace.workspace_shorthand as string),
     shorthand: workspace.workspace_shorthand as string,
     branch: (workspace.branch as string | null) ?? null,
@@ -67,6 +70,7 @@ const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): Dash
 export const createDashboardWorkspaceOptionResource = (workspace: DashboardWorkspaceOption, projectId?: string) =>
   createDashboardResource("workspace", workspace.id, workspace.title, workspaceIcon(workspace.type), projectId, {
     workspaceId: workspace.id,
+    ...(workspace.device ? { workspaceDeviceId: workspace.device.id, workspaceReadOnly: true } : {}),
     workspaceShorthand: workspace.shorthand,
     workspaceType: workspace.type,
     workspaceIsDefault: workspace.isDefault,

@@ -16,12 +16,12 @@ import { initializeOrderedOwner } from "./ordered-projection";
 import { admissionDecisions, rebaseOrderedProjection } from "./ordered-rebase";
 import { adoptOrderedCheckpoint } from "./ordered-receipts-adoption";
 import { createOrderedManifestCache } from "./ordered-receipts-blobs";
-import { coverOrderedReceiptRoot } from "./ordered-receipts-covered";
+import { coverOrderedReceiptRoot, coversOrderedReceipts } from "./ordered-receipts-covered";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
 import { nextOrderedUpload } from "./ordered-receipts-upload";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { applyOrderedStreamFrame } from "./ordered-stream-frames";
+import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
 import { orderedCursor, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { createRecordStreamStore } from "./record-stream-store";
 import type { NumberChange } from "./resource-number-repair";
@@ -101,6 +101,9 @@ export const createOrderedStreamStore = (
       connected = relay;
     },
     open: () => run(async (_journal, tx) => orderedCursor(await readOrderedOwner(tx, owner))),
+    /** A state whose receipts this device lacks covers saves its canonical records do not reflect. */
+    coversReceipts: (root: OrderedIndexReference | null) =>
+      run((journal, tx) => coversOrderedReceipts(journal, tx, owner, receiptIndex(), root)),
     checkpointPending: () =>
       run(async (_journal, tx) => {
         const roots = receiptRoots((await readOrderedOwner(tx, owner)).receipt_root);
@@ -113,7 +116,7 @@ export const createOrderedStreamStore = (
         const changed = new Set<string>();
         const rejected: number[] = [];
         for (const [position, frame] of frames.entries()) {
-          if (!frame) {
+          if (!frame || !(await admissibleOrderedFrame(frame))) {
             rejected.push(position);
             continue;
           }
@@ -132,10 +135,28 @@ export const createOrderedStreamStore = (
       notify(result.events);
       return { rejected: result.rejected, cursor: result.cursor };
     },
-    async merge(remote: Map<string, Uint8Array[]>, _mode: "adopt" | "repair", cursor: RecordStreamCursor) {
-      const result = await run((journal, tx) => mergeIn(journal, tx, remote, cursor));
+    async merge(
+      remote: Map<string, Uint8Array[]>,
+      _mode: "adopt" | "repair",
+      cursor: RecordStreamCursor,
+      tail: (RecordFrame | null)[] = [],
+    ) {
+      // Tail admissions follow the checkpoint in relay order; unreadable frames stay set aside whole.
+      const incoming = new Map(remote);
+      const rejectedFrames: number[] = [];
+      for (const [position, frame] of tail.entries()) {
+        if (!frame || !(await admissibleOrderedFrame(frame))) {
+          rejectedFrames.push(position);
+          continue;
+        }
+        for (const record of frame.records)
+          incoming.set(record.recordId, [...(incoming.get(record.recordId) ?? []), record.bytes]);
+      }
+      const result = await run((journal, tx) =>
+        mergeIn(journal, tx, incoming, { ...cursor, skipped: cursor.skipped || rejectedFrames.length > 0 }),
+      );
       notify(result.events);
-      return { rejected: result.rejected, cursor: result.cursor };
+      return { rejected: result.rejected, rejectedFrames, cursor: result.cursor };
     },
     outbox: (_limit: number) => run((journal, tx) => nextOrderedUpload(journal, tx, owner, receiptIndex())),
     sent: (sequence: number) =>
@@ -148,7 +169,7 @@ export const createOrderedStreamStore = (
     async snapshot(options?: { found: boolean; relayEmpty?: boolean }) {
       const draft = await run(async (journal, tx) => {
         const row = await readOrderedOwner(tx, owner);
-        const found = options?.found ?? !row.epoch;
+        const found = options?.found ?? !row.joined;
         const root = receiptRoots(row.receipt_root).root;
         const resolver = createOrderedReceiptResolver(journal, root, receiptIndex());
         const epoch = found ? crypto.randomUUID() : row.epoch!;

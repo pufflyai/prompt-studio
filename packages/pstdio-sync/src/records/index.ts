@@ -27,6 +27,7 @@ export {
   pathsOverlap,
   replacementChanges,
 } from "./ordered-json";
+export { prepareOrderedLocalAdoption } from "./ordered-local-adoption";
 export {
   applyOrderedNativeOperation,
   orderedNativeDependenciesReady,

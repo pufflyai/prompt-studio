@@ -11,6 +11,10 @@ export const simpleCardRecipe = defineRecipe({
   variants: {
     variant: {
       outline: {},
+      destructive: {
+        borderColor: "border.error",
+        bg: "bg.error",
+      },
       action: {
         "--simple-card-body-padding": "{spacing.xs}",
         borderWidth: "0",

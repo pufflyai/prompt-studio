@@ -16,7 +16,7 @@ Use `await client.performance.retain()` to hold capture ownership while your mon
 
 ## Developer settings
 
-Register a normal `defineSettingsPanel` contribution with `slot: workbenchSlots.developerSettings`. Its referenced view appears within the host's Developer tools panel. Removing one contribution removes only that control. The host resolves this target explicitly and preserves existing global and project settings targets.
+Register a normal `defineSettingsPanel` contribution with `slot: workbenchSlots.developerSettings`. Its referenced view appears as a device-local settings entry. Removing one contribution removes only that control. The host resolves this target explicitly and preserves existing global and project settings targets.
 
 A webview settings control receives intrinsic content height. Its contribution does not own the surrounding settings panel's scrolling or geometry. Use the exported UI components and tokens for its content.
 

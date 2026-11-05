@@ -41,6 +41,8 @@ export interface RecordStreamStore {
   recordFormat?: "ordered";
   connect?(space: SyncSpace, relay: DocumentRelay): Promise<void>;
   checkpointPending?(): Promise<boolean>;
+  /** False when a latest state's receipt root holds decisions this device has not applied. */
+  coversReceipts?(root: OrderedIndexReference | null): Promise<boolean>;
   /** Starts keeping local saves for upload and returns the saved cursor. */
   open(): Promise<RecordStreamCursor>;
   /**
@@ -55,13 +57,15 @@ export interface RecordStreamStore {
   /**
    * Merges records from the relay. `adopt` replaces each record's own history with the synced one and
    * reapplies this device's changes; `repair` merges a latest state and queues what it lacks (R19).
-   * Returns the records it could not merge and the saved cursor, marked `skipped` when there were any.
+   * Repair validates retained tail saves whole against local and snapshot records before comparing
+   * missing edits. Returns rejected records and tail frame indexes; either marks the cursor skipped.
    */
   merge(
     remote: Map<string, Uint8Array[]>,
     mode: "adopt" | "repair",
     cursor: RecordStreamCursor,
-  ): Promise<{ rejected: string[]; cursor: RecordStreamCursor }>;
+    tail?: (RecordFrame | null)[],
+  ): Promise<{ rejected: string[]; rejectedFrames: number[]; cursor: RecordStreamCursor }>;
   /** Saved local changes not on the relay yet, oldest first, within `limit` bytes but at least one entry. */
   outbox(limit: number): Promise<{ sequence: number; records: RecordBytes[]; assets: Asset[] }[]>;
   /** Marks entries through `sequence` delivered. Ordered saves stay durable until their exact decision. */

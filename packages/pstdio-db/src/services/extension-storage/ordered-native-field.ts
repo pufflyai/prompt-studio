@@ -77,7 +77,7 @@ export const runOrderedNativeField = async <T>(input: {
       const value = await input.action({
         document: opened.document,
         revision: marker?.revision ?? 0,
-        operation: async (id) => (await journal.localOperation(id))?.requestFingerprint ?? undefined,
+        operation: async (id) => await journal.requestIdentity(id),
         remember: (id, identity) => {
           remembered.set(id, identity);
         },

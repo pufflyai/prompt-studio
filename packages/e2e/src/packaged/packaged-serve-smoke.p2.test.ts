@@ -12,7 +12,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
-// Native actions cover complete Kanban moves and independent schema dependencies.
+// Native actions cover complete Kanban moves, resource lists and independent schema dependencies.
 // packaged-native-settings.p2.spec.ts checks the Extensions nav page, direct routes, reload, native settings and scrolling.
 // packaged-marketplace-search.p1.spec.ts finds downloads by their visible full ID.
 // Git-free installation preserves bundled extension IDs, names and icon metadata.
@@ -22,7 +22,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.
-// packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs, incremental device index edits, and complete offline history after restart.
+// packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs and complete offline history after restart.
 // packaged-tool-result-limit.p2.test.ts bounds a 76 MB failed result, including duplicate details, across restart.
 // Packaged harnesses expose scoped account state and a private interactive account channel.
 // harness-npm-detection.p1.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
@@ -37,12 +37,13 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // placeholder actions and status-item popover views through the compiled host.
 // scripts/verify/workbench-package-consumer.ts checks packaged activation, scoped status persistence and overlay exports.
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.
-// It also imports the packed SDK's browser-free theme converter and checks both packed UI contrast palettes.
+// It also imports the packed SDK's browser-free theme converter, checks both packed UI contrast palettes, and bundles the charts entry with a Gantt consumer.
 // packaged-session-tools.p1.spec.ts checks draft/session/tool tab restoration across navigation and reload, creation, closure and New session tools.
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.
 // packaged-notes-page.p2.spec.ts checks immediate palette creation, Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
 // packaged-planner-timeline-smoke.ts checks side-panel attention actions without leaving the board or timeline.
+// packaged-planner-smoke.p2.test.ts checks manual recovery of missing stopped work with Auto Build disabled.
 // packaged-lab-selection.p2.spec.ts checks tabless selection, retained frames, shared edits and saved transforms.
 // packaged-scribble-pages.p2.spec.ts checks native Scribble pages, drafts, favorites and group operations.
 // performance-observer.p2.test.ts checks native CPU units and memory through the compiled observer's direct startup path.

@@ -1,9 +1,18 @@
-import { expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCiChecks } from "./run-ci-checks";
+
+const inheritedProfile = process.env.CI_PROFILE;
+beforeEach(() => {
+  delete process.env.CI_PROFILE;
+});
+afterEach(() => {
+  if (inheritedProfile === undefined) delete process.env.CI_PROFILE;
+  else process.env.CI_PROFILE = inheritedProfile;
+});
 
 test("an empty check plan cannot report successful validation", async () => {
   await expect(runCiChecks([], { priority: "P0" })).rejects.toThrow("No CI checks");

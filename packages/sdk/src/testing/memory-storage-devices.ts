@@ -13,7 +13,7 @@ export interface MemoryStorageReplacement {
   replaced: JsonValue | undefined;
 }
 
-/** Two offline devices for one extension. Finish writes before calling merge. */
+/** Two devices already joined to one empty stream. Finish offline writes before calling merge. */
 export const createMemoryStorageDevices = async (options: MemoryStorageOptions = {}) => {
   const first = createMemoryStorageDevice(options);
   const second = createMemoryStorageDevice({
@@ -25,7 +25,9 @@ export const createMemoryStorageDevices = async (options: MemoryStorageOptions =
     extensionId: options.extensionId,
   });
   await second.applyUpdate(await first.exportUpdate());
-  await second.installOrdered(await first.exportOrdered());
+  const initial = await first.exportOrdered();
+  await first.installOrdered(initial);
+  await second.installOrdered(initial);
   const epoch = crypto.randomUUID();
   const devices: [ExtensionStorageApi, ExtensionStorageApi] = [first.storage, second.storage];
   let base = await first.snapshot();

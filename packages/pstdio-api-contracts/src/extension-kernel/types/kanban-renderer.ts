@@ -18,6 +18,9 @@ export interface KanbanRendererEnumOption {
   label: Localizable<string>;
   color?: string;
   icon?: string | null;
+  /** Resource-list group header metadata. */
+  note?: Localizable<string>;
+  canCreate?: boolean;
 }
 
 export type KanbanRendererAttributeType =
@@ -61,6 +64,7 @@ export interface KanbanRendererSettings {
   columnGrouping: string;
   rowGrouping: string;
   displayProperties: string[];
+  showChildren?: boolean;
 }
 
 /** Display settings stored in a view. Order lives in the view's `sorts`. */

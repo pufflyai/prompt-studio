@@ -77,8 +77,13 @@ export const withDeviceCommandAttachments = async (
   command: DeviceCommand,
   send: (command: DeviceCommand) => Promise<Json>,
 ) => {
-  if (command.type !== "session.create" && command.type !== "session.followUp") return send(command);
-  const fileIds = new Set(command.input.attachments?.map(({ fileId }) => fileId));
+  if (
+    command.type !== "session.create" &&
+    command.type !== "session.followUp" &&
+    command.type !== "session.queueUpdate"
+  )
+    return send(command);
+  const fileIds = new Set(command.input.attachments?.map((file) => ("fileId" in file ? file.fileId : file.file_id)));
   if (!fileIds.size) return send(command);
   const files: Array<{ fileId: string; file: NonNullable<Awaited<ReturnType<typeof getProjectSessionAttachment>>> }> =
     [];
@@ -86,6 +91,8 @@ export const withDeviceCommandAttachments = async (
   if (encodedBytes > deviceCommandInputLimit) throw new DeviceCommandInputError();
   for (const fileId of fileIds) {
     const file = await getProjectSessionAttachment(deps, projectId, fileId);
+    // Existing queued attachments can live only on the target; its normal edit validation checks them.
+    if (!file && command.type === "session.queueUpdate") continue;
     if (!file) throw new DeviceCommandAttachmentError();
     const metadata = { fileId, name: file.file_name, mimeType: file.mime_type, data: "" };
     encodedBytes +=
@@ -127,9 +134,14 @@ export const executeWithDeviceAttachments = async (
   command: DeviceCommand,
   execute: () => Promise<{ status: number; body: unknown }>,
 ) => {
-  if (command.type !== "session.create" && command.type !== "session.followUp") return execute();
+  if (
+    command.type !== "session.create" &&
+    command.type !== "session.followUp" &&
+    command.type !== "session.queueUpdate"
+  )
+    return execute();
   const contents = command.attachmentContents ?? [];
-  const refs = new Set(command.input.attachments?.map(({ fileId }) => fileId));
+  const refs = new Set(command.input.attachments?.map((file) => ("fileId" in file ? file.fileId : file.file_id)));
   if (
     new Set(contents.map(({ fileId }) => fileId)).size !== contents.length ||
     contents.some(({ fileId }) => !refs.has(fileId))

@@ -10,11 +10,12 @@
     "retry": "Reintentar",
     "maxConcurrentSessions": {
       "label": "Máximo de sesiones concurrentes",
-      "helper": "Déjalo en blanco para sesiones ilimitadas. Usa 1 para configuraciones con LLM local que solo pueden ejecutar una sesión a la vez.",
+      "limit": "Limitar sesiones simultáneas",
+      "helper": "Desactiva esta opción para permitir sesiones simultáneas ilimitadas.",
       "placeholder": "none",
       "none": "ninguno",
       "current": "Valor actual: {{value}}",
-      "invalid": "Introduce un número entero mayor que 0, o déjalo en blanco para ninguno."
+      "invalid": "Introduce un número entero mayor que 0."
     }
   },
   "agentRow": {

@@ -3,12 +3,14 @@ import type { ApprovalRequest, ApprovalResponse } from "pstdio-api-contracts";
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
 type PendingEntry = {
+  request: ApprovalRequest;
   resolve: (response: ApprovalResponse) => void;
   timer: ReturnType<typeof setTimeout>;
 };
 
 type Options = {
   timeoutMs?: number;
+  onChange?: () => void;
 };
 
 export const createApprovalService = (send: (request: ApprovalRequest) => void, options?: Options) => {
@@ -19,10 +21,12 @@ export const createApprovalService = (send: (request: ApprovalRequest) => void, 
     new Promise<ApprovalResponse>((resolve) => {
       const timer = setTimeout(() => {
         pending.delete(request.id);
+        options?.onChange?.();
         resolve({ id: request.id, decision: "timeout" });
       }, timeoutMs);
 
-      pending.set(request.id, { resolve, timer });
+      pending.set(request.id, { request, resolve, timer });
+      options?.onChange?.();
       send(request);
     });
 
@@ -32,6 +36,7 @@ export const createApprovalService = (send: (request: ApprovalRequest) => void, 
 
     clearTimeout(entry.timer);
     pending.delete(response.id);
+    options?.onChange?.();
     entry.resolve(response);
   };
 
@@ -40,8 +45,16 @@ export const createApprovalService = (send: (request: ApprovalRequest) => void, 
       clearTimeout(entry.timer);
       entry.resolve({ id, decision: "timeout" });
     }
+    const changed = pending.size > 0;
     pending.clear();
+    if (changed) options?.onChange?.();
   };
 
-  return { requestApproval, handleResponse, dispose, hasPending: () => pending.size > 0 };
+  return {
+    requestApproval,
+    handleResponse,
+    dispose,
+    pendingRequests: () => [...pending.values()].map((entry) => entry.request),
+    hasPending: () => pending.size > 0,
+  };
 };

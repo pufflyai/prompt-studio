@@ -12,6 +12,9 @@ const deviceSchema = z.object({ ownerId: z.string(), id: z.string(), name: z.str
 const personalSessionSchema = sessionSchema.extend({
   device: deviceSchema,
   workspace_id: z.string().nullable(),
+  approval_requests: z
+    .array(z.object({ id: z.string(), toolName: z.string(), toolUseId: z.string(), toolInput: z.unknown() }))
+    .optional(),
 });
 const personalWorkspaceSchema = workspaceSchema.extend({ device: deviceSchema });
 const remoteSession = (

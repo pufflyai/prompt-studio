@@ -85,12 +85,21 @@ export const mergeRecords = async (
  * Checks downloaded frames before they are applied. A frame with any record that cannot be merged is
  * left out whole, so a save is applied completely or not at all (R4).
  */
-export const acceptFrames = async (tx: Transaction, owner: StorageOwner, frames: (RecordFrame | null)[]) => {
+export const acceptFrames = async (
+  tx: Transaction,
+  owner: StorageOwner,
+  frames: (RecordFrame | null)[],
+  snapshot = new Map<string, Uint8Array[]>(),
+) => {
   const ids = [...new Set(frames.flatMap((frame) => frame?.records.map((record) => record.recordId) ?? []))];
   const saved = new Map<string, Uint8Array[]>();
   for (const batch of batches(ids)) {
     const { sources } = await loadResourceDocuments(tx, owner, batch.map(resourceDocumentId));
-    for (const recordId of batch) saved.set(recordId, sources.get(resourceDocumentId(recordId))?.states ?? []);
+    for (const recordId of batch)
+      saved.set(recordId, [
+        ...(sources.get(resourceDocumentId(recordId))?.states ?? []),
+        ...(snapshot.get(recordId) ?? []),
+      ]);
   }
   const accepted = new Map<string, Uint8Array[]>();
   const rejected: number[] = [];

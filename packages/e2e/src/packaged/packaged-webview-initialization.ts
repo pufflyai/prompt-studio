@@ -21,6 +21,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
             document.body.appendChild(menu);
             const label = document.createElement("button");
             label.textContent = "Short status";
+            label.dataset.initialHidden = String(document.hidden);
             label.onclick = () => { label.textContent = "A much longer status after an update"; };
             element.appendChild(label);
             return () => { menu.remove(); label.remove(); };
@@ -28,6 +29,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
         };
       `)}`;
       const message = {
+        visible: false,
         sizing: "content-width",
         moduleUrl,
         extensionId: "test.initialization",
@@ -83,6 +85,25 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
     }, new URL(runtimeUrl, page.url()).href);
 
     await expect(probe.locator('iframe[title="Initialization probe"]')).toHaveAttribute("data-initialized", "true");
+    // The packaged guest keeps its document while the host pauses and resumes its presentation.
+    const status = probe.frameLocator('iframe[title="Initialization probe"]').getByRole("button");
+    await expect(status).toHaveAttribute("data-initial-hidden", "true");
+    for (const visible of [false, true]) {
+      await probe.locator('iframe[title="Initialization probe"]').evaluate((element, next) => {
+        (element as HTMLIFrameElement).contentWindow!.postMessage(
+          {
+            action: "RIMLESS/RPC_REQUEST",
+            connectionID: "mount-probe",
+            callName: "visibilityUpdate",
+            callID: `visibility-${next}`,
+            args: [next],
+          },
+          "*",
+        );
+      }, visible);
+      await expect.poll(() => status.evaluate(() => document.visibilityState)).toBe(visible ? "visible" : "hidden");
+    }
+
     await expect(probe.frameLocator('iframe[title="Initialization probe"]').locator("[data-mount-owner]")).toHaveCount(
       1,
     );

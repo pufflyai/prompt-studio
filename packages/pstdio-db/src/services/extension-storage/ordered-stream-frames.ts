@@ -27,3 +27,10 @@ export const applyOrderedStreamFrame = async (
   }
   return changed;
 };
+
+/** Updates carry only group or text admissions; anything else is set aside whole, never applied. */
+export const admissibleOrderedFrame = async (frame: RecordFrame | null) =>
+  !!frame &&
+  (await Promise.all(frame.records.map((record) => decodeOrderedEntry(record.bytes)))).every(
+    (entry) => entry.type === "admission" || entry.type === "text",
+  );

@@ -1,19 +1,30 @@
 import type { StorageOwner } from "pstdio-sync";
-import type { OrderedAdmission } from "pstdio-sync/records";
+import {
+  jsonPointer,
+  type OrderedAdmission,
+  type OrderedOperation,
+  type OrderedRecord,
+  prepareOrderedLocalAdoption,
+  projectBoundedOrderedOperation,
+} from "pstdio-sync/records";
 import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sync/relay";
 import { decodeOrderedEntry, type OrderedStreamEntry, type RecordStreamCursor } from "pstdio-sync/relay";
+import { fingerprint, type Json } from "pstdio-sync-contracts";
 import {
   storage_ordered_records as canonical,
   storage_current_records as current,
   storage_record_projections as projections,
 } from "../../db/schemas.pg";
 import { dirtyOrderedReceipts } from "./ordered-checkpoint";
+import { queueOrderedCheckpointRepairs } from "./ordered-checkpoint-repair";
 import type { OrderedJournal } from "./ordered-journal";
+import { settleLocalOrderedSaves } from "./ordered-local-settlement";
+import { fenceOrderedNativeText, rememberOrderedAdoptionText } from "./ordered-native-recovery";
 import { resetCanonicalNumberIndex } from "./ordered-number-canonical";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
-import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 
 const checkpointEntries = async (remote: Map<string, Uint8Array[]>) => {
@@ -31,6 +42,38 @@ const applyCheckpointTail = async (
     for (const id of await apply(entry)) changed.add(id);
   }
   return changed;
+};
+
+const replacedTextHistory = (record: OrderedRecord, operation: OrderedOperation) =>
+  operation.edits.some((edit) =>
+    edit.texts?.some((text) => {
+      const saved = record.texts?.[jsonPointer(text.path)];
+      return saved && saved.seed !== text.seed;
+    }),
+  );
+
+const queueLocalRecords = async (
+  journal: OrderedJournal,
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  local: OrderedRecord[],
+) => {
+  const ids: string[] = [];
+  for (const record of local) {
+    const remote = (await journal.canonical([record.recordId])).get(record.recordId);
+    const operation = await prepareOrderedLocalAdoption(record, remote);
+    if (operation) {
+      if (replacedTextHistory(record, operation)) await fenceOrderedNativeText(tx, owner, operation, record);
+      const projected = await projectBoundedOrderedOperation(
+        remote ? new Map([[remote.recordId, remote]]) : new Map(),
+        operation,
+      );
+      await rememberOrderedAdoptionText(tx, owner, operation, record, projected[0]);
+      await journal.queue(operation, await fingerprint(operation as unknown as Json));
+      ids.push(record.recordId);
+    }
+  }
+  return ids;
 };
 
 export const adoptOrderedCheckpoint = async (input: {
@@ -62,7 +105,27 @@ export const adoptOrderedCheckpoint = async (input: {
   const meta = metadata[0]!;
   if (cursor.receiptRoot !== undefined && !sameReceiptRoot(cursor.receiptRoot, meta.receiptRoot))
     throw new Error("Checkpoint summary and payload disagree about its receipt root");
-  const previous = receiptRoots((await readOrderedOwner(tx, owner)).receipt_root);
+  await settleLocalOrderedSaves(journal, tx, owner);
+  const owned = await readOrderedOwner(tx, owner);
+  // Capture locally settled records before replacing canonical state, including saves made
+  // while our own founding upload was in flight. The tail must precede their new saves.
+  const local = !owned.joined
+    ? (await tx.select({ state: canonical.state }).from(canonical).where(orderedOwnerWhere(canonical, owner))).map(
+        (row) => decodeOrderedJson<OrderedRecord>(row.state),
+      )
+    : [];
+  const previous = receiptRoots(owned.receipt_root);
+  const records = entries.flatMap((entry) => (entry.type === "record" ? [entry.record] : []));
+  if (owned.epoch === meta.epoch)
+    await queueOrderedCheckpointRepairs({
+      journal,
+      tx,
+      owner,
+      index,
+      checkpointRoot: meta.receiptRoot,
+      localRoot: previous.root,
+      records,
+    });
   let root = await index.merge(meta.receiptRoot, previous.root);
   const dirty = await dirtyOrderedReceipts(journal);
   for (let offset = 0; offset < dirty.length; offset += 100)
@@ -79,7 +142,6 @@ export const adoptOrderedCheckpoint = async (input: {
     }
     after = page.at(-1)!.sequence;
   }
-  const records = entries.flatMap((entry) => (entry.type === "record" ? [entry.record] : []));
   if (new Set(records.map((record) => record.recordId)).size !== records.length)
     throw new Error("A checkpoint repeats a record");
   await tx.delete(canonical).where(orderedOwnerWhere(canonical, owner));
@@ -92,6 +154,8 @@ export const adoptOrderedCheckpoint = async (input: {
       ? input.applyNative(journal, tx, entry.admission, meta.epoch, root)
       : input.applyAdmission(journal, tx, entry.admission, meta.epoch, root),
   );
+  await saveOrderedCursor(tx, owner, cursor, meta.epoch);
+  for (const id of await queueLocalRecords(journal, tx, owner, local)) pendingIds.add(id);
   const changed = new Set([...pendingIds, ...records.map((record) => record.recordId), ...tail]);
   const saved = await rebaseOrderedProjection(journal, tx, owner, [...changed]);
   await saveReceiptRoots(tx, owner, { version: 1, root, published: meta.receiptRoot, stateId: cursor.stateId });

@@ -9,6 +9,7 @@ import {
   operationDependencies,
   orderedBody,
   orderedProjection,
+  prepareOrderedLocalAdoption,
   projectBoundedOrderedOperation,
   projectOrderedOperation,
 } from "pstdio-sync/records";
@@ -28,11 +29,22 @@ export interface OrderedMemoryState {
   identities: Map<string, string>;
 }
 
+const verifyIdentities = (local: ReadonlyMap<string, string>, remote: ReadonlyMap<string, string>) => {
+  for (const [id, identity] of remote) {
+    const previous = local.get(id);
+    if (previous !== undefined && previous !== identity)
+      throw new Error("Operation identity reused with changed payload");
+  }
+};
+
 /** An in-memory journal. Only the shared production compiler/reducer decides record semantics. */
 export const createOrderedMemoryRecords = (
   assets: ReturnType<typeof createMemoryAssets>,
   declarations: StorageTextDeclaration[] = [],
 ) => {
+  let joined = false;
+  const localEpoch = `local:${crypto.randomUUID()}`;
+  const delivered = new Set<string>();
   let canonical = new Map<string, OrderedRecord>();
   let views = new Map<string, OrderedRecord>();
   let decisions = new Map<string, OrderedDecision>();
@@ -56,7 +68,8 @@ export const createOrderedMemoryRecords = (
     if (!identities.has(operationId)) return undefined;
     const decision = decisions.get(operationId);
     let state: StorageSaveOutcome["state"] = "saved-locally";
-    if (decision) state = decision.state === "accepted" ? "synced" : "refused";
+    if (decision?.state === "refused") state = "refused";
+    else if (decision && (!decision.epoch.startsWith("local:") || delivered.has(operationId))) state = "synced";
     return {
       operationId,
       state,
@@ -100,7 +113,12 @@ export const createOrderedMemoryRecords = (
       assertStorageLimits(
         await Promise.all(projectOrderedOperation(views, operation, decisions).map(orderedProjection)),
       );
-      pending.set(operation.operationId, operation);
+      if (joined) pending.set(operation.operationId, operation);
+      else {
+        const result = await applyBoundedOrderedOperation(canonical, operation, localEpoch, undefined, decisions);
+        decisions.set(operation.operationId, result.decision);
+        for (const record of result.records) canonical.set(record.recordId, record);
+      }
       identities.set(operation.operationId, identity);
       await rebuild();
       return (await outcome(operation.operationId))!;
@@ -128,7 +146,20 @@ export const createOrderedMemoryRecords = (
     exportState: (): OrderedMemoryState => structuredClone({ canonical, decisions, identities }),
     pending: () => structuredClone([...pending.values()]),
     install: async (state: OrderedMemoryState) => {
+      verifyIdentities(identities, state.identities);
+      const local = joined ? [] : [...canonical.values()];
+      const previous = decisions;
       ({ canonical, decisions } = structuredClone(state));
+      for (const [id, decision] of previous) {
+        const remote = decisions.get(id);
+        if (remote?.fingerprint === decision.fingerprint && remote.epoch === decision.epoch) delivered.add(id);
+        if (!remote) decisions.set(id, decision);
+      }
+      joined = true;
+      for (const record of local) {
+        const operation = await prepareOrderedLocalAdoption(record, canonical.get(record.recordId));
+        if (operation) pending.set(operation.operationId, operation);
+      }
       for (const id of decisions.keys()) pending.delete(id);
       await rebuild();
     },

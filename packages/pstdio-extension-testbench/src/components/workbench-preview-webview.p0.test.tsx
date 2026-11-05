@@ -41,7 +41,7 @@ test("testbench webviews keep workspace, placement resource, metadata, and slot"
   });
   const resource = { type: "note", id: "note-1" };
   const body = workbench.views.getView(view.id)!.body;
-  if (body.kind !== "react") throw new Error("Expected a hosted webview");
+  if (body.kind !== "webview") throw new Error("Expected a hosted webview");
   const frame = body.render({
     workbench,
     panel: { id: view.id, title: "Notes", region: "main", rendererId: view.id },

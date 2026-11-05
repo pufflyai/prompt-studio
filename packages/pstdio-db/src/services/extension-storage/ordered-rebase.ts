@@ -7,6 +7,7 @@ import {
   projectOrderedNativeOperation,
 } from "pstdio-sync/records";
 import type { OrderedJournal } from "./ordered-journal";
+import { settleLocalOrderedSaves } from "./ordered-local-settlement";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { canProjectOrderedNumbers } from "./ordered-number-canonical";
 import type { OrderedNumberRepair } from "./ordered-number-limits";
@@ -123,6 +124,7 @@ export const rebaseOrderedProjection = async (
   owner: StorageOwner,
   changed: string[],
 ) => {
+  changed = [...new Set([...changed, ...(await settleLocalOrderedSaves(journal, tx, owner))])];
   const { ids, views, events, suppressed } = await projectWithOrderedNumberPolicy(
     journal,
     tx,

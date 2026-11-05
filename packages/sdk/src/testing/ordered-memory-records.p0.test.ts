@@ -102,3 +102,36 @@ test("legacy collection lists omit deleted items before and after device sync", 
     expect((await storage.records.list()).every((record) => !record.deleted)).toBe(true);
   }
 });
+
+test("a never-joined helper settles conditions locally and adopts existing Cloud state unconditionally", async () => {
+  const { createMemoryStorageDevice } = await import("./memory-storage");
+  const { admitMemoryOperations } = await import("./ordered-memory-records");
+  const first = createMemoryStorageDevice();
+  const second = createMemoryStorageDevice({ workbenchId: first.workbenchId });
+  await first.storage.records.commit({ operationId: "remote", edits: [{ recordId: "note", replace: { count: 9 } }] });
+  await second.storage.records.commit({ operationId: "local", edits: [{ recordId: "note", replace: { count: 0 } }] });
+  const observed = await second.storage.records.read("note");
+  await second.storage.records.commit({
+    operationId: "condition",
+    edits: [{ recordId: "note", expectedRevision: observed.revision, replace: { count: 1 } }],
+  });
+  expect(await second.pendingOrdered()).toEqual([]);
+  expect(await second.storage.records.outcome("condition")).toMatchObject({ state: "saved-locally" });
+  await second.installOrdered(await first.exportOrdered());
+  expect((await second.storage.records.read("note")).value).toEqual({ count: 1 });
+  const state = await second.exportOrdered();
+  await admitMemoryOperations(state, await second.pendingOrdered(), "cloud");
+  await second.installOrdered(state);
+  expect((await second.storage.records.read("note")).value).toEqual({ count: 1 });
+  expect(await second.storage.records.outcome("condition")).toMatchObject({ state: "synced" });
+});
+
+test("first helper adoption rejects operation identities reused with another payload", async () => {
+  const { createMemoryStorageDevice } = await import("./memory-storage");
+  const first = createMemoryStorageDevice();
+  const second = createMemoryStorageDevice({ workbenchId: first.workbenchId });
+  await first.storage.records.commit({ operationId: "same", edits: [{ recordId: "note", replace: "remote" }] });
+  await second.storage.records.commit({ operationId: "same", edits: [{ recordId: "note", replace: "local" }] });
+  await expect(second.installOrdered(await first.exportOrdered())).rejects.toThrow("identity");
+  expect((await second.storage.records.read("note")).value).toBe("local");
+});

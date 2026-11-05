@@ -7,6 +7,8 @@ export interface ParamEditorRowProps {
   values?: ParamValueMap;
   onChange?: (id: string, value: ParamValue) => void;
   onOpenResource?: (ref: ResourceRefValue) => void;
+  /** Text and number notification delay in milliseconds. Use 0 for forms that stage edits before saving. */
+  changeDelay?: number;
   readOnly?: boolean;
   fullWidth?: boolean;
   variant?: "default" | "small";
@@ -29,6 +31,7 @@ export const ParamEditorRow = (props: ParamEditorRowProps) => {
         defaultValues={values}
         onChange={onChange ?? (() => undefined)}
         onOpenResource={onOpenResource}
+        changeDelay={props.changeDelay}
         readOnly={readOnly}
         fullWidth={fullWidth}
         size={small ? "xs" : "sm"}

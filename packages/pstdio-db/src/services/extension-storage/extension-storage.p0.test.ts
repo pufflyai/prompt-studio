@@ -18,7 +18,7 @@ afterEach(async () => {
   await close?.();
 });
 
-test("legacy writes and records share one document and accept an earlier caller revision", async () => {
+test("legacy writes and records share one record and a stale caller revision does not overwrite a newer write", async () => {
   const scope = { extension_instance_id: instanceAId, scope_type: "project", scope_id: projectAId };
   await svc.setKv({ ...scope, key: "setting", value_json: "legacy", project_id: projectAId });
   const storage = await svc.open({ owner: { workbenchId: projectAId, extensionId: "ext.example" } });
@@ -34,7 +34,8 @@ test("legacy writes and records share one document and accept an earlier caller 
       })
     ).status,
   ).toBe("saved-locally");
-  expect((await svc.getKv(scope, "setting"))?.value_json).toBe("open caller");
+  // The overlapping legacy write came first, so the conditional save is refused when ordered (ADR 0134).
+  expect((await svc.getKv(scope, "setting"))?.value_json).toBe("newer");
 });
 
 test("legacy structured writes preserve JSON serialization of optional object and array values", async () => {

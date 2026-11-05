@@ -74,7 +74,11 @@ anything.
     positions. Legacy shared maps/lists are deprecated, with maintained callers
     migrated to ordinary fields. The compatibility shared-text API remains explicit
     text until its coordinated removal.
-  - Immutable pending saves overlay canonical records locally and survive restarts,
+  - Before the first Cloud join, saves settle in a durable local order and their envelopes
+    are dropped. An empty relay is founded from local canonical state. When a stream
+    already exists, local records become new unconditional saves after adoption; their
+    pre-join conditions are not checked against remote history again. After joining,
+    immutable pending saves overlay canonical records locally and survive restarts,
     adoption and uncertain acknowledgments. Exact per-epoch receipts settle them.
     Receipt roots use bounded encrypted index pages; a writer frontier is not proof
     that a save was accepted. See [ADR 0134](../../adrs/0134-order-record-saves-and-declare-collaborative-text.md).

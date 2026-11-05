@@ -158,7 +158,7 @@ Controls with `onApply` keep edited values during background refreshes. Apply sa
 
 Dashboard UI contributions have one ownership model:
 
-- a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
+- a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, `kanban`, or `resourceList`
 - a page owns a route, mode, optional resource constraint, Main presentation, and extra slots
 - a non-rendering parent uses `main: { kind: "group", default: child.ref }`; the default child opens without a resource in the same mode, while the group remains a breadcrumb label and navigation-tree owner
 - a placement owns a shared mode panel with a static-view or resource-binding item
@@ -473,9 +473,45 @@ The host sends only `params.filter`, `params.sorts`, and display settings. Histo
 
 `defaultViews` defines the starting views for a collection with no saved views. The host saves them as ordinary project views that people and agents can edit, rename, reorder, and delete. At least one view must remain. `defaultActiveViewId` chooses the initial default. Saved project views and their shared default take precedence after initialization. Do not store a second copy in extension storage.
 
-The host saves user-created views for kanban and data table views per project, extension instance and local view ID. Query-returned attributes, columns, and status options are used to validate settings, rules, and sorts. Keep field IDs stable across releases. A successful query can clean rules for removed fields and options from saved views; a failed query never removes them.
+The host saves user-created views for kanban, resource list and data table views per project, extension instance and local view ID. Query-returned attributes, columns, and status options are used to validate settings, rules, and sorts. Keep field IDs stable across releases. A successful query can clean rules for removed fields and options from saved views; a failed query never removes them.
 
 Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` and `DataTableViewsSource` supply shared views and asynchronous mutations to the UI renderers. The workbench accepts a subscribable views provider from its host. Standalone callers need a views source to persist view changes.
+
+## Resource lists
+
+Available on `main`, after 0.46.0 (`view.resourceList.v1`). A `resourceList` body renders the native kanban detailed list with the shared view bar, filters, ordering and properties. It has one display, one grouping and no row dragging. Extensions supply data through the public SDK; no webview is needed.
+
+```ts
+import { defineView } from "@pstdio/sdk/extensions";
+
+const resources = defineView({
+  id: "resources",
+  title: "Resources",
+  body: {
+    kind: "resourceList",
+    attributes: [{
+      id: "device", label: "Device", groupable: true, filterable: true,
+      type: { kind: "enum", options: [
+        { value: "local", label: "This device", color: "green", note: "Online", canCreate: true },
+      ] },
+    }],
+    defaultSettings: { columnGrouping: "device", showChildren: true },
+    query: async () => ({ rows: [{
+      id: "workspace", title: "Improve search", icon: "folder",
+      attributes: { id: "WS-12", device: "local" },
+      children: [{ id: "session", title: "Check results", icon: "message-square", attributes: {} }],
+    }] }),
+  },
+});
+```
+
+Enum options define group labels, dot colors and optional short `note` text. `canCreate: true` shows an Add action when the body also declares `createRow`. Its `columnParam` receives the group value, using the same creation form as kanban. Groups count parent resources and collapse independently; children nest one level. Row IDs must be unique across parents and children.
+
+Groups without source resources are absent, so their Add actions are also absent. Supply a creation toolbar action for a new empty collection or to create the first resource in an unused group.
+
+Rows reuse kanban shorthand (`attributes.id`), property chips, badges, dates and resource menus. Each row can declare an optional icon and navigation target. The Display menu offers grouping, Children (Nested or Hidden), ordering and visible properties. `defaultViews` uses `ResourceListRendererSettings`: `columnGrouping`, `displayProperties` and optional `showChildren`. The host persists these alongside the filter and sorts using the existing collection-view store. Its wire settings also contain the fixed `viewMode: "list"` and `rowGrouping: "none"` fields.
+
+See the [example extension](../../../packages/pstdio-workbench/src/examples/onboarding/extensions/resource-list-extension.ts) and the **ResourceList** onboarding Canvas preview. The shared list skeleton and empty state cover first load and empty queries. `queryMode: "paged"`, refresh events, toolbar actions, row actions and activation callbacks follow the kanban contracts.
 
 ## Sidenav levels
 

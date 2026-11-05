@@ -21,6 +21,8 @@ interface ParamEditorFieldProps {
   defaultValues: ParamValueMap;
   onChange: (id: string, value: ParamValue) => void;
   onOpenResource?: (ref: ResourceRefValue) => void;
+  /** Text and number notification delay in milliseconds. Use 0 for forms that stage edits before saving. */
+  changeDelay?: number;
   readOnly?: boolean;
   fullWidth?: boolean;
   presentation?: "stacked" | "horizontal";
@@ -74,6 +76,7 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
     case "number":
       return (
         <NumberInput
+          changeDelay={props.changeDelay}
           {...common}
           name={param.name}
           description={param.description || ""}
@@ -99,6 +102,7 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
       if (horizontal && param.singleLine !== false) {
         return (
           <HorizontalTextInput
+            changeDelay={props.changeDelay}
             {...common}
             name={param.name}
             description={param.description || ""}
@@ -109,6 +113,7 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
       }
       return (
         <TextInput
+          changeDelay={props.changeDelay}
           {...common}
           name={param.name}
           description={param.description || ""}

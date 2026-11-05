@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata, WorkbenchExtensionViewBody } from "@pstdio/sdk/api";
 import type { CommandRef, PackageAssetDescriptor, ViewBody, WebviewContribution } from "@pstdio/sdk/extensions";
-import { normalizeKanbanViewDefaults } from "pstdio-api-contracts";
+import { normalizeKanbanViewDefaults, normalizeResourceListViewDefaults } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { commandRef, normalizedRef, refreshEventIds } from "./workbench-extension-metadata-normalizers";
 
@@ -111,7 +111,7 @@ const toNativeViewBody = (
     };
   }
   return {
-    kind: "kanban",
+    kind: body.kind,
     queryMode: body.queryMode,
     ...common,
     attributes: body.attributes,
@@ -141,7 +141,7 @@ const toNativeViewBody = (
       ...action,
       params: action.params ? { ...action.params } : undefined,
     })),
-    ...normalizeKanbanViewDefaults(body),
+    ...(body.kind === "resourceList" ? normalizeResourceListViewDefaults(body) : normalizeKanbanViewDefaults(body)),
     defaultActiveViewId: body.defaultActiveViewId,
     hideToolbar: body.hideToolbar,
   };

@@ -14,6 +14,7 @@ import {
   type ReceiptIndexValue,
   receiptIdentity,
   receiptIndexKey,
+  sameReceiptIndexValue,
   validateOrderedReceipt,
   validateReceiptIndexNode,
   validateReceiptPageAddresses,
@@ -66,6 +67,46 @@ export const createOrderedReceiptIndex = (input: { space: SyncSpace; blobs: Orde
     return undefined;
   };
   const merge = createReceiptTreeMerger({ read, write, lookup, update });
+  // Read-only containment: shared copy-on-write pages are skipped, so the cost follows the difference.
+  // `aligned` is the container page at the same prefix while both trees still branch alike.
+  type CoverTask = {
+    aligned: OrderedIndexReference | null | undefined;
+    candidate: OrderedIndexReference;
+    prefix: string;
+  };
+  type Known = (value: ReceiptIndexValue) => Promise<boolean>;
+  const coverStep = async (container: OrderedIndexReference | null, task: CoverTask, known?: Known) => {
+    const node = await read(task.candidate, task.prefix);
+    if (node.type === "leaf") {
+      for (const entry of node.entries) {
+        const value = await lookup(container, entry.key);
+        if (value ? !sameReceiptIndexValue(value, entry.value) : !(await known?.(entry.value))) return false;
+      }
+      return [];
+    }
+    const other = task.aligned && (await read(task.aligned, task.prefix));
+    const children = other && other.type === "branch" ? other.children : undefined;
+    return Object.entries(node.children).map(([digit, child]) => ({
+      aligned: children && (children[digit] ?? null),
+      candidate: child,
+      prefix: task.prefix + digit,
+    }));
+  };
+  const covers = async (
+    container: OrderedIndexReference | null,
+    candidate: OrderedIndexReference | null,
+    known?: Known,
+  ) => {
+    const pending: CoverTask[] = candidate ? [{ aligned: container, candidate, prefix: "" }] : [];
+    while (pending.length) {
+      const task = pending.pop()!;
+      if (task.aligned?.blobId === task.candidate.blobId) continue;
+      const next = await coverStep(container, task, known);
+      if (!next) return false;
+      pending.push(...next);
+    }
+    return true;
+  };
   const getBinding = async (root: OrderedIndexReference | null, operationId: string) => {
     const reference = root && readOrderedIndexReference(root);
     receiptIdentity(operationId);
@@ -134,6 +175,17 @@ export const createOrderedReceiptIndex = (input: { space: SyncSpace; blobs: Orde
     identity: getIdentity,
     receipt: getReceipt,
     known: getKnown,
+    /** True when `container`, or `known` for entries not indexed yet, holds every entry of `candidate`. */
+    covers: (
+      container: OrderedIndexReference | null,
+      candidate: OrderedIndexReference | null,
+      known?: (value: ReceiptIndexValue) => Promise<boolean>,
+    ) =>
+      covers(
+        container && readOrderedIndexReference(container),
+        candidate && readOrderedIndexReference(candidate),
+        known,
+      ),
     merge: (preferred: OrderedIndexReference | null, retained: OrderedIndexReference | null) =>
       merge(preferred && readOrderedIndexReference(preferred), retained && readOrderedIndexReference(retained)),
     async append(root: OrderedIndexReference | null, input: OrderedReceipt[]) {

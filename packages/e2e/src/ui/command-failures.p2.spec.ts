@@ -29,7 +29,9 @@ const createProject = async (request: APIRequestContext) => {
   fixtures.push({ projectId: project.id, folder });
   return project;
 };
-test.afterEach(async ({ request }) => {
+test.afterEach(async ({ page, request }) => {
+  // Project deletion can refresh metadata; finish interceptions before removing their data.
+  await page.unrouteAll({ behavior: "wait" });
   for (const fixture of fixtures.splice(0)) {
     await request.delete(`${apiBase}/v1/projects/${fixture.projectId}`);
     rmSync(fixture.folder, { recursive: true, force: true });

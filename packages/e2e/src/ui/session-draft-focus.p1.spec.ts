@@ -42,6 +42,19 @@ test("new session tabs focus their composer and keep workspace selection availab
     await expect(mainInput).toHaveText("Main session draft");
     await expect(side.getByRole("button", { name: "Select workspace", exact: true })).toBeEnabled();
     await expect(side.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
+
+    await header.getByRole("button", { name: "Add panel", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("menuitem", { name: "New session", exact: true })).toHaveAttribute(
+      "data-highlighted",
+      "",
+    );
+    await page.keyboard.press("Enter");
+    await expect(sideInput).toBeFocused();
+    await page.keyboard.type("Keyboard-created draft");
+    await expect(sideInput).toHaveText("Keyboard-created draft");
+    await expect(mainInput).toHaveText("Main session draft");
   } finally {
     try {
       if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);

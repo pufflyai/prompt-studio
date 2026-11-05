@@ -10,6 +10,8 @@ import {
   type StorageGroup,
 } from "@pstdio/sdk/extensions";
 
+import { cloudAcceptanceCommands } from "./cloud-acceptance-commands";
+
 const read = defineCommand({
   id: "read",
   title: "Read shared notes",
@@ -173,6 +175,7 @@ export default defineExtension({
   ],
   resourceKinds: [defineResourceKind({ id: "note", prefix: "NR" })],
   commands: [
+    ...cloudAcceptanceCommands,
     read,
     writeFile,
     readFile,
