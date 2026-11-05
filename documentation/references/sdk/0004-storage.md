@@ -361,3 +361,23 @@ the previous page's `revision` to reject a jump after the owner changes. Use eit
 a nonzero offset or a cursor, never both. Cursor continuation remains the preferred
 path for adjacent pages. Deep offsets still traverse skipped index entries inside
 the database; they do not read skipped record bodies or hydrate the owner document.
+
+## Guard existing collection edits
+
+For existing collection data, the additive `collection.read(id)` returns the value
+and its opaque revision together. `collection.updateIfUnchanged(id, revision, value)`
+compares that revision and writes under one owner lock. It returns `false` without
+writing when the item changed or was deleted. Re-read and recompute the intended
+change when another edit wins. Reads and conditional writes keep the existing
+owner, scope and publication permissions.
+
+These methods require the host and SDK release containing this addition.
+A newer SDK alone does not add them to an older host.
+New data should use the records API. Existing collection methods keep their prior
+behavior; an ordinary `put` or `update` does not check an earlier caller's read.
+
+Before an incremental data upgrade outside a once-only `storage.migrate` callback,
+check `await storage.canMigrate()`. It returns false for a private override when
+the synced extension owns migrations, or a published extension's Cloud membership is unknown.
+This is a fresh policy read, not a stored flag. Ordinary edits still use the
+existing publication write permissions.

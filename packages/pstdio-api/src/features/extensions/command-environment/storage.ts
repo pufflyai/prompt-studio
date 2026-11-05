@@ -43,6 +43,7 @@ export const createStorageApi = (
   };
 
   const api: CommandRunnerEnvironment["storage"] = {
+    canMigrate: async () => true,
     migrate: (version, run) =>
       deps.extensionStorageService.migrate(scope, version, async (previous) => {
         input.signal?.throwIfAborted();
@@ -86,6 +87,12 @@ export const createStorageApi = (
     },
     collection(name) {
       return {
+        async read(id) {
+          const row = await read(() =>
+            deps.extensionStorageService.readCollectionItem({ ...scope, collection: name }, id),
+          );
+          return row ? { value: row.value_json as never, revision: row.revision } : undefined;
+        },
         async get(id) {
           const row = await read(() =>
             deps.extensionStorageService.getCollectionItem({ ...scope, collection: name }, id),
@@ -113,6 +120,15 @@ export const createStorageApi = (
             value_json: value,
           });
           if (!updated) throw new Error(`Item not found: ${id}`);
+        },
+        updateIfUnchanged(id, revision, value) {
+          return deps.extensionStorageService.updateCollectionItemIfUnchanged({
+            ...scope,
+            collection: name,
+            item_id: id,
+            value_json: value,
+            revision,
+          });
         },
         async createIfAbsent(id, value) {
           return deps.extensionStorageService.createCollectionItemIfAbsent({

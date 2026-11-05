@@ -46,6 +46,22 @@ test("host storage exposes document groups, verified assets, legacy access, and 
       });
     };
     const [first, other] = await Promise.all([context("First"), context("Other")]);
+    expect(await first.canMigrate()).toBe(true);
+    const tickets = first.collection<{ title: string; position?: string }>("tickets");
+    await tickets.put("a", { title: "Original" });
+    const old = (await tickets.read("a"))!;
+    await tickets.update("a", { title: "Received edit" });
+    expect(await tickets.updateIfUnchanged("a", old.revision, { ...old.value, position: "position" })).toBe(false);
+    const current = (await tickets.read("a"))!;
+    expect(await tickets.updateIfUnchanged("a", current.revision, { ...current.value, position: "position" })).toBe(
+      true,
+    );
+    expect(await tickets.get("a")).toEqual({ title: "Received edit", position: "position" });
+    const beforeDelete = (await tickets.read("a"))!;
+    await tickets.delete("a");
+    await tickets.put("a", beforeDelete.value);
+    expect(await tickets.updateIfUnchanged("a", beforeDelete.revision, { title: "Stale edit" })).toBe(false);
+    expect(await other.collection("tickets").read("a")).toBeUndefined();
     expect(first.ids.create()).toMatch(/^[0-9a-f-]{14}7[0-9a-f-]{21}$/);
     expect(first.ids.create("nt")).toMatch(/^nt_[0-9A-Za-z]{22}$/);
     const firstPosition = first.positions.between();

@@ -126,6 +126,7 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
     const { records, legacy } = owner.scope(scopeType, scopeId);
     const blobKey = JSON.stringify([scopeType, scopeId]);
     const api: ExtensionStorageApi = {
+      canMigrate: async () => true,
       migrate: (version, run) =>
         migrateFor(blobKey)(version, (previous) =>
           owner.duringMigration(JSON.stringify([owner.extensionId, scopeType, scopeId, version]), () =>
@@ -169,6 +170,10 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
       collection<TItem>(name: string): ExtensionStorageCollectionApi<TItem> {
         const store = legacy.collection(name);
         return {
+          async read(id) {
+            const record = await store.read(id);
+            return record ? { value: record.value as TItem, revision: record.revision } : undefined;
+          },
           async get(id) {
             return (await store.get(id))?.value as TItem | undefined;
           },
@@ -180,6 +185,9 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
           },
           async update(id, value) {
             if (!(await store.update(id, value as never))) throw new Error(`Item not found: ${id}`);
+          },
+          updateIfUnchanged(id, revision, value) {
+            return store.updateIfUnchanged(id, revision, value as never);
           },
           async createIfAbsent(id, value) {
             return store.createIfAbsent(id, value as never);
