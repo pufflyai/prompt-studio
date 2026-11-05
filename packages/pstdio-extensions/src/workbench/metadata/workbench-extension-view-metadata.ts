@@ -56,6 +56,7 @@ const toNativeViewBody = (
       kind: "chat",
       ...common,
       draftKey: body.draftKey,
+      legacySessionDraft: body.legacySessionDraft,
       initial: body.initial,
       queryHandlerId: String(handlers.queryHandlerId),
       actionHandlerId: String(handlers.actionHandlerId),

@@ -59,3 +59,11 @@ test.each([
   expect(result.success).toBe(false);
   if (!result.success) expect(result.error.issues[0]?.path.slice(0, 4)).toEqual(["groups", 0, "params", 0]);
 });
+
+test("native harness controls preserve an unselected picker before a harness is chosen", () => {
+  const result = {
+    params: [{ id: "harness", name: "Harness", type: "harness" as const, defaultValue: { harnessId: "" } }],
+    values: { harness: { harnessId: "" } },
+  };
+  expect(controlsQueryResultSchema.parse(result)).toEqual(result);
+});

@@ -140,6 +140,15 @@ test("independent native chat paints and accepts input before history, then reta
     await expect(main.getByText("Question answered", { exact: true })).toBeVisible();
     await expect(composer).toContainText("Unsent native draft");
     await expect(main.getByRole("button", { name: "Remove draft.txt" })).toBeVisible();
+    // Critical risk: host services must preserve independent provider URI/image callbacks and saved queue settings.
+    await main.getByRole("button", { name: "Show saved queue", exact: true }).click();
+    await expect(main.getByRole("img", { name: "Provider image" })).toBeVisible();
+    await main.getByRole("link", { name: "Provider document" }).click();
+    await expect(main.getByText("Provider link opened", { exact: true })).toBeVisible();
+    await main.getByRole("button", { name: "Edit queued message: Saved queued prompt", exact: true }).click();
+    await composer.fill("Edited prompt only");
+    await main.getByRole("button", { name: "Update", exact: true }).click();
+    await expect(main.getByText("Queue update kept B", { exact: true })).toBeVisible();
   } finally {
     release();
     await page.unrouteAll({ behavior: "wait" });

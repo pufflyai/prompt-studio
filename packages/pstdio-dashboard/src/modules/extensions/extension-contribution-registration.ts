@@ -7,6 +7,8 @@ import {
 import { createElement } from "react";
 import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
+import { readLegacySessionChatDraft } from "@/shared/app/legacy-session-chat-draft";
+import { createDashboardChatHost } from "@/shared/chat/native-chat-host";
 import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
@@ -109,6 +111,8 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     });
     disposables.push(
       registerWorkbenchExtensionContributions({
+        readLegacySessionDraft: readLegacySessionChatDraft,
+        createChatHost: createDashboardChatHost,
         createChatParamField: createDashboardParamFieldRenderer,
         streamChatCommand: (commandId, body, signal) =>
           getApiClient().extensions.streamCommand(input.projectId, commandId, body, { signal }),

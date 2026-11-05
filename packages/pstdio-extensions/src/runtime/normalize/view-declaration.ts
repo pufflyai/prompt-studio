@@ -21,6 +21,7 @@ const body = z.discriminatedUnion("kind", [
       kind: z.literal("chat"),
       ...native,
       draftKey: z.string().min(1),
+      legacySessionDraft: z.boolean().optional(),
       initial: chatRendererSnapshotSchema.optional(),
       query: callbackSchema,
       onAction: callbackSchema,

@@ -161,6 +161,8 @@ export interface ExtensionSessionsApi extends ExtensionSessionControlsApi {
     prompt?: string;
     harness?: ExtensionHarnessInput;
     workspaceId?: string;
+    /** Omit for this host, or use an account device returned by account.devices(). */
+    deviceId?: string;
     anchors?: ResourceAnchor[];
     attachments?: SessionAttachmentRef[];
     originalSessionId?: string;

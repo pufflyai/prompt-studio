@@ -1,13 +1,17 @@
 import { Button, Flex, Text } from "@chakra-ui/react";
 import type { ChatAttachment, ChatQueuedRequest } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ComponentType, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
-import { NativeChatApproval, NativeChatControls } from "./native-chat-controls";
+import { NativeChatAttachmentActions, NativeChatAttachmentList } from "./native-chat-attachments";
+import { NativeChatApproval, NativeChatControls, nativeChatCommands } from "./native-chat-controls";
 import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
+import type { NativeChatHostProps, NativeChatHostServices } from "./native-chat-host";
+import { queuedChatDraft } from "./native-chat-queue";
 
-interface NativeChatViewProps {
+interface NativeChatViewProps extends NativeChatHostServices {
+  Host?: ComponentType<NativeChatHostProps>;
   session: ChatSession;
   action: Parameters<ChatSession["run"]>[1];
   linkHandler?: ChatLinkHandler;
@@ -25,7 +29,16 @@ const encodeFile = async (file: File) => {
   return btoa(binary);
 };
 
-export const NativeChatView = (props: NativeChatViewProps) => {
+export const NativeChatView = (props: NativeChatViewProps) =>
+  props.Host ? (
+    <props.Host session={props.session} linkHandler={props.linkHandler}>
+      {(host) => <NativeChatContent {...props} {...host} />}
+    </props.Host>
+  ) : (
+    <NativeChatContent {...props} />
+  );
+
+const NativeChatContent = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
   const { conversation, draft, loading, sending, error } = useSyncExternalStore(
     session.subscribe,
@@ -101,6 +114,12 @@ export const NativeChatView = (props: NativeChatViewProps) => {
       conversationKey={conversationKey}
       linkHandler={props.linkHandler}
       messages={conversation.messages ?? []}
+      onForkMessage={
+        conversation.fork ? (messageId) => run({ type: "fork", messageId }).then(() => undefined) : undefined
+      }
+      forkDisabledReason={
+        conversation.fork?.disabledReason ?? (conversation.readOnly ? "This conversation is read only." : undefined)
+      }
       loading={loading}
       emptyStateTitle={props.emptyTitle ?? "No messages yet"}
       emptyStateDescription={props.emptyDescription ?? "Send a message to start this session."}
@@ -109,10 +128,22 @@ export const NativeChatView = (props: NativeChatViewProps) => {
       onChatInputChange={(text) => session.changeDraft({ text })}
       streaming={conversation.streaming}
       streamingStartedAt={conversation.streamingStartedAt}
-      inputDisabled={conversation.readOnly || uploading > 0}
-      submitDisabled={conversation.submitDisabled || sending || uploading > 0}
+      inputDisabled={conversation.readOnly || uploading > 0 || Boolean(props.account?.progress)}
+      submitDisabled={
+        conversation.submitDisabled ||
+        sending ||
+        uploading > 0 ||
+        (props.account?.blocked && !props.account.isCommand(draft.text))
+      }
       readOnlyQueue={conversation.readOnly}
       onSubmitMessage={async (text, _files, questionResponse) => {
+        if (props.account?.progress)
+          throw new Error("Finish or cancel harness authentication before sending a message.");
+        if (!questionResponse && props.account?.isCommand(text)) {
+          await props.account.submit(text);
+          return;
+        }
+        props.account?.assertReady();
         await run({ type: "submit", text, attachments: questionResponse ? [] : attachments, values, questionResponse });
       }}
       onInterrupt={
@@ -123,14 +154,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
           : undefined
       }
       approvalPrompt={<NativeChatApproval run={run} conversation={conversation} />}
-      chatInputCommands={conversation.harness?.commands.map((command) => ({
-        ...command,
-        onSelect: command.composer
-          ? () => {
-              void run({ type: "selectCommand", name: command.name }).catch(() => undefined);
-            }
-          : undefined,
-      }))}
+      chatInputCommands={nativeChatCommands(conversation, props.account, run)}
       composerDecision={
         conversation.decision
           ? {
@@ -165,12 +189,17 @@ export const NativeChatView = (props: NativeChatViewProps) => {
           run={run}
           conversation={conversation}
           draft={activeDraft}
+          editingQueuedRequest={Boolean(selected)}
+          unavailable={props.account?.blocked}
           renderParamField={renderParamField}
           changeValues={(next) => changeActive({ values: next })}
         />
       }
       conversationNotices={
         <>
+          {props.account?.progress}
+          {props.account?.notice}
+          {props.linkNotice}
           <NativeChatDraftRecovery recovered={draft.recovered} onRestore={session.restoreDraft} />
           {conversation.notice ? <Text>{conversation.notice}</Text> : null}
           {error ? (
@@ -190,38 +219,19 @@ export const NativeChatView = (props: NativeChatViewProps) => {
         void upload([new File([text], "pasted-text.txt", { type: "text/plain" })]).catch(() => undefined);
       }}
       attachmentActions={
-        <Button
-          size="xs"
-          variant="ghost"
-          disabled={conversation.readOnly || uploading > 0}
-          onClick={() => {
-            const picker = document.createElement("input");
-            picker.type = "file";
-            picker.multiple = true;
-            picker.onchange = () => {
-              void upload(Array.from(picker.files ?? [])).catch(() => undefined);
-            };
-            picker.click();
+        <NativeChatAttachmentActions
+          disabled={Boolean(conversation.readOnly) || uploading > 0}
+          upload={(files) => {
+            void upload(files).catch(() => undefined);
           }}
-        >
-          Attach files
-        </Button>
+        />
       }
       attachmentList={
-        <Flex gap="xs" wrap="wrap">
-          {attachments.map((attachment) => (
-            <Button
-              key={attachment.id}
-              size="xs"
-              variant="ghost"
-              disabled={conversation.readOnly}
-              onClick={() => removeAttachment(attachment.id)}
-              aria-label={`Remove ${attachment.name}`}
-            >
-              {attachment.name}
-            </Button>
-          ))}
-        </Flex>
+        <NativeChatAttachmentList
+          attachments={attachments}
+          disabled={Boolean(conversation.readOnly)}
+          remove={removeAttachment}
+        />
       }
       queuedFollowUps={conversation.queuedFollowUps}
       onQueuedFollowUpSelect={(item) => {
@@ -232,10 +242,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
               ? current
               : {
                   ...current,
-                  [item.id]: {
-                    values: { ...draft.values, ...(item.model ? { model: item.model } : {}), ...item.params },
-                    attachments: item.attachments ?? [],
-                  },
+                  [item.id]: queuedChatDraft(draft, item),
                 },
           );
       }}

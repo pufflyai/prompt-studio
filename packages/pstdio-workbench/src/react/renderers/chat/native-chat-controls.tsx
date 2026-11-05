@@ -6,12 +6,15 @@ import { controlValueSchema } from "pstdio-api-contracts";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { HarnessControl } from "../controls/harness-control";
+import type { NativeChatHostServices } from "./native-chat-host";
 
 interface NativeChatControlsProps {
   run: ChatSession["run"];
   conversation: ChatRendererSnapshot;
   draft: ChatDraft;
   renderParamField?: CommandParamFieldRenderer;
+  editingQueuedRequest?: boolean;
+  unavailable?: boolean;
   changeValues(values: ControlValueMap): void;
 }
 
@@ -30,7 +33,7 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
       type: "property",
       value: (
         <HarnessControl
-          param={param}
+          param={{ ...param, preserveSettings: param.preserveSettings || props.editingQueuedRequest }}
           value={draft.values[param.id] ?? param.defaultValue}
           readOnly={Boolean(conversation.readOnly)}
           renderParamField={renderParamField}
@@ -44,7 +47,7 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
       {conversation.harness ? (
         <HarnessControls
           modes={conversation.harness.modes}
-          unavailable={conversation.readOnly}
+          unavailable={conversation.readOnly || props.unavailable}
           draftTag={
             conversation.draftTag
               ? {
@@ -123,3 +126,21 @@ export const NativeChatApproval = (props: { run: ChatSession["run"]; conversatio
     </Flex>
   );
 };
+
+export const nativeChatCommands = (
+  conversation: ChatRendererSnapshot,
+  account: NativeChatHostServices["account"],
+  run: ChatSession["run"],
+) => [
+  ...(account?.commands ?? []),
+  ...((account?.blocked ? [] : conversation.harness?.commands)
+    ?.filter((command) => !account?.commands.some((local) => local.name === command.name))
+    .map((command) => ({
+      ...command,
+      onSelect: command.composer
+        ? () => {
+            void run({ type: "selectCommand", name: command.name }).catch(() => undefined);
+          }
+        : undefined,
+    })) ?? []),
+];

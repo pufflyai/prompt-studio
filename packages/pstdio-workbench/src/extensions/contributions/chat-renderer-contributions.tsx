@@ -3,16 +3,20 @@ import { commandRefId, resourceKey } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, parseChatLink } from "@pstdio/ui/chat-ui";
 import { chatLinkPresentationSchema } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
-import { createElement } from "react";
+import { type ComponentType, createElement } from "react";
 import { z } from "zod";
 import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchPanelRenderInput } from "../../core";
 import type { CommandParamFieldRenderer } from "../../react/command-palette/command-param-field";
+import type { NativeChatHostProps } from "../../react/renderers/chat/native-chat-host";
 import { NativeChatView } from "../../react/renderers/chat/native-chat-view";
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workbench-extension-host-types";
+import { type LegacyChatDraftTransfer, transferLegacyChatDraft } from "./chat-legacy-draft";
 import { type ChatSession, createChatSession } from "./chat-session";
 
 export interface ChatCommandTransport {
+  readLegacySessionDraft?: (projectId: string, draftKey: string) => LegacyChatDraftTransfer | undefined;
+  createChatHost?: (workbench: WorkbenchCore, projectId?: string) => ComponentType<NativeChatHostProps>;
   streamChatCommand?(
     commandId: string,
     body: CommandExecuteRequest,
@@ -26,6 +30,7 @@ type ChatRecord = WorkbenchExtensionMetadata["views"][number] & {
 
 const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view: ChatRecord) => {
   const body = view.body;
+  let Host: ComponentType<NativeChatHostProps> | undefined;
   const sessions = new Map<string, { session: ChatSession; render: WorkbenchPanelRenderInput }>();
   const sessionFor = (render: WorkbenchPanelRenderInput) => {
     const resource = render.instance.resource;
@@ -64,7 +69,16 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
         initial: body.initial,
         query: (signal) => binding().run(body.queryHandlerId, {}, signal),
         action: (action) => binding().run(body.actionHandlerId, { action }),
-        loadDraft: body.loadDraftHandlerId ? () => binding().run(body.loadDraftHandlerId!, {}) : undefined,
+        loadDraft: body.loadDraftHandlerId
+          ? () =>
+              transferLegacyChatDraft(
+                () => binding().run(body.loadDraftHandlerId!, {}),
+                body.saveDraftHandlerId ? (draft) => binding().run(body.saveDraftHandlerId!, { draft }) : undefined,
+                body.legacySessionDraft && input.projectId
+                  ? input.readLegacySessionDraft?.(input.projectId, draftKey)
+                  : undefined,
+              )
+          : undefined,
         saveDraft: body.saveDraftHandlerId ? (draft) => binding().run(body.saveDraftHandlerId!, { draft }) : undefined,
         watch: body.stream
           ? (signal) => {
@@ -123,9 +137,11 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
       body: {
         kind: "react",
         render: (render) => {
+          Host ??= input.createChatHost?.(render.workbench, input.projectId);
           const { session, key, action, linkHandler } = sessionFor(render);
           return createElement(NativeChatView, {
             key,
+            Host,
             session,
             action,
             linkHandler,

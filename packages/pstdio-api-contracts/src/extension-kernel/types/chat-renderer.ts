@@ -25,6 +25,8 @@ export type {
 export interface ChatRendererContribution extends RendererContributionBase {
   /** Fallback draft identity when the placement has no session/draft resource. Resource identity wins. */
   draftKey: string;
+  /** Transition one legacy host Sessions draft after saving it through saveDraft. */
+  legacySessionDraft?: boolean;
   /** Available on the first render, before any command or stream connects. */
   initial?: ChatRendererSnapshot;
   query: RendererCallback<JsonObject, ChatRendererSnapshot>;

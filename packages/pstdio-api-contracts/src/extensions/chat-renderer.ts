@@ -28,11 +28,15 @@ export const chatAttachmentSchema = z.strictObject({
 export const chatQueuedRequestSchema = z.strictObject({
   id: z.string().min(1),
   prompt: z.string(),
+  /** Saved control values for editing this request; keys belong to the provider. */
+  values: controlValuesSchema.optional(),
   position: z.number().int().nonnegative().optional(),
   revision: z.string().optional(),
   model: z.string().nullable().optional(),
   params: z.record(z.string(), z.union([z.string(), z.boolean()])).optional(),
   attachments: z.array(chatAttachmentSchema).optional(),
+  /** Run captured when the queue selection was presented, used for stale-run guards. */
+  activeRunStartedAt: z.string().nullable().optional(),
   steeringUnavailableReason: z.string().nullable().optional(),
   steeringDelivery: z.object({ id: z.string(), runStartedAt: z.string() }).nullable().optional(),
   sending: z.boolean().optional(),
@@ -57,6 +61,11 @@ export const chatRendererSnapshotSchema = z.strictObject({
   readOnly: z.boolean().optional(),
   submitDisabled: z.boolean().optional(),
   notice: z.string().optional(),
+  /** Use the host's scoped workspace link/image resolver. */
+  workspaceId: z.string().optional(),
+  nativeLinks: z.boolean().optional(),
+  /** Opt in to trusted host account UI and its dedicated authentication channel. */
+  nativeHarnessAccount: z.object({ controlId: z.string().min(1), remote: z.boolean().optional() }).optional(),
   harness: harnessCommandStateSchema.optional(),
   draftTag: z.object({ label: z.string(), description: z.string(), clearActionId: z.string() }).nullable().optional(),
   decision: z
@@ -88,6 +97,7 @@ export const chatRendererSnapshotSchema = z.strictObject({
     .object({ id: z.string(), title: z.string(), choices: z.array(z.object({ id: z.string(), label: z.string() })) })
     .nullable()
     .optional(),
+  fork: z.object({ disabledReason: z.string().nullable() }).optional(),
   operations: z.array(z.object({ id: z.string(), label: z.string(), disabled: z.boolean().optional() })).optional(),
 });
 export const chatRendererActionSchema = z.discriminatedUnion("type", [
@@ -99,6 +109,7 @@ export const chatRendererActionSchema = z.discriminatedUnion("type", [
     questionResponse: questionResponseSchema.optional(),
   }),
   z.strictObject({ type: z.literal("stop") }),
+  z.strictObject({ type: z.literal("fork"), messageId: z.string().min(1) }),
   z.strictObject({
     type: z.literal("harness"),
     operation: harnessOperationSchema,

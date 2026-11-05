@@ -6,6 +6,8 @@ import { buildCommandParam, readCommandParamValue } from "./command-param-descri
 
 export interface CommandParamFieldProps {
   entry: CommandParamEntry;
+  /** Host constraints for a native harness control. */
+  harness?: { lockIdentity?: boolean; preserveSettings?: boolean };
   value: CommandParamValue;
   context?: WorkbenchCommandExecutionContext;
   disabled: boolean;

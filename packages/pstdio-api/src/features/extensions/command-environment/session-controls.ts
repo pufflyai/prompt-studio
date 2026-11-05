@@ -1,12 +1,16 @@
 import { approvalInputSchema, moveQueuedFollowUpInputSchema, sessionStatusSchema } from "pstdio-api-contracts";
 import type { ExtensionSessionControlsApi } from "pstdio-api-contracts/extension-kernel";
+import { z } from "zod";
 import { buildDiff, emitActivityEvent, listActivityEvents } from "../../activity/activity-events";
 import { toExtensionSession } from "../../sessions/extension-session";
+import { forkSession } from "../../sessions/fork-session";
+import { getSessionHarness } from "../../sessions/get-session-harness";
 import { getSessionHarnessCommands, invokeSessionHarnessOperation } from "../../sessions/session-harness-commands";
 import { withSchedulingLock } from "../../sessions/session-scheduler-internals";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createSessionAccess, type SessionApiScope } from "./session-access";
 import { createSessionReaders } from "./session-readers";
+import { createRemoteSessionAccess } from "./session-remote";
 
 type Controls = Omit<
   ExtensionSessionControlsApi,
@@ -14,6 +18,7 @@ type Controls = Omit<
 >;
 
 export const createSessionControls = (deps: ExtensionsRouteDeps, input: SessionApiScope) => {
+  const remote = createRemoteSessionAccess(deps, input);
   const { read, requireProjectSession } = createSessionAccess(deps, input);
   const summary = async (id: string) => {
     const session = await read(() => requireProjectSession(id));
@@ -31,6 +36,30 @@ export const createSessionControls = (deps: ExtensionsRouteDeps, input: SessionA
     });
   return {
     ...createSessionReaders(deps, input),
+    fork: async (id, messageId) => {
+      await read(() => requireProjectSession(id));
+      input.signal?.throwIfAborted();
+      const result = await forkSession(deps, id, messageId);
+      return toExtensionSession(result.session, result.workspaceId);
+    },
+    getForkState: (id) =>
+      read(async () => {
+        const session = await requireProjectSession(id);
+        const harness = await getSessionHarness(deps.harnessRegistry, session);
+        const supported = Boolean(harness?.supportsFork);
+        const entry = deps.sessionService.store.get(id);
+        const pending =
+          ["in_progress", "awaiting_input", "queued"].includes(session.status) ||
+          entry?.session ||
+          entry?.controlInvocations.size ||
+          entry?.checkpointPromise ||
+          (await deps.sessionQueueEntriesService.hasEntries(id));
+        let disabledReason: string | null = null;
+        if (!supported) disabledReason = "This harness does not support forking conversations.";
+        else if (pending) disabledReason = "Finish or stop pending work before forking.";
+        else if (!session.agent_session_id) disabledReason = "Send a message before forking this conversation.";
+        return { supported, disabledReason };
+      }),
     rename: async (id, title) => {
       await read(() => requireProjectSession(id));
       const trimmed = title.trim();
@@ -68,8 +97,9 @@ export const createSessionControls = (deps: ExtensionsRouteDeps, input: SessionA
       return summary(id);
     },
     approve: async (id, request) => {
-      await read(() => requireProjectSession(id));
       const approval = approvalInputSchema.parse(request);
+      if (await remote(id, { type: "session.approve", id, input: approval }, z.object({ ok: z.literal(true) }))) return;
+      await read(() => requireProjectSession(id));
       const entry = deps.sessionService.store.get(id);
       if (!entry) throw new Error(`No active session process for: ${id}`);
       entry.approvalService.handleResponse(approval);
@@ -91,6 +121,14 @@ export const createSessionControls = (deps: ExtensionsRouteDeps, input: SessionA
         );
       }),
     removeQueuedFollowUp: async (id, position, expectedRevision) => {
+      if (
+        await remote(
+          id,
+          { type: "session.queueDelete", id, queuePosition: position, expectedRevision },
+          z.object({ ok: z.literal(true) }),
+        )
+      )
+        return;
       await read(() => requireProjectSession(id));
       await withSchedulingLock(async () => {
         input.signal?.throwIfAborted();
@@ -101,8 +139,14 @@ export const createSessionControls = (deps: ExtensionsRouteDeps, input: SessionA
       });
     },
     moveQueuedFollowUp: async (id, queuePosition, request) => {
-      await read(() => requireProjectSession(id));
       const move = moveQueuedFollowUpInputSchema.parse(request);
+      const forwarded = await remote(
+        id,
+        { type: "session.queueMove", id, queuePosition, input: move },
+        z.object({ queuePosition: z.number().int().positive() }),
+      );
+      if (forwarded) return forwarded.value;
+      await read(() => requireProjectSession(id));
       return withSchedulingLock(async () => {
         input.signal?.throwIfAborted();
         const moved = await deps.sessionQueueEntriesService.movePending({

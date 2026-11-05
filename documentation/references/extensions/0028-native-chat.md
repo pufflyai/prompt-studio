@@ -75,12 +75,59 @@ Restore saved draft swaps them without discarding current work. Failed hydration
 prevents overwriting unread storage; save errors stay visible. Saves may finish
 after the view closes. Project and draft identity must also scope storage keys.
 
-Mark foreign-device history `readOnly`: execution controls are disabled, and
-history and resource navigation remain usable. Existing services enforce ownership.
+Use `ctx.sessions.getExecutionState` for availability: local sessions work while
+signed out, online remote owners retain follow-up, question, approval, queue and
+stop controls through the host relay, and unavailable remote history is read only.
+Do not infer ownership by comparing an absent account device ID. Queue snapshots
+may independently be read only without disabling question replies or other controls.
+`ctx.sessions.create({ deviceId, ... })` targets an account device; omission targets
+this host. Attachment forwarding, project checks and permissions stay in core.
+A logical default workspace can have no local folder. Harnesses with optional cwd
+can start there; harnesses requiring files receive the existing folder setup error.
+Use project `ctx.storage.files` and a small record pointer for durable draft bodies
+when a project has no folder.
 `resolveLink` confirms resource candidates and returns a label, icon and href;
 `resolveImage` resolves image sources through scoped file APIs. Opening links
 dispatches `openLink`; resource buttons dispatch `openResource`. Use public
 navigation and preserve standard unavailable-target feedback.
+
+## Trusted host features
+
+Set `nativeHarnessAccount: { controlId: "your-harness-control" }` to use native `/login` and `/logout` handling and
+the host account progress, browser and secret-input UI. Authentication replies use
+the dedicated authentication channel, never chat actions, command history or
+transcripts. Normal submission waits for harness/account discovery and is disabled when
+signed out, missing a harness/model, or authenticating. Login/setup remains
+available. For an online remote owner, set `remote: true` in this binding and
+use `getExecutionState` for device availability instead of local harness discovery. Omit
+this opt-in for a provider with its own command semantics.
+
+Set `nativeLinks: true` and supply `workspaceId` for the host workspace link and
+image resolver. It preserves scoped relative/absolute paths, line positions,
+resource-owned paths, canonical project links, web icons and safe external tabs.
+Declared `resolveLink` and `resolveImage` callbacks keep priority, with host
+resolution as a fallback. Without opt-in the provider's handlers remain unchanged.
+
+A harness control accepts `harnessId: ""` while unselected. Execution still
+requires a real installed harness. Set `lockIdentity: true` on a saved-session
+control to lock only the harness; models and parameters remain editable. Providers populate `ChatQueuedRequest.values` with the saved request settings
+under their own control IDs. The host overlays those values on the draft for
+queue editing and create-as-new; `model` and `params` are display metadata.
+Saved models no longer advertised by discovery remain unchanged. `preserveSettings: true` requests
+that behavior outside queue editing. Explicit parameter resets send resolved
+default values so a persisted nondefault value is actually replaced.
+
+Set `snapshot.fork` to expose per-message fork actions, with a nullable
+`disabledReason`. Use `ctx.sessions.getForkState` and `ctx.sessions.fork` to reuse
+the native fork service, its idle/queue guards and independent transcript identity.
+Queue steering must pass the `activeRunStartedAt` captured with the selected
+request along with its revision, rather than reading a newer run when clicked.
+
+The transitional view option `legacySessionDraft: true` transfers one legacy
+Sessions browser draft for the same project and draft identity. It requires
+`loadDraft` and `saveDraft`: the host saves both bodies (using `recovered` when
+necessary) before acknowledging the unchanged legacy text/files. A failed save
+leaves the old keys intact. It exposes no generic browser-storage capability.
 
 ## Delivery order
 

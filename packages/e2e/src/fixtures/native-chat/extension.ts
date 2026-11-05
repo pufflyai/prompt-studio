@@ -1,10 +1,12 @@
 import {
   type ChatDraft,
+  type ChatRendererEvent,
   type ChatRendererSnapshot,
   defineCommand,
   defineExtension,
   definePage,
   defineView,
+  streamOf,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 
@@ -12,7 +14,7 @@ const initial: ChatRendererSnapshot = { messages: [], values: {}, controls: [] }
 const watch = defineCommand({
   id: "watch",
   title: "Watch conversation",
-  stream: { kind: "stream" },
+  stream: streamOf<ChatRendererEvent>(),
   async run(ctx) {
     await ctx.stream.write({ revision: 0, snapshot: { notice: "Live stream connected" } });
     if (!ctx.signal.aborted)
@@ -32,7 +34,10 @@ const conversation = defineView({
       await ctx.sessions.query({ limit: 1 });
       return {
         messages: [{ id: "history", role: "assistant", parts: [{ type: "text", text: "Native transcript" }] }],
-        operations: [{ id: "ask", label: "Ask a question" }],
+        operations: [
+          { id: "ask", label: "Ask a question" },
+          { id: "queue", label: "Show saved queue" },
+        ],
         controls: [
           {
             id: "model",
@@ -62,7 +67,55 @@ const conversation = defineView({
         edits: [{ recordId: ctx.storage.records.id(draftKey), replace: JSON.parse(JSON.stringify(draft)) }],
       });
     },
+    async resolveLink(_ctx, { candidate }) {
+      return candidate.source === "./provider.md" ? { href: "/provider-document", label: "Provider document" } : null;
+    },
+    async resolveImage(_ctx, { source }) {
+      return source === "./provider.png"
+        ? "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aK1sAAAAASUVORK5CYII="
+        : null;
+    },
     async onAction(ctx, { action }) {
+      if (action.type === "operation" && action.id === "queue")
+        return {
+          snapshot: {
+            values: { provider: { harnessId: "fixture.agent", model: "A", params: { thinking: "A" } } },
+            queuedFollowUps: [
+              {
+                id: "queue-item",
+                prompt: "Saved queued prompt",
+                revision: "saved-revision",
+                model: "B",
+                params: { thinking: "B" },
+                values: { provider: { harnessId: "fixture.agent", model: "B", params: { thinking: "B" } } },
+              },
+            ],
+            messages: [
+              {
+                id: "provider-links",
+                role: "assistant",
+                parts: [
+                  { type: "text", text: "[Provider document](./provider.md)\n\n![Provider image](./provider.png)" },
+                ],
+              },
+            ],
+          },
+        };
+      if (action.type === "openLink") return { snapshot: { notice: "Provider link opened" } };
+      if (action.type === "queue") {
+        const settings = action.values.provider;
+        if (
+          !settings ||
+          typeof settings !== "object" ||
+          Array.isArray(settings) ||
+          !("harnessId" in settings) ||
+          settings.model !== "B" ||
+          settings.params?.thinking !== "B"
+        )
+          throw new Error("Queued request settings were replaced by the active conversation.");
+        if (action.item.revision !== "saved-revision") throw new Error("The selected queue revision was lost.");
+        return { snapshot: { notice: `Queue ${action.operation} kept B`, queuedFollowUps: [] } };
+      }
       if (action.type === "operation" && action.id === "ask")
         return {
           snapshot: {

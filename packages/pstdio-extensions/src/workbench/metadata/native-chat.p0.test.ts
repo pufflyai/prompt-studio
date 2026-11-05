@@ -14,7 +14,23 @@ test("an independent extension declares native chat with normal private callback
     body: {
       kind: "chat",
       draftKey: "new",
-      initial: { messages: [] },
+      legacySessionDraft: true,
+      initial: {
+        messages: [],
+        nativeLinks: true,
+        workspaceId: "workspace",
+        nativeHarnessAccount: { controlId: "provider" },
+        controls: [
+          {
+            id: "provider",
+            name: "Harness",
+            type: "harness",
+            defaultValue: { harnessId: "" },
+            lockIdentity: true,
+            preserveSettings: true,
+          },
+        ],
+      },
       stream: watch.ref,
       query: async () => ({ messages: [] }),
       onAction: async () => undefined,
@@ -46,7 +62,14 @@ test("an independent extension declares native chat with normal private callback
   expect(metadata.views[0]?.body).toMatchObject({
     kind: "chat",
     draftKey: "new",
-    initial: { messages: [] },
+    legacySessionDraft: true,
+    initial: {
+      messages: [],
+      nativeLinks: true,
+      workspaceId: "workspace",
+      nativeHarnessAccount: { controlId: "provider" },
+      controls: [{ id: "provider", lockIdentity: true, preserveSettings: true }],
+    },
     queryHandlerId: "acme.chat.view.conversation.chat.query",
     actionHandlerId: "acme.chat.view.conversation.chat.onAction",
     loadDraftHandlerId: "acme.chat.view.conversation.chat.loadDraft",

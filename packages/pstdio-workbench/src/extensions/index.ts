@@ -1,3 +1,4 @@
+export type { NativeChatHostProps, NativeChatHostServices } from "../react/renderers/chat/native-chat-host";
 export type {
   BridgeWebviewConfig,
   BridgeWebviewRenderContext,

@@ -15,6 +15,7 @@ export const HarnessControl = (props: HarnessControlProps) => {
   const field = renderParamField?.({
     entry: { key: param.id, label: param.name, description: param.description, type: "harness", required: true },
     value: JSON.stringify(value),
+    harness: { lockIdentity: param.lockIdentity, preserveSettings: param.preserveSettings },
     disabled: readOnly || Boolean(param.readOnly),
     onChange: (next) => {
       if (!readOnly && !param.readOnly && typeof next === "string") onChange(JSON.parse(next));
