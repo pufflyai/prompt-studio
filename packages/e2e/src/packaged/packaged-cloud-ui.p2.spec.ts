@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
-import { type Browser, test as base, chromium, expect } from "../scripts/playwright-test";
+import { test as base, expect } from "../scripts/playwright-test";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { createCloudAcceptanceFixture, signInCloudAcceptanceDevice } from "./packaged-cloud-acceptance.fixture";
 import { buildBinary } from "./packaged-helpers";
@@ -14,7 +14,6 @@ interface Resources {
   root: string;
   children: Set<ChildProcess>;
   fixture?: Awaited<ReturnType<typeof createCloudAcceptanceFixture>>;
-  browser?: Browser;
 }
 const test = base.extend<{ resources: Resources }>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright reads fixture dependency patterns.
@@ -31,7 +30,6 @@ const test = base.extend<{ resources: Resources }>({
     }
     await stopPendingTestProcesses().catch((cause) => failures.push(cause));
     const stopped = await Promise.allSettled([
-      resources.browser?.close(),
       ...[...resources.children].map(stopProcess),
       resources.fixture?.peer.close(),
     ]);
@@ -44,11 +42,14 @@ const test = base.extend<{ resources: Resources }>({
     if (failures.length) throw new AggregateError(failures, "Cloud UI scenario or cleanup failed");
   },
 });
+test.use({ ignoreHTTPSErrors: true, launchOptions: PACKAGED_DASHBOARD_BROWSER });
 test.beforeAll(() => buildBinary());
 
 // Controlled-peer qualification of the production extension. Real Google and deployed services remain PS-789.
 test("Cloud settings respect early access and manage devices and project sync through the real bridge", async ({
   resources,
+  context,
+  page,
 }) => {
   // Critical: a denied account must not gain Cloud controls; make-local must preserve both devices' copies.
   const fixture = await createCloudAcceptanceFixture(resources.root, resources.children, { cloudUi: true });
@@ -56,18 +57,25 @@ test("Cloud settings respect early access and manage devices and project sync th
   await fixture.peer.setEarlyAccess(false);
   const first = await fixture.start("first");
   const project = await first.client.projects.create(folderProjectInput({ name: "Cloud UI acceptance" }, first.folder));
-  const browser = await chromium.launch({ headless: true, ...PACKAGED_DASHBOARD_BROWSER });
-  resources.browser = browser;
-  const context = await browser.newContext({ ignoreHTTPSErrors: true });
   await context.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-  const page = await context.newPage();
   await signInBrowser(page, first.host.descriptor, `/projects/${project.id}/`);
   const status = page.frameLocator('iframe[title="Prompt Studio Cloud"]').getByTestId("cloud-status-item");
   const details = page.frameLocator('iframe[title="Cloud details"]');
   const settings = page.frameLocator('iframe[title="Cloud"]');
+  const settingsFrame = page.locator('iframe[title="Cloud"]');
+  const openSettings = async () => {
+    const button = details.getByRole("button", { name: "Cloud settings" });
+    // Closing settings can reveal the still-open status popover. Its trigger toggles it closed.
+    if (!(await button.isVisible())) await status.click();
+    await expect(button).toBeVisible();
+    await button.click();
+  };
+  const closeSettings = async () => {
+    await page.keyboard.press("Escape");
+    await expect(settingsFrame).toBeHidden();
+  };
   await expect(status).toHaveText("Sign in");
-  await status.click();
-  await details.getByRole("button", { name: "Cloud settings" }).click();
+  await openSettings();
   const startSignIn = async () => {
     const opened = context.waitForEvent("page");
     const destination = context.waitForEvent(
@@ -92,14 +100,14 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(settings.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
   await expect(fetch(cancelled)).rejects.toThrow();
   const callback = await startSignIn();
-  await page.keyboard.press("Escape");
-  await status.click();
-  await details.getByRole("button", { name: "Cloud settings" }).click();
+  await closeSettings();
+  await openSettings();
   await expect(settings.getByRole("button", { name: "Cancel sign-in" })).toBeVisible();
   expect((await fetch(callback)).status).toBe(200);
   await expect(status).toHaveText("Signed in");
-  await page.keyboard.press("Escape");
-  await status.click();
+  await closeSettings();
+  const detailsButton = details.getByRole("button", { name: "Cloud settings" });
+  if (!(await detailsButton.isVisible())) await status.click();
   await expect(details.getByText("Cloud sync · Coming soon", { exact: true })).toBeVisible();
   await expect(details.getByText("Devices", { exact: true })).toHaveCount(0);
   await details.getByRole("button", { name: "Cloud settings" }).click();
@@ -122,9 +130,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   await second.client.projects.chooseFolder(project.id, { path: second.folder, clone: false });
   await expect.poll(async () => (await second.client.account.projectSyncStatus(project.id)).state).toBe("synced");
   // Reopening reads the current device presence; idle frames never poll device lists.
-  await page.keyboard.press("Escape");
-  await status.click();
-  await details.getByRole("button", { name: "Cloud settings" }).click();
+  await closeSettings();
+  await openSettings();
   await expect(settings.getByRole("button", { name: "Rename", exact: true })).toHaveCount(2);
   await settings.getByRole("button", { name: "Rename", exact: true }).first().click();
   await settings.getByRole("textbox", { name: "Device name" }).fill("Cloud UI renamed device");
