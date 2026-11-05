@@ -47,17 +47,19 @@ Keep request text to at most 80 words, excluding document links. Identify the ti
 
 Use descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Include as many relevant links as needed. Reuse existing documents and link supporting evidence, background, and implementation detail instead of copying them into the request. Keep the choice and essential trade-offs visible without opening the links.
 
+This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
+
 ```bash
 pst pstdio-planner request-review --ticket PS-12 \
-  --title "PS-12 · Choose when dependent work starts" \
-  --instructions "**Problem:** Dependent work needs a starting point.
+  --title "PS-12 · Choose the first release audience" \
+  --instructions "**Problem:** The export is ready, but its first release audience is undecided.
 
-**Solution:** Wait for prerequisite merges (recommended), or start from submitted revisions.
+**Solution:** Release to the internal project first (recommended), or to everyone now.
 
-**Downside:** Waiting delays work; starting early may require integration repairs.
+**Downside:** An internal release delays wider access; releasing to everyone exposes more people to faults.
 
-**Details:** [Dependency policy](https://prompt.studio/docs/extensions/planner/auto-build/#start-auto-build)." \
-  --request '{"kind":"decision","questions":[{"id":"start","label":"When should dependent work start?","required":true,"input":{"kind":"single-choice","options":[{"id":"merged","label":"After prerequisites merge (recommended)"},{"id":"submitted","label":"After prerequisites submit work"}]}}]}'
+**Details:** [Release plan](files/release-plan.md)." \
+  --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
 ```
 
 Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.

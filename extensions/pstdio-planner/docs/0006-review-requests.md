@@ -39,18 +39,20 @@ Answering or cancelling the last open request resolves pending input when no unr
 
 ## CLI
 
+This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
+
 ```sh
 pst pstdio-planner request-review --ticket PS-32 \
-  --title 'PS-32 · Choose when dependent work starts' \
-  --instructions '**Problem:** Dependent work needs a starting point.
+  --title 'PS-32 · Choose the first release audience' \
+  --instructions '**Problem:** The export is ready, but its first release audience is undecided.
 
-**Solution:** Wait for prerequisite merges (recommended), or start from submitted revisions.
+**Solution:** Release to the internal project first (recommended), or to everyone now.
 
-**Downside:** Waiting delays work; starting early may require integration repairs.
+**Downside:** An internal release delays wider access; releasing to everyone exposes more people to faults.
 
-**Details:** [Dependency policy](https://prompt.studio/docs/extensions/planner/auto-build/#start-auto-build).' \
-  --request '{"kind":"decision","questions":[{"id":"start","label":"When should dependent work start?","required":true,"input":{"kind":"single-choice","options":[{"id":"merged","label":"After prerequisites merge (recommended)"},{"id":"submitted","label":"After prerequisites submit work"}]}}]}'
-pst pstdio-planner review --request-id <id> --response '{"answers":{"start":"merged"}}'
+**Details:** [Release plan](files/release-plan.md).' \
+  --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
+pst pstdio-planner review --request-id <id> --response '{"answers":{"audience":"internal"}}'
 ```
 
 Read, cancel, or open requests:
