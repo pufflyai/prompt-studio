@@ -21,7 +21,7 @@ import { initializeOrderedOwner, orderedProjection } from "./ordered-projection"
 import { knownDependencies, rebaseOrderedProjection } from "./ordered-rebase";
 import { compileOrderedGroup } from "./ordered-record-compiler";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { readOrderedOwner } from "./ordered-stream-state";
+import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
 import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
 import type { createResourceRecords as createLegacyResourceRecords } from "./resource-records";
@@ -48,7 +48,7 @@ const prepareCommitViews = async (
   ids: string[],
 ) => {
   const row = await readOrderedOwner(tx, owner);
-  if (!row.joined && !(await journal.pendingFor(ids, { limit: 1 })).length)
+  if (!(await orderedOwnerJoinedCloud(tx, owner, row)) && !(await journal.pendingFor(ids, { limit: 1 })).length)
     return { views: await journal.canonical(ids), events: [] };
   return rebaseOrderedProjection(journal, tx, owner, ids);
 };

@@ -123,6 +123,15 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       return rows.map((row) => local(row)!);
     },
     async pendingFor(recordIds: string[], options: { after?: number; limit?: number } = {}) {
+      if (!recordIds.length) return [];
+      // Local settlement retires every touch. Probe the smaller pending-operation index
+      // before seeking thousands of absent memberships through recently deleted rows.
+      const [pending] = await tx
+        .select({ id: operations.operation_id })
+        .from(operations)
+        .where(pendingWhere())
+        .limit(1);
+      if (!pending) return [];
       const limit = options.limit ?? 100;
       let selected = new Map<string, number>();
       for (let offset = 0; offset < recordIds.length; offset += 1_000) {

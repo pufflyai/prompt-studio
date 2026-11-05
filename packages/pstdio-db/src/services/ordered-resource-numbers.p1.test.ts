@@ -18,7 +18,8 @@ const pair = async (count = 2, joined = false) => {
     spaceOwner: null,
     keys: [{ generation: 1, secret: "A".repeat(43) }],
   });
-  const { relay } = createRelay();
+  const remote = createRelay();
+  const { relay } = remote;
   const documentId = await space.documentId(JSON.stringify([coreOwnerId, "record-stream"]));
   const devices = await Promise.all(
     Array.from({ length: count }, async () => {
@@ -57,6 +58,10 @@ const pair = async (count = 2, joined = false) => {
     devices,
     input,
     owner,
+    loseRelay: () => {
+      remote.lose();
+      remote.loseBlobs();
+    },
     close: async () => {
       for (const device of devices) {
         await device.documents.flushStatistics();
@@ -574,6 +579,25 @@ test("a previously renumbered pending claim retains its original collateral repa
       expect(await device.numbers.identity({ ...f.input, id: "z" })).toMatchObject({ shorthand: "PS-2" });
       expect(device.failures).toEqual([]);
     }
+  } finally {
+    await f.close();
+  }
+});
+
+test("a core writer restores its ordered receipt graph after complete relay loss", async () => {
+  const f = await pair(3);
+  try {
+    const [first, second, fresh] = f.devices;
+    await first!.records.commit({ operationId: "before-loss", edits: [{ recordId: "a", replace: numbered("a", 5) }] });
+    await first!.sync.synchronize();
+    await second!.sync.synchronize();
+    f.loseRelay();
+    await first!.sync.synchronize();
+    await fresh!.sync.synchronize();
+    expect(await fresh!.numbers.identity({ ...f.input, id: "a" })).toMatchObject({ shorthand: "PS-5" });
+    expect((await fresh!.records.read("a")).value).toEqual((await first!.records.read("a")).value);
+    expect(fresh!.failures).toEqual([]);
+    expect(first!.failures).toEqual([]);
   } finally {
     await f.close();
   }

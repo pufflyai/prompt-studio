@@ -22,7 +22,7 @@ import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-recei
 import { nextOrderedUpload } from "./ordered-receipts-upload";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
-import { orderedCursor, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
+import { orderedCursor, orderedOwnerJoinedCloud, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { createRecordStreamStore } from "./record-stream-store";
 import type { NumberChange } from "./resource-number-repair";
 
@@ -229,7 +229,8 @@ export const createOrderedStreamStore = (
       run(
         async (journal, tx) =>
           (await journal.pending({ limit: 1 })).length > 0 ||
-          (!(await readOrderedOwner(tx, owner)).joined && (await hasCanonicalRecords(tx, owner))),
+          (!(await orderedOwnerJoinedCloud(tx, owner, await readOrderedOwner(tx, owner))) &&
+            (await hasCanonicalRecords(tx, owner))),
       ),
   } satisfies RecordStreamStore;
 };
