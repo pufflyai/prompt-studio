@@ -2,9 +2,9 @@
 
 **Needs attention** collects decisions a person needs to make. Use a request only for an unresolved choice that the agent cannot settle from existing instructions or authority.
 
-Identify the ticket in the title and keep request instructions to at most 100 words. Use one short sentence each for **Problem**, **Solutions**, and **Downsides**, including each choice’s main cost and a marked recommendation. Keep question and option labels to one short sentence each, without repeating the summary.
+Identify the ticket in the title and keep request text to at most 80 words, excluding document links. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. Include each choice’s main cost and a marked recommendation. Keep question and option labels short, without repeating the summary.
 
-Add a **Details** line with 1–3 descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Reuse existing documents and link evidence, background, and implementation detail instead of copying them into the request. The choice and essential trade-offs should be clear without opening the links.
+Use descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Include as many relevant links as needed. Reuse existing documents and link evidence, background, and implementation detail instead of copying them into the request. The choice and essential trade-offs should be clear without opening the links.
 
 Missing resources, credentials, access, reproduction details and non-decision actions use **Blocked** and a specific blocked reason: what is missing and what allows work to continue. Clear the reason when resolved. Dependency waiting belongs in dependency links. Routine assumptions, risk checklists and handing in work do not by themselves need a request.
 
@@ -44,9 +44,9 @@ pst pstdio-planner request-human --ticket PS-32 \
   --title 'PS-32 · Choose when dependent work starts' \
   --instructions '**Problem:** Dependent work needs a starting point.
 
-**Solutions:** Wait for prerequisite merges (recommended), or start from submitted revisions.
+**Solution:** Wait for prerequisite merges (recommended), or start from submitted revisions.
 
-**Downsides:** Waiting delays work; starting early may require integration repairs.
+**Downside:** Waiting delays work; starting early may require integration repairs.
 
 **Details:** [Dependency policy](https://prompt.studio/docs/extensions/planner/auto-build/#start-auto-build).' \
   --request '{"kind":"decision","questions":[{"id":"start","label":"When should dependent work start?","required":true,"input":{"kind":"single-choice","options":[{"id":"merged","label":"After prerequisites merge (recommended)"},{"id":"submitted","label":"After prerequisites submit work"}]}}]}'
