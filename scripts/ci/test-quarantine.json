@@ -132,7 +132,7 @@
   {
     "runner": "packaged-bun",
     "file": "packages/e2e/src/packaged/extension-browser-install.p1.test.ts",
-    "name": "the installed Playwright cache runs a packaged extension page outside the checkout",
+    "name": "the installed Playwright cache runs an extension page without Home outside the checkout",
     "platforms": ["win32"],
     "owner": "PS-907 / packaged browser installation",
     "reason": "Shares the Windows packaged browser validation path with the quarantined smoke-browser case and exhausted its 30 seconds in the same way. Preserve the outside-checkout cache and real page checks.",

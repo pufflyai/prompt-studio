@@ -19,6 +19,7 @@ interface Resources {
   browser?: Browser;
   connections: Set<TextEditingConnection>;
   sessions: Set<TextEditingSession>;
+  guests: Set<ReturnType<TextEditingConnection["guest"]>>;
 }
 const test = base.extend<{ resources: Resources }>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright reads fixture dependency patterns.
@@ -27,6 +28,7 @@ const test = base.extend<{ resources: Resources }>({
       root: realpathSync(mkdtempSync(join(tmpdir(), "pstdio-text-consumers-"))),
       connections: new Set(),
       sessions: new Set(),
+      guests: new Set(),
     };
     const failures: unknown[] = [];
     try {
@@ -42,9 +44,15 @@ const test = base.extend<{ resources: Resources }>({
     // still owns cancellation if graceful teardown reaches the test's existing deadline.
     const pending = resources.child ? registerPendingTestProcess(resources.child) : undefined;
     try {
+      console.info("Text consumer cleanup: close sessions");
       await settle([...resources.sessions].map((session) => session.close()));
+      console.info("Text consumer cleanup: close guests");
+      await settle([...resources.guests].map((guest) => guest.close()));
+      console.info("Text consumer cleanup: disconnect transports");
       await settle([...resources.connections].map((connection) => connection.disconnect()));
+      console.info("Text consumer cleanup: transports drained");
     } finally {
+      console.info("Text consumer cleanup: stop browser and host");
       pending?.finish();
       await settle([
         stopPendingTestProcesses(),
@@ -105,6 +113,7 @@ test("Notes and Planner use public native sessions while retaining domain titles
     });
     resources.connections.add(connection);
     const guest = connection.guest();
+    resources.guests.add(guest);
     const text = createTextEditingClient(guest.host);
     const grant = await text.current();
     expect(grant).toBeDefined();
