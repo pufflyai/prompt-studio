@@ -94,3 +94,60 @@ test("each session state offers exactly one delete action with the lifecycle gua
   }
   workbench.dispose();
 });
+
+test("message fork retains the invoking session and reply", async () => {
+  const workbench = setup();
+  expect(
+    await workbench.commands.prepareCommandArgs(
+      dashboardCommandIds.forkSession,
+      { sessionId: "a", messageId: "earlier-answer" },
+      { resource: { type: "session", id: "b" } },
+    ),
+  ).toEqual({ sessionId: "a", messageId: "earlier-answer" });
+  workbench.dispose();
+});
+
+test("a pending fork does not replace navigation after switching projects", async () => {
+  let release!: () => void;
+  let entered!: () => void;
+  const requested = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const response = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const server = Bun.serve({
+    port: 0,
+    async fetch() {
+      entered();
+      await response;
+      return Response.json(
+        { id: "copied-session", title: "A (fork)", project_id: "actions-project", status: "completed" },
+        { status: 201 },
+      );
+    },
+  });
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+  const previous = runtime.__PSTDIO_CONFIG__;
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
+  const workbench = setup();
+  try {
+    const pending = workbench.commands.executeCommand(
+      dashboardCommandIds.forkSession,
+      { sessionId: "a", messageId: "reply" },
+      { resource: { type: "session", id: "a" } },
+    );
+    await requested;
+    selectDashboardProject(workbench, { id: "other-project", name: "Other" });
+    openSessionsPage(workbench);
+    const location = workbench.pages.store.getState().location;
+    release();
+    await pending;
+    expect(workbench.pages.store.getState().location).toEqual(location);
+  } finally {
+    release();
+    runtime.__PSTDIO_CONFIG__ = previous;
+    server.stop(true);
+    workbench.dispose();
+  }
+});
