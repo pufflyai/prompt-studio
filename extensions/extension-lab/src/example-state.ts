@@ -2,12 +2,11 @@ import {
   applyEditingChanges,
   type ExtensionStorageApi,
   rebaseEditingChanges,
-  type SharedStorageEdit,
   type WebviewEditingChange,
 } from "@pstdio/sdk/extensions";
 import { readScribbleState, writeScribbleState } from "./scribble-pages-storage";
 import { type ExampleName, exampleDefaults } from "./state-defaults";
-import { exampleRecordId, migrateExampleStorage, readExampleChanges } from "./state-storage";
+import { exampleRecordId, migrateExampleStorage, readExampleChanges, storedChangeField } from "./state-storage";
 
 export const readExampleState = async <Name extends ExampleName>(storage: ExtensionStorageApi, name: Name) => {
   if (name === "scribble") return Object.assign({}, exampleDefaults[name], await readScribbleState(storage));
@@ -28,25 +27,26 @@ export const writeExampleState = async (
   const stored = new Map(
     (await readExampleChanges(storage, name)).map((change) => [JSON.stringify(change.path), change]),
   );
-  const shared: SharedStorageEdit[] = [];
+  const set: Record<string, import("@pstdio/sdk/extensions").JsonValue> = {};
+  const unset: string[] = [];
   for (const change of changes) {
     for (const [key, previous] of stored) {
       if (
         previous.path.length > change.path.length &&
         change.path.every((part, index) => part === previous.path[index])
       ) {
-        shared.push({ kind: "map.delete", key });
+        unset.push(storedChangeField(key));
         stored.delete(key);
       }
     }
     const key = JSON.stringify(change.path);
-    shared.push({ kind: "map.set", key, value: { path: change.path, value: change.value } });
+    set[storedChangeField(key)] = { path: change.path, value: change.value };
     stored.set(key, change);
   }
-  if (shared.length)
+  if (Object.keys(set).length || unset.length)
     await storage.records.commit({
       operationId: storage.ids.create(),
-      edits: [{ recordId: exampleRecordId(storage, name), shared }],
+      edits: [{ recordId: exampleRecordId(storage, name), set, unset }],
     });
   return readExampleState(storage, name);
 };
