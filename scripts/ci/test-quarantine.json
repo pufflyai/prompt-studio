@@ -81,7 +81,7 @@
   {
     "runner": "bun",
     "file": "extensions/pstdio-planner/src/commands/dependency-stacks.p0.test.ts",
-    "name": "the owner can reconcile conflicting dependencies and submit without a human request",
+    "name": "the owner can reconcile conflicting dependencies and submit without a review request",
     "platforms": ["win32"],
     "owner": "PS-907 / Planner dependency stacks",
     "reason": "On Windows this case exhausted its 15 second allowance in one PR run; on the same branch it took 3.0 to 6.6 seconds. The case before it in the same file took 13.9 seconds instead of 2.3, so the whole Windows runner was slow. The case runs many git commands to build and reconcile a conflicting stack.",
@@ -391,7 +391,7 @@
   {
     "runner": "bun",
     "file": "extensions/pstdio-planner/src/commands/dependency-stacks.p0.test.ts",
-    "name": "the owner can reconcile conflicting dependencies and submit without a human request",
+    "name": "the owner can reconcile conflicting dependencies and submit without a review request",
     "platforms": ["darwin"],
     "arch": "arm64",
     "owner": "PS-932 / Planner dependency stack fixture",
