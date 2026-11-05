@@ -94,6 +94,29 @@ test("ordinary close drains queued Lexical text after disabling new input", asyn
   }
 });
 
+test("unload drains Lexical text queued before its update listener reports pending edits", async () => {
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const events = new EventTarget();
+  Object.defineProperty(globalThis, "window", { configurable: true, value: events });
+  const f = await fixture();
+  try {
+    const settled = new Event("beforeunload", { cancelable: true });
+    events.dispatchEvent(settled);
+    expect(settled.defaultPrevented).toBe(false);
+    f.queueText();
+    const event = new Event("beforeunload", { cancelable: true });
+    Object.defineProperty(event, "returnValue", { configurable: true, writable: true, value: undefined });
+    events.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    await f.session.flush();
+    expect(f.document.getText("content").toString()).toBe("source LOCAL");
+  } finally {
+    await f.stop();
+    if (previousWindow) Object.defineProperty(globalThis, "window", previousWindow);
+    else Reflect.deleteProperty(globalThis, "window");
+  }
+});
+
 test("close does not authorize queued Markdown mutation after source permission withdrawal", async () => {
   const f = await fixture();
   try {

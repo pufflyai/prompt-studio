@@ -11,7 +11,7 @@ export const registerMarkdownEditUnload = (input: MarkdownEditUnloadInput) => {
   const { session, pending, drain } = input;
   if (!session || typeof window === "undefined") return () => {};
   const beforeUnload = (event: BeforeUnloadEvent) => {
-    if (!pending() && !session.getSnapshot().pending) return;
+    // Lexical may still have queued work whose update listener has not marked the batch pending.
     drain();
     if (!pending() && !session.getSnapshot().pending) return;
     void session.flush().catch(() => {});
