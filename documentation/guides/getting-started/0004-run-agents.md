@@ -10,7 +10,7 @@ Each new project has a harness extension for each supported agent. A harness con
 | --- | --- | --- | --- |
 | Claude Code | `claude` | 2.1.203 and newer | [Claude Code](../../../extensions/harness-claude-code/README.md) |
 | Codex | `codex` | 0.157.0 and newer | [Codex](../../../extensions/harness-codex/README.md) |
-| OpenCode | `opencode` | 1.0.175 and newer | [OpenCode](../../../extensions/harness-open-code/README.md) |
+| OpenCode | `opencode` | 2.2.5 and newer | [OpenCode](../../../extensions/harness-open-code/README.md) |
 
 An older version shows as unavailable with the reason, such as the version it found and the version it needs. Update the agent, then restart the runtime.
 

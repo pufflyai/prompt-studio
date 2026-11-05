@@ -6,7 +6,7 @@ const section = (daysLeft: number | null, done = 0, total = 2) =>
   ({
     deadline: daysLeft === null ? null : { id: "release", date: "2026-10-21", daysLeft },
     rows: [],
-    counts: { total, done, humanNeeded: 0, blocked: 0, atRisk: 0 },
+    counts: { total, done, reviewNeeded: 0, blocked: 0, atRisk: 0 },
     eta: null,
   }) satisfies PlanSection;
 

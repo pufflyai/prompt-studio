@@ -108,20 +108,20 @@ export function SectionHeader(props: Props) {
           Unscheduled
         </Text>
       )}
-      {counts.humanNeeded > 0 ? (
-        <Tooltip content={`${counts.humanNeeded} tickets need attention · open them`}>
+      {counts.reviewNeeded > 0 ? (
+        <Tooltip content={`${counts.reviewNeeded} tickets need attention · open them`}>
           <IconButton
             size="2xs"
             variant="ghost"
             color="orange.fg"
-            aria-label={`Open ${counts.humanNeeded} tickets needing attention in ${label}`}
+            aria-label={`Open ${counts.reviewNeeded} tickets needing attention in ${label}`}
             onClick={(event) => {
               event.currentTarget.focus({ preventScroll: true });
               onReview(deadline?.id ?? null, event.currentTarget, toggle.current);
             }}
           >
             <Icon as={MessageCircleWarning} />
-            <Text textStyle="label/XS/medium">{counts.humanNeeded}</Text>
+            <Text textStyle="label/XS/medium">{counts.reviewNeeded}</Text>
           </IconButton>
         </Tooltip>
       ) : null}

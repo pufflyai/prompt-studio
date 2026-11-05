@@ -21,6 +21,7 @@ import {
   createPageLocationPreparer,
   createPageLocationPublisher,
   createPageLocationReplayer,
+  createPageParamsUpdater,
 } from "./page-location-publish";
 import { restoreRememberedLocation } from "./page-location-restoration";
 import { createRootLevelLocationTracker } from "./page-location-root-level";
@@ -303,6 +304,7 @@ export const createWorkbenchPageLocationController = <Value>(
         publish,
         consumeRemembered: memory.consume,
       })(projectId, restoreResolved(resolved, projectId)),
+    replaceParams: createPageParamsUpdater({ registry: input.registry, prepare: prepareState.open, publish }),
     select: createMainViewSelector({ prepare: prepareState.select, publish }),
     fail,
     closePlacement: closeActivePlacement,

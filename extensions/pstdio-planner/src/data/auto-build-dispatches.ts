@@ -7,6 +7,6 @@ const supervisorStorage = (ctx: Pick<ExtensionContextBase, "storage">, sessionId
 export const autoBuildDispatches = (ctx: Pick<ExtensionContextBase, "storage">, sessionId: string) =>
   supervisorStorage(ctx, sessionId).collection<{ workspaceId: string; dispatchedAt: string }>("dispatches");
 
-// A supervisor can receive repair evidence before human input or capacity allows a repair to start.
+// A supervisor can receive repair evidence before review input or capacity allows a repair to start.
 export const autoBuildPullRequestNotifications = (ctx: Pick<ExtensionContextBase, "storage">, sessionId: string) =>
   supervisorStorage(ctx, sessionId).collection<{ evidenceKey: string }>("pull-request-notifications");

@@ -13,7 +13,7 @@ export const installNativeProbeFixture = async (prefix: string, command: string,
   const locations: Record<string, string[]> = {
     codex: ["@openai", "codex", "vendor", `${cpu}-pc-windows-msvc`, "bin", "codex.exe"],
     claude: ["@anthropic-ai", "claude-code", "bin", "claude.exe"],
-    opencode: ["opencode-ai", "bin", "opencode.exe"],
+    opencode: ["@opencode", "cli", "bin", "opencode.exe"],
   };
   const entry = join(prefix, "node_modules", ...locations[command]!);
   if (existsSync(entry)) return;

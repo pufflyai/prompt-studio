@@ -15,6 +15,13 @@ import { createTextEditingFences } from "./text-editing-queue";
 import { createTextEditingReplica, createTextReceiveHandlers } from "./text-editing-replica";
 import { createTextEditingOperations, createTextEditingPump } from "./text-editing-transport";
 import type { TextEditingSession, TextEditingSnapshot } from "./text-editing-types";
+
+const sessionReplica = (
+  snapshot: TextWireSnapshot,
+  receive: ReturnType<typeof createTextReceiveHandlers>,
+  editable: () => boolean,
+) => createTextEditingReplica(decodeTextSnapshot(snapshot), receive.run, editable);
+
 export const openTextEditingSession = async (host: GuestHost, input: TextOpenInput, memberId: string) => {
   const origin = {};
   const listeners = new Set<() => void>();
@@ -34,7 +41,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
   input = { grant: opened.grant };
   const generation = opened.snapshot.generation;
   let handle = opened.handle;
-  let replica = createTextEditingReplica(decodeTextSnapshot(opened.snapshot), receiveHandlers.run);
+  let replica = sessionReplica(opened.snapshot, receiveHandlers, () => state.editable);
   const fences = createTextEditingFences(opened.snapshot.revision);
   const frameTickets: number[] = [];
   let revision = opened.snapshot.revision;
@@ -102,7 +109,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     canonicalSeed = snapshot.seedId;
     const previous = replica;
     stopLocal();
-    replica = createTextEditingReplica(decodeTextSnapshot(snapshot), receiveHandlers.run);
+    replica = sessionReplica(snapshot, receiveHandlers, () => state.editable);
     stopLocal = replica.subscribe(localChanged);
     publish({ participants: [], editable: snapshot.editable, error: undefined, connected: true });
     previous.dispose();

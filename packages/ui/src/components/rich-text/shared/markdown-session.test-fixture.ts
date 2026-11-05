@@ -17,6 +17,7 @@ export const markdownSessionFixture = async () => {
   let editable = true;
   let holdDraft: (() => Promise<void>) | undefined;
   let holdParent: (() => Promise<void>) | undefined;
+  let holdSubmit: (() => Promise<void>) | undefined;
   let failDraftCleanup = false;
   let revision = 1;
   let memberId = "";
@@ -60,6 +61,7 @@ export const markdownSessionFixture = async () => {
         frames.push(update);
         Y.applyUpdate(document, update);
         revision++;
+        await holdSubmit?.();
         return snapshot();
       }
       if (input.operation === "snapshot") return snapshot();
@@ -95,6 +97,9 @@ export const markdownSessionFixture = async () => {
     },
     holdParent(handler?: () => Promise<void>) {
       holdParent = handler;
+    },
+    holdSubmit(handler?: () => Promise<void>) {
+      holdSubmit = handler;
     },
     failDraftCleanup() {
       failDraftCleanup = true;

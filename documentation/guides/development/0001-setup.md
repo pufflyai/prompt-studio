@@ -123,10 +123,10 @@ The isolated stack, including `bun run dev:playwright`, runs agents inside its c
 | Agent       | Version in the image                             | How the container signs in                                                 |
 | ----------- | ------------------------------------------------ | -------------------------------------------------------------------------- |
 | Codex       | `@openai/codex` 0.160.1                          | Mounts the host `~/.codex/auth.json`                                       |
-| OpenCode    | `opencode-ai` 1.18.34                            | Mounts the host `~/.local/share/opencode/auth.json`                        |
+| OpenCode    | `@opencode/cli` 2.2.5                            | Mounts the host `~/.local/share/opencode/auth.json`                        |
 | Claude Code | Latest release from the installer, at build time | Reads `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` from the host shell |
 
-Versions are pinned in [`infra/local/Dockerfile`](../../../infra/local/Dockerfile). OpenCode's free models need OpenCode 1.18.0 or newer.
+Versions are pinned in [`infra/local/Dockerfile`](../../../infra/local/Dockerfile). The OpenCode harness requires OpenCode 2.2.5 or newer.
 
 The launcher mounts each host login file only when it exists, and prints a `Not mounted, file is missing` line for each file it skips. The stack starts without any login. Docker would otherwise create a missing file path as an empty folder on the host, which breaks a later `codex login` or `opencode auth login`. Add a login later by signing in on the host and running the same `bun run dev:isolated -- --name <name>` command again, or by signing in inside the running container. An agent without a login stays installed but cannot start sessions. Use real logins for agent acceptance checks; empty placeholder files do not prove that sessions work.
 

@@ -71,7 +71,7 @@ test("timeline tickets keep their preview while the attention bubble opens and r
   const { id } = await created.json();
   try {
     const ticket = await createPlannerTicket(request, uiOrigin, id, { content: "# Ticket awaiting input" });
-    await executePlannerCommand(request, uiOrigin, id, "request-human", {
+    await executePlannerCommand(request, uiOrigin, id, "request-review", {
       ticket: ticket.id,
       title: "Confirm the timeline change",
       instructions: "Check the proposed behavior.",

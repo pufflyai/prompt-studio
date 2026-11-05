@@ -17,9 +17,9 @@ import { NativeDocumentSourceError } from "./source-error";
 
 const unavailable = (message: string) =>
   new NativeDocumentSourceError(404, "native_document_source_unavailable", message);
-const workspaceRoot = async (deps: ExtensionsRouteDeps, projectId: string) => {
+const workspaceRoot = async (deps: ExtensionsRouteDeps, projectId: string, workspaceId?: string) => {
   try {
-    return await resolveWorkspaceFilesPath(deps, { projectId }, "read");
+    return await resolveWorkspaceFilesPath(deps, { projectId, workspaceId }, "read");
   } catch (error) {
     if (error instanceof WorkspaceTargetUnavailableError || error instanceof ProjectFolderMissingError)
       throw unavailable(error.message);
@@ -58,8 +58,14 @@ const resolveNativeDeclaration = async (
       documentKey: createNativeSourceKey(["blob", source.identity]),
       recordId: storageRecordId(["blob-file"], source.id),
     };
-  if (source.kind === "workspace")
-    return { documentKey: createNativeSourceKey(["workspace", normalizeMountRelativePath(source.path)]) };
+  if (source.kind === "workspace") {
+    const path = normalizeMountRelativePath(source.path);
+    return {
+      documentKey: createNativeSourceKey(
+        source.workspaceId ? ["workspace", source.workspaceId, path] : ["workspace", path],
+      ),
+    };
+  }
   const snapshot = await deps.extensionRuntimeCatalog.get(owner.workbenchId);
   const mount = snapshot.runtime.artifactMounts.find(
     (mount) => mount.extensionId === owner.extensionId && (mount.id === source.mount || mount.localId === source.mount),
@@ -96,7 +102,7 @@ export const resolveNativeLoadedSource = async (
   const address = await resolveNativeSource(deps, input.owner, input.source);
   let copy: { projectionKey: string; content: string } | undefined;
   if (input.source.kind === "workspace") {
-    const root = await workspaceRoot(deps, input.owner.workbenchId);
+    const root = await workspaceRoot(deps, input.owner.workbenchId, input.source.workspaceId);
     const projectionKey = workspaceFileObservationKey(root, input.source.path);
     const bytes = await readWorkspaceSource(root, input.source.path);
     const revision = createHash("sha256").update(bytes).digest("hex");

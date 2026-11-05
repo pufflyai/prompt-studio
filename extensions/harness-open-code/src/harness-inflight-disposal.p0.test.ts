@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createOpencodeHarness } from "./harness";
 import { ctx } from "./harness.test-helpers";
+import { emptyMessages } from "./native-api.test-helpers";
 
 test("retiring a project during native creation prevents prompts and aborts the created session", async () => {
   const entered = Promise.withResolvers<void>();
@@ -12,12 +13,12 @@ test("retiring a project during native creation prevents prompts and aborts the 
     port: 0,
     async fetch(request) {
       const path = new URL(request.url).pathname;
-      if (path === "/session") {
+      if (path === "/api/session") {
         entered.resolve();
         await release.promise;
-        return Response.json({ id: "late" });
+        return Response.json({ data: { id: "late" } });
       }
-      if (path === "/session/late/abort") {
+      if (path === "/api/session/late/interrupt") {
         aborts += 1;
         return Response.json(true);
       }
@@ -25,7 +26,7 @@ test("retiring a project during native creation prevents prompts and aborts the 
         prompts += 1;
         return Response.json({});
       }
-      return Response.json([]);
+      return emptyMessages();
     },
   });
   const harness = createOpencodeHarness(

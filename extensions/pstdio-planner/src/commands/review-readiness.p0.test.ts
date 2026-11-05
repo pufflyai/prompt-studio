@@ -12,7 +12,7 @@ import { readPlanCommand } from "../timeline/commands/read-plan";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import { requestHumanCommand } from "./review-requests";
+import { requestReviewCommand } from "./review-requests";
 import { setTicketTagsCommand } from "./ticket-tags";
 import { updateTicketCommand } from "./update-ticket";
 
@@ -39,7 +39,7 @@ test("unreadable requests block launch and dependent work without a flag", async
   for (const target of [ticket, dependent]) {
     expect((await loadAttemptReadiness(ctx, target.id, {})).readiness).toMatchObject({
       decision: "wait",
-      reason: "human-input-needed",
+      reason: "review-needed",
       dependencyIds: [ticket.shorthand],
     });
   }
@@ -52,7 +52,7 @@ test("unreadable requests block launch and dependent work without a flag", async
 
 test("ticket tag edits preserve pending input and request history", async () => {
   const { storage, ctx, ticket } = await setup();
-  const request = await requestHumanCommand.run(ctx, {
+  const request = await requestReviewCommand.run(ctx, {
     ticket: ticket.id,
     title: "Choose the scope",
     instructions: "Confirm the tool scope.",
@@ -62,14 +62,14 @@ test("ticket tag edits preserve pending input and request history", async () => 
   await setTicketTagsCommand.run(ctx, { rowId: ticket.id, tagIds: [] });
   expect((await loadAttemptReadiness(ctx, ticket.id, {})).readiness).toMatchObject({
     decision: "wait",
-    reason: "human-input-needed",
+    reason: "review-needed",
   });
   expect(await reviewRequestsCollection(storage).get(request.id)).toMatchObject({ id: request.id });
 });
 
 test("an open request blocks the ticket and prerequisites without a stored tag", async () => {
   const { storage, ctx, ticket } = await setup();
-  await requestHumanCommand.run(ctx, {
+  await requestReviewCommand.run(ctx, {
     ticket: ticket.id,
     title: "Check the preview",
     instructions: "Confirm the layout.",
@@ -80,7 +80,7 @@ test("an open request blocks the ticket and prerequisites without a stored tag",
   for (const target of [ticket, dependent]) {
     expect((await loadAttemptReadiness(ctx, target.id, {})).readiness).toMatchObject({
       decision: "wait",
-      reason: "human-input-needed",
+      reason: "review-needed",
       dependencyIds: [ticket.shorthand],
     });
   }
@@ -93,7 +93,7 @@ test("an open request blocks the ticket and prerequisites without a stored tag",
 
 test("an unreadable outcome keeps a concrete error and pending input", async () => {
   const { storage, ctx, ticket } = await setup();
-  const request = await requestHumanCommand.run(ctx, {
+  const request = await requestReviewCommand.run(ctx, {
     ticket: ticket.id,
     title: "Check the preview",
     instructions: "Confirm the layout.",
@@ -110,7 +110,7 @@ test("an unreadable outcome keeps a concrete error and pending input", async () 
   expect(group.errors[0]).toContain(request.id);
   expect((await loadAttemptReadiness(ctx, ticket.id, {})).readiness).toMatchObject({
     decision: "wait",
-    reason: "human-input-needed",
+    reason: "review-needed",
   });
   const plan = await readPlanCommand.run(ctx, {});
   expect(plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticket.id)).toMatchObject({
@@ -122,7 +122,7 @@ test("an unreadable outcome keeps a concrete error and pending input", async () 
 test.each(["open", "unreadable"])("%s input on completed ancestors blocks dependent launch", async (state) => {
   const { storage, ctx, ticket } = await setup();
   if (state === "open") {
-    await requestHumanCommand.run(ctx, {
+    await requestReviewCommand.run(ctx, {
       ticket: ticket.id,
       title: "Check the preview",
       instructions: "Confirm the layout.",
@@ -141,7 +141,7 @@ test.each(["open", "unreadable"])("%s input on completed ancestors blocks depend
   for (const target of [intermediate, dependent]) {
     expect((await loadAttemptReadiness(ctx, target.id, {})).readiness).toMatchObject({
       decision: "wait",
-      reason: "human-input-needed",
+      reason: "review-needed",
       dependencyIds: [ticket.shorthand],
     });
   }

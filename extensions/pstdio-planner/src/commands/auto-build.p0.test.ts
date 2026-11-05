@@ -177,8 +177,8 @@ test("repeated checks do not wake for startable jobs outside the supervisor scop
   const parent = await ticket("Requested project");
   const scoped = await ticket("Waiting for a decision");
   await putTicket(storage, { ...scoped, parentId: parent.id });
-  const { requestHumanCommand, reviewCommand } = await import("./review-requests");
-  const decision = await requestHumanCommand.run(ctx, {
+  const { requestReviewCommand, reviewCommand } = await import("./review-requests");
+  const decision = await requestReviewCommand.run(ctx, {
     ticket: scoped.id,
     title: "Choose the scope",
     instructions: "Choose before continuing",

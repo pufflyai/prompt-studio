@@ -23,7 +23,7 @@ const attributeTagIds = (attributes: Record<string, unknown>) =>
   });
 
 // Backs the board's "new ticket" and the `pst tickets create`/`add` CLI path. The
-// board passes ids; the CLI passes human names/shorthands, so status, tags,
+// board passes ids; the CLI passes display names/shorthands, so status, tags,
 // parent, and dependencies are resolved server-side (Decision 3).
 export const createTicketCommand = defineCommand({
   id: "create-ticket",

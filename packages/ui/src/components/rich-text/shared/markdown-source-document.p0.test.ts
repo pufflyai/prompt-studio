@@ -1,5 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { $createParagraphNode, $createTextNode, $getRoot, $isElementNode } from "lexical";
+import * as markdownAst from "./markdown-ast";
 import { createMarkdownSourceDocument } from "./markdown-source-document";
 import { updateMarkdownTableCell } from "./markdown-table";
 import { $isDataTableNode } from "./nodes/DataTableNode";
@@ -331,4 +332,22 @@ test("maps edits within their block while preserving neighboring tokens and line
   });
 
   expect(result).toBe(markdown.replace("Target", "Changed"));
+});
+
+test("consecutive edits reuse loaded source analysis while preserving untouched spelling", () => {
+  const markdown = "# Heading ###\n\nKeep **bold** and [link](https://example.com).\n\nTail.";
+  const editor = createHeadlessEditor();
+  const source = createMarkdownSourceDocument(markdown);
+  editor.update(() => source.importToLexical(), { discrete: true });
+  const parse = spyOn(markdownAst, "parseMarkdownSource");
+  try {
+    for (const value of ["Tail one.", "Tail two.", "Tail three."]) {
+      editor.update(() => $getRoot().getAllTextNodes().at(-1)!.setTextContent(value), { discrete: true });
+      editor.read(() => expect(source.exportFromLexical($getRoot())).toBe(markdown.replace("Tail.", value)));
+    }
+    // Three changed snapshots are parsed once each; loaded source and baseline were analyzed at import.
+    expect(parse.mock.calls.length).toBeLessThanOrEqual(3);
+  } finally {
+    parse.mockRestore();
+  }
 });

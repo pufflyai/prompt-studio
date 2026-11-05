@@ -21,6 +21,7 @@ import { queryWorkspaceProvidersHandler, queryWorkspaceProvidersRoute } from "./
 import { queryWorkspacesHandler, queryWorkspacesRoute } from "./endpoints/query-workspaces";
 import { removeWorkspaceWorktreeHandler, removeWorkspaceWorktreeRoute } from "./endpoints/remove-worktree";
 import { renameWorkspaceHandler, renameWorkspaceRoute } from "./endpoints/rename-workspace";
+import { resolveWorkspaceEntryHandler, resolveWorkspaceEntryRoute } from "./endpoints/resolve-workspace-entry";
 import { setStartupLogHandler, setStartupLogRoute } from "./endpoints/set-startup-log";
 import {
   getWorkspaceCapacityHandler,
@@ -63,6 +64,7 @@ export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   routes.openapi(getWorkspaceDiffFileRoute, getWorkspaceDiffFileHandler(deps));
   routes.openapi(getWorkspaceDiffSummaryRoute, getWorkspaceDiffSummaryHandler(deps));
   routes.openapi(listWorkspaceFilesRoute, listWorkspaceFilesHandler(deps));
+  routes.openapi(resolveWorkspaceEntryRoute, resolveWorkspaceEntryHandler(deps));
   routes.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
   routes.openapi(createWorkspaceDirectoryRoute, createWorkspaceDirectoryHandler(deps));
   routes.openapi(createWorkspaceFileRoute, createWorkspaceFileHandler(deps));

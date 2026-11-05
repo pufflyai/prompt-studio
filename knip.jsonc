@@ -317,7 +317,7 @@
         "src/theme/index.ts",
         // The Canvas build loads these themes by absolute path.
         "src/theme/custom/vscode-theme.canvas-fixture.ts",
-        "src/components/{canvas,charts,dependency-timeline,keyframe-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
+        "src/components/{canvas,charts,dependency-timeline,keyframe-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,command-form,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.canvas.tsx",
         "*.test.ts",
@@ -361,7 +361,7 @@
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"],
       // Harnesses resolve these native executables through package metadata rather than imports.
-      "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "opencode-ai"]
+      "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "@opencode/cli"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
     "extensions/pstdio-onboarding": {
