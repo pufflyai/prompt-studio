@@ -13,6 +13,7 @@ import {
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_owners as owners } from "../../db/schemas.pg";
 import { createCommitQueue } from "./commit-queue";
+import { publishCommittedOrderedGroup } from "./ordered-commit-projection";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { bindOrderedNativeSource, type OrderedSourceInput } from "./ordered-native-source";
@@ -109,9 +110,8 @@ export const createOrderedResourceRecords = (
     }
     const { views } = prepared;
     const operation = await compileOrderedGroup(group, views, deps.textFields);
-    const records = await Promise.all(
-      projectOrderedOperation(views, operation, await knownDependencies(journal, operation)).map(orderedProjection),
-    );
+    const projected = projectOrderedOperation(views, operation, await knownDependencies(journal, operation));
+    const records = await Promise.all(projected.map(orderedProjection));
     assertStorageLimits(records);
     const assets = group.edits.flatMap((edit) => (edit.asset ? [edit.asset] : []));
     if (assets.length) {
@@ -120,7 +120,7 @@ export const createOrderedResourceRecords = (
     }
     await rememberOrderedTextGeneration(tx, owner, operation, records.length > 0);
     await journal.queue(operation, identity);
-    const saved = await rebaseOrderedProjection(journal, tx, owner, ids);
+    const saved = await publishCommittedOrderedGroup({ journal, tx, owner, operation, projected });
     return {
       ...saved,
       // Projection maintenance can include other pending groups. Only this

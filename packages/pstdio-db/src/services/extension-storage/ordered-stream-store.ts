@@ -22,7 +22,8 @@ import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-recei
 import { nextOrderedUpload } from "./ordered-receipts-upload";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
-import { orderedCursor, orderedOwnerJoinedCloud, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
+import { readOrderedPending } from "./ordered-stream-pending";
+import { orderedCursor, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { createRecordStreamStore } from "./record-stream-store";
 import type { NumberChange } from "./resource-number-repair";
 
@@ -224,12 +225,11 @@ export const createOrderedStreamStore = (
         async (journal, tx) =>
           (await journal.pending({ limit: 1 })).length > 0 || (await hasCanonicalRecords(tx, owner)),
       ),
-    pending: () =>
-      run(
-        async (journal, tx) =>
-          (await journal.pending({ limit: 1 })).length > 0 ||
-          (!(await orderedOwnerJoinedCloud(tx, owner, await readOrderedOwner(tx, owner))) &&
-            (await hasCanonicalRecords(tx, owner))),
-      ),
+    async pending() {
+      const pending = await readOrderedPending(db, owner);
+      if (pending !== undefined) return pending;
+      // Only a genuinely new owner needs the normal atomic legacy conversion.
+      return run(async (_journal, tx) => (await readOrderedPending(tx, owner)) ?? false);
+    },
   } satisfies RecordStreamStore;
 };

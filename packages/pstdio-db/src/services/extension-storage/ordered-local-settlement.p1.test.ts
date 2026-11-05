@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isNotNull } from "drizzle-orm";
+import { isNotNull, sql } from "drizzle-orm";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import * as Y from "yjs";
@@ -74,6 +74,32 @@ const peers = async (path = ":memory:", single = false) => {
   const first = await device(path);
   return [first, single ? first : await device()] as const;
 };
+
+test("pending progress reads stay read-only after initialization across local and Cloud settlement", async () => {
+  const [first, second] = await peers();
+  expect(await first.store.pending()).toBe(false);
+  const pendingRead = async () => {
+    await first.db.execute(sql`SET default_transaction_read_only = on`);
+    try {
+      return await first.store.pending();
+    } finally {
+      await first.db.execute(sql`SET default_transaction_read_only = off`);
+    }
+  };
+  await first.records.commit({ operationId: "status-local", edits: [{ recordId: "card", replace: 1 }] });
+  expect(await pendingRead()).toBe(true);
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect(await pendingRead()).toBe(false);
+  await first.records.commit({ operationId: "status-offline", edits: [{ recordId: "card", replace: 2 }] });
+  expect(await pendingRead()).toBe(true);
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect(await pendingRead()).toBe(false);
+  await first.store.apply([], { ...(await first.store.open()), joined: false });
+  expect(await pendingRead()).toBe(false);
+  expect((await second.records.read("card")).value).toBe(2);
+});
 
 test("never-joined saves settle immediately without retaining envelopes; exact retries keep their outcome", async () => {
   const [first] = await peers(":memory:", true);
