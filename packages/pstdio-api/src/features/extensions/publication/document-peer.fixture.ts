@@ -3,8 +3,14 @@ import { liveProtocolHeader, liveProtocolVersion, type StateInfo, type StoredUpd
 import { createDocumentPeerLive, type PeerLiveData } from "./document-peer-live.fixture";
 
 /** Blind wire peer: production client encryption, document merging and asset transfers run unchanged. */
-export const documentPeer = (projects: string[] = []) => {
-  const live = createDocumentPeerLive();
+export const documentPeer = (
+  projects: string[] = [],
+  options: {
+    beforeSubscribe?: (deviceId: string, topic: string) => Promise<void>;
+    onRead?: (id: string) => void;
+  } = {},
+) => {
+  const live = createDocumentPeerLive(options.beforeSubscribe);
   const documents = new Map<string, StoredUpdate[]>();
   // Latest states: the record stream founds itself with one and later compacts into new ones.
   const states = new Map<string, { info: StateInfo; payload: string }>();
@@ -125,6 +131,7 @@ export const documentPeer = (projects: string[] = []) => {
     if (path.includes("/states/")) return new Response(Buffer.from(states.get(id)!.payload, "base64"));
     if (path.endsWith("/state")) return stateRequest(request, id, spaceOwner);
     if (path.endsWith("/read")) {
+      options.onRead?.(id.slice(1));
       const { after } = (await request.json()) as { after: number };
       return Response.json({
         status: "updates",

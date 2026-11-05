@@ -14,9 +14,12 @@ import type { RelayWorkbench } from "./runtime";
 
 const personalSyncFailed = (workbenchId: string) =>
   apiLogger.warn({ event: "relay.personal.reconnecting", workbenchId }, "Personal history sync will retry");
-const waitForPersonalRun = async (lastRun: number, readAll: boolean) => {
+// Coalesce local publication without delaying subscription or remote-only catch-up.
+const waitForPersonalRun = async (lastRun: number, readAll: boolean, publishing: boolean) => {
+  if (!publishing) return lastRun;
   const wait = lastRun + 1000 - Date.now();
   if (wait > 0 && !readAll) await Bun.sleep(wait);
+  return Date.now();
 };
 
 const closePersonalResources = (resources: { close(): unknown }[]) => {
@@ -149,19 +152,19 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
       input.statusChanged?.();
     },
     synchronize: async (attemptSignal) => {
-      await waitForPersonalRun(lastRun, readAll);
-      lastRun = Date.now();
       const { personal } = await prepare(attemptSignal);
       const full = publishAll || readAll;
+      const captured = full || localIndexChanged;
+      localIndexChanged = false;
       const publishing = { all: publishAll, read: readAll };
       publishAll = false;
       readAll = false;
       const own = [...changedSessions];
       changedSessions.clear();
       try {
-        const captured = full || localIndexChanged;
+        const local = captured || own.length > 0 || publisher.hasPendingHeads();
+        lastRun = await waitForPersonalRun(lastRun, publishing.read, local);
         if (captured) {
-          localIndexChanged = false;
           const previous = await index.capture(full);
           await channel.prepare(personal, index.streaming);
           previews.admitted(previous);
