@@ -7,10 +7,10 @@ export interface SourceMap {
   start: number[];
 }
 
-const matchingSourceBlocks = (canonical: string, source: string) => {
-  const canonicalBlocks = parseMarkdownSource(canonical).children;
+const matchingSourceBlocks = (canonical: string, source: string, parse: typeof parseMarkdownSource) => {
+  const canonicalBlocks = parse(canonical).children;
   // Link definitions remain in the source but have no editable Lexical block.
-  const sourceBlocks = parseMarkdownSource(source).children.filter((block) => block.type !== "definition");
+  const sourceBlocks = parse(source).children.filter((block) => block.type !== "definition");
   const sameBlocks =
     canonicalBlocks.length === sourceBlocks.length &&
     canonicalBlocks.every(
@@ -45,13 +45,19 @@ function* diffSourceBlocks(canonical: string, source: string, blocks: ReturnType
   yield* diffChars(canonical.slice(canonicalOffset), source.slice(sourceOffset));
 }
 
-export const buildSourceMap = (canonical: string, source: string) => {
+export const buildSourceMap = (canonical: string, source: string, parse = parseMarkdownSource) => {
+  // Most caret spans are unchanged text. Their offsets already match, including block boundaries.
+  if (canonical === source) {
+    const start = Array.from({ length: canonical.length + 1 }, (_, index) => index);
+    return { blockStarts: new Map<number, number>(), start, end: [...start] } satisfies SourceMap;
+  }
+
   const start = Array.from<number>({ length: canonical.length + 1 }).fill(-1);
   const end = Array.from<number>({ length: canonical.length + 1 }).fill(-1);
   let canonicalOffset = 0;
   let sourceOffset = 0;
   let removedAtBoundary = false;
-  const blocks = matchingSourceBlocks(canonical, source);
+  const blocks = matchingSourceBlocks(canonical, source, parse);
 
   start[0] = 0;
   end[0] = 0;

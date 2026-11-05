@@ -7,6 +7,7 @@ import {
 } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "../../shared/app/commands";
 import { createDashboardResource } from "../../shared/app/resources";
+import { registerWorkspaceHostActions } from "./workspace-host-actions";
 import { registerWorkspaceResourceActions } from "./workspace-resource-actions";
 
 const workspaceActionCommandIds = new Set<string>([
@@ -22,6 +23,7 @@ describe("registerWorkspaceResourceActions", () => {
     workbench.registerModule({
       id: "test.workspace-actions",
       activate: (ctx) => {
+        registerWorkspaceHostActions(ctx, async (_ctx, resource) => resource);
         registerWorkspaceResourceActions(ctx);
         return undefined;
       },
@@ -57,6 +59,7 @@ describe("registerWorkspaceResourceActions", () => {
     workbench.registerModule({
       id: "test.workspace-actions",
       activate: (ctx) => {
+        registerWorkspaceHostActions(ctx, async (_ctx, resource) => resource);
         registerWorkspaceResourceActions(ctx);
         return undefined;
       },
@@ -100,6 +103,7 @@ describe("registerWorkspaceResourceActions", () => {
     workbench.registerModule({
       id: "test.workspace-actions",
       activate: (ctx) => {
+        registerWorkspaceHostActions(ctx, async (_ctx, resource) => resource);
         registerWorkspaceResourceActions(ctx);
         return undefined;
       },
@@ -135,6 +139,7 @@ describe("registerWorkspaceResourceActions", () => {
     workbench.registerModule({
       id: "test.workspace-actions",
       activate: (ctx) => {
+        registerWorkspaceHostActions(ctx, async (_ctx, resource) => resource);
         registerWorkspaceResourceActions(ctx);
         return undefined;
       },
@@ -159,6 +164,7 @@ test("a target-owned workspace does not offer local terminal or workspace mutati
   workbench.registerModule({
     id: "test.remote-actions",
     activate: (ctx) => {
+      registerWorkspaceHostActions(ctx, async (_ctx, resource) => resource);
       registerWorkspaceResourceActions(ctx);
       return undefined;
     },

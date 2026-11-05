@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { type ReactNode, type RefObject, useContext } from "react";
+import { type ReactNode, type RefObject, useContext, useLayoutEffect } from "react";
 import { useVirtualizer } from "@/utils/use-virtualizer";
 import type { TreeListProps } from "./tree-list";
 import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
@@ -87,6 +87,14 @@ export const VirtualTreeList = (props: VirtualTreeListProps) => {
     onToggleSection,
     scrollToRow: (index) => virtualizer.scrollToIndex(index, { align: "auto" }),
   });
+  const editingRow = rows.findIndex((row) =>
+    row.kind === "section-header"
+      ? Boolean(row.section.inlineInput)
+      : row.kind === "node" && Boolean(row.node.inlineInput),
+  );
+  useLayoutEffect(() => {
+    if (editingRow >= 0) virtualizer.scrollToIndex(editingRow, { align: "auto" });
+  }, [editingRow, virtualizer]);
 
   const content = (
     <Box

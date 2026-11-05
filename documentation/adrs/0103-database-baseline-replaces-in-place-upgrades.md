@@ -16,7 +16,7 @@ Status: Accepted. Consolidates the retired Drizzle migration-selection adapter (
 2. Require `.pstdio-engine.json` to contain the exact baseline marker `{ "baseline": "0.46" }`. Retire homes without it: export them, move them to `backups/pre-0.46-<time>-<folder>/` beside the database, and create a fresh database from the built image.
 3. Export with the engine that wrote the old home, using `pglite-previous` for unmarked homes. Write every table as JSON lines and decode extension Yjs records into plain records.
 4. If export fails, write `export-error.txt`, preserve the old folder, and continue with a fresh home instead of blocking startup.
-5. Restore selected data through an agent using the `pst` CLI. Core provides no import path.
+5. Restore selected data through an agent using the `pst` CLI. Exported conversations now have a [bulk session import API and CLI](../references/cli/0006-sessions.md#import-saved-conversations); other exported data still uses its owning extension’s supported commands.
 6. Keep `ctx.storage.readLegacy` as an API returning `undefined`; deprecate it in the separate SDK change. `ctx.storage.migrate` is unchanged.
 
 ## Consequences

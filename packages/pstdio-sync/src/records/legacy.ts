@@ -1,4 +1,4 @@
-import { canonicalJson, type Json, type StorageRecord } from "pstdio-sync-contracts";
+import { canonicalJson, fingerprint, type Json, type StorageRecord } from "pstdio-sync-contracts";
 import { legacyNamespaceStorage } from "./namespaces";
 import type { GroupCommit } from "./types";
 
@@ -9,6 +9,12 @@ interface LegacyCollectionValue {
 
 // Legacy SQL JSON writes omitted undefined object fields and used null for undefined array entries.
 const legacyJson = (value: Json) => JSON.parse(JSON.stringify(value)) as Json;
+
+const collectionRevision = (record: StorageRecord) =>
+  fingerprint({
+    revision: record.revision,
+    lifetime: "recordLifetime" in record ? String(record.recordLifetime) : null,
+  });
 
 interface LegacyRecords {
   read(id: string): Promise<StorageRecord>;
@@ -51,6 +57,7 @@ export const createLegacyRecordStorage = (input: { records: LegacyRecords }) => 
       });
     };
     return {
+      read: (id: string) => current.read(id),
       get: (id: string) =>
         current.read(id).then((record) => {
           return record.exists && !record.deleted ? record.value : undefined;
@@ -81,7 +88,40 @@ export const createLegacyRecordStorage = (input: { records: LegacyRecords }) => 
         collection: (name: string) => {
           const items = namespaceApi([...namespace, "collection", name]);
           const valueFor = (value: Json, sortOrder: number | null) => ({ value, sortOrder });
+          const update = async (id: string, value: Json, revision?: string) => {
+            // Read and change only the payload within the same owner lock.
+            return within([...namespace, "collection", name], async (records) => {
+              const current = await records.read(id);
+              if (
+                !current.exists ||
+                current.deleted ||
+                (revision !== undefined && (await collectionRevision(current)) !== revision)
+              )
+                return false;
+              const stored = current.value as unknown as LegacyCollectionValue;
+              await records.commit({
+                operationId: crypto.randomUUID(),
+                edits: [
+                  {
+                    recordId: id,
+                    expectedRevision: current.revision,
+                    replace: legacyJson(valueFor(value, stored.sortOrder)),
+                  },
+                ],
+              });
+              return true;
+            });
+          };
           return {
+            read: async (id: string) => {
+              const record = await items.read(id);
+              if (!record.exists || record.deleted) return undefined;
+              return {
+                id,
+                ...(record.value as unknown as LegacyCollectionValue),
+                revision: await collectionRevision(record),
+              };
+            },
             get: async (id: string) => {
               const stored = (await items.get(id)) as unknown as LegacyCollectionValue | undefined;
               return stored && { id, ...stored };
@@ -99,24 +139,10 @@ export const createLegacyRecordStorage = (input: { records: LegacyRecords }) => 
                 }),
             set: (id: string, value: Json, sortOrder: number | null = null) =>
               items.set(id, valueFor(value, sortOrder)),
-            update: async (id: string, value: Json) => {
-              // Read and change only the payload within the same owner lock.
-              return within([...namespace, "collection", name], async (records) => {
-                const current = await records.read(id);
-                if (!current.exists || current.deleted) return false;
-                const stored = current.value as unknown as LegacyCollectionValue;
-                await records.commit({
-                  operationId: crypto.randomUUID(),
-                  edits: [
-                    {
-                      recordId: id,
-                      expectedRevision: current.revision,
-                      replace: legacyJson(valueFor(value, stored.sortOrder)),
-                    },
-                  ],
-                });
-                return true;
-              });
+            update: (id: string, value: Json) => update(id, value),
+            updateIfUnchanged: (id: string, revision: string, value: Json) => {
+              if (typeof revision !== "string") throw new TypeError("A collection observation revision is required");
+              return update(id, value, revision);
             },
             createIfAbsent: (id: string, value: Json, sortOrder: number | null = null) =>
               items.createIfAbsent(id, valueFor(value, sortOrder)),

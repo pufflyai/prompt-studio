@@ -15,11 +15,13 @@ export class SessionForkError extends Error {
   }
 }
 
-const selectForkMessages = (history: SessionMessage[], messageId?: string) => {
+const selectForkMessages = (history: SessionMessage[], messageId?: string, running = false) => {
   const boundary =
     messageId === undefined ? history.length - 1 : history.findIndex((message) => message.id === messageId);
   if (messageId !== undefined && (boundary < 0 || history[boundary].role !== "assistant"))
     throw new SessionForkError("Choose an agent reply to fork from.", 400);
+  if (messageId !== undefined && running && boundary === history.length - 1)
+    throw new SessionForkError("Choose a completed agent reply to fork from.", 409);
   return structuredClone(history.slice(0, boundary + 1));
 };
 
@@ -27,7 +29,9 @@ const assertIndependentFork = (sourceId: string, forkId: string) => {
   if (!forkId || forkId === sourceId) throw new Error("The harness did not create an independent conversation.");
 };
 
-const assertSessionIdle = async (deps: SessionsRouteDeps, id: string, status: string) => {
+const assertForkSourceReady = async (deps: SessionsRouteDeps, id: string, status: string, messageId?: string) => {
+  // A selected reply bounds the copy before later work; only a whole-conversation fork needs an idle source.
+  if (messageId !== undefined) return;
   const owner = deps.sessionService.store.get(id);
   const hasWork = await deps.sessionQueueEntriesService.hasEntries(id);
   if (
@@ -67,13 +71,17 @@ export const forkSession = async (deps: SessionsRouteDeps, id: string, messageId
       const source = await deps.sessionService.get(id);
       if (!source) throw new SessionForkError("Session not found.", 404);
       if (!source.project_id || !source.agent) throw new SessionForkError("This session has no agent or project.", 400);
-      await assertSessionIdle(deps, id, source.status);
+      await assertForkSourceReady(deps, id, source.status, messageId);
       const harness = await getSessionHarness(deps.harnessRegistry, source);
       if (!harness?.supportsFork)
         throw new SessionForkError("This harness does not support forking conversations.", 400);
       if (!source.agent_session_id) throw new SessionForkError("Send a message before forking this conversation.", 409);
       const { workspace, context } = await resolveForkWorkspace(deps, id, harness.cwdRequirement);
-      const messages = selectForkMessages(await getSessionHistory(id, deps), messageId);
+      const messages = selectForkMessages(
+        await getSessionHistory(id, deps),
+        messageId,
+        Boolean(deps.sessionService.store.get(id)?.session),
+      );
       const native = await harness.fork(
         {
           sessionId: id,

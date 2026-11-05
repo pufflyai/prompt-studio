@@ -1,6 +1,6 @@
 import { connect } from "node:net";
 import type { HarnessStateApi } from "@pstdio/sdk/extensions";
-import { isConnectionError } from "./opencode-http";
+import { isConnectionError, requestJson } from "./opencode-http";
 import type { OpencodeServer, OpencodeServerStarter } from "./opencode-server-process";
 
 export type { OpencodeServerStarter } from "./opencode-server-process";
@@ -20,7 +20,7 @@ export type OpencodeServerDeps = {
   isPortOpen: (options: { host: string; port: number }) => Promise<boolean>;
 };
 
-export type WithServerUrl = <T>(action: (url: string) => Promise<T>) => Promise<T>;
+export type WithServerUrl = <T>(action: (url: string) => Promise<T>, options?: { retry?: boolean }) => Promise<T>;
 
 const defaultServerHost = "127.0.0.1";
 const defaultServerPort = 4096;
@@ -52,16 +52,19 @@ export const canConnectToHost = ({ host, port }: { host: string; port: number })
 
 export const defaultPingServer = async (url: string) => {
   try {
-    const healthUrl = new URL("/global/health", url);
+    const healthUrl = new URL("/api/info", url);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 750);
 
     try {
-      const response = await fetch(healthUrl, { signal: controller.signal });
+      const { response, parsed } = await requestJson<{ version?: string }>(fetch, healthUrl.href, {
+        method: "GET",
+        headers: {},
+        signal: controller.signal,
+      });
       if (!response.ok) return false;
 
-      const payload = (await response.json()) as { healthy?: boolean } | null;
-      return payload?.healthy === true;
+      return !!parsed?.version && Bun.semver.satisfies(parsed.version, ">=2.2.5");
     } finally {
       clearTimeout(timeout);
     }
@@ -155,7 +158,7 @@ export const createServerConnection = (deps: OpencodeServerDeps) => {
     return tracked;
   };
 
-  const withServerUrl: WithServerUrl = async (action) => {
+  const withServerUrl: WithServerUrl = async (action, options) => {
     lifetime.signal.throwIfAborted();
     const pending = connection ?? track(connect());
     const current = await pending;
@@ -165,6 +168,11 @@ export const createServerConnection = (deps: OpencodeServerDeps) => {
     } catch (error) {
       lifetime.signal.throwIfAborted();
       if (!isConnectionError(error)) throw error;
+      // A dropped request socket does not mean the process executing native work has exited.
+      if (current.owned?.running) {
+        if (!options?.retry) throw error;
+        return action(current.url);
+      }
       current.replacement ??= track(
         connect(async () => {
           await current.owned?.dispose();
@@ -173,6 +181,8 @@ export const createServerConnection = (deps: OpencodeServerDeps) => {
       );
       const replacement = await current.replacement;
       lifetime.signal.throwIfAborted();
+      // Only callers that explicitly permit replay may repeat an ambiguous request.
+      if (!options?.retry) throw error;
       return action(replacement.url);
     }
   };

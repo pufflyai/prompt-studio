@@ -11,6 +11,7 @@ import {
 } from "@pstdio/sdk/extensions";
 
 import { cloudAcceptanceCommands } from "./cloud-acceptance-commands";
+import { collectionObservation } from "./collection-observation-command";
 
 const read = defineCommand({
   id: "read",
@@ -175,6 +176,7 @@ export default defineExtension({
   ],
   resourceKinds: [defineResourceKind({ id: "note", prefix: "NR" })],
   commands: [
+    collectionObservation,
     ...cloudAcceptanceCommands,
     read,
     writeFile,

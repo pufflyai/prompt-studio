@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { fixture } from "./auto-build.fixture";
-import { openReviewRequestCommand, readReviewRequestCommand, requestHumanCommand } from "./review-requests";
+import { openReviewRequestCommand, readReviewRequestCommand, requestReviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionRecord } from "./session-record.fixture";
 
@@ -34,9 +34,9 @@ async function ownedWork() {
   return { ...f, input, followups };
 }
 
-test("a phase-free human handoff resumes the workspace owner only when opened", async () => {
+test("a phase-free review handoff resumes the workspace owner only when opened", async () => {
   const f = await ownedWork();
-  const request = await requestHumanCommand.run(f.ctx, f.input);
+  const request = await requestReviewCommand.run(f.ctx, f.input);
   expect(request.context.sessionId).toBeNull();
   expect(f.followups).toEqual([]);
 
@@ -46,14 +46,14 @@ test("a phase-free human handoff resumes the workspace owner only when opened", 
   expect(f.followups).toEqual([f.input.sessionId]);
 });
 
-test("a phase-free human handoff validates ticket and revision ownership", async () => {
+test("a phase-free review handoff validates ticket and revision ownership", async () => {
   const f = await ownedWork();
   const other = await f.ticket("Other ticket");
-  const wrongTicket = await Promise.resolve(requestHumanCommand.run(f.ctx, { ...f.input, ticket: other.id })).catch(
+  const wrongTicket = await Promise.resolve(requestReviewCommand.run(f.ctx, { ...f.input, ticket: other.id })).catch(
     (error) => error,
   );
   expect(wrongTicket).toMatchObject({ message: expect.stringContaining("handoff") });
-  const wrongRevision = await Promise.resolve(requestHumanCommand.run(f.ctx, { ...f.input, revision: 99 })).catch(
+  const wrongRevision = await Promise.resolve(requestReviewCommand.run(f.ctx, { ...f.input, revision: 99 })).catch(
     (error) => error,
   );
   expect(wrongRevision).toMatchObject({ message: expect.stringContaining("revision") });

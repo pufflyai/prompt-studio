@@ -13,11 +13,7 @@ export const SessionMessageForkPanel = (props: SessionMessageForkPanelProps) => 
     forkContext: { input, view },
     ...panel
   } = props;
-  const { sessionId, queue, streaming } = panel;
-  const busy =
-    streaming ||
-    ["in_progress", "awaiting_input", "queued"].includes(view.status ?? "") ||
-    Boolean(queue?.requests.length);
+  const { sessionId } = panel;
   return (
     <SessionQueuedChatPanel
       {...panel}
@@ -28,7 +24,6 @@ export const SessionMessageForkPanel = (props: SessionMessageForkPanelProps) => 
             }
           : undefined
       }
-      forkDisabledReason={busy ? "Finish or stop pending work before forking." : undefined}
     />
   );
 };

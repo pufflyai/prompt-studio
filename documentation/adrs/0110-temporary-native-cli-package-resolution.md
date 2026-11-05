@@ -18,7 +18,7 @@ Ideally the upstream packages would expose their installed native executable thr
 
 Claude Code exposes login through CLI output rather than a structured authentication API. Its adapter extracts the browser URL and submits the returned authorization code over the native process stdin. Output parsing stays inside the adapter, uses the pinned CLI version, and never exposes raw process output.
 
-OpenCode's provider API reports connected providers but does not distinguish stored credentials from anonymous custom providers. Its adapter reads only provider IDs from the native XDG `opencode/auth.json` store to identify removable credentials. Native API calls perform every credential write and removal. Credentials supplied through `OPENCODE_AUTH_CONTENT`, environment variables, or configuration remain managed outside the chat.
+OpenCode 2.2.5 exposes credential ownership through integration connections. The adapter uses those public connection IDs for logout and performs all sign-in and credential removal through the native API. It no longer reads the native credential file.
 
 Pi's JavaScript CLI does not expose an importable launcher. Its adapter resolves the public package entry and runs the adjacent CLI entry with bundled Bun and a preload that clears interpreter mode before child tools run. Account workers use Pi's public SDK, including native resource loading, provider registration, and credential storage.
 
@@ -32,4 +32,4 @@ Replace direct native-path resolution when upstream packages offer an executable
 
 Replace Claude's text adapter when its CLI exposes structured login callbacks. Keep provider selection, private replies, and session setup states unchanged.
 
-Replace OpenCode's store reader when its provider API exposes credential ownership. Keep native API writes and provider-specific readiness.
+OpenCode's store reader was removed with the OpenCode 2 migration. Keep native API writes and provider-specific readiness.

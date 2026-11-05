@@ -298,6 +298,12 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     listByAgentSession,
     countActive,
     create,
+    importHistorical: async (input: Parameters<typeof raw.importHistorical>[0]) => {
+      const result = await raw.importHistorical(input);
+      if (result.created) deps.eventBus.emit("sessions", "set", result.session);
+      if (result.workspaceLink) deps.eventBus.emit("workspace_sessions", "set", result.workspaceLink);
+      return result;
+    },
     createQueuedWithEntry,
     queueExistingWithEntry,
     insertEntryForActive,

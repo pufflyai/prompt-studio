@@ -101,6 +101,23 @@ const extension = defineExtension({
       async run(ctx, commandParams) {
         const workspace = await ctx.workspaces.get(commandParams.workspaceId);
         const workspaceByShorthand = await ctx.workspaces.getByShorthand("PS-1_A1");
+        await ctx.workspaces.rename(commandParams.workspaceId, { name: "Review" });
+        const entries = await ctx.workspaces.listFiles(commandParams.workspaceId, { query: "readme", limit: 10 });
+        const file = await ctx.workspaces.readFile(commandParams.workspaceId, "README.md");
+        await ctx.workspaces.createDirectory(commandParams.workspaceId, "docs");
+        await ctx.workspaces.createFile(commandParams.workspaceId, "docs/notes.md", { content: "Notes" });
+        await ctx.workspaces.writeFile(commandParams.workspaceId, "docs/notes.md", { content: "Saved" });
+        await ctx.workspaces.moveEntry(commandParams.workspaceId, "docs/notes.md", "docs/saved.md");
+        await ctx.workspaces.deleteEntry(commandParams.workspaceId, "docs/saved.md");
+        const changes = await ctx.workspaces.diffFiles(commandParams.workspaceId, "fork_point");
+        const diff = await ctx.workspaces.diffFile(commandParams.workspaceId, "current", "README.md");
+        const counts = await ctx.workspaces.diffSummary(commandParams.workspaceId, "current");
+        const editable: boolean = file.editable;
+        const additions: number = counts.additions;
+        const changedPath: string | undefined = changes.files[0]?.filePath;
+        const content: string | undefined = diff?.newContent;
+        const entryPath: string | undefined = entries.entries[0]?.path;
+        void [editable, additions, changedPath, content, entryPath];
         const worktreePath: string | null | undefined = workspace?.root_path;
         const shorthandWorktreePath: string | null | undefined = workspaceByShorthand?.root_path;
         const removed: boolean = (await ctx.workspaces.removeWorktree(commandParams.workspaceId)).removed;

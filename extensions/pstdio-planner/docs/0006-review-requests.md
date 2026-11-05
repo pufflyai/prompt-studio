@@ -1,6 +1,10 @@
 # Needs attention
 
-**Needs attention** collects decisions a person needs to make. Use a request only for an unresolved choice that the agent cannot settle from existing instructions or authority. Requests identify the ticket and give brief **Problem**, **Solutions**, and **Downsides** in plain language, including each choice’s cost and a marked recommendation. A person should understand the choice without reading logs or task history.
+**Needs attention** collects decisions a person needs to make. Use a request only for an unresolved choice that the agent cannot settle from existing instructions or authority.
+
+Identify the ticket in the title and keep request text to at most 80 words, excluding document links. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. Include each choice’s main cost and a marked recommendation. Keep question and option labels short, without repeating the summary.
+
+Use descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Include as many relevant links as needed. Reuse existing documents and link evidence, background, and implementation detail instead of copying them into the request. The choice and essential trade-offs should be clear without opening the links.
 
 Missing resources, credentials, access, reproduction details and non-decision actions use **Blocked** and a specific blocked reason: what is missing and what allows work to continue. Clear the reason when resolved. Dependency waiting belongs in dependency links. Routine assumptions, risk checklists and handing in work do not by themselves need a request.
 
@@ -14,7 +18,7 @@ Previously saved task confirmations and handoffs remain readable and answerable.
 
 ## Lifecycle
 
-1. `request-human` saves the request and updates the Needs attention count. It does not start or continue an agent session.
+1. `request-review` saves the request and updates the Needs attention count. It does not start or continue an agent session.
 2. A person or an agent answers with `review` or cancels with `review-requests cancel`. Schedules, automations, and event handlers cannot do either.
 3. Each request has one current outcome: an answer or a cancellation. If the first answer races another answer or cancellation, the first write wins and the other caller sees the saved outcome.
 4. When no open request is left on the ticket, the bubble shows the resolved count. Planner does not change the ticket status; the implementation agent updates it when it continues.
@@ -35,9 +39,20 @@ Answering or cancelling the last open request resolves pending input when no unr
 
 ## CLI
 
+This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
+
 ```sh
-pst pstdio-planner request-human --ticket PS-32 --title 'PS-32 · Choose the release scope' --instructions '**Problem:** The export needs a first release. **Solutions:** Internal project first (recommended), or everyone now. **Downsides:** Internal delays wider access; everyone exposes more people to faults.' --request '{"kind":"decision","questions":[{"id":"scope","label":"Who should receive the export?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
-pst pstdio-planner review --request-id <id> --response '{"answers":{"scope":"internal"}}'
+pst pstdio-planner request-review --ticket PS-32 \
+  --title 'PS-32 · Choose the first release audience' \
+  --instructions '**Problem:** The export is ready, but its first release audience is undecided.
+
+**Solution:** Release to the internal project first (recommended), or to everyone now.
+
+**Downside:** An internal release delays wider access; releasing to everyone exposes more people to faults.
+
+**Details:** [Release plan](files/release-plan.md).' \
+  --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
+pst pstdio-planner review --request-id <id> --response '{"answers":{"audience":"internal"}}'
 ```
 
 Read, cancel, or open requests:
@@ -55,7 +70,7 @@ Each read returns the request with its derived `state` (`open`, `answered`, or `
 
 Requests live in the `planner-review-requests` collection. Outcomes live in `planner-review-request-outcomes`, one per request, under the request ID. A request without an outcome is open. The design is recorded in [ADR 0068](../../../documentation/adrs/0068-planner-owns-review-requests.md).
 
-Legacy free-text requests in `planner-human-requests` are not inferred as actionable requests. Inspect the ticket for a genuine unresolved decision. If one exists, create a structured request with concrete instructions and questions. Otherwise no human input is needed.
+Legacy free-text requests are not inferred as actionable requests. Inspect the ticket for a genuine unresolved decision. If one exists, create a structured request with concrete instructions and questions. Otherwise no review input is needed.
 
 Board, CLI, and timeline reads derive pending input and counts from current requests, including on archived and completed tickets. Request changes refresh readers without rewriting ticket tags. The storage upgrade removes the old Needs attention tag option and its ticket references, while preserving custom flag options and request history.
 

@@ -220,3 +220,60 @@ test("each document on the same resource refreshes its own title and keeps its s
     subscription.dispose();
   }
 });
+
+test("body change events keep unchanged resource chrome and ancestry stable", async () => {
+  const { workbench, open, subscription } = setup((resource) => fileTarget(resource, "notes.md"));
+  try {
+    open("notes");
+    await settle();
+    const state = workbench.pages.store.getState();
+    const layout = workbench.layout.getLayout();
+    let pageUpdates = 0;
+    const unsubscribe = workbench.pages.store.subscribe(() => pageUpdates++);
+    publishExtensionEvent({ id: `${extensionId}.event.changed`, projectId });
+    await settle();
+    unsubscribe();
+    expect(workbench.pages.store.getState()).toBe(state);
+    expect(workbench.layout.getLayout()).toBe(layout);
+    expect(pageUpdates).toBe(0);
+  } finally {
+    subscription.dispose();
+  }
+});
+
+test("updates changed ancestry even when the open document reference is unchanged", async () => {
+  let parentLabel = "Original parent";
+  const { workbench, open, subscription } = setup((resource) => {
+    const target = fileTarget(resource, "notes.md");
+    target.parent!.resource!.label = parentLabel;
+    return target;
+  });
+  try {
+    open("notes");
+    await settle();
+    parentLabel = "Renamed parent";
+    publishExtensionEvent({ id: `${extensionId}.event.changed`, projectId });
+    await settle();
+    expect(workbench.pages.store.getState().location?.parent?.resource?.label).toBe(parentLabel);
+  } finally {
+    subscription.dispose();
+  }
+});
+
+test("updates an ancestor section without changing the document reference", async () => {
+  let heading = "Original";
+  const { workbench, open, subscription } = setup((resource) => {
+    const target = fileTarget(resource, "notes.md");
+    return { ...target, parent: { ...target.parent!, section: { anchors: [{ id: "part", heading }] } } };
+  });
+  try {
+    open("notes");
+    await settle();
+    heading = "Renamed";
+    publishExtensionEvent({ id: `${extensionId}.event.changed`, projectId });
+    await settle();
+    expect(workbench.pages.store.getState().location?.parent?.section?.anchors[0]?.heading).toBe(heading);
+  } finally {
+    subscription.dispose();
+  }
+});

@@ -28,7 +28,7 @@ export interface StoredPlan {
   order: PlanEntry[];
 }
 
-export type PlanFlag = "overdue" | "due-soon" | "human-needed" | "blocked" | "waiting" | "out-of-order";
+export type PlanFlag = "overdue" | "due-soon" | "review-needed" | "blocked" | "waiting" | "out-of-order";
 
 export interface PlanLink {
   id: string;
@@ -74,7 +74,7 @@ export interface PlanSection {
   eta: { remainingMs: number; completedComplexity: number; totalComplexity: number; startedAt: string | null } | null;
   deadline: PlanDeadline | null;
   rows: PlanRow[];
-  counts: { total: number; done: number; humanNeeded: number; blocked: number; atRisk: number };
+  counts: { total: number; done: number; reviewNeeded: number; blocked: number; atRisk: number };
 }
 
 export type PlanTag = StoredTag;

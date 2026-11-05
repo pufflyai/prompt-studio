@@ -1,3 +1,4 @@
+import { lstat, readlink } from "node:fs/promises";
 import { getImagePreviewMimeType, isImagePreviewPath } from "pstdio-file-types";
 import { git, gitBytes } from "./git";
 
@@ -100,7 +101,7 @@ const countUntrackedLines = async (worktreePath: string, paths: string[]) => {
   const counts = await Promise.all(
     paths.map(async (filePath) => {
       try {
-        const content = await Bun.file(`${worktreePath}/${filePath}`).text();
+        const content = await getWorkingContent(worktreePath, filePath);
         return countContentLines(content);
       } catch {
         return 0;
@@ -139,6 +140,9 @@ const getFileContent = async (cwd: string, ref: string, filePath: string) => {
 
 const getWorkingContent = async (cwd: string, filePath: string) => {
   try {
+    const path = `${cwd}/${filePath}`;
+    // Git stores a symlink's target text. Following it could expose another workspace's files.
+    if ((await lstat(path)).isSymbolicLink()) return await readlink(path);
     const file = Bun.file(`${cwd}/${filePath}`);
     if (isImagePreviewPath(filePath)) {
       if (file.size > MAX_IMAGE_PREVIEW_BYTES) return "";

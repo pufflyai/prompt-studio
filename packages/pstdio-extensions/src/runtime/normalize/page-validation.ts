@@ -201,13 +201,11 @@ const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) 
   validateModeAndRegions(runtime, record);
 };
 
-const reservedPaths = new Set<string>(
-  Object.values(workbenchPageDefinitions)
-    .map((definition) => definition.path)
-    .filter(Boolean),
-);
-const reservedPageIds = new Set<string>(Object.values(workbenchPageDefinitions).map((definition) => definition.ref.id));
-const hostPageIds = reservedPageIds;
+const hostDefinitions = Object.values(workbenchPageDefinitions);
+const reservedDefinitions = hostDefinitions.filter((definition) => !("legacy" in definition && definition.legacy));
+const reservedPaths = new Set<string>(reservedDefinitions.map((definition) => definition.path).filter(Boolean));
+const reservedPageIds = new Set<string>(reservedDefinitions.map((definition) => definition.ref.id));
+const hostPageIds = new Set<string>(hostDefinitions.map((definition) => definition.ref.id));
 
 const validatePaths = (runtime: Accumulator) => {
   const paths = new Map<string, RuntimePageRecord>();

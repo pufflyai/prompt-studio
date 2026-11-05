@@ -20,13 +20,8 @@ import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-
 
 // --- Detection ---
 
-const readOpencodeModels = async (ctx: HarnessContext, version?: string) => {
-  const number = version?.match(/\d+\.\d+\.\d+/)?.[0];
-  // A private v2 server receives this runtime's environment and exits after discovery.
-  const args =
-    number && Bun.semver.satisfies(number, ">=2.0.0")
-      ? ["api", "GET", "/api/model", "--standalone"]
-      : ["models", "--verbose"];
+const readOpencodeModels = async (ctx: HarnessContext) => {
+  const args = ["api", "GET", "/api/model", "--standalone"];
   const result = await ctx.process.run({ command: [resolveOpencodeCommand(), ...args] });
   // Native API output may contain provider credentials. Never include it in diagnostics.
   if (result.exitCode !== 0) throw new Error("OpenCode model command failed. Check the OpenCode installation.");
@@ -158,10 +153,10 @@ export const createOpencodeHarness = (
     signal: AbortSignal,
   ) => {
     const opencode = await serviceFor(ctx);
-    const pendingQuestions = await opencode.listPendingQuestions(input.cwd);
+    const pendingQuestions = await opencode.listPendingQuestions(input.agentSessionId, input.cwd);
     const pendingQuestion = pendingQuestions.find((question) => question.sessionID === input.agentSessionId);
     const messageComplete = pendingQuestion
-      ? opencode.replyQuestion(pendingQuestion.id, questionResponse.answers, input.cwd, signal)
+      ? opencode.replyQuestion(input.agentSessionId, pendingQuestion.id, questionResponse.answers, input.cwd, signal)
       : Promise.reject(new Error("OpenCode pending question request not found."));
     const abortController = new AbortController();
     const done = pollOpencodeQuestionReply({
