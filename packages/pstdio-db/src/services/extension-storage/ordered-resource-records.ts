@@ -68,7 +68,6 @@ const notifyNativeFileSave = (
   if (saved.result || !saved.changed) return;
   cache.committed(undefined);
   if (saved.projected) deps.statistics.record(saved.projected);
-  deps.changed();
   deps.observer?.committed(owner, saved.records, { status: "saved-locally" });
 };
 

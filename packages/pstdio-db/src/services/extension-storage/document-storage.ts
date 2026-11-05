@@ -51,7 +51,7 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
     .limit(1);
   return !!record;
 };
-type StorageChange = StorageOwner & { documentId?: string };
+type StorageChange = StorageOwner & { documentId?: string; origin?: "relay" };
 
 const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
   const [row] = await db
@@ -170,7 +170,7 @@ export const createDocumentStorageDBService = (
           metadata: transaction,
           changed: () => {
             notifyOwnerNative(owner);
-            for (const listener of listeners) listener(owner);
+            for (const listener of listeners) listener({ ...owner, origin: "relay" });
           },
         }),
       list: (owner: StorageOwner) => directory.list(owner),
