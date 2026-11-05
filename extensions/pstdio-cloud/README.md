@@ -5,6 +5,8 @@ Open it for details, then choose **Cloud settings** to sign in, manage your devi
 or make this project local. Making a project local stops syncing on every device;
 each keeps its copy. Syncing again merges those copies.
 
+See the [Cloud sync guide](../../documentation/guides/concepts/0007-cloud-sync.md) for sign-in, status and project controls.
+
 Accounts without early access stay signed in and see **Coming soon**. **Offline**
 means the connection is lost; **Local** means this project does not sync.
 
