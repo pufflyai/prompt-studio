@@ -10,6 +10,9 @@ import { createSessionsApi } from "./sessions";
 
 test("the scoped public fork copies a settled native conversation and rejects foreign identity without running it", async () => {
   let starts = 0;
+  const controlEntered = Promise.withResolvers<void>();
+  const releaseControl = Promise.withResolvers<void>();
+  let pendingControl: Promise<unknown> | undefined;
   const messages = [
     { id: "answer", role: "assistant" as const, parts: [{ type: "text" as const, text: "Remember blue" }] },
   ];
@@ -23,6 +26,14 @@ test("the scoped public fork copies a settled native conversation and rejects fo
             throw new Error("Fork cannot execute");
           },
           getMessages: () => messages,
+          prepareOperation: () => ({
+            execution: "control",
+            invoke: async () => {
+              controlEntered.resolve();
+              await releaseControl.promise;
+              return { kind: "completed" };
+            },
+          }),
           fork: (_ctx, input) => {
             expect(input.messageId).toBe("answer");
             return { agentSessionId: "independent" };
@@ -62,10 +73,14 @@ test("the scoped public fork copies a settled native conversation and rejects fo
     const foreign = await handle.deps.projectService.create({ name: "Foreign" });
     const other = createSessionsApi(handle.deps, { projectId: foreign.id, project: { ...foreign, shorthand: "F" } });
     await expect(other.fork(source.id, "answer")).rejects.toThrow("Session not found");
-    await handle.deps.sessionService.transitionStatus(source.id, "in_progress");
+    // Keep a real public control owner alive across both reads; an ownerless status can recover to settled.
+    pendingControl = api.invokeHarnessOperation(source.id, { kind: "command", text: "/status" });
+    await controlEntered.promise;
     expect((await api.getForkState(source.id)).disabledReason).toContain("pending work");
     await expect(api.fork(source.id, "answer")).rejects.toThrow("pending work");
   } finally {
+    releaseControl.resolve();
+    await pendingControl;
     await handle.close();
   }
 });
