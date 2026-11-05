@@ -15,9 +15,7 @@ describe("resolveDefaultExtensionsConfig", () => {
 
     expect(config.defaultExtensions).toEqual([
       "pstdio-home",
-      "harness-claude-code",
-      "harness-codex",
-      "harness-open-code",
+      "pstdio-onboarding",
       "pstdio-base-themes",
       "pstdio-skills",
       "pstdio-performance",
@@ -277,9 +275,7 @@ describe("installDefaultExtensions sources", () => {
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
     expect(calls.map((call) => call.installName)).toEqual([
-      "harness-claude-code",
-      "harness-codex",
-      "harness-open-code",
+      "pstdio-onboarding",
       "pstdio-base-themes",
       "pstdio-skills",
       "pstdio-performance",
