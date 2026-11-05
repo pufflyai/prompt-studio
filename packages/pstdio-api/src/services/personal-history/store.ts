@@ -100,11 +100,12 @@ const createStore = (input: PersonalHistoryInput) => {
       const deviceId = await input.logs.writerId();
       const seededHeads = await input.index.seeded(owner, "heads", deviceId);
       const seededPublications = await input.index.seeded(owner, "publications", deviceId);
+      const changes: Parameters<typeof index.write>[0][] = [];
       for (const [id, sequence] of heads) {
         const previous = await input.index.get(owner, "heads", id);
         const format = formats.get(id);
         if (Number(previous?.sequence ?? 0) < sequence || previous?.format !== format || seededHeads.has(id))
-          await index.write({
+          changes.push({
             deviceId,
             kind: "heads",
             id,
@@ -115,8 +116,9 @@ const createStore = (input: PersonalHistoryInput) => {
         const value = { id, ...publication };
         const previous = await input.index.get(owner, "publications", id);
         if (!previous || seededPublications.has(id) || canonicalJson(previous as Json) !== canonicalJson(value))
-          await index.write({ deviceId, kind: "publications", id, value });
+          changes.push({ deviceId, kind: "publications", id, value });
       }
+      await index.writeMany(changes);
     },
     async patchRecords<T extends { id: string }>(
       kind: "sessions" | "workspaces" | "workspace_sessions" | "queues",
@@ -125,17 +127,21 @@ const createStore = (input: PersonalHistoryInput) => {
       removed: string[] = [],
     ) {
       await index.ready();
+      const changes: Parameters<typeof index.write>[0][] = [];
+      const seen = new Map<string, Json>();
       for (const row of rows) {
         const value = JSON.parse(JSON.stringify({ ...row, device })) as Json;
-        const old = await input.index.get(owner, kind, row.id);
+        const old = seen.has(row.id) ? seen.get(row.id) : await input.index.get(owner, kind, row.id);
         if (
           !old ||
           (await input.index.isSeeded(owner, kind, device.id, row.id)) ||
           canonicalJson(old as Json) !== canonicalJson(value)
         )
-          await index.write({ deviceId: device.id, kind, id: row.id, value });
+          changes.push({ deviceId: device.id, kind, id: row.id, value });
+        seen.set(row.id, value);
       }
-      for (const id of removed) await index.write({ deviceId: device.id, kind, id, value: null });
+      for (const id of removed) changes.push({ deviceId: device.id, kind, id, value: null });
+      await index.writeMany(changes);
     },
     async writeRecords<T extends { id: string }>(
       kind: Parameters<typeof readRecords>[0],

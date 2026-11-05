@@ -150,35 +150,45 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
     }
     return { complete, changed };
   };
-  return {
-    address: logAddressKey(input),
-    cutoff: () => logCutoff(input),
-    async append(value: Json, options: { id?: string } = {}) {
-      const owned = structuredClone(value);
-      canonicalJson(owned);
-      const id = options.id ?? crypto.randomUUID();
-      const result = await db.transaction(async (tx) => {
-        await lockLogStream(tx, input);
+  const appendMany = async (items: { value: Json; id?: string }[]) => {
+    if (items.length > 100) throw new Error("A local log batch holds at most 100 entries");
+    const owned = structuredClone(items);
+    for (const item of owned) canonicalJson(item.value);
+    const result = await db.transaction(async (tx) => {
+      await lockLogStream(tx, input);
+      const entries: StorageLogEntry[] = [];
+      let count = 0;
+      for (const item of owned) {
+        const id = item.id ?? crypto.randomUUID();
         const previous = await entryRow(tx, id);
         if (previous) {
           const entry = await decodeLogPayload<StorageLogEntry>(input, previous.entry);
-          if (entry.writerId !== input.writerId || canonicalJson(entry.value) !== canonicalJson(owned))
+          if (entry.writerId !== input.writerId || canonicalJson(entry.value) !== canonicalJson(item.value))
             throw identityError();
-          return { entry, changed: 0 };
+          entries.push(entry);
+          continue;
         }
         const entry = {
           id,
           writerId: input.writerId,
           createdAt: new Date((input.now ?? Date.now)()).toISOString(),
-          value: owned,
+          value: item.value,
         };
-        const changed = (await write(entry, tx, true)) + (await pruneLogEntries(tx, input));
-        return { entry, changed };
-      });
-      if (result.changed) statistics.record(result.changed);
-      changed();
-      return result.entry;
-    },
+        count += await write(entry, tx, true);
+        entries.push(entry);
+      }
+      count += await pruneLogEntries(tx, input);
+      return { entries, count };
+    });
+    if (result.count) statistics.record(result.count);
+    changed();
+    return result.entries;
+  };
+  return {
+    address: logAddressKey(input),
+    cutoff: () => logCutoff(input),
+    appendMany,
+    append: async (value: Json, options: { id?: string } = {}) => (await appendMany([{ value, id: options.id }]))[0]!,
     read: (options = {}) => {
       const owned = structuredClone(options);
       return db.transaction((tx) => readOrderedLog(tx, input, owned), {
@@ -249,5 +259,5 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-  } satisfies LogStreamStore;
+  } satisfies LogStreamStore & { appendMany: typeof appendMany };
 };

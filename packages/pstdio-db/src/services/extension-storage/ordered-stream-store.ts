@@ -26,6 +26,10 @@ import { orderedCursor, readOrderedOwner, saveOrderedCursor } from "./ordered-st
 import { createRecordStreamStore } from "./record-stream-store";
 import type { NumberChange } from "./resource-number-repair";
 
+const hasCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner) =>
+  (await tx.select({ id: canonical.record_id }).from(canonical).where(orderedOwnerWhere(canonical, owner)).limit(1))
+    .length > 0;
+
 export const createOrderedStreamStore = (
   db: DbClient,
   owner: StorageOwner,
@@ -219,15 +223,13 @@ export const createOrderedStreamStore = (
     hasRecords: () =>
       run(
         async (journal, tx) =>
-          (await journal.pending({ limit: 1 })).length > 0 ||
-          (
-            await tx
-              .select({ id: canonical.record_id })
-              .from(canonical)
-              .where(orderedOwnerWhere(canonical, owner))
-              .limit(1)
-          ).length > 0,
+          (await journal.pending({ limit: 1 })).length > 0 || (await hasCanonicalRecords(tx, owner)),
       ),
-    pending: () => run(async (journal) => (await journal.pending({ limit: 1 })).length > 0),
+    pending: () =>
+      run(
+        async (journal, tx) =>
+          (await journal.pending({ limit: 1 })).length > 0 ||
+          (!(await readOrderedOwner(tx, owner)).joined && (await hasCanonicalRecords(tx, owner))),
+      ),
   } satisfies RecordStreamStore;
 };
