@@ -92,10 +92,10 @@ export const createRecoveryChunkStore = async ({ root, space }: { root: string; 
     return plain;
   };
   const read = async (reference: RecoveryChunk) => verify(reference, await encrypted(reference));
-  const stage = async (plain: Uint8Array) => {
+  const stage = async (plain: Uint8Array, role: "content" | "metadata" = "content") => {
     if (plain.length > recoveryChunkBytes) throw new Error("Recovery chunks must remain bounded");
     const sha256 = hash(plain);
-    const key = await space.documentId(JSON.stringify(["recovery-chunk", space.generation, sha256]));
+    const key = await space.documentId(JSON.stringify(["recovery-chunk", space.generation, role, sha256]));
     const pending = active.get(key);
     if (pending) return pending;
     const work = (async () => {

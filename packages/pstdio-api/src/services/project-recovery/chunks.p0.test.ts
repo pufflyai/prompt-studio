@@ -73,3 +73,12 @@ test("staging keeps one bounded chunk and refuses a project-wide encryption audi
   });
   await expect(createRecoveryChunkStore({ root: chunks.root, space })).rejects.toThrow();
 });
+
+test("file bytes matching a manifest page keep an independent immutable retention role", async () => {
+  const chunks = await store();
+  const bytes = new TextEncoder().encode('{"version":1,"kind":"file-leaf","parts":[]}');
+  const content = await chunks.stage(bytes);
+  const metadata = await chunks.stage(bytes, "metadata");
+  expect(metadata.blobId).not.toBe(content.blobId);
+  expect(await chunks.read(content)).toEqual(await chunks.read(metadata));
+});

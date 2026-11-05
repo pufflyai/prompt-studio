@@ -87,7 +87,7 @@ const pageWriter = <T>(chunks: ChunkStore, kind: PageKind) => {
   let bytes = 128;
   let finished = false;
   const levels: RecoveryChunk[][] = [];
-  const write = (value: unknown) => chunks.stage(encoder.encode(JSON.stringify(pageSchema.parse(value))));
+  const write = (value: unknown) => chunks.stage(encoder.encode(JSON.stringify(pageSchema.parse(value))), "metadata");
   const branch = (children: RecoveryChunk[]) => write({ version: 1, kind: `${kind}-branch`, children });
   const append = async (level: number, reference: RecoveryChunk) => {
     while (true) {
