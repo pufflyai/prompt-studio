@@ -185,7 +185,7 @@ export const startRelayRuntime = async (input: {
       })();
     return running;
   };
-  const stopStorage = deps.extensionStorageService.watch((owner) => {
+  const stopStorage = deps.extensionStorageService.watch((owner, origin) => {
     const documentId = owner.documentId;
     if (!workbenches.has(owner.workbenchId)) return;
     if (owner.extensionId === publishedExtensionsId) {
@@ -197,7 +197,7 @@ export const startRelayRuntime = async (input: {
     statusChanged(owner.workbenchId);
     // This owner's relay pass already owns these applied records. Views still
     // refresh, while genuinely local writes independently request another pass.
-    if (owner.origin === "relay") return;
+    if (origin === "relay") return;
     const connection = connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]));
     if (connection) {
       if (documentId && documentId !== "records") connection.wakeDocument(documentId);
