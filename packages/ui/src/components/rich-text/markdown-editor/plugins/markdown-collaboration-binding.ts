@@ -57,14 +57,14 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
   let compositionEnded = false;
   let points: ReturnType<typeof createMarkdownSourcePoints> | undefined;
   let tables: MarkdownTableProjection | undefined;
-  const captureSelection = () => {
+  const captureSelection = (body?: string) => {
     const range = $getSelection();
     if (!$isRangeSelection(range) || !editor.getRootElement()?.contains(globalThis.document.activeElement)) {
       selection = null;
       callbacks.current.onSelectionChange?.(null);
       return;
     }
-    points ??= createMarkdownSourcePoints($getRoot(), source.exportFromLexical($getRoot()));
+    points ??= createMarkdownSourcePoints($getRoot(), body ?? source.exportFromLexical($getRoot()));
     selection = {
       anchor: Y.createRelativePositionFromTypeIndex(binding.text, frontmatter.length + points.toSource(range.anchor)),
       focus: Y.createRelativePositionFromTypeIndex(binding.text, frontmatter.length + points.toSource(range.focus)),
@@ -85,7 +85,7 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
         tables = captureMarkdownTables($getRoot(), loaded.body, binding);
         points = undefined;
         if (!anchor || !focus || anchor.type !== binding.text || focus.type !== binding.text) {
-          captureSelection();
+          captureSelection(loaded.body);
           return;
         }
         points = createMarkdownSourcePoints($getRoot(), loaded.body);
@@ -95,7 +95,7 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
         next.anchor.set(start.key, start.offset, start.type);
         next.focus.set(end.key, end.offset, end.type);
         $setSelection(next);
-        captureSelection();
+        captureSelection(loaded.body);
       },
       {
         discrete: true,
@@ -121,22 +121,18 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
   };
   const stopUpdates = editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves, tags }) => {
     editorState.read(() => {
-      if (
-        !tags.has(remoteTag) &&
-        !tags.has("markdown-initial-import") &&
-        canDrain() &&
-        (dirtyElements.size || dirtyLeaves.size)
-      ) {
-        const body = source.exportFromLexical($getRoot());
+      const dirty = dirtyElements.size > 0 || dirtyLeaves.size > 0;
+      const body = dirty ? source.exportFromLexical($getRoot()) : undefined;
+      if (!tags.has(remoteTag) && !tags.has("markdown-initial-import") && canDrain() && body !== undefined) {
         const value = joinFrontmatter(frontmatter, body);
         frontmatter = value.slice(0, value.length - body.length);
         if (binding.write(value)) callbacks.current.onChange?.(value);
       }
-      if (dirtyElements.size || dirtyLeaves.size) {
+      if (body !== undefined) {
         points = undefined;
-        tables = captureMarkdownTables($getRoot(), source.exportFromLexical($getRoot()), binding);
+        tables = captureMarkdownTables($getRoot(), body, binding);
       }
-      captureSelection();
+      captureSelection(body);
     });
     queueMicrotask(releaseComposition);
   });
