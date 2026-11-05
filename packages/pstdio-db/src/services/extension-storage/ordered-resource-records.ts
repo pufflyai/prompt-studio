@@ -58,6 +58,20 @@ const prepareCommitViews = async (
   return rebaseOrderedProjection(journal, tx, owner, ids);
 };
 
+const notifyNativeFileSave = (
+  saved: Awaited<ReturnType<typeof writeOrderedTextAsset>>,
+  owner: StorageOwner,
+  deps: Parameters<typeof createLegacyResourceRecords>[2],
+  cache: ReturnType<typeof createOrderedCommitCache>,
+) => {
+  if (saved.changed) deps.nativeChanged?.([saved.key]);
+  if (saved.result || !saved.changed) return;
+  cache.committed(undefined);
+  if (saved.projected) deps.statistics.record(saved.projected);
+  deps.changed();
+  deps.observer?.committed(owner, saved.records, { status: "saved-locally" });
+};
+
 /** The public record facade owns immutable saves independently of a live connection. */
 export const createOrderedResourceRecords = (
   db: DbClient,
@@ -222,8 +236,8 @@ export const createOrderedResourceRecords = (
           commit: () => commitIn(journal, tx, group),
         });
       });
-      deps.nativeChanged?.([saved.key]);
-      return notify({ ...saved.result, records: saved.records });
+      notifyNativeFileSave(saved, owner, deps, commitCache);
+      if (saved.result) return notify({ ...saved.result, records: saved.records });
     },
     read: async (id: string, _branch?: { operationId: string }) => {
       await ready();
