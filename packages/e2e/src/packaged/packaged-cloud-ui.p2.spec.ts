@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { test as base, expect } from "../scripts/playwright-test";
+import { restorePackagedBrowserViewport } from "./packaged-browser-viewport";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { createCloudAcceptanceFixture, signInCloudAcceptanceDevice } from "./packaged-cloud-acceptance.fixture";
 import { buildBinary } from "./packaged-helpers";
@@ -69,6 +70,7 @@ test("Cloud settings respect early access and manage devices and project sync th
     if (!(await button.isVisible())) await status.click();
     await expect(button).toBeVisible();
     await button.click();
+    await expect(settingsFrame).toBeVisible();
   };
   const closeSettings = async () => {
     await page.keyboard.press("Escape");
@@ -77,6 +79,7 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(status).toHaveText("Sign in");
   await openSettings();
   const startSignIn = async () => {
+    const viewport = page.viewportSize()!;
     const opened = context.waitForEvent("page");
     const destination = context.waitForEvent(
       "request",
@@ -88,6 +91,7 @@ test("Cloud settings respect early access and manage devices and project sync th
     expect(login.origin).toBe(fixture.peer.origin);
     await expect.poll(() => new URL(popup.url()).pathname).toBe("/v1/native-login");
     await popup.close();
+    await restorePackagedBrowserViewport(page, viewport);
     const callback = new URL(login.searchParams.get("callback")!);
     callback.searchParams.set("state", login.searchParams.get("state")!);
     callback.searchParams.set("code", "controlled-fixture-login");
