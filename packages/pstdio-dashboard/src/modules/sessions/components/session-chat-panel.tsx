@@ -27,7 +27,7 @@ import { useStopSession } from "../hooks/use-stop-session";
 import { SessionChatFeedback } from "./session-chat-feedback";
 import { useSessionLinks } from "./session-chat-links";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
-import { SessionQueuedChatPanel } from "./session-queued-chat-panel";
+import { SessionMessageForkPanel } from "./session-message-fork-panel";
 import { useCommandComposer } from "./use-command-composer";
 import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
 import { useSessionChatDraft } from "./use-session-chat-draft";
@@ -197,7 +197,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     });
   };
 
-  const decision = composerDecision(commandComposer);
   const submit = sessionDraftSubmission(send, draftAttachments.attachments, () => {
     chatDraft.change("");
     draftAttachments.clearSubmittedAttachments();
@@ -208,7 +207,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     // to the region bounds and scrolls its messages internally instead of growing.
     <Box position="relative" h="full" w="full">
       <Box position="absolute" inset="0" overflow="hidden">
-        <SessionQueuedChatPanel
+        <SessionMessageForkPanel
+          forkContext={props}
           // Keying on the session id gives each session its own draft and scroll
           // state, so switching sessions in the bubble is a real switch.
           conversationKey={`dashboard-workbench-session:${conversationKey ?? view.id}`}
@@ -249,7 +249,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           chatInputDefaultValue={chatDraft.text}
           onChatInputChange={chatDraft.change}
           chatInputCommands={commands(commandComposer.suggestions)}
-          composerDecision={decision}
+          composerDecision={composerDecision(commandComposer)}
           device={unavailableDevice(device, view.device)}
           connectionUnknown={device.connectionUnknown}
           remote={device.remote}

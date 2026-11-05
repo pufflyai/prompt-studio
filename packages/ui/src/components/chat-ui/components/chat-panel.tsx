@@ -46,6 +46,9 @@ export interface ChatPanelProps extends ChatLinkProps {
     questionResponse?: ChatInputQuestionResponse,
   ) => void | Promise<void>;
   onInterrupt?: () => void;
+  /** Open an independent conversation through the selected agent reply. */
+  onForkMessage?: (messageId: string) => void | Promise<void>;
+  forkDisabledReason?: string;
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
   onChatInputChange?: (text: string) => void;
@@ -116,6 +119,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
     chatInputDefaultValue = "",
     onSubmitMessage,
     onInterrupt,
+    onForkMessage,
+    forkDisabledReason,
     onAttachFiles,
     onAttachText,
     onChatInputChange,
@@ -224,6 +229,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
                       expandedStickyMessageIds={expandedStickyMessageIds}
                       onToggleStickyMessage={toggleStickyMessageExpanded}
                       onReady={() => setReadyMessageListKey(messageListIdentity)}
+                      onForkMessage={onForkMessage}
+                      forkDisabledReason={forkDisabledReason}
                     />
                     {conversationNotices}
                   </>
