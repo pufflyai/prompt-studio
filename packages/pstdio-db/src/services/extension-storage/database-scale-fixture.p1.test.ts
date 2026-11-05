@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
-import { storage_ordered_operations } from "../../db/schemas.pg";
+import { storage_ordered_operations, storage_ordered_receipts } from "../../db/schemas.pg";
 import { prepareDatabaseFixture, verifyDatabaseFixture } from "./database-scale-fixture";
 
 test("owner fixture verification survives reopen and rejects missing history or source", async () => {
@@ -26,9 +26,8 @@ test("owner fixture verification survives reopen and rejects missing history or 
       .set({ request_fingerprint: receipt.request_fingerprint })
       .where(eq(storage_ordered_operations.operation_id, receipt.operation_id));
     await reopened.db
-      .update(storage_ordered_operations)
-      .set({ envelope: null })
-      .where(eq(storage_ordered_operations.operation_id, receipt.operation_id));
+      .delete(storage_ordered_receipts)
+      .where(eq(storage_ordered_receipts.operation_id, receipt.operation_id));
     await expect(verifyDatabaseFixture(reopened.db, "small", 101, false)).rejects.toThrow();
   } finally {
     await reopened?.close();

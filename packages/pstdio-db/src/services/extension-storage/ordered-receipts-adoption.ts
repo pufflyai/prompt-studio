@@ -25,7 +25,7 @@ import { rebaseOrderedProjection } from "./ordered-rebase";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
 import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
+import { joinedLegacyOrderedOwner, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 
 const checkpointEntries = async (remote: Map<string, Uint8Array[]>) => {
   const entries = [];
@@ -109,11 +109,12 @@ export const adoptOrderedCheckpoint = async (input: {
   const owned = await readOrderedOwner(tx, owner);
   // Capture locally settled records before replacing canonical state, including saves made
   // while our own founding upload was in flight. The tail must precede their new saves.
-  const local = !owned.joined
-    ? (await tx.select({ state: canonical.state }).from(canonical).where(orderedOwnerWhere(canonical, owner))).map(
-        (row) => decodeOrderedJson<OrderedRecord>(row.state),
-      )
-    : [];
+  const local =
+    !owned.joined && !(await joinedLegacyOrderedOwner(tx, owner))
+      ? (await tx.select({ state: canonical.state }).from(canonical).where(orderedOwnerWhere(canonical, owner))).map(
+          (row) => decodeOrderedJson<OrderedRecord>(row.state),
+        )
+      : [];
   const previous = receiptRoots(owned.receipt_root);
   const records = entries.flatMap((entry) => (entry.type === "record" ? [entry.record] : []));
   if (owned.epoch === meta.epoch)

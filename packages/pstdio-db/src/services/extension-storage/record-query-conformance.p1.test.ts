@@ -436,11 +436,16 @@ test("Unicode predicates, wrapped arrays and reserved object keys match memory",
     const tag = await records.query({ index: "text", where: { field: "tags", op: "contains", value: "😀" } });
     const groups = await records.aggregate({ index: "text", groupBy: "tags" });
     const batch = await records.readMany(values.map((_, index) => String(index)));
+    const comparable = (rows: typeof page.records) =>
+      rows.map(({ revision, ...row }) => {
+        expect(revision).toBe(batch.find((record) => record.recordId === row.recordId)!.revision);
+        return row;
+      });
     outputs.push({
       filters,
-      page: page.records,
-      next: next.records,
-      tag: tag.records,
+      page: comparable(page.records),
+      next: comparable(next.records),
+      tag: comparable(tag.records),
       groups: groups.groups,
       values: batch.map((record) => record.value),
     });

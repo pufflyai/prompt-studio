@@ -1,4 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
+import { createSyncSpace } from "pstdio-sync/encryption";
+import { createDocumentRelay } from "pstdio-sync/relay";
 import { syncPath } from "pstdio-sync-contracts";
 import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
 
@@ -367,6 +369,48 @@ test("accepted and injected latest-state bytes remain immutable when a replaceme
       second.payload,
       injected.payload,
     ]);
+  } finally {
+    await stopPeer(peer);
+  }
+});
+
+test("relay fixture negotiates manifest references and validates immutable completed children", async () => {
+  const peer = createPeer();
+  try {
+    const projectId = "manifest-project";
+    const { token } = await enrolledAccess(peer.origin, "manifest-device", projectId);
+    const space = await createSyncSpace({
+      projectId,
+      spaceOwner: null,
+      keys: [{ generation: 1, secret: "A".repeat(43) }],
+    });
+    const relay = createDocumentRelay({
+      origin: peer.origin,
+      space,
+      documentId: "records_0123456789abcdef",
+      token: async () => token,
+      signal: new AbortController().signal,
+    });
+    const manifests = await relay.manifestBlobs();
+    const child = "c".repeat(64);
+    const root = "d".repeat(64);
+    const bytes = new Uint8Array([1, 2, 3]);
+    await relay.blobs.put(child, bytes);
+    await manifests.put(root, bytes, [child]);
+    expect(await manifests.get(root, bytes.length)).toEqual(bytes);
+    const begin = (children: string[] | undefined) =>
+      fetch(
+        `${peer.origin}${syncPath({ kind: "blob", projectId, spaceOwner: null, blobId: root, operation: "begin-manifest" })}`,
+        {
+          method: "POST",
+          headers: { authorization: `Bearer ${token}`, "pstdio-sync-protocol": "1" },
+          body: JSON.stringify({ sha256: "e".repeat(64), byteLength: bytes.length, ...(children && { children }) }),
+        },
+      );
+    expect((await begin(undefined)).status).toBe(400);
+    expect((await begin([child, child])).status).toBe(400);
+    expect((await begin(["f".repeat(64)])).status).toBe(400);
+    expect((await begin([])).status).toBe(400);
   } finally {
     await stopPeer(peer);
   }

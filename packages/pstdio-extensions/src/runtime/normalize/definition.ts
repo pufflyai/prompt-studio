@@ -187,7 +187,9 @@ export const validateExtensionDefinition = (
   runtime: Accumulator,
 ) => {
   try {
-    ext.definition = { ...ext.definition, storage: normalizeStorageDeclaration(source.definition.storage) };
+    // Source identity also identifies unchanged schedules across catalog refreshes.
+    // Validate without replacing the loader-owned definition; storage opens apply defaults.
+    normalizeStorageDeclaration(source.definition.storage);
   } catch (error) {
     runtime.diagnostics.push(
       invalidCollectionDiagnostic(
@@ -197,7 +199,6 @@ export const validateExtensionDefinition = (
         error instanceof Error ? error.message : "Invalid storage declaration",
       ),
     );
-    ext.definition = { ...ext.definition, storage: undefined };
     return false;
   }
   for (const key of Object.keys(source.definition).sort()) {

@@ -19,6 +19,10 @@ const waitForPersonalRun = async (lastRun: number, readAll: boolean) => {
   if (wait > 0 && !readAll) await Bun.sleep(wait);
 };
 
+const closePersonalResources = (resources: { close(): unknown }[]) => {
+  for (const resource of resources) resource.close();
+};
+
 /**
  * Publishes this device's session history to the user's private space and copies the user's other devices'
  * history here. Each device publishes index changes as an append-only log. Each conversation is a log of
@@ -247,10 +251,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     },
     done: connection.done.finally(async () => {
       await stopWatching();
-      channel.close();
-      documents.close();
-      publisher.close();
-      liveReceiver.close();
+      closePersonalResources([channel, documents, publisher, liveReceiver]);
     }),
     close() {
       void stopWatching();

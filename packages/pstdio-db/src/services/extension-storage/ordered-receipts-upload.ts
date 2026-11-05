@@ -16,9 +16,12 @@ const authoredAssets = async (journal: OrderedJournal, operation: OrderedOperati
   // Retain immutable file intent even if its local projection is hidden by a condition/tombstone.
   const assets = operation.edits.flatMap((edit) =>
     edit.changes.flatMap((change) => {
-      if (change.path.length !== 1 || change.path[0] !== "asset" || !("set" in change) || change.set === null)
-        return [];
-      return [assetSchema.parse(change.set)];
+      if (!("set" in change)) return [];
+      let value = change.set;
+      if (!change.path.length && value && typeof value === "object" && !Array.isArray(value))
+        value = value.asset ?? null;
+      else if (change.path.length !== 1 || change.path[0] !== "asset") return [];
+      return value === null ? [] : [assetSchema.parse(value)];
     }),
   );
   const restored = operation.edits.filter((edit) => edit.deleted === false).map((edit) => edit.recordId);
