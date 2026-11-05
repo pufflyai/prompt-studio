@@ -8,6 +8,7 @@ import {
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
+
 export { openWorkspaceTerminalResource } from "./workspace-host-actions";
 
 const workspaceLabel = (resource: ResourceRef) => {
