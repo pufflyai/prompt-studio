@@ -38,17 +38,21 @@ Create a review request only for a genuine unresolved decision that the existing
 
 For an independent non-decision blocker, discover the configured Blocked status with `pst statuses list`, then use `pst tickets update --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
 
-A decision must stand alone without logs or conversation history. Include the ticket identity and brief **Problem**, **Solutions**, and **Downsides** in plain language. Explain each choice and its cost, and clearly mark the recommended choice. Use a required choice question for the decision; optional notes are useful when they help explain the choice. Do not add confirmation or risk checklists that contain no decision.
+Keep `--instructions` to at most 100 words. Identify the ticket in the title. Use one short sentence each for **Problem**, **Solutions**, and **Downsides**: state the decision, mark the recommended choice, and name the main cost of each option. Keep question and option labels to one short sentence each; do not repeat the summary in them. Use a required choice question; add optional notes only when useful. Do not add confirmation or risk checklists that contain no decision.
+
+Add a **Details** line with 1–3 descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Reuse existing documents and link supporting evidence, background, and implementation detail instead of copying them into the request. Keep the choice and essential trade-offs visible without opening the links.
 
 ```bash
 pst pstdio-planner request-human --ticket PS-12 \
-  --title "PS-12 · Choose the release scope" \
-  --instructions "**Problem:** People need to try the new export before a wider release.
+  --title "PS-12 · Choose when dependent work starts" \
+  --instructions "**Problem:** Dependent work needs a starting point.
 
-**Solutions:** Release to the internal project first (recommended), or release to everyone now.
+**Solutions:** Wait for prerequisite merges (recommended), or start from submitted revisions.
 
-**Downsides:** The internal release delays wider access. Releasing to everyone exposes more people to faults." \
-  --request '{"kind":"decision","questions":[{"id":"scope","label":"Who should receive the export?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
+**Downsides:** Waiting delays work; starting early may require integration repairs.
+
+**Details:** [Dependency policy](https://prompt.studio/docs/extensions/planner/auto-build/#start-auto-build)." \
+  --request '{"kind":"decision","questions":[{"id":"start","label":"When should dependent work start?","required":true,"input":{"kind":"single-choice","options":[{"id":"merged","label":"After prerequisites merge (recommended)"},{"id":"submitted","label":"After prerequisites submit work"}]}}]}'
 ```
 
 Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.

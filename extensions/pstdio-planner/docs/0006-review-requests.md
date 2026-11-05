@@ -1,6 +1,10 @@
 # Needs attention
 
-**Needs attention** collects decisions a person needs to make. Use a request only for an unresolved choice that the agent cannot settle from existing instructions or authority. Requests identify the ticket and give brief **Problem**, **Solutions**, and **Downsides** in plain language, including each choice’s cost and a marked recommendation. A person should understand the choice without reading logs or task history.
+**Needs attention** collects decisions a person needs to make. Use a request only for an unresolved choice that the agent cannot settle from existing instructions or authority.
+
+Identify the ticket in the title and keep request instructions to at most 100 words. Use one short sentence each for **Problem**, **Solutions**, and **Downsides**, including each choice’s main cost and a marked recommendation. Keep question and option labels to one short sentence each, without repeating the summary.
+
+Add a **Details** line with 1–3 descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Reuse existing documents and link evidence, background, and implementation detail instead of copying them into the request. The choice and essential trade-offs should be clear without opening the links.
 
 Missing resources, credentials, access, reproduction details and non-decision actions use **Blocked** and a specific blocked reason: what is missing and what allows work to continue. Clear the reason when resolved. Dependency waiting belongs in dependency links. Routine assumptions, risk checklists and handing in work do not by themselves need a request.
 
@@ -36,8 +40,17 @@ Answering or cancelling the last open request resolves pending input when no unr
 ## CLI
 
 ```sh
-pst pstdio-planner request-human --ticket PS-32 --title 'PS-32 · Choose the release scope' --instructions '**Problem:** The export needs a first release. **Solutions:** Internal project first (recommended), or everyone now. **Downsides:** Internal delays wider access; everyone exposes more people to faults.' --request '{"kind":"decision","questions":[{"id":"scope","label":"Who should receive the export?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
-pst pstdio-planner review --request-id <id> --response '{"answers":{"scope":"internal"}}'
+pst pstdio-planner request-human --ticket PS-32 \
+  --title 'PS-32 · Choose when dependent work starts' \
+  --instructions '**Problem:** Dependent work needs a starting point.
+
+**Solutions:** Wait for prerequisite merges (recommended), or start from submitted revisions.
+
+**Downsides:** Waiting delays work; starting early may require integration repairs.
+
+**Details:** [Dependency policy](https://prompt.studio/docs/extensions/planner/auto-build/#start-auto-build).' \
+  --request '{"kind":"decision","questions":[{"id":"start","label":"When should dependent work start?","required":true,"input":{"kind":"single-choice","options":[{"id":"merged","label":"After prerequisites merge (recommended)"},{"id":"submitted","label":"After prerequisites submit work"}]}}]}'
+pst pstdio-planner review --request-id <id> --response '{"answers":{"start":"merged"}}'
 ```
 
 Read, cancel, or open requests:
