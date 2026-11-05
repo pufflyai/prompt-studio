@@ -23,6 +23,8 @@ import { captureMarkdownTables, type MarkdownTableProjection } from "../../share
 import { createMarkdownTextDocument } from "../../shared/markdown-text-document";
 import { joinFrontmatter, splitFrontmatter } from "../../utils/markdown";
 import type { MarkdownDocumentSelection } from "./markdown-collaboration-types";
+import { createMarkdownEditBatch } from "./markdown-edit-batch";
+import { registerMarkdownEditUnload } from "./markdown-edit-unload";
 
 interface MarkdownCollaborationBindingInput {
   editor: LexicalEditor;
@@ -41,7 +43,10 @@ interface MarkdownCollaborationBindingInput {
 const remoteTag = "markdown-remote-source";
 export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInput) => {
   const { editor, source, document, session, bindingRef, callbacks, onRecovery } = input;
-  const drain = () => editor.read(() => undefined);
+  const drain = () => {
+    editor.read(() => undefined);
+    edits.flush();
+  };
   const binding = session
     ? createMarkdownSessionDocument(session, drain)
     : createMarkdownTextDocument(document!, drain);
@@ -110,32 +115,47 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
   const releaseComposition = () => {
     if (!compositionEnded || editor.isComposing()) return;
     compositionEnded = false;
+    drain();
     void Promise.resolve(binding.setComposing(false)).catch(() => {});
   };
   const canDrain = () => {
-    if (callbacks.current.editable) return true;
     if ("isComposing" in binding && binding.isComposing()) return true;
     const state = session?.getSnapshot();
+    if (state && !state.editable) return false;
+    if (callbacks.current.editable) return true;
     // Close disables DOM input first. Queued editor work still drains for a writable source.
     return Boolean(state?.closing && state.editable);
   };
+  const publishEdits = (group?: object) => {
+    if (!canDrain()) return;
+    const body = source.exportFromLexical($getRoot());
+    const value = joinFrontmatter(frontmatter, body);
+    frontmatter = value.slice(0, value.length - body.length);
+    if (value !== binding.text.toString() && binding.write(value, group)) callbacks.current.onChange?.(value);
+    points = undefined;
+    tables = captureMarkdownTables($getRoot(), body, binding);
+    captureSelection(body);
+  };
+  const edits = createMarkdownEditBatch((group) => {
+    editor.read(() => {
+      // The read also commits any Lexical work queued since the timer fired.
+      edits.cancel();
+      publishEdits(group);
+    });
+  });
   const stopUpdates = editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves, tags }) => {
     editorState.read(() => {
-      const dirty = dirtyElements.size > 0 || dirtyLeaves.size > 0;
-      const body = dirty ? source.exportFromLexical($getRoot()) : undefined;
-      if (!tags.has(remoteTag) && !tags.has("markdown-initial-import") && canDrain() && body !== undefined) {
-        const value = joinFrontmatter(frontmatter, body);
-        frontmatter = value.slice(0, value.length - body.length);
-        if (binding.write(value)) callbacks.current.onChange?.(value);
-      }
-      if (body !== undefined) {
+      if (tags.has(remoteTag) || tags.has("markdown-initial-import")) return;
+      if (dirtyElements.size || dirtyLeaves.size) {
         points = undefined;
-        tables = captureMarkdownTables($getRoot(), body, binding);
-      }
-      captureSelection(body);
+        // Public sessions have receive/close barriers. Legacy document callers retain synchronous writes.
+        if (session) edits.schedule();
+        else publishEdits();
+      } else if (!edits.pending()) captureSelection();
     });
     queueMicrotask(releaseComposition);
   });
+  const stopUnload = registerMarkdownEditUnload({ session, pending: edits.pending, drain });
   const stopRemote = binding.subscribe((value, origin) => {
     if (origin === "reset") {
       selection = null;
@@ -144,10 +164,18 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
     render(value);
     if (origin !== "remote" && origin !== "reset") callbacks.current.onChange?.(value);
   });
+  const flushCommandEdits = () => {
+    if (!session || ("isFinishing" in binding && (binding.isFinishing() || binding.isComposing()))) return;
+    // Commands already run in Lexical's update context, including edits whose listener has not run yet.
+    if (!edits.pending()) edits.schedule();
+    edits.cancel();
+    publishEdits(edits.group());
+  };
   const stopUndo = editor.registerCommand(
     UNDO_COMMAND,
     () => {
       if (!callbacks.current.editable) return false;
+      flushCommandEdits();
       binding.undo();
       return true;
     },
@@ -157,6 +185,7 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
     REDO_COMMAND,
     () => {
       if (!callbacks.current.editable) return false;
+      flushCommandEdits();
       binding.redo();
       return true;
     },
@@ -177,6 +206,7 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
   const beginComposition = () => {
     if (!callbacks.current.editable) return;
     compositionEnded = false;
+    drain();
     binding.setComposing(true);
   };
   const endComposition = () => {
@@ -184,6 +214,7 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
     queueMicrotask(releaseComposition);
   };
   const blur = () => {
+    drain();
     selection = null;
     callbacks.current.onSelectionChange?.(null);
   };
@@ -201,6 +232,9 @@ export const bindMarkdownCollaboration = (input: MarkdownCollaborationBindingInp
   });
   render(binding.text.toString());
   return () => {
+    drain();
+    edits.cancel();
+    stopUnload();
     compositionEnded = false;
     stopUpdates();
     stopRemote();

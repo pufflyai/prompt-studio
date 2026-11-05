@@ -112,9 +112,9 @@ export const createMarkdownSessionDocument = (session: TextEditingSession, befor
     get text() {
       return preview?.getText("content") ?? draft?.text ?? binding.text;
     },
-    write(source: string) {
+    write(source: string, group?: object) {
       if (preview) throw new Error("This composition is still waiting to be saved");
-      if (!draft) return binding.write(source);
+      if (!draft) return binding.write(source, group);
       const text = draft.text;
       text.doc!.transact(() => {
         let index = 0;

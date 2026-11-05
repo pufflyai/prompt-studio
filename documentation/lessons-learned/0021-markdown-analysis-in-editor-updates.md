@@ -13,7 +13,10 @@
 
 ## 3. Prevention
 
-- Export once per editor update and share that snapshot with its consumers.
+- Keep visible typing immediate; batch expensive publication after a pause and periodically during continuous input.
+- Export once per publication and share that snapshot with its consumers.
+- Drain pending text at receive, close, unload, undo and composition boundaries. Keep private IME text when public write permission changes.
+- Group Undo by input activity, rather than the interval between published batches.
 - Map identical strings directly without syntax analysis.
 - Keep parsed source analysis within its owning document. Retain loaded spellings and only the latest changing snapshot; replace it when the source is imported or reconciled.
 - Profile typing with a representative document. Verify full input, caret/focus, and persistence as well as frame timing.

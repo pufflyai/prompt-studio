@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Keep shared Markdown typing responsive by reusing source analysis and avoiding repeated document exports.
+Keep shared Markdown typing responsive by batching background publication after typing pauses, reusing source analysis, and preserving input-owned undo groups.
