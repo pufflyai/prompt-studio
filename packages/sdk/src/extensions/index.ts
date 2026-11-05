@@ -59,6 +59,8 @@ export {
   projectSlots,
   rebaseEditingChanges,
   resourceEvents,
+  sessionBrowser,
+  sessionBrowserId,
   sessionEvents,
   sessionSlots,
   storageLimits,

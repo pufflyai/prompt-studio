@@ -75,3 +75,103 @@ test("removes immediately after confirmation and restores the resource after fai
   await expect(pending).rejects.toThrow("Remove failed");
   expect(context.workbench.resources.preview.resolve(resource)).toEqual(resource);
 });
+
+for (const kind of ["rename", "remove"] as const) {
+  test(`${kind} keeps a canonical resource owned by another provider`, async () => {
+    const context = setup();
+    const session = { ...resource, type: "session", extensionId: "pstdio" };
+    const saving = Promise.withResolvers<void>();
+    const mutation =
+      kind === "rename"
+        ? { kind, resourceType: "session", idParam: "id", labelParam: "title" }
+        : { kind, resourceType: "session", idParam: "id" };
+    const pending = runResourceMutation(
+      context,
+      {
+        id: `pstdio.pstdio-session-browser.command.${kind}`,
+        extensionId: "pstdio.pstdio-session-browser",
+        title: `${kind} session`,
+        resourceMutation: mutation,
+      },
+      { id: "one", title: "New" },
+      { resource: session },
+      () => saving.promise,
+    );
+    if (kind === "remove") {
+      context.workbench.commandPalette.store.getState().confirmation!.resolve(true);
+      await Promise.resolve();
+    }
+    try {
+      if (kind === "remove") expect(context.workbench.resources.preview.resolve(session)).toBeUndefined();
+      else expect(context.workbench.resources.preview.resolve(session)?.label).toBe("New");
+    } finally {
+      saving.resolve();
+      await pending;
+      await context.workbench.dispose();
+    }
+  });
+}
+
+for (const other of [
+  { ...resource, type: "session", extensionId: "pstdio" },
+  { ...resource, id: "other", extensionId: "pstdio" },
+  { ...resource, projectId: "another-project", extensionId: "pstdio" },
+]) {
+  test(`ignores unrelated execution context ${JSON.stringify(other)}`, async () => {
+    const context = setup();
+    const saving = Promise.withResolvers<void>();
+    const pending = runResourceMutation(
+      context,
+      command,
+      { noteId: resource.id, title: "New" },
+      { resource: other },
+      () => saving.promise,
+    );
+    try {
+      expect(context.workbench.resources.preview.resolve(resource)?.label).toBe("New");
+      expect(context.workbench.resources.preview.resolve(other)).toEqual(other);
+    } finally {
+      saving.resolve();
+      await pending;
+      await context.workbench.dispose();
+    }
+  });
+}
+
+test("canonical and provider-owned commands serialize writes on the same resource identity", async () => {
+  const context = setup();
+  const canonical = { ...resource, extensionId: "pstdio" };
+  const first = Promise.withResolvers<void>();
+  const writes: string[] = [];
+  const pending = runResourceMutation(
+    context,
+    command,
+    { noteId: resource.id, title: "First" },
+    { resource: canonical },
+    async () => {
+      writes.push("first");
+      await first.promise;
+    },
+  );
+  await Promise.resolve();
+  await Promise.resolve();
+  const next = runResourceMutation(
+    context,
+    { ...command, extensionId: "pstdio" },
+    { noteId: resource.id, title: "Second" },
+    { resource: canonical },
+    async () => {
+      writes.push("second");
+    },
+  );
+  try {
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(writes).toEqual(["first"]);
+  } finally {
+    first.resolve();
+    await Promise.all([pending, next]);
+    await context.workbench.dispose();
+  }
+  expect(writes).toEqual(["first", "second"]);
+});
