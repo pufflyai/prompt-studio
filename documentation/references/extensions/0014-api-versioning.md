@@ -33,6 +33,8 @@ Pages that describe APIs from `main` say so and name the first release that has 
 Status bar items on `main` can also declare a `popover` view through the additive
 `status-bar-item.popover.v1` host capability. This shares the planned API 0.3.0 release.
 
+The optional `HarnessProvider.fork(ctx, input)` method is additive in API 0.3.1 on `main`. It copies native history without starting a turn and returns a different `agentSessionId`. When `input.messageId` is provided, copy through that projected message, inclusive, and omit later history. Reject unsupported boundaries instead of copying later context. The host reads and reconciles the copied native history to adopt its message IDs. Existing providers keep working without it. Publish the SDK and host before separately released harnesses adopt this method.
+
 The page and panel additions share the planned API 0.3.0 release: page-owned empty views and landing slots, non-rendering page groups with default children, closable fixed tabs, tabless Main presentation, independent panel views, declarative slot replacements, caller-relative viewer navigation, mode-owned fullscreen permission, and collection badge navigation actions. They do not add another version step before that release.
 
 Hosts on `main`, after 0.46.0, read the optional manifest `icon` field and show it in Extensions. This additive metadata shares API 0.3.1. Existing manifests remain valid without it. Older hosts ignore the field, so declaring an icon does not require a higher minimum API version.

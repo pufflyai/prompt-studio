@@ -12,10 +12,20 @@ interface ChatMessageListResponseProps {
   hideQuestionForms?: boolean;
   animatedKeys: Set<string>;
   showAssistantActions: boolean;
+  onForkMessage?: (messageId: string) => void | Promise<void>;
+  forkDisabledReason?: string;
 }
 
 export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => {
-  const { message, streaming, hideQuestionForms = false, animatedKeys, showAssistantActions } = props;
+  const {
+    message,
+    streaming,
+    hideQuestionForms = false,
+    animatedKeys,
+    showAssistantActions,
+    onForkMessage,
+    forkDisabledReason,
+  } = props;
   const fadeInProps = useMessageFadeIn(message.animationKey ?? message.id, animatedKeys);
   const from = getMessageOrigin(message.role);
   const showActions = from === "user" || (from === "assistant" && showAssistantActions);
@@ -29,7 +39,13 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
           hideQuestionForms={hideQuestionForms}
         />
         {showActions ? (
-          <MessageActionPanel message={message} alwaysVisible={from === "user"} copyAlwaysVisible={from !== "user"} />
+          <MessageActionPanel
+            message={message}
+            alwaysVisible={from === "user"}
+            copyAlwaysVisible={from !== "user"}
+            onForkMessage={onForkMessage}
+            forkDisabledReason={forkDisabledReason}
+          />
         ) : null}
       </ChatMessage.Content>
     </ChatMessage.Root>

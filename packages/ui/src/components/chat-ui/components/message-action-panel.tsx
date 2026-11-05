@@ -2,12 +2,15 @@ import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { MessageForkAction } from "./message-fork-action";
 import type { ChatMessagePart, SessionMessage } from "./message-types";
 
 interface MessageActionPanelProps {
   message: SessionMessage;
   alwaysVisible?: boolean;
   copyAlwaysVisible?: boolean;
+  onForkMessage?: (messageId: string) => void | Promise<void>;
+  forkDisabledReason?: string;
 }
 
 const isCopyablePart = (part: ChatMessagePart): part is Extract<ChatMessagePart, { type: "text" }> => {
@@ -34,7 +37,13 @@ export const getMessageTimestampLabel = (message: SessionMessage, locale?: strin
 };
 
 export const MessageActionPanel = (props: MessageActionPanelProps) => {
-  const { message, alwaysVisible = false, copyAlwaysVisible = alwaysVisible } = props;
+  const {
+    message,
+    alwaysVisible = false,
+    copyAlwaysVisible = alwaysVisible,
+    onForkMessage,
+    forkDisabledReason,
+  } = props;
   const [isCopied, setIsCopied] = useState(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
   const copyText = getMessageCopyText(message);
@@ -98,6 +107,9 @@ export const MessageActionPanel = (props: MessageActionPanelProps) => {
             </IconButton>
           </Tooltip>
         </Box>
+      ) : null}
+      {copyText && message.role === "assistant" && onForkMessage ? (
+        <MessageForkAction messageId={message.id} onForkMessage={onForkMessage} disabledReason={forkDisabledReason} />
       ) : null}
     </HStack>
   );
