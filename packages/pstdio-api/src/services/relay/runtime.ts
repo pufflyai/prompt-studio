@@ -195,6 +195,9 @@ export const startRelayRuntime = async (input: {
     }
     storageChanges.changed(owner.workbenchId);
     statusChanged(owner.workbenchId);
+    // This owner's relay pass already owns these applied records. Views still
+    // refresh, while genuinely local writes independently request another pass.
+    if (owner.origin === "relay") return;
     const connection = connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]));
     if (connection) {
       if (documentId && documentId !== "records") connection.wakeDocument(documentId);
