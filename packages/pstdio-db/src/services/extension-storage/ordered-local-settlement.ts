@@ -8,12 +8,12 @@ import { applyOrderedNumberPolicy } from "./ordered-number-admission";
 import { pendingOrderedOperations } from "./ordered-pending";
 import { applyBoundedOrderedOperation } from "./ordered-policy";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { readOrderedOwner } from "./ordered-stream-state";
+import { joinedLegacyOrderedOwner, readOrderedOwner } from "./ordered-stream-state";
 
 /** Never-joined devices own their order. Joining Cloud permanently ends local settlement. */
 export const settleLocalOrderedSaves = async (journal: OrderedJournal, tx: OrderedTransaction, owner: StorageOwner) => {
   const row = await readOrderedOwner(tx, owner);
-  if (row.joined) return [];
+  if (row.joined || (await joinedLegacyOrderedOwner(tx, owner))) return [];
   const epoch = row.epoch ?? `local:${crypto.randomUUID()}`;
   if (!row.epoch) await tx.update(owners).set({ epoch }).where(orderedOwnerWhere(owners, owner));
   const changed = new Set<string>();

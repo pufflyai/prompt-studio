@@ -9,7 +9,7 @@ import { createExtensionResourceSequencesDBService } from "./extension-resource-
 import { createDocumentStorageDBService } from "./extension-storage/document-storage";
 import { createRelay } from "./extension-storage/record-stream-relay.fixture";
 
-const pair = async (count = 2) => {
+const pair = async (count = 2, joined = false) => {
   const projectId = crypto.randomUUID();
   const owner = { workbenchId: projectId, extensionId: coreOwnerId };
   const input = { projectId, extensionId: "pstdio.planner", kind: "ticket", prefix: "PS" };
@@ -43,6 +43,13 @@ const pair = async (count = 2) => {
       return { ...connection, documents, numbers, records, sync, failures };
     }),
   );
+  if (joined) {
+    await devices[0]!.records.commit({
+      operationId: "cloud-base",
+      edits: [{ recordId: "stream-base", replace: true }],
+    });
+    for (const device of devices) await device.sync.synchronize();
+  }
   return {
     relay,
     space,
@@ -258,7 +265,7 @@ test("three offline number claims converge in one order with every replaced clai
 });
 
 test("an exhausted canonical number collision refuses its whole group and later ordered saves continue", async () => {
-  const f = await pair();
+  const f = await pair(2, true);
   try {
     const [first, second] = f.devices;
     await first!.records.commit({
@@ -295,64 +302,70 @@ test("an exhausted canonical number collision refuses its whole group and later 
   }
 });
 
-test("an exhausted pending floor cannot block an earlier incoming canonical number", async () => {
-  const f = await pair();
-  try {
-    const [first, second] = f.devices;
-    await first!.records.commit({
-      operationId: "local",
-      edits: [
-        { recordId: "z", replace: numbered("z", 1) },
-        { recordId: "audit-local", replace: "atomic" },
-      ],
-    });
-    const audit = await first!.records.read("audit-local");
-    await first!.records.commit({
-      operationId: "local-child",
-      edits: [{ recordId: "audit-local", expectedRevision: audit.revision, replace: "child" }],
-    });
-    await first!.records.commit({
-      operationId: "local-higher",
-      edits: [{ recordId: "higher", replace: numbered("higher", Number.MAX_SAFE_INTEGER) }],
-    });
-    await second!.records.commit({ operationId: "incoming", edits: [{ recordId: "a", replace: numbered("a", 1) }] });
-    await second!.sync.synchronize();
-    const paused = createRecordStreamSync({
-      space: f.space,
-      documentId: f.documentId,
-      relay: {
-        ...f.relay,
-        update: async () => {
-          throw new Error("Pause before authored admission");
+for (const localId of ["z", "a"]) {
+  test(`an exhausted pending floor cannot block an earlier canonical ${localId === "z" ? "winning" : "losing"} number`, async () => {
+    const incomingId = localId === "z" ? "a" : "z";
+    const f = await pair(2, true);
+    try {
+      const [first, second] = f.devices;
+      await first!.records.commit({
+        operationId: "local",
+        edits: [
+          { recordId: localId, replace: numbered(localId, 1) },
+          { recordId: "audit-local", replace: "atomic" },
+        ],
+      });
+      const audit = await first!.records.read("audit-local");
+      await first!.records.commit({
+        operationId: "local-child",
+        edits: [{ recordId: "audit-local", expectedRevision: audit.revision, replace: "child" }],
+      });
+      await first!.records.commit({
+        operationId: "local-higher",
+        edits: [{ recordId: "higher", replace: numbered("higher", Number.MAX_SAFE_INTEGER) }],
+      });
+      await second!.records.commit({
+        operationId: "incoming",
+        edits: [{ recordId: incomingId, replace: numbered(incomingId, 1) }],
+      });
+      await second!.sync.synchronize();
+      const paused = createRecordStreamSync({
+        space: f.space,
+        documentId: f.documentId,
+        relay: {
+          ...f.relay,
+          update: async () => {
+            throw new Error("Pause before authored admission");
+          },
         },
-      },
-      store: first!.numbers.recordStream(f.input.projectId),
-      quarantine: async (failure) => {
-        first!.failures.push(failure);
-      },
-    });
-    await expect(paused.synchronize()).rejects.toThrow("Pause before authored admission");
-    expect((await first!.records.read("z")).exists).toBe(false);
-    expect((await first!.records.read("audit-local")).exists).toBe(false);
-    expect((await first!.records.outcome("local"))?.state).toBe("saved-locally");
-    expect((await first!.records.outcome("local-child"))?.state).toBe("saved-locally");
-    await first!.sync.synchronize();
-    await second!.sync.synchronize();
-    for (const device of f.devices) {
-      expect(await device.numbers.identity({ ...f.input, id: "a" })).toMatchObject({ shorthand: "PS-1" });
-      expect(await device.numbers.identity({ ...f.input, id: "z" })).toMatchObject({
-        shorthand: "PS-2",
-        aliases: ["PS-1"],
+        store: first!.numbers.recordStream(f.input.projectId),
+        quarantine: async (failure) => {
+          first!.failures.push(failure);
+        },
       });
-      expect(await device.numbers.identity({ ...f.input, id: "higher" })).toMatchObject({
-        shorthand: `PS-${Number.MAX_SAFE_INTEGER}`,
-      });
-      expect((await device.records.read("audit-local")).value).toBe("child");
+      await expect(paused.synchronize()).rejects.toThrow("Pause before authored admission");
+      expect((await first!.records.read(localId)).exists).toBe(false);
+      expect((await first!.records.read("audit-local")).exists).toBe(false);
+      expect((await first!.records.outcome("local"))?.state).toBe("saved-locally");
+      expect((await first!.records.outcome("local-child"))?.state).toBe("saved-locally");
+      await first!.sync.synchronize();
+      await second!.sync.synchronize();
+      for (const device of f.devices) {
+        expect(await device.numbers.identity({ ...f.input, id: "a" })).toMatchObject({ shorthand: "PS-1" });
+        expect(await device.numbers.identity({ ...f.input, id: "z" })).toMatchObject({
+          shorthand: "PS-2",
+          aliases: ["PS-1"],
+        });
+        expect(await device.numbers.identity({ ...f.input, id: "higher" })).toMatchObject({
+          shorthand: `PS-${Number.MAX_SAFE_INTEGER}`,
+        });
+        expect((await device.records.read("audit-local")).value).toBe("child");
+      }
+    } finally {
+      await f.close();
     }
-  } finally {
-    await f.close();
-  }
-});
+  });
+}
 
 const paddedNumberValue = (value: Record<string, Json>, bytes: number) => {
   const padded = { ...value, padding: "" };
@@ -381,7 +394,7 @@ const numberBoundary = (limit: "record" | "group") => {
 
 for (const limit of ["record", "group"] as const) {
   test(`number repair crossing the ${limit} limit suppresses pending optimism and refuses the atomic group`, async () => {
-    const f = await pair();
+    const f = await pair(2, true);
     try {
       const [first, second] = f.devices;
       const { large, edits } = numberBoundary(limit);
@@ -516,6 +529,51 @@ test("a later independent enlargement does not spend an earlier group's byte bud
     expect((await first!.records.outcome("later-budget"))?.state).toBe("synced");
     expect((await second!.records.read("shared-budget-0")).exists).toBe(true);
     expect((await second!.records.read("shared-budget-16")).exists).toBe(true);
+  } finally {
+    await f.close();
+  }
+});
+
+test("a previously renumbered pending claim retains its original collateral repair budget", async () => {
+  const f = await pair(2, true);
+  try {
+    const [first, second] = f.devices;
+    const { large, edits } = numberBoundary("group");
+    await first!.records.commit({ operationId: "alias-canonical", edits: [{ recordId: "z", replace: large }] });
+    await second!.records.commit({ operationId: "alias-bounded", edits });
+    await second!.records.commit({
+      operationId: "alias-winner",
+      edits: [{ recordId: "0", replace: numbered("0", 1) }],
+    });
+    expect(await second!.numbers.identity({ ...f.input, id: "a" })).toMatchObject({ shorthand: "PS-2" });
+    await first!.sync.synchronize();
+    const paused = createRecordStreamSync({
+      space: f.space,
+      documentId: f.documentId,
+      relay: {
+        ...f.relay,
+        update: async () => {
+          throw new Error("Pause alias admission");
+        },
+      },
+      store: second!.numbers.recordStream(f.input.projectId),
+      quarantine: async (failure) => {
+        second!.failures.push(failure);
+      },
+    });
+    await expect(paused.synchronize()).rejects.toThrow("Pause alias admission");
+    expect((await second!.records.read("a")).exists).toBe(false);
+    expect((await second!.records.read("audit-boundary")).exists).toBe(false);
+    expect((await second!.records.outcome("alias-bounded"))?.state).toBe("saved-locally");
+    await second!.sync.synchronize();
+    await first!.sync.synchronize();
+    expect((await second!.records.outcome("alias-bounded"))?.state).toBe("refused");
+    for (const device of f.devices) {
+      expect((await device.records.read("a")).exists).toBe(false);
+      expect(await device.numbers.identity({ ...f.input, id: "0" })).toMatchObject({ shorthand: "PS-1" });
+      expect(await device.numbers.identity({ ...f.input, id: "z" })).toMatchObject({ shorthand: "PS-2" });
+      expect(device.failures).toEqual([]);
+    }
   } finally {
     await f.close();
   }

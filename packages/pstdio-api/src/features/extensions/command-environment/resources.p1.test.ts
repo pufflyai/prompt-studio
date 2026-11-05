@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { extensionResourceRefSchema } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION, resourceEvents } from "pstdio-api-contracts/extension-kernel";
-import { editResourceDocument } from "pstdio-sync/records";
+import { createSyncSpace } from "pstdio-sync/encryption";
+import { compileOrderedGroup } from "pstdio-sync/records";
+import { createRecordStreamSync, encodeOrderedEntry } from "pstdio-sync/relay";
+import { numberRelayFixture } from "../../../services/relay/resource-number-sync.fixture";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createResourcesApi } from "./resources";
 
@@ -76,24 +79,52 @@ test("enabled extensions allocate declared prefixes and reject conflicting insta
       const data = event.data as { eventId?: string };
       if (event.table === "extension_events" && data.eventId === resourceEvents.renumbered.id) dispatched.resolve(data);
     });
-    const incoming = await editResourceDocument(
-      [],
-      {
-        recordId: "zz-offline",
-        replace: {
-          id: "zz-offline",
-          extensionId: "example.planner",
-          kind: "planner",
-          prefix: project.shorthand,
-          value: 1,
-          aliases: [],
-        },
-      },
-      true,
-    );
     const stream = app.deps.extensionResourceSequencesService.recordStream(project.id);
+    const space = await createSyncSpace({
+      projectId: project.id,
+      spaceOwner: null,
+      keys: [{ generation: 1, secret: "A".repeat(43) }],
+    });
+    const documentId = await space.documentId("resource-numbers");
+    const relay = numberRelayFixture().relay(documentId);
+    const sync = createRecordStreamSync({
+      space,
+      documentId,
+      relay,
+      store: stream,
+      quarantine: async () => {
+        throw new Error("Bad core data");
+      },
+    });
+    await sync.synchronize();
+    const operation = await compileOrderedGroup(
+      {
+        operationId: "offline-number",
+        edits: [
+          {
+            recordId: "aa-offline",
+            replace: {
+              id: "aa-offline",
+              extensionId: "example.planner",
+              kind: "planner",
+              prefix: project.shorthand,
+              value: 1,
+              aliases: [],
+            },
+          },
+        ],
+      },
+      new Map(),
+    );
+    const { epoch } = await stream.snapshot();
     await stream.apply(
-      [{ records: [{ recordId: "zz-offline", bytes: incoming.update! }], assets: [] }],
+      [
+        {
+          records: [encodeOrderedEntry({ type: "admission", admission: { epoch, operation, dependencies: [] } })],
+          assets: [],
+          format: "ordered",
+        },
+      ],
       await stream.open(),
     );
     expect(await dispatched.promise).toMatchObject({ projectId: project.id, eventId: resourceEvents.renumbered.id });

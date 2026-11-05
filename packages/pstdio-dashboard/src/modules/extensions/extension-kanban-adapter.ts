@@ -22,11 +22,12 @@ import { createBadgeListRenderer } from "./extension-workspace-badge-renderer";
 
 type KanbanRecord = Parameters<NonNullable<WorkbenchExtensionKanbanRendererAdapter["resolveRowResource"]>>[0];
 type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistrations>["registrations"][number];
-const hasOnlyWorkspaceBadgeResources = (value: unknown) =>
+const hasOnlyLegacyWorkspaceBadges = (value: unknown) =>
   Array.isArray(value) &&
   value.length > 0 &&
   value.every((item) => {
     if (!item || typeof item !== "object") return false;
+    if ("action" in item && item.action) return false;
     const resource = (
       item as {
         resource?: unknown;
@@ -129,9 +130,7 @@ const decorateAttribute = (
     ...attribute,
     render: (value, row) => {
       const items = row.attributes[itemsAttributeId];
-      return hasOnlyWorkspaceBadgeResources(items)
-        ? workspaceRender(value, row)
-        : (genericRender?.(value, row) ?? null);
+      return hasOnlyLegacyWorkspaceBadges(items) ? workspaceRender(value, row) : (genericRender?.(value, row) ?? null);
     },
   };
 };

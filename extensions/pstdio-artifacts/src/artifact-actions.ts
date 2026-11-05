@@ -1,7 +1,7 @@
-import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { serviceFor } from "./artifact-context";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
-import { artifactUrl } from "./contracts";
+import { artifactUrl, extensionId } from "./contracts";
 import { sitesPath } from "./mounts";
 import { artifactActionsSlot } from "./resource-kinds";
 
@@ -11,6 +11,27 @@ export const resolveResource = defineCommand({
   title: l10n("commands.resolve", "Resolve artifact"),
   params: { artifactId: artifactParam },
   run: (ctx, input) => serviceFor(ctx).resolve(input.artifactId),
+});
+
+export const resolveResources = defineCommand({
+  id: "resolve-resources",
+  title: l10n("commands.resolveMany", "Resolve linked artifacts"),
+  params: { resources: params.json<ResourceRef[]>() },
+  async run(ctx, input) {
+    const requested = input.resources ?? [];
+    if (requested.length > 100) throw new Error("Resolve at most 100 artifacts.");
+    const refs = new Map(
+      requested
+        .filter((ref) => ref.type === "artifact" && ref.extensionId === extensionId && ref.projectId === ctx.projectId)
+        .map((ref) => [resourceKey(ref), ref]),
+    );
+    if (!refs.size) return [];
+    const current = new Map((await serviceFor(ctx).list()).map((item) => [resourceKey(item.resource), item]));
+    return [...refs.keys()].flatMap((key) => {
+      const item = current.get(key);
+      return item ? [{ resource: { ...item.resource, icon: "file-code" }, target: item.target }] : [];
+    });
+  },
 });
 
 export const resolvePath = defineCommand({

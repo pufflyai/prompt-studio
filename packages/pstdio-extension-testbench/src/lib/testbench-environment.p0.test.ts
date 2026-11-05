@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createBenchEnvironment } from "./testbench-environment";
 
 test("bench file updates retain identity and expose the new bytes and metadata", async () => {
-  const { storage } = createBenchEnvironment();
+  const { storage } = await createBenchEnvironment();
   const first = await storage.files.put({ name: "before.md", data: new TextEncoder().encode("Before") });
   const changed = await storage.files.update(first.id, {
     name: "after.md",
@@ -16,7 +16,7 @@ test("bench file updates retain identity and expose the new bytes and metadata",
 });
 
 test("bench commands migrate once per storage scope and retry failed imports", async () => {
-  const { storage } = createBenchEnvironment({ kv: { title: "Seed" } });
+  const { storage } = await createBenchEnvironment({ kv: { title: "Seed" } });
   await expect(
     storage.migrate(1, async () => {
       throw new Error("Retry");
@@ -40,8 +40,8 @@ test("bench commands migrate once per storage scope and retry failed imports", a
   expect(await scoped.readLegacy("missing")).toBeUndefined();
 });
 
-test("testbench storage shares seeded records and accepts stale revisions through deprecated storage calls", async () => {
-  const { storage } = createBenchEnvironment({
+test("testbench storage shares seeded records and refuses stale conditions while deprecated writes remain unconditional", async () => {
+  const { storage } = await createBenchEnvironment({
     kv: { note: "seed" },
     collections: { notes: { a: { title: "Seeded" } } },
   });
@@ -54,23 +54,25 @@ test("testbench storage shares seeded records and accepts stale revisions throug
         operationId: "open",
         edits: [{ recordId: observed.recordId, expectedRevision: observed.revision, replace: "retained" }],
       })
-    ).status,
-  ).toBe("saved-locally");
+    ).state,
+  ).toBe("refused");
+  expect(await storage.get<string>("note")).toBe("newer");
+  await storage.set("note", "retained");
   expect(await storage.get<string>("note")).toBe("retained");
   expect(await storage.collection("notes").get("a")).toEqual({ title: "Seeded" });
 });
 
 test("testbench commands stage and read isolated immutable assets", async () => {
-  const { storage } = createBenchEnvironment();
+  const { storage } = await createBenchEnvironment();
   const asset = await storage.assets.stage({ operationId: "preview", source: new Blob(["bench asset"]) });
   await storage.assets.verifyComplete([asset]);
   expect(await new Response(await storage.assets.read(asset)).text()).toBe("bench asset");
   expect(await storage.assets.getTransfer("preview")).toMatchObject({ status: "complete", asset });
-  expect(await createBenchEnvironment().storage.assets.getTransfer("preview")).toBeUndefined();
+  expect(await (await createBenchEnvironment()).storage.assets.getTransfer("preview")).toBeUndefined();
 });
 
 test("queued requests explain their host runtime requirement in the testbench", async () => {
-  const { sessions } = createBenchEnvironment();
+  const { sessions } = await createBenchEnvironment();
   await expect(sessions.getQueuedFollowUps("session")).rejects.toThrow("host runtime");
   await expect(sessions.updateQueuedFollowUp("session", 1, { prompt: "Update request" })).rejects.toThrow(
     "host runtime",

@@ -43,7 +43,7 @@ anything.
 | Device | A client that a user has logged into the cloud from. The client's environment ID becomes its device ID. Each device belongs to one user. |
 | Cloud project | A project (workbench) that syncs through the relay. Local projects never leave the device. |
 | CRDT | A data type that merges edits made at the same time on different machines automatically, without a server. [Yjs](https://docs.yjs.dev/) is the CRDT library this PRD assumes. |
-| Document | One encrypted relay stream or native text owner. An extension's ordered record groups share its record stream; only declared collaborative text and real editable files retain Yjs history ([ADR 0134](../../adrs/0134-order-record-saves-and-declare-collaborative-text.md)). |
+| Document | One encrypted relay stream or native text owner. An extension's ordered record groups share its record stream; only declared collaborative text and real editable files retain Yjs history ([ADR 0135](../../adrs/0135-order-record-saves-and-declare-collaborative-text.md)). |
 | Update | An encrypted change to one document, produced by a client. |
 | Latest state | An encrypted copy of one document's full current state, uploaded by a client. |
 | Blob | An encrypted file stored by the relay, such as an image or an extension package. |
@@ -81,7 +81,7 @@ anything.
     immutable pending saves overlay canonical records locally and survive restarts,
     adoption and uncertain acknowledgments. Exact per-epoch receipts settle them.
     Receipt roots use bounded encrypted index pages; a writer frontier is not proof
-    that a save was accepted. See [ADR 0134](../../adrs/0134-order-record-saves-and-declare-collaborative-text.md).
+    that a save was accepted. See [ADR 0135](../../adrs/0135-order-record-saves-and-declare-collaborative-text.md).
 - R3. The relay is never the source of truth. If the relay loses its data, a device
   with a full copy can upload it again. Its founding state establishes the new order;
   other devices adopt that base and replay their unsettled immutable saves. Exact

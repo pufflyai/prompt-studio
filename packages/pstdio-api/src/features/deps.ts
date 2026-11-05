@@ -16,6 +16,7 @@ import type { createNativeAccount } from "../services/account/native-account";
 import type { createAssetTransferService } from "../services/asset-transfer-service";
 import type { createExtensionAutomationPreferencesService } from "../services/extension-automation-preferences-service";
 import type { createExtensionFileService } from "../services/extension-file-service";
+import type { ExtensionInstallations } from "../services/extension-installations";
 import type { createExtensionService } from "../services/extension-service";
 import type { createExtensionUpgradeService } from "../services/extension-upgrade-service";
 import type { createFileService } from "../services/file-service";
@@ -87,6 +88,7 @@ export interface RouteDeps {
   webviewPreferencesDBService: ReturnType<typeof createWebviewPreferencesDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
   extensionUpgradeService: ReturnType<typeof createExtensionUpgradeService>;
+  extensionInstallations: ExtensionInstallations;
   ensureExtensionWebviews: (installedExtensionId: string, webviewId?: string) => Promise<void>;
   extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionSettingsService: ReturnType<typeof createExtensionSettingsService>;

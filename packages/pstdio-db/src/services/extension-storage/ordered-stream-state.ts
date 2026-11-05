@@ -1,6 +1,6 @@
 import type { StorageOwner } from "pstdio-sync";
 import type { RecordStreamCursor } from "pstdio-sync/relay";
-import { storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { storage_record_sync as legacy, storage_ordered_owners as owners } from "../../db/schemas.pg";
 import { receiptRoots } from "./ordered-receipts-state";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
@@ -39,3 +39,9 @@ export const saveOrderedCursor = (
       ...(epoch === undefined ? {} : { epoch }),
     })
     .where(orderedOwnerWhere(owners, owner));
+
+/** Upgrading a joined legacy stream is not a device's first Cloud join. */
+export const joinedLegacyOrderedOwner = async (tx: Pick<OrderedTransaction, "select">, owner: StorageOwner) => {
+  const [row] = await tx.select({ joined: legacy.joined }).from(legacy).where(orderedOwnerWhere(legacy, owner));
+  return row?.joined ?? false;
+};

@@ -1,5 +1,5 @@
 import type { OrderedOperation, OrderedRecord } from "pstdio-sync/records";
-import { assertOrderedNumberLimits, type OrderedNumberRepair } from "./ordered-number-limits";
+import { assertOrderedNumberLimits, numberRepairContributors, type OrderedNumberRepair } from "./ordered-number-limits";
 import {
   orderedNumber,
   renumberOrderedRecord,
@@ -52,7 +52,10 @@ export const repairOrderedNumbers = async (
     if (!record || !orderedNumber(record)) continue;
     const number = orderedNumber(record)!;
     const value = (await index.preferred?.(record)) ?? (await index.next(number.prefix));
-    if (!Number.isSafeInteger(value)) throw new OrderedNumberRangeError(number.prefix, collisions);
+    if (!Number.isSafeInteger(value))
+      throw new OrderedNumberRangeError(number.prefix, [
+        ...new Set([...collisions, ...numberRepairContributors(records, [{ before: record, after: record }])]),
+      ]);
     const repaired = renumberOrderedRecord(record, value, (await index.repairStamp?.(record, value)) ?? stamp);
     repairs.push({ before: record, after: repaired });
     final.set(id, repaired);

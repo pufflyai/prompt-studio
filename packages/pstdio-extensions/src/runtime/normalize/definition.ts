@@ -23,6 +23,7 @@ const contributionKeys = new Set(
     navigationTrees: true,
     pages: true,
     placements: true,
+    projectSetup: true,
     resourceKinds: true,
     resourceHierarchyProviders: true,
     schedules: true,
@@ -187,7 +188,9 @@ export const validateExtensionDefinition = (
   runtime: Accumulator,
 ) => {
   try {
-    ext.definition = { ...ext.definition, storage: normalizeStorageDeclaration(source.definition.storage) };
+    // Source identity also identifies unchanged schedules across catalog refreshes.
+    // Validate without replacing the loader-owned definition; storage opens apply defaults.
+    normalizeStorageDeclaration(source.definition.storage);
   } catch (error) {
     runtime.diagnostics.push(
       invalidCollectionDiagnostic(
@@ -197,7 +200,6 @@ export const validateExtensionDefinition = (
         error instanceof Error ? error.message : "Invalid storage declaration",
       ),
     );
-    ext.definition = { ...ext.definition, storage: undefined };
     return false;
   }
   for (const key of Object.keys(source.definition).sort()) {
@@ -211,6 +213,35 @@ export const validateExtensionDefinition = (
         metadata: { key },
       }),
     );
+  }
+  const setup = source.definition.projectSetup;
+  if (setup?.hiddenSetting && source.definition.settings?.properties[setup.hiddenSetting]?.type !== "boolean") {
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "invalid_project_setup",
+        message: "Project setup hiddenSetting must reference a declared boolean setting",
+        extensionId: ext.id,
+        sourcePath: source.sourcePath,
+      }),
+    );
+    return false;
+  }
+  if (
+    setup &&
+    (!setup.view ||
+      setup.view.kind !== "view" ||
+      (setup.view.extensionId && setup.view.extensionId !== ext.id) ||
+      !source.definition.views?.some((view) => view.id === setup.view.id))
+  ) {
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "invalid_project_setup",
+        message: "Project setup must reference this extension's declared view",
+        extensionId: ext.id,
+        sourcePath: source.sourcePath,
+      }),
+    );
+    return false;
   }
   return validateContributionCollections(ext, source, runtime);
 };

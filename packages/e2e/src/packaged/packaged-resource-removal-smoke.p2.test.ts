@@ -8,6 +8,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { installBuiltSdk } from "../helpers/installed-sdk";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
+import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
@@ -47,6 +48,7 @@ test("packaged related loading cannot reopen a resource deleted during resolutio
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
+    await enablePackagedProjectExtension(runtime, project.id, "resource-removal");
     const page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, runtime.descriptor);

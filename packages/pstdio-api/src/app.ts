@@ -30,7 +30,6 @@ import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
-import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
 import { createNativeDocumentService } from "./services/native-documents/documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
 import { resolveNativeTextAccess } from "./services/native-documents/source-access";
@@ -141,7 +140,6 @@ const buildApp = async (
   const {
     activityEventsDBService,
     automationDBService,
-    extensionAutomationPreferencesDBService,
     extensionConnectionsDBService,
     extensionInstancesDBService,
     extensionSettingsDBService,
@@ -162,13 +160,9 @@ const buildApp = async (
     sessionQueueEntriesDBService,
     sessionQueueChanged(sessionsDBService, eventBus),
   );
-  const extensionAutomationPreferencesService = createExtensionAutomationPreferencesService({
-    db: extensionAutomationPreferencesDBService,
-    eventBus,
-  });
-
   const {
     assetTransferService,
+    extensionAutomationPreferencesService,
     extensionFileService,
     extensionSettingsService,
     fileService,
@@ -187,6 +181,7 @@ const buildApp = async (
   let deps!: RouteDeps;
   const {
     extensionConnectionService,
+    extensionInstallations,
     extensionRuntime,
     extensionStartup,
     extensionRuntimeCatalog,
@@ -205,6 +200,7 @@ const buildApp = async (
     installedExtensionSourcesDBService,
     projectService,
     provisionWorkspacesUsingSource: (sourcePath) => provisionWorkspacesUsingSource(deps, sourcePath),
+    getProjectExtensionDeps: () => deps,
     workspaceService,
     storageRoot,
   });
@@ -301,6 +297,7 @@ const buildApp = async (
     extensionService,
     extensionUpgradeService,
     extensionSettingsService,
+    extensionInstallations,
     extensionStorageService: extensionStorageDBService,
     syncService,
     activityEventsService: activityEventsDBService,

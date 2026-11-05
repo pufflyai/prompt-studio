@@ -68,17 +68,31 @@ const recordFixture = async () => {
     });
     const snapshot = async () => {
       const saved = await store.snapshot();
-      const chunk = await sealBlob(space, encodeRecordFrame({ records: saved.records, assets: [] }));
+      const chunk = await sealBlob(
+        space,
+        encodeRecordFrame({ records: saved.records, assets: [], format: store.recordFormat }),
+      );
       await relay.blobs.put(chunk.blobId, chunk.bytes);
       const remote = await relay.read(0);
       const state = await sealState(space, documentId, {
         baseStateId: remote.state?.stateId ?? null,
         through: remote.lastSequence,
         state: new TextEncoder().encode(
-          JSON.stringify({ version: 1, chunks: [{ blobId: chunk.blobId, byteLength: chunk.bytes.length }] }),
+          JSON.stringify({
+            version: 1,
+            format: store.recordFormat,
+            chunks: [{ blobId: chunk.blobId, byteLength: chunk.bytes.length }],
+          }),
         ),
-        summary: new TextEncoder().encode(JSON.stringify({ records: saved.records.length, bytes: chunk.bytes.length })),
-        blobIds: [chunk.blobId],
+        summary: new TextEncoder().encode(
+          JSON.stringify({
+            records: saved.records.length,
+            bytes: chunk.bytes.length,
+            format: store.recordFormat,
+            receiptRoot: saved.receiptRoot ?? null,
+          }),
+        ),
+        blobIds: [chunk.blobId, ...(saved.blobIds ?? [])],
       });
       expect(await relay.replace(state)).toBe(true);
       return state;

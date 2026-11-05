@@ -9,7 +9,7 @@ import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
 import { projects, storage_ordered_operations, storage_ordered_touches } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
-import { createRelay } from "./record-stream-relay.fixture";
+import { createAssets, createRelay } from "./record-stream-relay.fixture";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -34,7 +34,12 @@ const peers = async (path = ":memory:", single = false) => {
       .values({ id: projectId, name: "Board", shorthand: "B", created_at: now, updated_at: now })
       .onConflictDoNothing();
     const service = createDocumentStorageDBService(db);
-    const records = service.open({ owner, textFields: [{ prefix: "card", fields: ["/description"] }] }).records;
+    const assets = createAssets();
+    const records = service.open({
+      owner,
+      assets: assets.store,
+      textFields: [{ prefix: "card", fields: ["/description"] }],
+    }).records;
     const store = service.documents.recordStream(owner);
     const failures: unknown[] = [];
     const sync = createRecordStreamSync({
@@ -42,12 +47,14 @@ const peers = async (path = ":memory:", single = false) => {
       documentId,
       relay,
       store,
+      assets: assets.store,
       quarantine: async (failure) => {
         failures.push(failure);
       },
     });
     return {
       db,
+      assets,
       records,
       store,
       sync,
@@ -344,5 +351,25 @@ test("refusing a delayed first-join text save preserves its captured native line
     }
   }
   expect(privateText).toContain("local!");
+  expect(second.failures).toEqual([]);
+});
+
+test("first adoption uploads the asset captured by a locally settled whole-record save", async () => {
+  const [first, second] = await peers();
+  await first.records.commit({ operationId: "remote-asset-base", edits: [{ recordId: "card", replace: "remote" }] });
+  await first.sync.synchronize();
+  const bytes = new TextEncoder().encode("local attachment before Cloud");
+  const sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+  const asset = { sha256, byteLength: bytes.length, mediaType: "text/plain" };
+  second.assets.files.set(sha256, bytes);
+  await second.records.commit({
+    operationId: "local-asset",
+    edits: [{ recordId: "card", replace: "local", asset }],
+  });
+  await second.sync.synchronize();
+  await first.sync.synchronize();
+  expect((await first.records.read("card")).asset).toEqual(asset);
+  expect(first.assets.files.get(sha256)).toEqual(bytes);
+  expect(first.failures).toEqual([]);
   expect(second.failures).toEqual([]);
 });

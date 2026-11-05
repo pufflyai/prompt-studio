@@ -1,11 +1,23 @@
 import { strict as assert } from "node:assert";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
-import { orderedProjection, projectOrderedOperation, verifyOrderedOperation } from "pstdio-sync/records";
+import {
+  applyBoundedOrderedOperation,
+  compileOrderedGroup,
+  type OrderedRecord,
+  orderedProjection,
+  projectOrderedOperation,
+  verifyOrderedOperation,
+} from "pstdio-sync/records";
 import { fingerprint } from "pstdio-sync-contracts";
 import { createRow, owners, scaleStorageIndexes, seedOwner, type Workload, workload } from "storage-scale-fixture";
 import { createDb, type DbClient } from "../../db/connection.pglite";
-import { projects, storage_ordered_operations, storage_record_projections } from "../../db/schemas.pg";
+import {
+  projects,
+  storage_ordered_operations,
+  storage_ordered_receipts,
+  storage_record_projections,
+} from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createOrderedJournal } from "./ordered-journal";
 import { decodeOrderedJson, orderedOwnerWhere } from "./ordered-sql";
@@ -43,6 +55,12 @@ const verifyReceipts = async (db: DbClient, kind: Workload, count: number, churn
     .from(storage_ordered_operations)
     .where(orderedOwnerWhere(storage_ordered_operations, databaseFixtureOwner));
   const actual = new Map(receipts.map((row) => [row.operation_id, row]));
+  const decisions = await db
+    .select()
+    .from(storage_ordered_receipts)
+    .where(orderedOwnerWhere(storage_ordered_receipts, databaseFixtureOwner));
+  const accepted = new Map(decisions.map((row) => [row.operation_id, row]));
+  const views = new Map<string, OrderedRecord>();
   let seedCommits = 0;
   // The unchanged seed schedule supplies expected receipts without writing to storage.
   const target = {
@@ -52,14 +70,25 @@ const verifyReceipts = async (db: DbClient, kind: Workload, count: number, churn
         ...deleted.map((recordId) => ({ recordId, deleted: true })),
       ];
       const saved = actual.get(operationId);
-      assert(saved?.envelope, `Missing author envelope ${operationId}`);
-      assert.equal(
-        saved.request_fingerprint,
-        await fingerprint({ operationId, edits }),
-        `Invalid seed history receipt ${operationId}`,
-      );
-      const operation = await verifyOrderedOperation(decodeOrderedJson(saved.envelope));
-      assert.equal(operation.fingerprint, saved.fingerprint, `Invalid envelope identity ${operationId}`);
+      assert(saved, `Missing author identity ${operationId}`);
+      const group = { operationId, edits };
+      assert.equal(saved.request_fingerprint, await fingerprint(group), `Invalid seed history receipt ${operationId}`);
+      const operation = await compileOrderedGroup(group, views);
+      assert.equal(operation.fingerprint, saved.fingerprint, `Invalid author identity ${operationId}`);
+      if (saved.envelope) {
+        const retained = await verifyOrderedOperation(decodeOrderedJson(saved.envelope));
+        assert.equal(retained.fingerprint, operation.fingerprint, `Invalid envelope identity ${operationId}`);
+        for (const record of projectOrderedOperation(views, operation)) views.set(record.recordId, record);
+      } else {
+        const receipt = accepted.get(operationId);
+        assert(
+          saved.settled_epoch && receipt?.epoch === saved.settled_epoch && receipt.state === "accepted",
+          `Missing accepted history receipt ${operationId}`,
+        );
+        const applied = await applyBoundedOrderedOperation(views, operation, saved.settled_epoch);
+        assert.equal(applied.decision.state, "accepted");
+        for (const record of applied.records) views.set(record.recordId, record);
+      }
       seedCommits++;
     },
   };

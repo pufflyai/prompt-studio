@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
-import { createTicketParentLookup, createTicketWorkspaceLookup, TICKET_RESOURCE_KIND, ticketToRow } from "./mappers";
+import type { CollectionBadgeItem } from "@pstdio/sdk/extensions";
+import { createTicketParentLookup, TICKET_RESOURCE_KIND, ticketToRow } from "./mappers";
 import type { StoredTag, Ticket } from "./types";
 
 const ticket: Ticket = {
@@ -42,7 +42,7 @@ describe("ticketToRow", () => {
       id: "T-1",
       parent: "",
       workspace: "",
-      workspaceItems: [],
+      linkedResourceItems: [],
     });
   });
 
@@ -120,60 +120,29 @@ describe("ticketToRow", () => {
   });
 });
 
-describe("createTicketWorkspaceLookup", () => {
-  const workspace = (id: string, shorthand: string, createdAt: string): ExtensionWorkspace => ({
-    id,
-    workspace_shorthand: shorthand,
-    anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
-    root_path: `/worktrees/${shorthand}`,
-    created_at: createdAt,
+test("linked workspace navigation retains its ticket context without changing another owner's target", () => {
+  const workspace: CollectionBadgeItem = {
+    id: "workspace",
+    label: "Workspace",
+    resource: { type: "workspace", id: "ws-1", extensionId: "pstdio", projectId: "proj-1" },
+    action: { kind: "page", page: { kind: "page", id: "workspace", extensionId: "pstdio" } },
+  };
+  const artifact: CollectionBadgeItem = {
+    id: "artifact",
+    label: "Artifact",
+    resource: { type: "artifact", id: "a-1", extensionId: "example.artifacts" },
+    action: { kind: "page", page: { kind: "page", id: "artifact", extensionId: "example.artifacts" } },
+  };
+  const row = ticketToRow(ticket, "proj-1", [], new Map([[ticket.id, [workspace, artifact]]]));
+  expect(row.attributes.linkedResourceItems[0]?.action).toMatchObject({
+    kind: "page",
+    page: { kind: "page", id: "workspace", extensionId: "pstdio" },
+    parent: {
+      kind: "page",
+      page: { id: "ticket", extensionId: "pstdio.pstdio-planner" },
+      resource: { type: "ticket", id: ticket.id, projectId: "proj-1", extensionId: "pstdio.pstdio-planner" },
+    },
   });
-
-  test("attaches each workspace's latest session to its own badge item", () => {
-    const items = createTicketWorkspaceLookup(
-      [
-        workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z"),
-        workspace("workspace-2", "T-1_A2", "2026-01-03T00:00:00.000Z"),
-      ],
-      new Map([
-        ["workspace-1", { id: "session-1", status: "completed" as const }],
-        ["workspace-2", { id: "session-2", status: "in_progress" as const }],
-      ]),
-    ).get("ticket-1");
-
-    // Newest workspace first, each carrying the session of that same workspace.
-    expect(items?.map((item) => [item.id, item.session])).toEqual([
-      ["workspace-2", { id: "session-2", status: "in_progress" }],
-      ["workspace-1", { id: "session-1", status: "completed" }],
-    ]);
-  });
-
-  test("omits the session field for workspaces without sessions", () => {
-    const items = createTicketWorkspaceLookup([workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z")]).get(
-      "ticket-1",
-    );
-
-    expect(items?.[0]).not.toHaveProperty("session");
-  });
-
-  test("passes every supported session status through unchanged", () => {
-    const statuses = [
-      "queued",
-      "in_progress",
-      "awaiting_input",
-      "completed",
-      "failed",
-      "cancelled",
-      "disconnected",
-    ] as const;
-
-    for (const status of statuses) {
-      const items = createTicketWorkspaceLookup(
-        [workspace("workspace-1", "T-1_A1", "2026-01-02T00:00:00.000Z")],
-        new Map([["workspace-1", { id: "session-1", status }]]),
-      ).get("ticket-1");
-
-      expect(items?.[0]?.session).toEqual({ id: "session-1", status });
-    }
-  });
+  expect(row.attributes.linkedResourceItems[1]?.action).toEqual(artifact.action);
+  expect(workspace.action).not.toHaveProperty("parent");
 });

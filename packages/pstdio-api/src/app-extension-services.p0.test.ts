@@ -47,6 +47,7 @@ test("extension startup failure still drains another branch before disposal comp
       },
     } as never,
     provisionWorkspacesUsingSource: async () => {},
+    getProjectExtensionDeps: () => ({}) as never,
     storageRoot: root,
   });
   const ready = services.extensionRuntime.ready.catch(() => {});

@@ -164,6 +164,7 @@ const queryRecords = defineCommand({
   },
 });
 export default defineExtension({
+  storage: { records: { text: [{ prefix: "shape", fields: ["/body"] }] } },
   artifactMounts: [documents],
   storageIndexes: [
     {

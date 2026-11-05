@@ -712,6 +712,26 @@ remain scoped to the renderer; after an edit they reset its page sequence while
 keeping the previous rows visible until the replacement arrives. A stale revision
 keeps those rows and shows Retry, which reloads from the first page.
 
+
+## Project setup views (API 0.3.1 on main)
+
+An optional `projectSetup: { view, hiddenSetting? }` on `defineExtension` offers an owned,
+declared view after a newly created project opens. The host waits for authoritative enabled
+setup contributions before opening anything; absent, disabled or hidden setup shows no setup UI.
+Multiple contributions run in declaration order;
+closing one advances to the next. Ordinary project navigation does not replay setup.
+
+`hiddenSetting` names a declared boolean extension setting. When true it suppresses automatic
+setup; a device-scoped setting shares this preference across projects. Unknown or nonboolean
+keys fail extension validation. Disabling/removing an active setup contribution closes its view.
+The host owns the dialog and focus trap: webviews render standalone content with their own
+providers, without nested dialogs. Declare `placement.close` to let Skip/Finish close the calling
+overlay; that capability cannot close another placement.
+
+Reopening a folder that already has a project does not offer setup. Disabled or removed
+extensions contribute no setup. These additions require a published SDK and host containing
+API 0.3.1 and `project-setup.v1`.
+
 ## Dashboard commands and session ordering (API 0.3.1 on main)
 
 Dashboard webviews with `commands.execute` can use public `workbenchCommands` refs: `newConversation`, `openToolSearch`, `retryProjectSetup`, and `recentResources`. Pass the ref's `id` to the host capability. Commands run in the webview's selected project; stale project invocations are rejected. Setup retry uses the existing project setup service and returns only after it finishes. `recentResources` returns the five most recently opened resources in the selected project with their explicit navigation targets. It uses this device’s saved navigation activity, preserves resource ownership, and uses live built-in metadata and last-seen extension presentation refreshed by the normal view lifecycle. Removed or unavailable resources are omitted. Subscribe to `viewDataEvents.recentResourcesChanged` to refresh while a view remains open. These are dashboard commands, not server-side extension commands or CLI actions. Publish the SDK and host before extensions adopt these additions.

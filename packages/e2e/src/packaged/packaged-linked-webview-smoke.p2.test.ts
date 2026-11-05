@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionWithDependency } from "./extension-fixtures";
+import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
@@ -48,6 +49,7 @@ test("serves compiled webviews through linked package directories", async () => 
     });
     expect(created.status).toBe(201);
     const project = (await created.json()) as { id: string };
+    await enablePackagedProjectExtension(started, project.id, "dep-ext");
     const metadataResponse = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, { headers });
     expect(metadataResponse.status).toBe(200);
     const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
