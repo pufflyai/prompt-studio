@@ -5,6 +5,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { storage_personal_history_positions as positions } from "../../db/schemas.pg";
 import { createPersonalIndexCache } from "./personal-history-index-cache";
 import { applyPersonalIndexRows } from "./personal-history-index-rows";
+import { applyPendingPersonalIndex } from "./personal-history-pending";
 import {
   acceptPersonalSource,
   personalPendingPage,
@@ -54,8 +55,15 @@ export const createPersonalHistoryIndex = (db: DbClient) => {
         cursor,
         changes.map((delta) => ({ delta, pendingId })),
       ),
-    applyPending: (owner: StorageOwner, changes: { delta: PersonalIndexDelta; pendingId: string }[]) =>
-      apply(owner, null, changes),
+    async applyPending(
+      owner: StorageOwner,
+      sourceId: string,
+      changes: { delta: PersonalIndexDelta; pendingId: string }[],
+    ) {
+      const owned = structuredClone(changes);
+      const current = await cache(owner);
+      current.apply(await db.transaction((tx) => applyPendingPersonalIndex(tx, owner, sourceId, owned)));
+    },
     sourcePosition: (owner: StorageOwner, sourceId: string) => readPersonalSourcePosition(db, owner, sourceId),
     pendingPage: (owner: StorageOwner, sourceId: string, after: number) =>
       personalPendingPage(db, owner, sourceId, after),

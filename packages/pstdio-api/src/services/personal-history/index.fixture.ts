@@ -36,7 +36,11 @@ export const memoryPersonalIndexFixture = () => {
       rows.set(key(owner), values);
       if (cursor !== null) positions.set(key(owner), cursor);
     },
-    async applyPending(owner: StorageOwner, changes: { delta: PersonalIndexDelta; pendingId: string }[]) {
+    async applyPending(
+      owner: StorageOwner,
+      _sourceId: string,
+      changes: { delta: PersonalIndexDelta; pendingId: string }[],
+    ) {
       await this.apply(
         owner,
         null,
