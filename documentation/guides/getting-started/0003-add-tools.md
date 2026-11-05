@@ -13,7 +13,7 @@ Prompt Studio publishes these tools as extensions. They use the public extension
 | [Reports](../../../extensions/pstdio-reports/README.md) | Reports that agents hand to each other | `pstdio-reports` |
 | [Artifacts](../../../extensions/pstdio-artifacts/README.md) | Interactive HTML pages with saved revisions | `pstdio-artifacts` |
 
-New projects already have the agent harnesses, the base themes, and Prompt Studio Skills.
+New projects start with Home, Onboarding, base themes, Prompt Studio Skills, and performance monitoring. Onboarding offers agent harnesses and optional tools; you can choose them there or install them later through Extensions.
 
 ## Install from the dashboard
 
@@ -55,7 +55,7 @@ The CLI sends the folder to the Prompt Studio runtime it is connected to. The ru
 
 ## Turn extensions on and off
 
-Each project has its own list in **Extensions**. Use the switch next to an extension to turn it on or off for that project. An extension installed for your user appears in every project. Other existing projects list it as off until you turn it on there. A project you create later starts with every installed extension turned on.
+Each project has its own list in **Extensions**. Use the switch next to an extension to turn it on or off for that project. An extension installed for your user appears in every project. Other existing projects list it as off until you turn it on there. New projects enable the defaults; optional extensions stay off until chosen for that project.
 
 Settings and saved data belong to each project, so two projects can use the same extension in different ways.
 
