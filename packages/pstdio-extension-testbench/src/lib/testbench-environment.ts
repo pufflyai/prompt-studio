@@ -127,6 +127,9 @@ export const createBenchEnvironment = async (
     },
     sessions: {
       getConversation: queuedRequestsRequireHost,
+      getExecutionState: queuedRequestsRequireHost,
+      fork: queuedRequestsRequireHost,
+      getForkState: queuedRequestsRequireHost,
       getConversationSources: queuedRequestsRequireHost,
       getQueuedMessages: queuedRequestsRequireHost,
       stream: queuedRequestsRequireHost,

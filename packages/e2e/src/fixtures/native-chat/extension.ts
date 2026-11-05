@@ -10,6 +10,7 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 
+const fixtureHarnessId = "pstdio.workbench-fixture.harness.fake";
 const initial: ChatRendererSnapshot = { messages: [], values: {}, controls: [] };
 const watch = defineCommand({
   id: "watch",
@@ -79,7 +80,19 @@ const conversation = defineView({
       if (action.type === "operation" && action.id === "queue")
         return {
           snapshot: {
-            values: { provider: { harnessId: "fixture.agent", model: "A", params: { thinking: "A" } } },
+            nativeHarnessAccount: { controlId: "provider" },
+            controls: [
+              {
+                id: "provider",
+                name: "Provider",
+                type: "harness",
+                defaultValue: { harnessId: fixtureHarnessId },
+                lockIdentity: true,
+                preserveSettings: true,
+                settingsMode: "resolved",
+              },
+            ],
+            values: { provider: { harnessId: fixtureHarnessId, model: "A", params: { thinking: "A" } } },
             queuedFollowUps: [
               {
                 id: "queue-item",
@@ -87,7 +100,7 @@ const conversation = defineView({
                 revision: "saved-revision",
                 model: "B",
                 params: { thinking: "B" },
-                values: { provider: { harnessId: "fixture.agent", model: "B", params: { thinking: "B" } } },
+                values: { provider: { harnessId: fixtureHarnessId, model: "B", params: { thinking: "B" } } },
               },
             ],
             messages: [

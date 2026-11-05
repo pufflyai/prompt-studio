@@ -21,3 +21,10 @@ export const restoreChatDraft = (current: ChatDraft, index: number) => {
   if (!saved) throw new Error("This saved draft is no longer available.");
   return hydrateChatDraft({ ...saved, recovered: current.recovered?.filter((_, i) => i !== index) }, current);
 };
+
+/** A failed operation carries its own recoveries; none may replace earlier unsent work. */
+export const recoverChatDraft = (current: ChatDraft, failed: ChatDraft, replace: boolean) => {
+  if (!replace) return hydrateChatDraft(current, failed);
+  if (!current.recovered?.length) return failed;
+  return hydrateChatDraft(failed, { text: "", attachments: [], values: {}, recovered: current.recovered });
+};

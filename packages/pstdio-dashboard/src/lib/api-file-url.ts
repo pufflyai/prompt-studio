@@ -35,17 +35,19 @@ export const useApiFileUrl = (url: string) => {
   return apiFile ? data : url;
 };
 
-const apiFileUrlsIn = (messages: SessionMessage[]) => [
+const apiFileUrlsIn = (messages: SessionMessage[], allowed: (url: string) => boolean) => [
   ...new Set(
     messages.flatMap((message) =>
-      message.parts.flatMap((part) => (part.type === "file" && isApiFilePath(part.url) ? [part.url] : [])),
+      message.parts.flatMap((part) =>
+        part.type === "file" && isApiFilePath(part.url) && allowed(part.url) ? [part.url] : [],
+      ),
     ),
   ),
 ];
 
 /** Resolves API file parts to blob URLs, so the chat can show and open them. */
-export const useApiFileParts = (messages: SessionMessage[]) => {
-  const urls = apiFileUrlsIn(messages);
+export const useApiFileParts = (messages: SessionMessage[], allowed: (url: string) => boolean = () => true) => {
+  const urls = apiFileUrlsIn(messages, allowed);
   const resolved = useQueries({
     queries: urls.map(apiFileUrlQuery),
     combine: (results) => results.map((result) => result.data),

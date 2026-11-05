@@ -97,6 +97,8 @@ export interface ExtensionSessionSummary {
 }
 
 export interface ExtensionSessionQuery {
+  /** Case-insensitive literal title substring, applied before pagination. */
+  search?: string;
   status?: SessionStatus[];
   agent?: string;
   workspaceId?: string;

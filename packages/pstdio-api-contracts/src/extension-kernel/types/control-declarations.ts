@@ -9,6 +9,8 @@ export interface HarnessControl extends BaseControl {
   lockIdentity?: boolean;
   /** Keep saved request model/params even when discovery no longer advertises them. */
   preserveSettings?: boolean;
+  /** Emit resolved defaults on edits for services that merge persisted settings. Defaults to overrides only. */
+  settingsMode?: "overrides" | "resolved";
   defaultValue: HarnessControlValue;
 }
 

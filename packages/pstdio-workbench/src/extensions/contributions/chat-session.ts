@@ -7,7 +7,7 @@ import {
   chatRendererEventSchema,
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
-import { hydrateChatDraft, restoreChatDraft } from "./chat-draft-recovery";
+import { hydrateChatDraft, recoverChatDraft, restoreChatDraft } from "./chat-draft-recovery";
 
 export interface ChatSessionInput {
   initial?: ChatRendererSnapshot;
@@ -17,6 +17,26 @@ export interface ChatSessionInput {
   loadDraft?(): Promise<unknown>;
   saveDraft?(draft: ChatDraft): Promise<unknown>;
 }
+
+const withSnapshotValues = (draft: ChatDraft, snapshot: ChatRendererSnapshot, localValues: Set<string>) => ({
+  ...draft,
+  values: {
+    ...draft.values,
+    ...snapshot.values,
+    ...Object.fromEntries([...localValues].map((key) => [key, draft.values[key]])),
+  },
+});
+const emptyChatDraft = (draft: ChatDraft) =>
+  !draft.text && !draft.attachments.length && !draft.recovered?.length && !Object.keys(draft.values).length;
+
+const latestChatFields = (incoming: ChatRendererSnapshot, fieldClocks: Map<string, number>, issued: number) =>
+  Object.fromEntries(
+    Object.entries(incoming).filter(([key]) => {
+      if ((fieldClocks.get(key) ?? -1) > issued) return false;
+      fieldClocks.set(key, issued);
+      return true;
+    }),
+  ) as ChatRendererSnapshot;
 
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
@@ -49,25 +69,13 @@ export const createChatSession = (input: ChatSessionInput) => {
   let persistedChanges = 0;
   let persistenceError: string | undefined;
   let submission: Promise<void> | undefined;
+  let recoverableDraft: ChatDraft | undefined;
   const merge = (incoming: ChatRendererSnapshot, issued = ++clock) => {
-    const snapshot = Object.fromEntries(
-      Object.entries(incoming).filter(([key]) => {
-        if ((fieldClocks.get(key) ?? -1) > issued) return false;
-        fieldClocks.set(key, issued);
-        return true;
-      }),
-    ) as ChatRendererSnapshot;
+    const snapshot = latestChatFields(incoming, fieldClocks, issued);
     publish({
       conversation: { ...state.conversation, ...snapshot },
       loading: false,
-      draft: {
-        ...state.draft,
-        values: {
-          ...state.draft.values,
-          ...snapshot.values,
-          ...Object.fromEntries([...localValues].map((key) => [key, state.draft.values[key]])),
-        },
-      },
+      draft: withSnapshotValues(state.draft, snapshot, localValues),
     });
   };
   const accept = (value: unknown) => {
@@ -76,7 +84,16 @@ export const createChatSession = (input: ChatSessionInput) => {
     if ("patch" in event && !streamHasMessages)
       throw new Error("A chat stream must send its transcript snapshot before incremental message patches.");
     revision = event.revision;
-    if ("snapshot" in event) {
+    if ("recoverDraft" in event) {
+      changeDraft(
+        recoverChatDraft(
+          state.draft,
+          event.recoverDraft,
+          (changes === 0 && emptyChatDraft(state.draft)) || state.draft === recoverableDraft,
+        ),
+      );
+      recoverableDraft = undefined;
+    } else if ("snapshot" in event) {
       if (event.snapshot.messages) streamHasMessages = true;
       merge(event.snapshot);
     } else {
@@ -170,6 +187,8 @@ export const createChatSession = (input: ChatSessionInput) => {
   const execute = async (action: ChatRendererAction, handler = input.action) => {
     if (state.conversation.readOnly && action.type !== "openResource" && action.type !== "openLink")
       throw new Error("This conversation is read-only.");
+    if (state.conversation.queueReadOnly && action.type === "queue")
+      throw new Error("This queue is read-only. Refresh it before editing.");
     const issued = ++clock;
     const changed = changes;
     const parsed = chatRendererActionSchema.parse(action);
@@ -186,7 +205,10 @@ export const createChatSession = (input: ChatSessionInput) => {
       submission = execute(action, handler)
         .then(() => {
           // A newer draft typed during a slow send must not be cleared by the older request.
-          if (!action.questionResponse && changes === submitted) changeDraft({ text: "", attachments: [] });
+          if (!action.questionResponse && changes === submitted) {
+            changeDraft({ text: "", attachments: [] });
+            recoverableDraft = state.draft;
+          }
         })
         .catch((error) => {
           fail(error);

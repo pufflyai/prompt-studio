@@ -10,6 +10,105 @@ const deferred = <T>() => {
 };
 const message = (text: string) => ({ id: "m", role: "assistant" as const, parts: [{ type: "text" as const, text }] });
 
+test("post-submit native recovery preserves drafts that were already recovered", async () => {
+  const earlier = { text: "Earlier work", attachments: [{ id: "B", name: "B.txt" }], values: { model: "B" } };
+  const failed = { text: "Send work", attachments: [{ id: "A", name: "A.txt" }], values: { model: "A" } };
+  let saved: unknown;
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    saveDraft: async (draft) => {
+      saved = draft;
+    },
+  });
+  session.changeDraft({ ...failed, recovered: [earlier] });
+  await session.run({ type: "submit", ...failed });
+  session.accept({ revision: 0, recoverDraft: { ...failed, recovered: [] } });
+  await session.flushDraft();
+  expect(saved).toEqual({ ...failed, recovered: [earlier] });
+});
+
+test("native recovery retains hydrated unsent work even without a local edit", async () => {
+  const newer = { text: "Saved newer body", attachments: [{ id: "B", name: "B.txt" }], values: { model: "B" } };
+  const older = { text: "Failed older body", attachments: [{ id: "A", name: "A.txt" }], values: { model: "A" } };
+  let saved: unknown;
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    loadDraft: async () => newer,
+    saveDraft: async (draft) => {
+      saved = draft;
+    },
+  });
+  const release = session.retain();
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(session.getSnapshot().draft).toEqual(newer);
+  session.accept({ revision: 0, recoverDraft: older });
+  await session.flushDraft();
+  expect(saved).toEqual({ ...newer, recovered: [older] });
+  release();
+});
+
+test("late native-operation recovery saves failed work without replacing a newer draft after the view closes", async () => {
+  let saved: unknown;
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    saveDraft: async (draft) => {
+      saved = draft;
+    },
+  });
+  const failed = { text: "Native objective", attachments: [{ id: "A", name: "A.txt" }], values: { model: "B" } };
+  session.accept({ revision: 1, recoverDraft: failed });
+  await session.flushDraft();
+  expect(saved).toEqual(failed);
+  session.changeDraft({ text: "New work", attachments: [{ id: "B", name: "B.txt" }], values: { model: "C" } });
+  session.dispose();
+  session.accept({ revision: 2, recoverDraft: failed });
+  await session.flushDraft();
+  expect(saved).toMatchObject({
+    text: "New work",
+    attachments: [{ id: "B" }],
+    values: { model: "C" },
+    recovered: [failed],
+  });
+  session.accept({ revision: 2, recoverDraft: failed });
+  expect(session.getSnapshot().draft.recovered).toHaveLength(1);
+});
+
+test("degraded queues block edits while questions and stop remain available and preserve typing", async () => {
+  const actions: string[] = [];
+  const session = createChatSession({
+    initial: { queueReadOnly: true },
+    query: async () => ({}),
+    action: async (action) => {
+      actions.push(action.type);
+    },
+  });
+  session.changeDraft({ text: "Unsent work" });
+  const edit = {
+    type: "queue" as const,
+    operation: "update" as const,
+    item: { id: "q", prompt: "Queued" },
+    values: {},
+    attachments: [],
+  };
+  await expect(session.run(edit)).rejects.toThrow("queue is read-only");
+  await session.run({ type: "stop" });
+  await session.run({
+    type: "submit",
+    text: "",
+    values: {},
+    attachments: [],
+    questionResponse: { callId: "q", answers: [["Yes"]] },
+  });
+  expect(session.getSnapshot().draft.text).toBe("Unsent work");
+  session.accept({ revision: 1, snapshot: { queueReadOnly: false } });
+  await session.run(edit);
+  expect(actions).toEqual(["stop", "submit", "queue"]);
+});
+
 test("composer state exists before delayed reads, and live data wins the snapshot handoff", async () => {
   const query = deferred<{ messages: ReturnType<typeof message>[] }>();
   const session = createChatSession({

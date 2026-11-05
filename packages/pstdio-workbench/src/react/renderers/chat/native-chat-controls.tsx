@@ -63,13 +63,14 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
               : undefined
           }
           onRequestConfirmation={(modeId) => {
-            void run({ type: "confirmation", modeId }).catch(() => undefined);
+            void run({ type: "confirmation", modeId, values: draft.values }).catch(() => undefined);
           }}
           onAction={async (modeId, actionId, argument, modeSnapshot) => {
             await run({
               type: "harness",
               operation: { kind: "mode-action", modeId, actionId, argument },
               modeSnapshot,
+              values: draft.values,
             });
           }}
         />
@@ -131,6 +132,7 @@ export const nativeChatCommands = (
   conversation: ChatRendererSnapshot,
   account: NativeChatHostServices["account"],
   run: ChatSession["run"],
+  values?: ControlValueMap,
 ) => [
   ...(account?.commands ?? []),
   ...((account?.blocked ? [] : conversation.harness?.commands)
@@ -139,7 +141,7 @@ export const nativeChatCommands = (
       ...command,
       onSelect: command.composer
         ? () => {
-            void run({ type: "selectCommand", name: command.name }).catch(() => undefined);
+            void run({ type: "selectCommand", name: command.name, values }).catch(() => undefined);
           }
         : undefined,
     })) ?? []),

@@ -16,6 +16,7 @@ import { useAgents } from "@/shared/agents/use-agents";
 import { useHarnessParamDefaults } from "@/shared/agents/use-harness-param-defaults";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { useProject } from "@/shared/projects/use-project";
+import { changedHarnessParams } from "./harness-settings";
 import { parseParamRecord, serializeParamRecord } from "./param-field-shared";
 import {
   readRecentHarnessSelection,
@@ -42,7 +43,7 @@ const readHarness = (value: CommandParamFieldProps["value"]) => {
 
 export const HarnessParamField = (props: HarnessParamFieldProps) => {
   const { entry, value, disabled, onChange, workbench } = props;
-  const { lockIdentity, preserveSettings } = props.harness ?? {};
+  const { lockIdentity, preserveSettings, settingsMode } = props.harness ?? {};
   const projectId = getDashboardSelectedProjectId(workbench);
   const { data: project } = useProject(projectId);
   const { data: agents = [], isLoading: isAgentsLoading } = useAgents(projectId);
@@ -51,7 +52,11 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
   // unselected so the menu shows its empty state instead of fetching 404ing models.
   const isResolvedAgent = agents.some((agent) => agent.id === harnessId);
   const selectedAgentInfo = agents.find((agent) => agent.id === harnessId);
-  const harnessParamDefaults = useHarnessParamDefaults(projectId, isResolvedAgent ? harnessId : undefined);
+  const harnessParamDefaults = useHarnessParamDefaults(
+    projectId,
+    isResolvedAgent ? harnessId : undefined,
+    model || undefined,
+  );
   const modelsQuery = useAgentModels(harnessId, {
     enabled: Boolean(harnessId) && isResolvedAgent,
     projectId,
@@ -161,8 +166,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     onChange(serializeParamRecord(next));
   };
   const handleParamsChange = (overrides: HarnessParamValues) => {
-    // Defaults must be explicit to reset an already persisted nondefault run parameter.
-    const nextParams = { ...effectiveParamDefaults, ...overrides };
+    const nextParams = changedHarnessParams(overrides, effectiveParamDefaults, settingsMode);
     onChange(
       serializeParamRecord({
         harnessId,

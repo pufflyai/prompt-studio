@@ -47,11 +47,17 @@ Patches add/replace/remove a whole canonical message at `/messages/<index>`, or
 replace the array at `/messages`. Reduce nested content patches before emitting.
 Live fields take precedence over a delayed query; a notice-only event does not
 displace history. Reconnect keeps displayed state. Connection errors offer Retry.
-Refresh events follow the normal native renderer path.
+Refresh events follow the normal native renderer path. A versioned `recoverDraft`
+event restores work after an accepted asynchronous native operation fails. The
+host restores an unchanged cleared composer, or retains the failed work under
+`recovered` when newer text, files or settings exist; persistence follows either
+path, including after the view closes.
 
 Use `ctx.sessions.getConversation`, `getConversationSources`, `stream`,
 `getQueuedMessages` and `getHarnessCommands`; do not duplicate transcripts or
-execution. A watch command should use `ctx.sessions.retainResources(sessionId)`
+execution. Session browsing can use `ctx.sessions.query({ search, limit, cursor })`
+for a case-insensitive literal title search applied before pagination, including
+readable remote history. A watch command should use `ctx.sessions.retainResources(sessionId)`
 and close its hold in `finally`. The host aborts reads and watches when the last
 view releases them or the extension unregisters. Cancellation releases holds and
 subscriptions; it must never invoke `ctx.sessions.stop`.
@@ -65,6 +71,9 @@ attachment, or replace the draft. Queue actions carry the selected position and
 revision: pass those through to the existing queue APIs. Upload data is base64;
 use the public attachment service. Removing a chip removes a reference, not a
 possibly shared file. The host deduplicates pending submissions across placements.
+Harness command, confirmation and decision actions carry the visible control
+`values`; decisions can carry their displayed `modeSnapshot` for stale-decision
+validation. Read fresh service state before executing a captured decision.
 Service permissions and queue revision checks remain authoritative. Question replies
 send no draft attachments and leave the unsent message and its files intact.
 
@@ -79,7 +88,10 @@ Use `ctx.sessions.getExecutionState` for availability: local sessions work while
 signed out, online remote owners retain follow-up, question, approval, queue and
 stop controls through the host relay, and unavailable remote history is read only.
 Do not infer ownership by comparing an absent account device ID. Queue snapshots
-may independently be read only without disabling question replies or other controls.
+may independently be read only without disabling question replies or other controls;
+set `queueReadOnly: true` and offer a refresh operation while recovering them.
+Remote queues support editing, reordering, combining and removal, but exclude live
+steering: display “Live steering is unavailable on another device.”
 `ctx.sessions.create({ deviceId, ... })` targets an account device; omission targets
 this host. Attachment forwarding, project checks and permissions stay in core.
 A logical default workspace can have no local folder. Harnesses with optional cwd
@@ -105,6 +117,8 @@ this opt-in for a provider with its own command semantics.
 Set `nativeLinks: true` and supply `workspaceId` for the host workspace link and
 image resolver. It preserves scoped relative/absolute paths, line positions,
 resource-owned paths, canonical project links, web icons and safe external tabs.
+Native file parts reuse authenticated blob URLs for the current project’s session
+attachments and the provider’s own stored files; arbitrary API paths are excluded.
 Declared `resolveLink` and `resolveImage` callbacks keep priority, with host
 resolution as a fallback. Without opt-in the provider's handlers remain unchanged.
 
@@ -112,10 +126,13 @@ A harness control accepts `harnessId: ""` while unselected. Execution still
 requires a real installed harness. Set `lockIdentity: true` on a saved-session
 control to lock only the harness; models and parameters remain editable. Providers populate `ChatQueuedRequest.values` with the saved request settings
 under their own control IDs. The host overlays those values on the draft for
-queue editing and create-as-new; `model` and `params` are display metadata.
+queue editing and create-as-new; the trusted account binding also uses the visible
+request settings rather than the unchanged base draft. `model` and `params` are display metadata.
 Saved models no longer advertised by discovery remain unchanged. `preserveSettings: true` requests
 that behavior outside queue editing. Explicit parameter resets send resolved
-default values so a persisted nondefault value is actually replaced.
+default values when the control explicitly sets `settingsMode: "resolved"`, so a
+persisted nondefault value is actually replaced. The default `"overrides"` mode
+keeps generic settings forms sparse, including removing an override on reset.
 
 Set `snapshot.fork` to expose per-message fork actions, with a nullable
 `disabledReason`. Use `ctx.sessions.getForkState` and `ctx.sessions.fork` to reuse

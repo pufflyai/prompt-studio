@@ -1,6 +1,24 @@
 import { expect, test } from "bun:test";
 import { chatRendererActionSchema } from "pstdio-api-contracts";
+import { createChatSession } from "../../../extensions/contributions/chat-session";
+import { runNativeChatAction } from "./native-chat-action";
 import { queuedChatDraft } from "./native-chat-queue";
+
+test("queued control echoes update presentation without replacing query-derived base settings", async () => {
+  const base = { provider: { harnessId: "test.agent", model: "A", params: { thinking: "A" } } };
+  const queued = { provider: { harnessId: "test.agent", model: "B", params: { thinking: "low" } } };
+  const session = createChatSession({ query: async () => ({ values: base }), action: async () => undefined });
+  const release = session.retain();
+  await Promise.resolve();
+  expect(session.getSnapshot().draft.values).toEqual(base);
+  const act = async () => ({ snapshot: { values: queued, notice: "Queue settings checked" } });
+  await runNativeChatAction(session, { type: "control", id: "provider", values: queued }, act, true);
+  expect(session.getSnapshot().draft.values).toEqual(base);
+  expect(session.getSnapshot().conversation.notice).toBe("Queue settings checked");
+  await runNativeChatAction(session, { type: "control", id: "provider", values: queued }, act, false);
+  expect(session.getSnapshot().draft.values).toEqual(queued);
+  release();
+});
 
 test("native queue editing and create-as-new preserve queued model and params instead of the active harness settings", () => {
   const active = {

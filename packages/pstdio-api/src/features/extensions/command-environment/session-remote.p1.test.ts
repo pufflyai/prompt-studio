@@ -9,6 +9,66 @@ import {
 import { inertSessionChannelHooks } from "../../sessions/session-store.test-utils";
 import { createSessionsApi } from "./sessions";
 
+test("public title search filters local and readable remote history before a shared cursor page", async () => {
+  const handle = await createTestApp();
+  let restore = () => {};
+  try {
+    const project = await handle.deps.projectService.create({ name: "Search history" });
+    const local = await handle.deps.sessionService.create({
+      project_id: project.id,
+      title: "LOCAL needle",
+      agent: "test.agent",
+    });
+    await handle.deps.sessionService.create({ project_id: project.id, title: "Unrelated local", agent: "test.agent" });
+    const personal = spyOn(handle.deps.personalHistoryService, "sessions").mockResolvedValue([
+      {
+        ...local,
+        id: "remote-match",
+        title: "Remote Needle",
+        workspace_id: null,
+        device: { ownerId: "owner", id: "laptop", name: "Laptop" },
+        approval_requests: [],
+      },
+      {
+        ...local,
+        id: "remote-unrelated",
+        title: "Unrelated remote",
+        workspace_id: null,
+        device: { ownerId: "owner", id: "laptop", name: "Laptop" },
+        approval_requests: [],
+      },
+    ]);
+    restore = () => personal.mockRestore();
+    const api = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "SH" } });
+    const first = await api.query({ search: "needle", limit: 1 });
+    const next = await api.query({ search: "needle", limit: 1, cursor: first.nextCursor! });
+    expect([...first.items, ...next.items].map((row) => row.id).sort()).toEqual([local.id, "remote-match"].sort());
+    expect(next.nextCursor).toBeNull();
+  } finally {
+    restore();
+    await handle.close();
+  }
+});
+
+test("remote creation preserves the device's actionable rejection", async () => {
+  const handle = await createTestApp();
+  const send = spyOn(handle.deps.accountService, "sendDeviceCommand").mockResolvedValue({
+    status: 400,
+    body: { error: "Sign in to the harness on Laptop before starting." },
+  });
+  try {
+    const project = await handle.deps.projectService.create({ name: "Remote rejection" });
+    const api = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "RR" } });
+    await expect(api.create({ title: "Run", prompt: "Hello", deviceId: "laptop" })).rejects.toThrow(
+      "Sign in to the harness on Laptop before starting.",
+    );
+    expect(send).toHaveBeenCalledTimes(1);
+  } finally {
+    send.mockRestore();
+    await handle.close();
+  }
+});
+
 test("public session controls relay online-owner queue, question, approval, follow-up and stop without local execution", async () => {
   const source = await createTestApp({
     harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("remote")]),

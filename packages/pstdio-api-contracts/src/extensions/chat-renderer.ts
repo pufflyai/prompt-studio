@@ -59,6 +59,8 @@ export const chatRendererSnapshotSchema = z.strictObject({
   streaming: z.boolean().optional(),
   streamingStartedAt: z.number().optional(),
   readOnly: z.boolean().optional(),
+  /** Disable queue edits independently while other execution controls remain usable. */
+  queueReadOnly: z.boolean().optional(),
   submitDisabled: z.boolean().optional(),
   notice: z.string().optional(),
   /** Use the host's scoped workspace link/image resolver. */
@@ -72,6 +74,7 @@ export const chatRendererSnapshotSchema = z.strictObject({
     .object({
       id: z.string(),
       model: z.string().optional(),
+      modeSnapshot: harnessModeSchema.optional(),
       actions: z.array(
         z.object({
           id: z.string(),
@@ -114,10 +117,17 @@ export const chatRendererActionSchema = z.discriminatedUnion("type", [
     type: z.literal("harness"),
     operation: harnessOperationSchema,
     modeSnapshot: harnessModeSchema.optional(),
+    values: controlValuesSchema.optional(),
   }),
-  z.strictObject({ type: z.literal("selectCommand"), name: z.string() }),
-  z.strictObject({ type: z.literal("confirmation"), modeId: z.string() }),
-  z.strictObject({ type: z.literal("decision"), id: z.string(), actionId: z.string() }),
+  z.strictObject({ type: z.literal("selectCommand"), name: z.string(), values: controlValuesSchema.optional() }),
+  z.strictObject({ type: z.literal("confirmation"), modeId: z.string(), values: controlValuesSchema.optional() }),
+  z.strictObject({
+    type: z.literal("decision"),
+    id: z.string(),
+    actionId: z.string(),
+    values: controlValuesSchema.optional(),
+    modeSnapshot: harnessModeSchema.optional(),
+  }),
   z.strictObject({ type: z.literal("openResource"), id: z.string() }),
   z.strictObject({ type: z.literal("openLink"), candidate: chatLinkCandidateSchema }),
   z.strictObject({ type: z.literal("control"), id: z.string(), values: controlValuesSchema }),
@@ -146,6 +156,8 @@ export const chatRendererActionResultSchema = z.strictObject({
 const revision = z.number().int().nonnegative();
 export const chatRendererEventSchema = z.union([
   z.strictObject({ revision, snapshot: chatRendererSnapshotSchema }),
+  /** Recover a failed asynchronous operation without overwriting newer composer work. */
+  z.strictObject({ revision, recoverDraft: chatDraftSchema }),
   z.strictObject({
     revision,
     patch: z

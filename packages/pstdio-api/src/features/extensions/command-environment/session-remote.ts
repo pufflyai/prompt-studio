@@ -61,7 +61,10 @@ export const createRemoteSession = async (
       },
       input.signal ?? new AbortController().signal,
     );
-    if (result.status !== 201) throw new Error("The session could not be created on the selected device.");
+    if (result.status !== 201) {
+      const error = result.body && typeof result.body === "object" && "error" in result.body ? result.body.error : null;
+      throw new Error(typeof error === "string" ? error : "The session could not be created on the selected device.");
+    }
     const session = sessionCreateResponseSchema.parse(result.body);
     return {
       ...toExtensionSession(

@@ -146,6 +146,7 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
             action,
             linkHandler,
             conversationKey: key,
+            extensionId: view.extensionId,
             refreshKey: getWorkbenchRenderers(render.workbench).store.getState().refreshKeys[view.id],
             emptyTitle: text(body.emptyTitle),
             emptyDescription: text(body.emptyDescription),

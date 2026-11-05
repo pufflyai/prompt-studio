@@ -46,6 +46,7 @@ export const controlParamSchema = z.discriminatedUnion("type", [
     defaultValue: harness,
     lockIdentity: z.boolean().optional(),
     preserveSettings: z.boolean().optional(),
+    settingsMode: z.enum(["overrides", "resolved"]).optional(),
   }),
   z.strictObject({ ...base, ...numeric, type: z.literal("number"), defaultValue: z.number() }),
   z.strictObject({ ...base, type: z.literal("boolean"), defaultValue: z.boolean() }),
