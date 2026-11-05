@@ -444,6 +444,13 @@ the incoming snapshot available for retry; recursive receive and async handlers 
 rejected. Normal remote edits preserve local undo. When `historyId` changes, reset
 the old undo stack and selection anchors while retaining SDK-owned drafts.
 
+On `main`, after 0.46.0 (API 0.3.1), handlers receive an optional context with
+`textChanged`, `historyChanged` and `editableChanged`. When all three are false,
+a renderer may keep its queued typing until its normal publication boundary.
+Every handler still runs for every ingress. Missing context requires the usual
+synchronous drain. Text changes include CRDT deletions and replacements even when
+the visible string is unchanged; permission and history transitions keep their barriers.
+
 Use `session.createDraft()` for tentative composition and table edits. A draft owns
 its original causal history; `commit()` freezes and admits that delta, and retries
 the same submission. `cancel()` discards an unsubmitted draft, or one definitively

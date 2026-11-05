@@ -48,6 +48,40 @@ const fixture = async () => {
   };
 };
 
+test("own receipts keep subsequent typing buffered until its normal publication boundary", async () => {
+  const f = await fixture();
+  let release = () => {};
+  let submitted = () => {};
+  const firstSubmission = new Promise<void>((resolve) => {
+    submitted = resolve;
+  });
+  f.holdSubmit(
+    () =>
+      new Promise<void>((resolve) => {
+        release = resolve;
+        submitted();
+      }),
+  );
+  try {
+    f.queueText();
+    await firstSubmission;
+    expect(f.session.getSnapshot().text.toString()).toBe("source LOCAL");
+    f.queueText();
+    f.editor.read(() => {});
+    f.holdSubmit();
+    release();
+    await f.session.flush();
+    expect(f.session.getSnapshot().text.toString()).toBe("source LOCAL");
+    expect(f.frames).toHaveLength(1);
+    await f.session.close();
+    expect(f.document.getText("content").toString()).toBe("source LOCAL LOCAL");
+  } finally {
+    f.holdSubmit();
+    release();
+    await f.stop();
+  }
+});
+
 test("ordinary close drains queued Lexical text after disabling new input", async () => {
   const f = await fixture();
   try {

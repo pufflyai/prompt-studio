@@ -11,6 +11,7 @@
 - Source mapping parsed identical text spans, and each source export reparsed the unchanged loaded source and baseline.
 - Sync correctness tests passed while typing became slower as documents grew.
 - Body-change events also refreshed every resource placement and replayed unchanged page ancestry, causing shell and shortcut menus to render again. Chromium-only checks missed the more severe Firefox cost.
+- Draining buffered edits on every own acknowledgement created a receive/publish loop. After the first batch, submission followed receipt latency rather than the intended typing cadence.
 
 ## 3. Prevention
 
@@ -23,6 +24,7 @@
 - Profile typing with a representative document. Verify full input, caret/focus, and persistence as well as frame timing.
 - Reproduce the reported browser and document size. Check both slow and fast input; a good result in another browser does not close the regression.
 - Keep resource refreshes idempotent across all matching retained and visible references. An unchanged primary reference must still repair a stale duplicate. Replay ancestry only when its resource, page, parameters, section or position changes.
+- Keep all public receive callbacks, and let renderers retain their buffer only when incoming context proves unchanged text, history and write access. Probe CRDT text events rather than visible-string or state-vector equality: equal-string replacements and deletions still need a barrier.
 - Keep source spelling, reference links, tables, composition and concurrent edits covered when changing analysis.
 
 ## 4. Evidence

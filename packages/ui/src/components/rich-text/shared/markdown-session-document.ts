@@ -86,7 +86,10 @@ export const createMarkdownSessionDocument = (session: TextEditingSession, befor
     changed();
     return finishing;
   };
-  const stopReceive = session.beforeReceive(() => beforeReceive?.());
+  const stopReceive = session.beforeReceive((context) => {
+    if (context?.textChanged === false && context.historyChanged === false && context.editableChanged === false) return;
+    beforeReceive?.();
+  });
   const stopClose = session.beforeClose(() => {
     beforeReceive?.();
     if (draft && !preview)
