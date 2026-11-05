@@ -44,7 +44,7 @@ describe("isTurnInFlight", () => {
 
   it("returns false when the assistant message contains a question tool part", () => {
     const msg = assistantMessage({
-      parts: [{ type: "text" }, { type: "tool", tool: "question", state: { status: "completed" } }],
+      parts: [{ type: "text" }, { type: "tool", tool: "question", state: { status: "running" } }],
     });
     expect(isTurnInFlight([msg])).toBe(false);
   });
@@ -100,7 +100,7 @@ describe("isTurnCompleted", () => {
 
   it("returns true when the assistant message contains a question tool part", () => {
     const msg = assistantMessage({
-      parts: [{ type: "tool", tool: "question", state: { status: "completed" } }],
+      parts: [{ type: "tool", tool: "question", state: { status: "running" } }],
     });
     expect(isTurnCompleted([msg])).toBe(true);
   });

@@ -87,3 +87,29 @@ test("failed and interrupted native outcomes do not become successful replies", 
     ).toEqual({ status: outcome === "interrupted" ? "cancelled" : "failed" });
   }
 });
+
+test("an answered question stays in flight while native execution continues", () => {
+  const question: SessionMessageInfo = {
+    ...step,
+    content: [
+      {
+        type: "tool",
+        id: "call_question",
+        name: "question",
+        time: { created: 1 },
+        state: {
+          status: "completed",
+          input: { questions: [] },
+          content: [{ type: "text", text: "The user answered." }],
+        },
+      },
+    ],
+  };
+  expect(isTurnInFlight(toSessionSnapshot([question]))).toBe(true);
+  expect(isTurnCompleted(toSessionSnapshot([question]))).toBe(false);
+  expect(
+    isTurnCompleted(
+      toSessionSnapshot([question, { type: "idle", id: "msg_idle", outcome: "succeeded", time: { created: 2 } }]),
+    ),
+  ).toBe(true);
+});
