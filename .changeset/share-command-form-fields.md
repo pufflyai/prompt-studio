@@ -9,3 +9,5 @@ Expose reusable command form fields and dynamic options through the public UI pa
 Keep sidebar drag targets inside their visible scroll viewport so virtualized rows cannot intercept moves into an empty header or footer.
 
 Load complete lazy folder contents after optimistic moves and retain expanded branches when a provider snapshot refreshes.
+
+Keep queued tree move previews on one provider snapshot, and report completion of startup extension registration.

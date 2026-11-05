@@ -10,6 +10,7 @@ import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
 import { apiLogger } from "../lib/logger";
+import { traceSetupPhase } from "../lib/setup-phase";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
@@ -79,7 +80,9 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
       signal,
     });
     signal?.throwIfAborted();
-    await registerInstalledExtensionSources(deps.extensionService, installed);
+    await traceSetupPhase("default_extensions.register", {}, () =>
+      registerInstalledExtensionSources(deps.extensionService, installed),
+    );
   } catch (err) {
     if (signal?.aborted) return;
     apiLogger.warn(
