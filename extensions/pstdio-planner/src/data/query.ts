@@ -9,7 +9,7 @@ import { readStoredPlan } from "../timeline/commands/plan-store";
 import { buildPlan } from "../timeline/model/build-plan";
 import { resolvePlan } from "../timeline/model/resolve-plan";
 import { timelineTicketProperties } from "../timeline/model/ticket-properties";
-import { sortedBySortOrder } from "../utils/sort";
+import { sortedByTicketOrder } from "../utils/sort";
 import { ticketsCollection } from "./collections";
 import {
   buildTicketAttributes,
@@ -26,10 +26,12 @@ import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "./revie
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import type { TicketContext } from "./ticket-identity";
 import { ticketActivationTarget } from "./ticket-page-target";
+import type { Ticket } from "./types";
 import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "./workflow-statuses";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
 interface TicketsQueryInput {
+  tickets?: Ticket[];
   storage: ExtensionStorageApi;
   resources: TicketContext["resources"];
   projectId: string;
@@ -42,6 +44,7 @@ interface TicketsQueryInput {
 // The renderer re-applies filter, sort, and grouping locally. The query returns the
 // requested archive set, enum options, and board rules from Planner storage.
 export const runTicketsQuery = async ({
+  tickets: snapshot,
   storage,
   resources,
   projectId,
@@ -51,13 +54,13 @@ export const runTicketsQuery = async ({
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
   const [tickets, tags, statuses, storedPlan, requests] = await Promise.all([
-    ticketsCollection({ storage, resources }).list(),
+    snapshot ?? ticketsCollection({ storage, resources }).list(),
     seedDefaultTags(storage),
     seedDefaultStatuses(storage),
     readStoredPlan(storage),
     readTicketReviewRequests(storage),
   ]);
-  const activeTickets = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived));
+  const activeTickets = sortedByTicketOrder(tickets.filter((ticket) => !ticket.archived));
   const timeline = timelineTicketProperties(
     buildPlan({
       tickets: activeTickets,
@@ -88,7 +91,7 @@ export const runTicketsQuery = async ({
       ? selectedArchiveStates
       : [TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ARCHIVED],
   );
-  const rows = sortedBySortOrder(
+  const rows = sortedByTicketOrder(
     tickets.filter((ticket) =>
       requestedArchiveStates.has(ticket.archived ? TICKET_ARCHIVE_STATE_ARCHIVED : TICKET_ARCHIVE_STATE_ACTIVE),
     ),

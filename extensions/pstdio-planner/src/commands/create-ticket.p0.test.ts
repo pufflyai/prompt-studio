@@ -134,11 +134,11 @@ describe("createTicketCommand", () => {
     });
   });
 
-  test("continues shorthand and sort order after hard delete", async () => {
+  test("continues shorthand and appends after hard delete", async () => {
     const storage = createMemoryStorage();
     await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
     const second = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Second" } }));
-    await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Third" } }));
+    const third = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Third" } }));
 
     await deleteTicketCommand.run(
       ...makeCommandArgs({ storage, params: {}, overrides: { resource: { type: "ticket", id: second.id } } }),
@@ -146,7 +146,7 @@ describe("createTicketCommand", () => {
     const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Fourth" } }));
 
     expect(created.shorthand).toBe("T-4");
-    expect(created.sortOrder).toBe(3);
+    expect(created.position! > third.position!).toBe(true);
   });
 
   test("continues project shorthand after hard delete", async () => {
