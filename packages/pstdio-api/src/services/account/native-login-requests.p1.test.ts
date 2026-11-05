@@ -68,7 +68,7 @@ test("cancellation after a fulfilled credential save reports complete instead of
     const callback = new URL(start.searchParams.get("callback")!);
     callback.searchParams.set("state", start.searchParams.get("state")!);
     callback.searchParams.set("code", "controlled-code");
-    await fetch(callback).catch(() => null);
+    expect((await fetch(callback)).status).toBe(200);
     expect(await cancelled.promise).toEqual({ ok: false, status: "complete" });
     expect(persisted).toBe(true);
     expect(requests.attempt()).toEqual({ id, status: "complete" });
