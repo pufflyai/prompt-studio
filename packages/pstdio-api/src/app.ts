@@ -318,10 +318,7 @@ const buildApp = async (
     artifactMountWatch,
     automationService,
     terminalSupervisor,
-    closeDb: async () => {
-      await deps.sessionImports.close();
-      await closeAppDatabase(deps, closeDb);
-    },
+    closeDb: () => closeAppDatabase(deps, closeDb),
   });
   return account.connectAccountRelay({ app, close, deps, eventBus });
 };
