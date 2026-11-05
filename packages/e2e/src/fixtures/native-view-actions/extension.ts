@@ -14,7 +14,7 @@ let failed = false;
 const locales = defineCommand({
   id: "locales",
   title: "List locales",
-  params: { region: params.text() },
+  params: { region: params.text(), search: params.text() },
   run: async (_context, { region }) => {
     if (region === "error" && !failed) {
       failed = true;
@@ -32,6 +32,7 @@ const input = {
     defaultValue: ["a,b"],
     options: [{ value: "known", label: "Known tag" }],
   }),
+  search: params.text({ label: "Search locales" }),
   region: params.select({ required: true, options: { command: regions.ref, valueField: "id", labelField: "name" } }),
   locale: params.select({
     required: true,
@@ -39,7 +40,7 @@ const input = {
       command: locales.ref,
       valueField: "id",
       labelField: "name",
-      params: { region: params.valueOf("region") },
+      params: { region: params.valueOf("region"), search: params.valueOf("search") },
     },
   }),
 };
