@@ -177,7 +177,7 @@ const observeVariant = async (ctx: CommandContext, ticket: Ticket, attempt: Atte
       "Wait for acknowledged handoff before resuming a writer.",
     );
   if (hasPendingImplementationInput(input.requests.get(ticket.id) ?? { requests: [], errors: [] }))
-    return observation(attempt, "Implementation needs human input.", "Answer the open implementation request.");
+    return observation(attempt, "Implementation needs review input.", "Answer the open implementation request.");
   if (!session || session.last_exit?.cause === "user_stop")
     return observation(
       attempt,

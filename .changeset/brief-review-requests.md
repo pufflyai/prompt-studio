@@ -1,5 +1,5 @@
 ---
-"pstdio-planner": patch
+"pstdio-planner": minor
 ---
 
-Keep agent review requests brief and link supporting documents for details.
+Keep review request text to 80 words with supporting document links and rename the creation command to request-review.

@@ -73,7 +73,7 @@ Keep request text to at most 80 words, excluding document links. Identify the ti
 Use descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Include as many relevant links as needed. Reuse existing documents and link supporting evidence, background, and implementation detail instead of copying them into the request. Keep the choice and essential trade-offs visible without opening the links.
 
 ```bash
-pst pstdio-planner request-human --ticket PS-12 \
+pst pstdio-planner request-review --ticket PS-12 \
   --title "PS-12 · Choose when dependent work starts" \
   --instructions "**Problem:** Dependent work needs a starting point.
 

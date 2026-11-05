@@ -18,7 +18,7 @@ Previously saved task confirmations and handoffs remain readable and answerable.
 
 ## Lifecycle
 
-1. `request-human` saves the request and updates the Needs attention count. It does not start or continue an agent session.
+1. `request-review` saves the request and updates the Needs attention count. It does not start or continue an agent session.
 2. A person or an agent answers with `review` or cancels with `review-requests cancel`. Schedules, automations, and event handlers cannot do either.
 3. Each request has one current outcome: an answer or a cancellation. If the first answer races another answer or cancellation, the first write wins and the other caller sees the saved outcome.
 4. When no open request is left on the ticket, the bubble shows the resolved count. Planner does not change the ticket status; the implementation agent updates it when it continues.
@@ -40,7 +40,7 @@ Answering or cancelling the last open request resolves pending input when no unr
 ## CLI
 
 ```sh
-pst pstdio-planner request-human --ticket PS-32 \
+pst pstdio-planner request-review --ticket PS-32 \
   --title 'PS-32 · Choose when dependent work starts' \
   --instructions '**Problem:** Dependent work needs a starting point.
 
@@ -68,7 +68,7 @@ Each read returns the request with its derived `state` (`open`, `answered`, or `
 
 Requests live in the `planner-review-requests` collection. Outcomes live in `planner-review-request-outcomes`, one per request, under the request ID. A request without an outcome is open. The design is recorded in [ADR 0068](../../../documentation/adrs/0068-planner-owns-review-requests.md).
 
-Legacy free-text requests in `planner-human-requests` are not inferred as actionable requests. Inspect the ticket for a genuine unresolved decision. If one exists, create a structured request with concrete instructions and questions. Otherwise no human input is needed.
+Legacy free-text requests are not inferred as actionable requests. Inspect the ticket for a genuine unresolved decision. If one exists, create a structured request with concrete instructions and questions. Otherwise no review input is needed.
 
 Board, CLI, and timeline reads derive pending input and counts from current requests, including on archived and completed tickets. Request changes refresh readers without rewriting ticket tags. The storage upgrade removes the old Needs attention tag option and its ticket references, while preserving custom flag options and request history.
 

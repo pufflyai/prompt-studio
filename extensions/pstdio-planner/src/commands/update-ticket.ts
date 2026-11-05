@@ -18,7 +18,7 @@ import { notifyBlocked, resolveBlockedNotification } from "../planner-notificati
 import { deriveTitle } from "../utils/derive-title";
 
 // Powers the markdown editor's save-on-edit autosave and the `pst tickets update`
-// CLI path. The board passes ids; the CLI passes human names/shorthands, so the
+// CLI path. The board passes ids; the CLI passes display names/shorthands, so the
 // status, tags, parent, and dependency inputs are resolved server-side
 // (Decision 3). The ticket title is the start of the body, so a content save
 // re-derives it.

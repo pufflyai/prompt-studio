@@ -50,7 +50,7 @@ import {
   listReviewRequestsCommand,
   openReviewRequestCommand,
   readReviewRequestCommand,
-  requestHumanCommand,
+  requestReviewCommand,
   reviewCommand,
 } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
@@ -158,7 +158,7 @@ export const plannerCommands = [
   readReviewThreadCommand,
   readAttemptHistoryCommand,
   selectAttemptCommand,
-  requestHumanCommand,
+  requestReviewCommand,
   reviewCommand,
   readReviewRequestCommand,
   listReviewRequestsCommand,

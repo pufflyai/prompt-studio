@@ -4,7 +4,7 @@ import { requireTickets, resolveStatusId, resolveTagOptionIds } from "../data/re
 import { ticketTagIds } from "../data/ticket-tags";
 import { sortedBySortOrder } from "../utils/sort";
 
-// Backs `pst tickets list`. Status/tag/parent filters accept human names
+// Backs `pst tickets list`. Status/tag/parent filters accept display names
 // (Decision 3); the result is curated display rows so the router renders a tidy
 // table. `--parent` doubles as the "sub-tickets of X" query.
 export const listTicketsCommand = defineCommand({

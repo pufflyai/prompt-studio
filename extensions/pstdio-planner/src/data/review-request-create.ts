@@ -6,7 +6,7 @@ import type { AttemptState } from "./attempt-types";
 import { findTicket } from "./resolve";
 import { keepOwnedRequest, publishRequestChange } from "./review-request-service";
 import { listTicketReviewRequests, readReviewRequest, reviewRequestsCollection } from "./review-request-storage";
-import type { HumanRequestReason, ReviewRequest } from "./review-request-types";
+import type { ReviewRequest, ReviewRequestReason } from "./review-request-types";
 import { parseRequestBody } from "./review-request-validation";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuses";
 
@@ -15,7 +15,7 @@ export interface CreateReviewRequestInput {
   title: string;
   instructions: string;
   request: unknown;
-  reason?: HumanRequestReason;
+  reason?: ReviewRequestReason;
   affectedAction?: "implementation" | "merge";
   workspaceId?: string;
   revision?: number;

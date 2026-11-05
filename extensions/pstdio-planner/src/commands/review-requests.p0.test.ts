@@ -12,12 +12,13 @@ import {
 import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 import { reviewRequestCleanupHook } from "../hooks/review-request-cleanup";
 import { makeCommandContext } from "./command-context.fixture";
+import { plannerCommands } from "./index";
 import {
   cancelReviewRequestCommand,
   listReviewRequestsCommand,
   openReviewRequestCommand,
   readReviewRequestCommand,
-  requestHumanCommand,
+  requestReviewCommand,
   reviewCommand,
 } from "./review-requests";
 
@@ -26,8 +27,8 @@ const timestamp = "2026-08-18T09:00:00.000Z";
 const ticket = (id: string, statusId = "in-review") => ({
   id,
   shorthand: id.toUpperCase(),
-  title: "Human handoff",
-  content: "# Human handoff",
+  title: "Review handoff",
+  content: "# Review handoff",
   statusId,
   tags: {},
   attachments: [],
@@ -121,10 +122,28 @@ const decision = {
 };
 
 describe("review requests", () => {
+  test("the registered request-review command creates a decision that can be read and answered", async () => {
+    const { context, inputPending } = await setup();
+    const command = plannerCommands.find(({ id }) => id === "request-review");
+    expect(command).toBeDefined();
+
+    const request = (await command!.run(context() as never, decision as never)) as { id: string };
+    expect(await inputPending()).toBe(true);
+    expect(await readReviewRequestCommand.run(context(), { requestId: request.id })).toMatchObject({
+      state: "open",
+      request: { kind: "decision" },
+    });
+    await reviewCommand.run(context(), {
+      requestId: request.id,
+      response: { answers: { scope: "preview", limits: "Internal project first." } },
+    });
+    expect(await inputPending()).toBe(false);
+  });
+
   test("a fresh project creates and answers a task without starting a session", async () => {
     const { storage, created, context, inputPending } = await setup();
 
-    const request = await requestHumanCommand.run(context(), task as never);
+    const request = await requestReviewCommand.run(context(), task as never);
 
     expect(request).toMatchObject({
       state: "open",
@@ -150,7 +169,7 @@ describe("review requests", () => {
 
   test("decisions validate every question kind before saving the answer", async () => {
     const { context } = await setup();
-    const request = await requestHumanCommand.run(context(), decision as never);
+    const request = await requestReviewCommand.run(context(), decision as never);
     const answer = (answers: Record<string, unknown>) =>
       reviewCommand.run(context(), { requestId: request.id, response: { answers } as never });
 
@@ -169,8 +188,8 @@ describe("review requests", () => {
 
   test("input stays pending until the last open request is answered or cancelled", async () => {
     const { context, inputPending } = await setup();
-    const first = await requestHumanCommand.run(context(), task as never);
-    const second = await requestHumanCommand.run(context(), decision as never);
+    const first = await requestReviewCommand.run(context(), task as never);
+    const second = await requestReviewCommand.run(context(), decision as never);
 
     await reviewCommand.run(context(), { requestId: first.id, response: { confirmed: true } });
     expect(await inputPending()).toBe(true);
@@ -184,12 +203,12 @@ describe("review requests", () => {
 
   test("a saved decision can be revised without hiding other pending input", async () => {
     const { context, inputPending } = await setup();
-    const request = await requestHumanCommand.run(context(), decision as never);
+    const request = await requestReviewCommand.run(context(), decision as never);
     const answer = (answers: Record<string, string | string[]>) =>
       reviewCommand.run(context("dashboard"), { requestId: request.id, response: { answers } });
     await answer({ scope: "preview", platforms: ["mac"], limits: "Internal only" });
     expect(await inputPending()).toBe(false);
-    const pending = await requestHumanCommand.run(context(), task as never);
+    const pending = await requestReviewCommand.run(context(), task as never);
 
     await expect(answer({ scope: "beta", limits: "None" })).rejects.toThrow("Invalid choice");
     expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).outcome).toMatchObject({
@@ -214,7 +233,7 @@ describe("review requests", () => {
 
   test("cancelled decisions cannot be answered", async () => {
     const { context } = await setup();
-    const request = await requestHumanCommand.run(context(), decision as never);
+    const request = await requestReviewCommand.run(context(), decision as never);
     await cancelReviewRequestCommand.run(context(), { requestId: request.id, reason: "Withdrawn" });
     await expect(
       reviewCommand.run(context(), {
@@ -226,7 +245,7 @@ describe("review requests", () => {
 
   test("schedules, automations, and events cannot answer or cancel a request", async () => {
     const { context } = await setup();
-    const request = await requestHumanCommand.run(context("schedule"), task as never);
+    const request = await requestReviewCommand.run(context("schedule"), task as never);
 
     for (const source of ["schedule", "automation", "event"] as const) {
       await expect(
@@ -241,7 +260,7 @@ describe("review requests", () => {
 
   test("competing answers and cancellations store exactly one outcome", async () => {
     const { context } = await setup();
-    const request = await requestHumanCommand.run(context(), task as never);
+    const request = await requestReviewCommand.run(context(), task as never);
 
     const results = await Promise.allSettled([
       reviewCommand.run(context(), { requestId: request.id, response: { confirmed: true } }),
@@ -260,7 +279,7 @@ describe("review requests", () => {
 describe("review request conversations", () => {
   test("opening a request starts its conversation once and records no response", async () => {
     const { context, opened, created } = await setup();
-    const request = await requestHumanCommand.run(context(), task as never);
+    const request = await requestReviewCommand.run(context(), task as never);
 
     expect(await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id })).toMatchObject({
       id: "session-1",
@@ -268,7 +287,7 @@ describe("review request conversations", () => {
     expect(created).toHaveLength(1);
     expect(created[0]?.prompt).toContain(`pst pstdio-planner review --request-id ${request.id}`);
     expect(created[0]?.anchors).toContainEqual(
-      expect.objectContaining({ type: "planner-human-request", id: request.id, extensionId: "pstdio-planner" }),
+      expect.objectContaining({ type: "planner-review-request", id: request.id, extensionId: "pstdio-planner" }),
     );
     await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
     expect(created).toHaveLength(1);
@@ -279,7 +298,7 @@ describe("review request conversations", () => {
   test("a related ticket session stays idle until the person opens the request", async () => {
     const { context, created, followups } = await setup();
     created.push({ id: "origin", title: "Planning", anchors: [{ type: "ticket", id: "ps-1" }] });
-    const request = await requestHumanCommand.run(context(), { ...task, sessionId: "origin" } as never);
+    const request = await requestReviewCommand.run(context(), { ...task, sessionId: "origin" } as never);
 
     expect(created).toHaveLength(1);
     expect(followups).toEqual([]);
@@ -295,7 +314,7 @@ describe("review request conversations", () => {
 
   test("overlapping opens share one conversation", async () => {
     const { context, created } = await setup();
-    const request = await requestHumanCommand.run(context(), task as never);
+    const request = await requestReviewCommand.run(context(), task as never);
     const sessions = await Promise.all([
       openReviewRequestCommand.run(context("dashboard"), { requestId: request.id }),
       openReviewRequestCommand.run(context("dashboard"), { requestId: request.id }),
@@ -307,7 +326,7 @@ describe("review request conversations", () => {
 
   test("opening a saved decision preserves its answer", async () => {
     const { context, created } = await setup();
-    const request = await requestHumanCommand.run(context(), decision as never);
+    const request = await requestReviewCommand.run(context(), decision as never);
     const answered = await reviewCommand.run(context("dashboard"), {
       requestId: request.id,
       response: { answers: { scope: "preview", limits: "Internal release" } },
@@ -326,10 +345,10 @@ describe("review request conversations", () => {
 describe("review request ownership", () => {
   test("a request opened before the ticket was done can still be settled", async () => {
     const { storage, context, inputPending } = await setup();
-    const request = await requestHumanCommand.run(context(), task as never);
+    const request = await requestReviewCommand.run(context(), task as never);
     await putTicket(storage, { ...ticket("ps-1"), statusId: "done", tags: {} });
 
-    await expect(requestHumanCommand.run(context(), task as never)).rejects.toThrow("The ticket is complete.");
+    await expect(requestReviewCommand.run(context(), task as never)).rejects.toThrow("The ticket is complete.");
     await reviewCommand.run(context(), { requestId: request.id, response: { confirmed: true } });
 
     expect((await readReviewRequestCommand.run(context(), { requestId: request.id })).state).toBe("answered");
@@ -338,7 +357,7 @@ describe("review request ownership", () => {
 
   test("an answer that races ticket deletion leaves no records behind", async () => {
     const { storage, context } = await setup();
-    const request = await requestHumanCommand.run(context(), task as never);
+    const request = await requestReviewCommand.run(context(), task as never);
     const outcomes = storage.collection(REVIEW_OUTCOMES_COLLECTION);
     const insert = outcomes.createIfAbsent.bind(outcomes);
     const racing = Object.create(storage, {
@@ -367,7 +386,7 @@ describe("review request ownership", () => {
 
   test("deleting a ticket removes its requests", async () => {
     const { storage, context } = await setup();
-    const request = await requestHumanCommand.run(context(), task as never);
+    const request = await requestReviewCommand.run(context(), task as never);
     await ticketsCollection(storage).delete("ps-1");
 
     await reviewRequestCleanupHook.run(context("event") as never, { ticketId: "ps-1" });
@@ -429,8 +448,8 @@ describe("attempt handoffs", () => {
   test("a retried handoff reuses its open request and does not reuse an unrelated session", async () => {
     const { context, created, inputPending } = await setupAttempt();
 
-    const first = await requestHumanCommand.run(context("automation"), handoff as never);
-    const second = await requestHumanCommand.run(context("automation"), handoff as never);
+    const first = await requestReviewCommand.run(context("automation"), handoff as never);
+    const second = await requestReviewCommand.run(context("automation"), handoff as never);
 
     expect(second.id).toBe(first.id);
     expect(created).toHaveLength(0);
@@ -447,15 +466,15 @@ describe("attempt handoffs", () => {
   test("a changed revision refuses the handoff before writing", async () => {
     const { context, created } = await setupAttempt();
 
-    await expect(requestHumanCommand.run(context("automation"), { ...handoff, revision: 2 } as never)).rejects.toThrow(
+    await expect(requestReviewCommand.run(context("automation"), { ...handoff, revision: 2 } as never)).rejects.toThrow(
       "Attempt revision changed",
     );
     expect(created).toHaveLength(0);
   });
 
-  test("human requests preserve the chosen ticket status when a variant records evidence", async () => {
+  test("review requests preserve the chosen ticket status when a variant records evidence", async () => {
     const { storage, context } = await setupAttempt();
-    await requestHumanCommand.run(context("automation"), handoff as never);
+    await requestReviewCommand.run(context("automation"), handoff as never);
     await putTicket(storage, { ...ticket("ps-1"), tags: {} });
     const attempt = (await readAttempt(storage, "workspace-1"))!;
     await putAttempt(storage, { ...attempt, updatedAt: new Date().toISOString() });
@@ -466,7 +485,7 @@ describe("attempt handoffs", () => {
 
 test("persisted merge-only requests do not block implementation", async () => {
   const { storage, context } = await setup();
-  await requestHumanCommand.run(context(), { ...task, request: { kind: "task" }, affectedAction: "merge" } as const);
+  await requestReviewCommand.run(context(), { ...task, request: { kind: "task" }, affectedAction: "merge" } as const);
   const requests = await listTicketReviewRequests(storage, "ps-1");
   expect(requests.requests[0]!.context.affectedAction).toBe("merge");
   expect(hasPendingImplementationInput(requests)).toBe(false);
