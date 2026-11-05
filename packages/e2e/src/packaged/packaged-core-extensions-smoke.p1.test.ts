@@ -127,6 +127,18 @@ test(
           body: expect.objectContaining({ kind: "resourceList" }),
         }),
       );
+      expect(metadata.statusBarItems).toContainEqual(
+        expect.objectContaining({
+          extensionId: "pstdio.pstdio-cloud",
+          popover: expect.objectContaining({ id: "details" }),
+        }),
+      );
+      expect(metadata.settingsPanels).toContainEqual(
+        expect.objectContaining({
+          extensionId: "pstdio.pstdio-cloud",
+          slot: expect.objectContaining({ id: "global.settings" }),
+        }),
+      );
       const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
       expect(planner).toBeDefined();
       await expectPlannerIdentities({

@@ -17,6 +17,7 @@ const e2eExtension = (name: string) => ({
 // Each extension is also an e2e devDependency, so CI runs e2e for pull requests that change it.
 // pstdio-reports stays out so the Marketplace lifecycle spec can install it.
 const e2eDefaultExtensions = [
+  e2eExtension("pstdio-cloud"),
   e2eExtension("pstdio-home"),
   e2eExtension("pstdio-workspaces"),
   e2eExtension("pstdio-base-themes"),
