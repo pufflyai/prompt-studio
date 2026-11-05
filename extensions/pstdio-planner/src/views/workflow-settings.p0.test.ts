@@ -29,12 +29,46 @@ test("native workflow controls expose current status IDs, icons, colors, and sav
     color: "green",
   } as never);
   const result = await queryWorkflowSettings(ctx);
-  expect(result.values).toEqual({ ...selections, mergeTargetStatusId: "custom" });
-  expect(result.groups?.[0]?.params[0]).toMatchObject({
+  expect(result.values).toMatchObject({ ...selections, mergeTargetStatusId: "custom" });
+  expect(result.groups?.find((group) => group.id === "workflow")?.params[0]).toMatchObject({
     type: "selection",
     multiSelect: true,
     options: [{ id: "custom", icon: "status-done", color: "green" }],
   });
   await saveWorkflowSettings(ctx, { ...result.values, mergeTargetStatusId: "" });
+  expect(settings["implementation.adversarialReview"]).toBe(true);
+  expect(settings["automation.maxInProgress"]).toBe(2);
   expect(settings["workflow.statuses"]).toEqual({ ...selections, mergeTargetStatusId: null });
+});
+
+test("workflow settings offer project branches and retain a configured branch that is no longer fetched", async () => {
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      settings: { all: async () => ({ "implementation.defaultTargetBranch": "origin/old-release" }) },
+      process: {
+        run: async () => ({ exitCode: 0, stdout: "true", stderr: "" }),
+        runOrThrow: async () => ({
+          exitCode: 0,
+          stdout: "origin/main\t\norigin/release\t\norigin/HEAD\trefs/remotes/origin/main\n",
+          stderr: "",
+        }),
+      },
+    },
+  });
+  const result = await queryWorkflowSettings(ctx);
+  expect(result.groups?.[0]?.id).toBe("automation");
+  const branch = result.groups
+    ?.flatMap((group) => group.params)
+    .find((param) => param.id === "implementation.defaultTargetBranch");
+  expect(branch).toMatchObject({
+    type: "selection",
+    defaultValue: "origin/old-release",
+    options: [
+      { id: "origin/main", name: "origin/main" },
+      { id: "origin/release", name: "origin/release" },
+      { id: "origin/old-release", name: "origin/old-release (unavailable)" },
+    ],
+  });
 });

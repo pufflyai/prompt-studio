@@ -10,6 +10,7 @@ export const HOST_RUNTIME_ERROR_EVENT = "pstdio.extension.runtime-error";
 export type ThemePreference = "dark" | "light";
 
 export type InitMessage = {
+  visible?: boolean;
   keyboardShortcuts?: readonly WebviewKeyboardShortcut[];
   sizing?: "content-width" | "content-height";
   moduleUrl: string;
@@ -56,6 +57,7 @@ export type HostEventMessage = {
 };
 
 export type HostApi = {
+  visibilityUpdate: (visible: boolean) => void;
   keyboardUpdate: (shortcuts: readonly WebviewKeyboardShortcut[]) => void;
   restoreFocus: () => void;
   init: (message: InitMessage) => Promise<void>;

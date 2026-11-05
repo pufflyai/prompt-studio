@@ -154,5 +154,5 @@ test("keeps ticket creation and ticket status settings available", async ({ page
   await expect(settingsDialog.getByRole("option", { name: "Ticket status", exact: true })).toBeVisible();
   await expect(settingsDialog.getByRole("option", { name: "Ticket tags", exact: true })).toBeVisible();
   await settingsDialog.getByRole("option", { name: "Ticket status", exact: true }).click();
-  await expect(settingsDialog.getByText("Ticket status", { exact: true })).toBeVisible();
+  await expect(settingsDialog.getByRole("heading", { name: "Ticket status", exact: true })).toBeVisible();
 });

@@ -6,6 +6,7 @@ import { createPackagedHome, launchPackagedApp } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
 const performancePath = dirname(fileURLToPath(import.meta.resolve("pstdio-performance/package.json")));
 
 export type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
@@ -22,6 +23,7 @@ export const launchProject = async (name: string, options: { monitoring?: boolea
     PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
       defaultExtensions: [
         { source: fixturePath, installName: "workbench-fixture", skipInstall: true },
+        { source: homePath, installName: "pstdio-home", skipInstall: true },
         ...(options.monitoring
           ? [{ source: performancePath, installName: "pstdio-performance", skipInstall: true }]
           : []),
@@ -30,10 +32,12 @@ export const launchProject = async (name: string, options: { monitoring?: boolea
   });
   const project = await createPackagedProject(app, name);
   await openPackagedProject(app.page, project);
-  await expect(app.page.getByTestId("start-page")).toBeVisible();
+  await expect(homePage(app.page)).toBeVisible();
   if (options.monitoring) await expect.poll(async () => (await readSnapshot(app.page)) !== null).toBe(true);
   return { app, project };
 };
+
+export const homePage = (page: Page) => page.frameLocator('iframe[title="Home"]').getByTestId("start-page");
 
 export const readSnapshot = (page: Page) =>
   page.evaluate(() => (window as unknown as MonitoringBridge).promptStudioDesktop.getPerformanceSnapshot());

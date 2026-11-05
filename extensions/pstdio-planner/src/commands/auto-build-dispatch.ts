@@ -5,12 +5,24 @@ import { readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { resolveImplementationBase } from "../data/implementation-targets";
 import { withWriteGuard } from "../data/write-guard";
-import { resumeAutoBuildAttempt } from "./auto-build-resume";
+import {
+  DeviceCapacityFullError,
+  hasDeviceWorkspaceCapacity,
+  requireDeviceWorkspaceCapacity,
+} from "./auto-build-capacity";
+import { readAutoBuildResumptions, resumeAutoBuildAttempt } from "./auto-build-resume";
 import { resumeStackRepair } from "./auto-build-stack";
 import type { NextTicket } from "./next-ticket-types";
 import { readNextTickets } from "./next-tickets";
 import { repairAttempt } from "./repair-attempt";
 import { startAttempt } from "./run-attempt";
+
+async function dispatchWorkspaceId(ctx: CommandContext, candidate: NextTicket, draftWorkspaceId?: string) {
+  if (candidate.action === "recover-workspace") return undefined;
+  if (candidate.action === "start") return draftWorkspaceId;
+  if (candidate.action === "resume") return (await readAutoBuildResumptions(ctx)).get(candidate.id)?.workspaceId;
+  return candidate.workspaceId;
+}
 
 async function dispatchNext(
   ctx: CommandContext,
@@ -25,13 +37,17 @@ async function dispatchNext(
   if (candidate.action === "resume") return resumeAutoBuildAttempt(ctx, candidate.id, beforeDispatch);
   if (candidate.action === "repair") {
     await beforeDispatch();
-    return repairAttempt(ctx, {
-      workspaceId: candidate.workspaceId!,
-      expectedHeadSha: candidate.expectedHeadSha!,
-      expectedRun: candidate.expectedRun,
-      evidenceKey: candidate.evidenceKey,
-      reason: candidate.detail!,
-    });
+    return repairAttempt(
+      ctx,
+      {
+        workspaceId: candidate.workspaceId!,
+        expectedHeadSha: candidate.expectedHeadSha!,
+        expectedRun: candidate.expectedRun,
+        evidenceKey: candidate.evidenceKey,
+        reason: candidate.detail!,
+      },
+      () => requireDeviceWorkspaceCapacity(ctx, candidate.workspaceId),
+    );
   }
   if (candidate.action === "update-stack" && candidate.workspaceId)
     return resumeStackRepair(ctx, candidate.workspaceId, beforeDispatch);
@@ -50,6 +66,7 @@ async function dispatchNext(
       },
       {
         beforeDispatch,
+        beforeSessionStart: (workspaceId) => requireDeviceWorkspaceCapacity(ctx, workspaceId),
         requireMergedDependencies: (await readAutoBuildMode(ctx)).requireMergedDependencies,
         recovery: { previous, headSha: candidate.recoveryHeadSha, detail: candidate.detail ?? "Workspace unavailable" },
       },
@@ -68,6 +85,7 @@ async function dispatchNext(
     { ticket: candidate.id, ...(base ? { workspace: { providerId: "pstdio.worktree", params: { base } } } : {}) },
     {
       beforeDispatch,
+      beforeSessionStart: (workspaceId) => requireDeviceWorkspaceCapacity(ctx, workspaceId),
       workspaceId: input.workspaceId,
       requireMergedDependencies: mode.requireMergedDependencies,
     },
@@ -104,6 +122,9 @@ export const autoBuildDispatchCommand = defineCommand({
           decision: "wait" as const,
           reason: capacity.running >= capacity.limit ? "capacity-full" : "ticket-not-ready",
         };
+      const targetWorkspaceId = await dispatchWorkspaceId(ctx, candidate, input.workspaceId);
+      if (!(await hasDeviceWorkspaceCapacity(ctx, targetWorkspaceId)))
+        return { decision: "wait" as const, reason: "device-capacity-full" };
       if (!owner.sessionId) return { decision: "wait" as const, reason: "supervisor-not-ready" };
       const beforeDispatch = async (baseHeadSha?: string) => {
         const current = await readAutoBuildMode(ctx);
@@ -111,6 +132,7 @@ export const autoBuildDispatchCommand = defineCommand({
           throw new Error("Auto Build stopped or the ticket is no longer ready.");
         }
         const next = await readNextTickets(ctx, current, { base: input.base });
+        await requireDeviceWorkspaceCapacity(ctx, targetWorkspaceId);
         const latest = next.tickets.find(({ id }) => id === candidate.id);
         if (!latest || latest.action !== candidate.action || latest.workspaceId !== candidate.workspaceId)
           throw new Error("Auto Build stopped or the ticket is no longer ready.");
@@ -118,7 +140,11 @@ export const autoBuildDispatchCommand = defineCommand({
           throw new Error("The dependency revision changed. Read candidates again before dispatching.");
         if (next.snapshot !== snapshot) throw new Error("Work changed before dispatch. Read tickets next again.");
       };
-      const result = await dispatchNext(ctx, candidate, beforeDispatch, input);
+      const result = await dispatchNext(ctx, candidate, beforeDispatch, input).catch((error: unknown) => {
+        if (error instanceof DeviceCapacityFullError)
+          return { decision: "wait" as const, reason: "device-capacity-full" };
+        throw error;
+      });
       if (["started", "resumed", "queued"].includes(result.decision) && "workspaceId" in result && result.workspaceId) {
         await autoBuildDispatches(ctx, owner.sessionId).put(result.workspaceId, {
           workspaceId: result.workspaceId,

@@ -9,6 +9,7 @@ interface HorizontalTextInputProps {
   name: string;
   onChange: (id: string, value: string) => void;
   description: string;
+  changeDelay?: number;
   readOnly?: boolean;
   hideLabel?: boolean;
   tooltipPlacement?: "top" | "right" | "bottom" | "left";
@@ -22,12 +23,21 @@ export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleChange = (nextValue: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => onChange(id, nextValue), 540);
+    timeoutRef.current = null;
+    if (props.changeDelay === 0) onChange(id, nextValue);
+    else timeoutRef.current = setTimeout(() => onChange(id, nextValue), props.changeDelay ?? 540);
   };
 
   useEffect(() => {
     setValue(defaultValue);
   }, [defaultValue]);
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    },
+    [],
+  );
 
   const handleChange = (newValue: string) => {
     setValue(newValue);

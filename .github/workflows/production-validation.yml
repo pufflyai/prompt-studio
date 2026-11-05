@@ -168,13 +168,14 @@ jobs:
           pattern: production-evidence-*-attempt-${{ github.run_attempt }}
           path: production-evidence
       - name: Require complete matching candidate certification
+        if: always()
         id: certify
         env:
           PRODUCTION_RESULTS: ${{ toJSON(needs) }}
           CHANNEL: ${{ inputs.channel }}
         run: |
-          bun scripts/ci/production-candidate.ts production-candidate.json
           echo "certificate_name=production-certificate-attempt-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+          bun scripts/ci/production-candidate.ts production-candidate.json
       - name: Preserve the decision, including every blocker
         if: always()
         uses: actions/upload-artifact@v4

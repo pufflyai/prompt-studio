@@ -94,3 +94,46 @@ test("keeps a pushed snapshot when the initial read later fails", async () => {
   expect(store.getError()).toBeUndefined();
   stop();
 });
+
+test("prepares an initial reading without keeping a live subscription", async () => {
+  let subscriptions = 0;
+  const store = createSnapshotStore({
+    snapshot: async () => null,
+    subscribe: async () => {
+      subscriptions++;
+      return async () => {};
+    },
+  });
+  await Bun.sleep(0);
+  expect(store.get()).toBeNull();
+  expect(subscriptions).toBe(0);
+});
+
+test("refreshes when reopened after monitoring is disabled while hidden", async () => {
+  let current: PerformanceSnapshot | null = { version: 1, frameRate: [60] } as unknown as PerformanceSnapshot;
+  const store = createSnapshotStore({ snapshot: async () => current, subscribe: async () => async () => {} });
+  const close = store.subscribe(() => {});
+  await Bun.sleep(0);
+  close();
+  current = null;
+  await Bun.sleep(0);
+  const closeAgain = store.subscribe(() => {});
+  await Bun.sleep(0);
+  expect(store.get()).toBeNull();
+  closeAgain();
+});
+
+test("opening supersedes a pending preload captured before monitoring was disabled", async () => {
+  const preload = Promise.withResolvers<PerformanceSnapshot | null>();
+  let reads = 0;
+  const store = createSnapshotStore({
+    snapshot: () => (++reads === 1 ? preload.promise : Promise.resolve(null)),
+    subscribe: async () => async () => {},
+  });
+  const close = store.subscribe(() => {});
+  await Bun.sleep(0);
+  preload.resolve({ version: 1, frameRate: [60] } as unknown as PerformanceSnapshot);
+  await Bun.sleep(0);
+  expect(store.get()).toBeNull();
+  close();
+});

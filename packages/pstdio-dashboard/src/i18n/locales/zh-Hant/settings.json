@@ -10,11 +10,12 @@
     "retry": "重試",
     "maxConcurrentSessions": {
       "label": "最大並行工作階段數",
-      "helper": "留空表示不限制工作階段。對於一次只能執行一個工作階段的本機 LLM 設定，請設為 1。",
+      "limit": "限制並行工作階段數",
+      "helper": "關閉後允許無限數量的並行工作階段。",
       "placeholder": "none",
       "none": "無",
       "current": "目前值：{{value}}",
-      "invalid": "請輸入大於 0 的整數，或留空表示無。"
+      "invalid": "請輸入大於 0 的整數。"
     }
   },
   "agentRow": {

@@ -25,6 +25,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs and complete offline history after restart.
 // packaged-tool-result-limit.p2.test.ts bounds a 76 MB failed result, including duplicate details, across restart.
 // Packaged harnesses expose scoped account state and a private interactive account channel.
+// packaged-session-fork.p1.test.ts checks independent conversation history through the compiled CLI and host.
 // harness-npm-detection.p1.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
@@ -82,6 +83,9 @@ test(
 );
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
+  const fork = spawnSync(PACKAGED_BINARY_PATH, ["sessions", "fork", "--help"], { encoding: "utf8" });
+  expect(fork.status).toBe(0);
+  expect(fork.stdout).toContain("--id");
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {
     encoding: "utf8",
   });
