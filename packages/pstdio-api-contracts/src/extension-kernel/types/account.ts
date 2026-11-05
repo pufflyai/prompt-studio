@@ -15,6 +15,8 @@ export interface ExtensionAccountApi {
   /**
    * Starts a native browser sign-in. Omit the address to use the host's account service. Open `url` in a browser on
    * the computer that runs Prompt Studio, then poll `loginStatus` until it is no longer pending.
+   * Starting another sign-in closes the previous pending callback on this device. `status().loginAttempt`
+   * and `accountEvents.changed` expose the same operation to every view and extension.
    */
   login(managerOrigin?: string): Promise<AccountLogin>;
   loginStatus(id: string): Promise<AccountLoginStatus>;

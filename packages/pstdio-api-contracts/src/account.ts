@@ -10,6 +10,8 @@ export interface DeviceLogin {
 
 export interface AccountStatus {
   login: DeviceLogin | null;
+  /** Latest device-native sign-in. Starting another closes the previous pending callback. No credential or URL is exposed. */
+  loginAttempt?: { id: string; status: AccountLoginStatus };
   /** True after the manager rejects this device credential. Cleared by a new sign-in or explicit sign-out. */
   signInRequired?: boolean;
   /** Last loaded account grants, or null before discovery or when signed out. Relay enables Cloud early access. */

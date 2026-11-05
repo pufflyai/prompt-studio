@@ -12,7 +12,7 @@ import { createDeviceIdentity } from "./device-identity";
 import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
 import { createMissingProjectRecovery } from "./missing-project-recovery";
-import { startNativeLogin } from "./native-login";
+import { createNativeLoginRequests } from "./native-login-requests";
 import { createNativePresence } from "./native-presence";
 import { createNativeStore, type DeviceLogin } from "./native-store";
 
@@ -125,7 +125,7 @@ export const createNativeAccount = (input: {
     },
   });
   const changes = createAccountWatch();
-  const logins = new Map<string, ReturnType<typeof startNativeLogin>>();
+  const logins = createNativeLoginRequests((...args) => finishLogin(...args), changes.notify);
   let cloudProjects: { credential: string; ids: string[]; features: { relay: boolean } } | undefined;
   const projectsFor = (login: DeviceLogin | null) =>
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
@@ -222,20 +222,21 @@ export const createNativeAccount = (input: {
     return next;
   };
   // Logging out works offline and after removal. Removing the device at the manager is best effort.
-  const logout = async () => {
-    const login = await readLogin();
-    if (!login) {
-      await store.forget(null);
+  const logout = () =>
+    logins.logout(async () => {
+      const login = await readLogin();
+      if (!login) {
+        await store.forget(null);
+        await refresh();
+        return { ok: true, removed: false };
+      }
+      const removed = await managerRequest(login.managerOrigin, `${devicePath(login.deviceId)}/remove`, login.token, {})
+        .then(() => true)
+        .catch(() => false);
+      await store.forget(login.token);
       await refresh();
-      return { ok: true, removed: false };
-    }
-    const removed = await managerRequest(login.managerOrigin, `${devicePath(login.deviceId)}/remove`, login.token, {})
-      .then(() => true)
-      .catch(() => false);
-    await store.forget(login.token);
-    await refresh();
-    return { ok: true, removed };
-  };
+      return { ok: true, removed };
+    });
   const finishLogin = async (origin: string, session: string, signal: AbortSignal, user: { email: string }) => {
     const { environmentId } = await input.environment.get();
     const device = { deviceId: environmentId, name: hostname(), platform: process.platform };
@@ -281,27 +282,15 @@ export const createNativeAccount = (input: {
           "Use the https address of an account service, such as https://accounts.example.test.",
         );
       const origin = parsed.data;
-      for (const [id, login] of logins)
-        if (login.status() !== "pending") {
-          login.close();
-          logins.delete(id);
-        }
-      const id = crypto.randomUUID();
-      const login = startNativeLogin(origin, (session, signal, user) => finishLogin(origin, session, signal, user));
-      logins.set(id, login);
-      return { id, url: login.url };
+      return logins.start(origin);
     },
-    loginStatus: (id: string) => ({ status: logins.get(id)?.status() ?? "failed" }),
-    async cancelLogin(id: string) {
-      const login = logins.get(id);
-      if (login?.status() === "complete") return { ok: false, status: "complete" as const };
-      await login?.close();
-      logins.delete(id);
-      return { ok: true, status: "failed" as const };
-    },
+    loginStatus: (id: string) => ({ status: logins.status(id) }),
+    cancelLogin: logins.cancel,
     async status() {
       const { environmentId } = await input.environment.get();
-      return readAccountStatus(store, await readLogin(environmentId), cloudProjects, environmentId);
+      const account = await readAccountStatus(store, await readLogin(environmentId), cloudProjects, environmentId);
+      const loginAttempt = logins.attempt();
+      return { ...account, ...(loginAttempt ? { loginAttempt } : {}) };
     },
     async projectSyncStatus(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
@@ -341,11 +330,9 @@ export const createNativeAccount = (input: {
       presence.close();
       clearTimeout(retry);
       update = async () => {};
-      for (const login of logins.values()) login.close();
-      logins.clear();
       changes.close();
       // Startup account reads can still use the database; its owner closes only after they drain.
-      await Promise.all([refreshing, missing.close()]);
+      await Promise.all([logins.close(), refreshing, missing.close()]);
     },
   };
 };

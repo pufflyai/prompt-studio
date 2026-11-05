@@ -360,6 +360,10 @@
       "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "opencode-ai"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
+    "extensions/pstdio-onboarding": {
+      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
     "extensions/pstdio-home": {
       "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/view.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]

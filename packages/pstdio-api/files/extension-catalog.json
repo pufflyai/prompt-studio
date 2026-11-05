@@ -16,6 +16,20 @@
       "extensionId": "pstdio.pstdio-home"
     },
     {
+      "installName": "pstdio-onboarding",
+      "displayName": "Onboarding",
+      "description": "Choose harnesses and default tools when opening a new project.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-onboarding",
+        "ref": "{hostRelease}"
+      },
+      "default": true,
+      "extensionId": "pstdio.pstdio-onboarding",
+      "icon": "Sparkles"
+    },
+    {
       "installName": "harness-claude-code",
       "displayName": "Claude Code",
       "description": "Contributes the Claude Code agent harness.",
@@ -25,7 +39,7 @@
         "path": "extensions/harness-claude-code",
         "ref": "{hostRelease}"
       },
-      "default": true,
+      "default": false,
       "extensionId": "pstdio.harness-claude-code",
       "icon": "./assets/icon.svg"
     },
@@ -39,7 +53,7 @@
         "path": "extensions/harness-codex",
         "ref": "{hostRelease}"
       },
-      "default": true,
+      "default": false,
       "extensionId": "pstdio.harness-codex",
       "icon": "./assets/icon.svg"
     },
@@ -53,7 +67,7 @@
         "path": "extensions/harness-open-code",
         "ref": "{hostRelease}"
       },
-      "default": true,
+      "default": false,
       "extensionId": "pstdio.harness-open-code",
       "icon": "./assets/icon.svg"
     },

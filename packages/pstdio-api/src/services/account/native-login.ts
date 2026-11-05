@@ -10,10 +10,16 @@ const sessionSchema = z.object({
 export const startNativeLogin = (
   origin: string,
   save: (token: string, signal: AbortSignal, user: { email: string }) => Promise<void>,
+  changed: () => void = () => {},
 ) => {
   const controller = new AbortController();
   const state = randomBytes(32).toString("base64url");
   let status: "pending" | "complete" | "failed" = "pending";
+  const settle = (next: typeof status) => {
+    if (next === status) return;
+    status = next;
+    changed();
+  };
   let consuming = false;
   let saving: Promise<void> | undefined;
   const server = Bun.serve({
@@ -50,13 +56,14 @@ export const startNativeLogin = (
         controller.signal.throwIfAborted();
         saving = save(session.session.token, controller.signal, { email: session.user.email });
         await saving;
-        controller.signal.throwIfAborted();
-        status = "complete";
+        // The owner checks cancellation and rolls back before fulfilling its save.
+        // Once it fulfills, the credential is committed even if cancellation arrived in this continuation gap.
+        settle("complete");
         return new Response("Sign-in complete. You can close this window.", {
           headers: { "cache-control": "no-store", "referrer-policy": "no-referrer" },
         });
       } catch {
-        status = "failed";
+        settle("failed");
         return new Response("Sign-in failed. Start sign-in again from Prompt Studio.", {
           status: 401,
           headers: { "cache-control": "no-store" },
@@ -70,9 +77,22 @@ export const startNativeLogin = (
   const close = () => {
     controller.abort();
     clearTimeout(expiry);
-    if (status === "pending") status = "failed";
+    if (saving)
+      return saving.then(
+        () => {
+          settle("complete");
+          setTimeout(() => server.stop(true), 0);
+        },
+        () => {
+          settle("failed");
+          void server.stop(true);
+        },
+      );
+    if (status === "pending") {
+      settle("failed");
+    }
     void server.stop(true);
-    return saving?.catch(() => {}) ?? Promise.resolve();
+    return Promise.resolve();
   };
   const expiry = setTimeout(close, 3 * 60_000);
   expiry.unref();
