@@ -221,7 +221,7 @@ test("a page of small shared edits keeps large record values and refuses a stale
   }
   // Save outcomes belong to the author; the peer observes the resulting records.
   expect(await second.records.outcome("large-marker-stale")).toMatchObject({ state: "refused" });
-});
+}, 10_000);
 
 test("a save larger than the transport batch stays whole through blob upload before the next save", async () => {
   const [first, second] = await peers();

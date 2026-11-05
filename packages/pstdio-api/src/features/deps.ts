@@ -40,6 +40,7 @@ import type { ExtensionWebviewAccess } from "./extensions/extension-webview-acce
 import type { ProjectExtensionRuntimeCatalog } from "./extensions/project-extension-runtime-catalog";
 import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
 import type { RuntimeRouteDeps } from "./runtime/routes";
+import type { createSessionImportService } from "./sessions/imports/service";
 import type { createSessionQueueLifecycle } from "./sessions/session-queue-lifecycle";
 import type { EventBus } from "./sync/event-bus";
 
@@ -66,6 +67,7 @@ export interface RouteDeps {
   harnessRegistry: HarnessRegistryService;
   projectService: ReturnType<typeof createProjectService>;
   sessionService: ReturnType<typeof createSessionService>;
+  sessionImports: ReturnType<typeof createSessionImportService>;
   sessionQueueEntriesService: ReturnType<typeof createSessionQueueEntriesDBService>;
   sessionQueueLifecycle: ReturnType<typeof createSessionQueueLifecycle>;
   settingsService: ReturnType<typeof createSettingsService>;

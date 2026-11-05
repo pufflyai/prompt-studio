@@ -43,6 +43,7 @@ export * from "./resource-anchors";
 export * from "./result-recovery";
 export * from "./runtime-auth";
 export * from "./session-attachment-types";
+export * from "./session-imports";
 export * from "./session-messages";
 export * from "./session-resource-retention";
 export * from "./session-steering";

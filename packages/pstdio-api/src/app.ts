@@ -25,6 +25,7 @@ import { validateLegacyAnchors } from "./features/extensions/command-environment
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
+import { createSessionImportService } from "./features/sessions/imports/service";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
@@ -160,24 +161,14 @@ const buildApp = async (
     sessionQueueEntriesDBService,
     sessionQueueChanged(sessionsDBService, eventBus),
   );
-  const {
-    assetTransferService,
-    extensionAutomationPreferencesService,
-    extensionFileService,
-    extensionSettingsService,
-    fileService,
-    notificationService,
-    projectService,
-    syncService,
-    workspaceSessionService,
-    workspaceService,
-  } = createCoreDomainServices({
+  const core = createCoreDomainServices({
     getCommandDeps: () => deps,
     db,
     dbs,
     eventBus,
     storageRoot,
   });
+  const { fileService, notificationService, projectService, workspaceSessionService, workspaceService } = core;
   let deps!: RouteDeps;
   const {
     extensionConnectionService,
@@ -254,6 +245,7 @@ const buildApp = async (
   );
 
   deps = {
+    ...core,
     personalHistoryService: createAppPersonalHistory(extensionStorageDBService, {
       eventBus,
       account: account.accountService,
@@ -261,7 +253,6 @@ const buildApp = async (
       logs: createSessionLogFiles(storageRoot),
     }),
     accountService: account.accountService,
-    assetTransferService,
     environmentService: dbs.environmentDBService,
     storagePositions,
     artifactMountWrites,
@@ -273,33 +264,28 @@ const buildApp = async (
     eventBus,
     automationService,
     harnessRegistry,
-    projectService,
     sessionQueueEntriesService,
     sessionQueueLifecycle,
     sessionService,
+    sessionImports: createSessionImportService(
+      { sessionService, fileService, projectService, workspaceService },
+      join(storageRoot, "session-imports"),
+    ),
     settingsService,
     workspaceCapacityService,
-    workspaceService,
-    workspaceSessionService,
     skillService,
-    fileService,
     boardViewsService: boardViewsDBService,
-    notificationService,
     nativeDocuments,
     textEditing,
     installedExtensionSourcesService: installedExtensionSourcesDBService,
-    extensionAutomationPreferencesService,
     extensionConnectionService,
-    extensionFileService,
     extensionRuntimeCatalog,
     webviewPreferencesDBService: dbs.webviewPreferencesDBService,
     extensionSettingsDBService,
     extensionService,
     extensionUpgradeService,
-    extensionSettingsService,
     extensionInstallations,
     extensionStorageService: extensionStorageDBService,
-    syncService,
     activityEventsService: activityEventsDBService,
     ensureExtensionWebviews: extensionRuntime.ensureWebviews,
     terminal: terminalSupervisor.api,
@@ -332,7 +318,10 @@ const buildApp = async (
     artifactMountWatch,
     automationService,
     terminalSupervisor,
-    closeDb: () => closeAppDatabase(deps, closeDb),
+    closeDb: async () => {
+      await deps.sessionImports.close();
+      await closeAppDatabase(deps, closeDb);
+    },
   });
   return account.connectAccountRelay({ app, close, deps, eventBus });
 };

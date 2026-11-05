@@ -6,7 +6,7 @@ export type FileServiceDeps = {
   filesDBService: ReturnType<typeof createFilesDBService>;
   filesStorageService: Pick<
     ReturnType<typeof createFilesStorageService>,
-    "writeStream" | "writeFileAtPath" | "deleteFile" | "computeHash"
+    "writeStream" | "writeFileAtPath" | "deleteFile" | "computeHash" | "discardUpload"
   >;
   eventBus: EventBus;
 };
@@ -137,6 +137,12 @@ export const createFileService = (deps: FileServiceDeps) => {
     upload,
     update,
     remove,
+    discardUpload: async (projectId: string, fileId: string) => {
+      const existing = await db.get(fileId);
+      if (existing && existing.project_id !== projectId) throw new Error("Staged upload belongs to another project.");
+      if (existing) await remove(fileId);
+      else storage.discardUpload(projectId, fileId);
+    },
     removeProjectStorage,
   };
 };
