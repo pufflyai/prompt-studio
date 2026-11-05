@@ -32,6 +32,7 @@ const conversation = defineView({
       await ctx.sessions.query({ limit: 1 });
       return {
         messages: [{ id: "history", role: "assistant", parts: [{ type: "text", text: "Native transcript" }] }],
+        operations: [{ id: "ask", label: "Ask a question" }],
         controls: [
           {
             id: "model",
@@ -62,6 +63,32 @@ const conversation = defineView({
       });
     },
     async onAction(ctx, { action }) {
+      if (action.type === "operation" && action.id === "ask")
+        return {
+          snapshot: {
+            messages: [
+              {
+                id: "question",
+                role: "assistant",
+                parts: [
+                  {
+                    type: "tool",
+                    tool: "question",
+                    callId: "question",
+                    status: "pending",
+                    state: {
+                      input: { questions: [{ question: "Which validation?", options: ["Browser", "Native"] }] },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        };
+      if (action.type === "submit" && action.questionResponse) {
+        if (action.attachments.length) throw new Error("Question replies must not send draft files.");
+        return { snapshot: { messages: [], notice: "Question answered" } };
+      }
       if (action.type === "submit")
         return {
           snapshot: {

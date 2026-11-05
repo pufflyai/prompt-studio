@@ -26,18 +26,21 @@ type ChatRecord = WorkbenchExtensionMetadata["views"][number] & {
 
 const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view: ChatRecord) => {
   const body = view.body;
-  const sessions = new Map<string, ChatSession>();
+  const sessions = new Map<string, { session: ChatSession; render: WorkbenchPanelRenderInput }>();
   const sessionFor = (render: WorkbenchPanelRenderInput) => {
     const resource = render.instance.resource;
     const draftKey = resource?.id ?? body.draftKey;
     const key = JSON.stringify([input.projectId, view.id, resourceKey(resource) ?? draftKey]);
-    let session = sessions.get(key);
+    let owner = sessions.get(key);
+    if (owner) owner.render = render;
     const binding = () => {
+      const current = owner?.render ?? render;
+      const resource = current.instance.resource;
       const renderer = {
         rendererId: view.id,
         projectId: input.projectId,
         resource,
-        pageParams: render.instance.pageContext?.params,
+        pageParams: current.instance.pageContext?.params,
         modeId: input.workbench.modes.getActiveModeId(),
         invocation: { placement: "visible" },
       };
@@ -52,26 +55,26 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
           resource,
           slot,
           signal,
-          placement: render.instance.placementIdentity,
+          placement: current.instance.placementIdentity,
         });
       return { renderer, slot, run };
     };
-    const { renderer, slot, run } = binding();
-    if (!session) {
-      session = createChatSession({
+    if (!owner) {
+      const session = createChatSession({
         initial: body.initial,
-        query: (signal) => run(body.queryHandlerId, {}, signal),
-        action: (action) => run(body.actionHandlerId, { action }),
-        loadDraft: body.loadDraftHandlerId ? () => run(body.loadDraftHandlerId!, {}) : undefined,
-        saveDraft: body.saveDraftHandlerId ? (draft) => run(body.saveDraftHandlerId!, { draft }) : undefined,
+        query: (signal) => binding().run(body.queryHandlerId, {}, signal),
+        action: (action) => binding().run(body.actionHandlerId, { action }),
+        loadDraft: body.loadDraftHandlerId ? () => binding().run(body.loadDraftHandlerId!, {}) : undefined,
+        saveDraft: body.saveDraftHandlerId ? (draft) => binding().run(body.saveDraftHandlerId!, { draft }) : undefined,
         watch: body.stream
           ? (signal) => {
               if (!input.streamChatCommand) throw new Error("This host cannot stream native conversations.");
+              const { renderer, slot } = binding();
               return input.streamChatCommand(
                 commandRefId(body.stream!),
                 {
                   projectId: input.projectId,
-                  resource,
+                  resource: renderer.resource,
                   slot,
                   params: { renderer, draftKey },
                   source: "dashboard",
@@ -81,8 +84,11 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
             }
           : undefined,
       });
-      sessions.set(key, session);
+      owner = { session, render };
+      sessions.set(key, owner);
     }
+    const { session } = owner;
+    const { run } = binding();
     const linkHandler: ChatLinkHandler = {
       resolveHref: (candidate) => {
         const link = parseChatLink(candidate, typeof window === "undefined" ? undefined : window.location.origin);
@@ -137,7 +143,7 @@ const registerChat = (input: RegisterWorkbenchExtensionContributionsInput, view:
   return {
     dispose() {
       registration.dispose();
-      for (const session of sessions.values()) session.dispose();
+      for (const { session } of sessions.values()) session.dispose();
       sessions.clear();
     },
   };

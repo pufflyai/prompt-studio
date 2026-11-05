@@ -113,7 +113,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
       submitDisabled={conversation.submitDisabled || sending || uploading > 0}
       readOnlyQueue={conversation.readOnly}
       onSubmitMessage={async (text, _files, questionResponse) => {
-        await run({ type: "submit", text, attachments, values, questionResponse });
+        await run({ type: "submit", text, attachments: questionResponse ? [] : attachments, values, questionResponse });
       }}
       onInterrupt={
         conversation.streaming && !conversation.readOnly

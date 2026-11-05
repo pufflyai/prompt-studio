@@ -29,6 +29,8 @@ render; neither query, draft hydration nor connection establishment gates the
 composer. State is shared by project, view and resource. The resource ID overrides
 the fallback `draftKey`. Actions receive the invoking placement's renderer context,
 including page params, project, mode and resource, through ordinary scoped routing.
+Reads, draft persistence and new watches use the latest placement context.
+Placements sharing a resource must refer to the same conversation.
 
 ## Snapshot and stream handoff
 
@@ -63,7 +65,8 @@ attachment, or replace the draft. Queue actions carry the selected position and
 revision: pass those through to the existing queue APIs. Upload data is base64;
 use the public attachment service. Removing a chip removes a reference, not a
 possibly shared file. The host deduplicates pending submissions across placements.
-Service permissions and queue revision checks remain authoritative.
+Service permissions and queue revision checks remain authoritative. Question replies
+send no draft attachments and leave the unsent message and its files intact.
 
 `loadDraft` and `saveDraft` use extension-owned project storage. Persist the complete
 `ChatDraft`, including `recovered`. Saves wait for hydration and follow edit order.

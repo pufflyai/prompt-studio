@@ -186,7 +186,7 @@ export const createChatSession = (input: ChatSessionInput) => {
       submission = execute(action, handler)
         .then(() => {
           // A newer draft typed during a slow send must not be cleared by the older request.
-          if (changes === submitted) changeDraft({ text: "", attachments: [] });
+          if (!action.questionResponse && changes === submitted) changeDraft({ text: "", attachments: [] });
         })
         .catch((error) => {
           fail(error);

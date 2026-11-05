@@ -274,3 +274,25 @@ test("query values replace static defaults while locally selected controls win d
   expect(session.getSnapshot().draft.values).toEqual({ model: "selected", effort: "high" });
   release();
 });
+
+test("answering a native question preserves the unsent message and its files", async () => {
+  const actions: unknown[] = [];
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async (action) => {
+      actions.push(action);
+    },
+  });
+  const draft = { text: "Unsent follow-up", attachments: [{ id: "file", name: "draft.txt" }], values: {} };
+  session.changeDraft(draft);
+  const action = {
+    type: "submit" as const,
+    text: "Browser",
+    attachments: [],
+    values: {},
+    questionResponse: { callId: "question", answers: [["Browser"]] },
+  };
+  await session.run(action);
+  expect(actions).toEqual([action]);
+  expect(session.getSnapshot().draft).toEqual(draft);
+});
