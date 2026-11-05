@@ -122,6 +122,99 @@ test("fork preserves history and settings while follow-ups use a separate native
   }
 });
 
+test("forks an earlier reply without stopping the source run or consuming pending work", async () => {
+  const native = new Map([["original", structuredClone(history)]]);
+  let stopped = false;
+  const running = Promise.withResolvers<{ status: "completed" }>();
+  const harness = createTestHarnessRecord("fork", {
+    provider: {
+      fork: (_ctx, input) => {
+        expect(input.messageId).toBe("answer");
+        const messages = native.get(input.agentSessionId!)!;
+        native.set(
+          "forked",
+          structuredClone(messages.slice(0, messages.findIndex((m) => m.id === input.messageId) + 1)),
+        );
+        return { agentSessionId: "forked" };
+      },
+      getMessages: (_ctx, input) => native.get(input.agentSessionId)!,
+    },
+  });
+  const handle = await createTestApp({ harnessRegistry: createTestHarnessRegistry([harness]) });
+  try {
+    const project = await handle.deps.projectService.create({ name: "Running fork" });
+    const workspace = await handle.deps.workspaceService.createStandalone({
+      project_id: project.id,
+      name: "Workspace",
+      root_path: "/tmp/running-fork-workspace",
+    });
+    const source = await handle.deps.sessionService.create({
+      project_id: project.id,
+      title: "Source",
+      agent: testHarnessId("fork"),
+      status: "in_progress",
+    });
+    await handle.deps.sessionService.update(source.id, { agent_session_id: "original" });
+    await handle.deps.workspaceSessionService.link(workspace.id, source.id);
+    const owner = handle.deps.sessionService.store.create(source.id, {
+      onApprovalRequest() {},
+      onQuestionAsked() {},
+      onQuestionAnswered() {},
+    });
+    const conversation = await owner.conversationReady;
+    const later: SessionMessage = { id: "later", role: "user", parts: [{ type: "text", text: "Keep working" }] };
+    conversation.push({ op: "replace", path: "/messages", value: [...history, later] });
+    native.get("original")!.push(later);
+    const run = {
+      agentSessionId: "original",
+      done: running.promise,
+      stop: () => {
+        stopped = true;
+      },
+    };
+    handle.deps.sessionService.store.setSession(source.id, run);
+    await handle.deps.sessionQueueEntriesService.createSteeringDelivery(
+      { session_id: source.id, prompt: "Unconfirmed correction", request_kind: "follow_up" },
+      { id: "delivery", runStartedAt: new Date().toISOString() },
+    );
+    await handle.deps.sessionQueueEntriesService.create({
+      session_id: source.id,
+      prompt: "Queued follow-up",
+      request_kind: "follow_up",
+    });
+    const before = await handle.deps.sessionQueueEntriesService.listUndispatchedBySession(source.id);
+    expect(before).toHaveLength(2);
+    const invalid = await handle.app.request(`/v1/sessions/${source.id}/fork?messageId=later`, { method: "POST" });
+    expect(invalid.status).toBe(400);
+    const partial: SessionMessage = {
+      id: "partial",
+      role: "assistant",
+      parts: [{ type: "text", text: "Working on it" }],
+    };
+    conversation.push({ op: "add", path: "/messages/3", value: partial });
+    native.get("original")!.push(partial);
+    const unsettled = await handle.app.request(`/v1/sessions/${source.id}/fork?messageId=partial`, { method: "POST" });
+    expect(unsettled.status).toBe(409);
+    const response = await handle.app.request(`/v1/sessions/${source.id}/fork?messageId=answer`, { method: "POST" });
+    expect(response.status).toBe(201);
+    const fork = (await response.json()) as { id: string; status: string; agentSessionId: string };
+    expect(fork).toMatchObject({ status: "completed", agentSessionId: "forked" });
+    expect(fork.id).not.toBe(source.id);
+    expect(await handle.deps.sessionQueueEntriesService.listUndispatchedBySession(source.id)).toEqual(before);
+    expect(handle.deps.sessionService.store.get(source.id)).toBe(owner);
+    expect(owner.session).toBe(run);
+    expect(stopped).toBe(false);
+    expect((await handle.deps.sessionService.get(source.id))?.status).toBe("in_progress");
+    expect(conversation.getMessages()).toEqual([...history, later, partial]);
+    expect(native.get("original")).toEqual([...history, later, partial]);
+    const copied = await handle.app.request(`/v1/sessions/${fork.id}/conversation`);
+    expect(((await copied.json()) as { messages: SessionMessage[] }).messages).toEqual(history);
+  } finally {
+    running.resolve({ status: "completed" });
+    await handle.close();
+  }
+});
+
 test("fork rejects missing sessions and work that has not settled", async () => {
   const handle = await createTestApp();
   try {

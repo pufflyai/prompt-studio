@@ -3,6 +3,7 @@ import type { ResourceAnchor } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
 import { createLegacyAnchorMutations, sessionColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
+import { createSessionImportOperations } from "./session-import";
 import { createSessionQuery } from "./session-query";
 import { removeSession } from "./session-removal";
 import { type SessionStatusGuards, updateSessionStatus } from "./session-status";
@@ -308,6 +309,7 @@ export const createSessionsDBService = (db: DbClient) => {
   };
 
   return {
+    ...createSessionImportOperations(db),
     create,
     createQueuedWithEntry,
     queueExistingWithEntry,

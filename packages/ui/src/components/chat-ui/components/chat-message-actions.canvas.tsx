@@ -131,3 +131,24 @@ export const MessageForkActions: Story = {
     );
   },
 };
+
+export const ForkWhileStreaming: Story = {
+  id: "patterns-chat-message-actions--fork-while-streaming",
+  fullscreen: true,
+  description:
+    "Fork an earlier reply while the active reply keeps streaming. Copy remains available on the active reply.",
+  render: function ForkWhileStreamingExample() {
+    const [selected, setSelected] = useState<string>();
+    return (
+      <Box height="full">
+        <ChatPanel
+          {...panelProps}
+          messages={[...completedTurnMessages, ...incompleteTurnMessages]}
+          streaming
+          onForkMessage={setSelected}
+        />
+        {selected ? <Text aria-live="polite">Fork selected: {selected}</Text> : null}
+      </Box>
+    );
+  },
+};

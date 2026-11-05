@@ -43,7 +43,7 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
             message={message}
             alwaysVisible={from === "user"}
             copyAlwaysVisible={from !== "user"}
-            onForkMessage={onForkMessage}
+            onForkMessage={streaming ? undefined : onForkMessage}
             forkDisabledReason={forkDisabledReason}
           />
         ) : null}
