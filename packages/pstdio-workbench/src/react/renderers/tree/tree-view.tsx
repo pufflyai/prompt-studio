@@ -124,7 +124,7 @@ const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string
 
   const expanded = context.expandedNodeIds.includes(nodeId);
   getWorkbenchRenderers(context.workbench).setNodeExpanded(context.treeViewId, nodeId, !expanded);
-  if (expanded || context.childrenByNodeId[nodeId] || node.children) return;
+  if (expanded) return;
 
   context.loadChildren(node);
 };
