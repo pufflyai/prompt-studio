@@ -13,6 +13,7 @@ import {
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_owners as owners } from "../../db/schemas.pg";
 import { createCommitQueue } from "./commit-queue";
+import { createOrderedCommitCache } from "./ordered-commit-cache";
 import { publishCommittedOrderedGroup } from "./ordered-commit-projection";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
@@ -47,7 +48,10 @@ const prepareCommitViews = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   ids: string[],
+  cache: ReturnType<typeof createOrderedCommitCache>,
 ) => {
+  const cached = await cache.read(tx, ids);
+  if (cached) return cached;
   const row = await readOrderedOwner(tx, owner);
   if (!(await orderedOwnerJoinedCloud(tx, owner, row)) && !(await journal.pendingFor(ids, { limit: 1 })).length)
     return { views: await journal.canonical(ids), events: [] };
@@ -62,6 +66,7 @@ export const createOrderedResourceRecords = (
 ) => {
   type LegacyRecords = ReturnType<typeof createLegacyResourceRecords>;
   const queries = createRecordQueries(db, owner, deps.diagnostics);
+  const commitCache = createOrderedCommitCache(db, owner);
   let initialized: Promise<void> | undefined;
   const ready = () =>
     (initialized ??= (async () => {
@@ -94,11 +99,17 @@ export const createOrderedResourceRecords = (
     const previous = await journal.requestIdentity(group.operationId);
     if (previous) {
       if (previous !== identity) throw new Error("Operation identity reused with changed payload");
-      return { records: [], projected: 0, events: [], outcome: await savedOutcome(journal, group.operationId) };
+      return {
+        records: [],
+        projected: 0,
+        events: [],
+        outcome: await savedOutcome(journal, group.operationId),
+        cache: undefined,
+      };
     }
     const ids = group.edits.map((edit) => edit.recordId);
     const authored = new Set(ids);
-    const prepared = await prepareCommitViews(journal, tx, owner, ids);
+    const prepared = await prepareCommitViews(journal, tx, owner, ids, commitCache);
     const expected = new Map(
       ids.flatMap((id) => {
         const revision = deps.observer?.expected?.(owner, id);
@@ -123,6 +134,7 @@ export const createOrderedResourceRecords = (
     const saved = await publishCommittedOrderedGroup({ journal, tx, owner, operation, projected });
     return {
       ...saved,
+      cache: await commitCache.stage(tx, ids, views, projected, saved),
       // Projection maintenance can include other pending groups. Only this
       // command's applied writes may advance its native load observations.
       records: saved.suppressed.has(operation.operationId)
@@ -133,8 +145,9 @@ export const createOrderedResourceRecords = (
     };
   };
   const notify = (
-    result: Pick<Awaited<ReturnType<typeof commitIn>>, "records" | "projected" | "events" | "outcome">,
+    result: Pick<Awaited<ReturnType<typeof commitIn>>, "records" | "projected" | "events" | "outcome" | "cache">,
   ) => {
+    commitCache.committed(result.cache);
     if (result.projected) deps.statistics.record(result.projected);
     deps.numbersChanged?.(result.events);
     deps.changed();

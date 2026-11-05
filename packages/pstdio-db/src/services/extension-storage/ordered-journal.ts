@@ -36,6 +36,26 @@ import { lockRecordOwner } from "./record-changes";
 
 const identityError = () => new Error("Operation identity reused with changed payload");
 
+const bindOperationIdentity = async (tx: Transaction, owner: StorageOwner, id: string, identity: string) => {
+  const [row] = await tx
+    .insert(operations)
+    .values({
+      workbench_id: owner.workbenchId,
+      extension_id: owner.extensionId,
+      operation_id: id,
+      fingerprint: identity,
+    })
+    .onConflictDoUpdate({
+      target: [operations.workbench_id, operations.extension_id, operations.operation_id],
+      // Retain the original identity and payload while returning its locked row
+      // in this statement; every admission otherwise repeats a separate lookup.
+      set: { fingerprint: operations.fingerprint },
+    })
+    .returning();
+  if (row!.fingerprint !== identity) throw identityError();
+  return row!;
+};
+
 /** All calls run inside the same project/owner lock as their projection and relay cursor. */
 export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
@@ -44,15 +64,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     const [row] = await tx.select().from(operations).where(operationWhere(id));
     return row;
   };
-  const bind = async (id: string, identity: string) => {
-    await tx
-      .insert(operations)
-      .values({ ...address, operation_id: id, fingerprint: identity })
-      .onConflictDoNothing();
-    const row = (await operation(id))!;
-    if (row.fingerprint !== identity) throw identityError();
-    return row;
-  };
+  const bind = (id: string, identity: string) => bindOperationIdentity(tx, owner, id, identity);
   const cachedDecision = async (id: string, epoch: string) => {
     const [row] = await tx
       .select({

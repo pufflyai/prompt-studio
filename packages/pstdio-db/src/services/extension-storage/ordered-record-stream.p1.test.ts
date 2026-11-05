@@ -51,6 +51,54 @@ const peers = async (textFields: { prefix: string; fields: string[] }[] = []) =>
   return [await device(), await device()] as const;
 };
 
+test("later joined saves retain peer edits and other local handles after optimistic projection reuse", async () => {
+  const [first, second] = await peers();
+  await first.records.commit({ operationId: "cache-seed", edits: [{ recordId: "card", replace: { local: 1 } }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  await first.records.commit({ operationId: "cache-local", edits: [{ recordId: "card", set: { "/local": 2 } }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  await second.records.commit({ operationId: "cache-peer", edits: [{ recordId: "card", set: { "/remote": true } }] });
+  await second.sync.synchronize();
+  await first.sync.synchronize();
+  await first.records.commit({ operationId: "cache-after-peer", edits: [{ recordId: "card", set: { "/local": 3 } }] });
+  const other = first.service.open({ owner: first.owner }).records;
+  await other.commit({
+    operationId: "cache-other-handle",
+    edits: [{ recordId: "card", set: { "/other": "retained" } }],
+  });
+  await first.records.commit({
+    operationId: "cache-after-handle",
+    edits: [{ recordId: "card", set: { "/local": 4 } }],
+  });
+  expect((await first.records.read("card")).value).toEqual({ local: 4, remote: true, other: "retained" });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect((await second.records.read("card")).value).toEqual({ local: 4, remote: true, other: "retained" });
+  expect(first.failures).toEqual([]);
+  expect(second.failures).toEqual([]);
+});
+
+test("a rolled-back callback cannot become the baseline of the next optimistic save", async () => {
+  const [first, second] = await peers();
+  await first.records.commit({ operationId: "rollback-seed", edits: [{ recordId: "card", replace: { kept: 1 } }] });
+  await first.sync.synchronize();
+  await first.records.commit({ operationId: "rollback-local", edits: [{ recordId: "card", set: { "/kept": 2 } }] });
+  await expect(
+    first.records.transaction(async (records) => {
+      await records.commit({ operationId: "rolled-back", edits: [{ recordId: "card", set: { "/discard": true } }] });
+      throw new Error("Roll back the callback");
+    }),
+  ).rejects.toThrow("Roll back the callback");
+  await first.records.commit({ operationId: "after-rollback", edits: [{ recordId: "card", set: { "/next": true } }] });
+  expect((await first.records.read("card")).value).toEqual({ kept: 2, next: true });
+  expect(await first.records.outcome("rolled-back")).toBeUndefined();
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect((await second.records.read("card")).value).toEqual({ kept: 2, next: true });
+});
+
 test("ready saves share a bounded transport batch while keeping their individual atomic outcomes", async () => {
   const started = performance.now();
   const phases: { phase: string; elapsedMs: number }[] = [];
