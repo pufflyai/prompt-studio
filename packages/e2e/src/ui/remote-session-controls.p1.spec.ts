@@ -85,7 +85,7 @@ test("remote primary controls keep commands, queues, questions and approvals on 
   expect(after.targetSessions.find((session: { id: string }) => session.id === fixture.unrelatedId).status).toBe(
     "in_progress",
   );
-  await page.unroute(queueRoute);
+  await page.unrouteAll({ behavior: "wait" });
   await page.goto(sessionUrl());
   await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
   await expect(editor).toHaveAttribute("contenteditable", "true");
@@ -123,7 +123,7 @@ test("an online owner's queue recovers by itself after its automatic refresh als
   renewing = false;
   await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
   await expect(page.getByTestId("send-message-button").filter({ visible: true }).last()).toBeVisible();
-  await page.unroute(queueRoute);
+  await page.unrouteAll({ behavior: "wait" });
 });
 
 test("remote workspace files and diff open on their owner; offline history stays readable and new drafts choose a device", async ({
@@ -179,7 +179,8 @@ test("remote workspace files and diff open on their owner; offline history stays
   await expect(page.getByRole("button", { name: "Stop Response", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
   await page.getByTestId("content-editable").filter({ visible: true }).last().fill("");
-  await page.unroute(queueRoute);
+  // Queue refreshes may still be inside route.fetch; finish their overrides before restoring delivery.
+  await page.unrouteAll({ behavior: "wait" });
   await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
   await expect(page.getByTestId("content-editable").filter({ visible: true }).last()).toHaveAttribute(
     "contenteditable",
