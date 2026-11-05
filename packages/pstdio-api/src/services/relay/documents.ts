@@ -7,6 +7,7 @@ import { createRelayDocumentJobs, RelayDocumentRetiredError } from "./document-j
 import { documentProgress } from "./document-progress";
 import { createRelayLogs } from "./logs";
 import { createSyncQuarantine } from "./quarantine";
+import { traceRecordStreamStore } from "./record-stream-progress";
 import type { RelayWorkbench } from "./runtime";
 
 export const createExtensionDocumentSync = (input: {
@@ -67,7 +68,7 @@ export const createExtensionDocumentSync = (input: {
       space,
       documentId: recordStreamId,
       relay: relay(recordStreamId),
-      store: deps.extensionStorageService.documents.recordStream(owner),
+      store: traceRecordStreamStore(owner, deps.extensionStorageService.documents.recordStream(owner)),
       assets: createRecordAssets(deps.assetTransferService, owner, workSignal),
       quarantine: quarantine(recordStreamId),
     });
