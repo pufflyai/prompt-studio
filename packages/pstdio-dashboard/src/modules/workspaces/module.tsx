@@ -258,8 +258,8 @@ export const createWorkspacesModule = () =>
           );
         },
       });
-      registerWorkspaceResourceActions(ctx);
       registerWorkspaceHostActions(ctx);
+      registerWorkspaceResourceActions(ctx);
       registerWorkspaceDataTableView(ctx);
       registerWorkspaceDetailWidgets(ctx);
       registerWorkspacesPage(ctx);
