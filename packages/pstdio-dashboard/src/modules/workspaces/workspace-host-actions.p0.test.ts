@@ -69,3 +69,63 @@ test("terminal and reveal use the live scoped target instead of caller path meta
     ),
   ).rejects.toThrow("project");
 });
+
+test("command navigation opens the explicit clicked workspace when another workspace is active", async () => {
+  const { createWorkbench } = await import("@pstdio/workbench");
+  const { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_WIDGET_ID } = await import("@pstdio/workbench/react");
+  const { registerWorkspaceHostActions } = await import("./workspace-host-actions");
+  const { dashboardCommandIds } = await import("@/shared/app/commands");
+  const workbench = createWorkbench();
+  workbench.registerModule(createWorkbenchTerminalModule());
+  workbench.modes.registerMode({ id: "project", activate() {} });
+  workbench.views.registerView({
+    id: "test.workspace",
+    title: "Workspace",
+    body: { kind: "react", render: () => null },
+  });
+  const page = { kind: "page" as const, extensionId: "test", id: "workspace" };
+  workbench.pages.registerPage({
+    id: "test.workspace",
+    ref: page,
+    path: "workspace",
+    modeId: "project",
+    resource: { kinds: [{ kind: "resource-kind", id: "workspace" }] },
+    main: { kind: "panels" },
+    slots: [],
+  });
+  workbench.pageLocations.setProject("project");
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page,
+    resource: { type: "workspace", id: "active", projectId: "project" },
+  });
+  let resolved: string | undefined;
+  workbench.registerModule({
+    id: "test.host-actions",
+    activate: (ctx) => {
+      registerWorkspaceHostActions(ctx, async (_ctx, resource) => {
+        resolved = resource.id;
+        return {
+          ...resource,
+          metadata: {
+            workspaceId: resource.id,
+            workspacePath: "/scope/clicked",
+            workspaceProviderState: "ready",
+            workspaceExecutionKind: "local",
+          },
+        };
+      });
+    },
+  });
+  await workbench.commands.executeCommand(
+    dashboardCommandIds.openWorkspaceTerminal,
+    { workspaceId: "clicked" },
+    { projectId: "project" },
+  );
+  expect(resolved).toBe("clicked");
+  expect(
+    workbench.layout.listPanelInstances("secondary").find((panel) => panel.viewId === WORKBENCH_TERMINAL_WIDGET_ID)
+      ?.resource?.metadata?.workspaceId,
+  ).toBe("clicked");
+  workbench.dispose();
+});

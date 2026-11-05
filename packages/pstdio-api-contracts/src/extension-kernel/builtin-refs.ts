@@ -52,7 +52,9 @@ export const workbenchPages = {
   session: hostRef("page", "session"),
   newSession: hostRef("page", "new-session"),
   sessionComposer: hostRef("page", "session-composer"),
+  /** @deprecated Use workspacePages.list from the Workspaces provider. */
   workspaces: hostRef("page", "workspaces"),
+  /** @deprecated Use workspacePages.workspace, files, or history from the Workspaces provider. */
   workspace: hostRef("page", "workspace"),
 };
 
@@ -88,12 +90,14 @@ export const workbenchPageDefinitions = {
     primary: { cardinality: "one", resourceKinds: [] },
   },
   workspaces: {
+    legacy: true,
     ref: workbenchPages.workspaces,
     mode: workbenchModes.project,
     path: "workspaces",
     primary: { cardinality: "one", resourceKinds: [] },
   },
   workspace: {
+    legacy: true,
     ref: workbenchPages.workspace,
     mode: workbenchModes.project,
     path: "workspace",
@@ -128,8 +132,13 @@ export const workbenchSlots = {
 
 /** Dashboard commands available through a webview's commands.execute capability. */
 export const workbenchCommands = {
+  /** Attach this project to a folder on the serving device through the host's folder picker. */
+  chooseProjectFolder: commandRef<Record<string, never>, void>({
+    extensionId: "pstdio",
+    id: "dashboard.chooseProjectFolder",
+  }),
   /** Open the platform terminal for the invocation's authorized local workspace. */
-  openWorkspaceTerminal: commandRef<Record<string, never>, void>({
+  openWorkspaceTerminal: commandRef<{ workspaceId?: string }, void>({
     extensionId: "pstdio",
     id: "dashboard.openWorkspaceTerminal",
   }),

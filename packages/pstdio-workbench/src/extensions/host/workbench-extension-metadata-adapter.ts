@@ -78,6 +78,7 @@ const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenc
           ? {
               title: body.createRow.title,
               submitLabel: body.createRow.submitLabel,
+              presentation:body.createRow.presentation,
               columnParam: body.createRow.columnParam,
               params: body.createRow.params as ParamObjectSchema | undefined,
               attributesParam: body.createRow.attributesParam,

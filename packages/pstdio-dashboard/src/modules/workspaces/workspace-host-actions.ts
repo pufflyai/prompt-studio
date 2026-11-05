@@ -1,5 +1,7 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
+import { openWorkbenchTerminal, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { getApiClient } from "@/lib/api";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import {
   createDashboardWorkspaceOptionResource,
@@ -61,7 +63,19 @@ export const resolveWorkspaceHostResource = async (ctx: WorkbenchModuleContext, 
 };
 
 /** Desktop integration stays in the host; tools supply a scoped workspace and relative entry. */
-export const registerWorkspaceHostActions = (ctx: WorkbenchModuleContext) => {
+export const registerWorkspaceHostActions = (ctx: WorkbenchModuleContext, resolve = resolveWorkspaceHostResource) => {
+  ctx.commands.registerCommand(
+    { id: dashboardCommandIds.openWorkspaceTerminal, label: "Open terminal", icon: "SquareTerminal" },
+    {
+      execute: (args: { workspaceId?: string } | undefined, invocation) => {
+        const resource = args?.workspaceId
+          ? { type: "workspace", id: args.workspaceId, projectId: invocation?.projectId }
+          : invocation?.resource;
+        if (!resource) throw new Error("Workspace is unavailable.");
+        return openWorkspaceTerminalResource(ctx, resource, resolve);
+      },
+    },
+  );
   ctx.context.set(canRevealKey, false);
   void desktop()
     ?.getAppInfo()
@@ -86,4 +100,19 @@ export const registerWorkspaceHostActions = (ctx: WorkbenchModuleContext) => {
       },
     },
   );
+};
+
+export const openWorkspaceTerminalResource = async (
+  ctx: WorkbenchModuleContext,
+  resource: ResourceRef,
+  resolve = resolveWorkspaceHostResource,
+) => {
+  if (
+    !resource.id ||
+    resource.metadata?.workspaceReadOnly === true ||
+    !ctx.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)
+  )
+    return;
+  const canonical = await resolve(ctx, resource);
+  return openWorkbenchTerminal(ctx, { resource: canonical });
 };

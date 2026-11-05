@@ -63,6 +63,7 @@ const kanbanCreateRowSchema = z.object({
   command: commandRefSchema,
   title: localizableStringSchema.optional(),
   submitLabel: localizableStringSchema.optional(),
+  presentation:z.enum(["inline","command"]).optional(),
   columnParam: z.string().optional(),
   params: z.record(z.string(), z.unknown()).optional(),
   attributesParam: z.string().optional(),

@@ -127,6 +127,8 @@ export interface KanbanRendererQueryResult {
 }
 
 export interface KanbanRendererCreateRowContribution<TParams extends ParamObjectSchema = ParamObjectSchema> {
+  /** Run the creation command directly when it owns its own form. Defaults to inline. */
+  presentation?: "inline" | "command";
   command: CommandRef<Struct, unknown>;
   title?: Localizable<string>;
   submitLabel?: Localizable<string>;
