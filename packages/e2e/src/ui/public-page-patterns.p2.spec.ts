@@ -203,7 +203,7 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page, project
   await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
 });
 
-test("Kiln docks the inspector and persists object changes", async ({ page, projectId }) => {
+test("Kiln keeps animation controls responsive and persists object changes", async ({ page, projectId }) => {
   await openExample(page, projectId, "kiln");
   const inspector = view(page, "Scene and properties");
   const gridToggle = view(page, "3D viewport").getByRole("button", { name: "Toggle viewport grid", exact: true });
