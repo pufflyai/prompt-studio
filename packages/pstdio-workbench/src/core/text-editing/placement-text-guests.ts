@@ -154,14 +154,21 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
         ) {
           // Explicit close discards this removed resource's recovery view, never its admitted durability.
           await retire(state, owner);
-        } else await owner.close();
+        } else {
+          try {
+            await owner.close();
+          } catch (error) {
+            if (owner.current() || (error as { code?: unknown })?.code !== "session_closed") throw error;
+            await retire(state, owner);
+          }
+        }
       }),
     );
   return owner;
 };
 
 /** One public guest belongs to one live presentation, including while its connection opens. */
-const placementTextOwner = (input: PlacementTextGuestInput) => {
+const placementTextOwner = (input: PlacementTextGuestInput, removalVersion: number) => {
   const state = getOwnership(input.workbench);
   // Failed forced cleanup stays owned. A later request or Workbench disposal retries it.
   for (const owner of state.retiring)
@@ -172,7 +179,11 @@ const placementTextOwner = (input: PlacementTextGuestInput) => {
     owner = undefined;
   }
   if (!owner) {
-    if (state.disposal) throw closed();
+    if (
+      state.disposal ||
+      (input.placement.resource && input.workbench.resources.wasRemovedSince(input.placement.resource, removalVersion))
+    )
+      throw closed();
     owner = createOwner(input, state);
   }
   return owner;
@@ -195,7 +206,8 @@ export const createPlacementTextRequester = (input: PlacementTextGuestInput) => 
       const guest = await owner.guest;
       return owner.presence.request(request, () => guest.host.call("editing.text", request));
     }
-    const owner = placementTextOwner(input);
+    // A retained owner can drain after removal; its old requester cannot admit another member.
+    const owner = placementTextOwner(input, invocation.removalVersion ?? 0);
     admittedOwner = owner;
     const guest = await owner.guest;
     if (!owner.current(input.scope)) throw closed();
