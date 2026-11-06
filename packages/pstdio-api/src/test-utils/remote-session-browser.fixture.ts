@@ -37,6 +37,8 @@ const stops: string[] = [];
 const answers: unknown[] = [];
 const approvals: unknown[] = [];
 let online = true;
+let queueUnavailable = false;
+let failedQueueReads = 0;
 let closing = false;
 let mirror: (fail?: boolean) => Promise<void> = async () => {};
 const record = () =>
@@ -197,6 +199,10 @@ source.deps.accountService.start(
   async (projectId, deviceId, command, signal) => {
     if (projectId !== project.id || deviceId !== targetId || !online)
       throw new AccountRequestError("Laptop is offline");
+    if (command.type === "session.queuedMessages" && queueUnavailable) {
+      failedQueueReads++;
+      throw new AccountRequestError("Queue access is renewing");
+    }
     const result = await withDeviceCommandAttachments(source.deps, projectId, command, (value) =>
       execute(jsonSchema.parse(JSON.parse(JSON.stringify(value))), { signal }),
     );
@@ -227,6 +233,7 @@ const snapshot = async () => ({
   answers,
   approvals,
   online,
+  failedQueueReads,
   sourceSessions: await source.deps.sessionService.list(project.id),
   targetSessions: await target.deps.sessionService.list(project.id),
   queue: await target.deps.sessionQueueEntriesService.listPendingBySession(session.id),
@@ -249,6 +256,8 @@ const admin = async (request: Request) => {
       throw new Error("Injected source close failure");
     };
   }
+  if (input.action === "queue-unavailable") queueUnavailable = true;
+  if (input.action === "queue-available") queueUnavailable = false;
   if (input.action === "offline") online = false;
   if (input.action === "online") online = true;
   if (input.action === "question") {
