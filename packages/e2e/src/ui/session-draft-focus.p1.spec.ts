@@ -17,6 +17,10 @@ test("new session tabs focus their composer and keep workspace selection availab
     });
     expect(created.ok()).toBe(true);
     projectId = (await created.json()).id;
+    const workspaces = await (await request.get(`${uiOrigin}/v1/workspaces?project_id=${projectId}`)).json();
+    const current = workspaces.find((workspace: { isDefault: boolean }) => workspace.isDefault);
+    expect(current).toBeTruthy();
+    const workspaceLabel = current.name ?? current.shorthand ?? current.id;
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });
@@ -26,7 +30,7 @@ test("new session tabs focus their composer and keep workspace selection availab
     await expect(mainInput).toBeFocused();
     await page.keyboard.type("Main session draft");
     await expect(mainInput).toHaveText("Main session draft");
-    await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toBeEnabled();
+    await expect(main.getByRole("button", { name: workspaceLabel, exact: true })).toBeEnabled();
     await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
@@ -40,7 +44,7 @@ test("new session tabs focus their composer and keep workspace selection availab
     await page.keyboard.type("New tab draft");
     await expect(sideInput).toHaveText("New tab draft");
     await expect(mainInput).toHaveText("Main session draft");
-    await expect(side.getByRole("button", { name: "Select workspace", exact: true })).toBeEnabled();
+    await expect(side.getByRole("button", { name: workspaceLabel, exact: true })).toBeEnabled();
     await expect(side.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
 
     await header.getByRole("button", { name: "Add panel", exact: true }).focus();

@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { contributionRefId, sessionBrowser, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -214,9 +214,11 @@ test("legacy session opening keeps the active extension page and uses its Side p
   const { registerSessionProvider } = await import("./session-provider.fixture");
   const wb = createWorkbench();
   wb.registerModule(createSessionsModule());
-  const provider = registerSessionProvider(wb, {
+  const source = {
     sessions: { get: async () => ({ id: "saved", title: "Saved", status: "completed" }) as never },
-  });
+  };
+  let provider = registerSessionProvider(wb, source);
+  const errors = spyOn(console, "error").mockImplementation(() => {});
   try {
     wb.pageLocations.setProject("project-1");
     wb.modes.registerMode({ id: "notes", panels: ["main", "side"], activate() {} });
@@ -242,8 +244,18 @@ test("legacy session opening keeps the active extension page and uses its Side p
     expect(wb.modes.getActiveModeId()).toBe("notes");
     expect(wb.layout.getActivePanel("main")).toEqual(main);
     expect(wb.layout.listPanelInstances("side").map((panel) => panel.resource?.id)).toContain("saved");
+    provider.dispose();
+    expect(errors.mock.calls).toEqual([]);
+    provider = registerSessionProvider(wb, source);
+    await wb.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: { type: "session", extensionId: "pstdio", id: "saved", projectId: "project-1" },
+    });
+    expect(wb.layout.listPanelInstances("side").filter((panel) => panel.resource?.id === "saved")).toHaveLength(1);
+    expect(wb.modes.getActiveModeId()).toBe("notes");
+    expect(wb.layout.getActivePanel("main")).toEqual(main);
   } finally {
     provider.dispose();
     await wb.dispose();
+    errors.mockRestore();
   }
 });

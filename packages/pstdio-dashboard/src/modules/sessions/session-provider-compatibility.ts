@@ -13,17 +13,27 @@ const legacyPanelRef = (modeId: string) =>
 export const registerSessionProviderCompatibility = (ctx: WorkbenchModuleContext) => {
   let pages: Disposable | undefined;
   const placements = new Map<string, Disposable>();
-  const sync = () => {
-    const available = Boolean(ctx.views.getView(contributionRefId(sessionBrowser.views.conversation)));
-    if (!available && pages) {
-      pages.dispose();
-      pages = undefined;
+  const retirePlacements = (modes: Set<string>) => {
+    // Disposal recomposes the active mode synchronously. Detach its alias first,
+    // before another mode can refresh a binding to the removed provider view.
+    const active = ctx.modes.getActiveModeId();
+    if (active && !modes.has(active)) {
+      placements.get(active)?.dispose();
+      placements.delete(active);
     }
-    const modes = new Set(available ? ["project", ...ctx.modes.listModes().map((mode) => mode.id)] : []);
     for (const [modeId, registration] of placements) {
       if (modes.has(modeId)) continue;
       registration.dispose();
       placements.delete(modeId);
+    }
+  };
+  const sync = () => {
+    const available = Boolean(ctx.views.getView(contributionRefId(sessionBrowser.views.conversation)));
+    const modes = new Set(available ? ["project", ...ctx.modes.listModes().map((mode) => mode.id)] : []);
+    retirePlacements(modes);
+    if (!available && pages) {
+      pages.dispose();
+      pages = undefined;
     }
     for (const modeId of modes) {
       if (placements.has(modeId)) continue;
