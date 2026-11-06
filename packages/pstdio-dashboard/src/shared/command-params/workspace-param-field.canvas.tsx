@@ -4,13 +4,16 @@ import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { ChatInput, ChatWorkspaceHub, createSerializedPromptState } from "@pstdio/ui/chat-ui";
 import { HarnessModelMenu } from "@pstdio/ui/param-editor";
 import { createWorkbench } from "@pstdio/workbench";
-import type { CommandParamEntry, CommandParamValue } from "@pstdio/workbench/react";
+import { type CommandParamEntry, type CommandParamValue, normalizeCommandParamValues } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { ExtensionIcon } from "@/shared/components/extension-icon";
+import { WorkspaceProviderFields } from "@/shared/workspaces/workspace-provider-fields";
+import { workspaceProviderParamSchema } from "@/shared/workspaces/workspace-provider-param-schema";
 import { workspaceProvidersQueryKey } from "@/shared/workspaces/workspace-providers";
 import { WorkspaceParamField } from "./workspace-param-field";
+import { defaultWorkspaceValues } from "./workspace-param-values";
 
 const projectId = "project-1";
 const workbench = createWorkbench();
@@ -113,10 +116,17 @@ const CustomHarnessIcon = () => (
 );
 // Synthetic state only: creation does not touch a project or provider from Canvas.
 export const ComposerWorkspace = () => {
-  const [value, setValue] = useState<CommandParamValue>(
-    JSON.stringify({ providerId: "pstdio.worktree", params: { base: "main" } }),
-  );
-  const [validation, setValidation] = useState<string | undefined>();
+  const [workspace, setWorkspace] = useState({
+    providerId: providers[0].id,
+    params: defaultWorkspaceValues(providers[0]),
+  });
+  const provider = providers.find((provider) => provider.id === workspace.providerId)!;
+  let invalid = false;
+  try {
+    normalizeCommandParamValues(workspaceProviderParamSchema(provider), workspace.params);
+  } catch {
+    invalid = true;
+  }
   const [created, setCreated] = useState(false);
   return (
     <QueryClientProvider client={queryClient}>
@@ -137,16 +147,23 @@ export const ComposerWorkspace = () => {
           options={
             !created && (
               <Stack gap="xs">
-                <WorkspaceParamField
-                  workbench={workbench}
-                  entry={{ key: "target", type: "workspace", label: "Workspace type", required: true }}
-                  value={value}
+                <WorkspaceProviderFields
+                  typeLabel="Workspace type"
+                  providers={providers}
+                  provider={provider}
+                  values={workspace.params}
                   disabled={false}
-                  onChange={setValue}
-                  onUpdateValue={setValue}
-                  onValidationChange={setValidation}
+                  optionStates={{}}
+                  onRetryOptions={() => {}}
+                  onProviderChange={(providerId) => {
+                    const next = providers.find((provider) => provider.id === providerId)!;
+                    setWorkspace({ providerId, params: defaultWorkspaceValues(next) });
+                  }}
+                  onValueChange={(key, value) =>
+                    setWorkspace((current) => ({ ...current, params: { ...current.params, [key]: value } }))
+                  }
                 />
-                <Button size="xs" disabled={Boolean(validation)} onClick={() => setCreated(true)}>
+                <Button size="xs" disabled={invalid} onClick={() => setCreated(true)}>
                   Create workspace
                 </Button>
               </Stack>
