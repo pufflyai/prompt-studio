@@ -113,7 +113,7 @@ test("keeps sent messages visible through session creation, redirect and follow-
       if (!sessionId) sessionId = outcome.navigationRequests[0].resource.id;
       await expect(page).toHaveURL(
         (url) =>
-          url.pathname === `/projects/${projectId}/extensions/pstdio.pstdio-session-browser/session` &&
+          url.pathname === `/projects/${projectId}/extensions/pstdio.pstdio-session-browser/conversation` &&
           Boolean(url.searchParams.get("resource")?.includes(sessionId!)),
       );
       const confirmed = main.locator('[data-chat-message-list-item="user"]:visible').filter({ hasText: prompt });
