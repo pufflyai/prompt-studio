@@ -567,6 +567,7 @@
         "pstdio-relay": "workspace:*",
         "pstdio-reports": "workspace:*",
         "pstdio-scripts": "workspace:*",
+        "pstdio-session-browser": "workspace:*",
         "pstdio-skills": "workspace:*",
         "pstdio-sync": "workspace:*",
         "pstdio-sync-contracts": "workspace:*",

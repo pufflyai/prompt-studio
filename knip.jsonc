@@ -171,6 +171,7 @@
         "pstdio-base-themes",
         "pstdio-dashboard",
         "pstdio-home",
+        "pstdio-session-browser",
         "pstdio-notes",
         "pstdio-performance",
         "pstdio-planner",

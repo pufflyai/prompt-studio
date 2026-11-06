@@ -1,5 +1,10 @@
 import { contributionRefId, type PlacementIdentity, sessionBrowser, workbenchPanels } from "@pstdio/sdk/extensions";
-import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "@pstdio/workbench";
+import {
+  type ResourceRef,
+  type WorkbenchCommandExecutionContext,
+  type WorkbenchModuleContext,
+  workbenchCommandPaletteMenuPath,
+} from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 
@@ -101,4 +106,12 @@ export const registerLegacySessionCommands = (ctx: WorkbenchModuleContext) => {
       },
     },
   );
+  ctx.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: dashboardCommandIds.createSession },
+    keybinding: "Mod+Alt+S",
+  });
+  ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+    commandId: dashboardCommandIds.openSessions,
+    order: 30,
+  });
 };

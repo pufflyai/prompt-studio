@@ -141,3 +141,32 @@ test("reply controls request per-reply fork availability while later work contin
   expect(requests).toEqual([["s", { scope: "reply" }]]);
   expect(snapshot).toMatchObject({ streaming: true, fork: { disabledReason: null } });
 });
+
+test("native failure and clearing preserve queue and offline device feedback", async () => {
+  const { saveNativeSubmission } = await import("./native-submission");
+  const resource = { type: "session", id: "s", extensionId: "pstdio", projectId: "p" };
+  for (const remote of [false, true]) {
+    const ctx = fixture(remote, !remote);
+    const get = ctx.sessions.get;
+    ctx.sessions.get = async (id) => ({ ...(await get(id))!, status: "failed", lastRequestStarted: "native" });
+    ctx.sessions.getConversation = async () => ({
+      session: { ...session, status: "failed", lastRequestStarted: "native" },
+      messages: [],
+    });
+    if (!remote)
+      ctx.sessions.getQueuedMessages = async () => {
+        throw new Error("Queue is recovering");
+      };
+    await saveNativeSubmission(
+      ctx,
+      "s",
+      { draft: { text: "/fail", attachments: [], values: {} }, operation: { kind: "command", text: "/fail" } },
+      "before",
+      true,
+      "native",
+    );
+    expect((await readSnapshot(ctx, resource)).notice).toBe(
+      remote ? "Laptop is offline. Reconnect it before sending." : "Queue is recovering",
+    );
+  }
+});

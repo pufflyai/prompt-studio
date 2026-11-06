@@ -14,6 +14,7 @@ interface NativeSubmission {
   sessionId: string;
   fileId: string;
   previousRequest: string | null;
+  requestStarted?: string | null;
   started: boolean;
   createdAt: string;
   state: "pending" | "recovering" | "confirmed" | "recovered";
@@ -30,6 +31,7 @@ export const saveNativeSubmission = async (
   body: NativeSubmissionBody,
   previousRequest: string | null,
   started: boolean,
+  requestStarted?: string | null,
 ) => {
   const file = await ctx.storage.files.put({
     name: "native-input.json",
@@ -40,6 +42,7 @@ export const saveNativeSubmission = async (
     sessionId: id,
     fileId: file.id,
     previousRequest,
+    ...(requestStarted !== undefined && { requestStarted }),
     started,
     createdAt: new Date().toISOString(),
     state: started ? "pending" : "confirmed",
@@ -85,7 +88,7 @@ export const readNativeSubmissions = async (ctx: ExtensionContextBase, id: strin
 export const updateNativeSubmission = async (
   ctx: ExtensionContextBase,
   recordId: string,
-  update: Partial<Pick<NativeSubmission, "state" | "hidden">>,
+  update: Partial<Pick<NativeSubmission, "state" | "hidden" | "requestStarted">>,
   sessionId?: string,
 ) => {
   const record = await ctx.storage.records.read(recordId);

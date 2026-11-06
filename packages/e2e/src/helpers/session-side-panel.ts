@@ -7,7 +7,10 @@ export const fakeHarnessId = "pstdio.workbench-fixture.harness.fake";
 export const switchSession = async (page: Page, title: string) => {
   await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "Switch session", exact: true });
-  await picker.getByRole("textbox", { name: "Search sessions", exact: true }).fill(title);
+  const search = picker.getByRole("textbox", { name: "Search sessions", exact: true });
+  await search.fill(title);
+  // Tab commits the text field through its normal blur path before opening asynchronous choices.
+  await search.press("Tab");
   await picker.getByRole("button", { name: "Select session", exact: true }).click();
   await page.getByRole("menuitemradio", { name: title, exact: true }).click();
   await picker.getByRole("button", { name: "Run", exact: true }).click();

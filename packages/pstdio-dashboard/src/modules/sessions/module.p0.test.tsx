@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
-import { createWorkbench } from "@pstdio/workbench";
+import { createWorkbench, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardSessionResource } from "@/shared/app/resources";
@@ -61,4 +61,20 @@ test("legacy create enters the provider draft page and keeps Side independent", 
   expect(workbench.pages.getContent()?.resource).toMatchObject({ type: "session-draft", extensionId: "pstdio" });
   expect(workbench.layout.listPanelInstances("side")).toHaveLength(0);
   workbench.dispose();
+});
+
+test("the deprecated Sessions destination stays discoverable in the command palette", async () => {
+  const workbench = fixture();
+  expect(
+    workbench.layout
+      .listMenuItems(workbenchCommandPaletteMenuPath)
+      .some((item) => item.commandId === dashboardCommandIds.openSessions),
+  ).toBe(true);
+  expect(workbench.keybindings.listCommandKeybindings()).toContainEqual({
+    commandId: dashboardCommandIds.createSession,
+    keybinding: "Mod+Alt+S",
+  });
+  await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
+  expect(workbench.pages.store.getState().location?.page).toEqual(sessionBrowser.pages.compose);
+  await workbench.dispose();
 });

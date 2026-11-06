@@ -87,7 +87,17 @@ export const readSessionSnapshot = async (
     operations: display.queueReadOnly ? [{ id: "refresh-queue", label: "Refresh queue" }] : [],
   };
   const draftValues = values ?? (options.messages === false ? undefined : (await readDraft(ctx, id)).values);
-  Object.assign(snapshot, await nativePresentation(ctx, id, harness, session.agent ?? "", draftValues));
+  const { notice: nativeNotice, ...native } = await nativePresentation(
+    ctx,
+    id,
+    harness,
+    session.agent ?? "",
+    draftValues,
+    session,
+  );
+  Object.assign(snapshot, native);
+  // Queue/device feedback has priority; an explicit empty notice retires earlier native failures.
+  snapshot.notice = notice || nativeNotice;
   if (!queued.error) snapshot.queuedFollowUps = display.queuedFollowUps;
   if (options.messages !== false) snapshot.messages = display.messages;
   return { snapshot, session };

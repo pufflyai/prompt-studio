@@ -21,7 +21,10 @@ export const recoverNativeInputs = async (
     const failed = recovering || session.status === "failed" || session.status === "disconnected";
     if (failed) {
       if (emitted.has(input.recordId)) continue;
-      await updateNativeSubmission(ctx, input.recordId, { state: "recovering" });
+      await updateNativeSubmission(ctx, input.recordId, {
+        state: "recovering",
+        requestStarted: input.value.requestStarted ?? session.lastRequestStarted,
+      });
       await emit(input.body.draft);
       emitted.add(input.recordId);
     } else await updateNativeSubmission(ctx, input.recordId, { state: "confirmed" });

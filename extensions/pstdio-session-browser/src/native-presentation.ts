@@ -10,8 +10,28 @@ export const nativePresentation = async (
   state: HarnessCommandState | undefined,
   harnessId: string,
   values?: ControlValueMap,
+  session?: { status: string; lastRequestStarted: string | null },
 ) => {
   const [submitted] = await readNativeSubmissions(ctx, id);
+  if (
+    submitted?.value.state === "pending" &&
+    submitted.value.requestStarted === undefined &&
+    session &&
+    session.lastRequestStarted !== submitted.value.previousRequest
+  ) {
+    await updateNativeSubmission(ctx, submitted.recordId, { requestStarted: session.lastRequestStarted }, id);
+    submitted.value.requestStarted = session.lastRequestStarted;
+  }
+  const failed =
+    submitted?.value.started &&
+    submitted.value.state !== "confirmed" &&
+    session &&
+    ["failed", "disconnected"].includes(session.status) &&
+    session.lastRequestStarted === submitted.value.requestStarted;
+  const failureNotice = failed
+    ? (submitted.body.message ??
+      `Native command ${submitted.body.draft.text} ${session.status}. Check the conversation before retrying.`)
+    : undefined;
   let sentTag = null;
   if (submitted && !submitted.value.hidden) {
     const modeId = commandIntent(submitted.body.draft.values)?.command.composer?.modeId;
@@ -24,6 +44,11 @@ export const nativePresentation = async (
     return decision ? [decision] : [];
   });
   return {
+    notice:
+      failureNotice ??
+      (!submitted?.value.started && session?.lastRequestStarted === submitted?.value.previousRequest
+        ? (submitted?.body.message ?? "")
+        : ""),
     sentTag,
     decisions,
     ...(values && { draftTag: commandDraftTag(values, harnessId, state) }),
