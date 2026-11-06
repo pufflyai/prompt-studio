@@ -8,6 +8,7 @@ import {
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
 import { hydrateChatDraft, recoverChatDraft, restoreChatDraft } from "./chat-draft-recovery";
+import { clearDeliveredChatRecoveries, restoreFailedChatSubmission } from "./chat-failed-submission";
 import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./chat-pending-submission";
 import { createChatSnapshot } from "./chat-snapshot";
 import { createChatSubmissionRunner } from "./chat-submission";
@@ -31,6 +32,7 @@ const initialChatState = (initial?: ChatRendererSnapshot) => ({
   },
   draft: { text: "", attachments: [], values: { ...initial?.values } } as ChatDraft,
   messages: (initial?.messages ?? []) as SessionMessage[],
+  queuedFollowUps: initial?.queuedFollowUps ?? [],
   pending: undefined as ChatPendingSubmission[] | undefined,
   loading: false,
   initializing: true,
@@ -63,15 +65,34 @@ const watchChatSession = async (
   }
 };
 
+const projectChatState = (
+  state: ReturnType<typeof initialChatState>,
+  update: Partial<ReturnType<typeof initialChatState>>,
+  present: ReturnType<typeof createChatSubmissionPresentation>,
+) => {
+  const next = { ...state, ...update };
+  const unchanged =
+    next.conversation.messages === state.conversation.messages &&
+    next.conversation.queuedFollowUps === state.conversation.queuedFollowUps &&
+    next.pending === state.pending;
+  return unchanged
+    ? next
+    : { ...next, ...present(next.conversation.messages ?? [], next.pending, next.conversation.queuedFollowUps) };
+};
+const subscribeChatState = (listeners: Set<() => void>, listener: () => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
   const listeners = new Set<() => void>();
   const present = createChatSubmissionPresentation();
   const publish = (update: Partial<typeof state>) => {
-    const next = { ...state, ...update };
-    const unchanged = next.conversation.messages === state.conversation.messages && next.pending === state.pending;
-    state = unchanged ? next : { ...next, ...present(next.conversation.messages ?? [], next.pending) };
+    state = projectChatState(state, update, present);
     for (const listener of listeners) listener();
   };
   const fail = (error: unknown) => publish({ error: error instanceof Error ? error.message : String(error) });
@@ -97,8 +118,11 @@ export const createChatSession = (input: ChatSessionInput) => {
     expectedValues?: Map<string, number>,
     action?: ChatRendererAction,
   ) => {
+    const pending = state.pending;
     const merged = snapshots.merge(state, incoming, issued, expectedValues, action);
     publish({ ...merged.state, loading: false });
+    const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
+    if (recovery) changeDraft(recovery);
     if (expectedValues && merged.valuesChanged) {
       changes++;
       saveDraft();
@@ -243,14 +267,16 @@ export const createChatSession = (input: ChatSessionInput) => {
   };
   return {
     getSnapshot: () => state,
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+    subscribe: (listener: () => void) => subscribeChatState(listeners, listener),
     accept,
     changeDraft,
+    restoreSubmission(id: string) {
+      const restored = restoreFailedChatSubmission(state.draft, state.pending, id);
+      if (!restored) return;
+      snapshots.values.claim(restored.draft.values);
+      changeDraft(restored.draft);
+      publish({ pending: restored.pending });
+    },
     restoreDraft(index: number) {
       const draft = restoreChatDraft(state.draft, index);
       snapshots.values.claim(draft.values);
