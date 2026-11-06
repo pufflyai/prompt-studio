@@ -30,6 +30,7 @@ import {
   ListChecks,
   ListTree,
   MessageSquare,
+  Monitor,
   Pause,
   Pencil,
   Play,
@@ -153,6 +154,7 @@ export const optionIcons = [
 ] satisfies IconColorPickerIconOption[];
 
 const actionIcons: Record<string, ComponentType> = {
+  monitor: Monitor,
   pause: Pause,
   pencil: Pencil,
   trash: Trash2,
@@ -172,5 +174,6 @@ export const getIconComponent = (
     .replace(/([a-zA-Z])([0-9])/g, "$1-$2")
     .toLowerCase();
   const entry = iconOptions.find((icon) => icon.value === normalizedName);
-  return entry?.icon ?? actionIcons[normalizedName] ?? Circle;
+  const actionIcon = Object.hasOwn(actionIcons, normalizedName) ? actionIcons[normalizedName] : undefined;
+  return entry?.icon ?? actionIcon ?? Circle;
 };
