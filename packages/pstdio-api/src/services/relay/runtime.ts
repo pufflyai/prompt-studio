@@ -91,6 +91,18 @@ const drainOwnerStarts = async (starts: Promise<void>[]) => {
   for (const result of results) if (result.status === "rejected") throw result.reason;
 };
 
+type ExtensionConnection = Awaited<ReturnType<typeof startRelayExtension>>;
+
+const stopRelayConnection = async (
+  connections: Map<string, ExtensionConnection>,
+  key: string,
+  connection: ExtensionConnection,
+) => {
+  connection.close();
+  await connection.done;
+  if (connections.get(key) === connection) connections.delete(key);
+};
+
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
 export const startRelayRuntime = async (input: {
@@ -120,11 +132,8 @@ export const startRelayRuntime = async (input: {
   const commands = createWorkbenchConnections((config) => startDeviceCommands(core(config)));
   const recovery = createWorkbenchConnections((config) => startFolderRecovery(core(config)));
   const lifecycleOwners = [...coreOwners, commands, recovery];
-  const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
-    connection.close();
-    await connection.done;
-    if (connections.get(key) === connection) connections.delete(key);
-  };
+  const stopConnection = (key: string, connection: ExtensionConnection) =>
+    stopRelayConnection(connections, key, connection);
   let running: Promise<void> | undefined;
   let dirty = false;
   // Committed storage changes, local or downloaded, refresh the project's open views.
