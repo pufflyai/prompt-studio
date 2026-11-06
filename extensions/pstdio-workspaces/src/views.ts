@@ -5,8 +5,8 @@ import { workspaceCommands } from "./refs";
 
 const grouped = {
   columnGrouping: "device",
-  displayProperties: ["id", "tickets", "type", "status", "harness", "date"],
-  showChildren: true,
+  displayProperties: ["id", "tickets", "type", "date"],
+  showChildren: false,
 };
 export const workspacesView = defineView({
   id: "workspaces",
@@ -15,11 +15,11 @@ export const workspacesView = defineView({
   body: {
     kind: "resourceList",
     refreshEvents,
-    query: (ctx, { settings }) => queryWorkspaces(ctx, settings.showChildren !== false),
+    query: (ctx) => queryWorkspaces(ctx),
     defaultSettings: grouped,
     defaultViews: [
       { id: "grouped", title: "By device", settings: grouped },
-      { id: "compact", title: "Compact", settings: { ...grouped, columnGrouping: "none", showChildren: false } },
+      { id: "compact", title: "Compact", settings: { ...grouped, columnGrouping: "none" } },
     ],
     defaultActiveViewId: "grouped",
     createRow: {

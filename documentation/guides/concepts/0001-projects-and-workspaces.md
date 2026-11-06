@@ -48,13 +48,13 @@ Remote environments are covered in [Local and remote work](0004-local-and-remote
 
 ## Files and Workspaces in the sidebar
 
-The bundled Workspaces extension adds a **Project Workspaces** group. **Files** opens the project folder directly. It has no Changes tab. **Workspaces** groups workspace rows by device: this device first, online devices by name, then offline devices by last seen. Expand a workspace to see its sessions, or choose Compact for an ungrouped list without sessions.
+The bundled Workspaces extension adds a **Project Workspaces** group. **Files** opens the project folder directly. It has no Changes tab. **Workspaces** groups workspace rows by device: this device first, online devices by name, then offline devices by last seen. Choose Compact for an ungrouped list. Sessions appear inside a workspace’s own navigation when you open it; project Files keeps project navigation.
 
 Each row shows its kind, short name, title, related ticket, type and creation date. Local workspaces offer Open, Open session, Rename and Delete when the provider supports them. Workspaces on another device open synced session history. Their files and execution actions remain on the owning device.
 
 Files uses the shared searchable tree and editor. Create files or folders from the tree, rename inline, drag entries between folders, and confirm deletion before removing them. Save text with the editor's Save action or shortcut. Copy paths and Reveal in Finder use the host's supported actions. Git worktrees also have a Changes panel; file bodies load as you open them.
 
-Right-click a device header to open its menu. Choose **This device** or **Device details** to see presence and capacity in a modal. **Create workspace** is available on this device and opens a creation modal, keeping the current page in place until creation succeeds. The forms use the standard dialog header and Cancel/primary actions. Online counts come from that device. Offline details show last seen and the last observed limit, with capacity marked unavailable. Settings → Workspaces changes the serving device's limit. Turn on **Limit workspaces** to enable the count, then apply the change. Turn it off to remove the limit. Edit another device's limit on that device.
+Choose **Create workspace** from the **Workspaces** title dropdown, the sidebar row’s menu, or the local device header’s menu. It opens the creation dialog and keeps the current page in place until creation succeeds. The title and sidebar menu actions use a plus icon. Workspace limits and device details have no UI controls for now; capacity remains available through the CLI and SDK.
 
 ## Active workspace limits
 

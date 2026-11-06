@@ -1,6 +1,6 @@
 {
   "page.create": "Créer un espace de travail",
-  "page.device": "Détails de l’appareil",
+  "action.create": "Créer un espace de travail",
   "sidebar.files": "Fichiers",
   "sidebar.title": "Espaces de travail du projet",
   "sidebar.workspaces": "Espaces de travail"

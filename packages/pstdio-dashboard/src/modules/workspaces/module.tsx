@@ -91,7 +91,29 @@ export const createWorkspacesModule = () =>
             icon: "folder-git-2",
             path: "workspaces",
             modeId: "project",
-            main: { kind: "view", view: workspaceViews.list, cardinality: "one", presentation: "tabs" },
+            main: {
+              kind: "view",
+              view: workspaceViews.list,
+              cardinality: "one",
+              presentation: "tabs",
+              tab: {
+                getSnapshot: () => ({
+                  menu: [
+                    {
+                      id: "workspaces",
+                      rows: [
+                        {
+                          id: "create-workspace",
+                          label: "Create workspace",
+                          icon: "plus",
+                          action: { kind: "command", commandId: commandRefId(workspaceCommands.create) },
+                        },
+                      ],
+                    },
+                  ],
+                }),
+              },
+            },
             slots: [],
           }),
         );

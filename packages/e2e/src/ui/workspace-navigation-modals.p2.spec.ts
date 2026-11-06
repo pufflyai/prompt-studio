@@ -67,67 +67,14 @@ test("Files opens without Home and workspace creation stays in a keyboard-access
     await expect(page.getByRole("dialog")).toHaveCount(0);
     expect(page.url()).toBe(location);
     await expect(device.locator("xpath=ancestor::*[@role='option'][1]")).toBeFocused();
-    await openCreate();
+    await page.goto(`/projects/${project.id}/workspaces`);
+    await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+    await page.getByRole("menuitem", { name: "Create workspace", exact: true }).click();
     await form.getByRole("button", { name: "Create workspace", exact: true }).click();
     await expect(page).toHaveURL(/extensions\/pstdio\.pstdio-workspaces\/workspace\?/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
     rmSync(root, { recursive: true, force: true });
-  }
-});
-
-// Critical risk: an optional limit must remain editable after toggling/cancelling and
-// actually save the displayed number; unlimited must remain a supported capacity value.
-test("device details stages an optional workspace limit and preserves Main", async ({ page, request }) => {
-  const capacityUrl = `${uiOrigin}/v1/workspaces/capacity`;
-  const previous = await (await request.get(capacityUrl)).json();
-  const response = await request.post(`${uiOrigin}/v1/projects`, {
-    data: folderProjectInput({ name: "Workspace limits" }),
-  });
-  expect(response.ok()).toBe(true);
-  const project = await response.json();
-  try {
-    expect((await request.patch(capacityUrl, { data: { limit: null } })).ok()).toBe(true);
-    await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}/workspaces`);
-    const openDevice = async () => {
-      await page.getByText(previous.deviceName, { exact: true }).filter({ visible: true }).click({ button: "right" });
-      await page.getByRole("menuitem", { name: "This device", exact: true }).click();
-    };
-    await openDevice();
-    const dialog = page.getByRole("dialog", { name: "Device details", exact: true });
-    const limited = dialog.getByRole("checkbox", { name: "Limit workspaces", exact: true });
-    const count = dialog.getByRole("spinbutton", { name: "Workspace limit", exact: true });
-    const toggle = dialog
-      .locator('label[data-scope="switch"]')
-      .filter({ has: page.getByRole("checkbox", { name: "Limit workspaces", exact: true }) });
-    const location = page.url();
-    await expect(limited).not.toBeChecked();
-    await expect(count).toBeDisabled();
-    await toggle.click();
-    await expect(count).toBeEnabled();
-    await count.fill("7");
-    await toggle.click();
-    await expect(count).toBeDisabled();
-    await toggle.click();
-    await expect(count).toHaveValue("7");
-    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-    await expect(dialog).toHaveCount(0);
-    await openDevice();
-    await expect(limited).not.toBeChecked();
-    await toggle.click();
-    await dialog.getByRole("button", { name: "Apply", exact: true }).click();
-    await expect.poll(async () => (await (await request.get(capacityUrl)).json()).limit).toBe(6);
-    await toggle.click();
-    await dialog.getByRole("button", { name: "Apply", exact: true }).click();
-    await expect.poll(async () => (await (await request.get(capacityUrl)).json()).limit).toBeNull();
-    await expect(count).toBeDisabled();
-    await page.keyboard.press("Escape");
-    await expect(dialog).toHaveCount(0);
-    expect(page.url()).toBe(location);
-  } finally {
-    await request.patch(capacityUrl, { data: { limit: previous.limit } });
-    await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
   }
 });

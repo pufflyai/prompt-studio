@@ -28,7 +28,6 @@ const DeviceMenuPreview = (props: { initial?: "create" }) => {
               {
                 key: "create",
                 label: "Create workspace",
-                icon: <Plus size={14} />,
                 onClick: () => setDialog("create"),
               },
             ],
