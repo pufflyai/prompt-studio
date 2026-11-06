@@ -161,8 +161,18 @@ test(
     try {
       // Both runtimes and the browser start cold inside this case and own separate state.
       const startingRuntimes = Promise.allSettled([
-        startPackagedServe(join(root, "a"), env).then((runtime) => (a = runtime)),
-        startPackagedServe(join(root, "b"), env).then((runtime) => (b = runtime)),
+        startPackagedServe(join(root, "a"), env)
+          .then((runtime) => (a = runtime))
+          .catch((error) => {
+            console.error("Workspaces device A startup failed", error);
+            throw error;
+          }),
+        startPackagedServe(join(root, "b"), env)
+          .then((runtime) => (b = runtime))
+          .catch((error) => {
+            console.error("Workspaces device B startup failed", error);
+            throw error;
+          }),
       ]);
       const openingBrowser = chromium.launch(PACKAGED_DASHBOARD_BROWSER).then((opened) => {
         browser = opened;
