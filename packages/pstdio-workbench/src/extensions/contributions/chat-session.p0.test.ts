@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { visibleChatDraftAttachments } from "./chat-pending-submission";
 import { createChatSession } from "./chat-session";
 
 const deferred = <T>() => {
@@ -629,4 +630,155 @@ test("restoring a draft claims its settings even when they equal untouched query
   await new Promise((done) => setTimeout(done, 0));
   expect(session.getSnapshot().draft).toMatchObject({ text: "Recovered work", values: { model: "A" } });
   release();
+});
+
+test("a held submission belongs to its shared owner, shows files once and reconciles a canonical echo", async () => {
+  const held = deferred<unknown>();
+  const attachment = { id: "A", name: "diagram.png", url: "/files/A", mediaType: "image/png" };
+  const prior = { id: "previous", role: "user" as const, parts: [{ type: "text" as const, text: "Send diagram" }] };
+  const session = createChatSession({
+    initial: { messages: [prior] },
+    query: async () => ({}),
+    action: () => held.promise,
+  });
+  session.changeDraft({ attachments: [attachment] });
+  const pending = session.run({ type: "submit", text: "Send diagram", attachments: [attachment], values: {} });
+  expect(session.getSnapshot().messages).toHaveLength(3);
+  const optimistic = session.getSnapshot().messages[1];
+  expect(visibleChatDraftAttachments(session.getSnapshot().draft.attachments, session.getSnapshot().pending)).toEqual(
+    [],
+  );
+  const newerFiles = [...session.getSnapshot().draft.attachments, { id: "B", name: "B.txt" }];
+  expect(visibleChatDraftAttachments(newerFiles, session.getSnapshot().pending)).toEqual([{ id: "B", name: "B.txt" }]);
+  expect(optimistic.parts).toEqual([
+    { type: "text", text: "Send diagram" },
+    { type: "file", fileId: "A", filename: "diagram.png", mediaType: "image/png", url: "/files/A" },
+  ]);
+  const release = session.retain();
+  release();
+  const reopen = session.retain();
+  expect(session.getSnapshot().messages[1].id).toBe(optimistic.id);
+  const confirmed = { ...optimistic, id: "confirmed" };
+  session.accept({ revision: 1, snapshot: { messages: [prior, confirmed] } });
+  expect(session.getSnapshot().messages).toHaveLength(2);
+  expect(session.getSnapshot().messages[1].animationKey).toBe(optimistic.id);
+  held.resolve({});
+  await pending;
+  expect(session.getSnapshot().messages).toHaveLength(2);
+  expect(session.getSnapshot().draft.attachments).toEqual([]);
+  reopen();
+});
+
+test("a failed held submission restores its text and files after its presentation closes", async () => {
+  let reject!: (error: Error) => void;
+  const held = new Promise((_, fail) => {
+    reject = fail;
+  });
+  const attachment = { id: "A", name: "A.txt", url: "/files/A" };
+  const session = createChatSession({ query: async () => ({}), action: () => held });
+  session.changeDraft({ attachments: [attachment] });
+  const release = session.retain();
+  const pending = session.run({ type: "submit", text: "Keep this", attachments: [attachment], values: {} });
+  release();
+  reject(new Error("Unavailable"));
+  await expect(pending).rejects.toThrow("Unavailable");
+  expect(session.getSnapshot().messages).toEqual([]);
+  expect(session.getSnapshot().draft).toMatchObject({ text: "Keep this", attachments: [attachment] });
+});
+
+test("rejected pending work cannot overwrite a newer draft and never enters canonical patch indexes", async () => {
+  let reject!: (error: Error) => void;
+  const held = new Promise((_, fail) => {
+    reject = fail;
+  });
+  const session = createChatSession({
+    initial: { messages: [message("History")] },
+    query: async () => ({}),
+    action: () => held,
+  });
+  const pending = session.run({ type: "submit", text: "Old", attachments: [{ id: "A", name: "A.txt" }], values: {} });
+  expect(session.getSnapshot().conversation.messages).toHaveLength(1);
+  session.accept({ revision: 0, snapshot: { messages: [message("History")] } });
+  session.accept({ revision: 1, patch: { op: "replace", path: "/messages/0", value: message("Changed") } });
+  expect(session.getSnapshot().messages[0].parts[0]).toEqual({ type: "text", text: "Changed" });
+  session.changeDraft({ text: "Newer", attachments: [{ id: "B", name: "B.txt" }] });
+  reject(new Error("Unavailable"));
+  await expect(pending).rejects.toThrow("Unavailable");
+  expect(session.getSnapshot().draft).toMatchObject({
+    text: "Newer",
+    attachments: [{ id: "B" }],
+    recovered: [{ text: "Old", attachments: [{ id: "A" }] }],
+  });
+  expect(session.getSnapshot().messages).toHaveLength(1);
+});
+
+test("closing the last owner returns a watch iterator even when it has one buffered event", async () => {
+  const gate = deferred<void>();
+  let returned = false;
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => ({}),
+    watch: () => ({
+      async *[Symbol.asyncIterator]() {
+        try {
+          yield { revision: 0, snapshot: { notice: "Connected" } };
+          await gate.promise;
+          yield { revision: 1, snapshot: { notice: "Buffered" } };
+          await new Promise(() => {});
+        } finally {
+          returned = true;
+        }
+      },
+    }),
+  });
+  const release = session.retain();
+  await new Promise((done) => setTimeout(done, 0));
+  release();
+  gate.resolve();
+  await new Promise((done) => setTimeout(done, 0));
+  expect(returned).toBe(true);
+  expect(session.getSnapshot().conversation.notice).toBe("Connected");
+});
+
+test("accepted input stays visible until its delayed canonical echo without holding the request lock", async () => {
+  const session = createChatSession({ query: async () => ({}), action: async () => ({}) });
+  await session.run({ type: "submit", text: "Send", attachments: [], values: {} });
+  expect(session.getSnapshot().sending).toBe(false);
+  expect(session.getSnapshot().messages.filter((item) => item.role === "user")).toHaveLength(1);
+  session.accept({
+    revision: 0,
+    snapshot: { messages: [{ id: "echo", role: "user", parts: [{ type: "text", text: "Send" }] }] },
+  });
+  expect(session.getSnapshot().pending).toBeUndefined();
+  expect(session.getSnapshot().messages).toHaveLength(1);
+  expect(session.getSnapshot().messages[0].id).toBe("echo");
+});
+
+test("an explicit submitted-input result finishes an operation without manufacturing a transcript echo", async () => {
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => ({ snapshot: { sentTag: null, notice: "Operation complete" } }),
+  });
+  await session.run({ type: "submit", text: "/usage", attachments: [], values: {} });
+  expect(session.getSnapshot().messages).toEqual([]);
+  expect(session.getSnapshot().pending).toBeUndefined();
+  expect(session.getSnapshot().conversation.notice).toBe("Operation complete");
+});
+
+test("consecutive identical submissions keep distinct pending rows and consume separate canonical echoes", async () => {
+  const session = createChatSession({ query: async () => ({}), action: async () => ({}) });
+  const action = { type: "submit" as const, text: "Same", attachments: [], values: {} };
+  await session.run(action);
+  await session.run(action);
+  expect(session.getSnapshot().messages.filter((item) => item.role === "user")).toHaveLength(2);
+  const first = { id: "one", role: "user" as const, parts: [{ type: "text" as const, text: "Same" }] };
+  session.accept({ revision: 0, snapshot: { messages: [first] } });
+  expect(session.getSnapshot().messages.filter((item) => item.role === "user")).toHaveLength(2);
+  expect(session.getSnapshot().pending).toHaveLength(1);
+  session.accept({ revision: 1, snapshot: { messages: [first, { ...first, id: "two" }] } });
+  expect(session.getSnapshot().pending).toBeUndefined();
+  expect(session.getSnapshot().messages.map((item) => item.id)).toEqual(["one", "two"]);
+  const displayed = session.getSnapshot().messages;
+  session.changeDraft({ text: "Keep typing" });
+  expect(session.getSnapshot().messages).toBe(displayed);
 });
