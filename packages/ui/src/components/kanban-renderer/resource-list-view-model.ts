@@ -113,6 +113,12 @@ export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRen
       note: option?.note,
       onNoteClick: option?.onNoteClick,
       onCreate: option?.canCreate && onCreate ? () => onCreate(group.key) : undefined,
+      contextMenuActions: option?.contextMenuActions?.map((action) => ({
+        key: action.id,
+        label: action.label,
+        isDisabled: action.disabled,
+        onClick: action.onAction,
+      })),
       children: sorted(group.rows).map((row) => rowItem(row)),
     };
   });

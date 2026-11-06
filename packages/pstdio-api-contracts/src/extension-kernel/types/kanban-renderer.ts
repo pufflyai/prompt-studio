@@ -23,6 +23,13 @@ export interface KanbanRendererEnumOption {
   /** Open details from the group note without expanding or creating a resource. */
   noteAction?: NavigationTarget;
   canCreate?: boolean;
+  /** Actions offered by the resource-list group header's context menu. */
+  contextMenuActions?: Array<{
+    id: string;
+    label: Localizable<string>;
+    action: NavigationTarget;
+    disabled?: boolean;
+  }>;
 }
 
 export type KanbanRendererAttributeType =

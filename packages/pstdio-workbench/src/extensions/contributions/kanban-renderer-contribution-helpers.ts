@@ -53,6 +53,12 @@ const localizeAttributes = (
               label: localize(option.label, option.value),
               note: option.note ? localize(option.note) : undefined,
               onNoteClick: option.noteAction && openNote ? () => openNote(option.noteAction!) : undefined,
+              contextMenuActions: option.contextMenuActions?.map((item) => ({
+                id: item.id,
+                label: localize(item.label, item.id),
+                disabled: item.disabled,
+                onAction: () => openNote?.(item.action),
+              })),
             }))
           : type.options,
       };

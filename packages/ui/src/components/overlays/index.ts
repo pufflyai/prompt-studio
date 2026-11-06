@@ -7,6 +7,7 @@ export { BubbleButton } from "./bubble-button";
 export { BubblePanel } from "./bubble-panel";
 export { DeleteConfirmationModal } from "./delete-confirmation-modal";
 export { handleDialogAcceptShortcut } from "./dialog-accept-shortcut";
+export { DialogFormFooter } from "./dialog-form-footer";
 export type { FolderPickerEntry, FolderPickerProps } from "./folder-picker-dialog";
 export { FolderPicker, FolderPickerDialog } from "./folder-picker-dialog";
 export type { FolderPickerDrive } from "./folder-picker-drive-menu";
