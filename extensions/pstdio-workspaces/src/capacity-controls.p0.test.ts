@@ -23,3 +23,15 @@ test("offline limits remain unknown until observed and foreign controls cannot e
     step: 1,
   });
 });
+
+test("unlimited capacity hides usage and leaves the count behind a limit toggle", () => {
+  const fields = capacityControls({
+    current: true,
+    name: "Local",
+    online: true,
+    capacity: { deviceId: "local", deviceName: "Local", activeCount: 0, limit: null },
+  });
+  expect(fields.find((field) => field.id === "active")).toBeUndefined();
+  expect(fields.find((field) => field.id === "limited")).toMatchObject({ type: "boolean", defaultValue: false });
+  expect(fields.find((field) => field.id === "limit")).toMatchObject({ enabledBy: "limited" });
+});

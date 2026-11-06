@@ -1,5 +1,5 @@
 import { Box, Button, Flex, HStack, Input, Stack, Text } from "@chakra-ui/react";
-import { TreeList } from "@pstdio/ui";
+import { ScopedDialog as Dialog, Portal, Switch, TreeList } from "@pstdio/ui";
 import { CodeEditor, DiffViewer } from "@pstdio/ui/diff";
 import { ResourceListRenderer } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
@@ -20,12 +20,12 @@ const attributes = [
     type: {
       kind: "enum" as const,
       options: [
-        { value: "local", label: "MacBook Pro", color: "green", note: "This device · 2 / 6 active", canCreate: true },
-        { value: "online", label: "Studio iMac", color: "green", note: "Online · 1 / 4 active", canCreate: false },
+        { value: "local", label: "MacBook Pro", icon: "monitor", note: "This device · 2 / 6 active", canCreate: true },
+        { value: "online", label: "Studio iMac", icon: "monitor", note: "Online · 1 / 4 active", canCreate: false },
         {
           value: "offline",
           label: "Build box",
-          color: "gray",
+          icon: "monitor",
           note: "Last seen 2 days ago · Limit 2",
           canCreate: false,
         },
@@ -77,6 +77,7 @@ const rows = [
 ];
 const WorkspacesPreview = (props: { compact?: boolean }) => {
   const [opened, setOpened] = useState("");
+  const [dialog, setDialog] = useState<"create" | "device" | undefined>();
   const listAttributes = attributes.map((attribute) => ({
     ...attribute,
     type:
@@ -85,7 +86,7 @@ const WorkspacesPreview = (props: { compact?: boolean }) => {
             ...attribute.type,
             options: attribute.type.options.map((option) => ({
               ...option,
-              onNoteClick: () => setOpened(`Device details: ${option.label}`),
+              onNoteClick: () => setDialog("device"),
             })),
           }
         : attribute.type,
@@ -98,7 +99,7 @@ const WorkspacesPreview = (props: { compact?: boolean }) => {
         rows={rows}
         defaultSettings={{
           viewMode: "list",
-          columnGrouping: "device",
+          columnGrouping: props.compact ? "none" : "device",
           showChildren: !props.compact,
           displayProperties: ["type", "date"],
         }}
@@ -117,8 +118,22 @@ const WorkspacesPreview = (props: { compact?: boolean }) => {
           fields: [],
           labels: { cancel: "Cancel", properties: "Properties", submitError: "Could not create", removeFile: "Remove" },
         }}
-        onCreateRow={() => setOpened("Choose workspace provider")}
+        onCreateRow={() => setDialog("create")}
       />
+      <Dialog.Root open={Boolean(dialog)} onOpenChange={({ open }) => !open && setDialog(undefined)} placement="center">
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content maxW="xl" p="lg">
+              <Dialog.Title>{dialog === "create" ? "Create workspace" : "This device"}</Dialog.Title>
+              {dialog === "create" ? <CreateWorkspaceForm /> : <DeviceLimit />}
+              <Button variant="ghost" onClick={() => setDialog(undefined)}>
+                Cancel
+              </Button>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
       {opened && (
         <Text aria-live="polite" px="md" py="sm">
           {opened}
@@ -207,6 +222,7 @@ export const WorktreeChanges = () => (
 
 export const DeviceLimit = () => {
   const [limit, setLimit] = useState("6");
+  const [limited, setLimited] = useState(false);
   const [saved, setSaved] = useState("6");
   return (
     <Stack maxW="xl" p="lg" gap="lg">
@@ -215,9 +231,13 @@ export const DeviceLimit = () => {
         <Text color="fg.muted">Limits for this device. Other devices choose their own limits.</Text>
       </Stack>
       <Stack gap="sm">
-        <Text>Active workspaces on MacBook Pro</Text>
+        <Switch checked={limited} onCheckedChange={({ checked }) => setLimited(checked)}>
+          Limit workspaces
+        </Switch>
+        <Text>Workspace limit</Text>
         <Input
-          aria-label="Active workspace limit"
+          aria-label="Workspace limit"
+          disabled={!limited}
           type="number"
           min="1"
           value={limit}
@@ -230,7 +250,7 @@ export const DeviceLimit = () => {
           <Button variant="primary" onClick={() => setSaved(limit)}>
             Apply
           </Button>
-          <Text aria-live="polite">2 of {saved} active</Text>
+          {limited && <Text aria-live="polite">2 of {saved} active</Text>}
         </HStack>
       </Stack>
       <Stack gap="xs">
@@ -241,3 +261,23 @@ export const DeviceLimit = () => {
     </Stack>
   );
 };
+
+const CreateWorkspaceForm = () => {
+  const [name, setName] = useState("");
+  return (
+    <Stack gap="md" py="md">
+      <Text>Git worktree</Text>
+      <Input
+        aria-label="Workspace name"
+        placeholder="Workspace name"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+      />
+      <Button variant="primary" disabled={!name}>
+        Create workspace
+      </Button>
+    </Stack>
+  );
+};
+export const CreateWorkspaceModal = () => <WorkspacesPreview />;
+export const ThisDeviceModal = () => <WorkspacesPreview />;

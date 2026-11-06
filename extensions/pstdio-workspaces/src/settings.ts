@@ -65,7 +65,7 @@ export const capacityView = defineView({
       const local = await ctx.workspaces.getCapacity();
       if (renderer.pageParams?.["device-id"] && renderer.pageParams["device-id"] !== local.deviceId)
         throw new Error("Device limits can only be changed on that device.");
-      const limit = values.unlimited ? null : Number(values.limit);
+      const limit = values.limited ? Number(values.limit) : null;
       if (limit !== null && (!Number.isInteger(limit) || limit < 1))
         throw new Error("Enter a positive whole-number limit.");
       await ctx.workspaces.updateCapacity({ limit });

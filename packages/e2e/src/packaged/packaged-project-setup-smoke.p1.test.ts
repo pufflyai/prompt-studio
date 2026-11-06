@@ -24,9 +24,15 @@ setupPackagedSmokeTests(async () => {
     join(import.meta.dirname, "../../../../extensions/pstdio-workspaces"),
     { install: true },
   );
+  const home = await preparePackagedExtensionSource(
+    join(sources, "home"),
+    join(import.meta.dirname, "../../../../extensions/pstdio-home"),
+    { install: true },
+  );
   composerDefaults = JSON.stringify({
     defaultExtensions: [
       ...JSON.parse(e2eExtensions("workbench-fixture")).defaultExtensions,
+      { installName: "pstdio-home", source: home, skipInstall: true },
       { installName: "pstdio-workspaces", source, skipInstall: true },
     ],
   });

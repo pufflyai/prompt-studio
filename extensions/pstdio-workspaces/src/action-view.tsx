@@ -125,15 +125,17 @@ const Action = ({
     }
   };
   const create = async (providerId: string, params: Record<string, unknown>) =>
-    run(() =>
-      client.commands.create({
+    run(async () => {
+      await client.commands.create({
         providerId,
         params: JSON.parse(JSON.stringify(params)) as JsonObject,
         anchors: host.pageParams?.anchors ? JSON.parse(String(host.pageParams.anchors)) : undefined,
         shorthandBase: typeof host.pageParams?.shorthand === "string" ? host.pageParams.shorthand : undefined,
-      }),
-    );
+      });
+      if (host.presentation === "dialog") await client.placement.close();
+    });
   const cancel = () => {
+    if (host.presentation === "dialog") return client.placement.close();
     if (!data?.workspace) return client.navigation.open({ kind: "page", page: workspacePages.list });
     const path = selectedPath(host);
     const projectId = host.projectId ?? data.workspace.projectId;
@@ -149,8 +151,8 @@ const Action = ({
         <MutationForm client={client} host={host} data={data} operation={operation} busy={busy} run={run} />
       );
   return (
-    <ScrollArea h="100dvh" w="full">
-      <Stack maxW="36rem" mx="auto" p="lg" gap="lg">
+    <ScrollArea h="full" w="full">
+      <Stack maxW="xl" mx="auto" p="lg" gap="lg">
         <Text textStyle="heading/M">{actionTitle(operation)}</Text>
         {error && (
           <AlertMessage status="error" title="Workspace action failed">

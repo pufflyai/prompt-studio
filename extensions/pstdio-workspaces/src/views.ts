@@ -19,7 +19,7 @@ export const workspacesView = defineView({
     defaultSettings: grouped,
     defaultViews: [
       { id: "grouped", title: "By device", settings: grouped },
-      { id: "compact", title: "Compact", settings: { ...grouped, showChildren: false } },
+      { id: "compact", title: "Compact", settings: { ...grouped, columnGrouping: "none", showChildren: false } },
     ],
     defaultActiveViewId: "grouped",
     createRow: {
@@ -69,7 +69,7 @@ export const actionView = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./action-view.tsx", import.meta.url),
-    capabilities: ["commands.execute", "navigation.open"],
+    capabilities: ["commands.execute", "navigation.open", "placement.close"],
   },
 });
 export const summaryView = defineView({

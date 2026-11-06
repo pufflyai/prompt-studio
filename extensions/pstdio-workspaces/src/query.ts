@@ -101,13 +101,14 @@ export const queryWorkspaces = async (ctx: ExtensionContextBase, showChildren = 
           let note = device.online
             ? "Online · Capacity unavailable"
             : `Offline · Last seen ${device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : "unknown"}`;
-          if (capacity)
-            note = `${device.current ? "This device" : "Online"} · ${capacity.activeCount} / ${capacity.limit ?? "∞"} active`;
-          else if (limit !== undefined) note += ` · Limit ${limit ?? "∞"}`;
+          if (capacity) {
+            note = device.current ? "This device" : "Online";
+            if (capacity.limit !== null) note += ` · ${capacity.activeCount} / ${capacity.limit} active`;
+          } else if (typeof limit === "number") note += ` · Limit ${limit}`;
           return {
             value: device.id,
             label: device.name,
-            color: device.online ? "green" : "gray",
+            icon: "monitor",
             note,
             canCreate: device.current,
             noteAction: {
