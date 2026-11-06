@@ -942,7 +942,6 @@ test("an offline file binding cannot replace an earlier peer asset authority", a
   }
 });
 
-
 test("downloaded record changes notify views without being reported as local writes", async () => {
   const fixture = createRelay();
   const first = await device(fixture.relay);
