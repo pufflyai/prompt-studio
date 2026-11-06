@@ -109,10 +109,6 @@ const NativeChatContent = (props: NativeChatViewProps) => {
     extra: { prompt?: string; direction?: "up" | "down"; steps?: number; target?: ChatQueuedRequest } = {},
   ) => run({ type: "queue", operation, item, ...extra, values, attachments }).then(() => undefined);
   const find = (id: string) => findQueuedChatRequest(conversation.queuedFollowUps, id);
-  const removeAttachment = (id: string) => {
-    // Removing a chip only removes its draft reference. A shared file may still belong to a queue edit.
-    changeActive({ attachments: attachments.filter((attachment) => attachment.id !== id) });
-  };
   const Host = props.Host ?? PassthroughChatHost;
   return (
     <Host
@@ -218,7 +214,10 @@ const NativeChatContent = (props: NativeChatViewProps) => {
               attachments={attachments}
               resolvedAttachments={host.attachments}
               disabled={Boolean(conversation.readOnly)}
-              remove={removeAttachment}
+              remove={(id) =>
+                // A shared file may still belong to a queue edit; remove only its draft reference.
+                changeActive({ attachments: attachments.filter((attachment) => attachment.id !== id) })
+              }
             />
           }
           queuedFollowUps={queuedFollowUps}
@@ -255,12 +254,16 @@ const NativeChatContent = (props: NativeChatViewProps) => {
             const saved = edits[id];
             if (saved) session.changeDraft(saved);
           }}
-          onQueuedFollowUpRemove={(id) => {
-            void queue("remove", find(id)).catch(() => undefined);
-          }}
-          onQueuedFollowUpMove={(id, direction, steps, selection) => {
-            void queue("move", selection?.source ?? find(id), { direction, steps }).catch(() => undefined);
-          }}
+          onQueuedFollowUpRemove={(id) =>
+            void Promise.resolve()
+              .then(() => queue("remove", find(id)))
+              .catch(session.reportError)
+          }
+          onQueuedFollowUpMove={(id, direction, steps, selection) =>
+            void Promise.resolve()
+              .then(() => queue("move", selection?.source ?? find(id), { direction, steps }))
+              .catch(session.reportError)
+          }
           onQueuedFollowUpCombine={(source, target) => queue("combine", source, { target })}
           onQueuedFollowUpSteer={(item) => queue("steer", item)}
         />
