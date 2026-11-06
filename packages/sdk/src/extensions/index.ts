@@ -1,9 +1,11 @@
 export type {
+  ChatRendererStreamEvent,
   HistoryProjection,
   HistoryRecoveryInput,
   HistoryRecoveryResult,
   ToolResultSummary,
 } from "pstdio-api-contracts";
+export { chatRendererStreamFrames } from "pstdio-api-contracts";
 export {
   createToolOutputBuffer,
   HistoryConflict,

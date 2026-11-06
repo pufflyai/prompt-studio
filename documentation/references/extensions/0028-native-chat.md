@@ -54,6 +54,16 @@ it must not stop execution or discard recoverable input.
 `snapshot.messages` before incremental message patches, including on reconnect.
 Patches add/replace/remove a whole canonical message at `/messages/<index>`, or
 replace the array at `/messages`. Reduce nested content patches before emitting.
+Use `chatRendererStreamFrames(event)` from `@pstdio/sdk/extensions` when writing
+events, including snapshots, patches and draft recovery. Await each frame in order
+and finish one event before writing the next. Small events stay unchanged; large
+events become bounded `ChatRendererStreamEvent` fragments within the existing
+64 KiB command-stream limit. The native owner validates and reconstructs one event
+before publishing it atomically, retaining visible history and draft state while
+fragments arrive. This also supports a single large message or tool result without
+truncating it. No query refresh, transcript polling or execution service is added.
+Malformed/interleaved or naturally incomplete events report a stream error;
+disposal/reconnect discards unfinished fragments without stopping work.
 Live fields take precedence over a delayed query; a notice-only event does not
 displace history. Reconnect keeps displayed state. Connection errors offer Retry.
 Refresh events follow the normal native renderer path. A versioned `recoverDraft`
