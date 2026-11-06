@@ -51,7 +51,13 @@ test("the reply footer forks its own message and keeps failed copies available f
         json: {
           commandId,
           extensionId: "pstdio.pstdio-session-browser",
-          outcome: { ok: false, status: "error", error: { message: "Copy unavailable. Try again." }, notices: [] },
+          outcome: {
+            ok: false,
+            status: "error",
+            reason: "Copy unavailable. Try again.",
+            error: { message: "Copy unavailable. Try again." },
+            notices: [],
+          },
         },
       });
       return;
