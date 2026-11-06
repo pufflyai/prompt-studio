@@ -22,8 +22,11 @@ export const walkRecoveryGraph = async (input: {
     if (role === "data") return [];
     if (role === "capture") {
       const { capture } = await readRecoveryManifest(input.chunks, reference);
-      const children: Node[] = [{ reference: capture.inventory, role: "inventory" }];
-      if (capture.exclusions) children.push({ reference: capture.exclusions, role: "exclusion" });
+      const children: Node[] = [];
+      for (const root of [capture, ...capture.git.dependencies]) {
+        children.push({ reference: root.inventory, role: "inventory" });
+        if (root.exclusions) children.push({ reference: root.exclusions, role: "exclusion" });
+      }
       return children;
     }
     const page = await pages.read(reference);

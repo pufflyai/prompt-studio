@@ -1,6 +1,36 @@
 import { z } from "zod";
 import { type createRecoveryChunkStore, recoveryChunkSchema } from "./chunks";
 
+const countsSchema = {
+  inventory: recoveryChunkSchema,
+  exclusions: recoveryChunkSchema.nullable(),
+  policy: z.string().nullable(),
+  rootMode: z.number().int().min(0).max(0o7777),
+  files: z.number().int().nonnegative().safe(),
+  bytes: z.number().int().nonnegative().safe(),
+};
+const gitSchema = z.strictObject({
+  state: z.enum(["none", "functional", "incomplete"]),
+  dependencies: z
+    .array(
+      z.strictObject({
+        ...countsSchema,
+        kind: z.enum(["git-admin", "git-common", "git-objects"]),
+        path: z.string().min(1).max(4096),
+        referencedBy: z.string().min(1).max(4096),
+      }),
+    )
+    .max(64),
+  problems: z
+    .array(
+      z.strictObject({
+        path: z.string().min(1).max(4096),
+        reason: z.enum(["excluded", "unregistered", "relationship", "unavailable", "unsupported"]),
+      }),
+    )
+    .max(64),
+});
+
 export const recoveryManifestSchema = z.strictObject({
   version: z.literal(1),
   kind: z.literal("folder-capture"),
@@ -12,16 +42,18 @@ export const recoveryManifestSchema = z.strictObject({
     name: z.string().min(1).max(1024),
     folder: z.string().min(1),
   }),
-  capture: z.strictObject({
-    inventory: recoveryChunkSchema,
-    exclusions: recoveryChunkSchema.nullable(),
-    policy: z.string().nullable(),
-    rootMode: z.number().int().min(0).max(0o7777),
-    files: z.number().int().nonnegative().safe(),
-    bytes: z.number().int().nonnegative().safe(),
-    startedAt: z.iso.datetime(),
-    completedAt: z.iso.datetime(),
-  }),
+  capture: z
+    .strictObject({
+      ...countsSchema,
+      git: gitSchema,
+      startedAt: z.iso.datetime(),
+      completedAt: z.iso.datetime(),
+    })
+    .refine(
+      ({ git }) =>
+        (git.state === "incomplete") === git.problems.length > 0 && (git.state !== "none" || !git.dependencies.length),
+      "Git recovery state must match its problems and dependencies",
+    ),
 });
 export type RecoveryManifest = z.infer<typeof recoveryManifestSchema>;
 export type RecoveryChunkStore = Awaited<ReturnType<typeof createRecoveryChunkStore>>;
