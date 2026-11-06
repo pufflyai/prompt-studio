@@ -96,7 +96,7 @@ test("shared session actions rename another row without changing the selected se
   await expect(input).toHaveValue("Other conversation");
   await input.fill("  ");
   await page.getByRole("button", { name: "Run", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("Enter a session name");
+  await expect(page.getByRole("alert")).toContainText(/title cannot be empty/i);
   await input.fill("  Renamed conversation  ");
   await rejectCommand(page, "rename", b.id, "Save unavailable. Try again.");
   await page.getByRole("button", { name: "Run", exact: true }).click();
