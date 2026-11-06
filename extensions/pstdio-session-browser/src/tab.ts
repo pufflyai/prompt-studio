@@ -1,6 +1,6 @@
 import type { PlacementTabPresentation } from "@pstdio/sdk/extensions";
 import { l10n, viewDataEvents } from "@pstdio/sdk/extensions";
-import { create, switchConversation } from "./navigation";
+import { newInViewer, switchConversation } from "./navigation";
 
 const icons: Record<string, string> = {
   in_progress: "loader-circle",
@@ -25,7 +25,6 @@ export const conversationTab: PlacementTabPresentation = {
   async query(ctx, { renderer }) {
     const resource = renderer.resource;
     const saved = resource?.type === "session" ? await ctx.sessions.get(resource.id) : undefined;
-    const workspaceId = saved?.workspaceId ?? resource?.metadata?.workspaceId;
     const status = saved?.status;
     return {
       label: saved?.title ?? resource?.label ?? l10n("commands.new", "New session"),
@@ -51,12 +50,7 @@ export const conversationTab: PlacementTabPresentation = {
               action: {
                 kind: "command",
                 target: {
-                  command: create.ref,
-                  params: {
-                    replace: true,
-                    ...(typeof workspaceId === "string" ? { workspaceId } : {}),
-                    ...(resource?.device?.id ? { deviceId: resource.device.id } : {}),
-                  },
+                  command: newInViewer.ref,
                 },
               },
             },

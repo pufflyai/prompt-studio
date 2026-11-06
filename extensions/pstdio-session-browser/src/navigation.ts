@@ -44,6 +44,24 @@ export const create = defineCommand({
     );
   },
 });
+// A tab already supplies the destination context. Keep this action immediate;
+// the general creation command exposes optional parameters to the command form.
+export const newInViewer = defineCommand({
+  id: "new-in-viewer",
+  title: l10n("commands.new", "New session"),
+  async run(ctx) {
+    const resource = ctx.resource;
+    const session = resource?.type === "session" ? await ctx.sessions.get(resource.id) : undefined;
+    const workspaceId = session?.workspaceId ?? resource?.metadata?.workspaceId;
+    const deviceId = session ? session.device?.id : (resource?.metadata?.deviceId ?? resource?.device?.id);
+    return create.run(ctx, {
+      replace: true,
+      ...(typeof workspaceId === "string" ? { workspaceId } : {}),
+      // An empty selection explicitly means local, overriding any stale resource device.
+      deviceId: typeof deviceId === "string" ? deviceId : "",
+    });
+  },
+});
 export const open = defineCommand({
   id: "open",
   title: l10n("commands.open", "Open session"),

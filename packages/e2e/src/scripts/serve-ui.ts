@@ -28,7 +28,13 @@ const child = Bun.spawn(
   [process.execPath, "--conditions=source", "src/index.ts", "serve", "--foreground", ...process.argv.slice(2)],
   {
     cwd: join(repoRoot, "packages/pstdio"),
-    env: { ...process.env, NPM_CONFIG_USERCONFIG: npmConfigPath, PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults) },
+    env: {
+      ...process.env,
+      NPM_CONFIG_USERCONFIG: npmConfigPath,
+      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults),
+      // Keep provisioning/harness failures after the launcher removes its isolated home.
+      PSTDIO_LOG_PATH: join(repoRoot, "packages/e2e/test-results", process.env.E2E_RUN_ID!, "runtime.jsonl"),
+    },
     stdout: "inherit",
     stderr: "inherit",
   },
