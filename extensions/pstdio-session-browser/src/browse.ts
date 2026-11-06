@@ -122,16 +122,25 @@ export const search = defineCommandPaletteResource({
   resourceKind: workbenchResourceKinds.session,
   refreshEvents: [viewDataEvents.sessionsChanged],
   async query(ctx, input) {
-    const page = await ctx.sessions.query({
-      limit: input.limit,
-      orderBy: "lastActivity",
-      search: input.query.trim() || undefined,
-    });
+    const sessions: Awaited<ReturnType<typeof ctx.sessions.query>>["items"] = [];
+    let cursor: string | undefined;
+    while (sessions.length < input.limit) {
+      const page = await ctx.sessions.query({
+        limit: Math.min(200, input.limit - sessions.length),
+        orderBy: "lastActivity",
+        search: input.query.trim() || undefined,
+        ...(cursor ? { cursor } : {}),
+      });
+      sessions.push(...page.items);
+      cursor = page.nextCursor ?? undefined;
+      if (!cursor) break;
+    }
     return {
-      items: page.items.map((session) => ({
+      items: sessions.map((session) => ({
         id: session.id,
         label: session.title,
         icon: "message-circle",
+        indicator: { icon: icons[session.status] ?? "circle-dashed", label: `Session status: ${session.status}` },
         target: sessionTarget(sessionResource(session, ctx.projectId)),
       })),
     };

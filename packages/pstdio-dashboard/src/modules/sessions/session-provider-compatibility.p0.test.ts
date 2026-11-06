@@ -117,7 +117,7 @@ test("legacy switch and rename collect the actual provider's missing parameters"
       record: {
         command: {
           id: "pstdio.pstdio-session-browser.command.switch",
-          params: { sessionId: { type: "select", required: true } },
+          params: { session: { type: "resource", resourceType: "session", required: true } },
         },
       },
       context: { resource },

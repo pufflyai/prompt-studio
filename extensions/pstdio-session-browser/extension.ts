@@ -31,7 +31,6 @@ import {
   resolve,
   stop,
   switchConversation,
-  switchOptions,
 } from "./src/navigation";
 import { sessionId } from "./src/resource";
 import { composerControls, readSnapshot } from "./src/snapshot";
@@ -143,20 +142,7 @@ export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   storageIndexes: [nativeSubmissionIndex],
-  commands: [
-    create,
-    newInViewer,
-    open,
-    rename,
-    archive,
-    remove,
-    fork,
-    stop,
-    switchConversation,
-    switchOptions,
-    resolve,
-    watch,
-  ],
+  commands: [create, newInViewer, open, rename, archive, remove, fork, stop, switchConversation, resolve, watch],
   views: [conversation, list],
   pages: [sessions, compose, session, draft],
   placements: [viewer],

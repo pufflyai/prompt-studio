@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -38,16 +37,17 @@ test("session picker exposes the complete project source and navigates the invok
   try {
     openSessionsPage(workbench, createDashboardSessionResource("picker-0", "History 0", "picker-project"));
     const main = workbench.pages.getContent()!;
-    const optionsId = contributionRefId({ ...sessionBrowser.commands.open, id: "switch.options" });
-    const entries = (await workbench.commands.executeCommand(optionsId, {})) as { id: string }[];
+    const groups = await workbench.commandPaletteResources.queryProviders({
+      query: "",
+      limit: 100,
+      resourceType: "session",
+    });
+    const entries = groups.flatMap((group) => group.results);
     expect(entries).toHaveLength(65);
-    expect(queries).toEqual([
-      { limit: 50, orderBy: "lastActivity", search: undefined },
-      { limit: 50, orderBy: "lastActivity", search: undefined, cursor: "50" },
-    ]);
-    const entry = entries.find((entry) => entry.id === "picker-64")!;
+    expect(queries).toEqual([{ limit: 100, orderBy: "lastActivity", search: undefined }]);
+    const entry = entries.find((entry) => entry.resource?.id === "picker-64")!;
     await workbench.commands.executeCommand(dashboardCommandIds.switchSession, {
-      sessionId: entry.id,
+      sessionId: entry.resource!.id,
       placementIdentity: main.placementIdentity,
       from: main.resource,
     });

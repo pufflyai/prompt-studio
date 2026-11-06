@@ -11,7 +11,7 @@ test("browsing and search use bounded public queries, workspace scope and lazy c
       sessions: {
         query: async (input) => {
           queries.push(input);
-          return { items: [], nextCursor: input?.cursor ? null : "next" };
+          return { items: [], nextCursor: input?.workspaceId && !input?.cursor ? "next" : null };
         },
       },
     },
@@ -55,4 +55,40 @@ test("workspace sessions keep the contextual page and open chat in shared Side p
   expect(group?.children?.find((node) => node.resource?.id === "s")).toMatchObject({
     target: { kind: "panel", open: "preview", resource: { extensionId: "pstdio", id: "s" } },
   });
+});
+
+test("session resource search follows cursors beyond the public 200-row page limit", async () => {
+  const queries: Array<{ limit?: number; cursor?: string; search?: string; orderBy?: string }> = [];
+  const sessions = Array.from({ length: 301 }, (_, index) => ({
+    id: `s${index}`,
+    title: `History ${index}`,
+    status: "completed",
+    updatedAt: "2026-11-06T00:00:00Z",
+  }));
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      sessions: {
+        query: async (input = {}) => {
+          queries.push(input);
+          const start = Number(input.cursor ?? 0);
+          const end = Math.min(start + Math.min(200, input.limit ?? 50), sessions.length);
+          return { items: sessions.slice(start, end) as never, nextCursor: end < sessions.length ? `${end}` : null };
+        },
+      },
+    },
+  });
+  const result = await search.query(ctx, {
+    query: "history",
+    limit: 300,
+    providerId: "sessions",
+    renderer: { rendererId: "list" },
+  });
+  expect(result.items).toHaveLength(300);
+  expect(result.items.at(-1)?.id).toBe("s299");
+  expect(queries).toEqual([
+    { limit: 200, orderBy: "lastActivity", search: "history" },
+    { limit: 100, orderBy: "lastActivity", search: "history", cursor: "200" },
+  ]);
 });

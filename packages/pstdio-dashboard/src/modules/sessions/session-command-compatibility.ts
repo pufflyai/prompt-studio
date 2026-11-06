@@ -34,7 +34,17 @@ const providerArgs = (command: string, input: LegacyArgs, context?: WorkbenchCom
       side: input.side || input.sidePanel || (context?.source === "panel-add" && context.region !== "main"),
       replace: input.replace ?? Boolean(input.replacePanel),
     };
-  if (command === "switch") return { sessionId: input.sessionId, search: input.search };
+  if (command === "switch")
+    return input.sessionId
+      ? {
+          session: {
+            type: "session",
+            id: input.sessionId,
+            extensionId: "pstdio",
+            projectId: context?.projectId,
+          },
+        }
+      : {};
   const resource = input.resource ?? context?.resource;
   return {
     sessionId: input.sessionId ?? (resource?.type === "session" ? resource.id : undefined),
@@ -69,7 +79,10 @@ export const registerLegacySessionCommands = (ctx: WorkbenchModuleContext) => {
             extensionId: sessionBrowser.commands.create.extensionId,
             id: command,
           });
-          const params = providerArgs(command, input, context);
+          const params = providerArgs(command, input, {
+            ...context,
+            projectId: context?.projectId ?? ctx.pages.store.getState().projectId,
+          });
           const modeId = ctx.modes.getActiveModeId();
           // Saved non-Project modes retain their existing Side placement. The provider
           // owns draft creation; this bridge supplies only its legacy destination.

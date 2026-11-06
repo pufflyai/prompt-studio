@@ -123,12 +123,6 @@ export const archive = defineCommand({
   resourceMutation: { kind: "remove", resourceType: "session", idParam: "sessionId" },
   async run(ctx, input) {
     await ctx.sessions.archive(input.sessionId);
-    await ctx.resources.removed({
-      type: "session",
-      id: input.sessionId,
-      extensionId: "pstdio",
-      projectId: ctx.projectId,
-    });
   },
 });
 export const remove = defineCommand({
@@ -157,12 +151,6 @@ export const remove = defineCommand({
   resourceMutation: { kind: "remove", resourceType: "session", idParam: "sessionId" },
   async run(ctx, input) {
     await ctx.sessions.delete(input.sessionId);
-    await ctx.resources.removed({
-      type: "session",
-      id: input.sessionId,
-      extensionId: "pstdio",
-      projectId: ctx.projectId,
-    });
   },
 });
 export const resolve = defineCommand({
@@ -223,41 +211,20 @@ export const stop = defineCommand({
   params: { sessionId: params.text({ required: true, resolvedFrom: "resource" }) },
   run: (ctx, input) => ctx.sessions.stop(input.sessionId),
 });
-export const switchOptions = defineCommand({
-  id: "switch.options",
-  title: l10n("commands.switchOptions", "Find sessions"),
-  params: { search: params.text() },
-  async run(ctx, input) {
-    const items: Awaited<ReturnType<typeof ctx.sessions.query>>["items"] = [];
-    let cursor: string | undefined;
-    do {
-      const page = await ctx.sessions.query({
-        limit: 50,
-        orderBy: "lastActivity",
-        search: input.search || undefined,
-        ...(cursor ? { cursor } : {}),
-      });
-      items.push(...page.items);
-      cursor = page.nextCursor ?? undefined;
-    } while (cursor);
-    return items;
-  },
-});
 export const switchConversation = defineCommand({
   id: "switch",
   title: l10n("commands.switch", "Switch session"),
   params: {
-    search: params.text({ label: l10n("sessions.search", "Search sessions") }),
-    sessionId: params.select({
-      required: true,
-      label: l10n("conversation.title", "Session"),
-      options: {
-        command: switchOptions.ref,
-        valueField: "id",
-        labelField: "title",
-        params: { search: { kind: "param-value", key: "search" } },
-      },
-    }),
+    session: params.resource({ required: true, resourceType: "session", label: l10n("conversation.title", "Session") }),
   },
-  run: (ctx, input) => open.run(ctx, { sessionId: input.sessionId, replace: true }),
+  run(ctx, input) {
+    const selected = input.session;
+    if (
+      selected.type !== "session" ||
+      (selected.extensionId && selected.extensionId !== "pstdio") ||
+      (selected.projectId && selected.projectId !== ctx.projectId)
+    )
+      throw new Error("Choose a saved session from this project.");
+    return open.run(ctx, { sessionId: selected.id, replace: true });
+  },
 });
