@@ -110,7 +110,17 @@ export const chatRendererSnapshotSchema = z.strictObject({
     .nullable()
     .optional(),
   fork: z.object({ disabledReason: z.string().nullable() }).optional(),
-  operations: z.array(z.object({ id: z.string(), label: z.string(), disabled: z.boolean().optional() })).optional(),
+  operations: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        disabled: z.boolean().optional(),
+        /** Reconnect the native view's query/watch without dispatching a provider action. */
+        refresh: z.boolean().optional(),
+      }),
+    )
+    .optional(),
 });
 export const chatRendererActionSchema = z.discriminatedUnion("type", [
   z.strictObject({

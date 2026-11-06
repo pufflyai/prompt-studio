@@ -9,7 +9,7 @@ import { runNativeChatAction } from "./native-chat-action";
 import { NativeChatAttachmentActions, NativeChatAttachmentList } from "./native-chat-attachments";
 import { NativeChatApproval, NativeChatControls, nativeChatCommands } from "./native-chat-controls";
 import type { NativeChatHostProps, NativeChatHostServices } from "./native-chat-host";
-import { queuedChatDraft } from "./native-chat-queue";
+import { findQueuedChatRequest, queuedChatDraft } from "./native-chat-queue";
 import { NativeChatNotices, NativeChatResources } from "./native-chat-status";
 
 interface NativeChatViewProps extends NativeChatHostServices {
@@ -99,11 +99,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
     item: ChatQueuedRequest,
     extra: { prompt?: string; direction?: "up" | "down"; steps?: number; target?: ChatQueuedRequest } = {},
   ) => run({ type: "queue", operation, item, ...extra, values, attachments }).then(() => undefined);
-  const find = (id: string) => {
-    const item = conversation.queuedFollowUps?.find((candidate) => candidate.id === id);
-    if (!item) throw new Error("The queued request is no longer available.");
-    return item;
-  };
+  const find = (id: string) => findQueuedChatRequest(conversation.queuedFollowUps, id);
   const removeAttachment = (id: string) => {
     // Removing a chip only removes its draft reference. A shared file may still belong to a queue edit.
     changeActive({ attachments: attachments.filter((attachment) => attachment.id !== id) });
@@ -180,6 +176,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
           actions={
             <NativeChatControls
               run={run}
+              reconnect={session.reconnect}
               conversation={conversation}
               draft={activeDraft}
               editingQueuedRequest={Boolean(selected)}
