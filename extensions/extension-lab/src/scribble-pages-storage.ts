@@ -19,8 +19,10 @@ export const readScribblePageEntries = async (storage: ExtensionStorageApi) => {
     exampleDefaults.scribble.documents.map((document, index) => [document.id, seedEntry(document, index)]),
   );
   for (const record of await storage.records.list()) {
-    if (record.deleted || record.shared?.kind !== "map" || record.shared.value.kind !== "scribble.page") continue;
-    const { id, kind: _kind, position, content, favorite, ...fields } = record.shared.value;
+    const value = record.value;
+    if (record.deleted || !value || typeof value !== "object" || Array.isArray(value) || value.kind !== "scribble.page")
+      continue;
+    const { id, kind: _kind, position, content, favorite, ...fields } = value;
     const pageId = id as string;
     const seed =
       entries.get(pageId) ??
