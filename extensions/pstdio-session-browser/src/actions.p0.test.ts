@@ -78,7 +78,7 @@ test("new-session handoff retires the source draft receipt while follow-ups awai
     storage: createMemoryStorage(),
     params: {},
     overrides: {
-      sessions: { create: async () => created, followup: async () => ({}) },
+      sessions: { create: async () => created, followup: async () => {} },
       navigation: {
         open: (target) => {
           opened.push(target);
