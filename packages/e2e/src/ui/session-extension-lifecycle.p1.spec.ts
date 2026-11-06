@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Request, test } from "@playwright/test";
 import {
   createResourceActionsProject,
   openSessionSidePanel,
@@ -36,8 +36,13 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     const holds: string[] = [];
     const deleted: string[] = [];
     let stops = 0;
+    const activeStreams = new Set<Request>();
+    const finishStream = (sent: Request) => activeStreams.delete(sent);
+    page.on("requestfinished", finishStream);
+    page.on("requestfailed", finishStream);
     page.on("request", (sent) => {
       const path = new URL(sent.url()).pathname;
+      if (path === "/v1/session-stream" && sent.method() === "GET") activeStreams.add(sent);
       if (path.endsWith("/subscriptions") && sent.method() === "POST") {
         const body = sent.postDataJSON();
         if (
@@ -157,7 +162,10 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     // Project teardown can close the whole transport instead of deleting each interest.
     const removed = await request.delete(`/v1/sessions/${sessionId}`);
     expect(removed.ok()).toBe(true);
-    await expect.poll(() => [...watches, ...holds].every((id) => deleted.includes(id))).toBe(true);
+    // A server end retires its observer without DELETE; the final local interest
+    // closes the physical connection. Leave the empty composer before checking it.
+    await page.getByRole("option", { name: "Home", exact: true }).click();
+    await expect.poll(() => activeStreams.size).toBe(0);
     expect(stops).toBe(0);
     sessionId = undefined;
   } finally {
