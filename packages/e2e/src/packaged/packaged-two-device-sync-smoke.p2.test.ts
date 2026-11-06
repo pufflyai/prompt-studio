@@ -251,7 +251,8 @@ test(
       await first.reach(project.id, "synced");
       await second.reach(project.id, "synced");
       await picker.ready();
-      expect((await second.client.account.projectSyncStatus(project.id)).offlineReady).toBe(true);
+      // Folder preparation can replace a synced owner; navigation does not await its next download.
+      await waitFor(async () => (await second.client.account.projectSyncStatus(project.id)).offlineReady);
       phase("project folder prepared");
       expect((await second.command<Record<string, StorageRecord>>(project.id, "read")).note?.value).toBe(
         "written on the first device",
