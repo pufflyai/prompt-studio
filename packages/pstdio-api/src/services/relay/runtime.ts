@@ -85,6 +85,12 @@ const projectEntryPoints = (
   folders: (workbenchId: string) => ReturnType<typeof startFolderRecovery> | undefined,
 ) => ({ call: createDeviceCommandCaller(commands), folders });
 
+// Drain every start before another refresh can admit owners from a newer snapshot.
+const drainOwnerStarts = async (starts: Promise<void>[]) => {
+  const results = await Promise.allSettled(starts);
+  for (const result of results) if (result.status === "rejected") throw result.reason;
+};
+
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
 export const startRelayRuntime = async (input: {
@@ -147,7 +153,7 @@ export const startRelayRuntime = async (input: {
     );
     await Promise.all(obsolete.map(([key, connection]) => stopConnection(key, connection)));
     // Folder lookup and preparation belong to each owner; one slow source must not delay the others.
-    const starts = await Promise.allSettled(
+    await drainOwnerStarts(
       snapshot.enabledSources.map(async (source) => {
         if (workbenches.get(workbenchId) !== config) return;
         const key = JSON.stringify([workbenchId, source.installedSource.extension_id]);
@@ -171,8 +177,6 @@ export const startRelayRuntime = async (input: {
         connections.set(key, connection);
       }),
     );
-    // Drain every start before another refresh can admit owners from a newer snapshot.
-    for (const result of starts) if (result.status === "rejected") throw result.reason;
     statusChanged(workbenchId);
   };
   const reconcile = async () => {
