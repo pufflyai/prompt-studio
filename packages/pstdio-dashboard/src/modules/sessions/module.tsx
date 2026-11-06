@@ -13,11 +13,11 @@ export const createSessionsModule = () =>
       ctx.resources.registerKind({
         kind: "session",
         label: "Session",
-        icon: "MessageCircle",
+        icon: "messages-circle",
         resolve: (resource) => findDashboardSession(resource.id)?.resource,
         subscribe: subscribeSessionListData,
       });
-      ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "message-circle" });
+      ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "messages-circle" });
       const compatibility = registerSessionProviderCompatibility(ctx);
       const stopSync = registerSessionResourceSync(ctx);
       const stopRetention = registerSessionResourceRetention(ctx);

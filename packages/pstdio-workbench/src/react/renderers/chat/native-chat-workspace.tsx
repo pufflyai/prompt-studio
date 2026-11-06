@@ -1,8 +1,7 @@
-import { Box, Button, HStack, IconButton, Text } from "@chakra-ui/react";
+import { HStack } from "@chakra-ui/react";
 import type { ChatDraft, ChatRendererSnapshot, ControlValueMap, SelectionControl } from "@pstdio/sdk/extensions";
-import { resolveIconComponent, SearchableMenu, Tooltip } from "@pstdio/ui";
-import { ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
-import { ArrowUpRight, ChevronDown, Folder, Monitor, Plus } from "lucide-react";
+import { ChatDeviceMenu, ChatWorkspaceHub, ChatWorkspaceMenu } from "@pstdio/ui/chat-ui";
+import { Plus } from "lucide-react";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { NativeChatResources } from "./native-chat-status";
@@ -19,73 +18,24 @@ export interface NativeChatWorkspaceProps {
   changeValues(values: ControlValueMap | ((current: ControlValueMap) => ControlValueMap)): void;
 }
 
-const WorkspaceSelection = (props: {
-  control: SelectionControl;
-  value: unknown;
-  disabled: boolean;
-  device?: boolean;
-  create?: { disabledReason?: string };
-  change(value: string | { providerId: string; params: Record<string, never> }): void;
-}) => {
-  const { control, value, disabled, device, create, change } = props;
-  const selected = control.options.find((option) => option.id === value);
-  const Fallback = device ? Monitor : Folder;
-  const Glyph = (selected?.icon && resolveIconComponent(selected.icon)) || Fallback;
-  const creating = typeof value === "object" && value !== null;
-  return (
-    <SearchableMenu
-      trigger={
-        <Box minW="0">
-          <Button
-            variant="ghost"
-            size="xs"
-            px="2xs"
-            minW="0"
-            aria-label={`Select ${control.name.toLowerCase()}`}
-            disabled={disabled}
-          >
-            <Glyph size={14} />
-            <Text textStyle="label/XS/medium" truncate>
-              {creating ? "New workspace" : (selected?.name ?? control.placeholder ?? control.name)}
-            </Text>
-            {!disabled && <ChevronDown size={14} />}
-          </Button>
-        </Box>
-      }
-      items={[
-        ...control.options.map((option) => ({
-          id: option.id,
-          label: option.name,
-          secondaryLabel: option.description,
-          icon: (option.icon && resolveIconComponent(option.icon)) || Fallback,
-          isSelected: value === option.id,
-          isDisabled: disabled || option.disabled,
-          onSelect: () => {
-            if (!disabled && !option.disabled) change(option.id);
-          },
-        })),
-        ...(create
-          ? [
-              {
-                id: "native-create-workspace",
-                label: "New workspace",
-                icon: Plus,
-                isDisabled: disabled || Boolean(create.disabledReason),
-                secondaryLabel: create.disabledReason,
-                onSelect: () => {
-                  if (!disabled && !create.disabledReason) change({ providerId: "", params: {} });
-                },
-              },
-            ]
-          : []),
-      ]}
-      searchPlaceholder={`Search ${control.name.toLowerCase()}...`}
-      emptyState={<Text>No choices available</Text>}
-      showSearch={control.options.length > 10}
-      portalled
-    />
-  );
+const workspaceLabel = (workspace: SelectionControl, value: unknown) => {
+  if (typeof value === "object" && value !== null) return "New workspace";
+  return workspace.options.find((option) => option.id === value)?.name ?? workspace.placeholder ?? "Select workspace";
 };
+
+// Metadata can arrive before the current local selection or creation form settles.
+const selectedWorkspaceId = (
+  workspace: NonNullable<ChatRendererSnapshot["controls"]>[number] | undefined,
+  value: unknown,
+  openId?: string,
+) =>
+  typeof value === "string" &&
+  value !== "" &&
+  value === openId &&
+  workspace?.type === "selection" &&
+  workspace.options?.some((option) => option.id === value)
+    ? value
+    : undefined;
 
 /** Selection IDs and provider values remain in the native owner's one draft map. */
 export const NativeChatWorkspace = (props: NativeChatWorkspaceProps) => {
@@ -105,27 +55,51 @@ export const NativeChatWorkspace = (props: NativeChatWorkspaceProps) => {
     });
     void run({ type: "control", id, values }).catch(() => undefined);
   };
+  const selectedId =
+    workspace?.type === "selection" ? (draft.values[workspace.id] ?? workspace.defaultValue) : undefined;
+  const openId = selectedWorkspaceId(workspace, selectedId, binding.openResourceId);
   return (
     <>
       <ChatWorkspaceHub
         workspaceControl={
           <HStack gap="2xs" minW="0">
             {device?.type === "selection" && (
-              <WorkspaceSelection
-                control={device}
-                device
-                value={draft.values[device.id] ?? device.defaultValue}
-                disabled={locked || Boolean(device.readOnly || device.disabled)}
-                change={(value) => change(device.id, value)}
+              <ChatDeviceMenu
+                devices={device.options.map((option) => ({ ...option, current: option.id === "" }))}
+                selectedDeviceId={String(draft.values[device.id] ?? device.defaultValue ?? "")}
+                isDisabled={locked || Boolean(device.readOnly || device.disabled)}
+                onSelectDevice={(value) => change(device.id, value)}
               />
             )}
             {workspace?.type === "selection" && (
-              <WorkspaceSelection
-                control={workspace}
-                value={draft.values[workspace.id] ?? workspace.defaultValue}
-                disabled={locked || Boolean(workspace.readOnly || workspace.disabled)}
-                create={binding.create}
-                change={(value) => change(workspace.id, value)}
+              <ChatWorkspaceMenu
+                workspaces={workspace.options.map((option) => ({
+                  id: option.id,
+                  title: option.name,
+                  shorthand: option.description,
+                  disabled: option.disabled,
+                }))}
+                selectedWorkspaceId={typeof selectedId === "string" ? selectedId : ""}
+                selectedWorkspaceLabel={workspaceLabel(workspace, selectedId)}
+                isDisabled={locked || Boolean(workspace.readOnly || workspace.disabled)}
+                onSelectWorkspace={(value) => change(workspace.id, value)}
+                onOpenWorkspace={
+                  openId ? () => void run({ type: "openResource", id: openId }).catch(() => undefined) : undefined
+                }
+                createItem={
+                  binding.create
+                    ? {
+                        id: "native-create-workspace",
+                        label: "New workspace",
+                        icon: Plus,
+                        isDisabled: Boolean(binding.create.disabledReason),
+                        secondaryLabel: binding.create.disabledReason,
+                        onSelect: () => {
+                          if (!binding.create?.disabledReason) change(workspace.id, { providerId: "", params: {} });
+                        },
+                      }
+                    : undefined
+                }
               />
             )}
           </HStack>
@@ -134,20 +108,6 @@ export const NativeChatWorkspace = (props: NativeChatWorkspaceProps) => {
         deletions={binding.deletions ?? 0}
         status={binding.status}
         statusLabel={binding.statusLabel}
-        action={
-          binding.openResourceId ? (
-            <Tooltip content="Open workspace">
-              <IconButton
-                aria-label="Open workspace"
-                size="xs"
-                variant="ghost"
-                onClick={() => void run({ type: "openResource", id: binding.openResourceId! }).catch(() => undefined)}
-              >
-                <ArrowUpRight size={14} />
-              </IconButton>
-            </Tooltip>
-          ) : undefined
-        }
         options={
           <NativeWorkspaceCreation
             {...props}

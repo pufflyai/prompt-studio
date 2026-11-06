@@ -2,7 +2,7 @@ import { Dialog, IconButton, Image } from "@chakra-ui/react";
 import type { ChatAttachment } from "@pstdio/sdk/extensions";
 import { ResourceBadge, Tooltip } from "@pstdio/ui";
 import { AttachmentList } from "@pstdio/ui/chat-ui";
-import { FileIcon, X } from "lucide-react";
+import { Paperclip, X } from "lucide-react";
 import { useState } from "react";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 
@@ -21,7 +21,7 @@ export const NativeChatAttachmentActions = (props: { disabled: boolean; upload(f
         picker.click();
       }}
     >
-      <FileIcon size={14} />
+      <Paperclip size={14} />
     </IconButton>
   </Tooltip>
 );

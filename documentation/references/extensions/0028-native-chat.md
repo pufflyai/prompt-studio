@@ -78,13 +78,16 @@ may also refresh the new label, setup state and open action. Existing per-contro
 preserve later selections. Creation errors keep the form and draft for correction/retry. The
 public create service runs on this device: do not create locally for a different selected
 account device. Providers retain their own execution targets and operations; Sessions never
-interprets provider-specific field names. Existing sessions keep their bound workspace.
+interprets provider-specific field names. Existing sessions keep their bound workspace. The shared workspace/device menus match the chat
+menus: saved workspace labels open the selected workspace and device identity remains read-only.
+An Open action requires a visible existing workspace choice matching `openResourceId`; empty and
+provider-create values never expose it.
 
 Harness choices use agent metadata's exact owning `extensionId` and installed manifest `icon`.
 The host resolves package SVG assets with the same bounded asset reader used by Extensions;
 the native picker uses that icon for each harness and its selected parent row. An absent or
 unreadable icon falls back without removing the harness. No ID/name inference or marketplace
-icon lookup is involved. Attach files is an icon-only file action with an accessible label and
+icon lookup is involved. Attach files is an icon-only paperclip action with an accessible label and
 tooltip; upload and attachment ownership are unchanged.
 
 ## Snapshot and stream handoff

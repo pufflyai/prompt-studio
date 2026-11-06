@@ -21,7 +21,7 @@ export const createDashboardSessionResource = (
   projectId: string | undefined,
   metadata: Record<string, unknown> = {},
 ) => ({
-  ...createDashboardResource("session", id, label, "MessageCircle", projectId, metadata),
+  ...createDashboardResource("session", id, label, "messages-circle", projectId, metadata),
   extensionId: "pstdio",
   projectId,
 });
