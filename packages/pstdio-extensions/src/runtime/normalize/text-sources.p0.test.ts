@@ -24,7 +24,7 @@ test("source callbacks are registered without a view and validate their declared
       publisher: "acme",
       version: "1.0.0",
       main: "extension.ts",
-      enginesPstdio: "^0.3.0",
+      enginesPstdio: "^0.4.0",
     },
     definition: {
       textSources: [body],

@@ -1,6 +1,5 @@
 import type { StorageRecord } from "pstdio-sync-contracts";
-import type { StorageOwner } from "../shared";
-import { encodeText } from "../shared";
+import type { OrderedObservation } from "./ordered-operation";
 import type { GroupCommit } from "./types";
 
 export const storageRecordId = (namespace: string[], recordId: string) => JSON.stringify([...namespace, recordId]);
@@ -34,5 +33,13 @@ export const legacyNamespaceStorage = (records: NamespacedRecords, namespace: st
   };
 };
 
-export const initialRecordRevision = (owner: StorageOwner, recordId: string) =>
-  encodeText(JSON.stringify({ owner, recordId, operations: [] }));
+/** An observation of an absent record: a save conditioned on it is refused once the record exists. */
+export const initialRecordRevision = () =>
+  JSON.stringify({
+    version: 1,
+    exists: false,
+    deleted: false,
+    lifetime: null,
+    value: { kind: "object", fields: {} },
+    stamps: {},
+  } satisfies OrderedObservation);

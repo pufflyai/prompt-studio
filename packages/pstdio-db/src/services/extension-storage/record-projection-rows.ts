@@ -12,6 +12,11 @@ type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export const publishProjectedRecords = async (tx: Transaction, owner: StorageOwner, input: NativeProjectedRecord[]) => {
   const records = await Promise.all(input.map((record) => projectNativeRecordText(tx, owner, record)));
   assertStorageLimits(records);
+  return writeProjectedRecords(tx, owner, records);
+};
+
+/** Already materialized records. Snapshot callers validate each record rather than one author group. */
+export const writeProjectedRecords = async (tx: Transaction, owner: StorageOwner, records: NativeProjectedRecord[]) => {
   let projected = 0;
   const rows = records.map((record) => ({
     record_id: record.recordId,

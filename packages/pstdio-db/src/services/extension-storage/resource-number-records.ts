@@ -23,20 +23,29 @@ const aliasNumber = (shorthand: string) => {
   return { shorthand, prefix: shorthand.slice(0, separator), value };
 };
 
+export const numberIndexString = (value: unknown): value is string => {
+  if (typeof value !== "string") return false;
+  for (const character of value) {
+    const code = character.codePointAt(0)!;
+    if (code === 0 || (code >= 0xd800 && code <= 0xdfff)) return false;
+  }
+  return true;
+};
+
 const hasNumberValue = (record: StorageRecord) => {
   if (!record.exists) return false;
   const value = record.value;
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   return (
     value.id === record.recordId &&
-    typeof value.extensionId === "string" &&
-    typeof value.kind === "string" &&
-    typeof value.prefix === "string" &&
+    numberIndexString(value.extensionId) &&
+    numberIndexString(value.kind) &&
+    numberIndexString(value.prefix) &&
     typeof value.value === "number" &&
     Number.isSafeInteger(value.value) &&
     value.value > 0 &&
     Array.isArray(value.aliases) &&
-    value.aliases.every((alias) => typeof alias === "string" && aliasNumber(alias) !== undefined)
+    value.aliases.every((alias) => numberIndexString(alias) && aliasNumber(alias) !== undefined)
   );
 };
 
@@ -45,7 +54,7 @@ export const isNumberRecord = (record: StorageRecord) => !record.deleted && hasN
 export const numberValue = (record: StorageRecord) => record.value as unknown as NumberRecord;
 
 /** Both indexes include numeric values: a large former alias must never be allocated again. */
-export const nextIndexedNumber = async (tx: Transaction, projectId: string, prefix: string) => {
+export const indexedNumberCandidate = async (tx: Transaction, projectId: string, prefix: string) => {
   const where = and(eq(sequences.project_id, projectId), eq(sequences.prefix, prefix));
   const [sequence] = await tx.select({ next: sequences.next_value }).from(sequences).where(where);
   const highest = async (table: typeof identities | typeof aliases) => {
@@ -57,9 +66,45 @@ export const nextIndexedNumber = async (tx: Transaction, projectId: string, pref
       .limit(1);
     return row?.value ?? 0;
   };
-  const value = Math.max((sequence?.next ?? 1) - 1, await highest(identities), await highest(aliases)) + 1;
+  return Math.max((sequence?.next ?? 1) - 1, await highest(identities), await highest(aliases)) + 1;
+};
+export const nextIndexedNumber = async (tx: Transaction, projectId: string, prefix: string) => {
+  const value = await indexedNumberCandidate(tx, projectId, prefix);
   if (!Number.isSafeInteger(value)) throw new Error(`Resource number range exhausted for prefix ${prefix}`);
   return value;
+};
+
+type RetainedNumberValues = ReadonlyMap<string, { value: StorageRecord["value"]; history: Record<string, number> }>;
+const retainedNumberValues = async (
+  tx: Transaction,
+  owner: StorageOwner,
+  deleted: StorageRecord[],
+  retained?: RetainedNumberValues,
+) => {
+  const retainedNumbers: NumberRecord[] = [];
+  for (let offset = 0; offset < deleted.length; offset += 1_000) {
+    const batch = deleted.slice(offset, offset + 1_000);
+    if (retained) {
+      for (const record of batch) {
+        const value = retained.get(record.recordId)?.value;
+        const candidate = { ...record, value: value ?? null };
+        if (hasNumberValue(candidate)) retainedNumbers.push(numberValue(candidate));
+      }
+      continue;
+    }
+    const { sources } = await loadResourceDocuments(
+      tx,
+      owner,
+      batch.map((record) => resourceDocumentId(record.recordId)),
+    );
+    for (const record of batch) {
+      const source = sources.get(resourceDocumentId(record.recordId))!;
+      const value = retainedResourceValue(record.recordId, source.states);
+      const retained = { ...record, value };
+      if (hasNumberValue(retained)) retainedNumbers.push(numberValue(retained));
+    }
+  }
+  return retainedNumbers;
 };
 
 /** Maintained in the same transaction as the canonical core records, for local and remote writes. */
@@ -68,6 +113,7 @@ export const projectNumberRecords = async (
   owner: StorageOwner,
   records: StorageRecord[],
   revision: number,
+  retained?: RetainedNumberValues,
 ) => {
   if (owner.extensionId !== coreOwnerId || !records.length) return;
   await tx
@@ -101,28 +147,24 @@ export const projectNumberRecords = async (
       FROM jsonb_to_recordset(${batch}::jsonb) AS i(resource_id text, extension_id text, kind text, prefix text, value bigint, shorthand text)`);
   }
   // Retained tombstones also carry history to a fresh device before its first allocation.
-  const retainedNumbers: NumberRecord[] = [];
-  const deleted = records.filter((record) => record.exists && record.deleted);
-  for (let offset = 0; offset < deleted.length; offset += 1_000) {
-    const batch = deleted.slice(offset, offset + 1_000);
-    const { sources } = await loadResourceDocuments(
-      tx,
-      owner,
-      batch.map((record) => resourceDocumentId(record.recordId)),
-    );
-    for (const record of batch) {
-      const source = sources.get(resourceDocumentId(record.recordId))!;
-      const value = retainedResourceValue(record.recordId, source.states);
-      const retained = { ...record, value };
-      if (hasNumberValue(retained)) retainedNumbers.push(numberValue(retained));
-    }
-  }
+  const retainedNumbers = await retainedNumberValues(
+    tx,
+    owner,
+    records.filter((record) => record.exists && record.deleted),
+    retained,
+  );
   const history = [
     ...live.map((r) => ({ id: r.id, aliases: r.aliases })),
     ...retainedNumbers.map((r) => ({ id: r.id, aliases: [...r.aliases, `${r.prefix}-${r.value}`] })),
   ].flatMap((r) => [...new Set(r.aliases)].map((shorthand) => ({ resource_id: r.id, ...aliasNumber(shorthand)! })));
+  for (const [resource_id, metadata] of retained ?? [])
+    for (const [prefix, value] of Object.entries(metadata.history))
+      history.push({ resource_id, shorthand: `${prefix}-${value}`, prefix, value });
+  const uniqueHistory = [
+    ...new Map(history.map((entry) => [JSON.stringify([entry.resource_id, entry.shorthand]), entry])).values(),
+  ];
 
-  for (const batch of jsonBatches(history)) {
+  for (const batch of jsonBatches(uniqueHistory)) {
     await tx.execute(sql`INSERT INTO storage_resource_aliases (workbench_id, resource_id, shorthand, prefix, value)
       SELECT ${owner.workbenchId}, i.resource_id, i.shorthand, i.prefix, i.value
       FROM jsonb_to_recordset(${batch}::jsonb) AS i(resource_id text, shorthand text, prefix text, value bigint)`);

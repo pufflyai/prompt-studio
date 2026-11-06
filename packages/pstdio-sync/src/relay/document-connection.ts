@@ -11,7 +11,7 @@ export const createDocumentRelayConnection = (input: {
   signal: AbortSignal;
   live?: LiveConnection;
   synchronize: (signal: AbortSignal, subscribe: SubscribeDocument) => Promise<unknown>;
-  onError?: () => void;
+  onError?: (error?: unknown) => void;
   acceptsChange?: (change: Change) => boolean;
   synchronizeChanged?: (change: Change, signal: AbortSignal) => Promise<boolean>;
   synchronizeDocument?: (name: string, signal: AbortSignal) => Promise<boolean>;
@@ -55,9 +55,9 @@ export const createDocumentRelayConnection = (input: {
     attempt = new AbortController();
     attemptSignal = AbortSignal.any([attempt.signal, input.signal]);
   };
-  const failed = (current: AbortController) => {
+  const failed = (current: AbortController, error: unknown) => {
     if (current.signal.aborted || current !== attempt || stopped) return;
-    input.onError?.();
+    input.onError?.(error);
     current.abort();
     retry = setTimeout(
       () => {
@@ -83,7 +83,7 @@ export const createDocumentRelayConnection = (input: {
         (handled) => {
           if (!handled && current === attempt && !current.signal.aborted) wake();
         },
-        () => failed(current),
+        (error) => failed(current, error),
       )
       .finally(() => {
         targeted.delete(pending);
@@ -105,8 +105,8 @@ export const createDocumentRelayConnection = (input: {
         await input.synchronize(signal, subscribe);
         failures = 0;
       }
-    } catch {
-      failed(current);
+    } catch (error) {
+      failed(current, error);
     } finally {
       running = undefined;
       input.onStatusChange?.();

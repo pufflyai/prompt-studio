@@ -43,9 +43,13 @@ const compareRecords = (index: StorageRecordIndex, left: OrderedRecord, right: O
   return compareQueryValues(left.recordId, right.recordId);
 };
 
-export const createMemoryRecordQueries = (owner: StorageOwner, store: DocumentStore) => {
+export const createMemoryRecordQueries = (
+  owner: StorageOwner,
+  store: DocumentStore,
+  source?: { list(): Promise<StorageRecord[]>; read(id: string): Promise<StorageRecord> },
+) => {
   const records = (document: Y.Doc) =>
-    Promise.all([...document.getMap("records").keys()].map((id) => readDocumentRecord(document, id)));
+    source?.list() ?? Promise.all([...document.getMap("records").keys()].map((id) => readDocumentRecord(document, id)));
   const api: StorageRecordQueries = {
     defineIndexes: async (indexes) => {
       validateIndexes(indexes);
@@ -56,7 +60,7 @@ export const createMemoryRecordQueries = (owner: StorageOwner, store: DocumentSt
     readMany: (ids) =>
       store.transaction(owner, async ({ document }) => {
         if (ids.length > 100) throw new Error("A batch can read at most 100 records");
-        return Promise.all(ids.map((id) => readDocumentRecord(document, id)));
+        return Promise.all(ids.map((id) => (source ? source.read(id) : readDocumentRecord(document, id))));
       }),
     query: (query) =>
       store.transaction(owner, async ({ document }) => {
