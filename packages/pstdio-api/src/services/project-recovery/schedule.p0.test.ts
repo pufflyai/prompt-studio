@@ -92,3 +92,25 @@ test("a failed scan keeps its work pending and retries, while close cancels a ru
   await scheduler.close();
   await cancelled.promise;
 });
+
+test("a watcher that keeps failing rescans no more often than the change gap", async () => {
+  const runs: number[] = [];
+  const watch = watcher();
+  const scheduler = createRecoveryScheduler({
+    watch: watch.watch,
+    quietMs: 5,
+    gapMs: 200,
+    retryMs: 10,
+    run: async () => {
+      runs.push(Date.now());
+      watch.handles.at(-1)!.lost();
+    },
+  });
+  try {
+    scheduler.request("startup");
+    await until(() => runs.length === 2);
+    expect(runs[1]! - runs[0]!).toBeGreaterThanOrEqual(190);
+  } finally {
+    await scheduler.close();
+  }
+});

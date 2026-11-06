@@ -10,7 +10,7 @@ import { type RecoveryChunkStore, readRecoveryManifest } from "./manifest";
 import { pruneRecoveryStore } from "./retention";
 import { createRecoveryScheduler } from "./schedule";
 import { openRecoverySource } from "./source-posix";
-import { prepareRecoveryCapture } from "./transfer";
+import { prepareRecoveryCapture, RecoveryCandidateInvalid } from "./transfer";
 import { watchRecoveryFolder } from "./watch";
 
 interface LocalWorkspace {
@@ -74,13 +74,25 @@ export const createLocalRecoverySource = (input: {
 
   // This process owns the source's capture and publication until the owner stops.
   let ownership: { id: string; release: () => Promise<void> } | undefined;
+  const disown = async () => {
+    const held = ownership;
+    ownership = undefined;
+    await held?.release().catch(() => {});
+  };
   const own = async (current: NonNullable<Awaited<ReturnType<typeof source>>>) => {
     if (ownership?.id === current.id) return;
-    await ownership?.release();
-    ownership = undefined;
+    await disown();
     const release = await current.journal.acquire();
     if (!release) throw new Error("Another Prompt Studio process owns this folder's recovery");
     ownership = { id: current.id, release };
+  };
+  const cataloged = async (store: RecoveryChunkStore, current: { id: string; folder: string }) => {
+    for (const entry of await input.catalog.list()) {
+      if (entry.deviceId === input.deviceId && entry.sourceId === current.id) return true;
+      const manifest = await readRecoveryManifest(store, entry.root).catch(() => null);
+      if (manifest?.source.folder === current.folder) return true;
+    }
+    return false;
   };
   const capture = async (runSignal: AbortSignal) => {
     const store = input.chunks();
@@ -92,11 +104,14 @@ export const createLocalRecoverySource = (input: {
     restartWatch(current.folder);
     await own(current);
     if (!(await current.journal.read()).enrolled) {
-      const opened = await openRecoverySource(current.folder);
-      try {
-        await sourceRecoveryPolicy(opened.root, true, store.directory);
-      } finally {
-        opened.close();
+      // A source already in the catalog keeps its applied policy, including deliberate absence.
+      if (!(await cataloged(store, current))) {
+        const opened = await openRecoverySource(current.folder);
+        try {
+          await sourceRecoveryPolicy(opened.root, true, store.directory);
+        } finally {
+          opened.close();
+        }
       }
       await current.journal.update({ enrolled: true });
     }
@@ -106,9 +121,14 @@ export const createLocalRecoverySource = (input: {
       gitRoots: await gitRoots(),
       signal: runSignal,
     });
-    const previous = (await current.journal.read()).candidate ?? (await ownRoot(current.id));
+    const pending = (await current.journal.read()).candidate;
+    const previous = pending ?? (await ownRoot(current.id));
     const prior = previous && (await readRecoveryManifest(store, previous).catch(() => null));
-    if (prior && sameCapture(prior.capture, captured)) return;
+    if (prior && sameCapture(prior.capture, captured)) {
+      // An unchanged folder can still have a saved candidate awaiting publication.
+      if (pending) input.captured();
+      return;
+    }
     const candidate = await prepareRecoveryCapture({
       chunks: store,
       source: {
@@ -125,9 +145,14 @@ export const createLocalRecoverySource = (input: {
   let watching: { folder: string; handle: { close(): void } } | undefined;
   let watchHints: { changed: () => void; lost: () => void } | undefined;
   const restartWatch = (next: string) => {
-    if (!watchHints || watching?.folder === next) return;
+    const hints = watchHints;
+    if (!hints || watching?.folder === next) return;
     watching?.handle.close();
-    watching = { folder: next, handle: watchRecoveryFolder(next, watchHints.changed, watchHints.lost) };
+    watching = undefined;
+    const handle = watchRecoveryFolder(next, hints.changed, hints.lost);
+    // A watch that failed while starting already reported its loss.
+    if (watchHints === hints) watching = { folder: next, handle };
+    else handle.close();
   };
   const scheduler = createRecoveryScheduler({
     ...input.schedule,
@@ -155,16 +180,32 @@ export const createLocalRecoverySource = (input: {
 
   const publish = async (store: RecoveryChunkStore, transport: Transport, attempt: AbortSignal) => {
     const current = await source();
-    const candidate = current && ownership?.id === current.id && (await current.journal.read()).candidate;
+    const candidate = current && (await current.journal.read()).candidate;
     if (!current || !candidate) return;
-    await input.catalog.publish({ chunks: store, candidate, transport, signal: attempt });
-    // A newer capture may have replaced the candidate during the upload.
-    await current.journal.update((state) => (state.candidate?.blobId === candidate.blobId ? { candidate: null } : {}));
+    await own(current);
+    // A newer capture may replace the candidate during the upload.
+    const clear = () =>
+      current.journal.update((state) => (state.candidate?.blobId === candidate.blobId ? { candidate: null } : {}));
+    let valid = await readRecoveryManifest(store, candidate).then(
+      () => true,
+      () => false,
+    );
+    if (valid)
+      try {
+        await input.catalog.publish({ chunks: store, candidate, transport, signal: attempt });
+      } catch (error) {
+        if (!(error instanceof RecoveryCandidateInvalid)) throw error;
+        valid = false;
+      }
+    await clear();
+    if (!valid) scheduler.request("reconnect");
   };
   const prune = async (store: RecoveryChunkStore) => {
     if (scheduler.status().running || pruning) return;
     pruning = (async () => {
       const current = await source();
+      // Another process owning this source may be staging ciphertext.
+      if (current && ownership?.id !== current.id) return;
       const candidate = current && (await current.journal.read()).candidate;
       const roots: RecoveryChunk[] = (await input.catalog.list()).map((entry) => entry.root);
       if (candidate) roots.push(candidate);
@@ -193,7 +234,7 @@ export const createLocalRecoverySource = (input: {
     },
     async close() {
       await scheduler.close();
-      await ownership?.release();
+      await disown();
     },
   };
 };

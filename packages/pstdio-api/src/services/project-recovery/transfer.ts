@@ -34,14 +34,29 @@ export const prepareRecoveryCapture = async (input: {
   return input.chunks.stage(new TextEncoder().encode(JSON.stringify(manifest)), "metadata");
 };
 
+/** The retained candidate itself is unreadable or fails verification locally.
+ * A fresh capture replaces it; retrying the same upload cannot succeed. */
+export class RecoveryCandidateInvalid extends Error {
+  constructor(cause: unknown) {
+    super("The saved folder capture is incomplete locally and will be captured again", { cause });
+    this.name = "RecoveryCandidateInvalid";
+  }
+}
+
 /** The only completion boundary is after acknowledged upload of the entire DAG.
  * A retained candidate and the transport's resumable immutable IDs survive lost
  * acknowledgements without reading a changed source or minting new ciphertext. */
 export const publishRecoveryCapture = async (
   input: TransferInput & { complete: (reference: RecoveryChunk, manifest: RecoveryManifest) => Promise<void> },
 ) => {
-  const manifest = await readRecoveryManifest(input.chunks, input.candidate);
-  await verifyRecoveryCapture(input.chunks, manifest, input.signal);
+  let manifest: RecoveryManifest;
+  try {
+    manifest = await readRecoveryManifest(input.chunks, input.candidate);
+    await verifyRecoveryCapture(input.chunks, manifest, input.signal);
+  } catch (error) {
+    if (input.signal?.aborted) throw error;
+    throw new RecoveryCandidateInvalid(error);
+  }
   let bytes = 0;
   await walkRecoveryGraph({
     chunks: input.chunks,

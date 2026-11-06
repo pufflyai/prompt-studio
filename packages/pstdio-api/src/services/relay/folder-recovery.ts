@@ -47,6 +47,10 @@ export const startFolderRecovery = (input: {
   let sync: { attempt: AbortSignal; documentSync: ReturnType<typeof createDocumentSync> } | undefined;
   let downloaded = false;
   let catalogId: string | undefined;
+  // A failed publication is reported without blocking downloads or local retention.
+  let publishFailed = false;
+  let publishRetry: ReturnType<typeof setTimeout> | undefined;
+  let offline = false;
   const local = createLocalRecoverySource({
     workbenchId: config.workbenchId,
     accountId: config.accountId,
@@ -77,8 +81,15 @@ export const startFolderRecovery = (input: {
     access: input.access,
     signal,
     acceptsChange: (change) => change.spaceOwner === config.accountId && change.documentId === catalogId,
-    // A reconnect may follow missed watch notifications on this device.
-    onReady: () => local.request("reconnect"),
+    onDisconnect: (reason) => {
+      if (reason === "offline") offline = true;
+    },
+    // Only a live reconnect follows a gap; a retry after a failed pass rescans nothing.
+    onReady: () => {
+      if (!offline) return;
+      offline = false;
+      local.request("reconnect");
+    },
     onStatusChange: input.statusChanged,
     onError: () =>
       apiLogger.warn(
@@ -125,12 +136,29 @@ export const startFolderRecovery = (input: {
           }),
         };
       }
-      await local.publish(store, transport, attempt);
+      try {
+        await local.publish(store, transport, attempt);
+        publishFailed = false;
+      } catch {
+        attempt.throwIfAborted();
+        publishFailed = true;
+        clearTimeout(publishRetry);
+        publishRetry = setTimeout(() => connection.wake(), 30_000);
+        publishRetry.unref?.();
+        apiLogger.warn(
+          { event: "relay.folder-recovery.publish-failed", workbenchId: config.workbenchId },
+          "Folder capture publication will retry",
+        );
+      }
       await sync.documentSync.synchronize();
       downloaded = (await sync.documentSync.status()).downloaded;
       input.statusChanged?.();
       await local.prune(store);
     },
+  });
+  // A changed default workspace can move the folder: rescan and watch the current one.
+  const stopWorkspaces = deps.eventBus.subscribe((event) => {
+    if (event.table === "workspaces") local.request("watcher-lost");
   });
   const stopCatalog = deps.extensionStorageService.watch((owner, origin) => {
     if (owner.workbenchId !== config.workbenchId || owner.extensionId !== catalog.owner.extensionId) return;
@@ -141,9 +169,14 @@ export const startFolderRecovery = (input: {
     retry: connection.retry,
     /** A person's "Back up now": a full scan, then publication when the relay is reachable. */
     capture: () => local.request("explicit"),
-    status: async () => ({ ...(await local.status()), downloaded, ...connection.status() }),
+    async status() {
+      const own = await local.status();
+      return { ...own, needsAttention: own.needsAttention || publishFailed, downloaded, ...connection.status() };
+    },
     done: connection.done.finally(async () => {
       stopCatalog();
+      stopWorkspaces();
+      clearTimeout(publishRetry);
       await local.close();
       sync?.documentSync.close();
     }),

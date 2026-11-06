@@ -8,7 +8,7 @@ import {
   unchangedRecoverySource,
   verifyRecoverySource,
 } from "./capture-source";
-import { type createRecoveryChunkStore, recoveryChunkBytes } from "./chunks";
+import { type createRecoveryChunkStore, type RecoveryChunk, recoveryChunkBytes } from "./chunks";
 import type { createRecoveryFileCache } from "./file-cache";
 import { createRecoveryPages } from "./pages";
 import { createRecoveryPolicy } from "./policy";
@@ -30,6 +30,9 @@ const within = (root: string, path: string) => {
 };
 const mode = (stat: BigIntStats) => Number(stat.mode & 0o7777n);
 const pointerBytes = 64n * 1024n;
+// Coarse filesystem clocks (HFS+, FAT, network shares) can hide a same-size write
+// that lands in the tick after a read. Files that recent are read again next time.
+const racyNs = 2_000_000_000n;
 const maxPointers = 1024;
 
 export interface RecoveryScanInput {
@@ -43,7 +46,9 @@ export interface RecoveryScanInput {
   /** Content of files whose source identity is unchanged since an earlier scan. */
   reuse?: ReturnType<typeof createRecoveryFileCache>;
   /** Reports each visited entry with whether the policy included it. */
-  visited?: (path: string, included: boolean) => void;
+  visited?: (path: string, included: boolean, kind: "file" | "directory" | "other") => void;
+  /** The validated real path; a root that resolves elsewhere is refused before any read. */
+  expectedRoot?: string;
   signal?: AbortSignal;
   progress?: (event: { kind: "read"; path: string; files: number; bytes: number }) => Promise<void> | void;
 }
@@ -52,7 +57,12 @@ export interface RecoveryScanInput {
  * The transfer owner must acknowledge the complete graph before publishing it. */
 export const scanRecoveryRoot = async (input: RecoveryScanInput) => {
   const startedAt = new Date().toISOString();
+  const reusableBefore = BigInt(Date.now()) * 1_000_000n - racyNs;
   const source = await openRecoverySource(input.root);
+  if (input.expectedRoot !== undefined && source.rootPath !== input.expectedRoot) {
+    source.close();
+    throw new RecoveryCaptureError("", new Error("The recovery root moved before capture"));
+  }
   const pages = createRecoveryPages(input.chunks);
   const inventory = pages.inventory();
   const excluded = pages.excluded();
@@ -85,6 +95,14 @@ export const scanRecoveryRoot = async (input: RecoveryScanInput) => {
     files++;
     bytes += cached.size;
     return true;
+  };
+  const remember = async (
+    path: string,
+    initial: BigIntStats,
+    content: { size: number; sha256: string; content: RecoveryChunk | null },
+  ) => {
+    if (initial.mtimeNs < reusableBefore && initial.ctimeNs < reusableBefore)
+      await input.reuse?.set(path, recoverySourceIdentity(initial), content);
   };
   const captureFile = async (parent: RecoverySourceHandle, name: string, path: string, initial: BigIntStats) => {
     const file = await parent.open(name, true);
@@ -119,7 +137,7 @@ export const scanRecoveryRoot = async (input: RecoveryScanInput) => {
         throw new Error("The included file changed during capture");
       const content = { size: position, sha256: digest.digest("hex"), content: await parts.finish() };
       await inventory.add({ kind: "file", path, mode: mode(initial), ...content });
-      await input.reuse?.set(path, recoverySourceIdentity(initial), content);
+      await remember(path, initial, content);
       files++;
       if (kept !== undefined) retainPointer(path, kept);
     } finally {
@@ -141,7 +159,10 @@ export const scanRecoveryRoot = async (input: RecoveryScanInput) => {
       try {
         const stat = await entry.stat();
         const match = policy.classify(path, stat.isDirectory());
-        input.visited?.(path, match.included);
+        let kind: "file" | "directory" | "other" = "other";
+        if (stat.isFile()) kind = "file";
+        else if (stat.isDirectory()) kind = "directory";
+        input.visited?.(path, match.included, kind);
         if (!match.included) {
           await excluded.add({ path, rule: match.rule! });
           return;

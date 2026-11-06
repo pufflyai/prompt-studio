@@ -1,6 +1,6 @@
 import { lstat, realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import type { scanRecoveryRoot } from "./scan";
+import { RecoveryCaptureError, type scanRecoveryRoot } from "./scan";
 import { openRecoverySource } from "./source-posix";
 
 type Scan = Awaited<ReturnType<typeof scanRecoveryRoot>>;
@@ -83,6 +83,10 @@ export const captureRecoveryGitDependencies = async (input: {
   gitRoots: string[];
   found: boolean;
   excluded: string[];
+  /** Included `.git` entries that are neither a directory nor a pointer file. */
+  unsupported: string[];
+  /** Whether the root policy includes a folder-relative directory. */
+  included: (path: string) => boolean;
   capture: (root: string, policy: string | null, pointer: (path: string) => boolean) => Promise<Scan>;
   signal?: AbortSignal;
 }) => {
@@ -98,6 +102,14 @@ export const captureRecoveryGitDependencies = async (input: {
       problems.push({ path, reason });
   };
   for (const path of input.excluded) problem(path, "excluded");
+  for (const path of input.unsupported) problem(path, "unsupported");
+  // A target inside the folder is captured with it only when the policy includes it.
+  const inside = (pointer: Pointer, target: string) => {
+    if (!within(input.root, target)) return false;
+    const rel = relative(input.root, target).split(sep).join("/");
+    if (rel && !input.included(rel)) problem(pointer.origin, "excluded");
+    return true;
+  };
   const trusted = await trustedAdministration(input.gitRoots);
   const visited = new Set<string>();
   const queue: Pointer[] = [];
@@ -116,20 +128,21 @@ export const captureRecoveryGitDependencies = async (input: {
     let scan: Scan;
     try {
       scan = await input.capture(path, policy, dependencyPointer(kind));
-      if (scan.rootPath !== path) throw new Error("Git administration moved during capture");
-    } catch {
+    } catch (error) {
       if (input.signal?.aborted) throw input.signal.reason;
+      // Changing or moving administration keeps the whole capture pending, like folder entries.
+      if (error instanceof RecoveryCaptureError) throw error;
       return problem(referencedBy, "unavailable");
     }
     const { inventory, exclusions, rootMode, files, bytes } = scan;
     dependencies.push({ kind, path, referencedBy, policy, inventory, exclusions, rootMode, files, bytes });
     enqueue(scan, path, referencedBy, (pointer) => (dependencyPointer(kind)(pointer) ? "alternates" : null));
   };
-  const alternate = async (objects: string, line: string) => {
+  const alternate = async (pointer: Pointer, objects: string, line: string) => {
     if (line.startsWith('"')) return { reason: "unsupported" } as const;
     const target = await real(resolve(objects, line));
     if (!target) return { reason: "unavailable" } as const;
-    if (within(input.root, target)) return {};
+    if (inside(pointer, target)) return {};
     if (basename(target) !== "objects" || !trusted.some(({ admin }) => within(admin, target)))
       return { reason: "unregistered" } as const;
     return { target };
@@ -139,21 +152,27 @@ export const captureRecoveryGitDependencies = async (input: {
     const objects = dirname(dirname(join(pointer.base, pointer.path)));
     for (const line of text.split(/\r?\n/)) {
       if (!line.trim() || line.startsWith("#")) continue;
-      const result = await alternate(objects, line);
+      const result = await alternate(pointer, objects, line);
       if (result.reason) problem(pointer.origin, result.reason);
       else if (result.target) await add("git-objects", result.target, pointer.origin);
     }
   };
-  const resolveWorktree = async (pointer: Pointer, target: string, admin: string) => {
-    // The worktree administration must name this exact `.git` file as its checkout,
-    // and share the registered repository's common directory.
-    const back = await readPointer(target, "gitdir").catch(() => null);
-    const checkout = back && (await real(resolve(target, back)));
-    const common = await readPointer(target, "commondir").catch(() => null);
-    const commonPath = common && (await real(resolve(target, common)));
-    if (!checkout || checkout !== (await real(join(pointer.base, pointer.path))) || commonPath !== admin)
-      return problem(pointer.origin, "relationship");
-    await add("git-admin", target, pointer.origin);
+  /** The `.git` file a linked worktree's administration names, when it shares `admin`. */
+  const worktreeCheckout = async (worktree: string, admin: string) => {
+    const back = await readPointer(worktree, "gitdir").catch(() => null);
+    const checkout = back && (await real(resolve(worktree, back)));
+    const common = await readPointer(worktree, "commondir").catch(() => null);
+    const commonPath = common && (await real(resolve(worktree, common)));
+    return commonPath === admin ? checkout : null;
+  };
+  const resolveWorktree = async (pointer: Pointer, worktree: string, admin: string, module: boolean) => {
+    // The worktree administration must name this `.git` file as its checkout. A
+    // submodule of that worktree must be checked out inside it.
+    const checkout = await worktreeCheckout(worktree, admin);
+    const file = await real(join(pointer.base, pointer.path));
+    const related = module ? !!checkout && !!file && within(dirname(checkout), file) : !!checkout && checkout === file;
+    if (!related) return problem(pointer.origin, "relationship");
+    await add("git-admin", worktree, pointer.origin);
     await add("git-common", admin, pointer.origin);
   };
   const resolveAdministration = async (pointer: Pointer, text: string) => {
@@ -162,7 +181,7 @@ export const captureRecoveryGitDependencies = async (input: {
     const directory = dirname(join(pointer.base, pointer.path));
     const target = await real(resolve(directory, value));
     if (!target) return problem(pointer.origin, "unavailable");
-    if (within(input.root, target)) return;
+    if (inside(pointer, target)) return;
     const owner = trusted.find(({ admin }) => within(admin, target));
     if (!owner) return problem(pointer.origin, "unregistered");
     return linkAdministration(pointer, directory, target, owner);
@@ -178,7 +197,8 @@ export const captureRecoveryGitDependencies = async (input: {
         ? add("git-common", target, pointer.origin)
         : problem(pointer.origin, "relationship");
     const [area, name, ...rest] = relative(owner.admin, target).split(sep);
-    if (area === "worktrees" && name && !rest.length) return resolveWorktree(pointer, target, owner.admin);
+    if (area === "worktrees" && name && (!rest.length || (rest[0] === "modules" && rest.length > 1)))
+      return resolveWorktree(pointer, join(owner.admin, area, name), owner.admin, rest.length > 0);
     // A submodule checkout must live inside the registered repository that owns its module.
     if (area === "modules" && name && within(owner.root, (await real(directory)) ?? ""))
       return add("git-admin", target, pointer.origin);

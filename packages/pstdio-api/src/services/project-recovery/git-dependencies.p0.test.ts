@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, mkdtemp, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
@@ -7,6 +7,7 @@ import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore } from "./chunks";
 import { readRecoveryManifest } from "./manifest";
 import { createRecoveryPages } from "./pages";
+import { scanRecoveryRoot } from "./scan";
 import { prepareRecoveryCapture } from "./transfer";
 import { verifyRecoveryCapture } from "./verify-capture";
 
@@ -113,4 +114,70 @@ test("unregistered, unrelated and excluded Git administration never becomes func
     dependencies: [],
     problems: [],
   });
+});
+
+test("shared Git administration that changes during capture keeps the capture pending instead of incomplete", async () => {
+  const { root, repository, chunks } = await fixture();
+  const worktree = join(root, "worktree");
+  git(repository, "worktree", "add", "-q", worktree);
+  let changed = false;
+  await expect(
+    captureRecoveryFolder({
+      root: worktree,
+      chunks,
+      gitRoots: [repository],
+      progress: async (event) => {
+        if (event.path === "config" && !changed) {
+          changed = true;
+          await appendFile(join(repository, ".git/config"), "\n[core]\n\tchanged = true\n");
+        }
+      },
+    }),
+  ).rejects.toMatchObject({ code: "recovery_capture_incomplete" });
+  expect(changed).toBe(true);
+});
+
+test("a linked .git or an excluded in-folder Git directory is never functional Git recovery", async () => {
+  const { root, repository, chunks } = await fixture();
+  const linked = join(root, "linked");
+  await mkdir(linked);
+  await symlink(join(repository, ".git"), join(linked, ".git"));
+  const symlinked = await captureRecoveryFolder({ root: linked, chunks, gitRoots: [repository] });
+  expect(symlinked.git).toMatchObject({ state: "incomplete", problems: [{ path: ".git", reason: "unsupported" }] });
+
+  const ignored = join(root, "ignored");
+  await mkdir(join(ignored, "gitdata/wt"), { recursive: true });
+  await writeFile(join(ignored, ".git"), "gitdir: ./gitdata/wt\n");
+  await writeFile(join(ignored, ".pstignore"), "gitdata/\n");
+  const excluded = await captureRecoveryFolder({ root: ignored, chunks, gitRoots: [repository] });
+  expect(excluded.git).toMatchObject({ state: "incomplete", problems: [{ path: ".git", reason: "excluded" }] });
+});
+
+test("a submodule checked out in a linked worktree recovers through that worktree's administration", async () => {
+  const { root, repository, chunks } = await fixture();
+  const library = join(root, "library");
+  await mkdir(library);
+  git(library, "init", "-q");
+  await writeFile(join(library, "lib"), "library bytes");
+  git(library, "add", "lib");
+  git(library, "commit", "-qm", "library");
+  git(repository, "-c", "protocol.file.allow=always", "submodule", "add", "-q", library, "sub");
+  git(repository, "commit", "-qm", "add submodule");
+  const worktree = join(root, "worktree");
+  git(repository, "worktree", "add", "-q", worktree);
+  git(worktree, "-c", "protocol.file.allow=always", "submodule", "update", "-q", "--init");
+  const captured = await captureRecoveryFolder({ root: worktree, chunks, gitRoots: [repository] });
+  expect(captured.git.problems).toEqual([]);
+  expect(captured.git.state).toBe("functional");
+});
+
+test("a scan refuses a root that does not resolve to the validated path before reading it", async () => {
+  const { root, repository, chunks } = await fixture();
+  const alias = join(root, "alias");
+  await symlink(join(repository, ".git"), alias);
+  const before = await readdir(chunks.directory);
+  await expect(
+    scanRecoveryRoot({ root: alias, expectedRoot: alias, chunks, policy: { text: null } }),
+  ).rejects.toThrow();
+  expect(await readdir(chunks.directory)).toEqual(before);
 });

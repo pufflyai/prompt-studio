@@ -41,6 +41,8 @@ export const createRecoveryCatalog = (input: {
     extensionId: JSON.stringify([catalogExtension, input.managerOrigin, input.accountId]),
   };
   const store = input.documents.open("records");
+  // Roots are immutable: once acknowledged, the relay retains their graph while referenced.
+  const uploaded = new Set<string>();
   type Transfer = Parameters<typeof publishRecoveryCapture>[0];
   const assertSpace = (chunks: Transfer["chunks"]) => {
     if (chunks.space.projectId !== input.projectId || chunks.space.spaceOwner !== input.accountId)
@@ -60,6 +62,7 @@ export const createRecoveryCatalog = (input: {
         complete: async (root, completed) => {
           const entry = entrySchema.parse({ deviceId: input.deviceId, sourceId: completed.source.id, root });
           verifySource(entry, completed);
+          uploaded.add(root.blobId);
           await store.transaction(owner, async ({ document }) => {
             document.getMap("sources").set(key(entry), entry);
           });
@@ -68,8 +71,7 @@ export const createRecoveryCatalog = (input: {
     },
     references(transfer: Omit<Transfer, "candidate" | "complete">) {
       assertSpace(transfer.chunks);
-      // Roots are immutable: one verified upload or download per connection attempt is enough.
-      const uploaded = new Set<string>();
+      // One verified download per connection attempt is enough.
       const available = new Set<string>();
       const references: NonNullable<DocumentSyncInput["references"]> = {
         validate(document) {

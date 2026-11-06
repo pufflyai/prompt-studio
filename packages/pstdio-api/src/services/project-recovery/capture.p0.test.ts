@@ -119,6 +119,12 @@ test("a later capture reuses unchanged files by source identity and reads change
   const { folder, chunks, pages } = await fixture();
   await writeFile(join(folder, "unchanged"), "same bytes");
   await writeFile(join(folder, "edited"), "before");
+  const racy: string[] = [];
+  await captureRecoveryFolder({ root: folder, chunks });
+  // Files written moments before a scan can change again within one timestamp tick.
+  await captureRecoveryFolder({ root: folder, chunks, progress: (event) => void racy.push(event.path) });
+  expect(racy.sort()).toEqual(["edited", "unchanged"]);
+  await Bun.sleep(2_100);
   await captureRecoveryFolder({ root: folder, chunks });
   await writeFile(join(folder, "edited"), "after the edit");
   const read: string[] = [];

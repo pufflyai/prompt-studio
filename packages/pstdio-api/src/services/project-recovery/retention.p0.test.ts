@@ -33,6 +33,8 @@ test("local retention keeps every current capture graph and removes only superse
   await writeFile(join(folder, "replaced"), "superseded bytes");
   const previous = await capture();
   await writeFile(join(folder, "replaced"), "current bytes");
+  // Recently written files are never reused, so let both age past the racy window.
+  await Bun.sleep(2_100);
   const current = await capture();
   const before = await readdir(chunks.directory);
 

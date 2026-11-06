@@ -1,7 +1,7 @@
 export type RecoveryScanReason = "startup" | "reconnect" | "change" | "watcher-lost" | "explicit";
 
-/** Watch notifications are hints. Startup, reconnect, watcher loss and an explicit
- * request run a full scan promptly; change hints wait for a quiet period. */
+/** Watch notifications are hints. Startup, reconnect and an explicit request run a
+ * full scan promptly; watcher loss waits for the gap and change hints for a quiet period. */
 export const createRecoveryScheduler = (input: {
   run: (reasons: RecoveryScanReason[], signal: AbortSignal) => Promise<void>;
   watch: (changed: () => void, lost: () => void) => { close(): void };
@@ -40,8 +40,10 @@ export const createRecoveryScheduler = (input: {
   };
   const delay = () => {
     if (failures) return Math.min(retryMs * 2 ** (failures - 1), 5 * 60_000);
-    if ([...reasons].some((reason) => reason !== "change")) return 0;
     const now = Date.now();
+    if ([...reasons].some((reason) => reason !== "change" && reason !== "watcher-lost")) return 0;
+    // A lost watcher rescans after the gap, so a watch that keeps failing cannot loop.
+    if (!reasons.has("change")) return Math.max(0, lastEnded + gapMs - now);
     burstStartedAt ??= now;
     const settled = Math.min(now + quietMs, burstStartedAt + 10 * quietMs);
     return Math.max(settled, lastEnded + gapMs) - now;
