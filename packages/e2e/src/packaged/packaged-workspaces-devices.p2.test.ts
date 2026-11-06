@@ -253,7 +253,7 @@ test(
       progress("workspaces collection visible");
       const foreignWorkspace = (await second.query()).rows.find((row) => row.resource?.device?.id === first.id);
       if (!foreignWorkspace) throw new Error("Foreign workspace is unavailable");
-      await page.getByRole("option").filter({ hasText: foreignWorkspace.title }).first().click();
+      await page.locator(`[role="option"][id="${foreignWorkspace.id}"]`).click();
       await expectUI(page).toHaveURL(/\/history\?/);
       await page
         .getByRole("region", { name: "Main", exact: true })
