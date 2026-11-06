@@ -67,3 +67,29 @@ test("existing shared layouts move once to ordinary fields without losing untouc
     "second~frame": { x: 20, y: 30 },
   });
 });
+
+test("retained shared layout fields take precedence over stale ordinary layout values", async () => {
+  const {
+    devices: [storage],
+  } = await createMemoryStorageDevices();
+  const id = storage.records.id("layout:canvas");
+  await storage.records.commit({
+    operationId: "ordinary-layout",
+    edits: [{ recordId: id, replace: { version: 1, positions: { "second~frame": { x: 1, y: 2 } } } }],
+  });
+  await storage.records.commit({
+    operationId: "newer-shared-layout",
+    edits: [
+      {
+        recordId: id,
+        shared: [
+          { kind: "map.set", key: "version", value: 1 },
+          { kind: "map.set", key: "position:second~frame", value: { x: 200, y: 300 } },
+        ],
+      },
+    ],
+  });
+  expect((await loadLayout(storage, canvas)).positions["second~frame"]).toEqual({ x: 200, y: 300 });
+  await saveLayout(storage, canvas, { positions: { "second~frame": { x: 400, y: 500 } } });
+  expect((await loadLayout(storage, canvas)).positions["second~frame"]).toEqual({ x: 400, y: 500 });
+});

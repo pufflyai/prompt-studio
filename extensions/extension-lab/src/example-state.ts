@@ -28,25 +28,29 @@ export const writeExampleState = async (
     (await readExampleChanges(storage, name)).map((change) => [JSON.stringify(change.path), change]),
   );
   const set: Record<string, import("@pstdio/sdk/extensions").JsonValue> = {};
-  const unset: string[] = [];
+  const unset = new Set<string>();
   for (const change of changes) {
     for (const [key, previous] of stored) {
       if (
         previous.path.length > change.path.length &&
         change.path.every((part, index) => part === previous.path[index])
       ) {
-        unset.push(storedChangeField(key));
+        const field = storedChangeField(key);
+        delete set[field];
+        unset.add(field);
         stored.delete(key);
       }
     }
     const key = JSON.stringify(change.path);
-    set[storedChangeField(key)] = { path: change.path, value: change.value };
+    const field = storedChangeField(key);
+    unset.delete(field);
+    set[field] = { path: change.path, value: change.value };
     stored.set(key, change);
   }
-  if (Object.keys(set).length || unset.length)
+  if (Object.keys(set).length || unset.size)
     await storage.records.commit({
       operationId: storage.ids.create(),
-      edits: [{ recordId: exampleRecordId(storage, name), set, unset }],
+      edits: [{ recordId: exampleRecordId(storage, name), set, unset: [...unset] }],
     });
   return readExampleState(storage, name);
 };

@@ -188,3 +188,18 @@ test("upgrading version-one Scribble preserves newer native page edits", async (
   await readExampleState(storage, "pigeon");
   expect((await readExampleState(storage, "scribble")).contentById[id]).toBe("Newer native page edit");
 });
+
+test("an edit batch keeps its final parent and child changes without overlapping writes", async () => {
+  const storage = createMemoryStorage();
+  await writeExampleState(storage, "pigeon", [
+    { path: ["draft", "subject"], value: "Child" },
+    { path: ["draft"], value: { to: "", subject: "Parent", body: "" } },
+  ]);
+  expect((await readExampleState(storage, "pigeon")).draft.subject).toBe("Parent");
+  await writeExampleState(storage, "pigeon", [{ path: ["draft", "subject"], value: "Old child" }]);
+  await writeExampleState(storage, "pigeon", [
+    { path: ["draft"], value: { to: "", subject: "Parent", body: "" } },
+    { path: ["draft", "subject"], value: "New child" },
+  ]);
+  expect((await readExampleState(storage, "pigeon")).draft.subject).toBe("New child");
+});
