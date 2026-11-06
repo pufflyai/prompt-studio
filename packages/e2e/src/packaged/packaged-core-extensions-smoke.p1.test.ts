@@ -82,6 +82,7 @@ test(
       const body = { extensions };
       expect(body.extensions).toEqual(
         expect.arrayContaining([
+          expect.objectContaining({ enabled: true, installName: "pstdio-cloud" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-onboarding" }),
           expect.objectContaining({ enabled: true, installName: "harness-claude-code" }),
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
