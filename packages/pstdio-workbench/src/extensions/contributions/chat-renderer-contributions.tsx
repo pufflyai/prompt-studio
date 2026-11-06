@@ -1,5 +1,5 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { type ChatRendererAction, commandRefId, resourceKey } from "@pstdio/sdk/extensions";
+import { type ChatRendererAction, commandRefId, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, parseChatLink } from "@pstdio/ui/chat-ui";
 import { chatLinkPresentationSchema } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
@@ -15,6 +15,8 @@ import { type LegacyChatDraftTransfer, transferLegacyChatDraft } from "./chat-le
 import { type ChatSession, createChatSession } from "./chat-session";
 
 export interface ChatCommandTransport {
+  /** Normalize host resource defaults for owner selection; invoking placement context stays unchanged. */
+  resolveChatResource?(resource: ResourceRef, projectId: string): ResourceRef;
   /** Retain unchanged native owners when the host rebuilds a project contribution set. */
   chatRendererOwners?: ChatRendererOwners;
   readLegacySessionDraft?: (projectId: string, draftKey: string) => LegacyChatDraftTransfer | undefined;
@@ -38,8 +40,10 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
     string,
     { session: ChatSession; render: WorkbenchPanelRenderInput; presentationKey: string }
   >();
+  const normalizeResource = (resource: ResourceRef | undefined) =>
+    resource ? (input.resolveChatResource?.(resource, input.projectId) ?? resource) : undefined;
   const keyFor = (resource: WorkbenchPanelRenderInput["instance"]["resource"]) =>
-    JSON.stringify([input.projectId, view.id, resourceKey(resource) ?? body.draftKey]);
+    JSON.stringify([input.projectId, view.id, resourceKey(normalizeResource(resource)) ?? body.draftKey]);
   const sessionFor = (render: WorkbenchPanelRenderInput) => {
     const resource = render.instance.resource;
     const draftKey = resource?.id ?? body.draftKey;

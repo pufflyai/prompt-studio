@@ -23,6 +23,7 @@ import {
   subscribeToExtensionEventFeed,
   subscribeToExtensionEventReset,
 } from "@/shared/extensions/extension-webview-broadcast";
+import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
 import {
   buildDashboardExtensionMenuRegistrations,
@@ -116,6 +117,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         chatRendererOwners: input.chatRendererOwners,
         readLegacySessionDraft: readLegacySessionChatDraft,
         createChatHost: createDashboardChatHost,
+        resolveChatResource: canonicalDashboardResource,
         createChatParamField: createDashboardParamFieldRenderer,
         streamChatCommand: (commandId, body, signal) =>
           getApiClient().extensions.streamCommand(input.projectId, commandId, body, { signal }),
