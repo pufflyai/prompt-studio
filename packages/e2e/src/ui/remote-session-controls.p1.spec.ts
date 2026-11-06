@@ -22,6 +22,7 @@ test("remote primary controls keep commands, queues, questions and approvals on 
   page,
   request,
 }) => {
+  const main = page.locator('[data-workbench-panel="main"]');
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -30,47 +31,47 @@ test("remote primary controls keep commands, queues, questions and approvals on 
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "hold-presence" } });
   try {
     await page.goto(sessionUrl());
-    await expect(page.getByRole("button", { name: "Check connection", exact: true })).toBeVisible();
-    await expect(page.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Check connection", exact: true })).toBeVisible();
+    await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
   } finally {
     await request.post(`${fixture.origin}/fixture/action`, { data: { action: "release-presence" } });
   }
-  const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
-  const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
-  await expect(page.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
+  const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
+  const send = main.getByTestId("send-message-button").filter({ visible: true });
+  await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+  await expect(main.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
   await expect(editor).toHaveAttribute("contenteditable", "true");
-  await expect(page.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+  await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await editor.fill("Queued from the browser");
   // The initial stream can carry a saved read-only queue before the owner read recovers.
   // Select the actual queue action, not the same toolbar button while it still means Stop.
-  await page.getByRole("button", { name: "Queue message", exact: true }).click();
-  const queued = page.getByRole("button", { name: "Edit queued message: Queued from the browser", exact: true });
+  await main.getByRole("button", { name: "Queue message", exact: true }).click();
+  const queued = main.getByRole("button", { name: "Edit queued message: Queued from the browser", exact: true });
   await expect(queued).toBeVisible();
   await queued.click();
   await editor.fill("Edited from the browser");
-  await page.getByRole("button", { name: "Update", exact: true }).click();
+  await main.getByRole("button", { name: "Update", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Edit queued message: Edited from the browser", exact: true }),
+    main.getByRole("button", { name: "Edit queued message: Edited from the browser", exact: true }),
   ).toBeVisible();
   const state = async () => (await request.get(`${fixture.origin}/fixture/state`)).json();
   await expect.poll(async () => (await state()).queue[0]?.prompt).toBe("Edited from the browser");
-  await page.getByRole("button", { name: "Remove queued follow-up", exact: true }).click();
+  await main.getByRole("button", { name: "Remove queued follow-up", exact: true }).click();
   await expect.poll(async () => (await state()).queue).toEqual([]);
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-unavailable" } });
   await page.goto(sessionUrl());
-  await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
+  await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "question" } });
-  await expect(page.getByRole("radio", { name: "Blue", exact: true })).toBeVisible();
-  await page.getByRole("form", { name: "Question form" }).getByText("Blue", { exact: true }).click();
-  await expect(page.getByRole("radio", { name: "Blue", exact: true })).toBeChecked();
+  await expect(main.getByRole("radio", { name: "Blue", exact: true })).toBeVisible();
+  await main.getByRole("form", { name: "Question form" }).getByText("Blue", { exact: true }).click();
+  await expect(main.getByRole("radio", { name: "Blue", exact: true })).toBeChecked();
   await send.click();
   await expect.poll(async () => (await state()).answers).toEqual([{ callId: "remote-question", answers: [["Blue"]] }]);
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "approval" } });
-  await page.getByRole("button", { name: "Allow", exact: true }).click();
+  await main.getByRole("button", { name: "Allow", exact: true }).click();
   await expect.poll(async () => (await state()).approvals).toEqual([{ id: "remote-approval", decision: "approve" }]);
-  await page.getByRole("button", { name: "Stop Response", exact: true }).click();
+  await main.getByRole("button", { name: "Stop Response", exact: true }).click();
   await expect.poll(async () => (await state()).stops).toEqual([fixture.sessionId]);
   const after = await state();
   expect(after.sourceSessions).toEqual([]);
@@ -79,7 +80,7 @@ test("remote primary controls keep commands, queues, questions and approvals on 
   );
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-available" } });
   await page.goto(sessionUrl());
-  await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
+  await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
   await expect(editor).toHaveAttribute("contenteditable", "true");
   await editor.fill("Resume on Laptop");
   await send.click();
@@ -89,11 +90,12 @@ test("remote primary controls keep commands, queues, questions and approvals on 
         (await state()).targetSessions.find((session: { id: string }) => session.id === fixture.sessionId).status,
     )
     .toBe("in_progress");
-  await expect(page.getByRole("button", { name: "Stop Response", exact: true })).toBeVisible();
+  await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("online-owner.png") });
 });
 
 test("an online owner's queue recovers by itself after its automatic refresh also fails", async ({ page, request }) => {
+  const main = page.locator('[data-workbench-panel="main"]');
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -102,7 +104,7 @@ test("an online owner's queue recovers by itself after its automatic refresh als
   const initial = await (await request.get(`${fixture.origin}/fixture/state`)).json();
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-unavailable" } });
   await page.goto(sessionUrl());
-  await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
+  await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
   // The first read and the automatic refresh both fail; a third read proves the session keeps asking.
   await expect
     .poll(async () => {
@@ -110,11 +112,11 @@ test("an online owner's queue recovers by itself after its automatic refresh als
       return state.failedQueueReads - initial.failedQueueReads;
     })
     .toBeGreaterThanOrEqual(3);
-  const draft = page.getByTestId("content-editable").filter({ visible: true }).last();
+  const draft = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
   await draft.fill("Keep queue recovery draft");
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-available" } });
-  await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
-  await expect(page.getByTestId("send-message-button").filter({ visible: true }).last()).toBeVisible();
+  await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
+  await expect(main.getByTestId("send-message-button").filter({ visible: true })).toBeVisible();
   await expect(draft).toHaveText("Keep queue recovery draft");
 });
 
@@ -122,6 +124,7 @@ test("remote workspace files and diff open on their owner; offline history stays
   page,
   request,
 }) => {
+  const main = page.locator('[data-workbench-panel="main"]');
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -134,13 +137,13 @@ test("remote workspace files and diff open on their owner; offline history stays
   const filesRead = page.waitForResponse(
     (response) => response.url().includes(`/v1/workspaces/${fixture.workspaceId}/files`) && response.ok(),
   );
-  await page.getByRole("button", { name: "Open workspace", exact: true }).click();
+  await main.getByRole("button", { name: "Open workspace", exact: true }).click();
   await page.getByRole("tab", { name: "Files", exact: true }).click();
   await filesRead;
   const file = page.getByRole("option").filter({ hasText: "target-note.md" }).first();
   await file.getByText("target-note.md", { exact: true }).click();
   await expect(
-    page.getByText("Target-owned changed content.", { exact: false }).filter({ visible: true }).first(),
+    main.getByText("Target-owned changed content.", { exact: false }).filter({ visible: true }).first(),
   ).toBeVisible();
   const queuedResponse = await request.post(`${fixture.origin}/v1/sessions/${fixture.sessionId}/follow-up`, {
     data: { prompt: "Readable offline queue" },
@@ -149,30 +152,31 @@ test("remote workspace files and diff open on their owner; offline history stays
   await page.getByRole("tab", { name: "Changes", exact: true }).click();
   await expect(page.getByTestId("diff-viewer").filter({ visible: true }).first()).toBeVisible();
   await expect(
-    page.getByText("Target-owned changed content.", { exact: false }).filter({ visible: true }).first(),
+    main.getByText("Target-owned changed content.", { exact: false }).filter({ visible: true }).first(),
   ).toBeVisible();
   // An incomplete saved queue must not hide essential controls for an online owner.
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-unavailable" } });
   await page.goto(sessionUrl());
-  await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
+  await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
+    main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
-  await expect(page.getByTestId("content-editable").filter({ visible: true }).last()).toHaveAttribute(
-    "contenteditable",
-    "true",
-  );
-  await page.getByTestId("content-editable").filter({ visible: true }).last().fill("Keep this draft while refreshing");
-  await expect(page.getByRole("button", { name: "Stop Response", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
-  await page.getByTestId("content-editable").filter({ visible: true }).last().fill("");
+  await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
+  await expect(
+    main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+  ).toHaveAttribute("contenteditable", "true");
+  await main
+    .locator('[data-testid="content-editable"][contenteditable="true"]')
+    .filter({ visible: true })
+    .fill("Keep this draft while refreshing");
+  await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toBeVisible();
+  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
+  await main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }).fill("");
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-available" } });
-  await expect(page.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
-  await expect(page.getByTestId("content-editable").filter({ visible: true }).last()).toHaveAttribute(
-    "contenteditable",
-    "true",
-  );
+  await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
+  await expect(
+    main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+  ).toHaveAttribute("contenteditable", "true");
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "offline" } });
   await page.goto(sessionUrl());
   await expect(
@@ -181,42 +185,41 @@ test("remote workspace files and diff open on their owner; offline history stays
       .filter({ visible: true })
       .first(),
   ).toBeVisible();
-  await expect(page.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+  await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await expect(
-    page.getByText("Readable offline queue", { exact: true }).filter({ visible: true }).first(),
+    main.getByText("Readable offline queue", { exact: true }).filter({ visible: true }).first(),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
+    main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
   ).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
+  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
   await expect(
     page.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
   ).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
+  await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("offline-readable.png") });
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "online" } });
-  await page.getByRole("button", { name: "Check connection", exact: true }).click();
-  await expect(page.getByTestId("content-editable").filter({ visible: true }).last()).toHaveAttribute(
-    "contenteditable",
-    "true",
-  );
-  await expect(page.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
+  await main.getByRole("button", { name: "Check connection", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
+    main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+  ).toHaveAttribute("contenteditable", "true");
+  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
+  await expect(
+    main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
+  await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
   await page.goto(`${fixture.origin}/projects/${fixture.projectId}/sessions/compose`);
   // An empty local device value uses the native selection placeholder.
   await page.locator('[data-workbench-panel="main"]').getByRole("button", { name: "Select", exact: true }).click();
   await page.getByRole("menuitemradio", { name: "Laptop", exact: true }).click();
-  const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
+  const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
   await editor.fill("New session on Laptop");
   await page.reload();
   await expect(editor).toHaveText("New session on Laptop");
-  await expect(page.getByRole("button", { name: "Laptop", exact: true })).toBeVisible();
-  await page.getByTestId("send-message-button").filter({ visible: true }).last().click();
-  await expect(page.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
+  await expect(main.getByRole("button", { name: "Laptop", exact: true })).toBeVisible();
+  await main.getByTestId("send-message-button").filter({ visible: true }).click();
+  await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+  await expect(main.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
   await expect
     .poll(async () => {
       const state = await (await request.get(`${fixture.origin}/fixture/state`)).json();

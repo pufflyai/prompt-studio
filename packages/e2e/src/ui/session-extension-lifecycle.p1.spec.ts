@@ -55,10 +55,12 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     await page.goto(target);
     const main = page.locator('[data-workbench-region="main"]');
     const side = page.locator('[data-workbench-region="side"]');
-    const editor = main.getByTestId("content-editable").filter({ visible: true });
+    const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
     await expect(editor).toBeVisible();
     await openSessionSidePanel(page, "Retained execution");
-    await expect(side.getByTestId("content-editable").filter({ visible: true })).toBeVisible();
+    await expect(
+      side.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+    ).toBeVisible();
     await expect.poll(() => watches.length).toBe(1);
     await expect.poll(() => holds.length).toBe(1);
     const saved = page.waitForResponse(
@@ -84,7 +86,9 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     });
     expect(disabled.ok()).toBe(true);
     await expect(page.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(0);
-    await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveCount(0);
+    await expect(
+      page.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+    ).toHaveCount(0);
     await expect.poll(() => [...watches, ...holds].every((id) => deleted.includes(id))).toBe(true);
     expect(stops).toBe(0);
     expect(await readSession()).toMatchObject({
@@ -101,9 +105,9 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     });
     expect(enabled.ok()).toBe(true);
     await expect(page.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(1);
-    await expect(side.getByTestId("content-editable").filter({ visible: true })).toContainText(
-      "Unsent work survives provider disablement",
-    );
+    await expect(
+      side.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+    ).toContainText("Unsent work survives provider disablement");
     await expect(side.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
     expect(
       await side
