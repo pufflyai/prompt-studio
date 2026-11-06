@@ -2,11 +2,15 @@ import type { Asset } from "pstdio-sync-contracts";
 import type { SyncSpace } from "../encryption";
 import type { AssetStore } from "../shared";
 import type { DocumentRelay, SyncFailure } from "./document-sync-types";
+import type { OrderedIndexReference } from "./ordered-receipt-index-blobs";
 import type { AssetReferences } from "./record-assets";
 import type { RecordFrame } from "./record-frames";
 
 /** What a device has read from its owner's record stream. Saved with the records it describes. */
 export interface RecordStreamCursor {
+  /** Ordered summary roots advance atomically only after their covered history is applied. */
+  receiptRoot?: OrderedIndexReference | null;
+  receiptStateId?: string | null;
   /** False until this device's records share one history with the stream (it published or adopted). */
   joined: boolean;
   /** The last relay sequence applied here. */
@@ -25,7 +29,7 @@ export interface RecordStreamCursor {
   skipped: boolean;
 }
 
-/** One record's Yjs bytes, as stored in an outbox entry or a snapshot. */
+/** One encoded record entry, as stored in an outbox entry or a snapshot. */
 export interface RecordBytes {
   recordId: string;
   bytes: Uint8Array;
@@ -33,6 +37,12 @@ export interface RecordBytes {
 
 /** A device's durable record storage, as the record stream needs it. Every method is atomic. */
 export interface RecordStreamStore {
+  /** Ordered client payloads are incompatible with legacy Yjs record frames. */
+  recordFormat?: "ordered";
+  connect?(space: SyncSpace, relay: DocumentRelay): Promise<void>;
+  checkpointPending?(): Promise<boolean>;
+  /** False when a latest state's receipt root holds decisions this device has not applied. */
+  coversReceipts?(root: OrderedIndexReference | null): Promise<boolean>;
   /** Starts keeping local saves for upload and returns the saved cursor. */
   open(): Promise<RecordStreamCursor>;
   /**
@@ -58,15 +68,26 @@ export interface RecordStreamStore {
   ): Promise<{ rejected: string[]; rejectedFrames: number[]; cursor: RecordStreamCursor }>;
   /** Saved local changes not on the relay yet, oldest first, within `limit` bytes but at least one entry. */
   outbox(limit: number): Promise<{ sequence: number; records: RecordBytes[]; assets: Asset[] }[]>;
-  /** Drops outbox entries up to `sequence` once the relay holds them. */
-  sent(sequence: number): Promise<void>;
+  /** Legacy stores drop the delivered prefix; ordered stores mark exactly the included sequences.
+   * Delivery never settles an ordered save without its exact decision. */
+  sent(sequence: number, included?: number[]): Promise<void>;
   /**
    * Every record's full state and current file at one moment, and the newest outbox entry those
    * states include. Read together, so a latest state never lists a file its records do not use.
    */
-  snapshot(): Promise<{ records: RecordBytes[]; assets: Map<string, Asset>; outbox: number }>;
+  snapshot(options?: {
+    found: boolean;
+    /** Set only after Sync observes an actually empty or lost relay stream. */
+    relayEmpty?: boolean;
+  }): Promise<{
+    records: RecordBytes[];
+    assets: Map<string, Asset>;
+    outbox: number;
+    blobIds?: string[];
+    receiptRoot?: OrderedIndexReference | null;
+  }>;
   /** Saves the cursor after a latest-state upload and drops the outbox entries it covered. */
-  published(cursor: RecordStreamCursor, outbox: number): Promise<void>;
+  published(cursor: RecordStreamCursor, outbox: number): Promise<RecordStreamCursor> | Promise<void>;
   hasRecords(): Promise<boolean>;
   /** True while saved local changes wait for upload. */
   pending(): Promise<boolean>;

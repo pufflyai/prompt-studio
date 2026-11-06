@@ -94,6 +94,8 @@ test("remote edits imported by sync notify storage watchers, and a round with no
   expect(await second.text.read()).toBe("remote text");
   expect(second.notified.slice(quiet)).toEqual([owner, { ...owner, documentId: textName }]);
 
+  // The text document's first write also registered it in the shared owner directory.
+  await second.syncs.owner.synchronize();
   const imported = second.notified.length;
   await second.synchronize();
   expect(second.notified.length).toBe(imported);

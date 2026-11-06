@@ -1,7 +1,7 @@
 import type { DocumentStore, StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { createDocumentRelay, createDocumentSync, fetchSyncSpaces, type SubscribeDocument } from "pstdio-sync/relay";
-import { indexLogName } from "../personal-history/index-state";
+import { personalIndexLogName } from "../personal-history/index-projection-sync";
 import { historyReferenceName } from "../personal-history/references";
 import { documentProgress } from "./document-progress";
 import type { createPersonalContext } from "./personal-context";
@@ -28,6 +28,7 @@ export const createPersonalDocuments = (input: {
   const changed = new Set<string>();
   let allIndexes = true;
   let downloaded = false;
+  const knownIndexes = new Set<string>();
   const relayFor = (space: SyncSpace, subscribe?: SubscribeDocument) => (documentId: string) => {
     return createDocumentRelay({
       subscribe,
@@ -85,7 +86,8 @@ export const createPersonalDocuments = (input: {
         close();
         allIndexes = true;
         downloaded = false;
-        const recordsId = await keys.personal.documentId(JSON.stringify(["pstdio.personal-history", "devices-v1"]));
+        knownIndexes.clear();
+        const recordsId = await keys.personal.documentId(JSON.stringify(["pstdio.personal-history", "records-v3"]));
         const sharedId = await keys.project.documentId(historyReferenceName);
         ids = [recordsId, sharedId];
         records = syncFor(context.history.owner, context.history.records, keys.personal, recordsId);
@@ -97,29 +99,40 @@ export const createPersonalDocuments = (input: {
     },
     async status(pendingHeads = false) {
       const record = await records?.status();
-      const index = record && { ...record, pending: record.pending || pendingHeads || context.history.indexPending() };
+      const index = record && {
+        ...record,
+        pending: record.pending || pendingHeads || (await context.history.indexPending()),
+      };
       return documentProgress(
         [index && { ...index, downloaded: index.downloaded && downloaded }, await shared?.status()],
         true,
       );
     },
     async synchronize() {
-      await context.history.registerDevice(config.environmentId);
       await records!.synchronize();
       const pending = new Set(changed);
       changed.clear();
       const full = allIndexes;
       allIndexes = false;
       try {
-        for (const device of await context.history.devices()) {
-          const id = await spaces!.personal.documentId(indexLogName(device));
-          const added = !ids.includes(id);
-          if (added) ids.push(id);
+        const localPending = await context.history.indexPending();
+        for (const entry of await context.logs.directory(context.history.owner)) {
+          if (entry.name !== "index" || entry.writer !== "device") continue;
+          const id = await spaces!.personal.documentId(personalIndexLogName(entry.stream));
+          const added = !knownIndexes.has(id);
+          knownIndexes.add(id);
+          if (!ids.includes(id)) ids.push(id);
           input.subscribe(spaces!.personal.spaceOwner, id);
-          if (full || added || device === config.environmentId || pending.has(id) || !downloaded)
+          if (
+            full ||
+            added ||
+            pending.has(id) ||
+            !downloaded ||
+            (entry.stream === config.environmentId && localPending)
+          )
             await context.history.synchronizeIndex(
-              device,
-              device === config.environmentId,
+              entry.stream,
+              entry.stream === config.environmentId,
               spaces!.personal,
               relayFor(spaces!.personal),
             );

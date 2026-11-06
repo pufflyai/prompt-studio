@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { eq, ne } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { readTextDocumentSeed, saveTextDocument, seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
@@ -10,6 +11,13 @@ const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
   for (const close of cleanup.splice(0).reverse()) await close();
 });
+const nativeId = '["native-markdown","file-view-key"]';
+// The first durable write also registers the document in the owner's encrypted sync directory.
+const ownDocuments = (db: Awaited<ReturnType<typeof createExtensionStorageFixture>>["db"]) =>
+  db
+    .select({ id: storage_documents.document_id })
+    .from(storage_documents)
+    .where(ne(storage_documents.document_id, "records"));
 const fixture = async () => {
   const f = await createExtensionStorageFixture();
   cleanup.push(f.close);
@@ -19,7 +27,7 @@ const fixture = async () => {
   return { ...f, owner, service, text };
 };
 
-test("native text seeds once and reopens without creating an owner or record document", async () => {
+test("native text seeds once and reopens without creating a record document", async () => {
   const f = await fixture();
   await f.text.seed("first\nlast");
   await f.text.seed("stale load");
@@ -28,8 +36,7 @@ test("native text seeds once and reopens without creating an owner or record doc
     fileId: "file-view-key",
   });
   expect(await reopened.read()).toBe("first\nlast");
-  const rows = await f.db.select({ id: storage_documents.document_id }).from(storage_documents);
-  expect(rows).toEqual([{ id: '["native-markdown","file-view-key"]' }]);
+  expect(await ownDocuments(f.db)).toEqual([{ id: nativeId }]);
 });
 
 test("committed text changes announce their exact standalone document identity", async () => {
@@ -76,8 +83,10 @@ test("native text adopts atomically and invalidates previously cached copies", a
   remote.destroy();
   expect(await second.text.read()).toBe("FIRST\nLAST");
   expect(await cached.read()).toBe("FIRST\nLAST");
-  expect(await second.db.select().from(storage_document_updates)).toHaveLength(0);
-  const [row] = await second.db.select().from(storage_documents);
+  expect(
+    await second.db.select().from(storage_document_updates).where(eq(storage_document_updates.document_id, nativeId)),
+  ).toHaveLength(0);
+  const [row] = await second.db.select().from(storage_documents).where(eq(storage_documents.document_id, nativeId));
   expect(row!.revision).toBe(row!.folded_revision);
   const reopened = createDocumentStorageDBService(second.db).openNativeTextDocument({
     owner: second.owner,
@@ -145,9 +154,7 @@ test("an older room history can save local edits while keeping the current canon
   await f.text.applySource(source);
   expect(changes).toBe(0);
   stop();
-  expect(await f.db.select({ id: storage_documents.document_id }).from(storage_documents)).toEqual([
-    { id: '["native-markdown","file-view-key"]' },
-  ]);
+  expect(await ownDocuments(f.db)).toEqual([{ id: nativeId }]);
   source.destroy();
   canonical.destroy();
   merged.destroy();

@@ -111,7 +111,7 @@ test(
       expect(status.download!.total).toBeGreaterThan(0);
       expect(status.download!.completed).toBe(status.download!.total!);
       const space = await createSyncSpace({ projectId: project.id, spaceOwner: null, keys: [packagedProjectKey] });
-      const streamId = await space.documentId(JSON.stringify(["example.shared-notes", "record-stream"]));
+      const streamId = await space.documentId(JSON.stringify(["example.shared-notes", "record-stream-v2"]));
       const stream = peer.documents.get(`~${streamId}`)!;
       const previousState = stream.state!.stateId;
       const previousUpdates = stream.updates.length;

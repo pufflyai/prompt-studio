@@ -35,10 +35,8 @@ test("opening an advancing session catches up completed messages before displayi
       .conversationReady;
     conversation.push({ op: "add", path: "/messages/0", value: message("complete-1") });
     conversation.push({ op: "add", path: "/messages/1", value: message("complete-2") });
-    for (const [app, deviceId] of [
-      [source, "source"],
-      [destination, "reader"],
-    ] as const) {
+    for (const app of [source, destination]) {
+      const { environmentId: deviceId } = await app.deps.environmentService.get();
       const status = await app.deps.accountService.status();
       app.deps.accountService.status = async () => ({
         ...status,
@@ -66,7 +64,14 @@ test("opening an advancing session catches up completed messages before displayi
     }
     const namespace = historyNamespace({ projectId: project.id, accountId: "owner", managerOrigin: peer.origin });
     const saved = () => destination.deps.personalHistoryService.logs.read(namespace, session.id);
-    await until(async () => (await saved()).length === 1);
+    await until(async () => (await saved()).length === 1).catch(async (error) => {
+      console.error({
+        saved: await saved(),
+        statuses: await Promise.all(syncs.map((sync) => sync.status())),
+        documents: [...peer.documents].map(([id, updates]) => ({ id, updates: updates.length })),
+      });
+      throw error;
+    });
     await until(async () => !(await syncs[0]!.status()).busy);
     conversation.push({ op: "add", path: "/messages/2", value: message("current-3") });
     const frames: unknown[] = [];

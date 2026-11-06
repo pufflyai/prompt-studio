@@ -26,7 +26,7 @@ The host decides what loads. It compares its own extension API version with `eng
 | 0.44.0 | 0.2.0 | A breaking step. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
 | 0.45.0 | 0.2.1 | Adds [independent panel permissions](#independent-panel-permissions-in-api-021) and the `/client` device login methods. Existing `^0.2.0` ranges still load. |
 | 0.46.0 | 0.3.0 | A breaking step. See [Storage size limits in API 0.3](#storage-size-limits-in-api-03). Manifests need `^0.3.0`. It also has the additions listed for API 0.2.2, which no release shipped: account feature grants, full project-scoped `ctx.sessions` operations, indexed record queries and batches, optional paged collection views, device performance capture and Developer settings contributions, project recovery methods on `/client`, app-wide and device settings, and Kanban dragging in every column. |
-| `main`, after 0.46.0 | 0.3.1 | Adds Cloud sync progress and sign-in recovery. Existing `^0.3.0` ranges still load. |
+| `main`, after 0.46.0 | 0.4.0 | Changes structured record merging to relay order, with explicit collaborative text and append-only logs. It includes the Cloud sync progress, sign-in recovery and manifest icon additions previously planned for unreleased API 0.3.1. Manifests need `^0.4.0`. |
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
@@ -42,7 +42,7 @@ The optional `HarnessProvider.fork(ctx, input)` method is additive in API 0.3.1 
 
 The page and panel additions share the planned API 0.3.0 release: page-owned empty views and landing slots, non-rendering page groups with default children, closable fixed tabs, tabless Main presentation, independent panel views, declarative slot replacements, caller-relative viewer navigation, mode-owned fullscreen permission, and collection badge navigation actions. They do not add another version step before that release.
 
-Hosts on `main`, after 0.46.0, read the optional manifest `icon` field and show it in Extensions. This additive metadata shares API 0.3.1. Existing manifests remain valid without it. Older hosts ignore the field, so declaring an icon does not require a higher minimum API version.
+Hosts on `main`, after 0.46.0, read the optional manifest `icon` field and show it in Extensions. This additive metadata shares the API 0.4.0 release. Existing manifests remain valid without the icon field. Older hosts ignore the field, so declaring an icon does not require a higher minimum API version.
 
 ### Which version each check uses
 
@@ -262,6 +262,31 @@ Move large content out of records before you declare `^0.3.0`:
 - Large imports: several smaller commits.
 
 An extension whose records already stay small can declare `^0.2.0 || ^0.3.0`. See [Size limits](../sdk/0004-storage.md#size-limits).
+
+## Ordered records in API 0.4
+
+API 0.4 changes documented storage behavior and therefore takes one breaking
+version step from the last released API 0.3 line. It includes all intervening
+additions; there is no separate release step for each new method.
+
+Ordinary strings, including multiline strings, and arrays are whole values. Objects
+merge by the fields an author changed, in the encrypted relay's order. An explicit
+`expectedRevision` is an atomic condition on the group's observed paths and record
+lifetimes; an earlier overlapping change refuses the entire group, including its
+text edits. `observedRevision` supplies a replacement baseline without making it a
+condition. `set` and `unset` use JSON Pointer field addresses.
+
+Declare collaborative record text in `storage.records.text`, then edit it with
+`storage.text(recordId, field).edit(...)` or the native editor for that bound field.
+Declare append-only `storage.logs` for event history and open them with
+`storage.log(name, options)`. These additions do not remove deprecated shared or
+conflict signatures. Maintained consumers migrate to ordinary fields and explicitly
+declared text; old explicit shared-text edits remain text during their compatibility
+period. See [Grouped storage](../sdk/0004-storage.md) for methods, limits and outcomes.
+
+Update the SDK and host together before adopting the new methods. A manifest's
+`^0.4.0` minimum must be checked against an SDK providing API 0.4; widening a version
+range or substituting local declarations does not prove a published dependency works.
 
 ## Independent panel permissions in API 0.2.1
 

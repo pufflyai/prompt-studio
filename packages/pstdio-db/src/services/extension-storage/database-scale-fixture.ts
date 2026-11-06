@@ -1,21 +1,27 @@
 import { strict as assert } from "node:assert";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
-import { readDocumentRecord } from "pstdio-sync/records";
+import {
+  applyBoundedOrderedOperation,
+  compileOrderedGroup,
+  type OrderedRecord,
+  orderedProjection,
+  projectOrderedOperation,
+  verifyOrderedOperation,
+} from "pstdio-sync/records";
 import { fingerprint } from "pstdio-sync-contracts";
 import { createRow, owners, scaleStorageIndexes, seedOwner, type Workload, workload } from "storage-scale-fixture";
-import * as Y from "yjs";
 import { createDb, type DbClient } from "../../db/connection.pglite";
 import {
   projects,
-  storage_document_operations,
-  type storage_document_updates,
-  storage_documents,
+  storage_ordered_operations,
+  storage_ordered_receipts,
   storage_record_projections,
 } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
+import { createOrderedJournal } from "./ordered-journal";
+import { decodeOrderedJson, orderedOwnerWhere } from "./ordered-sql";
 import { readProjectedRecords } from "./record-queries";
-import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
 
 export const databaseFixtureOwner = { workbenchId: "00000000-0000-4000-8000-000000000903", extensionId: "scale.owner" };
 
@@ -43,17 +49,18 @@ const seedTarget = (records: Records) => ({
       ],
     }),
 });
-const scope = (
-  table: typeof storage_document_operations | typeof storage_documents | typeof storage_document_updates,
-) =>
-  and(
-    eq(table.workbench_id, databaseFixtureOwner.workbenchId),
-    eq(table.extension_id, databaseFixtureOwner.extensionId),
-  );
-
 const verifyReceipts = async (db: DbClient, kind: Workload, count: number, churn: boolean) => {
-  const receipts = await db.select().from(storage_document_operations).where(scope(storage_document_operations));
-  const actual = new Map(receipts.map((row) => [row.operation_id, row.fingerprint]));
+  const receipts = await db
+    .select()
+    .from(storage_ordered_operations)
+    .where(orderedOwnerWhere(storage_ordered_operations, databaseFixtureOwner));
+  const actual = new Map(receipts.map((row) => [row.operation_id, row]));
+  const decisions = await db
+    .select()
+    .from(storage_ordered_receipts)
+    .where(orderedOwnerWhere(storage_ordered_receipts, databaseFixtureOwner));
+  const accepted = new Map(decisions.map((row) => [row.operation_id, row]));
+  const views = new Map<string, OrderedRecord>();
   let seedCommits = 0;
   // The unchanged seed schedule supplies expected receipts without writing to storage.
   const target = {
@@ -62,7 +69,26 @@ const verifyReceipts = async (db: DbClient, kind: Workload, count: number, churn
         ...rows.map((row) => ({ recordId: row.id, replace: row })),
         ...deleted.map((recordId) => ({ recordId, deleted: true })),
       ];
-      assert.equal(actual.get(operationId), await fingerprint(edits), `Invalid seed history receipt ${operationId}`);
+      const saved = actual.get(operationId);
+      assert(saved, `Missing author identity ${operationId}`);
+      const group = { operationId, edits };
+      assert.equal(saved.request_fingerprint, await fingerprint(group), `Invalid seed history receipt ${operationId}`);
+      const operation = await compileOrderedGroup(group, views);
+      assert.equal(operation.fingerprint, saved.fingerprint, `Invalid author identity ${operationId}`);
+      if (saved.envelope) {
+        const retained = await verifyOrderedOperation(decodeOrderedJson(saved.envelope));
+        assert.equal(retained.fingerprint, operation.fingerprint, `Invalid envelope identity ${operationId}`);
+        for (const record of projectOrderedOperation(views, operation)) views.set(record.recordId, record);
+      } else {
+        const receipt = accepted.get(operationId);
+        assert(
+          saved.settled_epoch && receipt?.epoch === saved.settled_epoch && receipt.state === "accepted",
+          `Missing accepted history receipt ${operationId}`,
+        );
+        const applied = await applyBoundedOrderedOperation(views, operation, saved.settled_epoch);
+        assert.equal(applied.decision.state, "accepted");
+        for (const record of applied.records) views.set(record.recordId, record);
+      }
       seedCommits++;
     },
   };
@@ -71,7 +97,7 @@ const verifyReceipts = async (db: DbClient, kind: Workload, count: number, churn
   return seedCommits;
 };
 
-/** Every record has its own document; rebuilding each one must match the generator and its projection row. */
+/** Rebuild from canonical state plus immutable pending groups, then compare every public query row. */
 export const verifyDatabaseFixture = async (db: DbClient, kind: Workload, count: number, churn: boolean) => {
   const seedCommits = await verifyReceipts(db, kind, count, churn);
   const [projection] = await db
@@ -85,36 +111,37 @@ export const verifyDatabaseFixture = async (db: DbClient, kind: Workload, count:
     );
   assert.equal(projection?.revision, seedCommits, "Incomplete owner revision");
   assert.equal(projection.live_count, count, "Stored live count differs");
-  const documents = await db
-    .select({ id: storage_documents.document_id })
-    .from(storage_documents)
-    .where(scope(storage_documents));
-  assert.equal(documents.length, 1 + count * (churn ? 2 : 1), "Unexpected record documents");
   for (const deleted of churn ? [false, true] : [false]) {
     for (let offset = 0; offset < count; offset += 500) {
       const expected = Array.from({ length: Math.min(500, count - offset) }, (_, index) =>
         createRow(kind, 0, offset + index, 3, deleted),
       );
       const ids = expected.map((row) => row.id);
-      const { sources } = await db.transaction((tx) =>
-        loadResourceDocuments(tx, databaseFixtureOwner, ids.map(resourceDocumentId)),
-      );
+      const rebuilt = await db.transaction(async (tx) => {
+        const journal = createOrderedJournal(tx, databaseFixtureOwner);
+        const views = await journal.canonical(ids);
+        let after = 0;
+        while (true) {
+          const page = await journal.pendingFor(ids, { after, limit: 100 });
+          if (!page.length) break;
+          for (const { operation } of page)
+            for (const record of projectOrderedOperation(views, operation)) views.set(record.recordId, record);
+          after = page.at(-1)!.sequence;
+        }
+        return Promise.all(
+          ids.map(async (id) => {
+            const record = views.get(id);
+            assert(record, `Missing authoritative record ${id}`);
+            return orderedProjection(record);
+          }),
+        );
+      });
       const projected = await readProjectedRecords(db, databaseFixtureOwner, ids);
       for (const [index, row] of expected.entries()) {
-        const source = sources.get(resourceDocumentId(row.id));
-        assert(source, `Missing record document ${row.id}`);
-        const tails = source.states.length - 1;
-        assert.equal(source.revision - source.folded_revision, tails, `Incomplete history for ${row.id}`);
-        const document = new Y.Doc();
-        try {
-          for (const state of source.states) Y.applyUpdate(document, state);
-          const actual = await readDocumentRecord(document, row.id);
-          assert.equal(actual.deleted, deleted);
-          if (!deleted) assert.deepEqual(actual.value, row);
-          assert.deepEqual(projected[index], actual, `Projection differs for ${row.id}`);
-        } finally {
-          document.destroy();
-        }
+        const actual = rebuilt[index]!;
+        assert.equal(actual.deleted, deleted);
+        if (!deleted) assert.deepEqual(actual.value, row);
+        assert.deepEqual({ nativeSources: {}, ...projected[index] }, actual, `Projection differs for ${row.id}`);
       }
     }
   }
@@ -153,7 +180,7 @@ export const prepareDatabaseFixture = async (
     emit({ phase: "fixture-verified", ...verification, acceptedTiming: false });
     return verification;
   } finally {
-    // Records fold inside their own commits; flushStatistics above finished the only deferred work.
+    // Canonical/pending writes commit atomically; flushStatistics finished deferred query statistics.
     await opened.close();
   }
 };

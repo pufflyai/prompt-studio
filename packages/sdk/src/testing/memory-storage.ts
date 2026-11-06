@@ -10,9 +10,11 @@ import type {
   ExtensionStorageApi,
   ExtensionStorageCollectionApi,
   JsonObject,
+  StorageLogDefinition,
   StorageScope,
 } from "pstdio-api-contracts/extension-kernel";
 import { createMemoryAssets } from "./memory-assets";
+import { createMemoryLogs } from "./memory-logs";
 import { createMemoryRecordOwner, type MemoryStorageSeed } from "./memory-record-owner";
 
 export type { MemoryStorageSeed } from "./memory-record-owner";
@@ -23,6 +25,7 @@ export interface MemoryStorageOptions extends MemoryStorageSeed {
   extensionId?: string;
   deviceId?: string;
   legacyData?: Record<string, { version: string; records: JsonObject[] }>;
+  logs?: readonly (string | StorageLogDefinition)[];
 }
 
 export const createMemoryStorage = (options: MemoryStorageOptions = {}) => createMemoryStorageDevice(options).storage;
@@ -33,7 +36,14 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
     workbenchId: options.workbenchId ?? crypto.randomUUID(),
     extensionId: options.extensionId ?? "test-extension",
   });
-  const positions = createStoragePositions(options.deviceId ?? crypto.randomUUID());
+  const deviceId = options.deviceId ?? crypto.randomUUID();
+  const positions = createStoragePositions(deviceId);
+  const logs = createMemoryLogs({
+    workbenchId: owner.workbenchId,
+    extensionId: owner.extensionId,
+    writerId: deviceId,
+    definitions: options.logs,
+  });
   const blobStores = new Map<string, Map<string, ExtensionBlobRef & { data: Uint8Array }>>();
   const migrations = new Map<string, ReturnType<typeof createDataMigrationRunner>>();
   const migrateFor = (scope: string) => {
@@ -127,6 +137,19 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
       positions,
       readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
       records,
+      text: (recordId, field) => ({
+        edit: (edits) =>
+          records.commit({ operationId: createStorageId(), edits: [{ recordId, text: { [field]: edits } }] }),
+      }),
+      log(name, options) {
+        const scope = options?.scope;
+        if (!scope) return logs.open(name, JSON.stringify([scopeType, scopeId]));
+        if (scope.type === "project") return logs.open(name, JSON.stringify(["project", owner.workbenchId]));
+        if (scope.type === "resource" && "resource" in scope)
+          return logs.open(name, JSON.stringify(["resource", scope.resource.id]));
+        if (!("id" in scope)) throw new Error("Storage scope requires an ID");
+        return logs.open(name, JSON.stringify([scope.type, scope.id]));
+      },
       assets,
       files: blobsApi(blobKey),
       scope(scope: StorageScope) {
@@ -191,9 +214,13 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
 
   return {
     storage: scopedApi("project", owner.workbenchId),
+    logs,
     workbenchId: owner.workbenchId,
     exportUpdate: owner.exportUpdate,
     applyUpdate: owner.applyUpdate,
     snapshot: owner.snapshot,
+    exportOrdered: owner.exportOrdered,
+    pendingOrdered: owner.pendingOrdered,
+    installOrdered: owner.installOrdered,
   };
 };

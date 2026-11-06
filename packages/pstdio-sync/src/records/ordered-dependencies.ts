@@ -1,0 +1,25 @@
+import { overlappingJsonStamps } from "./ordered-json";
+import type { OrderedOperation } from "./ordered-operation";
+
+const conditionStamps = (edit: OrderedOperation["edits"][number]) => {
+  if (!edit.condition) return [];
+  const condition = edit.condition;
+  const lifecycle = edit.deleted === true || (edit.deleted === false && condition.deleted);
+  const paths = [...edit.changes, ...(edit.texts ?? []).map((text) => ({ path: text.path, remove: true as const }))];
+  const stamps = overlappingJsonStamps(condition.stamps, lifecycle ? [{ path: [], remove: true }] : paths);
+  return [condition.lifetime, ...Object.values(stamps)];
+};
+
+export const operationDependencies = (operation: OrderedOperation) => {
+  const references = new Map<string, string>();
+  for (const edit of operation.edits) {
+    for (const text of edit.texts ?? [])
+      for (const dependency of text.dependencies) references.set(dependency.operationId, dependency.fingerprint);
+    for (const stamp of conditionStamps(edit)) {
+      if (!stamp || stamp === "initial") continue;
+      const [kind, id, fingerprint] = JSON.parse(stamp) as string[];
+      if (kind === "pending") references.set(id!, fingerprint!);
+    }
+  }
+  return references;
+};

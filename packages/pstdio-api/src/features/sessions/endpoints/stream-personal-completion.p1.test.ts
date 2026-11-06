@@ -55,7 +55,8 @@ test.each([
       ...login,
       projectId: project.id,
       documents: destination.deps.extensionStorageService.documents,
-      files: destination.deps.personalHistoryService.logs,
+      index: destination.deps.extensionStorageService.personalHistoryIndex,
+      logs: destination.deps.extensionStorageService.logs,
     });
     const device = { ownerId: login.accountId, id: "other-device", name: "Laptop" };
     await history.writeRecords("sessions", device, [row]);

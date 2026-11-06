@@ -30,6 +30,7 @@ export type * from "./session-controls";
 export type * from "./slots";
 export type * from "./status-bar";
 export type * from "./storage";
+export type * from "./storage-logs";
 export type * from "./storage-records";
 export type * from "./text-source";
 export type * from "./tree-renderer";

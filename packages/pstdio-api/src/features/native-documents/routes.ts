@@ -86,12 +86,13 @@ export const createNativeDocumentRoutes = (service: ReturnType<typeof createNati
       },
     }),
     async (c) => {
-      const { sourceState, pendingUpdate, ...target } = c.req.valid("json");
+      const { sourceState, pendingUpdate, generation, ...target } = c.req.valid("json");
       const joined = await service.open({
         ...target,
         ...("fileRendererId" in target && { resource: target.resource }),
         projectId: c.req.valid("param").projectId,
         signal: c.req.raw.signal,
+        generation,
         sourceState: sourceState === undefined ? undefined : Buffer.from(sourceState, "base64"),
         pendingUpdate: pendingUpdate === undefined ? undefined : Buffer.from(pendingUpdate, "base64"),
       });

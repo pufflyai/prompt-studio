@@ -2,7 +2,6 @@ import { beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentStorage } from "pstdio-sync/records";
 import { createResourceLinksApi } from "../../features/extensions/command-environment/resource-links";
 import { streamPersonalSession } from "../../features/sessions/endpoints/stream-personal-session";
@@ -10,9 +9,9 @@ import { inertSessionChannelHooks } from "../../features/sessions/session-store.
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createNativeStore } from "../account/native-store";
 import { capturePersonalHistory } from "./capture";
+import { transferPersonalIndex } from "./index-transfer.fixture";
 import { messageEntries } from "./log-entries";
 import { historyNamespace } from "./log-files";
-import { logRelayFixture } from "./log-transport.fixture";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore } from "./store";
 
@@ -85,26 +84,9 @@ const verifyOfflineInterrupt = async (sessionId: string) => {
   expect((await destination.deps.personalHistoryService.getSession(sessionId))?.status).toBe("completed");
 };
 
-const copyIndex = async (
-  source: ReturnType<typeof createPersonalHistoryStore>,
-  destination: ReturnType<typeof createPersonalHistoryStore>,
-  deviceId: string,
-  projectId: string,
-  accountId: string,
-) => {
-  const space = await createSyncSpace({
-    projectId,
-    spaceOwner: accountId,
-    keys: [{ generation: 1, secret: "A".repeat(43) }],
-  });
-  const relay = logRelayFixture();
-  await source.synchronizeIndex(deviceId, true, space, relay.relay);
-  await destination.synchronizeIndex(deviceId, false, space, relay.relay);
-};
-
+const managerOrigin = "https://127.0.0.1:1";
+const accountId = "alice";
 test("personal history is readable offline after restart, private to the account, and never a local execution record", async () => {
-  const managerOrigin = "https://127.0.0.1:1";
-  const accountId = "alice";
   try {
     const project = await source.deps.projectService.create({ name: "Personal history" });
     await destination.deps.projectService.create({ id: project.id, name: project.name });
@@ -141,12 +123,17 @@ test("personal history is readable offline after restart, private to the account
         managerOrigin,
         accountId: owner,
         documents: host.deps.extensionStorageService.documents,
-        files: host.deps.personalHistoryService.logs,
+        index: host.deps.extensionStorageService.personalHistoryIndex,
+        logs: host.deps.extensionStorageService.logs,
       });
     const refs = (host: typeof source) =>
       createHistoryReferences(host.deps.extensionStorageService.documents.open(historyReferenceName), project.id);
     const history = store(source);
-    const device = { ownerId: accountId, id: "source-device", name: "Laptop" };
+    const device = {
+      ownerId: accountId,
+      id: (await source.deps.environmentService.get()).environmentId,
+      name: "Laptop",
+    };
     await capturePersonalHistory({
       projectId: project.id,
       device,
@@ -167,7 +154,11 @@ test("personal history is readable offline after restart, private to the account
       1,
       messages.flatMap((message, index) => messageEntries(index, message)),
     );
-    await copyIndex(history, store(destination), device.id, project.id, accountId);
+    await transferPersonalIndex(source.deps.extensionStorageService, destination.deps.extensionStorageService, {
+      projectId: project.id,
+      accountId,
+      managerOrigin,
+    });
     const sharedFrom = refs(source);
     const sharedTo = refs(destination);
     await createDocumentStorage(sharedTo).applyUpdate(await createDocumentStorage(sharedFrom).exportUpdate());

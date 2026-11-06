@@ -182,8 +182,10 @@ test(
         progress("start second runtime");
         b = await startPackagedServe(join(root, "b"), env);
         const projectId = crypto.randomUUID();
-        const first = await connectDevice(a, "a", projectId, peer.origin, progress),
-          second = await connectDevice(b, "b", projectId, peer.origin, progress);
+        const [first, second] = await Promise.all([
+          connectDevice(a, "a", projectId, peer.origin, progress),
+          connectDevice(b, "b", projectId, peer.origin, progress),
+        ]);
         progress("set device limits");
         await first.command("command.set-limit", { limit: 4 });
         await second.command("command.set-limit", { limit: 7 });

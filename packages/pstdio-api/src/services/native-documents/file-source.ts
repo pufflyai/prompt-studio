@@ -124,6 +124,7 @@ export const loadNativeMarkdownFile = async (deps: ExtensionsRouteDeps, input: F
   return {
     documentKey: binding.documentKey,
     lifetime: binding.lifetime,
+    generation: binding.generation,
     owner,
     content,
     copy: binding.copy,

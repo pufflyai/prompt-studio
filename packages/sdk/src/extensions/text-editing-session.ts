@@ -1,7 +1,14 @@
 import type { TextEditingEvent, TextOpenInput, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
 import * as Y from "yjs";
 import type { GuestHost } from "./guest-host";
-import { decodeTextSnapshot, textEditingError, textEditingFailure } from "./text-editing-codec";
+import {
+  assertTextEditingWrite,
+  createTextGenerationFence,
+  decodeTextSnapshot,
+  textEditingBlocked,
+  textEditingError,
+  textEditingFailure,
+} from "./text-editing-codec";
 import { createTextEditingReceiver } from "./text-editing-events";
 import { createTextEditingLifecycle } from "./text-editing-lifecycle";
 import { createTextEditingFences } from "./text-editing-queue";
@@ -32,6 +39,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     throw error;
   });
   input = { grant: opened.grant };
+  const generation = opened.snapshot.generation;
   let handle = opened.handle;
   let replica = sessionReplica(opened.snapshot, receiveHandlers, () => state.editable);
   const fences = createTextEditingFences(opened.snapshot.revision);
@@ -40,6 +48,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
   let writing: Promise<void> | undefined;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
   let canonicalSeed = opened.snapshot.seedId;
+  const generationFence = createTextGenerationFence(generation);
   let state: TextEditingSnapshot = {
     version: 0,
     historyId: replica.seedId,
@@ -50,11 +59,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     connected: true,
     participants: [],
   };
-  const blocked = () =>
-    state.error &&
-    !state.error.retryable &&
-    state.error.code !== "draft_active" &&
-    state.error.code !== "projection_failed";
+  const blocked = () => textEditingBlocked(state.error);
   const publish = (patch: Partial<TextEditingSnapshot> = {}) => {
     state = {
       ...state,
@@ -69,6 +74,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
   };
   const failed = (error: unknown) => {
     const failure = textEditingError(error);
+    if (failure.code === "source_retired" || failure.code === "recovery_required") generationFence.retire();
     fences.fail(error);
     publish({ error: failure, connected: false });
     if (failure.retryable && !lifecycle.closed() && !retryTimer)
@@ -88,6 +94,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
   };
   let stopLocal = replica.subscribe(localChanged);
   const receive = (snapshot: TextWireSnapshot) => {
+    if (!generationFence.accept(snapshot, failed)) return;
     if (snapshot.revision < revision) return;
     const same = replica.receive(decodeTextSnapshot(snapshot));
     revision = snapshot.revision;
@@ -96,6 +103,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     if (!same) drive();
   };
   const install = (snapshot: TextWireSnapshot) => {
+    if (!generationFence.accept(snapshot, failed)) return;
     if (replica.pending() || snapshot.revision < revision || snapshot.seedId !== canonicalSeed) return;
     revision = snapshot.revision;
     canonicalSeed = snapshot.seedId;
@@ -111,6 +119,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     memberId,
     source: input,
     sourceIdentity: opened.sourceIdentity,
+    generation,
     replica: () => replica,
     fences,
     tickets: frameTickets,
@@ -147,6 +156,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     host,
     source: input,
     sourceIdentity: opened.sourceIdentity,
+    generation,
     fences,
     sourceState: () => Y.encodeStateAsUpdate(replica.document),
     flush: flushPrefix,
@@ -206,10 +216,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
       };
     },
     transact(change) {
-      if (lifecycle.closed() || lifecycle.closing())
-        throw textEditingFailure("session_closed", "This text session is closing");
-      if (!state.editable) throw textEditingFailure("source_read_only", "The text source is read only");
-      if (blocked()) throw state.error;
+      assertTextEditingWrite(state, lifecycle.closed() || lifecycle.closing());
       replica.document.transact(() => change(replica.document.getText("content")), origin);
     },
     createDraft: lifecycle.createDraft,

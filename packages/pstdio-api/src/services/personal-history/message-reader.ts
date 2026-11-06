@@ -28,7 +28,7 @@ export const createPersonalMessageReader = (input: {
     if (!(await matches())) return false;
     const publication = await current.history.readPublication(id);
     if (publication?.version !== version) return false;
-    const position = await input.logs.readPosition(current.namespace, id);
+    const position = await input.logs.readPosition(current.namespace, id, publication.format);
     // A resumed run can finish while the disk read is pending. Its older proof must not end this stream.
     const latest = await current.history.readPublication(id);
     const sameSession = await matches();
@@ -38,6 +38,7 @@ export const createPersonalMessageReader = (input: {
       sameSession &&
       latest?.version === version &&
       latest.head === publication.head &&
+      latest.format === publication.format &&
       position.after >= latest.head
     );
   },

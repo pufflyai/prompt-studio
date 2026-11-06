@@ -1,13 +1,15 @@
-import type { GroupCommit, LockedRecords } from "pstdio-sync/records";
+import type { GroupCommit } from "pstdio-sync/records";
 import type { Asset, StorageRecord } from "pstdio-sync-contracts";
 import { type Publication, PublicationChangedError, packageMetadataSchema, selectionSchema } from "./types";
 
-/** The records API of one storage owner. Each record is its own document (ADR 0100). */
+type CatalogLockedRecords = Pick<CatalogRecords, "read" | "commit">;
+
+/** The publication catalog shares one ordered record owner and transaction lock. */
 export interface CatalogRecords {
   read(id: string): Promise<StorageRecord>;
   list(): Promise<StorageRecord[]>;
   commit(group: GroupCommit): Promise<unknown>;
-  transaction<T>(run: (records: LockedRecords) => Promise<T>): Promise<T>;
+  transaction<T>(run: (records: CatalogLockedRecords) => Promise<T>): Promise<T>;
 }
 
 /** A mutable package selector points at one immutable metadata-and-bytes record. */
@@ -46,7 +48,7 @@ export const createPublicationCatalog = (input: {
   const change = <T>(
     id: string,
     expectedRevision: string | undefined,
-    action: (catalog: ReturnType<typeof view> & { records: LockedRecords }) => Promise<T>,
+    action: (catalog: ReturnType<typeof view> & { records: CatalogLockedRecords }) => Promise<T>,
   ) =>
     records.transaction(async (locked) => {
       const record = await locked.read(id);

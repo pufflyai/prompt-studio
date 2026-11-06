@@ -5,6 +5,12 @@ import { resolveNativeSource } from "./source-binding";
 import { NativeDocumentSourceError } from "./source-error";
 import { type ProviderTarget, resolveTextProvider } from "./source-provider";
 
+/** Authority checks need source identity and access, independent of a physical load observation. */
+export type NativeSourceAccess = Pick<
+  Awaited<ReturnType<typeof resolveNativeTextAccess>>,
+  "owner" | "documentKey" | "lifetime" | "generation" | "content" | "projectionTarget"
+>;
+
 const resolveProviderAccess = async (deps: ExtensionsRouteDeps, input: ProviderTarget) => {
   const { resolved, owner } = await resolveTextProvider(deps, input);
   return {
