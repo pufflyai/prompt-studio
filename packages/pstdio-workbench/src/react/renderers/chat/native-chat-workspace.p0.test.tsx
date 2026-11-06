@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ControlValueMap } from "@pstdio/sdk/extensions";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createChatSession } from "../../../extensions/contributions/chat-session";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
@@ -117,7 +118,8 @@ test("a saved remote hub keeps its device name visible while both selectors are 
   );
   expect(markup).toContain("Research laptop");
   expect(markup).toContain("Existing workspace");
-  expect(markup).toContain('aria-label="Select device" disabled');
+  expect(markup).toContain('data-testid="session-device"');
+  expect(markup).not.toContain('aria-label="Select device"');
 });
 
 test("a workspace menu opened before another control edit dispatches the latest accepted values", () => {
@@ -130,9 +132,44 @@ test("a workspace menu opened before another control edit dispatches the latest 
       session.changeDraft({ values: typeof next === "function" ? next(session.getSnapshot().draft.values) : next }),
   });
   const selector = view.props.children[0].props.workspaceControl.props.children[1];
-  const menu = selector.type(selector.props);
   session.changeDraft({ values: { ...session.getSnapshot().draft.values, model: "model-b" } });
-  menu.props.items[0].onSelect();
+  selector.props.onSelectWorkspace("a");
   expect(session.getSnapshot().draft.values.model).toBe("model-b");
   expect(session.getSnapshot().draft.values.target).toBe("a");
+});
+
+test("Open workspace requires the visible existing selection, never metadata alone or staged creation", () => {
+  const actions: unknown[] = [];
+  const conversation = { ...initial, workspace: { ...initial.workspace, openResourceId: "a" } };
+  const hub = (
+    value: typeof initial.values.target | { providerId: string; params: Record<string, never> } | undefined,
+    options: { id: string; name: string }[] = initial.controls[0].options ?? [],
+  ) => {
+    const values: ControlValueMap = { ...initial.values };
+    if (value === undefined) delete values.target;
+    else values.target = value;
+    return NativeChatWorkspace({
+      conversation: {
+        ...conversation,
+        controls: initial.controls.map((control) =>
+          control.type === "selection" && control.id === "target" ? { ...control, options } : control,
+        ),
+      },
+      draft: { text: "Keep draft", attachments: [], values },
+      run: async (action) => {
+        actions.push(action);
+        return {};
+      },
+      changeValues: () => {},
+    }).props.children[0].props.workspaceControl.props.children[1];
+  };
+  expect(hub("").props.onOpenWorkspace).toBeUndefined();
+  expect(hub({ providerId: "custom", params: {} }).props.onOpenWorkspace).toBeUndefined();
+  expect(hub("other").props.onOpenWorkspace).toBeUndefined();
+  expect(hub("a", []).props.onOpenWorkspace).toBeUndefined();
+  expect(hub(undefined).props.onOpenWorkspace).toBeDefined();
+  const open = hub("a").props.onOpenWorkspace;
+  expect(open).toBeDefined();
+  open();
+  expect(actions).toEqual([{ type: "openResource", id: "a" }]);
 });

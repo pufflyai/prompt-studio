@@ -1,7 +1,13 @@
 import { Button, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
-import { ChatInput, ChatWorkspaceHub, createSerializedPromptState } from "@pstdio/ui/chat-ui";
+import {
+  ChatDeviceMenu,
+  ChatInput,
+  ChatWorkspaceHub,
+  ChatWorkspaceMenu,
+  createSerializedPromptState,
+} from "@pstdio/ui/chat-ui";
 import { HarnessModelMenu } from "@pstdio/ui/param-editor";
 import { createWorkbench } from "@pstdio/workbench";
 import { type CommandParamEntry, type CommandParamValue, normalizeCommandParamValues } from "@pstdio/workbench/react";
@@ -136,12 +142,16 @@ export const ComposerWorkspace = () => {
           deletions={0}
           workspaceControl={
             <HStack gap="2xs">
-              <Button size="xs" variant="ghost">
-                This device
-              </Button>
-              <Button size="xs" variant="ghost">
-                {created ? "New workspace" : "Create workspace"}
-              </Button>
+              <ChatDeviceMenu devices={[{ id: "", name: "This device", current: true }]} selectedDeviceId="" />
+              <ChatWorkspaceMenu
+                workspaces={created ? [{ id: "created", title: "New workspace" }] : []}
+                selectedWorkspaceId={created ? "created" : ""}
+                selectedWorkspaceLabel={created ? "New workspace" : "Create workspace"}
+                onSelectWorkspace={() => {}}
+                isDisabled={created}
+                onOpenWorkspace={created ? () => {} : undefined}
+                createItem={!created ? { id: "create", label: "New workspace", onSelect: () => {} } : undefined}
+              />
             </HStack>
           }
           options={

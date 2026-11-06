@@ -36,12 +36,14 @@ test("workspace provider fields and extension harness icon remain usable in the 
     "packages/pstdio-dashboard/src/shared/command-params/workspace-param-field.canvas.tsx#ComposerWorkspace",
   );
   await expect(preview.getByText("Base branch", { exact: true })).toBeVisible();
+  await expect(preview.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
   await preview.getByRole("button", { name: "Select model", exact: true }).click();
   const harness = preview.getByRole("menuitem", { name: "Select harness", exact: true });
   await expect(harness.locator('img[src^="data:image/svg+xml;base64,"]')).toBeVisible();
   await preview.locator("body").press("Escape");
   await preview.getByRole("button", { name: "Create workspace", exact: true }).last().click();
   await expect(preview.getByText("Base branch", { exact: true })).toHaveCount(0);
+  await expect(preview.getByRole("button", { name: "Open workspace", exact: true })).toContainText("New workspace");
   await expect(preview.locator('[contenteditable="true"]')).toHaveText("Keep this draft");
   await preview.locator("body").screenshot({ path: info.outputPath("workspace-composer.png") });
 });
