@@ -63,19 +63,22 @@ test(
       if (browserSetup.status === "rejected") throw browserSetup.reason;
       const id = projectSetup.value;
       const page = browserSetup.value;
-      await Promise.all([
-        createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" }),
-        createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" }),
-        createPlannerTicket(page.request, runtime.baseUrl, id, {
-          content: "# Completed board ticket",
-          statusId: "done",
-        }),
-      ]);
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-      phase("tickets created");
-      await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
-      phase("browser signed in");
-      await page.getByRole("option", { name: "Tickets", exact: true }).click();
+      await Promise.all([
+        Promise.all([
+          createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" }),
+          createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" }),
+          createPlannerTicket(page.request, runtime.baseUrl, id, {
+            content: "# Completed board ticket",
+            statusId: "done",
+          }),
+        ]).then(() => phase("tickets created")),
+        (async () => {
+          await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
+          phase("browser signed in");
+          await page.getByRole("option", { name: "Tickets", exact: true }).click();
+        })(),
+      ]);
       phase("board opened");
       await verifyBoardPanning(page);
       phase("panning checked");
@@ -86,6 +89,7 @@ test(
       await page.getByRole("button", { name: "Column actions for Done", exact: true }).click();
       await page.getByRole("menuitem", { name: "Archive all", exact: true }).click();
       await expect(doneCard).toBeHidden();
+      phase("column archive checked");
       await page.getByTestId("board-column-backlog").scrollIntoViewIfNeeded();
       await verifyTicketCreation(page);
       phase("ticket creation checked");
