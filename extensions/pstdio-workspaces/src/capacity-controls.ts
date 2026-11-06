@@ -22,13 +22,14 @@ export const capacityControls = (input: DeviceCapacityInput): ControlParam[] => 
   const fields: ControlParam[] = [
     { id: "device", name: "Device", type: "readOnly", value: input.name },
     { id: "presence", name: "Presence", type: "readOnly", value: presence(input) },
-    {
+  ];
+  if (capacity?.limit !== null)
+    fields.push({
       id: "active",
       name: "Active workspaces",
       type: "readOnly",
-      value: capacity ? `${capacity.activeCount} / ${knownLimit(capacity.limit)}` : "Capacity unavailable",
-    },
-  ];
+      value: capacity ? `${capacity.activeCount} / ${capacity.limit}` : "Capacity unavailable",
+    });
   if (!current) {
     fields.push({
       id: "limit",
@@ -40,12 +41,13 @@ export const capacityControls = (input: DeviceCapacityInput): ControlParam[] => 
     return fields;
   }
   fields.push(
-    { id: "unlimited", name: "Unlimited workspaces", type: "boolean", defaultValue: capacity?.limit === null },
+    { id: "limited", name: "Limit workspaces", type: "boolean", defaultValue: capacity?.limit != null },
     {
       id: "limit",
       name: "Workspace limit",
       type: "number",
       defaultValue: capacity?.limit ?? 6,
+      enabledBy: "limited",
       min: 1,
       step: 1,
       description: "Running and waiting-for-input workspaces occupy slots. Queued work starts when capacity opens.",

@@ -1,4 +1,4 @@
-import { definePage, workbenchModes, workbenchResourceKinds } from "@pstdio/sdk/extensions";
+import { definePage, l10n, workbenchModes, workbenchResourceKinds } from "@pstdio/sdk/extensions";
 import { fileView } from "./files";
 import { workspaceFileDocument } from "./refs";
 import { capacityView } from "./settings";
@@ -85,7 +85,7 @@ export const action = definePage({
 });
 export const devicePage = definePage({
   id: "device",
-  title: "Device workspaces",
+  title: l10n("page.device", "Device details"),
   icon: "monitor",
   path: "device",
   mode,

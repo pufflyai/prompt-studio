@@ -258,16 +258,22 @@ test("device details update this device's workspace limit", async ({ page, reque
       localStorage.setItem("dashboard-wb2:selected-project:global", id);
     }, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
-    await page.getByRole("button", { name: /This device.*active/ }).click();
-    await expect(page).toHaveURL(/\/device\?/);
-    const unlimited = page.getByRole("checkbox", { name: "Unlimited workspaces", exact: true });
-    if (await unlimited.isChecked()) await unlimited.press("Space");
-    await expect(unlimited).not.toBeChecked();
-    await page.getByRole("spinbutton", { name: "Workspace limit", exact: true }).fill("3");
-    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    const workspaceUrl = page.url();
+    await page.getByRole("button", { name: /: This device/ }).click();
+    const dialog = page.getByRole("dialog", { name: "Device details", exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(workspaceUrl);
+    const limited = dialog.getByRole("checkbox", { name: "Limit workspaces", exact: true });
+    if (!(await limited.isChecked())) await limited.press("Space");
+    await expect(limited).toBeChecked();
+    await dialog.getByRole("spinbutton", { name: "Workspace limit", exact: true }).fill("3");
+    await dialog.getByRole("button", { name: "Apply", exact: true }).click();
     await expect
       .poll(async () => (await (await request.get(`${apiBase}/v1/workspaces/capacity`)).json()).limit)
       .toBe(3);
+    await limited.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(workspaceUrl);
   } finally {
     await request.patch(`${apiBase}/v1/workspaces/capacity`, { data: { limit: before.limit } });
     await request.delete(`${apiBase}/v1/projects/${project.id}`);

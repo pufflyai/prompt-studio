@@ -136,7 +136,6 @@ const fileNode = (
       : { fileName: entry.name, target: workspaceTarget(workspace, projectId, { workspaceFilePath: entry.path }) }),
     selected: entry.path === selected,
     contextMenuActions: actions,
-    showContextMenuTrigger: true,
     canDrag: writable,
     canDrop: writable,
     metadata: { path: entry.path, type: entry.type },

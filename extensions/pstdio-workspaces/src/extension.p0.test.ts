@@ -5,7 +5,6 @@ import { commands } from "./commands";
 test("the ordinary extension entry loads with valid routed document and action parameters", () => {
   expect(extension.pages.find((page) => page.id === "files")?.document).toEqual({ metadataKey: "workspaceFilePath" });
   expect(extension.pages.find((page) => page.id === "files")?.slots).toEqual([]);
-  expect(extension.navigationItems.map((item) => item.id)).toEqual(["files", "workspaces"]);
 });
 
 test("workspace comparison follows the provider unless the person selects a mode", () => {

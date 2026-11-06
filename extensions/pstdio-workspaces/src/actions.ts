@@ -46,7 +46,7 @@ export const showCreate = defineCommand({
       return;
     }
     ctx.navigation.open({
-      kind: "page",
+      kind: "dialog",
       page: workspacePages.form,
       params: {
         operation: "create",
