@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { ExtensionContextBase, NavigationTarget } from "@pstdio/sdk/extensions";
+import { type ExtensionContextBase, type NavigationTarget, sessionBrowserId } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { registerWorkbenchExtensionContributions } from "@pstdio/workbench/extensions";
@@ -11,11 +11,22 @@ import { buildDashboardWorkbenchWhenExpression } from "@/shared/extensions/workb
 const loaded = await loadExtensionSources({
   extensionPackages: [
     { path: resolve(import.meta.dir, "../../../../../extensions/pstdio-session-browser"), sourceKind: "local_path" },
+    { path: resolve(import.meta.dir, "../../../../../extensions/pstdio-workspaces"), sourceKind: "local_path" },
   ],
 });
 const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
 if (runtime.diagnostics.length) throw new Error(JSON.stringify(runtime.diagnostics));
-const metadata = createWorkbenchExtensionMetadata({ runtime });
+// Resolve external owners against their real declarations, but let each test's
+// Workspaces helper own its registrations instead of registering that provider twice.
+const allMetadata = createWorkbenchExtensionMetadata({ runtime });
+const metadata = Object.fromEntries(
+  Object.entries(allMetadata).map(([key, records]) => [
+    key,
+    records?.filter((record: { extensionId?: string; id?: string }) =>
+      key === "extensions" ? record.id === sessionBrowserId : record.extensionId === sessionBrowserId,
+    ),
+  ]),
+) as typeof allMetadata;
 
 export const registerSessionProvider = (
   workbench: WorkbenchCore,
