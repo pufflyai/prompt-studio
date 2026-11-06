@@ -27,10 +27,12 @@ const createWorkspaceSessionWorkbench = () => {
   return workbench;
 };
 describe("createSessionsModule workspace session scoping", () => {
-  test("scopes the project-mode session list to the open workspace resource", async () => {
+  test("scopes the workspace navigation session list to the open workspace resource", async () => {
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-1",
+        provider_id: "pstdio.worktree",
+        provider_capabilities_json: { files: "write", diff: true },
         project_id: "project-1",
         name: "Workspace one",
         branch: "workspace/PS-1",
@@ -92,6 +94,8 @@ describe("createSessionsModule workspace session scoping", () => {
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-1",
+        provider_id: "pstdio.worktree",
+        provider_capabilities_json: { files: "write", diff: true },
         project_id: "project-1",
         name: "Workspace one",
         branch: "workspace/PS-1",
@@ -105,6 +109,8 @@ describe("createSessionsModule workspace session scoping", () => {
       },
       {
         id: "workspace-2",
+        provider_id: "pstdio.worktree",
+        provider_capabilities_json: { files: "write", diff: true },
         project_id: "project-1",
         name: "Workspace two",
         branch: "workspace/PS-2",

@@ -20,6 +20,8 @@ Deleting a project removes its saved host data and its matching `.pstdio/config.
 
 Every project has a default workspace. For a project opened from a local folder, it is that folder. Sessions in it share the same files. When one agent changes a file, the others see the change. A folder workspace has no separate branch and no diff or merge actions. It also does not sandbox the agent: the agent can reach anything its own process can reach.
 
+Opening project files keeps the project navigation. Opening a workspace view replaces it with that workspace's sessions. Use the return control above the sessions to return to project navigation.
+
 A provider can also create a project whose default workspace is remote. That project has no local project folder. Its file access and other actions depend on the provider. See [Local and remote work](0004-local-and-remote.md).
 
 Other workspaces come from workspace providers. A provider creates the workspace and owns its files.
