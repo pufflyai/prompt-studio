@@ -234,7 +234,7 @@ test("live reply patches keep 67 unchanged 4KiB history messages in the native o
   }
   const transcript = events.filter((event) => "patch" in event || ("snapshot" in event && event.snapshot.messages));
   let restored: import("@pstdio/sdk/extensions").SessionMessage[] = [];
-  const { applySessionMessagePatch } = await import("@pstdio/ui/chat-ui");
+  const { applySessionMessagePatch } = await import("@pstdio/sdk/extensions");
   for (const event of transcript.slice(0, -1)) {
     if ("snapshot" in event && event.snapshot.messages) restored = event.snapshot.messages;
     else if ("patch" in event) restored = applySessionMessagePatch(restored, event.patch);
