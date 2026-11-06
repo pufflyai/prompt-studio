@@ -49,13 +49,13 @@ test("Go destinations use shortcut mode while history chords and Shift slash rem
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
   await page.keyboard.press("s");
-  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Alt+Shift+ArrowRight");
-  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   // Shortcut help is available outside inputs; history restores the composer's focus.
   await page.getByRole("button", { name: "Help", exact: true }).focus();
@@ -295,7 +295,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
   for (const [key, label, destination] of [
-    ["S", "Sessions", /\/sessions\/compose$/],
+    ["S", "Sessions", /\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/],
     ["W", "Workspaces", /\/workspaces$/],
     ["N", "Notes", /\/notes$/],
     ["K", "Tickets", /\/tickets$/],

@@ -3,7 +3,7 @@ import {
   type ChatRendererActionResult,
   type ExtensionContextBase,
   type RendererContext,
-  workbenchPages,
+  workspaceCommands,
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "../refs";
 import { nativeAction } from "./native-actions";
@@ -51,10 +51,10 @@ export const act = async (
     case "deleteAttachment":
       return {};
     case "openResource":
+      // Workspaces resolves the current device/capabilities and owns its page policy.
       ctx.navigation.open({
-        kind: "page",
-        page: workbenchPages.workspace,
-        resource: { type: "workspace", extensionId: "pstdio", id: action.id, projectId: ctx.projectId },
+        kind: "command",
+        target: { command: workspaceCommands.open, params: { id: action.id } },
       });
       return {};
     case "openLink":

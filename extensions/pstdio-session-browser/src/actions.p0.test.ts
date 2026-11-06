@@ -1,7 +1,27 @@
 import { expect, test } from "bun:test";
+import { workspaceCommands } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { act } from "./actions";
 import { readDraft, saveDraft } from "./drafts";
+
+test("Open workspace delegates identity and destination policy to its public owner", async () => {
+  const opened: unknown[] = [];
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      navigation: { open: (target) => opened.push(target) },
+    },
+  });
+  await act(ctx, {
+    renderer: { rendererId: "sessions", resource: { type: "session", id: "remote-session" } },
+    draftKey: "remote-session",
+    action: { type: "openResource", id: "remote-workspace" },
+  });
+  expect(opened).toEqual([
+    { kind: "command", target: { command: workspaceCommands.open, params: { id: "remote-workspace" } } },
+  ]);
+});
 
 const created = {
   type: "session" as const,
