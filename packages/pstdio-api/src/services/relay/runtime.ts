@@ -146,28 +146,33 @@ export const startRelayRuntime = async (input: {
         connection.contextKey !== desired.get(connection.owner.extensionId),
     );
     await Promise.all(obsolete.map(([key, connection]) => stopConnection(key, connection)));
-    for (const source of snapshot.enabledSources) {
-      if (workbenches.get(workbenchId) !== config) return;
-      const key = JSON.stringify([workbenchId, source.installedSource.extension_id]);
-      if (connections.has(key)) continue;
-      const connection = await startRelayExtension({
-        config,
-        source,
-        snapshot,
-        contextKey: desired.get(source.installedSource.extension_id)!,
-        access: access.get(workbenchId)!,
-        live: live.get(workbenchId)!,
-        deps,
-        signal: controller.signal,
-        statusChanged: () => statusChanged(workbenchId),
-      });
-      if (controller.signal.aborted || workbenches.get(workbenchId) !== config) {
-        connection.close();
-        await connection.done;
-        return;
-      }
-      connections.set(key, connection);
-    }
+    // Folder lookup and preparation belong to each owner; one slow source must not delay the others.
+    const starts = await Promise.allSettled(
+      snapshot.enabledSources.map(async (source) => {
+        if (workbenches.get(workbenchId) !== config) return;
+        const key = JSON.stringify([workbenchId, source.installedSource.extension_id]);
+        if (connections.has(key)) return;
+        const connection = await startRelayExtension({
+          config,
+          source,
+          snapshot,
+          contextKey: desired.get(source.installedSource.extension_id)!,
+          access: access.get(workbenchId)!,
+          live: live.get(workbenchId)!,
+          deps,
+          signal: controller.signal,
+          statusChanged: () => statusChanged(workbenchId),
+        });
+        if (controller.signal.aborted || workbenches.get(workbenchId) !== config) {
+          connection.close();
+          await connection.done;
+          return;
+        }
+        connections.set(key, connection);
+      }),
+    );
+    // Drain every start before another refresh can admit owners from a newer snapshot.
+    for (const result of starts) if (result.status === "rejected") throw result.reason;
     statusChanged(workbenchId);
   };
   const reconcile = async () => {
