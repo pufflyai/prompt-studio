@@ -47,7 +47,7 @@ const findWindowsCommand = (command: string, env: NodeJS.ProcessEnv, cwd: string
     for (const name of names) {
       const path = win32.resolve(cwd, directory, name);
       try {
-        if (statSync(path).isFile()) return path;
+        if (statSync(path, { throwIfNoEntry: false })?.isFile()) return path;
       } catch {}
     }
   }

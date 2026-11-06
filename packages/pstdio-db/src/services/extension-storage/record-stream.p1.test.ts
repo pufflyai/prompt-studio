@@ -941,3 +941,25 @@ test("an offline file binding cannot replace an earlier peer asset authority", a
     expect(peer.failures).toEqual([]);
   }
 });
+
+
+test("downloaded record changes notify views without being reported as local writes", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Downloaded" }] });
+  await first.sync.synchronize();
+  const events: { workbenchId: string; extensionId: string; origin?: string }[] = [];
+  const stop = second.service.watch((event, origin) => events.push({ ...event, origin }));
+  try {
+    await second.sync.synchronize();
+    expect(await second.value("note")).toBe("Downloaded");
+    expect(events).toEqual([expect.objectContaining({ ...owner, origin: "relay" })]);
+    events.length = 0;
+    await second.records.commit({ operationId: "edit", edits: [{ recordId: "note", replace: "Local edit" }] });
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((event) => event.origin !== "relay")).toBe(true);
+  } finally {
+    stop();
+  }
+});
