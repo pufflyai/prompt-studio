@@ -1,6 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { BookFinding } from "./book-findings";
-import { BookObservation } from "./book-observation";
 import { BookSuggestion, type SuggestionAction } from "./book-suggestion";
 import type { BookClient } from "./client";
 import type { Section } from "./model";
@@ -13,11 +12,9 @@ interface Props {
   client: BookClient;
   run: (action: () => Promise<unknown>) => void;
   onOpen: (ref: string) => void;
-  onPromote: (id: string) => void;
-  onMap: (id: string, ref: string) => void;
 }
 export function ReviewList(props: Props) {
-  const { data, section, focusedId, client, run, onOpen, onPromote, onMap } = props;
+  const { data, section, focusedId, client, run, onOpen } = props;
   const markRead = (id: string) =>
     run(() => client.commands["review.mark-read"]({ workspaceId: data.workspaceId, ids: [id] }));
   const onAction = (id: string, action: SuggestionAction) => {
@@ -29,9 +26,6 @@ export function ReviewList(props: Props) {
       if (action === "discard") return client.commands["suggestions.discard"]({ id });
     });
   };
-  const observations = data.observations.filter((item) =>
-    focusedId ? item.id === focusedId : !item.requirements.length,
-  );
   const findings = data.findings.filter((item) => (focusedId ? item.id === focusedId : !item.resolved));
   const suggestions = data.suggestions.filter((item) => !focusedId || item.id === focusedId);
   return (
@@ -47,29 +41,7 @@ export function ReviewList(props: Props) {
               onResolve={() => run(() => client.commands["findings.save"]({ ...finding, resolved: true }))}
             />
           ))}
-          {!findings.length && (
-            <Text color="fg.muted">No active findings. This does not establish complete compliance.</Text>
-          )}
-        </>
-      )}
-      {section === "Undocumented" && (
-        <>
-          {observations.map((item) => (
-            <BookObservation
-              key={item.id}
-              observation={item}
-              rules={data.rules}
-              unread={item.unread}
-              onRead={markRead}
-              onMap={onMap}
-              onPromote={onPromote}
-            />
-          ))}
-          {!observations.length && (
-            <Text color="fg.muted">
-              No unmapped observations. Retained evidence remains accessible from its requirements.
-            </Text>
-          )}
+          {!findings.length && <Text color="fg.muted">No active findings.</Text>}
         </>
       )}
       {section === "Suggestions" && (

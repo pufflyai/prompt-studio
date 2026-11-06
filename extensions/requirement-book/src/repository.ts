@@ -91,10 +91,6 @@ export const readRepository = async (
     book,
   };
 };
-export const sourceFingerprint = async (ctx: ExtensionContextBase, root: string, path: string) => {
-  const result = await git(ctx, root, ["hash-object", "--", safePath(path)]);
-  return result.exitCode ? null : result.stdout.trim();
-};
 export const replacementPatch = (before: string | null, after: string) => {
   const oldLines = before?.replace(/\n$/, "").split("\n") ?? [];
   const newLines = after.replace(/\n$/, "").split("\n");

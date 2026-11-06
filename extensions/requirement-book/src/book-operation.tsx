@@ -1,7 +1,8 @@
 import { Badge, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { MarkdownPreview } from "@pstdio/ui/rich-text";
+import { BookAcceptance } from "./book-acceptance";
 import type { Rule } from "./book-model";
-import { RuleTag, TestTag } from "./book-resource-tag";
+import { RuleTag } from "./book-resource-tag";
 import { type Operation, sameRule } from "./model";
 
 interface VersionProps {
@@ -20,29 +21,11 @@ function RuleVersion(props: VersionProps) {
         <>
           <Text textStyle="label/M/medium">{rule.title}</Text>
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
-            L{rule.level} · {rule.ref}
+            {rule.ref}
           </Text>
           <MarkdownPreview defaultState={rule.statement} isEditable={false} fullWidth />
-          <Text textStyle="paragraph/XS/regular">
-            {rule.status} · {rule.section}
-          </Text>
           {rule.rationale && <Text>{rule.rationale}</Text>}
-          {rule.acceptance.length > 0 && <Text textStyle="label/S/medium">Acceptance</Text>}
-          {rule.acceptance.map((condition) => (
-            <Stack key={condition.statement} gap="xs">
-              <Text textStyle="paragraph/S/regular">{condition.statement}</Text>
-              <HStack flexWrap="wrap" gap="xs">
-                {condition.tests.map((path) => (
-                  <TestTag key={path} path={path} />
-                ))}
-              </HStack>
-              {!condition.tests.length && (
-                <Text color="fg.muted" textStyle="paragraph/XS/regular">
-                  No test linked.
-                </Text>
-              )}
-            </Stack>
-          ))}
+          <BookAcceptance conditions={rule.acceptance} />
           <HStack flexWrap="wrap" gap="xs">
             {[...rule.governing, ...rule.related].map((ref) => (
               <RuleTag key={ref} reference={ref} onOpen={onOpen} />

@@ -1,6 +1,5 @@
 import { Badge, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { SimpleCard, SimpleCardBody } from "@pstdio/ui";
-import { useState } from "react";
 import { RuleTag } from "./book-resource-tag";
 import type { BookData } from "./read";
 
@@ -12,7 +11,6 @@ interface Props {
 }
 export function BookFinding(props: Props) {
   const { finding, onRead, onOpen, onResolve } = props;
-  const [expanded, setExpanded] = useState(false);
   return (
     <SimpleCard>
       <SimpleCardBody>
@@ -33,31 +31,9 @@ export function BookFinding(props: Props) {
               <RuleTag key={ref} reference={ref} onOpen={onOpen} />
             ))}
           </HStack>
-          {expanded && (
-            <Stack gap="sm">
-              {finding.evidence.map((item, index) => (
-                <Text key={`${index}-${item}`} textStyle="paragraph/XS/regular">
-                  {item}
-                </Text>
-              ))}
-              {finding.observations.map((id) => (
-                <Text key={id} textStyle="paragraph/XS/regular">
-                  Evidence record {id}
-                </Text>
-              ))}
-            </Stack>
-          )}
-          <HStack justify="space-between">
-            <Button
-              size="xs"
-              variant="ghost"
-              aria-expanded={expanded}
-              onClick={() => {
-                setExpanded(!expanded);
-                onRead(finding.id);
-              }}
-            >
-              {expanded ? "Hide details" : "Inspect details"}
+          <HStack justify="end">
+            <Button size="xs" variant="ghost" onClick={() => onRead(finding.id)}>
+              Mark read
             </Button>
             <Button size="xs" variant="outline" disabled={finding.resolved} onClick={onResolve}>
               {finding.resolved ? "Resolved" : "Resolve finding"}

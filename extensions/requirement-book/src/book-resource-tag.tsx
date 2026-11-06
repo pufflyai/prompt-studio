@@ -1,8 +1,7 @@
 import { Icon } from "@chakra-ui/react";
 import { ResourceBadge } from "@pstdio/ui";
 import { Check, Copy, TriangleAlert } from "lucide-react";
-import { createContext, useContext, useEffect, useState } from "react";
-export const SourceContext = createContext<(path: string) => void>(() => {});
+import { useEffect, useState } from "react";
 export function RuleTag(props: { reference: string; title?: string; onOpen: (ref: string) => void }) {
   const { reference, title, onOpen } = props;
   return (
@@ -22,27 +21,6 @@ export function RuleTag(props: { reference: string; title?: string; onOpen: (ref
     />
   );
 }
-export function TestTag(props: { path: string }) {
-  const { path } = props;
-  const open = useContext(SourceContext);
-  return (
-    <ResourceBadge
-      fileName={path.split("/").pop() ?? path}
-      tooltip={path}
-      size="sm"
-      role="button"
-      tabIndex={0}
-      onSelect={() => open(path)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          open(path);
-        }
-      }}
-    />
-  );
-}
-
 export function RuleIdTag(props: { reference: string }) {
   const { reference } = props;
   const [state, setState] = useState<"ready" | "copied" | "failed">("ready");

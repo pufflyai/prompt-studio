@@ -1,37 +1,9 @@
-export const ruleFields = (test = "") => [
+export const ruleFields = () => [
   { id: "title", label: "Title", type: "text" as const, required: true },
   { id: "statement", label: "Requirement", type: "longtext" as const, required: true },
-  {
-    id: "level",
-    label: "Level",
-    type: "select" as const,
-    required: true,
-    defaultValue: "2",
-    options: [0, 1, 2, 3].map((level) => ({ value: String(level), label: `L${level}` })),
-  },
   { id: "acceptance", label: "Acceptance", type: "longtext" as const },
-  { id: "tests", label: "Test or result paths (one per line)", type: "longtext" as const, defaultValue: test },
   { id: "related", label: "Related requirements (comma-separated)", type: "text" as const },
   { id: "reason", label: "Reason for this change", type: "longtext" as const, required: true },
-];
-export const observationFields = [
-  { id: "title", label: "Title", type: "text" as const, required: true },
-  { id: "claim", label: "What is known", type: "longtext" as const, required: true },
-  {
-    id: "kind",
-    label: "Evidence kind",
-    type: "select" as const,
-    options: [
-      { value: "source", label: "Source" },
-      { value: "assertion", label: "Assertion" },
-      { value: "measurement", label: "Measurement" },
-    ],
-    required: true,
-    defaultValue: "assertion",
-  },
-  { id: "sources", label: "Source or result paths (one per line)", type: "longtext" as const, required: true },
-  { id: "conditions", label: "Conditions and environment", type: "longtext" as const, required: true },
-  { id: "limits", label: "Verification limits", type: "longtext" as const, required: true },
 ];
 export const findingFields = [
   { id: "title", label: "Title", type: "text" as const, required: true },
@@ -55,7 +27,6 @@ export const findingFields = [
     type: "text" as const,
     required: true,
   },
-  { id: "evidence", label: "Inspectable evidence", type: "longtext" as const, required: true },
 ];
 export const splitLines = (value: unknown) =>
   String(value ?? "")
@@ -83,9 +54,8 @@ export const chapterFields = [
   },
 ];
 
-export const acceptanceConditions = (statement: unknown, tests: unknown) => {
-  const text = String(statement ?? "").trim();
-  const paths = splitLines(tests);
-  if (!text && paths.length) throw new Error("Describe the acceptance condition for the linked tests.");
-  return text ? [{ statement: text, tests: paths }] : [];
-};
+export const acceptanceConditions = (value: unknown) =>
+  splitLines(value).map((statement) => ({ statement: statement.replace(/^[-*]\s+/, ""), tests: [] as string[] }));
+
+export const draftChapterFor = (mode: "rule" | "finding" | "chapter", chapter: number) =>
+  ({ rule: chapter, finding: -2, chapter: -3 })[mode];

@@ -9,7 +9,6 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { bookMenu } from "./book-menu";
-import { chapterReference } from "./model";
 import { readIndex } from "./read-index";
 import { changed } from "./records";
 import { resourceTarget, ruleTarget } from "./targets";
@@ -32,7 +31,7 @@ export const page = definePage({
   params: {
     chapter: { type: "number", default: 1 },
     review: { type: "string", default: "" },
-    form: { type: "string", default: "", values: ["", "rule", "chapter", "finding", "observation"] },
+    form: { type: "string", default: "", values: ["", "rule", "chapter", "finding"] },
   },
   main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page", tab: bookMenu },
   slots: [],
@@ -71,9 +70,12 @@ export const navigationView = defineView({
         {
           id: "review",
           collapsible: false,
-          nodes: ["Findings", "Undocumented", "Suggestions"].map((section) => ({
+          nodes: ["Findings", "Suggestions"].map((section) => ({
             id: section,
-            label: `${section}${data.counts[section as keyof typeof data.counts] ? ` · ${data.counts[section as keyof typeof data.counts]}` : ""}`,
+            label: section,
+            badge: data.counts[section as keyof typeof data.counts]
+              ? { label: String(data.counts[section as keyof typeof data.counts]) }
+              : undefined,
             target: { kind: "page" as const, page: page.ref, params: { review: section } },
           })),
         },
@@ -85,7 +87,7 @@ export const navigationView = defineView({
             .filter((chapter) => chapter.group === group)
             .map((chapter) => ({
               id: `chapter-${chapter.id}`,
-              label: `${chapterReference(chapter)} ${chapter.title}`,
+              label: chapter.title,
               icon: "library",
               target: resourceTarget("chapter", String(chapter.id), chapter.title, ctx.projectId),
             })),

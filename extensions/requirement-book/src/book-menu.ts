@@ -20,7 +20,6 @@ export const bookMenu: PlacementTabPresentation = {
             { id: "rule", label: "New rule", icon: "plus" },
             { id: "chapter", label: "New chapter", icon: "plus" },
             { id: "finding", label: "New finding", icon: "plus" },
-            { id: "observation", label: "Record observation", icon: "plus" },
           ].map((item) => ({
             ...item,
             action: {

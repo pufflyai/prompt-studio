@@ -1,36 +1,26 @@
-import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Text } from "@chakra-ui/react";
 import { SearchableMenu } from "@pstdio/ui";
-import { GitBranch, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import type { BookClient } from "./client";
 import type { Section } from "./model";
 import type { BookData } from "./read";
 
 interface Props {
   data: BookData;
-  revision: "working" | "accepted";
   section: Section | null;
   heading: string;
   client: BookClient;
   run: (action: () => Promise<unknown>) => void;
-  onRevision: (revision: "working" | "accepted") => void;
   onSearch: () => void;
 }
 export function BookControls(props: Props) {
-  const { data, revision, section, heading, client, run, onRevision, onSearch } = props;
+  const { data, section, heading, client, run, onSearch } = props;
   return (
-    <HStack
-      px="lg"
-      py="md"
-      borderBottomWidth="1px"
-      borderColor="border.subtle"
-      justify="space-between"
-      flexShrink="0"
-      flexWrap="wrap"
-    >
-      <Text as="h1" textStyle="label/L/medium">
+    <HStack px="md" py="xs" gap="sm" minW="0" borderBottomWidth="1px" borderColor="border.subtle" flexShrink="0">
+      <Text as="h1" textStyle="label/M/medium" minW="0" flex="1" truncate title={heading}>
         {heading}
       </Text>
-      <HStack gap="xs" flexWrap="wrap">
+      <HStack gap="xs" minW="0">
         <Button size="xs" variant="ghost" aria-label="Search requirements" onClick={onSearch}>
           <Search />
         </Button>
@@ -42,11 +32,10 @@ export function BookControls(props: Props) {
               run(() =>
                 client.commands["review.mark-read"]({
                   workspaceId: data.workspaceId,
-                  ids: {
-                    Findings: data.findings.map((item) => item.id),
-                    Undocumented: data.observations.filter((item) => !item.requirements.length).map((item) => item.id),
-                    Suggestions: data.suggestions.map((item) => item.id),
-                  }[section],
+                  ids:
+                    section === "Findings"
+                      ? data.findings.map((item) => item.id)
+                      : data.suggestions.map((item) => item.id),
                 }),
               )
             }
@@ -57,47 +46,15 @@ export function BookControls(props: Props) {
         <SearchableMenu
           lazyMount
           trigger={
-            <Button size="xs" variant="ghost" aria-label="Book revision">
-              <GitBranch />
-              {revision === "accepted" ? data.target : data.branch}
-            </Button>
-          }
-          header={
-            <Stack p="md" gap="xs">
-              <Text textStyle="label/S/medium">One repository book</Text>
-              <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                Local review and branch edits do not accept intent. Revision {data.head.slice(0, 8)}.
+            <Button size="xs" variant="ghost" aria-label="Book workspace" maxW="160px" minW="0">
+              <Text as="span" truncate>
+                {data.workspaces.find((item) => item.id === data.workspaceId)?.label ?? "Workspace"}
               </Text>
-            </Stack>
-          }
-          items={[
-            {
-              id: "working",
-              label: "Working branch",
-              isSelected: revision === "working",
-              onSelect: () => onRevision("working"),
-            },
-            {
-              id: "accepted",
-              label: "Accepted target branch",
-              isSelected: revision === "accepted",
-              onSelect: () => onRevision("accepted"),
-            },
-          ]}
-          showSearch={false}
-          searchPlaceholder="Book revision"
-          emptyState="No revisions"
-        />
-        <SearchableMenu
-          lazyMount
-          trigger={
-            <Button size="xs" variant="ghost" aria-label="Book workspace">
-              {data.workspaces.find((item) => item.id === data.workspaceId)?.label ?? "Workspace"}
             </Button>
           }
           items={data.workspaces.map((item) => ({
             id: item.id,
-            label: `${item.label}${item.branch ? ` · ${item.branch}` : ""}`,
+            label: item.label,
             isSelected: item.id === data.workspaceId,
             onSelect: () => run(() => client.commands["workspace.select"]({ workspaceId: item.id })),
           }))}

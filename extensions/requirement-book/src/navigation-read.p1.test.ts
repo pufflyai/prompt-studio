@@ -6,10 +6,14 @@ import { createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
 import { bookMenu } from "./book-menu";
 import { BOOK_PATH, serializeBook } from "./model";
 import { bookFixture } from "./model.fixture";
-import { saveRecord } from "./records";
+import { navigationView } from "./navigation";
+import { readIndex } from "./read-index";
+import { readRecord, saveRecord } from "./records";
 import { resourceContributions } from "./resources";
+import { reviewCommands } from "./review-commands";
+import { suggestionCommands } from "./suggestions";
 
-test("navigation resolves current rules without rechecking every evidence file", async () => {
+test("book review retains current labels, read counts and stored history", async () => {
   const root = await mkdtemp(join(tmpdir(), "book-navigation-"));
   try {
     const commands: string[][] = [];
@@ -26,26 +30,12 @@ test("navigation resolves current rules without rechecking every evidence file",
     await mkdir(join(root, "documentation/requirement-book"), { recursive: true });
     const book = bookFixture();
     await writeFile(join(root, BOOK_PATH), serializeBook(book));
-    await writeFile(join(root, "code.ts"), "export const value = 1;");
     await run({ command: ["git", "add", "."], cwd: root });
     await run({
       command: ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "Book"],
       cwd: root,
     });
     const storage = createMemoryStorage();
-    await saveRecord(storage, "observation", {
-      id: "source",
-      workspaceId: "workspace",
-      title: "Source",
-      kind: "source",
-      claim: "Inspected code",
-      conditions: "Source inspection",
-      limits: "No execution",
-      revision: "head",
-      updatedAt: "now",
-      requirements: [book.rules[0].ref],
-      sources: [{ path: "code.ts", hash: "previous" }],
-    });
     const workspace = {
       id: "workspace",
       rootPath: root,
@@ -63,10 +53,59 @@ test("navigation resolves current rules without rechecking every evidence file",
       },
     });
     const resolver = resourceContributions.find((item) => item.kind.id === "requirement")!.resolve;
+    await saveRecord(storage, "finding", {
+      id: "manual",
+      workspaceId: "workspace",
+      title: "Review mismatch",
+      kind: "potential-conflict",
+      explanation: "Needs review",
+      requirements: [book.rules[0].ref],
+      observations: ["archived-observation"],
+      evidence: ["archived-result.log"],
+      resolved: false,
+      updatedAt: "now",
+    });
+    const sections = await navigationView.body.body(ctx);
+    const findingNode = sections[0].nodes.find((node) => node.id === "Findings")!;
+    expect(findingNode.label).toBe("Findings");
+    expect("badge" in findingNode ? findingNode.badge : undefined).toEqual({ label: "1" });
+    expect(sections[1].nodes[0].label).toBe("Workspaces");
+    await reviewCommands["review.mark-read"].run(ctx, { ids: ["manual"] });
+    expect((await readIndex(ctx)).counts.Findings).toBe(0);
+    await reviewCommands["findings.save"].run(ctx, {
+      id: "manual",
+      title: "Reviewed mismatch",
+      kind: "potential-conflict",
+      explanation: "Reviewed",
+      requirements: [book.rules[0].ref],
+      resolved: true,
+    });
+    expect((await readRecord<{ evidence: string[] }>(storage, "finding", "manual")).value?.evidence).toEqual([
+      "archived-result.log",
+    ]);
+    const operations = [
+      { type: "AMEND" as const, before: book.rules[0], after: { ...book.rules[0], title: "Proposed" } },
+    ];
+    await saveRecord(storage, "suggestion", {
+      id: "prior",
+      workspaceId: "workspace",
+      title: "Prior",
+      reason: "Prior",
+      baseRevision: "prior",
+      operations,
+      evidence: ["archived-result.log"],
+      reviewedDigest: null,
+      appliedRevision: null,
+      createdAt: "now",
+      updatedAt: "now",
+    });
+    await suggestionCommands.suggest.run(ctx, { id: "prior", title: "Revised", reason: "Revise intent", operations });
+    expect((await readRecord<{ evidence: string[] }>(storage, "suggestion", "prior")).value?.evidence).toEqual([
+      "archived-result.log",
+    ]);
     commands.length = 0;
     const first = await resolver.run(ctx, { reference: book.rules[0].ref });
     expect(first?.label).toBe(book.rules[0].title);
-    expect(commands.filter((command) => command[1] === "hash-object")).toHaveLength(0);
     const presentation = await bookMenu.query!(ctx, {
       renderer: { resource: { type: "requirement", id: book.rules[0].ref }, pageParams: {} },
     } as never);

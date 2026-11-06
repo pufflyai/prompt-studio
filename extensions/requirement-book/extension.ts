@@ -1,28 +1,15 @@
 import {
   defineExtension,
-  defineHook,
   defineKeybinding,
   defineNavigationItem,
-  defineSchedule,
-  gitEvents,
   l10n,
   packageAsset,
-  projectEvents,
-  sessionEvents,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
-import { checkWorkspace } from "./src/checks";
 import { commands } from "./src/commands";
 import { navigationTree, navigationView, openCommand, page, view } from "./src/navigation";
 import { resourceContributions } from "./src/resources";
 
-const check = async (ctx: Parameters<typeof checkWorkspace>[0]) => {
-  try {
-    await checkWorkspace(ctx);
-  } catch (error) {
-    ctx.logger.warn("Requirement check unavailable", { error: String(error) });
-  }
-};
 export default defineExtension({
   settings: {
     properties: {
@@ -49,20 +36,5 @@ export default defineExtension({
   ],
   keybindings: [
     defineKeybinding({ id: "go-book", layer: "go", key: "R", sticky: true, action: { kind: "page", page: page.ref } }),
-  ],
-  hooks: [
-    defineHook({ id: "check-after-session", event: sessionEvents.completed, run: check }),
-    defineHook({ id: "check-after-commit", event: gitEvents.committed, run: check }),
-    defineHook({ id: "check-after-merge", event: gitEvents.merged, run: check }),
-    defineHook({ id: "check-on-open", event: projectEvents.opened, run: check }),
-  ],
-  schedules: [
-    defineSchedule({
-      id: "check",
-      title: l10n("book.check", "Check requirement evidence"),
-      schedule: "* * * * *",
-      command: commands.check.ref,
-      enabled: true,
-    }),
   ],
 });

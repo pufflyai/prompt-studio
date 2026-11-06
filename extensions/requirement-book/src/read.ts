@@ -1,5 +1,4 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
-import { freshness } from "./checks";
 import { type Book, operationIssues } from "./model";
 import { readRecordGroups } from "./read-index";
 import { digest, suggestionDigest } from "./records";
@@ -11,7 +10,7 @@ export const readBook = async (
 ) => {
   const snapshot = await readRepository(ctx, input.workspaceId, input.revision);
   const [workspaces, records] = await Promise.all([ctx.workspaces.list(), readRecordGroups(ctx)]);
-  const { suggestions: allSuggestions, observations: allObservations, findings: allFindings, reads, drafts } = records;
+  const { suggestions: allSuggestions, findings: allFindings, reads, drafts } = records;
   const suggestions = allSuggestions
     .filter((item) => item.workspaceId === snapshot.workspaceId)
     .map((item) => ({
@@ -24,17 +23,6 @@ export const readBook = async (
       reviewed: item.reviewedDigest === suggestionDigest(item),
       unread: !reads.some((read) => read.id === item.id && read.digest === suggestionDigest(item)),
     }));
-  const observations = await Promise.all(
-    allObservations
-      .filter((item) => item.workspaceId === snapshot.workspaceId)
-      .map(async (item) => ({
-        ...item,
-        requirements: item.requirements.filter((ref) => snapshot.book?.rules.some((rule) => rule.ref === ref)),
-        retiredMappings: item.requirements.filter((ref) => !snapshot.book?.rules.some((rule) => rule.ref === ref)),
-        ...(await freshness(ctx, snapshot.root, item)),
-        unread: !reads.some((read) => read.id === item.id && read.digest === digest(item)),
-      })),
-  );
   const findings = allFindings
     .filter((item) => item.workspaceId === snapshot.workspaceId)
     .map((item) => ({ ...item, unread: !reads.some((read) => read.id === item.id && read.digest === digest(item)) }));
@@ -55,7 +43,6 @@ export const readBook = async (
     retired: snapshot.book?.retired ?? [],
     exists: Boolean(snapshot.book),
     suggestions,
-    observations,
     findings,
     drafts: drafts.filter((item) => item.workspaceId === snapshot.workspaceId),
     workspaces: workspaces
@@ -72,11 +59,8 @@ export const readBook = async (
       })),
     counts: {
       Findings: findings.filter((item) => !item.resolved && item.unread).length,
-      Undocumented: observations.filter((item) => !item.requirements.length && item.unread).length,
       Suggestions: suggestions.filter((item) => item.unread).length,
     },
-    limitations:
-      "Findings are focused checks and recorded assessments. An empty findings list does not prove compliance.",
   };
 };
 export type BookData = Awaited<ReturnType<typeof readBook>>;

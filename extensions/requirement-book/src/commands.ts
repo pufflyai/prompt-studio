@@ -1,29 +1,16 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { checkWorkspace } from "./checks";
-import { evidenceCommands } from "./evidence-commands";
 import { bookCommands } from "./import";
 import { chapterSchema, emptyBook, findRule, ruleSchema } from "./model";
 import { readBook, requireBook } from "./read";
 import { announce, type Draft, deleteRecord, saveRecord } from "./records";
-import { git, readRepository, readWorkingText, resolveWorkspace, writeRepository } from "./repository";
+import { git, readRepository, resolveWorkspace, writeRepository } from "./repository";
+import { reviewCommands } from "./review-commands";
 import { suggestionCommands } from "./suggestions";
 
 export const commands = {
   ...suggestionCommands,
   ...bookCommands,
-  ...evidenceCommands,
-  "sources.read": defineCommand({
-    id: "sources.read",
-    title: "Inspect source evidence",
-    cli: true,
-    params: { workspaceId: params.text(), path: params.text({ required: true }) },
-    async run(ctx, input) {
-      const { root } = await resolveWorkspace(ctx, input.workspaceId);
-      const content = await readWorkingText(ctx, root, input.path);
-      if (content === null) throw new Error("Source is unavailable in this workspace.");
-      return { path: input.path, content };
-    },
-  }),
+  ...reviewCommands,
   read: defineCommand({
     id: "read",
     title: l10n("book.read", "Read the requirement book"),
@@ -100,18 +87,9 @@ export const commands = {
         rule,
         head: data.head,
         revision: data.revision,
-        observations: data.observations.filter((item) => item.requirements.includes(rule.ref)),
         findings: data.findings.filter((item) => item.requirements.includes(rule.ref)),
       };
     },
-  }),
-  check: defineCommand({
-    id: "check",
-    title: l10n("book.check", "Check requirement evidence"),
-    cli: true,
-    mutating: true,
-    params: { workspaceId: params.text() },
-    run: (ctx, input) => checkWorkspace(ctx, input.workspaceId),
   }),
   "drafts.save": defineCommand({
     id: "drafts.save",

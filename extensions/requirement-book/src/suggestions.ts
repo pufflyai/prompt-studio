@@ -24,7 +24,6 @@ export const suggestionCommands = {
       title: params.text({ required: true }),
       reason: params.longText({ required: true }),
       operations: params.json<Operation[], { required: true }>({ required: true }),
-      evidence: params.list(),
       expectedRevision: params.text(),
     },
     async run(ctx, input) {
@@ -49,13 +48,17 @@ export const suggestionCommands = {
         reason: input.reason.trim(),
         baseRevision: snapshot.digest,
         operations,
-        evidence: input.evidence ?? [],
         reviewedDigest: null,
         appliedRevision: null,
         createdAt: previous?.value?.createdAt ?? now,
         updatedAt: now,
       };
-      await saveRecord(ctx.storage, "suggestion", suggestion, input.expectedRevision ?? previous?.record.revision);
+      await saveRecord(
+        ctx.storage,
+        "suggestion",
+        { ...previous?.value, ...suggestion },
+        input.expectedRevision ?? previous?.record.revision,
+      );
       await announce(ctx, snapshot.workspaceId);
       return suggestion;
     },

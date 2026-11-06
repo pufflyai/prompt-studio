@@ -4,9 +4,7 @@ import type { BookData } from "./read";
 import { changed, type Draft } from "./records";
 export function useBook(client: BookClient) {
   const [data, setData] = useState<BookData>();
-  const [query, setQuery] = useState<{ revision: "working" | "accepted" }>({ revision: "working" });
-  const revision = query.revision;
-  const setRevision = (revision: "working" | "accepted") => setQuery({ revision });
+  const [query, setQuery] = useState({ revision: "working" as const });
   const refresh = () => setQuery((current) => ({ ...current }));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,8 +49,6 @@ export function useBook(client: BookClient) {
       setData((current) =>
         current ? { ...current, drafts: [...current.drafts.filter((item) => item.id !== draft.id), draft] } : current,
       ),
-    revision,
-    setRevision,
     error,
     setError,
     busy,

@@ -21,14 +21,11 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
   const routeForm = String(props.pageParams.form ?? "");
   const ready = Boolean(data);
   useEffect(() => {
-    if (!ready || !["rule", "chapter", "finding", "observation"].includes(routeForm)) return;
+    if (!ready || !["rule", "chapter", "finding"].includes(routeForm)) return;
     setForm(routeForm as FormMode);
-    setPromoteId(undefined);
     void client.page.updateParams({ form: null }).catch((error) => book.setError(String(error)));
   }, [client, routeForm, ready, book.setError]);
-  const [promoteId, setPromoteId] = useState<string>();
   const [search, setSearch] = useState(false);
-  const [source, setSource] = useState<{ path: string; content: string } | null>(null);
   useEffect(() => {
     setSelected(resource);
     setEditor((current) => (current?.chapter === routeChapter && !review && resource === current.ref ? current : null));
@@ -65,7 +62,6 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
         reference: rule.ref,
         revision: "working",
       });
-      book.setRevision("working");
       setEditor(result.rule);
       setSelected(result.rule.ref);
     });
@@ -114,17 +110,6 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
       setRemoving(null);
       await navigateReview();
     });
-  const map = (id: string, ref: string) =>
-    run(async () => {
-      await client.commands["observations.map"]({ id, reference: ref });
-      book.setRevision("working");
-      open(ref);
-    });
-  const openSource = (path: string) =>
-    run(async () => {
-      const result = await client.commands["sources.read"]({ workspaceId: data!.workspaceId, path });
-      setSource({ path, content: result.content });
-    });
   const formSaved = () => {
     book.refresh();
     if (form === "rule") run(navigateReview);
@@ -139,12 +124,8 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
     setRemoving,
     form,
     setForm,
-    promoteId,
-    setPromoteId,
     search,
     setSearch,
-    source,
-    setSource,
     chapter,
     section,
     focusedId: route.focusedId,
@@ -153,8 +134,6 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
     save,
     remove,
     move,
-    map,
-    openSource,
     formSaved,
   };
 }

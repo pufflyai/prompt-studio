@@ -1,5 +1,5 @@
 import { Button, Field, HStack, Input, Stack, Text, Textarea } from "@chakra-ui/react";
-import { ScrollArea, SearchableMenu } from "@pstdio/ui";
+import { ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
 import { findRule, type Rule } from "./book-model";
 import { acceptanceConditions } from "./forms";
@@ -15,25 +15,14 @@ export function RuleEditor(props: EditorProps) {
   const [reason, setReason] = useState("");
   const [title, setTitle] = useState(rule.title);
   const [statement, setStatement] = useState(rule.statement);
-  const [level, setLevel] = useState(rule.level);
-  const [acceptance, setAcceptance] = useState(rule.acceptance[0]?.statement ?? "");
-  const [tests, setTests] = useState(rule.acceptance[0]?.tests.join("\n") ?? "");
+  const [acceptance, setAcceptance] = useState(rule.acceptance.map((item) => item.statement).join("\n"));
   const [related, setRelated] = useState(rule.related.join(", "));
   const references = related
     .split(",")
     .map((ref) => ref.trim())
     .filter(Boolean);
   const unknown = references.filter((ref) => ref === rule.ref || !findRule(rules, ref));
-  const testPaths = tests
-    .split("\n")
-    .map((path) => path.trim())
-    .filter(Boolean);
-  const valid =
-    reason.trim() &&
-    title.trim() &&
-    statement.trim() &&
-    (acceptance.trim() || testPaths.length === 0) &&
-    unknown.length === 0;
+  const valid = reason.trim() && title.trim() && statement.trim() && unknown.length === 0;
   return (
     <Stack
       as="form"
@@ -50,8 +39,7 @@ export function RuleEditor(props: EditorProps) {
               ...rule,
               title: title.trim(),
               statement: statement.trim(),
-              level,
-              acceptance: [...acceptanceConditions(acceptance, tests), ...rule.acceptance.slice(1)],
+              acceptance: acceptanceConditions(acceptance),
               related: references,
             },
             reason.trim(),
@@ -81,26 +69,6 @@ export function RuleEditor(props: EditorProps) {
             <Field.Label>Requirement</Field.Label>
             <Textarea value={statement} onChange={(event) => setStatement(event.target.value)} />
           </Field.Root>
-          <Field.Root>
-            <Field.Label>Level</Field.Label>
-            <SearchableMenu
-              lazyMount
-              trigger={
-                <Button size="xs" variant="outline">
-                  L{level}
-                </Button>
-              }
-              items={[0, 1, 2, 3].map((value) => ({
-                id: String(value),
-                label: `L${value}`,
-                isSelected: level === value,
-                onSelect: () => setLevel(value),
-              }))}
-              showSearch={false}
-              searchPlaceholder="Choose level"
-              emptyState="No levels"
-            />
-          </Field.Root>
           <Field.Root required>
             <Field.Label>Reason for this change</Field.Label>
             <Textarea value={reason} onChange={(event) => setReason(event.target.value)} />
@@ -108,14 +76,6 @@ export function RuleEditor(props: EditorProps) {
           <Field.Root>
             <Field.Label>Acceptance</Field.Label>
             <Textarea value={acceptance} onChange={(event) => setAcceptance(event.target.value)} />
-          </Field.Root>
-          <Field.Root>
-            <Field.Label>Tests</Field.Label>
-            <Textarea
-              value={tests}
-              placeholder="path/to/feature.p1.test.ts"
-              onChange={(event) => setTests(event.target.value)}
-            />
           </Field.Root>
           <Field.Root invalid={unknown.length > 0}>
             <Field.Label>Related requirements</Field.Label>

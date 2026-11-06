@@ -1,40 +1,29 @@
 import { BookForm } from "./book-form";
 import type { BookClient } from "./client";
-import {
-  acceptanceConditions,
-  chapterFields,
-  findingFields,
-  observationFields,
-  ruleFields,
-  splitLines,
-  splitRefs,
-} from "./forms";
+import { acceptanceConditions, chapterFields, draftChapterFor, findingFields, ruleFields, splitRefs } from "./forms";
 import { createRuleReference, ruleSchema } from "./model";
 import type { BookData } from "./read";
 import type { Draft } from "./records";
-export type FormMode = "rule" | "observation" | "finding" | "chapter";
+export type FormMode = "rule" | "finding" | "chapter";
 interface Props {
   mode: FormMode;
   chapter: number;
   data: BookData;
   client: BookClient;
-  promoteId?: string;
   onClose: () => void;
   onSaved: () => void;
   onDraftSaved: (draft: Draft) => void;
 }
 export function AuthoringForm(props: Props) {
-  const { mode, chapter, data, client, promoteId, onClose, onSaved, onDraftSaved } = props;
-  const draftChapter = mode === "rule" ? chapter : -["observation", "finding", "chapter"].indexOf(mode) - 1;
+  const { mode, chapter, data, client, onClose, onSaved, onDraftSaved } = props;
+  const draftChapter = draftChapterFor(mode, chapter);
   const fields = {
     rule: ruleFields(),
-    observation: observationFields,
     finding: findingFields,
     chapter: chapterFields,
   }[mode];
   const title = {
-    rule: promoteId ? "Propose a rule from evidence" : "New rule",
-    observation: "Record observation",
+    rule: "New rule",
     finding: "New finding",
     chapter: "New chapter",
   }[mode];
@@ -45,43 +34,29 @@ export function AuthoringForm(props: Props) {
       const rule = ruleSchema.parse({
         ref: createRuleReference(targetChapter),
         chapter,
-        level: Number(values.level),
+        level: 2,
         title: String(values.title),
         statement: String(values.statement),
         rationale: "",
         status: "proposed",
-        section: Number(values.level) === 3 ? "Contracts" : "Behavior",
-        acceptance: acceptanceConditions(values.acceptance, values.tests),
+        section: "Behavior",
+        acceptance: acceptanceConditions(values.acceptance),
         related: splitRefs(values.related),
         governing: [],
       });
-      if (promoteId)
-        await client.commands["observations.promote"]({ id: promoteId, rule, reason: String(values.reason) });
-      else
-        await client.commands.suggest({
-          workspaceId: data.workspaceId,
-          title: `Add ${rule.title}`,
-          reason: String(values.reason),
-          operations: [{ type: "ADD", before: null, after: rule }],
-        });
-    } else if (mode === "observation")
-      await client.commands["observations.save"]({
+      await client.commands.suggest({
         workspaceId: data.workspaceId,
-        title: String(values.title),
-        claim: String(values.claim),
-        kind: String(values.kind),
-        conditions: String(values.conditions),
-        limits: String(values.limits),
-        sources: splitLines(values.sources),
+        title: `Add ${rule.title}`,
+        reason: String(values.reason),
+        operations: [{ type: "ADD", before: null, after: rule }],
       });
-    else if (mode === "finding")
+    } else if (mode === "finding")
       await client.commands["findings.save"]({
         workspaceId: data.workspaceId,
         title: String(values.title),
         kind: String(values.kind),
         explanation: String(values.explanation),
         requirements: splitRefs(values.requirements),
-        evidence: splitLines(values.evidence),
       });
     else
       await client.commands["chapters.create"]({

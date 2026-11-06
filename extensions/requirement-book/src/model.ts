@@ -35,7 +35,7 @@ export const chapterPrefix = (chapter: Chapter) => (chapter.group === "Extension
 export const chapterReference = (chapter: Chapter) => `${chapterPrefix(chapter)}${chapter.id}`;
 export const createRuleReference = (chapter: Chapter) =>
   `${chapterPrefix(chapter)} ${chapter.id}.A.${crypto.randomUUID().replaceAll("-", "")}`;
-export type Section = "Findings" | "Undocumented" | "Suggestions";
+export type Section = "Findings" | "Suggestions";
 export const operationSchema = z
   .object({
     type: z.enum(["ADD", "AMEND", "REMOVE", "MOVE"]),

@@ -2,7 +2,7 @@
   "name": "requirement-book",
   "version": "0.1.0",
   "displayName": "Requirement book",
-  "description": "Repository requirements, qualified evidence, and reviewed branch changes.",
+  "description": "Repository requirements, findings, and reviewed branch changes.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {

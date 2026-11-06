@@ -1,12 +1,12 @@
-import { IconButton as ActionIconButton, Badge, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { IconButton as ActionIconButton, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { ResizableSplitLayout, ScrollArea, SearchableMenu, TreeList } from "@pstdio/ui";
 import { MarkdownPreview } from "@pstdio/ui/rich-text";
-import { Pencil, Trash2 } from "lucide-react";
+import { FileText, Pencil, Trash2 } from "lucide-react";
 import { useRef } from "react";
+import { BookAcceptance } from "./book-acceptance";
 import { RuleEditor } from "./book-editor";
-import { type Chapter, chapterReference, findRule, type Rule } from "./book-model";
-import { RuleIdTag, RuleTag, TestTag } from "./book-resource-tag";
-import type { Observation } from "./records";
+import { type Chapter, findRule, type Rule } from "./book-model";
+import { RuleIdTag, RuleTag } from "./book-resource-tag";
 
 interface BrowserProps {
   rules: Rule[];
@@ -21,8 +21,6 @@ interface BrowserProps {
   onRemove: (rule: Rule) => void;
   onSave: (rule: Rule, reason: string) => void;
   onCancel: () => void;
-  observations: Observation[];
-  onMapObservation: (id: string, ref: string) => void;
 }
 interface PreviewProps {
   chapters: Chapter[];
@@ -32,24 +30,16 @@ interface PreviewProps {
   onOpen: (ref: string) => void;
   onEdit: (rule: Rule) => void;
   onRemove: (rule: Rule) => void;
-  observations: Observation[];
-  onMapObservation: (id: string, ref: string) => void;
 }
 function RulePreview(props: PreviewProps) {
-  const { rule, rules, chapters, onMove, observations, onMapObservation, onOpen, onEdit, onRemove } = props;
+  const { rule, rules, chapters, onMove, onOpen, onEdit, onRemove } = props;
   return (
-    <Stack h="full" minH="0" minW="0" w="full" gap="lg" p="lg">
-      <HStack justify="space-between" align="start" gap="md" flexShrink="0">
-        <Stack gap="xs" minW="0" flex="1">
-          <HStack>
-            <RuleIdTag reference={rule.ref} />
-            <Badge variant="plain">L{rule.level}</Badge>
-            <Badge variant="plain">{rule.status}</Badge>
-          </HStack>
-          <Text as="h2" textStyle="label/L/medium">
-            {rule.title}
-          </Text>
-        </Stack>
+    <Stack h="full" minH="0" minW="0" w="full" gap="0">
+      <HStack px="md" py="2xs" gap="sm" minW="0" flexShrink="0" borderBottomWidth="1px" borderColor="border.subtle">
+        <RuleIdTag reference={rule.ref} />
+        <Text as="h2" textStyle="label/M/medium" minW="0" flex="1" truncate title={rule.title}>
+          {rule.title}
+        </Text>
         <HStack gap="2xs" flexShrink="0">
           <SearchableMenu
             lazyMount
@@ -63,11 +53,7 @@ function RulePreview(props: PreviewProps) {
                 (item) =>
                   item.id !== rule.chapter && item.group === chapters.find((entry) => entry.id === rule.chapter)?.group,
               )
-              .map((item) => ({
-                id: String(item.id),
-                label: `${chapterReference(item)} ${item.title}`,
-                onSelect: () => onMove(rule, item.id),
-              }))}
+              .map((item) => ({ id: String(item.id), label: item.title, onSelect: () => onMove(rule, item.id) }))}
             searchPlaceholder="Choose chapter…"
             emptyState="Add another chapter first"
           />
@@ -86,36 +72,17 @@ function RulePreview(props: PreviewProps) {
         </HStack>
       </HStack>
       <ScrollArea flex="1" minH="0">
-        <Stack gap="lg">
+        <Stack p="md" gap="md">
           <MarkdownPreview defaultState={rule.statement} isEditable={false} fullWidth />
           {rule.rationale && <Text>{rule.rationale}</Text>}
           {rule.governing.length > 0 && (
-            <Stack gap="sm">
-              <Text textStyle="label/M/medium">Governing intent</Text>
-              <HStack flexWrap="wrap">
-                {rule.governing.map((ref) => (
-                  <RuleTag key={ref} reference={ref} onOpen={onOpen} />
-                ))}
-              </HStack>
-            </Stack>
-          )}
-          {rule.acceptance.length > 0 && (
-            <Stack gap="sm">
-              <Text as="h3" textStyle="label/M/medium">
-                Acceptance
-              </Text>
-              {rule.acceptance.map((condition) => (
-                <Stack key={condition.statement} gap="sm">
-                  <Text textStyle="paragraph/S/regular">{condition.statement}</Text>
-                  <HStack flexWrap="wrap" gap="xs">
-                    {condition.tests.map((path) => (
-                      <TestTag key={path} path={path} />
-                    ))}
-                  </HStack>
-                </Stack>
+            <HStack flexWrap="wrap" gap="xs">
+              {rule.governing.map((ref) => (
+                <RuleTag key={ref} reference={ref} onOpen={onOpen} />
               ))}
-            </Stack>
+            </HStack>
           )}
+          <BookAcceptance conditions={rule.acceptance} />
           {rule.related.length > 0 && (
             <Stack gap="sm">
               <Text as="h3" textStyle="label/M/medium">
@@ -128,75 +95,14 @@ function RulePreview(props: PreviewProps) {
               </HStack>
             </Stack>
           )}
-          {observations
-            .filter((item) => item.requirements.includes(rule.ref))
-            .map((item) => (
-              <Stack key={item.id} gap="sm">
-                <Text as="h3" textStyle="label/M/medium">
-                  Evidence · {item.id}
-                </Text>
-                <Badge alignSelf="start" colorPalette="blue">
-                  {item.kind}
-                </Badge>
-                <Text textStyle="paragraph/S/regular">{item.claim}</Text>
-                <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                  {item.revision} · {item.conditions}
-                </Text>
-                <Text textStyle="paragraph/S/regular" color="fg.muted">
-                  {item.limits}
-                </Text>
-                <HStack gap="xs" flexWrap="wrap">
-                  {item.requirements
-                    .filter((ref) => ref !== rule.ref)
-                    .map((ref) => (
-                      <RuleTag key={ref} reference={ref} onOpen={onOpen} />
-                    ))}
-                  <SearchableMenu
-                    lazyMount
-                    trigger={
-                      <Button size="xs" variant="outline">
-                        Map to another requirement
-                      </Button>
-                    }
-                    items={rules
-                      .filter((target) => !item.requirements.includes(target.ref))
-                      .map((target) => ({
-                        id: target.ref,
-                        label: `${target.ref} ${target.title}`,
-                        searchText: target.statement,
-                        onSelect: () => onMapObservation(item.id, target.ref),
-                      }))}
-                    searchPlaceholder="Find another requirement…"
-                    emptyState="All requirements are already mapped"
-                  />
-                </HStack>
-                <Button size="xs" variant="ghost" alignSelf="start" onClick={() => onMapObservation(item.id, rule.ref)}>
-                  Remove mapping
-                </Button>
-              </Stack>
-            ))}
         </Stack>
       </ScrollArea>
     </Stack>
   );
 }
 export function BookBrowser(props: BrowserProps) {
-  const {
-    rules,
-    chapters,
-    onMove,
-    chapter,
-    selected,
-    editor,
-    observations,
-    onMapObservation,
-    onSelect,
-    onOpen,
-    onEdit,
-    onRemove,
-    onSave,
-    onCancel,
-  } = props;
+  const { rules, chapters, onMove, chapter, selected, editor, onSelect, onOpen, onEdit, onRemove, onSave, onCancel } =
+    props;
   const treeScroll = useRef<HTMLDivElement>(null);
   const results = rules.filter((rule) => rule.chapter === chapter);
   const rule = findRule(rules, selected);
@@ -204,50 +110,48 @@ export function BookBrowser(props: BrowserProps) {
     <ResizableSplitLayout
       flex="1"
       minH="0"
-      defaultSizePx={360}
+      defaultSizePx={300}
       contentMinSizePx={320}
       collapsible={false}
       separator="line"
       resizablePanel={
-        <Stack h="full" minH="0" minW="0" overflow="hidden" gap="xs" py="xs" px="0">
-          <HStack justify="space-between" px="sm">
-            <Text textStyle="label/S/medium">Rules</Text>
-          </HStack>
-          <ScrollArea flex="1" minH="0" minW="0" viewportRef={treeScroll} contentProps={{ minW: "0", w: "full" }}>
-            <TreeList
-              virtualize
-              scrollRef={treeScroll}
-              sections={[...new Set(["Behavior", "Contracts", ...results.map((rule) => rule.section)])]
-                .map((section) => ({
-                  id: section,
-                  label: section,
-                  collapsible: false,
-                  nodes: results
-                    .filter((item) => item.section === section)
-                    .map((item) => ({
-                      id: item.ref,
-                      label: (
-                        <Text minW="0" maxW="full" truncate title={item.title}>
-                          {item.title}
-                        </Text>
-                      ),
-                      startContent: <RuleIdTag reference={item.ref} />,
-                      rowVariant: "file" as const,
-                      isNavigable: true,
-                    })),
-                }))
-                .filter((section) => section.nodes.length > 0)}
-              activeNodeId={selected}
-              rowVariant="compact"
-              onNavigate={(event) => onSelect(event.nodeId)}
-            />
-            {results.length === 0 && (
-              <Text p="sm" color="fg.muted">
-                No rules yet.
-              </Text>
-            )}
-          </ScrollArea>
-        </Stack>
+        <ScrollArea
+          flex="1"
+          h="full"
+          minH="0"
+          minW="0"
+          viewportRef={treeScroll}
+          contentProps={{ minW: "0", w: "full" }}
+        >
+          <TreeList
+            virtualize
+            scrollRef={treeScroll}
+            rowVariant="compact"
+            nodeGap="0"
+            sections={[...new Set(results.map((rule) => rule.section))].map((section) => ({
+              id: section,
+              label: section || undefined,
+              collapsible: false,
+              nodes: results
+                .filter((item) => item.section === section)
+                .map((item) => ({
+                  id: item.ref,
+                  label: item.title,
+                  tooltip: `${item.ref} ${item.title}`,
+                  icon: <FileText />,
+                  rowVariant: "file" as const,
+                  isNavigable: true,
+                })),
+            }))}
+            activeNodeId={selected}
+            onNavigate={(event) => onSelect(event.nodeId)}
+          />
+          {!results.length && (
+            <Text p="sm" color="fg.muted">
+              No rules yet.
+            </Text>
+          )}
+        </ScrollArea>
       }
       contentPanel={
         <>
@@ -258,15 +162,13 @@ export function BookBrowser(props: BrowserProps) {
               rules={rules}
               chapters={chapters}
               onMove={onMove}
-              observations={observations}
-              onMapObservation={onMapObservation}
               onOpen={onOpen}
               onEdit={onEdit}
               onRemove={onRemove}
             />
           )}
           {!editor && !rule && (
-            <Text p="lg" color="fg.muted">
+            <Text p="md" color="fg.muted">
               Select a rule.
             </Text>
           )}

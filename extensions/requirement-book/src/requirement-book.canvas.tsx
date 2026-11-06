@@ -4,8 +4,6 @@ import { ChakraProvider, psTheme, ResourceBadge, resolveIconComponent } from "@p
 import { useState } from "react";
 import { BookBrowser } from "./book-browser";
 import { BookFinding } from "./book-findings";
-import { BookForm } from "./book-form";
-import { observationFields } from "./forms";
 import { type Chapter, chapterReference, type Rule } from "./model";
 import { bookFixture } from "./model.fixture";
 import { resourceSpecs } from "./resource-catalog";
@@ -17,8 +15,12 @@ export function Documentation() {
     ...book.rules[0],
     title:
       "Preserve user work when a very long requirement title needs to fit within a narrow rule tree without widening the panel",
-    acceptance: [],
+    acceptance: [
+      { statement: "Saved work remains accessible after reopening the project.", tests: [] },
+      { statement: "An interrupted save preserves the previous complete version.", tests: [] },
+    ],
   };
+  book.rules = book.rules.map((rule) => ({ ...rule, section: "" }));
   const [selected, setSelected] = useState(book.rules[0].ref);
   const [editor, setEditor] = useState<Rule | null>(null);
   return (
@@ -30,7 +32,6 @@ export function Documentation() {
           chapter={1}
           selected={selected}
           editor={editor}
-          observations={[]}
           onSelect={setSelected}
           onOpen={setSelected}
           onEdit={setEditor}
@@ -38,25 +39,8 @@ export function Documentation() {
           onRemove={() => {}}
           onSave={() => setEditor(null)}
           onCancel={() => setEditor(null)}
-          onMapObservation={() => {}}
         />
       </Stack>
-    </ChakraProvider>
-  );
-}
-
-export function EvidenceForm() {
-  return (
-    <ChakraProvider value={psTheme}>
-      <BookForm
-        title="Record observation"
-        fields={observationFields}
-        submitLabel="Create"
-        onSubmit={async () => {}}
-        onClose={() => {}}
-        onSaveDraft={async () => {}}
-        onDiscard={async () => {}}
-      />
     </ChakraProvider>
   );
 }
@@ -95,8 +79,6 @@ export function ResolvedFinding() {
           title: "Reviewed terminology",
           explanation: "The naming difference was reconciled.",
           requirements: [],
-          observations: [],
-          evidence: [],
           resolved: true,
           updatedAt: "2026-11-06",
           unread: false,

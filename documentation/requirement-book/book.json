@@ -2715,7 +2715,7 @@
       "statement": "1. Prompt Studio exists so that anyone who can direct an agent can build the tools they want and make their own work easier.\n2. Tools share the same plumbing instead of rebuilding it. What one tool produces, another can use.\n3. Check every feature, fix, and trade-off against this mission. A change that ships today must not block where the product is headed.",
       "rationale": "",
       "status": "accepted",
-      "section": "1. Purpose",
+      "section": "",
       "acceptance": [],
       "related": [],
       "governing": []
@@ -2728,7 +2728,7 @@
       "statement": "1. Anyone who can describe what they want. A person who never reads code must be able to build, run, change, and trust their tools.\n2. A feature that only makes sense to someone who codes is not finished.",
       "rationale": "",
       "status": "accepted",
-      "section": "2. Who Prompt Studio is for",
+      "section": "",
       "acceptance": [],
       "related": [],
       "governing": []
@@ -2741,7 +2741,7 @@
       "statement": "1. Prompt Studio provides infrastructure every tool needs and no tool should build for itself. Everything else is an extension.\n2. Agents and where they work: sessions, workspaces, and the machines work runs on.\n3. The extension platform: installing, enabling, and running the tools people build.\n4. UI contracts: the workbench, its layout, and how tools appear in it.\n5. State and storage: what tools persist and where it lives.\n6. Live sync: every client and agent seeing the same state.\n7. Security and trust: keeping secrets away from tools and limiting what a tool may touch.\n8. User attention: notifications and what may interrupt a person.\n9. This list is closed. Extending it requires a human decision and an edit to this document.\n10. A feature enters core only when extensions cannot build it or most extensions need it. One tool wanting it is not enough, even when core could ship it faster.",
       "rationale": "",
       "status": "accepted",
-      "section": "3. What belongs in core",
+      "section": "",
       "acceptance": [],
       "related": [],
       "governing": []
@@ -2754,7 +2754,7 @@
       "statement": "1. Project trackers, code editors, and consoles for monitoring agent runs belong in extensions. Core must never compete with its own extensions.\n2. Our own extensions use the same public interfaces as anyone else's. If a first-party tool needs a private API, fix the platform.\n3. A new person must reach a working tool without reading documentation.\n4. Whatever a person can do, an agent can do through the same interface with the same permissions, and the reverse.",
       "rationale": "",
       "status": "accepted",
-      "section": "4. Product boundaries",
+      "section": "",
       "acceptance": [],
       "related": [],
       "governing": []
@@ -2767,7 +2767,7 @@
       "statement": "1. Today's decisions must not make these directions harder.\n2. Work can run on other machines. A hosted offering is fine as long as what a person builds stays theirs.\n3. A tool one person builds can be picked up by a team or a community.\n4. People who never open code can build and run their own tools.\n5. Agents propose, build, and maintain tools, not only run tasks.",
       "rationale": "",
       "status": "accepted",
-      "section": "5. Where the product is headed",
+      "section": "",
       "acceptance": [],
       "related": [],
       "governing": []
@@ -2777,10 +2777,10 @@
       "chapter": 1,
       "title": "Mission test",
       "level": 1,
-      "statement": "1. Before planning a feature or fix, check whether it helps someone build or use a tool they would not have bothered with before.\n2. Check whether an extension could provide it instead of core.\n3. Check whether it works for a person who never reads code.\n4. Check whether an agent can drive it end to end.\n5. Check whether it makes any direction in section 5 harder.\n6. If an answer is off-mission and you cannot fix it, raise it.",
+      "statement": "1. Before planning a feature or fix, check whether it helps someone build or use a tool they would not have bothered with before.\n2. Check whether an extension could provide it instead of core.\n3. Check whether it works for a person who never reads code.\n4. Check whether an agent can drive it end to end.\n5. Check whether it makes any direction in RB 1.A.5 harder.\n6. If an answer is off-mission and you cannot fix it, raise it.",
       "rationale": "",
       "status": "accepted",
-      "section": "6. Mission test",
+      "section": "",
       "acceptance": [],
       "related": [],
       "governing": []
@@ -2937,15 +2937,7 @@
       "rationale": "",
       "status": "accepted",
       "section": "Behavior",
-      "acceptance": [
-        {
-          "statement": "Verify the stated behavior under the linked test scenarios; a source link alone is not a recorded execution result.",
-          "tests": [
-            "packages/pstdio-db/src/services/workspaces/workspace-location.p0.test.ts",
-            "packages/pstdio-api/src/features/workspaces/workspace-provider-runtime.p0.test.ts"
-          ]
-        }
-      ],
+      "acceptance": [],
       "related": [],
       "governing": ["RB 1.A.3"]
     },
@@ -2958,12 +2950,7 @@
       "rationale": "",
       "status": "accepted",
       "section": "Behavior",
-      "acceptance": [
-        {
-          "statement": "Verify the stated behavior under the linked test scenarios; a source link alone is not a recorded execution result.",
-          "tests": ["packages/pstdio-api/src/features/workspaces/worktree-cleanup.p0.test.ts"]
-        }
-      ],
+      "acceptance": [],
       "related": [],
       "governing": ["RB 1.A.3"]
     },
@@ -2989,12 +2976,7 @@
       "rationale": "",
       "status": "accepted",
       "section": "Behavior",
-      "acceptance": [
-        {
-          "statement": "Verify the stated behavior under the linked test scenarios; a source link alone is not a recorded execution result.",
-          "tests": ["packages/pstdio-db/src/services/extension-storage/ordered-record-stream.p1.test.ts"]
-        }
-      ],
+      "acceptance": [],
       "related": [],
       "governing": ["RB 1.A.3"]
     },
@@ -3150,33 +3132,20 @@
       "rationale": "",
       "status": "accepted",
       "section": "Behavior",
-      "acceptance": [
-        {
-          "statement": "Verify the stated behavior under the linked test scenarios; a source link alone is not a recorded execution result.",
-          "tests": [
-            "extensions/requirement-book/src/application.p1.test.ts",
-            "extensions/requirement-book/src/model.p1.test.ts"
-          ]
-        }
-      ],
+      "acceptance": [],
       "related": [],
       "governing": ["RB 1.A.3"]
     },
     {
       "ref": "RBE 23.A.3",
       "chapter": 23,
-      "title": "Keep evidence qualified",
+      "title": "Keep the prototype focused on rules and findings",
       "level": 2,
-      "statement": "An observation states its kind, source revision, conditions, limits and many-to-many requirement mappings. Source inspection is not test execution. Findings distinguish violations, potential conflicts, missing evidence and stale evidence. An empty findings list does not prove compliance.",
+      "statement": "The local prototype omits evidence collection, evidence display and automatic evidence checks. Findings and rule suggestions remain available.",
       "rationale": "",
       "status": "accepted",
       "section": "Behavior",
-      "acceptance": [
-        {
-          "statement": "Verify the stated behavior under the linked test scenarios; a source link alone is not a recorded execution result.",
-          "tests": ["extensions/requirement-book/src/checks.p1.test.ts"]
-        }
-      ],
+      "acceptance": [],
       "related": [],
       "governing": ["RB 1.A.3"]
     },
@@ -3185,16 +3154,11 @@
       "chapter": 23,
       "title": "Register book resources",
       "level": 2,
-      "statement": "Rules, chapters, findings, observations and suggestions have registered resource kinds with distinct icons, resolvable identities, search and resource pages. Opening a record retains its chapter or review context, including mapped observations and resolved findings.",
+      "statement": "Rules, chapters, findings and suggestions have registered resource kinds with distinct icons, resolvable identities, search and resource pages. Opening a record retains its chapter or review context, including resolved findings.",
       "rationale": "",
       "status": "accepted",
       "section": "Behavior",
-      "acceptance": [
-        {
-          "statement": "Verify the stated behavior under the linked test scenarios; a source link alone is not a recorded execution result.",
-          "tests": ["extensions/requirement-book/src/resource-catalog.p1.test.ts"]
-        }
-      ],
+      "acceptance": [],
       "related": [],
       "governing": ["RB 1.A.3"]
     },
@@ -3207,12 +3171,7 @@
       "rationale": "",
       "status": "accepted",
       "section": "Behavior",
-      "acceptance": [
-        {
-          "statement": "Verify the stated behavior under the linked test scenarios; a source link alone is not a recorded execution result.",
-          "tests": ["extensions/requirement-book/src/records.p1.test.ts"]
-        }
-      ],
+      "acceptance": [],
       "related": [],
       "governing": ["RB 1.A.3"]
     },

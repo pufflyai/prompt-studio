@@ -9,24 +9,10 @@ export interface Suggestion {
   reason: string;
   baseRevision: string;
   operations: Operation[];
-  evidence: string[];
   reviewedDigest: string | null;
   appliedRevision: string | null;
   application?: { beforeDigest: string; afterDigest: string };
   createdAt: string;
-  updatedAt: string;
-}
-export interface Observation {
-  id: string;
-  workspaceId: string;
-  title: string;
-  claim: string;
-  kind: "source" | "assertion" | "measurement";
-  revision: string;
-  conditions: string;
-  limits: string;
-  requirements: string[];
-  sources: { path: string; hash: string | null }[];
   updatedAt: string;
 }
 export interface Finding {
@@ -36,8 +22,6 @@ export interface Finding {
   title: string;
   explanation: string;
   requirements: string[];
-  observations: string[];
-  evidence: string[];
   resolved: boolean;
   managedBy?: "focused-check";
   updatedAt: string;
@@ -58,7 +42,6 @@ export const suggestionDigest = (suggestion: Suggestion) =>
     title: suggestion.title,
     reason: suggestion.reason,
     operations: suggestion.operations,
-    evidence: suggestion.evidence,
   });
 export const changed = { extensionId: "pstdio.requirement-book", id: "changed", kind: "event" as const };
 export const announce = async (ctx: ExtensionContextBase, workspaceId: string) => {

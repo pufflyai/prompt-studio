@@ -66,12 +66,6 @@ export function BookSuggestion(props: SuggestionProps) {
           </Button>
           {expanded && (
             <Stack gap="lg">
-              <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                {suggestion.evidence.length
-                  ? `Supporting records: ${suggestion.evidence.join(", ")}.`
-                  : "No supporting evidence attached."}{" "}
-                Local review records inspection; it does not accept a requirement.
-              </Text>
               {issues.length > 0 && (
                 <AlertMessage status="warning" title="Reconciliation required">
                   {issues.join(" ")}

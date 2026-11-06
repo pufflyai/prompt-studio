@@ -8,9 +8,6 @@ test("book resources have distinct identities and navigate to their own content"
     chapters: book.chapters,
     rules: book.rules,
     findings: [{ id: "finding", title: "Review gap", requirements: [book.rules[0].ref], resolved: true }],
-    observations: [
-      { id: "evidence", title: "Source reading", claim: "Inspected source", requirements: [book.rules[0].ref] },
-    ],
     suggestions: [
       {
         id: "suggestion",
@@ -20,12 +17,11 @@ test("book resources have distinct identities and navigate to their own content"
       },
     ],
   };
-  expect(new Set(resourceSpecs.map((spec) => spec.icon)).size).toBe(5);
+  expect(new Set(resourceSpecs.map((spec) => spec.icon)).size).toBe(4);
   for (const [type, id, section] of [
     ["requirement", book.rules[0].ref, null],
     ["chapter", "2", null],
     ["finding", "finding", "Findings"],
-    ["observation", "evidence", "Undocumented"],
     ["suggestion", "suggestion", "Suggestions"],
   ] as const) {
     expect(resourceEntries(data, type).some((entry) => entry.id === id)).toBe(true);
@@ -42,7 +38,6 @@ test("extension chapter and rule resources expose the RBE namespace", () => {
     chapters: [{ id: 3, title: "Planner", group: "Extensions" as const }],
     rules: [{ ...book.rules[0], chapter: 3, ref: "RBE 3.A.1" }],
     findings: [],
-    observations: [],
     suggestions: [],
   };
   expect(resourceEntries(data, "chapter")[0].label).toBe("RBE3 Planner");
