@@ -60,6 +60,8 @@ export interface NavigationItemContribution extends ContributionDefinition<"navi
 
 export interface NavigationTreeContribution extends ContributionDefinition<"navigation-tree"> {
   readonly owner: NavigationOwnerRef;
+  /** Stay inactive while a foreign owner extension is absent; local or present-owner typos still fail. */
+  readonly optionalOwner?: boolean;
   readonly slot?: NavigationTreeSlot;
   readonly view: ViewRef;
   /** Project-scoped trees read without a selected resource. Defaults to selection. */
