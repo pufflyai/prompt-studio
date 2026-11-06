@@ -176,23 +176,6 @@ export const fork = defineCommand({
   id: "fork",
   title: l10n("commands.fork", "Fork conversation"),
   cli: true,
-  menus: ["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"].map(
-    (status) => ({
-      slot: sessionSlots.headerOverflow,
-      group: "session",
-      icon: "git-fork",
-      when: { metadata: { status } },
-      ...(["in_progress", "awaiting_input", "queued"].includes(status)
-        ? {
-            disabledWhen: { metadata: { status } },
-            disabledReason: l10n(
-              "actions.waitBeforeFork",
-              "Wait for pending work before forking the full conversation.",
-            ),
-          }
-        : {}),
-    }),
-  ),
   params: { sessionId: params.text({ required: true, resolvedFrom: "resource" }), messageId: params.text() },
   async run(ctx, input) {
     const result = await ctx.sessions.fork(input.sessionId, input.messageId);

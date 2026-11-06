@@ -218,3 +218,29 @@ test("an explicit reader override does not reuse its registered session renderer
   expect(workbench.layout.listPanelInstances("side")).toHaveLength(2);
   expect(workbench.layout.getActivePanel("side")?.instanceId).not.toBe(session.instanceId);
 });
+
+test("the bubble opens a generic Side shell when Sessions is absent", async () => {
+  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  registerWorkspaceProviderViews(workbench);
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionsModule());
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  openWorkspacesPage(workbench);
+  const location = workbench.pages.store.getState().location;
+  await openDashboardSidePanel(workbench);
+  expect(workbench.sidePanel.getMode()).toBe("floating");
+  expect(workbench.layout.listPanelInstances("side")).toEqual([]);
+  expect(workbench.pages.store.getState().location).toEqual(location);
+  workbench.sidePanel.setMode("closed");
+  workbench.views.registerView({ id: "reader", title: "Reader", body: { kind: "react", render: () => null } });
+  workbench.shellPlacements.registerPlacement({
+    id: "reader",
+    region: "side",
+    item: { kind: "view", view: { kind: "view", id: "reader" }, presence: "open" },
+  });
+  const reader = workbench.layout.getActivePanel("side");
+  await openDashboardSidePanel(workbench);
+  expect(workbench.sidePanel.getMode()).toBe("floating");
+  expect(workbench.layout.getActivePanel("side")?.instanceId).toBe(reader?.instanceId);
+  expect(workbench.layout.listPanelInstances("side")).toHaveLength(1);
+});

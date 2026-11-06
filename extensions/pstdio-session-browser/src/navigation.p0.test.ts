@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { sessionBrowser } from "../refs";
-import { archive, create, open, remove, resolve, switchConversation } from "./navigation";
+import { archive, create, fork, open, remove, resolve, switchConversation } from "./navigation";
 
 test("new drafts keep explicit and contextual workspace, harness and device identity", async () => {
   const opened: unknown[] = [];
@@ -151,4 +151,41 @@ test("public resolution preserves canonical identity and omits explicit foreign 
     { resource: canonical },
   ]);
   expect(reads).toEqual(["s", "s"]);
+});
+
+test("fork stays a selected-message action instead of a conversation dropdown entry", async () => {
+  const calls: unknown[] = [];
+  const opened: unknown[] = [];
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      sessions: {
+        fork: async (id, messageId) => {
+          calls.push({ id, messageId });
+          return {
+            id: "forked",
+            title: "Forked",
+            status: "completed",
+            archived: false,
+            agent: null,
+            cwd: null,
+            lastSelectedModel: null,
+            workspaceId: null,
+            originalSessionId: null,
+            createdAt: "",
+            updatedAt: "",
+            lastRequestStarted: null,
+            lastRequestEnded: null,
+            usage: null,
+          };
+        },
+      },
+      navigation: { open: (target) => opened.push(target) },
+    },
+  });
+  expect(fork.menus ?? []).toEqual([]);
+  await fork.run(ctx, { sessionId: "source", messageId: "completed-reply" });
+  expect(calls).toEqual([{ id: "source", messageId: "completed-reply" }]);
+  expect(opened).toHaveLength(1);
 });

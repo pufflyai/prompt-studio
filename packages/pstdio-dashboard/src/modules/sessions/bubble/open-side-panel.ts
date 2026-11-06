@@ -14,8 +14,13 @@ const projectModeStarted = (workbench: WorkbenchModuleContext) =>
   });
 
 export const openDashboardSidePanel = async (workbench: WorkbenchModuleContext) => {
-  await projectModeStarted(workbench);
   const viewId = contributionRefId(sessionBrowser.views.conversation);
+  // The bubble belongs to the generic Side shell; Sessions only supplies its optional default tab.
+  if (!workbench.views.getView(viewId)) {
+    workbench.sidePanel.setMode("floating");
+    return;
+  }
+  await projectModeStarted(workbench);
   const active = workbench.layout.getActivePanel("side");
   // Resource replacement can clear the instance view override without changing its
   // registered renderer. Both identify the same provider-owned conversation.
