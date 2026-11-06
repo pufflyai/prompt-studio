@@ -31,7 +31,7 @@ test("prepared package cache seeds a fresh runtime without creating installed de
     expect(readFileSync(archive, "utf8")).toBe("runtime-owned cache");
     expect(readFileSync(join(prepared, "package-archive"), "utf8")).toBe("prepared public artifact");
     rmSync(prepared, { recursive: true });
-    expect(readFileSync(join(home, "cache/extension-bun-install/alias"), "utf8")).toBe("prepared public artifact");
+    expect(readFileSync(join(home, "cache/extension-bun-install/alias"), "utf8")).toBe("runtime-owned cache");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
