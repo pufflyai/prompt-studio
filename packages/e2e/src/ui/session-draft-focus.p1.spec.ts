@@ -1,15 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
+import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 // Critical: opening a new session must accept keyboard input without an extra click.
 test("new session tabs focus their composer and keep workspace selection available", async ({ page, request }) => {
-  const parent = fileURLToPath(new URL("../../__test-tmp__/", import.meta.url));
-  mkdirSync(parent, { recursive: true });
-  const folder = mkdtempSync(join(parent, "session-focus-"));
+  const folder = createGitRepo("session-focus-", "Session composer focus");
   let projectId: string | undefined;
   try {
     const created = await request.post(`${uiOrigin}/v1/projects`, {
@@ -17,6 +14,12 @@ test("new session tabs focus their composer and keep workspace selection availab
     });
     expect(created.ok()).toBe(true);
     projectId = (await created.json()).id;
+    // A selection with no alternative is intentionally inert. Give the picker a real choice.
+    const alternativeResponse = await request.post(`${uiOrigin}/v1/workspaces`, {
+      data: { project_id: projectId, provider_id: "pstdio.worktree", params: {} },
+    });
+    expect(alternativeResponse.ok()).toBe(true);
+    const alternative = await alternativeResponse.json();
     const workspaces = await (await request.get(`${uiOrigin}/v1/workspaces?project_id=${projectId}`)).json();
     const current = workspaces.find((workspace: { isDefault: boolean }) => workspace.isDefault);
     expect(current).toBeTruthy();
@@ -31,6 +34,10 @@ test("new session tabs focus their composer and keep workspace selection availab
     await page.keyboard.type("Main session draft");
     await expect(mainInput).toHaveText("Main session draft");
     await expect(main.getByRole("button", { name: workspaceLabel, exact: true })).toBeEnabled();
+    await main.getByRole("button", { name: workspaceLabel, exact: true }).click();
+    await page.getByRole("menuitemradio", { name: alternative.workspace_shorthand, exact: true }).click();
+    await expect(main.getByRole("button", { name: alternative.workspace_shorthand, exact: true })).toBeEnabled();
+    await expect(mainInput).toHaveText("Main session draft");
     await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
