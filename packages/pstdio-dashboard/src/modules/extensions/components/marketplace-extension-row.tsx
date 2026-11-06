@@ -1,6 +1,6 @@
-import { Button, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Button, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension } from "@pstdio/sdk/api";
-import { ChevronRight, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
@@ -75,9 +75,6 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
         <Download size={12} />
         {t("projectSettings.extensionsPanel.marketplace.install")}
       </Button>
-      <Icon boxSize="4" color="fg.subtle" flexShrink="0">
-        <ChevronRight />
-      </Icon>
     </HStack>
   );
 };

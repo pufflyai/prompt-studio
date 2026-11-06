@@ -5,7 +5,7 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import { Switch, type SwitchProps, Tooltip } from "@pstdio/ui";
-import { ArrowUpCircle, ChevronRight, Folder, Globe } from "lucide-react";
+import { ArrowUpCircle, Folder, Globe } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
@@ -88,18 +88,11 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         </Text>
       </Stack>
 
-      <HStack gap="2xs" w="72px" flexShrink="0" color="fg.subtle">
-        <Icon boxSize="3.5">{extension.scope === "repo" ? <Folder /> : <Globe />}</Icon>
-        <Text textStyle="label/XS" fontFamily="mono">
-          {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
-        </Text>
-      </HStack>
-
       <Box
         w="64px"
         flexShrink="0"
         display="flex"
-        justifyContent="flex-start"
+        justifyContent="flex-end"
         onClick={stopRowClick}
         data-testid="extension-automation-status"
       >
@@ -152,9 +145,12 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         />
       </Box>
 
-      <Icon boxSize="4" color="fg.subtle" flexShrink="0">
-        <ChevronRight />
-      </Icon>
+      <HStack gap="2xs" w="72px" flexShrink="0" justifyContent="flex-end" color="fg.subtle">
+        <Icon boxSize="3.5">{extension.scope === "repo" ? <Folder /> : <Globe />}</Icon>
+        <Text textStyle="label/XS" fontFamily="mono">
+          {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
+        </Text>
+      </HStack>
     </HStack>
   );
 };
