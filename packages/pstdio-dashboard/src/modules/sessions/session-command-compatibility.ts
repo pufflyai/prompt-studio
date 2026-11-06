@@ -1,6 +1,7 @@
-import { contributionRefId, type PlacementIdentity, sessionBrowser } from "@pstdio/sdk/extensions";
+import { contributionRefId, type PlacementIdentity, sessionBrowser, workbenchPanels } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { openSessionsPage } from "@/shared/workbench/page-navigation";
 
 interface LegacyArgs {
   workspace?: ResourceRef;
@@ -64,6 +65,11 @@ export const registerLegacySessionCommands = (ctx: WorkbenchModuleContext) => {
             id: command,
           });
           const params = providerArgs(command, input, context);
+          const modeId = ctx.modes.getActiveModeId();
+          // Saved non-Project modes retain their existing Side placement. The provider
+          // owns draft creation; this bridge supplies only its legacy destination.
+          if (command === "new" && "side" in params && params.side && modeId && modeId !== "project")
+            Object.assign(params, { panel: { ...workbenchPanels.projectSession, id: `session.${modeId}` } });
           const record = ctx.commands.getCommand(commandId);
           if (!record) return ctx.commands.executeCommand(commandId, params, execution);
           const prepared = (await ctx.commands.prepareCommandArgs(commandId, params, execution)) as Record<
@@ -90,7 +96,9 @@ export const registerLegacySessionCommands = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.openSessions, label: "Go to sessions" },
     {
-      execute: () => ctx.navigation.openTarget({ kind: "page", page: sessionBrowser.pages.sessions }),
+      execute: () => {
+        openSessionsPage(ctx);
+      },
     },
   );
 };

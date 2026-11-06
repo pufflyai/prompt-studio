@@ -1,19 +1,20 @@
 import { expect, test } from "bun:test";
+import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionsModule } from "../module";
-import { createSessionBubbleModule } from "./module";
+import { registerSessionProvider } from "../session-provider.fixture";
 import { openDashboardSidePanel } from "./open-side-panel";
 
 test("opens an empty chat panel with a workspace session draft and reuses it on reopen", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
   workbench.registerModule(createWorkspacesModule());
-  workbench.registerModule(createSessionBubbleModule());
+  workbench.registerModule(createSessionsModule());
+  registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   const workspace = createDashboardResource("workspace", "workspace-1", "Workspace", "GitBranch", "project-1");
   openWorkspacesPage(workbench, workspace);
@@ -24,7 +25,7 @@ test("opens an empty chat panel with a workspace session draft and reuses it on 
   const panels = workbench.layout.listPanelInstances("side");
   expect(panels).toHaveLength(1);
   expect(panels[0]).toMatchObject({
-    viewId: dashboardWidgetIds.sessionBubble,
+    viewId: contributionRefId(sessionBrowser.views.conversation),
     resource: { type: "session-draft", metadata: { workspaceId: "workspace-1" } },
   });
   expect(workbench.sidePanel.getMode()).toBe("floating");
@@ -41,6 +42,7 @@ test("opens the session draft in the Side Panel while a session page is open", a
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
+  registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   openSessionsPage(workbench, createDashboardResource("session", "session-1", "Session", "MessageCircle", "project-1"));
   const location = workbench.pages.store.getState().location;
@@ -48,7 +50,7 @@ test("opens the session draft in the Side Panel while a session page is open", a
   await openDashboardSidePanel(workbench);
   expect(workbench.layout.listPanelInstances("side")).toEqual([
     expect.objectContaining({
-      viewId: dashboardWidgetIds.sessionBubble,
+      viewId: contributionRefId(sessionBrowser.views.conversation),
       resource: expect.objectContaining({ type: "session-draft" }),
     }),
   ]);
@@ -58,7 +60,8 @@ test("opens the session draft in the Side Panel while a session page is open", a
 test("opens a session beside an extension page and keeps each mode's sessions separate", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
   workbench.registerModule(createWorkspacesModule());
-  workbench.registerModule(createSessionBubbleModule());
+  workbench.registerModule(createSessionsModule());
+  registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   workbench.pageLocations.setProject("project-1");
   workbench.modes.registerMode({ id: "notes", panels: ["main", "side"], activate() {} });
@@ -77,7 +80,10 @@ test("opens a session beside an extension page and keeps each mode's sessions se
   expect(workbench.modes.getActiveModeId()).toBe("notes");
   await openDashboardSidePanel(workbench);
   const notesSession = workbench.layout.listPanelInstances("side")[0];
-  expect(notesSession).toMatchObject({ viewId: dashboardWidgetIds.sessionBubble, resource: { type: "session-draft" } });
+  expect(notesSession).toMatchObject({
+    viewId: contributionRefId(sessionBrowser.views.conversation),
+    resource: { type: "session-draft" },
+  });
   expect(workbench.pages.store.getState().location).toEqual(location);
   expect(workbench.sidePanel.getMode()).toBe("floating");
   openWorkspacesPage(workbench);
@@ -91,7 +97,8 @@ test("opens a session beside an extension page and keeps each mode's sessions se
 test("opens a session tab alongside an extension reader", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "attached" });
   workbench.registerModule(createWorkspacesModule());
-  workbench.registerModule(createSessionBubbleModule());
+  workbench.registerModule(createSessionsModule());
+  registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   openWorkspacesPage(workbench);
   workbench.views.registerView({ id: "reader", title: "Message", body: { kind: "react", render: () => null } });
@@ -105,11 +112,11 @@ test("opens a session tab alongside an extension reader", async () => {
   expect(workbench.layout.listPanelInstances("side")).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ viewId: "reader", instanceId: reader.instanceId }),
-      expect.objectContaining({ viewId: dashboardWidgetIds.sessionBubble }),
+      expect.objectContaining({ viewId: contributionRefId(sessionBrowser.views.conversation) }),
     ]),
   );
   const session = workbench.layout.getActivePanel("side");
-  expect(session?.viewId).toBe(dashboardWidgetIds.sessionBubble);
+  expect(session?.viewId).toBe(contributionRefId(sessionBrowser.views.conversation));
   await openDashboardSidePanel(workbench);
   expect(workbench.layout.listPanelInstances("side")).toHaveLength(2);
 });
@@ -117,11 +124,16 @@ test("opens a session tab alongside an extension reader", async () => {
 test("reopens the active session when several session tabs exist", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
   workbench.registerModule(createWorkspacesModule());
-  workbench.registerModule(createSessionBubbleModule());
+  workbench.registerModule(createSessionsModule());
+  registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   openWorkspacesPage(workbench);
   for (let index = 0; index < 2; index++) {
-    await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+    await workbench.commands.executeCommand(
+      dashboardCommandIds.createSession,
+      { sidePanel: true },
+      { source: "panel-add", region: "side" },
+    );
   }
   const session = workbench.layout.getActivePanel("side");
   workbench.sidePanel.setMode("closed");
@@ -132,7 +144,8 @@ test("reopens the active session when several session tabs exist", async () => {
 test("a Side Panel requested while the project loads opens its session once the project mode starts", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
   workbench.registerModule(createWorkspacesModule());
-  workbench.registerModule(createSessionBubbleModule());
+  workbench.registerModule(createSessionsModule());
+  registerSessionProvider(workbench);
   // A saved project waits for its synced rows before the project mode starts.
   expect(workbench.modes.getActiveModeId()).toBeUndefined();
 
@@ -144,6 +157,6 @@ test("a Side Panel requested while the project loads opens its session once the 
   await opened;
   expect(workbench.sidePanel.getMode()).toBe("floating");
   expect(workbench.layout.listPanelInstances("side")).toEqual([
-    expect.objectContaining({ viewId: dashboardWidgetIds.sessionBubble }),
+    expect.objectContaining({ viewId: contributionRefId(sessionBrowser.views.conversation) }),
   ]);
 });

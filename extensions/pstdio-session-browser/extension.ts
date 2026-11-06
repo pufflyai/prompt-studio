@@ -180,6 +180,14 @@ export default defineExtension({
   commandPaletteResources: [search],
   keybindings: [
     defineKeybinding({
+      id: "new-in-viewer",
+      layer: "current",
+      key: "N",
+      targetScope: "panel",
+      when: { resourceType: [workbenchResourceKinds.session, draftKind] },
+      action: { kind: "command", target: { command: newInViewer.ref } },
+    }),
+    defineKeybinding({
       id: "new-session",
       layer: "create",
       key: "S",

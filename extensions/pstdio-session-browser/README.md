@@ -6,6 +6,13 @@ Other tools use `sessionBrowser` from `@pstdio/sdk/extensions`. This package re-
 
 Draft bodies, files and control values are stored through public project storage, with small record pointers to durable blobs. Projects without a local folder remain supported. The native host transfers legacy `session-drafts` and `session-attachments` snapshots only after a successful durable save. Removing an attachment chip releases that draft reference, not an attachment still used elsewhere.
 
+Creation uses `sessionBrowser.commands.create`. With `side: true`, an optional
+`panel` placement ref selects an existing compatible destination (for example a
+legacy non-Project mode); otherwise the provider uses its Project Side placement.
+Draft identity and persistence stay here. “New in this tab” uses the shared
+Current view shortcut and captured viewer, without changing Main from Side.
+Switch options follow public query cursors rather than truncate older history.
+
 ## Local development and release
 
 Follow `extensions/AGENTS.md`: use CLI `extensions dev`, then production-like `extensions add --force`, without skipping installation. Local built SDK/UI packages can qualify this stacked implementation. An independent install must use fresh package-local Bun dependencies from built tarballs rather than symlinks or copied installed dependencies.
@@ -14,4 +21,4 @@ This provider has an independent version/changelog and its own changeset. It sta
 
 ## Current implementation checkpoint
 
-Default catalog, provider refs, production native view/list/commands, contextual workspace previews and thin legacy definitions are wired. The implementation is unfinished. Real installed browser/performance acceptance, consumer migration regressions, complete harness/draft/stream lifetime qualification, removal of orphaned dashboard presentation after installed parity, and release qualification remain. Existing unit checks do not establish installed parity. The consumer PR stacks on prerequisite #1762.
+Default catalog, provider refs, production native view/list/commands, contextual workspace previews and thin legacy definitions are wired. The implementation is unfinished. Clean installed browser acceptance, complete harness/draft/stream lifetime and performance qualification, and release checks remain. The superseded dashboard chat/list implementation has been removed; retained caller tests load the production provider declarations. Existing unit checks do not establish installed parity. The consumer PR stacks on prerequisite #1762.

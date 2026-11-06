@@ -1,6 +1,7 @@
 import {
   defineCommand,
   l10n,
+  type PlacementRef,
   params,
   type ResourceRef,
   sessionSlots,
@@ -19,6 +20,7 @@ export const create = defineCommand({
     harnessId: params.text(),
     deviceId: params.text(),
     side: params.boolean(),
+    panel: params.json<PlacementRef>(),
     replace: params.boolean(),
   },
   run(ctx, input) {
@@ -39,7 +41,7 @@ export const create = defineCommand({
     }
     ctx.navigation.open(
       input.side
-        ? { kind: "panel", panel: sessionBrowser.panels.conversation, resource, open: "pin" }
+        ? { kind: "panel", panel: input.panel ?? sessionBrowser.panels.conversation, resource, open: "pin" }
         : { kind: "page", page: sessionBrowser.pages.draft, resource },
     );
   },
@@ -217,7 +219,19 @@ export const switchOptions = defineCommand({
   title: l10n("commands.switchOptions", "Find sessions"),
   params: { search: params.text() },
   async run(ctx, input) {
-    return (await ctx.sessions.query({ limit: 50, orderBy: "lastActivity", search: input.search || undefined })).items;
+    const items: Awaited<ReturnType<typeof ctx.sessions.query>>["items"] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await ctx.sessions.query({
+        limit: 50,
+        orderBy: "lastActivity",
+        search: input.search || undefined,
+        ...(cursor ? { cursor } : {}),
+      });
+      items.push(...page.items);
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    return items;
   },
 });
 export const switchConversation = defineCommand({

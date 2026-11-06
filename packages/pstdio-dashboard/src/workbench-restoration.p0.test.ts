@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
-import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { getCollection, getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
@@ -15,11 +15,20 @@ import {
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { registerHomePage } from "./home-page.test-support";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
+import { registerSessionProvider } from "./modules/sessions/session-provider.fixture";
 import { createDashboardWorkbench as createWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
 
 const createDashboardWorkbench = (input: Parameters<typeof createWorkbench>[0] = {}) => {
   const workbench = createWorkbench(input);
   registerHomePage(workbench);
+  registerSessionProvider(workbench, {
+    sessions: {
+      get: async (id) => {
+        const row = getCollection("sessions").get(id);
+        return row ? ({ id, title: row.title, status: row.status, archived: row.archived } as never) : null;
+      },
+    },
+  });
   return workbench;
 };
 const createStorage = (): WorkbenchStorageLike => {
