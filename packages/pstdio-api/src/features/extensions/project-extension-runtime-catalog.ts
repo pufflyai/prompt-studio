@@ -32,8 +32,10 @@ const assertResourcePrefixes = (
 };
 
 type ProjectState = {
-  /** Bumped on every invalidation; a load may publish only if it still matches. */
+  /** Bumped on every invalidation; a read waits for a snapshot loaded at its starting revision or later. */
   revision: number;
+  /** Bumped by invalidations that can change contributions; a load may publish only if it still matches. */
+  contributionRevision: number;
   /** Revision the current snapshot was built from; differing from revision means dirty. */
   loadedRevision: number;
   dirtyReason: RuntimeInvalidationReason | null;
@@ -45,6 +47,37 @@ type ProjectState = {
   knownSourcePaths: Set<string>;
   loadCount: number;
 };
+
+const createProjectState = (): ProjectState => ({
+  revision: 0,
+  contributionRevision: 0,
+  loadedRevision: -1,
+  dirtyReason: null,
+  current: null,
+  staleView: null,
+  loading: null,
+  knownSourcePaths: new Set(),
+  loadCount: 0,
+});
+
+const markDirty = (state: ProjectState, reason: RuntimeInvalidationReason) => {
+  state.revision += 1;
+  // A webview build only refreshes later reads: the load in flight still serves the reads that
+  // started before the build, and the next read loads again and rechecks the source.
+  if (reason !== "webviews_built") state.contributionRevision += 1;
+  state.dirtyReason = reason;
+};
+
+type LoadContext = {
+  projectId: string;
+  reason: string;
+  startedAt: number;
+  startRevision: number;
+  startContributionRevision: number;
+};
+
+const isStale = (state: ProjectState, context: LoadContext) =>
+  state.contributionRevision !== context.startContributionRevision;
 
 // Test seam: reports catalog activity without exposing handlers or settings.
 export type ProjectExtensionRuntimeCatalogObserver = {
@@ -75,16 +108,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   const stateFor = (projectId: string) => {
     const existing = states.get(projectId);
     if (existing) return existing;
-    const created: ProjectState = {
-      revision: 0,
-      loadedRevision: -1,
-      dirtyReason: null,
-      current: null,
-      staleView: null,
-      loading: null,
-      knownSourcePaths: new Set(),
-      loadCount: 0,
-    };
+    const created = createProjectState();
     states.set(projectId, created);
     return created;
   };
@@ -109,8 +133,6 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
     return { enabledSources, project, runtime };
   };
-
-  type LoadContext = { projectId: string; reason: string; startedAt: number; startRevision: number };
 
   const discardStaleLoad = (context: LoadContext) => {
     deps.observer?.onDiscard?.({ projectId: context.projectId, code: "extension_runtime_generation_stale" });
@@ -175,7 +197,13 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
   const runLoad = async (projectId: string, state: ProjectState) => {
     const reason: string = state.current ? (state.dirtyReason ?? "runtime_refresh") : "cold_read";
-    const context: LoadContext = { projectId, reason, startedAt: performance.now(), startRevision: state.revision };
+    const context: LoadContext = {
+      projectId,
+      reason,
+      startedAt: performance.now(),
+      startRevision: state.revision,
+      startContributionRevision: state.contributionRevision,
+    };
     state.loadCount += 1;
     deps.observer?.onLoadStart?.({ projectId, reason, revision: context.startRevision });
     apiLogger.info(
@@ -190,13 +218,13 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
     try {
       const loaded = await buildRuntime(projectId, state, () => {
-        if (state.revision !== context.startRevision) throw discardStaleLoad(context);
+        if (isStale(state, context)) throw discardStaleLoad(context);
       });
       // Committed indexes belong to this healthy candidate. If an invalidation
       // arrived during COMMIT, retain it as the fallback while loading the newer
       // source. Never pair the previous handlers with newly accepted definitions.
       const snapshot = publishSnapshot(state, context, loaded);
-      if (state.revision !== context.startRevision) throw discardStaleLoad(context);
+      if (isStale(state, context)) throw discardStaleLoad(context);
       return snapshot;
     } catch (error) {
       if (error instanceof ExtensionRuntimeProjectMissingError) states.delete(projectId);
@@ -235,16 +263,20 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
   const get = async (projectId: string): Promise<ProjectExtensionRuntimeSnapshot> => {
     const state = stateFor(projectId);
+    // A read reflects every invalidation made before it started. A later webview build only
+    // refreshes the next read, so builds finishing one after another cannot hold this read back.
+    let requested = state.revision;
 
     for (;;) {
-      if (state.current && state.loadedRevision === state.revision) return state.current;
+      if (state.current && state.loadedRevision >= requested) return state.current;
 
       try {
-        return await (state.loading ?? startLoad(projectId, state));
+        await (state.loading ?? startLoad(projectId, state));
       } catch (error) {
-        // A load invalidated in flight never becomes current; read the latest revision.
-        if (error instanceof ExtensionRuntimeGenerationStaleError) continue;
-        return resolveReadFailure(projectId, state, error);
+        if (!(error instanceof ExtensionRuntimeGenerationStaleError))
+          return resolveReadFailure(projectId, state, error);
+        // Changed contributions replaced the load in flight; read the latest revision.
+        requested = state.revision;
       }
     }
   };
@@ -265,11 +297,6 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     const candidate = await sources.load(installedSource);
     if (candidate) loaded.push(candidate);
     assertResourcePrefixes(loaded);
-  };
-
-  const markDirty = (state: ProjectState, reason: RuntimeInvalidationReason) => {
-    state.revision += 1;
-    state.dirtyReason = reason;
   };
 
   // Marks affected projects dirty; the replacement snapshot builds lazily on the
