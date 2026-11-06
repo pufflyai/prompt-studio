@@ -219,7 +219,9 @@ resource, the host transfers only the transient submitted receipt and presentati
 identity after the ordinary viewer guards authorize the replacement. The new
 resource owns its query, stream and durable draft. The source remains empty and
 reusable; a stale navigation result or an unrelated explicit switch cannot carry
-that submitted prompt into another conversation.
+that submitted prompt into another conversation. Harness confirmation can replace canonical
+message IDs while retaining the same displayed row; unrelated explicit provider
+animation identities keep their existing meaning.
 
 
 A snapshot operation with `refresh: true` reconnects the native owner's existing
