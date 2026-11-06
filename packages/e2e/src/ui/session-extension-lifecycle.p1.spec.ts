@@ -68,6 +68,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     ).toBeVisible();
     await expect.poll(() => watches.length).toBe(1);
     await expect.poll(() => holds.length).toBe(1);
+    expect(activeStreams.size).toBe(1);
     const saved = page.waitForResponse(
       (response) =>
         response.url().endsWith("conversation.chat.saveDraft/execute") &&
@@ -162,9 +163,10 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     // Project teardown can close the whole transport instead of deleting each interest.
     const removed = await request.delete(`/v1/sessions/${sessionId}`);
     expect(removed.ok()).toBe(true);
-    // A server end retires its observer without DELETE; the final local interest
-    // closes the physical connection. Leave the empty composer before checking it.
-    await page.getByRole("option", { name: "Home", exact: true }).click();
+    expect((await request.get(`/v1/sessions/${sessionId}`)).status()).toBe(404);
+    // Server ends need no DELETE, and inactive cached views may still own interests.
+    // Client disconnect is the terminal boundary that releases every remaining claim.
+    await page.close();
     await expect.poll(() => activeStreams.size).toBe(0);
     expect(stops).toBe(0);
     sessionId = undefined;
