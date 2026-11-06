@@ -1,4 +1,5 @@
 import { commandRef } from "./refs";
+import type { PlacementRef } from "./types/contribution-identity";
 
 export const sessionBrowserId = "pstdio.pstdio-session-browser";
 const ref = <K extends "page" | "placement" | "view">(kind: K, id: string) => ({
@@ -21,7 +22,15 @@ export const sessionBrowser = {
   views: { conversation: ref("view", "conversation"), list: ref("view", "list") },
   commands: {
     create: commandRef<
-      { workspaceId?: string; harnessId?: string; deviceId?: string; side?: boolean; replace?: boolean },
+      {
+        workspaceId?: string;
+        harnessId?: string;
+        deviceId?: string;
+        side?: boolean;
+        /** With side, open the new draft in this declared placement; defaults to the Sessions Project placement. */
+        panel?: PlacementRef;
+        replace?: boolean;
+      },
       void
     >({ extensionId: sessionBrowserId, id: "new" }),
     open: commandRef<{ sessionId: string; side?: boolean; replace?: boolean }, void>({
