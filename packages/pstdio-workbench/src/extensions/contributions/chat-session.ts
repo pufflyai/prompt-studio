@@ -21,6 +21,8 @@ export interface ChatSessionInput {
   watch?(signal: AbortSignal): AsyncIterable<unknown> & { result?: Promise<unknown> };
   loadDraft?(): Promise<unknown>;
   saveDraft?(draft: ChatDraft): Promise<unknown>;
+  /** Stage edits synchronously until the provider acknowledges the asynchronous save. */
+  stageDraft?(draft: ChatDraft): void;
 }
 
 const executeChatAction = async (
@@ -102,6 +104,25 @@ const subscribeChatState = (listeners: Set<() => void>, listener: () => void) =>
   };
 };
 
+const stageChatDraft = (stage: ChatSessionInput["stageDraft"], draft: ChatDraft, fail: (error: unknown) => void) => {
+  try {
+    stage?.(draft);
+  } catch (error) {
+    fail(error);
+  }
+};
+
+const trackChatAction = <T extends Promise<unknown>>(actions: Set<Promise<unknown>>, running: T) => {
+  actions.add(running);
+  const settled = () => actions.delete(running);
+  void running.then(settled, settled);
+  return running;
+};
+const failChatAction = (fail: (error: unknown) => void) => (error: unknown) => {
+  fail(error);
+  throw error;
+};
+
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
@@ -125,8 +146,13 @@ export const createChatSession = (input: ChatSessionInput) => {
   let hydration = Promise.resolve();
   const snapshots = createChatSnapshot(state.conversation);
   let save = Promise.resolve();
+  const actions = new Set<Promise<unknown>>();
   let persistedChanges = 0;
   let persistenceError: string | undefined;
+  const failPersistence = (error: unknown) => {
+    persistenceError = error instanceof Error ? error.message : String(error);
+    fail(error);
+  };
   let recoverableDraft: ChatDraft | undefined;
   const merge = (
     incoming: ChatRendererSnapshot,
@@ -170,20 +196,19 @@ export const createChatSession = (input: ChatSessionInput) => {
   const accept = reader.accept;
   const saveDraft = () => {
     if (!input.saveDraft || persistedChanges === changes) return;
+    stageChatDraft(input.stageDraft, state.draft, failPersistence);
     save = save
       .then(() => hydration)
       .then(async () => {
         if (!hydrated || persistedChanges === changes) return;
         const savingChanges = changes;
+        stageChatDraft(input.stageDraft, state.draft, failPersistence);
         await input.saveDraft!(state.draft);
         persistedChanges = savingChanges;
         if (state.error === persistenceError) publish({ error: undefined });
         persistenceError = undefined;
       })
-      .catch((error) => {
-        persistenceError = error instanceof Error ? error.message : String(error);
-        fail(error);
-      });
+      .catch(failPersistence);
   };
   const changeDraft = (update: Partial<ChatDraft>) => {
     const draft = chatDraftSchema.parse({ ...state.draft, ...update });
@@ -265,13 +290,11 @@ export const createChatSession = (input: ChatSessionInput) => {
       recoverableDraft = state.draft;
     },
   });
-  const run = (action: ChatRendererAction, handler = input.action) => {
-    if (action.type === "submit") return submit(action, handler);
-    return execute(action, handler).catch((error) => {
-      fail(error);
-      throw error;
-    });
-  };
+  const run = (action: ChatRendererAction, handler = input.action) =>
+    trackChatAction(
+      actions,
+      action.type === "submit" ? submit(action, handler) : execute(action, handler).catch(failChatAction(fail)),
+    );
   return {
     getSnapshot: () => state,
     subscribe: (listener: () => void) => subscribeChatState(listeners, listener),
@@ -314,6 +337,8 @@ export const createChatSession = (input: ChatSessionInput) => {
       controller?.abort();
       reader.reset();
       listeners.clear();
+      // Abort presentation now; already-started actions still own their final draft save.
+      return Promise.allSettled([...actions, hydration]).then(() => save);
     },
   };
 };
