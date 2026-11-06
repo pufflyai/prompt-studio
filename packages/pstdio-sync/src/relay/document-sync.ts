@@ -13,6 +13,8 @@ import { type DocumentSyncInput, DocumentUpdateTooLarge, type SyncFailure } from
 import { retainNativeSource, withSourceRecovery } from "./source-recovery";
 
 export const latestStateLimits = { bytes: 1_048_576, updates: 1_000 };
+const hasExternalBytes = (input: DocumentSyncInput, document: Y.Doc) =>
+  !!input.references || hasDocumentAssets(document);
 
 export const createDocumentSync = (input: DocumentSyncInput) => {
   const { owner, store, space, documentId, relay } = input;
@@ -40,7 +42,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     try {
       Y.applyUpdate(next, await openState(space, documentId, state, payload));
       checkSummary(next, await openSummary(space, documentId, state));
-      validateDocumentBlobs(next);
+      validateDocumentBlobs(next, input.references);
       await store.initialHistory?.validate(next);
       incomplete = false;
     } catch {
@@ -61,7 +63,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     const next = cloneDocument(remote);
     try {
       Y.applyUpdate(next, await openUpdate(space, documentId, update));
-      validateDocumentBlobs(next);
+      validateDocumentBlobs(next, input.references);
       await store.initialHistory?.validate(next);
     } catch {
       next.destroy();
@@ -189,11 +191,12 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     downloaded &&
     store.revision &&
     (await store.revision(owner)) === acknowledgedRevision &&
-    !hasDocumentAssets(remote);
+    !hasExternalBytes(input, remote);
   const synchronizeLocal = async () => {
     const initialHistory = await prepareLocalHistory();
     if (initialHistory === "waiting") return true;
     if (initialHistory === "retry") return false;
+    downloaded = false;
     const local = await mergeLocal();
     if (!local) return false;
     try {

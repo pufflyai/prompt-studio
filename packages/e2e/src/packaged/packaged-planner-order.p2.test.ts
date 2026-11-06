@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -94,13 +94,22 @@ test(
       expect((await read(restarted)).map(({ id }) => id)).toEqual((await read(second)).map(({ id }) => id));
     } catch (cause) {
       failures.push(cause);
+      if (fixture) {
+        try {
+          await writeFile(join(root, "failure-diagnostics.json"), JSON.stringify(await fixture.diagnostics(), null, 2));
+        } catch (diagnosticError) {
+          failures.push(diagnosticError);
+        }
+      }
     }
     const stopped = await Promise.allSettled([...children].map(stopProcess));
     for (const result of stopped) if (result.status === "rejected") failures.push(result.reason);
     await fixture?.peer.close().catch((cause) => failures.push(cause));
-    if (stopped.every((result) => result.status === "fulfilled"))
-      await rm(root, { recursive: true, force: true }).catch((cause) => failures.push(cause));
-    if (failures.length) throw new AggregateError(failures, `Planner ordering scenario or cleanup failed: ${root}`);
+    if (failures.length === 0) await rm(root, { recursive: true, force: true }).catch((cause) => failures.push(cause));
+    if (failures.length) {
+      console.error(`Planner ordering failure evidence retained at ${root}`);
+      throw new AggregateError(failures, `Planner ordering scenario or cleanup failed: ${root}`);
+    }
   },
   PACKAGED_TEST_TIMEOUT,
 );

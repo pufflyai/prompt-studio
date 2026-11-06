@@ -255,6 +255,7 @@ const buildApp = async (
     accountService: account.accountService,
     environmentService: dbs.environmentDBService,
     storagePositions,
+    projectRecovery: { root: join(storageRoot, "folder-recovery") },
     artifactMountWrites,
     resourceLinksService: dbs.resourceLinksDBService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,

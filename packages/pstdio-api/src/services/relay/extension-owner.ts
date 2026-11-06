@@ -12,15 +12,51 @@ import type { RelayDeps } from "./deps";
 import { createExtensionDocumentSync } from "./documents";
 import type { RelayWorkbench } from "./runtime";
 
+type RelaySource = Awaited<ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>>[number];
+type RelaySnapshot = Awaited<ReturnType<ExtensionsRouteDeps["extensionRuntimeCatalog"]["get"]>>;
+
+// View bundles change the catalog generation without changing a document owner.
+// Keep its transport until its source, file mounts or workspace actually changes.
+export const extensionOwnerContextKey = (input: {
+  source: RelaySource;
+  snapshot: RelaySnapshot;
+  workspace: Awaited<ReturnType<RelayDeps["workspaceService"]["getDefault"]>>;
+}) => {
+  const {
+    source: { installedSource, instance },
+    snapshot,
+    workspace,
+  } = input;
+  return JSON.stringify([
+    instance.id,
+    installedSource.id,
+    installedSource.source_path,
+    installedSource.source_hash,
+    installedSource.source_ref,
+    installedSource.version,
+    snapshot.runtime.artifactMounts
+      .filter((mount) => mount.extensionId === installedSource.extension_id)
+      .map(({ name, relativePath }) => [name, relativePath]),
+    workspace?.id,
+    workspace?.root_path,
+    workspace?.execution_kind,
+    workspace?.provider_state,
+    workspace?.initializing,
+    workspace?.setup_error,
+    workspace?.deleted_at,
+    workspace?.provider_capabilities_json,
+  ]);
+};
+
 export const startRelayExtension = async (input: {
   live?: LiveConnection;
   config: RelayWorkbench;
-  source: Awaited<ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>>[number];
+  source: RelaySource;
   deps: RelayDeps;
   signal: AbortSignal;
   statusChanged: () => void;
   contextKey: string;
-  snapshot: Awaited<ReturnType<ExtensionsRouteDeps["extensionRuntimeCatalog"]["get"]>>;
+  snapshot: RelaySnapshot;
   access: () => Promise<{ token: string; expiresAt: string }>;
 }) => {
   const { config, deps } = input;

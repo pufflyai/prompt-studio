@@ -3,12 +3,14 @@ import { canonicalJson } from "pstdio-sync-contracts";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { AccountRequestError } from "../account/native-account";
+import { isRecoveryCatalogOwner } from "../project-recovery/catalog";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
 import type { RelayDeps } from "./deps";
 import { createDeviceCommandCaller } from "./device-command-call";
 import { startDeviceCommands } from "./device-commands";
-import { startRelayExtension } from "./extension-owner";
+import { extensionOwnerContextKey, startRelayExtension } from "./extension-owner";
+import { startFolderRecovery } from "./folder-recovery";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
 import { startPublishedExtensions } from "./publications";
@@ -101,7 +103,8 @@ export const startRelayRuntime = async (input: {
   const coreDocuments = createWorkbenchConnections((config) => startCoreDocumentSync(core(config)));
   const coreOwners = [publications, automations, personal, coreDocuments];
   const commands = createWorkbenchConnections((config) => startDeviceCommands(core(config)));
-  const lifecycleOwners = [...coreOwners, commands];
+  const recovery = createWorkbenchConnections((config) => startFolderRecovery(core(config)));
+  const lifecycleOwners = [...coreOwners, commands, recovery];
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
     await connection.done;
@@ -122,17 +125,16 @@ export const startRelayRuntime = async (input: {
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     const workspace = await deps.workspaceService.getDefault(workbenchId);
-    const contextKey = JSON.stringify([
-      snapshot.generation,
-      workspace?.id,
-      workspace?.root_path,
-      workspace?.provider_capabilities_json,
-    ]);
-    const desired = new Set(snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id));
+    const desired = new Map(
+      snapshot.enabledSources.map((source) => [
+        source.installedSource.extension_id,
+        extensionOwnerContextKey({ source, snapshot, workspace }),
+      ]),
+    );
     const obsolete = [...connections].filter(
       ([, connection]) =>
         connection.owner.workbenchId === workbenchId &&
-        (!desired.has(connection.owner.extensionId) || connection.contextKey !== contextKey),
+        connection.contextKey !== desired.get(connection.owner.extensionId),
     );
     await Promise.all(obsolete.map(([key, connection]) => stopConnection(key, connection)));
     for (const source of snapshot.enabledSources) {
@@ -143,7 +145,7 @@ export const startRelayRuntime = async (input: {
         config,
         source,
         snapshot,
-        contextKey,
+        contextKey: desired.get(source.installedSource.extension_id)!,
         access: access.get(workbenchId)!,
         live: live.get(workbenchId)!,
         deps,
@@ -187,7 +189,7 @@ export const startRelayRuntime = async (input: {
   };
   const stopStorage = deps.extensionStorageService.watch((owner, origin) => {
     const documentId = owner.documentId;
-    if (!workbenches.has(owner.workbenchId)) return;
+    if (!workbenches.has(owner.workbenchId) || isRecoveryCatalogOwner(owner.extensionId)) return;
     if (owner.extensionId === publishedExtensionsId) {
       publications.get(owner.workbenchId)?.wake();
       statusChanged(owner.workbenchId);
@@ -216,6 +218,7 @@ export const startRelayRuntime = async (input: {
       publications.get(workbenchId)?.retry();
       automations.get(workbenchId)?.retry();
       coreDocuments.get(workbenchId)?.retry();
+      recovery.get(workbenchId)?.retry();
       for (const connection of connections.values())
         if (connection.owner.workbenchId === workbenchId) connection.retry();
     },

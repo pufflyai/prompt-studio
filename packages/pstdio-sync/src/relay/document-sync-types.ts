@@ -1,4 +1,5 @@
 import type { ReadResult, StateEnvelope, StateInfo, UpdateEnvelope, UpdateResult } from "pstdio-sync-contracts";
+import type { Doc } from "yjs";
 import type { SyncSpace } from "../encryption";
 import type { AssetStore, DocumentStore, StorageOwner } from "../shared";
 
@@ -32,6 +33,13 @@ export interface DocumentSyncInput {
   documentId: string;
   relay: DocumentRelay;
   assets?: AssetStore;
+  /** Owners with encrypted blob graphs retain their roots in the same document
+   * envelopes. Upload acknowledgement precedes publication; downloads precede merge. */
+  references?: {
+    validate(document: Doc): void;
+    upload(document: Doc): Promise<string[]>;
+    download(document: Doc): Promise<void>;
+  };
   quarantine(failure: SyncFailure): Promise<void>;
   limits?: { bytes: number; updates: number };
 }
