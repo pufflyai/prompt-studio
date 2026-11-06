@@ -68,6 +68,17 @@ export const openResourceSlot = (input: {
   } satisfies WorkbenchPageRuntimeState;
 };
 
+export const validatePageResourceTarget = (page: WorkbenchPageContribution, resource: ResourceRef | undefined) => {
+  if (page.resource) {
+    if (!resource) {
+      if (isSingleViewPage(page) && page.main.empty) return;
+      throw new Error(`Page "${page.id}" requires a resource`);
+    }
+    if (!resourceMatchesConstraint(page.resource, resource))
+      throw new Error(`Page "${page.id}" does not accept resource kind "${resource.type}"`);
+  } else if (resource) throw new Error(`Page "${page.id}" does not accept a resource`);
+};
+
 export const selectPrimaryTarget = (input: {
   page: WorkbenchPageContribution;
   state: WorkbenchPageRuntimeState;
@@ -75,19 +86,13 @@ export const selectPrimaryTarget = (input: {
   resourceKey(resource: ResourceRef): string;
 }) => {
   const { page, target } = input;
-  if (page.resource) {
-    if (!target.resource) {
-      if (isSingleViewPage(page) && page.main.empty)
-        return {
-          ...input.state,
-          resourceInstances: { ...input.state.resourceInstances, [PAGE_MAIN_SLOT_ID]: [] },
-          activePrimaryInstanceKey: undefined,
-        };
-      throw new Error(`Page "${page.id}" requires a resource`);
-    }
-    if (!resourceMatchesConstraint(page.resource, target.resource))
-      throw new Error(`Page "${page.id}" does not accept resource kind "${target.resource.type}"`);
-  } else if (target.resource) throw new Error(`Page "${page.id}" does not accept a resource`);
+  validatePageResourceTarget(page, target.resource);
+  if (page.resource && !target.resource)
+    return {
+      ...input.state,
+      resourceInstances: { ...input.state.resourceInstances, [PAGE_MAIN_SLOT_ID]: [] },
+      activePrimaryInstanceKey: undefined,
+    };
   const slot = primarySlot(page);
   if (!slot) {
     if (target.open && !(page.resource && page.main.kind === "panels" && typeof page.main.landing === "object"))

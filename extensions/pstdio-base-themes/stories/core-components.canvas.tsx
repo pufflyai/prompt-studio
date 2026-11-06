@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { CoreComponents } from "./core-components";
 
 const meta = {
-  title: "Themes/Single theme",
+  title: "Design system/Foundations/Themes/Single theme",
   fullscreen: true,
   component: CoreComponents,
   args: { section: "all" },

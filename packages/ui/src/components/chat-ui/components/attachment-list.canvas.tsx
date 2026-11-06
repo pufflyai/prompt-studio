@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { AttachmentList } from "./attachment-list";
 
 const meta: CanvasMeta<typeof AttachmentList> = {
-  title: "Patterns/Chat/Attachment List",
+  title: "Design system/Patterns/Chat/Attachment list",
   component: AttachmentList,
 };
 export default meta;

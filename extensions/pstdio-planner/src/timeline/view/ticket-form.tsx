@@ -6,7 +6,7 @@ import {
 } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
 import { buildTicketAttributes } from "../../data/mappers";
-import { createTicketFormConfig, localizeTicketFormValue } from "../../ticket-create-form";
+import { createTicketFormConfig, localizeTicketFormOption, localizeTicketFormValue } from "../../ticket-create-form";
 import type { Plan } from "../contracts";
 import { timelineTicketProperties } from "../model/ticket-properties";
 import type { PlanClient } from "./use-plan";
@@ -48,9 +48,7 @@ export function TicketForm(props: TicketFormProps) {
         label: localizeTicketFormValue(attribute.label, t),
         type: {
           ...type,
-          options: Array.isArray(type.options)
-            ? type.options.map((option) => ({ ...option, label: localizeTicketFormValue(option.label, t) }))
-            : [],
+          options: Array.isArray(type.options) ? type.options.map((option) => localizeTicketFormOption(option, t)) : [],
         },
       },
     ];

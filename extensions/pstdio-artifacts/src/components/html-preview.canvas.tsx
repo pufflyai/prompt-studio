@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { HtmlPreview } from "./html-preview";
 
 const meta = {
-  title: "Extensions/Artifacts/HtmlPreview",
+  title: "Extensions/Artifacts/HTML preview",
   component: HtmlPreview,
   decorators: [
     (Story) => (

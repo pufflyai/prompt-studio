@@ -47,7 +47,7 @@ const IndependentViewerQuery = () => {
   return <output aria-label="Native viewer query">{JSON.stringify(params)}</output>;
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Native viewer query",
+  title: "Product/Workbench/Views/Native viewer query",
   component: IndependentViewerQuery,
 } satisfies CanvasMeta<typeof IndependentViewerQuery>;
 export default meta;

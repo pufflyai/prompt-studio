@@ -3,7 +3,7 @@ import { ThemePreferenceProvider } from "@pstdio/ui";
 import { DesktopQuitConfirmationDialog } from "./desktop-quit-confirmation";
 
 const meta = {
-  title: "Desktop/QuitConfirmation",
+  title: "Product/Desktop/Quit confirmation",
   component: DesktopQuitConfirmationDialog,
   fullscreen: true,
   args: {

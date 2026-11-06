@@ -7,7 +7,7 @@ import { ParamEditor } from "@/components/param-editor";
 import { Slider } from "@/components/primitives";
 
 export default {
-  title: "Canvas/Lab merger proposal",
+  title: "Extensions/UI Canvas/Frame editor workflow",
   description:
     "Selection-scoped panels resize to close. The timeline exposes a repeat toggle beside transport; pinch or Ctrl-scroll over its ruler to zoom. Animation ranges and speed settings belong to the timeline.",
 };

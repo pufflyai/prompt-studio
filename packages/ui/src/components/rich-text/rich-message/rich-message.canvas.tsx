@@ -118,7 +118,7 @@ print(list(fib(10)))
 \`\`\`
 `;
 const meta: CanvasMeta<typeof RichMessage> = {
-  title: "Patterns/Chat/Rich Message",
+  title: "Design system/Patterns/Chat/Rich message",
   component: RichMessage,
   args: {
     debug: false,

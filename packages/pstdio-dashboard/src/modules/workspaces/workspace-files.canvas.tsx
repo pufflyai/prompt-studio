@@ -199,7 +199,7 @@ const WorkspaceFilesStory = (props: { state: WorkspaceStoryState }) => {
   );
 };
 const meta = {
-  title: "Modules/Workspaces/Files and Changes",
+  title: "Product/Workspaces/Files and changes",
   component: WorkspaceFilesStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceFilesStory>;

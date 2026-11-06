@@ -1,5 +1,5 @@
 import "@pstdio/ui/style.css";
-import { Flex, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Stack, Text, Textarea } from "@chakra-ui/react";
 import { createWebviewClient, defineExtensionView, type TextEditingSession } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { useState, useSyncExternalStore } from "react";
@@ -16,14 +16,7 @@ const Editor = (props: { session: TextEditingSession }) => {
       <Text textStyle="label/S/regular" color="fg.muted">
         Installed text editor
       </Text>
-      {snapshot.pending && (
-        <Flex gap="xs" align="center" bg="bg.muted" px="sm" py="xs">
-          <Spinner size="xs" color="fg.muted" aria-label="Saving" />
-          <Text textStyle="label/S/regular" color="fg.muted">
-            Saving changes…
-          </Text>
-        </Flex>
-      )}
+
       <Textarea
         aria-label="Installed editor source"
         value={snapshot.text.toString()}

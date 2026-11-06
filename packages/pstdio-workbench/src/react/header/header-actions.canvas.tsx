@@ -66,7 +66,7 @@ const createHeaderWorkbench = () => {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Header actions",
+  title: "Product/Workbench/Header/Header actions",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

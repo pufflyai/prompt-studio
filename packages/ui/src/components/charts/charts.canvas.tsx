@@ -16,7 +16,7 @@ const values = [
 ];
 
 export default {
-  title: "Components/Charts",
+  title: "Design system/Components/Data display/Charts",
   fullscreen: true,
   description:
     "Shared TanStack charts with semantic colors, tooltips, and keyboard focus. Compare light, dark, and custom themes.",

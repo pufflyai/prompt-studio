@@ -4,7 +4,7 @@ import { useState } from "react";
 import { TreeList } from "./tree-list";
 
 const meta: CanvasMeta<typeof TreeList> = {
-  title: "Components/Data Display/Tree List/Keyboard",
+  title: "Design system/Components/Data display/Tree list/Keyboard",
   component: TreeList,
 };
 export default meta;

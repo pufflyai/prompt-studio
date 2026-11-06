@@ -76,7 +76,7 @@ const NoteTabActions = () => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Tab actions",
+  title: "Product/Workbench/Panels/Tab actions",
   component: NoteTabActions,
   decorators: [
     (Story) => (

@@ -33,7 +33,7 @@ const Toolbar = (props: { actions: ViewToolbarAction[] }) => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Native toolbar actions",
+  title: "Product/Workbench/Views/Native toolbar actions",
   component: Toolbar,
   args: { actions },
   decorators: [

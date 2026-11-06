@@ -73,7 +73,7 @@ const DocumentBreadcrumb = () => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Document breadcrumb",
+  title: "Product/Workbench/Navigation/Breadcrumbs/Document breadcrumb",
   component: DocumentBreadcrumb,
 } satisfies CanvasMeta<typeof DocumentBreadcrumb>;
 export default meta;

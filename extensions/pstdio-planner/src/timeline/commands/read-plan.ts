@@ -3,14 +3,14 @@ import { defineCommand } from "@pstdio/sdk/extensions";
 import { listAttempts } from "../../data/attempt-storage";
 import { readTicketSnapshot } from "../../data/collections";
 import { buildTicketAttributes, createTicketParentLookup, createTicketRowMapper } from "../../data/mappers";
-import { migratePlannerStorage } from "../../data/migrate-storage";
+import { readMigratedTickets } from "../../data/read-migrated-tickets";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
 import { loadTicketLinkedResources } from "../../data/ticket-linked-resources";
 import { ticketPageTarget } from "../../data/ticket-page-target";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
-import { sortedBySortOrder } from "../../utils/sort";
+import { sortedByTicketOrder } from "../../utils/sort";
 import { buildPlan } from "../model/build-plan";
 import { resolvePlan } from "../model/resolve-plan";
 import { timelineTicketProperties } from "../model/ticket-properties";
@@ -26,9 +26,9 @@ export const readPlanCommand = defineCommand({
   title: "Read execution plan",
   cli: { description: "Print the execution order, deadlines, blockers, and risk as JSON." },
   async run(ctx) {
-    await migratePlannerStorage(ctx);
+    const migrated = await readMigratedTickets(ctx);
     const [{ tickets, requests }, { statuses }, { tags }, stored, gates, attempts, selections] = await Promise.all([
-      readTicketSnapshot(ctx),
+      readTicketSnapshot(ctx, migrated),
       readTicketStatuses(ctx.storage),
       readTicketTags(ctx.storage),
       readStoredPlan(ctx.storage),
@@ -37,7 +37,7 @@ export const readPlanCommand = defineCommand({
       readWorkflowStatuses(ctx),
     ]);
     const workflow = usableWorkflowStatuses(selections);
-    const active = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived));
+    const active = sortedByTicketOrder(tickets.filter((ticket) => !ticket.archived));
     const plan = buildPlan({
       tickets: active,
       statuses,

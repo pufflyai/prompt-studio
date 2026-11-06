@@ -4,7 +4,10 @@ import { useState } from "react";
 import type { ChatLinkHandler } from "../links/chat-link";
 import { ChatPanel } from "./chat-panel";
 
-const meta: CanvasMeta<typeof ChatPanel> = { title: "Chat/ChatPanel/Images", component: ChatPanel };
+const meta: CanvasMeta<typeof ChatPanel> = {
+  title: "Design system/Patterns/Chat/Chat panel/Images",
+  component: ChatPanel,
+};
 export default meta;
 type Story = CanvasFrame<typeof ChatPanel>;
 const image =

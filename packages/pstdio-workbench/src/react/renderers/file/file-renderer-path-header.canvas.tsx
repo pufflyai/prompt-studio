@@ -3,7 +3,7 @@ import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
 
 const meta = {
-  title: "pstdio-workbench/File editor/Save status",
+  title: "Product/Workbench/File editor/Save status",
   component: FileRendererPathHeader,
   decorators: [
     (Story) => (
@@ -25,5 +25,6 @@ export const Unsaved: Story = {
 };
 export const Saving: Story = {
   id: "pstdio-workbench-file-editor-save-status--saving",
-  args: { dirty: true, saving: true },
+  args: { dirty: true },
+  description: "A pending write keeps the manual unsaved marker stable without a saving status.",
 };

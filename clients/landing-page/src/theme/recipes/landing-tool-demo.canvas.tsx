@@ -105,7 +105,7 @@ const VisualTool = () => {
   );
 };
 const meta = {
-  title: "Theme/Landing Tool Demo",
+  title: "Website/Landing/Tool demo",
   component: VisualTool,
   fullscreen: true,
 } satisfies CanvasMeta<typeof VisualTool>;

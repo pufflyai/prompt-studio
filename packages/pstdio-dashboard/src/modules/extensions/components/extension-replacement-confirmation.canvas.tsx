@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 
 const meta = {
-  title: "Settings/Extension Replacement Confirmation",
+  title: "Product/Settings/Extensions/Replace extension",
   component: ExtensionReplacementConfirmation,
 } satisfies CanvasMeta<typeof ExtensionReplacementConfirmation>;
 export default meta;

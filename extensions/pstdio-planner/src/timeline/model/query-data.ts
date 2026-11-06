@@ -1,7 +1,7 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { withTitleField } from "@pstdio/ui/collection-view";
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import { localizeTicketFormValue } from "../../ticket-create-form";
+import { localizeTicketFormOption, localizeTicketFormValue } from "../../ticket-create-form";
 import type { readPlanCommand } from "../commands/read-plan";
 
 export type TimelineTicketRow = KanbanRendererRow & { resource?: ResourceRef };
@@ -20,7 +20,7 @@ export function timelineQueryData(
           type: {
             ...type,
             options: Array.isArray(type.options)
-              ? type.options.map((option) => ({ ...option, label: localizeTicketFormValue(option.label, t) }))
+              ? type.options.map((option) => localizeTicketFormOption(option, t))
               : [],
           },
         },

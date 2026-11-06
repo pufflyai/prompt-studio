@@ -88,3 +88,25 @@ test("an extension may close its own host overlay even when user chrome is noncl
   await gate.call({ method: "placement.close" });
   expect(workbench.layout.getLayout().regions.overlay.widgets).toEqual([]);
 });
+
+test("closed overlay clients cannot close, navigate or execute against a reopened singleton", async () => {
+  const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project");
+  workbench.views.registerView({ id: "form", title: "Form", body: { kind: "react", render: () => null } });
+  workbench.overlays.registerOverlay({ id: "form", viewId: "form" });
+  const first = workbench.overlays.openOverlay("form");
+  const capabilities = createWorkbenchWebviewHostCapabilities({
+    workbench,
+    projectId: "project",
+    placement: toPanelInstance(workbench.layout.getLayout().regions.overlay.widgets[0]!),
+  });
+  workbench.layout.closePanel(first);
+  const next = workbench.overlays.openOverlay("form");
+  for (const call of [
+    () => capabilities["placement.close"]({}),
+    () => capabilities["commands.execute"]({ commandId: "anything" }),
+    () => capabilities["navigation.open"]({ target: { kind: "href", href: "https://example.com/" } }),
+  ])
+    await expect(Promise.resolve().then(call)).rejects.toThrow("no longer open");
+  expect(workbench.layout.getLayout().regions.overlay.widgets[0]?.widgetId).toBe(next);
+});

@@ -23,7 +23,7 @@ import {
 
 const noop = () => {};
 const meta = {
-  title: "Landing/Docs and blog",
+  title: "Website/Docs/Pages and blog",
   decorators: [
     (Story) => (
       <Box height="720px" bg="bg.subtle" p="panel-gap" display="flex" flexDirection="column">

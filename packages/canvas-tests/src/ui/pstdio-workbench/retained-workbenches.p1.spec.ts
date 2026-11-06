@@ -47,9 +47,14 @@ test("switching suspends a color picker and restores its open state", async ({ p
 // Critical: the enclosing theme provider remains the owner across activation and inner remounts.
 test("outer theme controls remain connected to remounted workbenches", async ({ page }) => {
   const preview = await openCanvasPreview(page, `${prefix}InheritedTheme`);
+  const frameHeight = () => preview.locator("body").evaluate(() => window.innerHeight);
+  const initialHeight = await frameHeight();
   const theme = preview.getByRole("button", { name: /^Outer theme:/ });
   const before = await theme.textContent();
   await theme.click();
+  await expect
+    .poll(frameHeight, { message: "Theme changes must not keep growing the fitted preview" })
+    .toBe(initialHeight);
   const chosen = (await theme.textContent())!.replace("Outer theme: ", "");
   expect(await theme.textContent()).not.toBe(before);
   await expect(preview.locator("[data-ui-scope]:visible")).toHaveAttribute("data-theme", chosen);
@@ -57,6 +62,7 @@ test("outer theme controls remain connected to remounted workbenches", async ({ 
   await expect(preview.locator("[data-ui-scope]:visible")).toHaveAttribute("data-theme", chosen);
   await preview.getByRole("button", { name: "Remount workbenches" }).click();
   await expect(preview.getByRole("textbox", { name: "A draft", exact: true })).toBeVisible();
+  await expect.poll(frameHeight).toBe(initialHeight);
   await expect(preview.locator("[data-ui-scope]:visible")).toHaveAttribute("data-theme", chosen);
   await expect(theme).toHaveText(`Outer theme: ${chosen}`);
 });

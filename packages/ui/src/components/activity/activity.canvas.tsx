@@ -56,7 +56,7 @@ const initialComments: StoryComment[] = [
   },
 ];
 const meta: CanvasMeta = {
-  title: "Components/Data Display/Activity",
+  title: "Design system/Components/Data display/Activity",
   fullscreen: true,
   decorators: [
     (Story) => (

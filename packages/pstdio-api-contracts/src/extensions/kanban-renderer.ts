@@ -14,6 +14,16 @@ const kanbanRendererEnumOptionSchema = z.object({
   note: localizableStringSchema.optional(),
   noteAction: navigationTargetSchema.optional(),
   canCreate: z.boolean().optional(),
+  contextMenuActions: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: localizableStringSchema,
+        action: navigationTargetSchema,
+        disabled: z.boolean().optional(),
+      }),
+    )
+    .optional(),
 });
 
 const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [

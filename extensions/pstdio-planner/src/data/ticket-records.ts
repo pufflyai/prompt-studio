@@ -19,3 +19,19 @@ export const ticketRecord = (ticket: StoredTicket) => {
   };
   return record;
 };
+
+// Recompute the intended fields if a received edit wins between observation and save.
+export const changeTicketRecord = async (
+  storage: ExtensionStorageApi,
+  id: string,
+  change: (current: StoredTicket) => StoredTicket | Promise<StoredTicket>,
+) => {
+  const records = ticketRecords(storage);
+  for (;;) {
+    const observed = await records.read(id);
+    if (!observed) return undefined;
+    const next = await change(observed.value);
+    if (next === observed.value) return next;
+    if (await records.updateIfUnchanged(id, observed.revision, ticketRecord(next))) return next;
+  }
+};

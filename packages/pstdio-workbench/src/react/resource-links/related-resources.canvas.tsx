@@ -47,7 +47,7 @@ const service = (items: ResourceAnchorPage["items"], fail = false): ResourceLink
   subscribe: () => () => undefined,
 });
 const meta = {
-  title: "Workbench/Resource links",
+  title: "Product/Workbench/Resource links/Resource links",
   component: RelatedResources,
   args: { resource: ticket, onClose: () => undefined },
   decorators: [

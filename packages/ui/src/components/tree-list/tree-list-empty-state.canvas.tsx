@@ -6,7 +6,7 @@ import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
 const meta: CanvasMeta<typeof TreeList> = {
-  title: "Components/Data Display/Tree List/Empty State",
+  title: "Design system/Components/Data display/Tree list/Empty state",
   component: TreeList,
 };
 export default meta;

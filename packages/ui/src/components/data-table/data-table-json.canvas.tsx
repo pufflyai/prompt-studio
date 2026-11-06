@@ -3,7 +3,7 @@ import { DataTable, type DataTableProps } from ".";
 import { friendlyJsonRows } from "./data-table.story-fixtures";
 
 const meta = {
-  title: "Components/Data Display/Data Table",
+  title: "Design system/Components/Data display/Data table/JSON cells",
   component: DataTable,
 };
 export default meta;

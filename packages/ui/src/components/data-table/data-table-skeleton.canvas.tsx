@@ -2,7 +2,7 @@ import { Box, Stack, Text } from "@chakra-ui/react";
 import { DataTableSkeleton } from ".";
 
 const meta = {
-  title: "Components/Data Display/Data Table",
+  title: "Design system/Components/Data display/Data table/Loading",
   component: DataTableSkeleton,
 };
 export default meta;

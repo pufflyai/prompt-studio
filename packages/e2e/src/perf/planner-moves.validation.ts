@@ -198,7 +198,8 @@ try {
   const savedBefore = await executePlanner<StressTicket>(api, project.id, "get-ticket", {
     id: tickets.find(({ title }) => title === beforeTitle)!.id,
   });
-  assert(saved.value.sortOrder < savedBefore.value.sortOrder);
+  assert(saved.value.position && savedBefore.value.position);
+  assert(saved.value.position < savedBefore.value.position);
   await page.screenshot({ path: resolve(output, "variable-height-failure-recovery.png") });
   const second = await openPage();
   await revealCard(second, destination.id, title);

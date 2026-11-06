@@ -66,3 +66,25 @@ The skill reads these options with `pst pstdio-planner implementation-policy` an
 Ticket tags have their own panel in **Settings → Project**.
 
 From a terminal, list the branch choices with `pst pstdio-planner implementation-targets`. Set one with `pst pstdio-planner set-implementation-target --branch origin/main`. Leave out `--branch` to clear it.
+
+## Manual ticket order
+
+Planner uses public core order positions for moves and new tickets. Offline moves
+merge into the same order on each device, with each stable ticket once. Filtered
+rows retain their global place; archived tickets do not enter active board moves.
+
+Storage migration 4 imports numeric order by rank and stable ticket ID with
+`migration.position`, preserving IDs and content. It keeps old ranks until every
+position is saved, then removes them. An interrupted import can resume. New moves
+use `storage.positions.between`; Planner no longer computes numeric midpoints or
+rebalances neighbours.
+
+A legacy card can arrive from an offline device after the shared migration has
+finished. Planner inserts such arrivals after the current order using core
+positions, without resetting existing manual moves. Ordinary content edits keep
+the freshly stored position; only explicit order actions replace it.
+
+Metadata updates use the public observed-read and conditional-update API from
+PS-1073. If a remote edit wins, Planner reads the new value and recomputes only the
+intended metadata. A matching published host and SDK are required; a development
+SDK link does not satisfy the production delivery gate.

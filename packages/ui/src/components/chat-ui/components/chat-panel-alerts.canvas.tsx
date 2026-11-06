@@ -7,7 +7,7 @@ import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Chat Panel/Alerts",
+  title: "Design system/Patterns/Chat/Chat panel/Alerts",
   component: ChatPanel,
 };
 export default meta;

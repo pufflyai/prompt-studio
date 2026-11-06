@@ -6,7 +6,7 @@ import { PaletteExamples } from "./visualization-palettes";
 import { PieExamples } from "./visualization-parts";
 import { AreaExamples, LineExamples } from "./visualization-trends";
 
-export default { title: "Foundations/Visualizations", fullscreen: true } satisfies CanvasMeta;
+export default { title: "Design system/Foundations/Visualizations", fullscreen: true } satisfies CanvasMeta;
 export const Light = { render: () => <VisualizationGallery />, defaultTheme: "pstdio-light" };
 export const Dark = { render: () => <VisualizationGallery />, defaultTheme: "pstdio-dark" };
 export const CustomPalette = { render: () => <VisualizationGallery />, defaultTheme: "charts-forest" };

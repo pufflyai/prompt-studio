@@ -7,7 +7,7 @@ import { createPagedTableStoryModule } from "./paged-module";
 const workbench = createWorkbench();
 workbench.registerModule(createDataTableRendererStoryModule());
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Native data table",
+  title: "Product/Reference/Core API/Native data table",
   component: WorkbenchStory,
   args: { workbench },
   description:

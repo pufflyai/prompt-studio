@@ -4,7 +4,7 @@ import { ThemePreferenceProvider, useThemePreference } from "../../utils/theme-p
 import { CodeDiffEditor, CodeEditor } from "./code-editor";
 
 const meta = {
-  title: "Patterns/Editors/Code Editor",
+  title: "Design system/Patterns/Editors/Code editor",
   component: CodeEditor,
   decorators: [
     (Story) => (

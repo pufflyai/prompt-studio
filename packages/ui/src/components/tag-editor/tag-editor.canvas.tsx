@@ -23,7 +23,7 @@ const customIcons = [
   { value: "square", label: "square", icon: Square },
 ];
 const meta = {
-  title: "Components/Inputs/Tag Editor",
+  title: "Design system/Components/Forms/Tag editor",
   component: TagEditor,
   decorators: [
     (Story: StoryFn) => (

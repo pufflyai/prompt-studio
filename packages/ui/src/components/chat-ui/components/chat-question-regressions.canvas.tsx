@@ -7,7 +7,7 @@ import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp } from "./message-types";
 
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Question interruptions",
+  title: "Design system/Patterns/Chat/Question interruptions",
   component: ChatPanel,
 };
 export default meta;

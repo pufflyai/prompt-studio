@@ -2,9 +2,10 @@ import { Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { Checkbox } from "@/components/primitives/checkbox";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 
 const meta = {
-  title: "Components/Inputs/Checkbox",
+  title: "Design system/Components/Forms/Checkbox",
   component: Checkbox,
   decorators: [
     (Story: () => ReactNode) => (
@@ -14,31 +15,34 @@ const meta = {
     ),
   ],
 } satisfies CanvasMeta<typeof Checkbox>;
-export default meta;
+export default {
+  title: "Design system/Components/Forms/Checkbox",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const Default: Story = {
+const Default: Story = {
   id: "components-inputs-checkbox--default",
 };
-export const DefaultChecked: Story = {
+const DefaultChecked: Story = {
   id: "components-inputs-checkbox--default-checked",
   args: {
     defaultChecked: true,
   },
 };
-export const WithLabel: Story = {
+const WithLabel: Story = {
   id: "components-inputs-checkbox--with-label",
   args: {
     children: "Enable project template",
   },
 };
-export const Disabled: Story = {
+const Disabled: Story = {
   id: "components-inputs-checkbox--disabled",
   args: {
     disabled: true,
     children: "Unavailable",
   },
 };
-export const DisabledChecked: Story = {
+const DisabledChecked: Story = {
   id: "components-inputs-checkbox--disabled-checked",
   args: {
     disabled: true,
@@ -46,7 +50,7 @@ export const DisabledChecked: Story = {
     children: "Locked on",
   },
 };
-export const Sizes: Story = {
+const Sizes: Story = {
   id: "components-inputs-checkbox--sizes",
   render: () => (
     <Stack gap="md">
@@ -56,3 +60,15 @@ export const Sizes: Story = {
     </Stack>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Default,
+  DefaultChecked,
+  WithLabel,
+  Disabled,
+  DisabledChecked,
+  Sizes,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

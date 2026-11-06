@@ -47,9 +47,9 @@ interface WorkbenchTreeViewProps {
 
 const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
 
-const treeCustomizationOptions = (body: TreeViewSection[], isSidenav: boolean) => ({
+const treeCustomizationOptions = (sections: TreeViewSection[], isSidenav: boolean) => ({
   suppressNodeContextMenus: isSidenav,
-  pinnedOnlyNodeIds: pinnedOnlyNodeIds(body),
+  pinnedOnlyNodeIds: pinnedOnlyNodeIds(sections),
   allowGroups: isSidenav,
 });
 
@@ -193,7 +193,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
       resetIcon: <WorkbenchIcon name="rotate-ccw" size={14} />,
     },
-    treeCustomizationOptions(body, isSidenav),
+    treeCustomizationOptions([...header, ...body, ...footer], isSidenav),
   );
   useSidenavContextActions(
     props.placement?.instanceId ?? treeViewId,

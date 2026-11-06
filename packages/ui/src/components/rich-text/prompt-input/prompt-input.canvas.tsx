@@ -5,7 +5,7 @@ import { PromptEditor, type PromptEditorProps } from "./prompt-input";
 import { generateEditorStateFromString } from "./utils";
 
 const meta: CanvasMeta<typeof PromptEditor> = {
-  title: "Patterns/Editors/Prompt Editor",
+  title: "Design system/Patterns/Editors/Prompt editor/Overview",
   component: PromptEditor,
   args: {
     defaultState: JSON.stringify(generateEditorStateFromString()),

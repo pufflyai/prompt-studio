@@ -9,7 +9,7 @@ function FilterStory(props: CollectionFilterProps) {
   return <CollectionFilter {...rest} filter={filter} onFilterChange={setFilter} />;
 }
 const meta: CanvasMeta<typeof CollectionFilter> = {
-  title: "Patterns/Collection View/Collection Filter",
+  title: "Design system/Patterns/Collection view/Collection filter",
   component: CollectionFilter,
   render: (props) => <FilterStory {...props} />,
   args: {

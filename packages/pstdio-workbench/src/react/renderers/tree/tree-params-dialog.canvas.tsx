@@ -51,7 +51,7 @@ const PendingTreeRename = () => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Tree rename parameters",
+  title: "Product/Workbench/Navigation/Tree/Tree rename parameters",
   component: PendingTreeRename,
 } satisfies CanvasMeta<typeof PendingTreeRename>;
 export default meta;

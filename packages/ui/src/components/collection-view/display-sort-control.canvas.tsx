@@ -4,7 +4,7 @@ import { useState } from "react";
 import { DisplaySortControl } from "./display-sort-control";
 
 const meta: CanvasMeta<typeof DisplaySortControl> = {
-  title: "Patterns/Collection View/Display Sort Control",
+  title: "Design system/Patterns/Collection view/Display sort control",
   component: DisplaySortControl,
 };
 export default meta;

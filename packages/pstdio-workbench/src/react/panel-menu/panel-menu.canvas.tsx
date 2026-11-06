@@ -81,7 +81,7 @@ const PanelMenuStory = (props: PanelMenuStoryProps) => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Panel menus",
+  title: "Product/Workbench/Panels/Panel menus",
   component: PanelMenuStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof PanelMenuStory>;

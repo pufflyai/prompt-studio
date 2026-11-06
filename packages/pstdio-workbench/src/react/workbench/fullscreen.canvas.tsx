@@ -3,7 +3,7 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 import { createFullscreenWorkbench } from "./fullscreen.fixture";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Main fullscreen",
+  title: "Product/Workbench/Main fullscreen",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

@@ -1,4 +1,5 @@
 import { Badge, Box } from "@chakra-ui/react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { DataTable, type DataTableProps, type RowData } from ".";
 
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
@@ -50,16 +51,19 @@ const valueRenderers: DataTableProps["columnRenderers"] = {
   Diff: { type: "diff" },
 };
 const meta = {
-  title: "Components/Data Display/Data Table",
+  title: "Design system/Components/Data display/Data table/Value renderers",
   component: DataTable,
 };
-export default meta;
+export default {
+  title: "Design system/Components/Data display/Data table/Value renderers",
+  fullscreen: true,
+};
 const StoryFrame = (args: DataTableProps) => (
   <Box width="100%" maxWidth="880px" height="440px" marginX="auto" padding="sm" background="bg">
     <DataTable {...args} />
   </Box>
 );
-export const ValueRenderers = {
+const ValueRenderers = {
   id: "components-data-display-data-table--value-renderers",
   description:
     "Relative dates refresh every minute while the table stays open. Hover or focus a date to read its full timestamp.",
@@ -71,7 +75,7 @@ export const ValueRenderers = {
   },
   render: StoryFrame,
 };
-export const DefaultDisplay = {
+const DefaultDisplay = {
   id: "components-data-display-data-table--default-display",
   args: {
     data: workspaceRows,
@@ -83,7 +87,7 @@ export const DefaultDisplay = {
   },
   render: StoryFrame,
 };
-export const SearchCellValues = {
+const SearchCellValues = {
   id: "components-data-display-data-table--search-cell-values",
   args: {
     data: [
@@ -101,3 +105,8 @@ export const SearchCellValues = {
   },
   render: StoryFrame,
 };
+
+const Examples = createCanvasExampleNavigator(meta, { ValueRenderers, DefaultDisplay, SearchCellValues });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as ValueRenderers };

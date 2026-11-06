@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ListRow } from "./list-row";
 
 const meta = {
-  title: "Components/Data Display/List Row/Hover Content",
+  title: "Design system/Components/Data display/List row/Hover content",
   component: ListRow,
 } satisfies CanvasMeta<typeof ListRow>;
 export default meta;

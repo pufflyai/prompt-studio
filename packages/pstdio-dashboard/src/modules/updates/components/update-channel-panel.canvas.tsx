@@ -12,7 +12,7 @@ import type { UpdateChannel, UpdateChannelBridge } from "../update-channel-bridg
 import { UpdateChannelContent } from "./update-channel-panel";
 
 const meta = {
-  title: "Settings/Update channel",
+  title: "Product/Settings/Update channel",
   component: UpdateChannelContent,
   args: {
     version: "0.41.0",

@@ -3,6 +3,7 @@ import { Box, Button, ButtonGroup, HStack, Icon, IconButton, SimpleGrid, Stack, 
 import type { CanvasMeta } from "@pstdio/canvas";
 import { ChevronDown, Download, Plus, Settings, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { getThemePreferenceClassNames, type ThemePreferenceMode } from "@/utils/apply-theme-preference";
 
 type StoryFn = () => ReactNode;
@@ -46,7 +47,7 @@ const buttonModePreviews: ButtonModePreview[] = [
   { id: "pstdio-dark", label: "Dark mode", mode: "dark" },
 ];
 const meta: CanvasMeta<typeof Button> = {
-  title: "Components/Inputs/Button",
+  title: "Design system/Components/Forms/Button",
   component: Button,
   decorators: [
     (Story: StoryFn) => (
@@ -56,8 +57,11 @@ const meta: CanvasMeta<typeof Button> = {
     ),
   ],
 };
-export default meta;
-export const Variants = {
+export default {
+  title: "Design system/Components/Forms/Button",
+  fullscreen: true,
+};
+const Variants = {
   id: "components-inputs-button--variants",
   render: () => (
     <SimpleGrid columns={{ base: 1, lg: 2 }} gap="md">
@@ -93,7 +97,7 @@ export const Variants = {
     </SimpleGrid>
   ),
 };
-export const PrimaryAndDestructive = {
+const PrimaryAndDestructive = {
   id: "components-inputs-button--primary-and-destructive",
   render: () => (
     <SimpleGrid columns={{ base: 1, lg: 2 }} gap="md">
@@ -140,7 +144,7 @@ export const PrimaryAndDestructive = {
     </SimpleGrid>
   ),
 };
-export const Sizes = {
+const Sizes = {
   id: "components-inputs-button--sizes",
   render: () => (
     <Stack gap="lg">
@@ -187,7 +191,7 @@ export const Sizes = {
     </Stack>
   ),
 };
-export const IconOnly = {
+const IconOnly = {
   id: "components-inputs-button--icon-only",
   render: () => (
     <HStack gap="sm" flexWrap="wrap" padding="md" borderWidth="1px" borderColor="border.subtle" borderRadius="xs">
@@ -209,7 +213,7 @@ export const IconOnly = {
     </HStack>
   ),
 };
-export const AttachedGroups = {
+const AttachedGroups = {
   id: "components-inputs-button--attached-groups",
   render: () => (
     <Stack gap="md" padding="md" borderWidth="1px" borderColor="border.subtle" borderRadius="xs" background="bg">
@@ -237,3 +241,14 @@ export const AttachedGroups = {
     </Stack>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Variants,
+  PrimaryAndDestructive,
+  Sizes,
+  IconOnly,
+  AttachedGroups,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Variants };

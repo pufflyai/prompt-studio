@@ -12,7 +12,7 @@ import treePageExtension, { guidePage } from "../onboarding/extensions/tree-page
 import { OnboardingFrame } from "../onboarding/onboarding-frame";
 
 const meta = {
-  title: "pstdio-workbench/Guides/Renderers",
+  title: "Product/Reference/Examples/Renderers",
 } satisfies CanvasMeta;
 export default meta;
 type Story = CanvasFrame<typeof meta>;

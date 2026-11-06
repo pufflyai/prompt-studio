@@ -48,6 +48,7 @@ const canonicalResource = (resource: ResourceRef | undefined, resources: Workben
     ...(normalized.label ? { label: normalized.label } : {}),
     ...(normalized.icon ? { icon: normalized.icon } : {}),
     ...(normalized.extensionId ? { extensionId: normalized.extensionId } : {}),
+    ...(normalized.device ? { device: Object.freeze({ ...normalized.device }) } : {}),
     ...(normalized.metadata ? { metadata: cloneMetadata(normalized.metadata) } : {}),
   };
   return Object.freeze(canonical) as ResourceRef;

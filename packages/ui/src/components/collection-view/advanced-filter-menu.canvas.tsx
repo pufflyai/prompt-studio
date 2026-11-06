@@ -6,7 +6,7 @@ import { AdvancedFilterMenu } from "./advanced-filter-menu";
 import { storyFields, storyFilter, storyOptions } from "./collection-view-story-fixtures";
 
 const meta: CanvasMeta<typeof AdvancedFilterMenu> = {
-  title: "Patterns/Collection View/Advanced Filter Menu",
+  title: "Design system/Patterns/Collection view/Advanced filter menu",
   component: AdvancedFilterMenu,
 };
 export default meta;

@@ -8,7 +8,7 @@ import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Chat Panel Rendering",
+  title: "Design system/Patterns/Chat/Chat panel rendering",
   component: ChatPanel,
   fullscreen: true,
 };

@@ -88,7 +88,7 @@ const createBreadcrumbWorkbench = (target: {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Breadcrumb actions",
+  title: "Product/Workbench/Header/Breadcrumb actions",
   component: WorkbenchStory,
   fullscreen: true,
   render: (args) => (

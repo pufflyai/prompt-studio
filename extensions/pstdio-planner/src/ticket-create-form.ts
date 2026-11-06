@@ -25,6 +25,17 @@ export const ticketCreateForm = {
 } as const;
 export const localizeTicketFormValue = (value: Localizable, t: (key: string, fallback?: string) => string) =>
   typeof value === "string" ? value : t(value.$l10n, value.default);
+export const localizeTicketFormOption = <T extends { label: Localizable; note?: Localizable }>(
+  option: T,
+  t: (key: string, fallback?: string) => string,
+) => {
+  const { label, note, ...rest } = option;
+  return {
+    ...rest,
+    label: localizeTicketFormValue(label, t),
+    ...(note === undefined ? {} : { note: localizeTicketFormValue(note, t) }),
+  };
+};
 export const createTicketFormConfig = (t: (key: string, fallback?: string) => string) =>
   ({
     title: localizeTicketFormValue(ticketCreateForm.title, t),

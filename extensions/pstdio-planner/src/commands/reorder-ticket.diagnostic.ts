@@ -5,6 +5,7 @@ import { runTicketsQuery } from "../data/query";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";
+import { sortedByTicketOrder } from "../utils/sort";
 import { reorderTicket } from "./reorder-ticket";
 
 // Diagnostic only: no timing budget. Real browser/database measurements live in e2e/src/perf.
@@ -13,7 +14,9 @@ for (const count of [50, 500, 1_000]) {
   await Promise.all([seedDefaultStatuses(storage), seedDefaultTags(storage)]);
   const collection = ticketsCollection(storage);
   const now = new Date().toISOString();
+  let position: string | undefined;
   for (let index = 0; index < count; index += 1) {
+    position = storage.positions.between(position);
     const ticket: Ticket = {
       id: `ticket-${index}`,
       shorthand: `ST-${index + 1}`,
@@ -22,7 +25,7 @@ for (const count of [50, 500, 1_000]) {
       statusId: "backlog",
       tags: { "default-type": "default-type-bug", "default-priority": "default-priority-high" },
       archived: false,
-      sortOrder: index,
+      position,
       createdAt: now,
       updatedAt: now,
     };
@@ -37,6 +40,16 @@ for (const count of [50, 500, 1_000]) {
       const original = storage.collection<T>(name);
       return {
         ...original,
+        async updateIfUnchanged(id: string, revision: string, value: T) {
+          const previous = await original.get(id);
+          const saved = await original.updateIfUnchanged(id, revision, value);
+          if (saved && name === "tickets") {
+            writes++;
+            bytes += Buffer.byteLength(JSON.stringify(value));
+            if (JSON.stringify(previous) === JSON.stringify(value)) unchangedWrites++;
+          }
+          return saved;
+        },
         async put(id: string, value: T) {
           if (name === "tickets") {
             writes += 1;
@@ -59,12 +72,12 @@ for (const count of [50, 500, 1_000]) {
     },
   );
   const reorderMs = performance.now() - start;
-  const ordered = (await collection.list()).sort((a, b) => a.sortOrder - b.sortOrder);
+  const ordered = sortedByTicketOrder(await collection.list());
   assert.deepEqual(
     ordered.slice(0, 3).map(({ id }) => id),
     ["ticket-1", "ticket-0", "ticket-2"],
   );
-  assert.equal(new Set(ordered.map(({ sortOrder }) => sortOrder)).size, count);
+  assert.equal(new Set(ordered.map(({ position }) => position)).size, count);
   const queryStart = performance.now();
   const query = await runTicketsQuery({ ...ticketContext(storage), projectId: "stress-project" });
   assert.equal(query.rows.length, count);

@@ -52,7 +52,7 @@ const sampleItems: NotificationCenterItem[] = [
   },
 ];
 const meta: CanvasMeta<typeof NotificationCenter> = {
-  title: "Components/Feedback/Notification Center",
+  title: "Design system/Components/Feedback/Notification center",
   component: NotificationCenter,
   decorators: [
     (Story) => (

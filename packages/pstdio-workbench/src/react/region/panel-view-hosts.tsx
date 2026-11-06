@@ -126,7 +126,7 @@ const PanelViewPortal = (props: {
       <RegionScrollArea>
         {/* Preserve collection state while deferring updates and reads for hidden pages. */}
         <Activity mode={active || !collection ? "visible" : "hidden"}>
-          <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} />
+          <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
         </Activity>
       </RegionScrollArea>
     </Box>,

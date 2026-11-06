@@ -7,7 +7,7 @@ import type { AttributeDescriptor, EnumOption, EnumOptionsSource } from "./types
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
 const meta: CanvasMeta<typeof KanbanRenderer> = {
-  title: "Patterns/Kanban Renderer/Internal/Live Options",
+  title: "Design system/Patterns/Kanban renderer/Live options",
   component: KanbanRenderer,
   description:
     "Regression story for live enum option updates. Excluded from agent manifests so agents use the canonical Kanban Renderer stories.",

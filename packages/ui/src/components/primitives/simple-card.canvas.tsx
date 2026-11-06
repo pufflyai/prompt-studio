@@ -1,12 +1,18 @@
 import { HStack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Terminal } from "lucide-react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { SimpleCard, SimpleCardBody } from "./simple-card";
 
-const meta = { title: "Primitives/SimpleCard", component: SimpleCard } satisfies CanvasMeta<typeof SimpleCard>;
-export default meta;
+const meta = { title: "Design system/Components/Layout/Simple card", component: SimpleCard } satisfies CanvasMeta<
+  typeof SimpleCard
+>;
+export default {
+  title: "Design system/Components/Layout/Simple card",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const Outline: Story = {
+const Outline: Story = {
   id: "primitives-simplecard--outline",
   render: () => (
     <SimpleCard>
@@ -14,7 +20,7 @@ export const Outline: Story = {
     </SimpleCard>
   ),
 };
-export const Action: Story = {
+const Action: Story = {
   id: "primitives-simplecard--action",
   description: "Hover and pressed feedback changes immediately, including when the pointer leaves.",
   render: () => (
@@ -30,3 +36,8 @@ export const Action: Story = {
     </SimpleCard>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Outline, Action });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Outline };

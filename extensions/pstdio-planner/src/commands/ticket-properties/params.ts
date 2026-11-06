@@ -147,7 +147,7 @@ export const buildTicketPropertiesControls = (input: TicketPropertiesInput) => {
     idParam(ticket),
     timestampControl("created", l10n("ticketDetail.createdAt", "Created at"), ticket.createdAt),
     timestampControl("updated", l10n("ticketDetail.updatedAt", "Updated at"), ticket.updatedAt),
-    reviewLinksParam(ticket),
+    ...(ticket.reviewLinks?.length ? [reviewLinksParam(ticket)] : []),
     statusParam(ticket, statuses),
     ...(plan
       ? [

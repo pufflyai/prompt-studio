@@ -181,7 +181,7 @@ const LiveShortcutsStory = () => {
   );
 };
 const meta: CanvasMeta<typeof MarkdownEditor> = {
-  title: "Patterns/Editors/Markdown Editor",
+  title: "Design system/Patterns/Editors/Markdown editor/Overview",
   component: MarkdownEditor,
   decorators: [
     (Story) => (

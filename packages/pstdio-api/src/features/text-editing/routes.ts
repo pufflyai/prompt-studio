@@ -37,6 +37,7 @@ export const createTextEditingRoutes = (service: ReturnType<typeof createTextEdi
     await service.disconnect({ projectId: c.req.param("projectId"), ...input });
     return c.json({ ok: true, value: null });
   });
+  // Deprecated for SDK callers: use text_editing subscriptions on /v1/session-stream.
   routes.post(`${base}/stream`, async (c) => {
     const input = addressSchema.parse(await c.req.json());
     // Resolve before returning streaming headers, so invalid connections get a typed reply.

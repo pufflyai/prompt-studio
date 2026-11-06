@@ -77,7 +77,7 @@ const InstantMoves = () => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Tree/Instant resource moves",
+  title: "Product/Workbench/Navigation/Tree/Instant resource moves",
   component: InstantMoves,
   decorators: [
     (Story) => (

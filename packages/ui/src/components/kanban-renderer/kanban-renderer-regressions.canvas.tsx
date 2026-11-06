@@ -7,7 +7,7 @@ import { attributes, boardColumnColors, initialRows, type StoryRow } from "./kan
 import type { AttributeDescriptor } from "./types";
 
 const meta: CanvasMeta<typeof KanbanRenderer> = {
-  title: "Patterns/Kanban Renderer/Regression Cases",
+  title: "Design system/Patterns/Kanban renderer/Regression cases",
   component: KanbanRenderer,
   fullscreen: true,
 };

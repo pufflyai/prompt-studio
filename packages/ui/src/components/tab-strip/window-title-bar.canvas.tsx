@@ -94,7 +94,7 @@ const MenuExample = () => {
   );
 };
 const meta = {
-  title: "Components/Navigation/Window Title Bar",
+  title: "Design system/Components/Navigation/Window title bar",
   component: WindowTitleBar,
   args: { platform: "darwin" },
   description:

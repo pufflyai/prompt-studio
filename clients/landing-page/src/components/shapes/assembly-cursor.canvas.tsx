@@ -16,7 +16,7 @@ const CursorModes = () => {
   );
 };
 const meta = {
-  title: "Landing/Agent Cursors",
+  title: "Website/Landing/Agent cursors",
   component: CursorModes,
 } satisfies CanvasMeta<typeof CursorModes>;
 export default meta;

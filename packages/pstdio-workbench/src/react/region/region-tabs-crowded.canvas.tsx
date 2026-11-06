@@ -44,7 +44,7 @@ const createCrowdedWorkbench = () => {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Crowded panel tabs",
+  title: "Product/Workbench/Panels/Crowded panel tabs",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

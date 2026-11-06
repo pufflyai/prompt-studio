@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TimelineFromJSON } from "./timeline";
 
 const meta = {
-  title: "Patterns/Chat/Timeline",
+  title: "Design system/Patterns/Chat/Timeline",
   component: TimelineFromJSON,
 } satisfies CanvasMeta<typeof TimelineFromJSON>;
 export default meta;

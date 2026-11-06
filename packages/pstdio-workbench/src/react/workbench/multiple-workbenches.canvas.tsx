@@ -152,7 +152,7 @@ const createExample = (
   return workbench;
 };
 
-const MultipleWorkbenches = (props: { richText?: boolean }) => {
+const MultipleWorkbenches = (props: { richText?: boolean; height?: "full" | "100dvh" }) => {
   const [workbenches, setWorkbenches] = useState<WorkbenchCore[]>([]);
   useEffect(() => {
     const storage = createExampleStorage();
@@ -171,7 +171,7 @@ const MultipleWorkbenches = (props: { richText?: boolean }) => {
   };
   return (
     <ChakraProvider value={psTheme}>
-      <Stack h="100dvh" gap="0">
+      <Stack h={props.height ?? "100dvh"} gap="0">
         <HStack p="sm">
           {workbenches.map((workbench, index) => (
             <Button key={index} size="sm" onClick={() => select(workbench)}>
@@ -203,7 +203,7 @@ const MultipleWorkbenches = (props: { richText?: boolean }) => {
 };
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Multiple workbenches",
+  title: "Product/Workbench/Multiple workbenches",
   component: MultipleWorkbenches,
   fullscreen: true,
 } satisfies CanvasMeta<typeof MultipleWorkbenches>;
@@ -246,9 +246,15 @@ const InheritedThemeExample = () => {
   const [storage] = useState(createExampleStorage);
   return (
     <WorkbenchThemeProvider themeStorage={storage}>
-      <ThemeControls />
-      <Button onClick={() => setGeneration(generation + 1)}>Remount workbenches</Button>
-      <MultipleWorkbenches key={generation} />
+      <Stack h="100dvh" gap="0">
+        <HStack flexShrink="0">
+          <ThemeControls />
+          <Button onClick={() => setGeneration(generation + 1)}>Remount workbenches</Button>
+        </HStack>
+        <Box flex="1" minH="0">
+          <MultipleWorkbenches key={generation} height="full" />
+        </Box>
+      </Stack>
     </WorkbenchThemeProvider>
   );
 };

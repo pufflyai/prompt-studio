@@ -3,7 +3,7 @@ import config from "./default.json";
 
 export default {
   ...shaderCanvas("section-hatch", config),
-  title: "Shaders/Section hatch",
+  title: "Design system/Components/Effects/Section hatch",
   save: { file: "default.json", key: "values" },
 };
 export const Preview = {};

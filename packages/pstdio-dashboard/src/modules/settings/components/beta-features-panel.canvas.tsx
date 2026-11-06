@@ -9,7 +9,7 @@ import { createSettingsModule } from "../module";
 import { BetaFeaturesContent } from "./beta-features-panel";
 
 const meta = {
-  title: "Settings/Beta features",
+  title: "Product/Settings/Beta features",
   component: BetaFeaturesContent,
   args: { onChange: () => undefined, onRetry: () => undefined },
 } satisfies CanvasMeta<typeof BetaFeaturesContent>;

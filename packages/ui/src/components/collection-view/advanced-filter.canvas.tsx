@@ -1,7 +1,7 @@
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Bar } from "./collection-view-bar-story";
 
-const meta: CanvasMeta = { title: "Patterns/Collection View/Advanced Filter", fullscreen: true };
+const meta: CanvasMeta = { title: "Design system/Patterns/Collection view/Advanced filter", fullscreen: true };
 export default meta;
 type Story = CanvasFrame;
 export const NestedExactDateField: Story = {

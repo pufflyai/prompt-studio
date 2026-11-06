@@ -5,7 +5,7 @@ import { useState } from "react";
 import { KanbanRendererList, type KanbanRendererListItem } from "./kanban-renderer-list";
 
 const meta: CanvasMeta<typeof KanbanRendererList> = {
-  title: "Patterns/Kanban Renderer/List",
+  title: "Design system/Patterns/Kanban renderer/List",
   component: KanbanRendererList,
 };
 export default meta;

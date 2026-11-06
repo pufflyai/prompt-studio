@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
-const meta: CanvasMeta = { title: "Patterns/Kanban Renderer/Large Board" };
+const meta: CanvasMeta = { title: "Design system/Patterns/Kanban renderer/Large board" };
 export default meta;
 const items = Array.from({ length: 1000 }, (_, index) => ({
   id: `row-${index}`,

@@ -109,7 +109,13 @@ export const renderBridgeWebviewFrame = (input: {
         },
       }}
       props={{
+        resource: context.placement.resource,
         ...createProps(context),
+        presentation: context.workbench.layout
+          .getLayout()
+          .regions.overlay.widgets.some((item) => item.widgetId === context.placement.instanceId)
+          ? "dialog"
+          : undefined,
         viewLocation: {
           section: context.placement.section,
           position: context.placement.position,

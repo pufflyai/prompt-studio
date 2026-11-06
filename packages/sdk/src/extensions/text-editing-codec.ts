@@ -16,14 +16,15 @@ export const textEditingFailure = (code: TextEditingErrorCode, message: string, 
   Object.assign(new Error(message), { code, retryable });
 export const textEditingError = (error: unknown): TextEditingError => {
   const value = error as {
-    code?: string;
+    code?: unknown;
     retryable?: boolean;
     data?: { retryable?: boolean; cancelledBarrierId?: string };
     cancelledBarrierId?: string;
     message?: string;
   };
   const cancelledBarrierId = value?.cancelledBarrierId ?? value?.data?.cancelledBarrierId;
-  const code = value?.code?.replace(/^native_document_/, "").replace(/^native_/, "");
+  const code =
+    typeof value?.code === "string" ? value.code.replace(/^native_document_/, "").replace(/^native_/, "") : undefined;
   const known = new Set<TextEditingErrorCode>([
     "capability_denied",
     "grant_invalid",

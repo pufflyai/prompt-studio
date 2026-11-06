@@ -2,6 +2,33 @@ import { describe, expect, test } from "bun:test";
 import { extensionKanbanRendererRecordSchema } from "./extensions";
 
 describe("extension kanban renderer contracts", () => {
+  test("preserves group context menu navigation targets", () => {
+    const action = {
+      id: "details",
+      label: "This device",
+      action: {
+        kind: "command",
+        target: {
+          command: { kind: "command", id: "details", extensionId: "acme.tools" },
+          params: { deviceId: "local" },
+        },
+      },
+    };
+    const record = extensionKanbanRendererRecordSchema.parse({
+      id: "devices",
+      extensionId: "acme.tools",
+      title: "Devices",
+      queryHandlerId: "devices.query",
+      attributes: [
+        {
+          id: "device",
+          label: "Device",
+          type: { kind: "enum", options: [{ value: "local", label: "Local", contextMenuActions: [action] }] },
+        },
+      ],
+    });
+    expect(record.attributes?.[0]?.type).toMatchObject({ options: [{ contextMenuActions: [action] }] });
+  });
   test("preserves extension-declared default saved views", () => {
     const record = extensionKanbanRendererRecordSchema.parse({
       id: "planner.tickets",

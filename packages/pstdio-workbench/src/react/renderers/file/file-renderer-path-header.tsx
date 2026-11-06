@@ -1,13 +1,8 @@
 import { Text } from "@chakra-ui/react";
 import { Header, resolveFileIconElement, useFileIconThemePreference } from "@pstdio/ui";
 
-export const FileRendererPathHeader = (props: {
-  fileName: string;
-  filePath: string;
-  dirty?: boolean;
-  saving?: boolean;
-}) => {
-  const { fileName, filePath, dirty, saving } = props;
+export const FileRendererPathHeader = (props: { fileName: string; filePath: string; dirty?: boolean }) => {
+  const { fileName, filePath, dirty } = props;
   const { activeFileIconTheme } = useFileIconThemePreference();
 
   return (
@@ -19,12 +14,12 @@ export const FileRendererPathHeader = (props: {
       {dirty && (
         <Text
           role="status"
-          aria-label={saving ? "Saving file" : "Unsaved changes"}
-          title={saving ? "Saving…" : "Unsaved changes (⌘S / Ctrl+S)"}
+          aria-label="Unsaved changes"
+          title="Unsaved changes (⌘S / Ctrl+S)"
           textStyle="label/S/regular"
           color="fg.muted"
         >
-          {saving ? "Saving…" : "●"}
+          ●
         </Text>
       )}
     </Header>

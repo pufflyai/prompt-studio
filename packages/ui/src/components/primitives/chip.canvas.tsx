@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Chip } from "./chip";
 
 const meta = {
-  title: "Components/Data Display/Chip",
+  title: "Design system/Components/Data display/Chip",
   component: Chip,
   args: {
     children: "Bug",

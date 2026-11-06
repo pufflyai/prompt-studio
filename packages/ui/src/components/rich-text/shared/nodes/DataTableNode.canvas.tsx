@@ -3,7 +3,7 @@ import { MarkdownEditor } from "../../markdown-editor/markdown-editor";
 import { RichMessage } from "../../rich-message/rich-message";
 
 const meta: CanvasMeta<typeof RichMessage> = {
-  title: "Patterns/Chat/Data Table Node",
+  title: "Design system/Patterns/Chat/Data table node",
   component: RichMessage,
   description:
     "Chat tables wrap cells and hide row numbers by default. Display settings can change wrapping for each table independently.",

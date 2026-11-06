@@ -1,4 +1,4 @@
-import { Flex, Spinner, Text } from "@chakra-ui/react";
+import { Flex, Text } from "@chakra-ui/react";
 import type { TextEditingSession } from "@pstdio/sdk/extensions";
 import { LazyMarkdownEditor, type MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -71,14 +71,7 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
           }}
         />
       )}
-      {state?.pending && !error && (
-        <Flex gap="xs" align="center" bg="bg.muted" px="sm" py="xs">
-          <Spinner size="xs" color="fg.muted" aria-label={state.connected ? "Saving" : "Reconnecting"} />
-          <Text color="fg.muted" textStyle="label/S/regular">
-            {state.connected ? "Saving changes…" : "Changes are waiting to be saved."}
-          </Text>
-        </Flex>
-      )}
+
       {state && !state.editable && !error && (
         <Flex bg="bg.muted" px="sm" py="xs">
           <Text color="fg.muted" textStyle="label/S/regular">

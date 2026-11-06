@@ -4,7 +4,7 @@ import { SettingsPreview } from "./settings-preview";
 
 const themeStorage = { getItem: () => null, setItem: () => {} };
 export default {
-  title: "Settings/Consistent settings",
+  title: "Product/Workbench/Settings/Consistent settings",
   component: SettingsPreview,
   fullscreen: true,
   description:

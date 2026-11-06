@@ -1,6 +1,8 @@
 import { Box, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { composePreview } from "@pstdio/canvas";
 import { useState } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
 import { HarnessParamEditor } from "./harness-param-editor";
@@ -122,27 +124,30 @@ const HarnessParamEditorStory = (props: {
   );
 };
 const meta: CanvasMeta<typeof HarnessParamEditorStory> = {
-  title: "Components/Param Editor/Harness run options",
+  title: "Design system/Patterns/Parameter editor/Harness run options",
   component: HarnessParamEditorStory,
 };
-export default meta;
+export default {
+  title: "Design system/Patterns/Parameter editor/Harness run options",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof HarnessParamEditorStory>;
-export const Defaults: Story = {
+const Defaults: Story = {
   id: "components-param-editor-harness-run-options--defaults",
 };
-export const WithOverrides: Story = {
+const WithOverrides: Story = {
   id: "components-param-editor-harness-run-options--with-overrides",
   args: {
     initial: { model_reasoning_effort: "high", dryRun: true },
   },
 };
-export const CustomProjectDefaults: Story = {
+const CustomProjectDefaults: Story = {
   id: "components-param-editor-harness-run-options--custom-project-defaults",
   args: {
     defaults: { model_reasoning_effort: "low", model_reasoning_summary: "concise", dryRun: false },
   },
 };
-export const ModelSpecificEffortLevels: Story = {
+const ModelSpecificEffortLevels: Story = {
   id: "components-param-editor-harness-run-options--model-specific-effort-levels",
   args: {
     schema: {
@@ -160,7 +165,7 @@ export const ModelSpecificEffortLevels: Story = {
     defaults: { model_reasoning_effort: "high", model_reasoning_summary: "auto", dryRun: false },
   },
 };
-export const Narrow: Story = {
+const Narrow: Story = {
   id: "components-param-editor-harness-run-options--narrow",
   decorators: [
     (Story) => (
@@ -172,7 +177,7 @@ export const Narrow: Story = {
 };
 // The run attempt modal renders this editor inside a dialog, so its options must remain
 // clickable there as well as in a standalone form.
-export const InsideDialog: Story = {
+const InsideDialog: Story = {
   id: "components-param-editor-harness-run-options--inside-dialog",
   args: { showCommandParams: false },
   fullscreen: true,
@@ -208,3 +213,19 @@ export const InsideDialog: Story = {
     ),
   ],
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Defaults,
+  WithOverrides,
+  CustomProjectDefaults,
+  ModelSpecificEffortLevels,
+  Narrow,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Defaults };
+
+const DialogPreview = composePreview(InsideDialog, meta).Component;
+const DialogPage = { name: "Inside dialog", fullscreen: true, render: () => <DialogPreview /> };
+
+export { DialogPage as InsideDialog };

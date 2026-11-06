@@ -106,7 +106,7 @@ const formatPath = (path: ColumnFileItem[]) => {
 const formatFileCount = (count: number) => `${count} file${count === 1 ? "" : "s"}`;
 const canDeleteItem = (item: ColumnFileItem) => item.type === "file";
 const meta = {
-  title: "Components/Navigation/Column File Browser",
+  title: "Design system/Components/Navigation/Column file browser",
   component: ColumnFileBrowser,
   decorators: [
     (Story: StoryFn) => (

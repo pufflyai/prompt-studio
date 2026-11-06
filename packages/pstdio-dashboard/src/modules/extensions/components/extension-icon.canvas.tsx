@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ExtensionIcon } from "./extension-icon";
 
 export default {
-  title: "Extensions/Icon",
+  title: "Product/Settings/Extensions/Icon",
   component: ExtensionIcon,
   args: { size: "md" },
 } satisfies CanvasMeta<typeof ExtensionIcon>;

@@ -41,7 +41,7 @@ const createNavigationWorkbench = () => {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Browser panel controls",
+  title: "Product/Workbench/Header/Browser panel controls",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

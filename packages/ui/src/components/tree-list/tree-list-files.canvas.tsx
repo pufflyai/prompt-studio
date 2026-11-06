@@ -4,7 +4,7 @@ import { File, Folder } from "lucide-react";
 import { TreeList } from "./tree-list";
 
 const meta = {
-  title: "Components/Data Display/Tree List/Files",
+  title: "Design system/Components/Data display/Tree list/Files",
   component: TreeList,
 } satisfies CanvasMeta<typeof TreeList>;
 export default meta;

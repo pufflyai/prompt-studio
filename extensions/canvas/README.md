@@ -25,15 +25,23 @@ bun x pstdio-canvas watch
 
 Keep the watcher running while you work, or let an agent start it. It writes each build to `.pstdio/extension-storage/pstdio.canvas/build/`, the folder UI Canvas reads, and puts a `.gitignore` there so builds are never committed. UI Canvas declares that folder as a watched storage folder: when the watcher writes a new build, the host tells UI Canvas, and it reloads only the frames whose code changed. Until a build exists, UI Canvas shows these commands and an example file.
 
-A canvas file is one canvas, and each named export is one frame:
+A canvas file is one canvas, and each named export is one frame. Unless separate frames are requested, keep states reachable through navigation or controls in one frame:
 
 ```tsx
 // src/button.canvas.tsx
+import { useState } from "react";
 import { Button } from "./button";
 
 export default { title: "Components/Button", component: Button };
-export const Primary = { args: { children: "Save" } };
-export const Loading = () => <Button loading>Save</Button>;
+export const Example = () => {
+  const [loading, setLoading] = useState(false);
+  return (
+    <>
+      <button onClick={() => setLoading((value) => !value)}>Toggle loading</button>
+      <Button loading={loading}>Save</Button>
+    </>
+  );
+};
 ```
 
 The title's part before the last `/` is the navigation group. A `.canvas/preview.tsx` file supplies CSS and decorators for the canvas files below it. See the [`@pstdio/canvas` README](https://www.npmjs.com/package/@pstdio/canvas#readme) for the full format.

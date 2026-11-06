@@ -59,7 +59,7 @@ const ProjectSelectionStory = (props: { platform?: string }) => {
   );
 };
 const meta = {
-  title: "Dashboard/Project selection",
+  title: "Product/Projects/Project picker",
   component: ProjectSelectionStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ProjectSelectionStory>;

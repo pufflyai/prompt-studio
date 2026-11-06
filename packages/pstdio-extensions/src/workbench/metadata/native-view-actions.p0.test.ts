@@ -21,6 +21,62 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
   definition,
 });
 
+test("resource group context-menu targets retain their extension owner", () => {
+  const details = defineCommand({ id: "details", title: "Device details", run: async () => undefined });
+  const view = defineView({
+    id: "devices",
+    title: "Devices",
+    body: {
+      kind: "resourceList",
+      attributes: [
+        {
+          id: "device",
+          label: "Device",
+          type: {
+            kind: "enum",
+            options: [
+              {
+                value: "local",
+                label: "Local",
+                contextMenuActions: [
+                  {
+                    id: "details",
+                    label: "This device",
+                    action: { kind: "command", target: { command: details.ref } },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+      query: async () => ({ rows: [] }),
+    },
+  });
+  const runtime = normalizeExtensionSources([source(defineExtension({ commands: [details], views: [view] }))]);
+  const metadata = workbenchExtensionMetadataSchema.parse(createWorkbenchExtensionMetadata({ runtime }));
+  expect(metadata.views[0]?.body).toMatchObject({
+    attributes: [
+      {
+        type: {
+          options: [
+            {
+              contextMenuActions: [
+                {
+                  action: {
+                    kind: "command",
+                    target: { command: { kind: "command", id: "details", extensionId: "pstdio.lab" } },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    ],
+  });
+});
+
 test.each(["dataTable", "kanban"] as const)("%s toolbar actions survive the public metadata round trip", (kind) => {
   const run = defineCommand({
     id: "run",

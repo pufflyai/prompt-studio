@@ -62,6 +62,10 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
                   options: attribute.type.options.map((option) => ({
                     ...option,
                     noteAction: option.noteAction ? previewNavigationTarget(option.noteAction) : undefined,
+                    contextMenuActions: option.contextMenuActions?.map((item) => ({
+                      ...item,
+                      action: previewNavigationTarget(item.action),
+                    })),
                   })),
                 }
               : attribute.type,

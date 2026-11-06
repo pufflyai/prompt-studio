@@ -104,7 +104,7 @@ const AgentDemo = () => {
   );
 };
 const meta = {
-  title: "Theme/Landing Agent Demo",
+  title: "Website/Landing/Agent demo",
   component: AgentDemo,
   fullscreen: true,
 } satisfies CanvasMeta<typeof AgentDemo>;

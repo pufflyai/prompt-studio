@@ -43,6 +43,34 @@ const setup = () => {
 };
 
 describe("level navigation", () => {
+  test("keeps lazy children available for enclosing rows pinned to the header or footer", async () => {
+    const { workbench, navigation } = setup();
+    const page = registerPage(workbench, "details");
+    for (const slot of ["header", "content", "footer"] as const) {
+      workbench.navigationTrees.registerContribution({
+        id: `project.${slot}`,
+        owner: project,
+        sourceExtensionId: "pstdio",
+        declarationIndex: 0,
+        slot,
+        getSections: () => [{ id: slot, nodes: [{ id: `${slot}-folder`, label: "Folder", collapsible: true }] }],
+        getChildren: () => [{ id: `${slot}-child`, label: "Child" }],
+      });
+    }
+    contribute(workbench, { kind: "page", id: "test.page.details", extensionId: "test" }, "content", () => [
+      { id: "details", nodes: [{ id: "file", label: "File" }] },
+    ]);
+    workbench.pageLocations.navigate({ kind: "page", page });
+    for (const slot of ["header", "content", "footer"] as const) {
+      const node = (await navigation.getSections(slot))
+        .flatMap((section) => section.nodes)
+        .find((node) => node.id === `${slot}-folder`)!;
+      expect(node.pinnedOnly).toBe(true);
+      expect((await workbench.navigationTrees.getChildren(node)).map((child) => child.id)).toEqual([`${slot}-child`]);
+    }
+    workbench.dispose();
+  });
+
   test("publishes destination navigation before enclosing navigation finishes", async () => {
     const { workbench, navigation } = setup();
     const page = registerPage(workbench, "sessions");
@@ -69,7 +97,7 @@ describe("level navigation", () => {
     }
   });
 
-  test("replaces the body with the level, keeps mode rows for pinned slots, and follows inherited levels", async () => {
+  test("keeps enclosing rows available only for header and footer placement, and follows inherited levels", async () => {
     const { workbench, navigation } = setup();
     const home = registerPage(workbench, "home");
     const ticket = registerPage(workbench, "ticket", "ticket");
@@ -83,8 +111,8 @@ describe("level navigation", () => {
 
     workbench.pageLocations.navigate(target("one"));
     expect(rows(await navigation.getSections("content"))).toEqual(["one", "pinned:content"]);
-    expect(rows(await navigation.getSections("header"))).toEqual(["header"]);
-    expect(rows(await navigation.getSections("footer"))).toEqual(["footer"]);
+    expect(rows(await navigation.getSections("header"))).toEqual(["pinned:header"]);
+    expect(rows(await navigation.getSections("footer"))).toEqual(["pinned:footer"]);
     const levelKey = navigation.getReadKey();
     workbench.pageLocations.navigate(target("two"));
     expect(rows(await navigation.getSections("content"))).toEqual(["two", "pinned:content"]);
@@ -120,7 +148,7 @@ describe("level navigation", () => {
       parent: { kind: "page", page: tickets },
     });
 
-    expect(rows(await navigation.getSections("header"))).toEqual(["search", "filter"]);
+    expect(rows(await navigation.getSections("header"))).toEqual(["pinned:search", "pinned:filter"]);
     const body = await navigation.getSections("content");
     expect(body.map((section) => section.id)).toEqual(["navigation.root", "board"]);
     expect(rows(body)).toEqual(["files", "pinned:notes", "pinned:all"]);
