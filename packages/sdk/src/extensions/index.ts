@@ -146,6 +146,7 @@ export { params } from "./params";
 export { type QualifiedRef, qualifyRef } from "./qualify-ref";
 export { artifactChanged, commandEvent, commandRef, eventRef } from "./refs";
 export { resourceKey } from "./resource-key";
+export { applySessionMessagePatch, type SessionMessagePatch } from "./session-message-patch";
 export {
   createTerminalSessionBridge,
   type TerminalSessionAdapter,
