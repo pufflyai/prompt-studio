@@ -23,7 +23,11 @@ export const removeRecoveryStaging = async (path: string) => {
   };
   await writable(path);
   await rm(path, { recursive: true, force: true });
+  if (await lstat(path).catch(() => null)) throw new Error("The restore staging folder remains");
 };
+
+/** Journal entries of restores running now in this process; a crash or failed cleanup ends that. */
+const running = new Set<string>();
 
 const alive = (pid: number) => {
   try {
@@ -46,11 +50,22 @@ export const createRecoveryStagingJournal = (root: string) => {
       await mkdir(directory, { recursive: true, mode: 0o700 });
       const { dev, ino } = await lstat(path, { bigint: true });
       const file = join(directory, `${crypto.randomUUID()}.json`);
+      running.add(file);
       await writeFile(file, JSON.stringify({ path, dev: String(dev), ino: String(ino), pid: process.pid }), {
         mode: 0o600,
         flag: "wx",
       });
-      return { done: () => unlink(file).catch(() => {}) };
+      return {
+        /** The staging folder is gone: forget it. */
+        done: () => {
+          running.delete(file);
+          return unlink(file).catch(() => {});
+        },
+        /** The restore ended but its staging remains: a later cleanup removes it. */
+        release: () => {
+          running.delete(file);
+        },
+      };
     },
     async clean() {
       for (const name of await readdir(directory).catch(() => [])) {
@@ -60,11 +75,15 @@ export const createRecoveryStagingJournal = (root: string) => {
             .then(JSON.parse)
             .catch(() => null),
         ).data;
-        if (entry && entry.pid !== process.pid && alive(entry.pid)) continue;
-        if (entry && entry.pid === process.pid) continue;
+        if (running.has(file) || (entry && entry.pid !== process.pid && alive(entry.pid))) continue;
         const stat = entry && (await lstat(entry.path, { bigint: true }).catch(() => null));
-        if (stat?.isDirectory() && String(stat.dev) === entry?.dev && String(stat.ino) === entry.ino)
-          await removeRecoveryStaging(entry.path);
+        if (stat?.isDirectory() && String(stat.dev) === entry?.dev && String(stat.ino) === entry.ino) {
+          const removed = await removeRecoveryStaging(entry.path).then(
+            () => true,
+            () => false,
+          );
+          if (!removed) continue;
+        }
         await unlink(file).catch(() => {});
       }
     },

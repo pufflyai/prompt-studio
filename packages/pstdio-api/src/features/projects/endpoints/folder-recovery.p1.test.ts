@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { ProjectFolderRecoveryStatus, ProjectFolderSource } from "pstdio-api-contracts";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { startFolderRecovery } from "../../../services/relay/folder-recovery";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
@@ -28,6 +29,24 @@ test("a new device restores another device's folder copy while that device is of
     await mkdir(join(folder, "src"), { recursive: true });
     await writeFile(join(folder, "src/notes.md"), "saved without a commit");
     await writeFile(join(folder, ".env"), "TOKEN=private");
+    // Local extension code travels with the folder but must not run until the person enables it.
+    const marker = join(root, "extension-code-ran");
+    await mkdir(join(folder, ".pstdio/extensions/local-tool"), { recursive: true });
+    await writeFile(
+      join(folder, ".pstdio/extensions/local-tool/package.json"),
+      JSON.stringify({
+        name: "local-tool",
+        version: "1.0.0",
+        displayName: "Local tool",
+        publisher: "restored",
+        main: "./extension.ts",
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+      }),
+    );
+    await writeFile(
+      join(folder, ".pstdio/extensions/local-tool/extension.ts"),
+      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "ran");\nexport default {};\n`,
+    );
     const project = await source.deps.projectService.create({ name: "Recovered folder" });
     await source.deps.workspaceService.ensureDefault({ project_id: project.id, root_path: folder, name: "Folder" });
     // The new device already has the project's records, but no folder.
@@ -79,7 +98,7 @@ test("a new device restores another device's folder copy while that device is of
 
     const listed = (await laptopCopy())!;
     const copy = { deviceId: listed.deviceId, sourceId: listed.sourceId };
-    expect(listed).toMatchObject({ current: false, name: expect.any(String), folder, git: "none", files: 2 });
+    expect(listed).toMatchObject({ current: false, name: expect.any(String), folder, git: "none", files: 4 });
     const restored = join(root, "desktop");
     const started = await call<ProjectFolderRecoveryStatus>("restore", { ...copy, path: restored });
     expect(started.status).toBe(202);
@@ -92,13 +111,18 @@ test("a new device restores another device's folder copy while that device is of
     expect(progress.restore).toMatchObject({
       state: "complete",
       error: null,
-      files: { completed: 2, total: 2 },
+      files: { completed: 4, total: 4 },
       result: { path: restored, attached: true, git: "none", rewritten: [] },
     });
     expect(progress.download.state).toBe("complete");
     expect(await readFile(join(restored, "src/notes.md"), "utf8")).toBe("saved without a commit");
     expect(await readFile(join(restored, ".env"), "utf8")).toBe("TOKEN=private");
     expect((await destination.deps.workspaceService.getDefault(project.id))?.root_path).toBe(restored);
+    const restoredExtension = (await destination.deps.extensionService.listProjectExtensionInstances(project.id)).find(
+      (record) => record.installedSource.source_path.startsWith(restored),
+    );
+    expect(restoredExtension?.instance.enabled ?? false).toBe(false);
+    await expect(lstat(marker)).rejects.toThrow();
 
     // The restored folder is now this device's source; its capture keeps the copy's absent policy.
     await until(async () => (await call<ProjectFolderSource[]>("sources")).body.some((item) => item.current));

@@ -19,16 +19,21 @@ export type RestoreExpected =
   | { kind: "symlink"; target: string };
 
 /** External Git administration is rebuilt inside the restored folder, so the folder never
- * depends on paths of the source device. This Prompt Studio-owned location is reserved. */
-const recoveryGitLayout = ".pstdio/recovery/git";
+ * depends on paths of the source device. Each copy gets its own folder here, so a restored
+ * folder that was captured again keeps the earlier rebuilt administration as ordinary files. */
+const recoveryRoot = ".pstdio/recovery";
+/** Keeps rebuilt administration out of the restored repository's own commits. */
+const recoveryIgnore = { path: `${recoveryRoot}/.gitignore`, bytes: new TextEncoder().encode("*\n") };
 const nameBytes = 255;
+// Restored files are user files; privilege bits such as setuid are never restored.
+const permissions = (mode: number) => mode & 0o777;
 const join = (prefix: string, path: string) => (prefix ? `${prefix}/${path}` : path);
 const parentOf = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf("/")));
 const within = (root: string, path: string) => path === root || path.startsWith(`${root}/`);
 
 /** A linked worktree's administration goes back under its common directory's `worktrees/`,
  * so Git's own relative `commondir` link stays valid. Other roots get their own slot. */
-const dependencyLayout = (dependencies: Dependency[]) => {
+const dependencyLayout = (dependencies: Dependency[], layout: string) => {
   const prefixes = new Map<Dependency, string>();
   const common = dependencies.filter((dependency) => dependency.kind === "git-common");
   const ordered = [...common, ...dependencies.filter((dependency) => dependency.kind !== "git-common")];
@@ -38,7 +43,7 @@ const dependencyLayout = (dependencies: Dependency[]) => {
       (root) => dependency.kind === "git-admin" && parentOf(dependency.path) === `${root.path}/worktrees`,
     );
     if (!owner) {
-      prefixes.set(dependency, `${recoveryGitLayout}/${index}`);
+      prefixes.set(dependency, `${layout}/${index}`);
       continue;
     }
     const worktrees = `${prefixes.get(owner)}/worktrees`;
@@ -53,15 +58,17 @@ const reserved = (path: string) =>
   new RecoveryRestoreError("name_collision", "The copy uses a name this restore reserves", path);
 
 /** The entries a restore must produce, keyed by their path in the restored folder. */
-const createPlanEntries = (dependencies: boolean) => {
+const createPlanEntries = (layoutRoot: string | null) => {
   const expected = new Map<string, RestoreExpected>();
   const directories: { path: string; mode: number }[] = [];
   /** Directories the restore adds for rebuilt Git administration, in creation order. */
   const layout: string[] = [];
   const directory = (path: string, mode: number) => {
-    expected.set(path, { kind: "directory", mode });
-    directories.push({ path, mode });
+    expected.set(path, { kind: "directory", mode: permissions(mode) });
+    directories.push({ path, mode: permissions(mode) });
   };
+  /** The longest restored path, so a destination that cannot hold it is refused before writing. */
+  let longest = "";
   const addLayout = (path: string, mode: number) => {
     directory(path, mode);
     layout.push(path);
@@ -72,7 +79,7 @@ const createPlanEntries = (dependencies: boolean) => {
     expected,
     directories,
     layout,
-    totals: () => ({ files, bytes }),
+    totals: () => ({ files, bytes, longest }),
     /** A dependency root and the layout directories above and inside it. */
     root(prefix: string, mode: number, synthetic: string[]) {
       const parts = prefix.split("/");
@@ -88,7 +95,8 @@ const createPlanEntries = (dependencies: boolean) => {
     },
     entry(root: RestoreRoot, entry: RecoveryEntry) {
       const path = join(root.prefix, entry.path);
-      if (!root.prefix && dependencies && within(recoveryGitLayout, path)) throw reserved(path);
+      if (!root.prefix && layoutRoot && within(layoutRoot, path)) throw reserved(path);
+      if (Buffer.byteLength(path) > Buffer.byteLength(longest)) longest = path;
       if (entry.path.split("/").some((part) => Buffer.byteLength(part) > nameBytes))
         throw unsafe(path, "A name in the copy is longer than this filesystem allows");
       if (expected.has(path)) throw unsafe(path, "The copy lists this path twice");
@@ -97,12 +105,29 @@ const createPlanEntries = (dependencies: boolean) => {
         throw unsafe(path, "The copy places this entry outside a directory it restores");
       if (entry.kind === "directory") return directory(path, entry.mode);
       if (entry.kind === "symlink") return expected.set(path, { kind: "symlink", target: entry.target });
-      expected.set(path, { kind: "file", mode: entry.mode, size: entry.size });
+      expected.set(path, { kind: "file", mode: permissions(entry.mode), size: entry.size });
       files++;
       bytes += entry.size;
       if (!Number.isSafeInteger(bytes)) throw unsafe(path, "The copy exceeds supported sizes");
     },
   };
+};
+
+const checkCounts = <T extends { files: number; bytes: number }>(capture: RecoveryManifest["capture"], totals: T) => {
+  const counted = capture.git.dependencies.reduce(
+    (sum, item) => ({ files: sum.files + item.files, bytes: sum.bytes + item.bytes }),
+    { files: capture.files, bytes: capture.bytes },
+  );
+  if (totals.files !== counted.files || totals.bytes !== counted.bytes)
+    throw new RecoveryRestoreError("integrity", "The copy's entries do not match its counts", null);
+  return totals;
+};
+
+/** Rebuilt administration gets an ignore file; a copy restored again keeps the one it has. */
+const ignoreFiles = (layoutRoot: string | null, expected: Map<string, RestoreExpected>) => {
+  const extras = layoutRoot && !expected.has(recoveryIgnore.path) ? [recoveryIgnore] : [];
+  for (const extra of extras) expected.set(extra.path, { kind: "file", mode: 0o644, size: extra.bytes.length });
+  return extras;
 };
 
 /**
@@ -113,12 +138,14 @@ const createPlanEntries = (dependencies: boolean) => {
  */
 export const planRecoveryRestore = async (
   chunks: RecoveryChunkStore,
+  root: RecoveryChunk,
   manifest: RecoveryManifest,
   signal?: AbortSignal,
 ) => {
   const pages = createRecoveryPages(chunks);
   const { capture, source } = manifest;
-  const layout = dependencyLayout(capture.git.dependencies);
+  const layoutRoot = capture.git.dependencies.length ? `${recoveryRoot}/${root.blobId}` : null;
+  const layout = dependencyLayout(capture.git.dependencies, layoutRoot ?? recoveryRoot);
   const roots: RestoreRoot[] = [
     { inventory: capture.inventory, prefix: "", source: source.folder, mode: capture.rootMode },
     ...layout.ordered.map((dependency) => ({
@@ -128,28 +155,33 @@ export const planRecoveryRestore = async (
       mode: dependency.rootMode,
     })),
   ];
-  const plan = createPlanEntries(capture.git.dependencies.length > 0);
+  const plan = createPlanEntries(layoutRoot);
   const policy = capture.policy === null ? null : createHash("sha256").update(capture.policy).digest("hex");
   let policyFound = false;
-  for (const root of roots) {
-    if (root.prefix) plan.root(root.prefix, root.mode, layout.synthetic);
-    for await (const entry of pages.entries(root.inventory)) {
+  for (const item of roots) {
+    if (item.prefix) plan.root(item.prefix, item.mode, layout.synthetic);
+    for await (const entry of pages.entries(item.inventory)) {
       signal?.throwIfAborted();
-      plan.entry(root, entry);
-      if (root.prefix || entry.path !== ".pstignore") continue;
+      plan.entry(item, entry);
+      if (item.prefix || entry.path !== ".pstignore") continue;
       policyFound = entry.kind === "file" && entry.sha256 === policy;
       if (!policyFound) throw unsafe(entry.path, "The copy's policy file does not match it");
     }
   }
   if (policyFound !== (policy !== null)) throw unsafe(".pstignore", "The copy's policy file does not match it");
-  const { files, bytes } = plan.totals();
-  const counted = capture.git.dependencies.reduce(
-    (sum, item) => ({ files: sum.files + item.files, bytes: sum.bytes + item.bytes }),
-    { files: capture.files, bytes: capture.bytes },
-  );
-  if (files !== counted.files || bytes !== counted.bytes)
-    throw new RecoveryRestoreError("integrity", "The copy's entries do not match its counts", null);
+  const { files, bytes, longest } = checkCounts(capture, plan.totals());
   const { expected, directories } = plan;
-  return { roots, expected, directories, layout: plan.layout, files, bytes, rootMode: capture.rootMode };
+  const extras = ignoreFiles(layoutRoot, expected);
+  return {
+    roots,
+    expected,
+    directories,
+    layout: plan.layout,
+    extras,
+    files,
+    bytes,
+    longest,
+    rootMode: permissions(capture.rootMode),
+  };
 };
 export type RecoveryRestorePlan = Awaited<ReturnType<typeof planRecoveryRestore>>;

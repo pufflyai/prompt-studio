@@ -8,6 +8,7 @@ export interface FolderCommandDeps {
     ReturnType<typeof apiClient>["projects"],
     "folderRecovery" | "downloadFolder" | "restoreFolder" | "cancelFolderRecovery"
   >;
+  cwd: () => string;
   /** Final results go to stdout as the same JSON the API returns. */
   log: (text: string) => void;
   /** Progress lines go to stderr, so stdout stays machine-readable. */
@@ -20,6 +21,7 @@ export interface FolderCommandDeps {
 
 export const defaultFolderCommandDeps: FolderCommandDeps = {
   projects: () => apiClient().projects,
+  cwd: () => process.cwd(),
   log: console.log,
   progress: (text) => process.stderr.write(`${text}\n`),
   sleep: (ms) => Bun.sleep(ms),

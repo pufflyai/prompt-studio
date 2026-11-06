@@ -74,7 +74,9 @@ const attachRestored =
         const initial = await resolveInitialWorkspace({
           initial_workspace: { provider_id: rootProviderId, params: { path } },
         });
-        const workspace = await initializeProjectWorkspace(deps, projectId, initial.initial);
+        const workspace = await initializeProjectWorkspace(deps, projectId, initial.initial, undefined, {
+          restored: true,
+        });
         return workspace.root_path === path;
       }),
     );

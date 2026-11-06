@@ -41,16 +41,26 @@ UI does not exist yet, and nothing advertises recovery.
   folder becomes the project's folder through the normal attach flow, after its source
   journal records the copy's policy decision; a project that already has a folder keeps it
   and the restored folder stays unattached. A separate workspace for it is not built yet.
-- External Git administration is rebuilt under `.pstdio/recovery/git/` in the restored
-  folder, with linked worktree administration back under its common directory. Git links
-  that named source paths are rewritten and listed in the restore result; the original
-  bytes stay in the recovery store. Recovery runs no Git, hooks or setup of its own.
+- External Git administration is rebuilt under `.pstdio/recovery/<copy>/` in the restored
+  folder, with linked worktree administration back under its common directory, and a
+  `.pstdio/recovery/.gitignore` keeps it out of commits. Git links that named source paths
+  are rewritten and listed in the restore result. A link whose target was not restored is
+  left out and listed as omitted, so the restored folder never writes to another repository
+  on this device; the original bytes stay in the recovery store. A work tree setting outside
+  the folder is dropped from its configuration the same way. Recovery runs no Git or hooks.
+- Restored files and folders keep permission bits only; setuid, setgid and sticky bits are
+  not restored.
+- Attaching a restored folder registers its own `.pstdio/extensions` disabled, from their
+  manifests, without importing their code. A person enables them through the normal
+  extension flow. Defaults the host installs during attach are enabled as usual. A later
+  file change in that folder runs the ordinary repo-extension sync, which imports code of
+  registered extensions as it does for any project folder.
 - `GET /projects/{id}/folder/sources`, `/folder/recovery`, and `POST /folder/capture`,
   `/folder/download`, `/folder/restore` and `/folder/cancel` back the SDK `projects` methods
   and `pst projects folder`. Capture, download and restore progress is derived in memory
   and also appears as `folder` in the project's sync status.
-- Still open: a worker for capture hashing and encryption, Windows access (restore refuses
-  to run there), the Cloud extension UI (PS-1068), the per-entry problem list and pending
+- Still open: a worker for capture hashing and encryption, Windows and musl Linux access
+  (restore reports `unsupported` there), the Cloud extension UI (PS-1068), the per-entry problem list and pending
   counts in progress, and the 5 GiB qualification. Each restored file is flushed before
   publication; restore throughput is unmeasured.
 

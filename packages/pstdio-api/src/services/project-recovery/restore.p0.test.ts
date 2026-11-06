@@ -21,6 +21,7 @@ import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore, recoveryChunkBytes } from "./chunks";
 import { createRecoveryPages, type RecoveryEntry } from "./pages";
 import { restoreRecoveryCapture } from "./restore";
+import { createRecoveryStagingJournal } from "./restore-staging";
 import { prepareRecoveryCapture } from "./transfer";
 
 const roots: string[] = [];
@@ -105,7 +106,7 @@ test("a restore reproduces every included byte, empty entry, mode and link text 
 
   const destination = join(root, "restored");
   const result = await restore(candidate, destination);
-  expect(result).toEqual({ path: destination, git: "none", rewritten: [] });
+  expect(result).toEqual({ path: destination, git: "none", rewritten: [], omitted: [] });
   expect(await tree(destination)).toEqual(await tree(folder));
   expect((await stat(destination)).mode & 0o7777).toBe((await stat(folder)).mode & 0o7777);
   expect(await readlink(join(destination, "external"))).toBe("../outside");
@@ -325,11 +326,10 @@ test("a linked worktree restores its registered administration inside the folder
   const result = await restore(candidate, destination);
   expect(result.git).toBe("functional");
   expect(result.rewritten).toEqual(
-    expect.arrayContaining([".git", expect.stringMatching(/^\.pstdio\/recovery\/git\/.+\/gitdir$/)]),
+    expect.arrayContaining([".git", expect.stringMatching(/^\.pstdio\/recovery\/.+\/gitdir$/)]),
   );
   expect(git(destination, "log", "--format=%s")).toBe("worktree only\nfirst\n");
-  // The rebuilt administration itself is the only new, untracked path.
-  expect(git(destination, "status", "--porcelain")).toBe("?? .pstdio/\n");
+  expect(git(destination, "status", "--porcelain")).toBe("");
   expect(git(destination, "fsck", "--no-progress")).toBe("");
   expect(await readFile(join(destination, ".git"), "utf8")).not.toContain(repository);
 });
@@ -345,5 +345,133 @@ test("an unregistered worktree restores its files but never claims working Git",
   const result = await restore(await capture([]), join(root, "restored"));
   expect(result.git).toBe("incomplete");
   expect(result.rewritten).toEqual([]);
-  expect(await readFile(join(root, "restored", ".git"), "utf8")).toBe(await readFile(join(folder, ".git"), "utf8"));
+  expect(result.omitted).toEqual([{ path: ".git", reason: "git-link-outside-folder" }]);
+  await expect(lstat(join(root, "restored", ".git"))).rejects.toThrow();
+});
+
+test("a worktree whose administration was not restored never shares the source repository", async () => {
+  const { root, folder, capture, restore } = await fixture();
+  const repository = join(root, "repository");
+  await mkdir(repository);
+  git(repository, "init", "-q");
+  await writeFile(join(repository, "tracked"), "committed");
+  git(repository, "add", "tracked");
+  git(repository, "commit", "-qm", "first");
+  await rm(folder, { recursive: true });
+  git(repository, "worktree", "add", "-q", "-b", "work", folder);
+  const branch = git(repository, "rev-parse", "work");
+  const index = await readFile(join(repository, ".git/worktrees/project/index"));
+  // The repository is not registered, so its administration is not part of the copy.
+  const destination = join(root, "restored");
+  const result = await restore(await capture([]), destination);
+  expect(result.git).toBe("incomplete");
+  expect(result.omitted).toEqual([{ path: ".git", reason: "git-link-outside-folder" }]);
+  await expect(lstat(join(destination, ".git"))).rejects.toThrow();
+  await writeFile(join(destination, "tracked"), "changed in the restored folder");
+  Bun.spawnSync(["git", "add", "tracked"], { cwd: destination });
+  Bun.spawnSync(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "restored"], {
+    cwd: destination,
+  });
+  expect(git(repository, "rev-parse", "work")).toBe(branch);
+  expect(await readFile(join(repository, ".git/worktrees/project/index"))).toEqual(index);
+  expect(await readFile(join(folder, "tracked"), "utf8")).toBe("committed");
+});
+
+test("rebuilt Git administration stays out of commits and a re-captured restored folder restores again", async () => {
+  const { root, folder, chunks, restore } = await fixture();
+  const repository = join(root, "repository");
+  await mkdir(repository);
+  git(repository, "init", "-q");
+  await writeFile(join(repository, "tracked"), "committed");
+  git(repository, "add", "tracked");
+  git(repository, "commit", "-qm", "first");
+  await rm(folder, { recursive: true });
+  git(repository, "worktree", "add", "-q", folder);
+  const copy = (from: string, gitRoots: string[]) =>
+    captureRecoveryFolder({ root: from, chunks, gitRoots }).then((capture) =>
+      prepareRecoveryCapture({
+        chunks,
+        source: { id: "workspace", deviceId: "laptop", name: "Laptop", folder: from },
+        capture,
+      }),
+    );
+  const first = join(root, "first");
+  await restore(await copy(folder, [repository]), first);
+  expect(git(first, "status", "--porcelain")).toBe("");
+  git(first, "add", "-A");
+  expect(git(first, "diff", "--cached", "--name-only")).toBe("");
+
+  const second = join(root, "second");
+  const again = await restore(await copy(first, []), second);
+  expect(again.git).toBe("functional");
+  expect(again.omitted).toEqual([]);
+  expect(git(second, "log", "--format=%s")).toBe("first\n");
+  expect(git(second, "status", "--porcelain")).toBe("");
+  const firstHead = git(first, "rev-parse", "HEAD");
+  git(second, "commit", "-q", "--allow-empty", "-m", "second only");
+  expect(git(first, "rev-parse", "HEAD")).toBe(firstHead);
+});
+
+test("restored modes keep permission bits only", async () => {
+  const { root, folder, capture, restore } = await fixture();
+  await writeFile(join(folder, "tool"), "#!/bin/sh\n");
+  await chmod(join(folder, "tool"), 0o4755);
+  await mkdir(join(folder, "shared"));
+  await chmod(join(folder, "shared"), 0o1777);
+  const destination = join(root, "restored");
+  await restore(await capture(), destination);
+  expect((await stat(join(destination, "tool"))).mode & 0o7777).toBe(0o755);
+  expect((await stat(join(destination, "shared"))).mode & 0o7777).toBe(0o777);
+});
+
+test("a failed staging cleanup keeps the original error and its journal entry for a later cleanup", async () => {
+  const { root, folder, chunks, capture } = await fixture();
+  const parent = join(root, "parent");
+  await mkdir(parent);
+  for (let index = 0; index < 4; index++) await writeFile(join(folder, `file-${index}`), `copy ${index}`);
+  const candidate = await capture();
+  const controller = new AbortController();
+  const restoring = restoreRecoveryCapture({
+    chunks,
+    root: candidate,
+    destination: join(parent, "restored"),
+    workRoot: join(root, "recovery"),
+    signal: controller.signal,
+    progress: async ({ files }) => {
+      if (files !== 2) return;
+      // The staging folder can no longer be removed from its parent.
+      await chmod(parent, 0o500);
+      controller.abort(new Error("cancelled by the person"));
+    },
+  });
+  await expect(restoring).rejects.toThrow("cancelled by the person");
+  await chmod(parent, 0o700);
+  expect(await siblings(parent)).toHaveLength(1);
+  expect(await readdir(join(root, "recovery", "restores"))).toHaveLength(1);
+  // No restore of this process runs now, so the next cleanup removes it.
+  await createRecoveryStagingJournal(join(root, "recovery")).clean();
+  expect(await siblings(parent)).toEqual([]);
+  expect(await readdir(join(root, "recovery", "restores"))).toEqual([]);
+});
+
+test("destination names and paths beyond the platform limits are refused with their own error", async () => {
+  const { root, folder, capture, restore } = await fixture();
+  const deep = "d".repeat(200);
+  await mkdir(join(folder, deep, deep), { recursive: true });
+  await writeFile(join(folder, deep, deep, "file"), "deep");
+  const candidate = await capture();
+  // A long name still fits beside its staging folder.
+  await restore(candidate, join(root, "n".repeat(240)));
+  await expect(restore(candidate, join(root, "n".repeat(256)))).rejects.toMatchObject({
+    code: "destination_too_long",
+  });
+  const limit = process.platform === "darwin" ? 1024 : 4096;
+  let parent = root;
+  while (Buffer.byteLength(parent) < limit - 300) parent = join(parent, "p".repeat(100));
+  await mkdir(parent, { recursive: true });
+  await expect(restore(candidate, join(parent, "restored"))).rejects.toMatchObject({
+    code: "destination_too_long",
+    path: `${deep}/${deep}/file`,
+  });
+  expect(await siblings(parent)).toEqual([]);
 });

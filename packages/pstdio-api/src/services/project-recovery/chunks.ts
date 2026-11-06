@@ -148,7 +148,14 @@ export const createRecoveryChunkStore = async ({ root, space }: { root: string; 
       const reference = referenceSchema.parse(input);
       await verify(reference, bytes);
       await retain(path(reference), bytes);
-      await read(reference);
+      try {
+        await read(reference);
+      } catch {
+        // A damaged retained copy is replaced by the verified bytes.
+        await unlink(path(reference)).catch(() => {});
+        await retain(path(reference), bytes);
+        await read(reference);
+      }
     },
   };
 };

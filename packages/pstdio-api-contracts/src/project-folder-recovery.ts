@@ -46,6 +46,8 @@ export const folderRecoveryErrorCodeSchema = z.enum([
   "destination_exists",
   /** The destination's parent folder does not exist. */
   "destination_parent_missing",
+  /** The folder name, or a restored path inside it, is longer than this platform allows. */
+  "destination_too_long",
   /** Something created the destination during the restore. Nothing was replaced. */
   "destination_created",
   /** The copy contains a path or entry this device refuses to write. */
@@ -108,6 +110,13 @@ export const projectFolderRecoveryStatusSchema = z.object({
         git: z.enum(["none", "functional", "incomplete"]),
         /** Restored paths whose bytes differ from the copy because Git links were rebuilt for this folder. */
         rewritten: z.array(z.string()),
+        /**
+         * Git links that pointed outside the restored folder and were left out, so the folder never
+         * shares another repository. Their original bytes stay in the recovery store.
+         */
+        omitted: z.array(
+          z.object({ path: z.string(), reason: z.enum(["git-link-outside-folder", "git-setting-outside-folder"]) }),
+        ),
       })
       .nullable(),
   }),

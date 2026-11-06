@@ -18,10 +18,11 @@ test("a later start removes staging a crashed restore left, but never a folder t
   await mkdir(join(abandoned, "readonly"), { recursive: true });
   await writeFile(join(abandoned, "readonly/file"), "partial");
   await chmod(join(abandoned, "readonly"), 0o500);
-  await journal.record(abandoned);
+  // The restores ended without removing their staging, as when a process crashes.
+  (await journal.record(abandoned)).release();
   const replaced = join(root, ".restored.pstdio-restore-b");
   await mkdir(replaced);
-  await journal.record(replaced);
+  (await journal.record(replaced)).release();
   await rm(replaced, { recursive: true });
   await mkdir(join(root, "work"));
   await writeFile(join(root, "work", "file"), "someone else's folder");

@@ -40,6 +40,7 @@ const fixture = (responses: ProjectFolderRecoveryStatus[]) => {
         return responses[0]!;
       },
     }),
+    cwd: () => "/caller",
     log: (text) => output.push(text),
     progress: (text) => progress.push(text),
     sleep: async () => {},
@@ -58,7 +59,7 @@ const fixture = (responses: ProjectFolderRecoveryStatus[]) => {
 
 test("restore prints the API's own final progress and reports progress until it completes", async () => {
   const complete = status(
-    { state: "complete", result: { path: "/new", attached: true, git: "none", rewritten: [] } },
+    { state: "complete", result: { path: "/new", attached: true, git: "none", rewritten: [], omitted: [] } },
     2,
   );
   const run = fixture([status({}), status({}, 1), complete]);
@@ -86,4 +87,25 @@ test("a failed or interrupted restore prints its actionable error and exits unsu
   expect(interrupted.calls.at(-1)).toBe("cancel");
   expect(JSON.parse(interrupted.output.join("")).restore.state).toBe("cancelled");
   expect(interrupted.failed()).toBe(true);
+});
+
+test("a relative restore path is the caller's folder, and a home path stays for the host to expand", async () => {
+  const complete = status(
+    {
+      state: "complete",
+      result: { path: "/caller/restored", attached: true, git: "none", rewritten: [], omitted: [] },
+    },
+    2,
+  );
+  for (const [path, expected] of [
+    ["restored", "/caller/restored"],
+    ["../elsewhere", "/elsewhere"],
+    ["~/restored", "~/restored"],
+  ]) {
+    const run = fixture([complete]);
+    await createHandler(run.deps)({ ...args, path, wait: false } as Arguments<RestoreArgs>);
+    expect(run.calls).toEqual([
+      `restore ${JSON.stringify({ deviceId: "laptop", sourceId: "workspace", path: expected })}`,
+    ]);
+  }
 });

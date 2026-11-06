@@ -24,8 +24,9 @@ const progressMs = 250;
 
 /** Turns any failure into a code and message a person can act on. Paths stay folder-relative. */
 export const folderRecoveryError = (error: unknown, signal?: AbortSignal): FolderRecoveryError => {
-  if (signal?.aborted) return { code: "cancelled", message: "The operation was cancelled.", path: null };
+  // A specific failure, such as binding a folder that was already published, outranks a late cancel.
   if (error instanceof RecoveryRestoreError) return { code: error.code, message: error.message, path: error.path };
+  if (signal?.aborted) return { code: "cancelled", message: "The operation was cancelled.", path: null };
   if (error instanceof RecoveryCaptureError)
     return { code: "capture_incomplete", message: error.message, path: error.path || null };
   const text = error instanceof Error ? error.message : "";
@@ -37,6 +38,10 @@ export const folderRecoveryError = (error: unknown, signal?: AbortSignal): Folde
       message: "Part of this copy is not on this device. Download it first.",
       path: null,
     };
+  if ((error as NodeJS.ErrnoException).code === "ENOTSUP")
+    return { code: "unsupported", message: "This system cannot recover folders safely yet.", path: null };
+  if ((error as NodeJS.ErrnoException).code === "ENAMETOOLONG")
+    return { code: "destination_too_long", message: "A restored path is longer than this disk allows.", path: null };
   if ((error as NodeJS.ErrnoException).code === "ENOSPC")
     return { code: "failed", message: "This disk is full. Free space and try again.", path: null };
   return { code: "failed", message: "The operation failed. Try again.", path: null };
@@ -63,6 +68,8 @@ export const createRecoveryOperations = (input: {
   let restore: Status["restore"] = { ...idle, destination: null, files: { completed: 0, total: null }, result: null };
   let active: { controller: AbortController; done: Promise<void> } | undefined;
   const available = new Set<string>();
+  /** Copies whose local bytes failed verification; their next download re-reads every chunk. */
+  const damaged = new Set<string>();
   let notified = 0;
   const changed = (throttle = false) => {
     if (throttle && Date.now() - notified < progressMs) return;
@@ -102,20 +109,25 @@ export const createRecoveryOperations = (input: {
     available.add(root.blobId);
     return true;
   };
+  /** `verify` re-reads every local chunk and fetches any that is missing or damaged. */
   const fetch = async (
     chunks: RecoveryChunkStore,
     ref: ProjectFolderSourceRef,
     root: RecoveryChunk,
     signal: AbortSignal,
+    verify = false,
   ) => {
     download = { state: "running", source: ref, bytes: { completed: 0, total: null }, error: null };
     changed();
-    if (!(await isAvailable(chunks, root))) {
+    const check = verify || damaged.has(root.blobId);
+    if (check || !(await isAvailable(chunks, root))) {
       const connected = input.transport();
       if (!connected)
         throw new RecoveryRestoreError(
-          "not_downloaded",
-          "This copy is not fully on this device. Connect to Cloud to download it; the source device can stay offline.",
+          check ? "integrity" : "not_downloaded",
+          check
+            ? "Part of this copy on this device is damaged. Connect to Cloud to download it again."
+            : "This copy is not fully on this device. Connect to Cloud to download it; the source device can stay offline.",
         );
       await downloadRecoveryCapture({
         chunks,
@@ -128,6 +140,7 @@ export const createRecoveryOperations = (input: {
         },
       });
       available.add(root.blobId);
+      damaged.delete(root.blobId);
     }
     download = { ...download, state: "complete" };
     changed();
@@ -178,7 +191,7 @@ export const createRecoveryOperations = (input: {
       const chunks = store();
       const { root } = await entry(ref);
       run(
-        (signal) => fetch(chunks, ref, root, signal),
+        (signal) => fetch(chunks, ref, root, signal, true),
         (error) => {
           download = { ...download, ...fail(error) };
         },
@@ -215,6 +228,12 @@ export const createRecoveryOperations = (input: {
               };
               changed(true);
             },
+          }).catch((error) => {
+            if (folderRecoveryError(error).code === "integrity") {
+              available.delete(root.blobId);
+              damaged.add(root.blobId);
+            }
+            throw error;
           });
           restore = { ...restore, result: { ...restored, attached: false } };
           let attached: boolean;
@@ -224,7 +243,7 @@ export const createRecoveryOperations = (input: {
             // The verified folder stays where it was published; only binding it failed.
             throw new RecoveryRestoreError(
               "failed",
-              `The folder was restored but could not become the project's folder: ${error instanceof Error ? error.message : String(error)}. Attach it with chooseFolder.`,
+              `The folder was restored at ${restored.path}, but it could not become the project's folder: ${error instanceof Error ? error.message : String(error)}. It stays on disk; attach it with chooseFolder.`,
               null,
               { cause: error },
             );

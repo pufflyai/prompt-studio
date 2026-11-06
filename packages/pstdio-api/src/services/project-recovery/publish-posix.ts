@@ -9,6 +9,13 @@ const component = (name: string) => {
   return Buffer.from(`${name}\0`);
 };
 
+const loadLibrary = (darwin: boolean) =>
+  dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
+    // macOS: RENAME_EXCL. Linux (glibc 2.28+): RENAME_NOREPLACE.
+    [darwin ? "renameatx_np" : "renameat2"]: { args: ["int", "ptr", "int", "ptr", "u32"], returns: "int" },
+    [darwin ? "__error" : "__errno_location"]: { args: [], returns: "ptr" },
+  });
+
 /**
  * Renames `from` to `to` inside one held parent directory and refuses an existing `to`,
  * including an empty directory. See ADR 0138: a check followed by an ordinary rename can
@@ -35,11 +42,16 @@ export const publishRecoveryStaging = async (input: {
       throw Object.assign(new Error("The destination's parent folder moved during the restore"), {
         code: "EXDEV",
       });
-    const library = dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
-      // macOS: RENAME_EXCL. Linux (glibc 2.28+): RENAME_NOREPLACE.
-      [darwin ? "renameatx_np" : "renameat2"]: { args: ["int", "ptr", "int", "ptr", "u32"], returns: "int" },
-      [darwin ? "__error" : "__errno_location"]: { args: [], returns: "ptr" },
-    });
+    let library: ReturnType<typeof loadLibrary>;
+    try {
+      library = loadLibrary(darwin);
+    } catch (cause) {
+      // musl and glibc before 2.28 have no compatible `renameat2`; there is no weaker fallback.
+      throw Object.assign(new Error("This system's C library cannot publish a folder without replacing"), {
+        code: "ENOTSUP",
+        cause,
+      });
+    }
     try {
       const native = library.symbols;
       const rename = native[darwin ? "renameatx_np" : "renameat2"]!;
@@ -49,7 +61,7 @@ export const publishRecoveryStaging = async (input: {
         const value = errno.getInt32(0, true);
         throw Object.assign(new Error("Publishing the restored folder failed"), {
           errno: value,
-          code: getSystemErrorName(-value),
+          code: value > 0 ? getSystemErrorName(-value) : "EIO",
         });
       }
     } finally {
