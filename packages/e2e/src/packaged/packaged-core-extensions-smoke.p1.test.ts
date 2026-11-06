@@ -93,6 +93,7 @@ test(
             scope: "repo",
             sourcePath: join(realpathSync(projectFolder), ".pstdio/extensions/pstdio-home"),
           }),
+          expect.objectContaining({ enabled: true, installName: "pstdio-workspaces" }),
           expect.objectContaining({ canUpgrade: false, enabled: true, installName: "pstdio-planner" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
@@ -113,6 +114,19 @@ test(
         });
         expect(setupRuntime.status).toBe(200);
       }
+      expect(metadata.pages).toContainEqual(
+        expect.objectContaining({
+          extensionId: "pstdio.pstdio-workspaces",
+          path: "files",
+          document: { metadataKey: "workspaceFilePath" },
+        }),
+      );
+      expect(metadata.views).toContainEqual(
+        expect.objectContaining({
+          extensionId: "pstdio.pstdio-workspaces",
+          body: expect.objectContaining({ kind: "resourceList" }),
+        }),
+      );
       const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
       expect(planner).toBeDefined();
       await expectPlannerIdentities({

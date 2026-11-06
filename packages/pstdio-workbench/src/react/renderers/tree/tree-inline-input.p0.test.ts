@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { TreeListSection } from "@pstdio/ui";
 import type { TreeActionParamsRequest } from "./tree-actions";
-import { withTreeInlineInput } from "./tree-inline-input";
+import { treeActionParamsFallback, withTreeInlineInput } from "./tree-inline-input";
 
 test("inline tree actions keep failed edits and preserve the supplied command arguments", async () => {
   const sections: TreeListSection[] = [
@@ -89,4 +89,84 @@ test("pending inline rows cannot alias provider IDs", () => {
   const result = withTreeInlineInput(sections, request, () => {});
   expect(result[0].nodes[0].id).toBe("workbench:inline-input:2");
   expect(result[0].nodes[1].id).toBe("workbench:inline-input");
+});
+
+test("tree actions retain their parameter dialog when an inline editor cannot be placed", () => {
+  const sections: TreeListSection[] = [
+    {
+      id: "files",
+      nodes: [
+        { id: "file", label: "one.ts" },
+        {
+          id: "provider",
+          label: "Provider input",
+          inlineInput: { ariaLabel: "Provider input", onCommit: async () => {} },
+        },
+      ],
+    },
+  ];
+  const request: TreeActionParamsRequest = {
+    inlineInput: { field: "name", nodeId: "file", placement: "replace" },
+    request: {
+      record: { command: { id: "rename", label: "Rename", params: { name: { type: "text" } } } },
+      label: "Rename",
+    },
+    run: async () => {},
+  };
+  const fallback = () =>
+    treeActionParamsFallback(
+      withTreeInlineInput(sections, request, () => {}),
+      request,
+    );
+  expect(fallback()).toBeNull();
+  const nextRequest = { ...request };
+  expect(
+    treeActionParamsFallback(
+      withTreeInlineInput(sections, request, () => {}),
+      nextRequest,
+    ),
+  ).toBe(nextRequest);
+  const inlineInput = request.inlineInput;
+  request.inlineInput = undefined;
+  expect(fallback()).toBe(request);
+  request.inlineInput = inlineInput;
+  request.inlineInput!.nodeId = "unloaded";
+  expect(fallback()).toBe(request);
+  request.inlineInput!.nodeId = "file";
+  request.inlineInput!.field = "missing";
+  expect(fallback()).toBe(request);
+  request.inlineInput!.field = "name";
+  request.request.record.command.params!.name = { type: "number" };
+  expect(fallback()).toBe(request);
+});
+
+test("collapsed tree sections and ancestors keep the parameter dialog available", () => {
+  const request: TreeActionParamsRequest = {
+    inlineInput: { field: "name", nodeId: "file", placement: "replace" },
+    request: {
+      record: { command: { id: "rename", label: "Rename", params: { name: { type: "text" } } } },
+      label: "Rename",
+    },
+    run: async () => {},
+  };
+  const sections = withTreeInlineInput(
+    [
+      {
+        id: "files",
+        label: "Files",
+        nodes: [{ id: "folder", label: "src", children: [{ id: "file", label: "one.ts" }] }],
+      },
+    ],
+    request,
+    () => {},
+  );
+  expect(treeActionParamsFallback(sections, request, { expandedSectionIds: [], expandedNodeIds: ["folder"] })).toBe(
+    request,
+  );
+  expect(treeActionParamsFallback(sections, request, { expandedSectionIds: ["files"], expandedNodeIds: [] })).toBe(
+    request,
+  );
+  expect(
+    treeActionParamsFallback(sections, request, { expandedSectionIds: ["files"], expandedNodeIds: ["folder"] }),
+  ).toBeNull();
 });

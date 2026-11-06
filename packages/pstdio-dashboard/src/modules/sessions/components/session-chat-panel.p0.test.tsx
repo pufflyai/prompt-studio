@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { openSelectedWorkspace } from "./session-chat-panel";
 
@@ -25,6 +26,7 @@ describe("workspace navigation", () => {
   test("opens the linked workspace resource for review changes", async () => {
     const workbench = createWorkbench();
 
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
@@ -33,7 +35,7 @@ describe("workspace navigation", () => {
     expect(workbench.commandPalette.isOpen()).toBe(false);
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.pages.store.getState().location).toMatchObject({
-      page: workbenchPages.workspace,
+      page: workspacePages.workspace,
       resource: {
         type: "workspace",
         id: "workspace-1",
@@ -57,6 +59,7 @@ describe("openSelectedWorkspace", () => {
   test("opens the selected workspace dropdown option", async () => {
     const workbench = createWorkbench();
 
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
@@ -82,7 +85,7 @@ describe("openSelectedWorkspace", () => {
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.pages.store.getState().location).toMatchObject({
-      page: workbenchPages.workspace,
+      page: workspacePages.workspace,
       resource: {
         type: "workspace",
         id: "workspace-2",

@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { revealTreeEntry } from "./tree-entry";
 
 export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locator) => {
   await source.click({ button: "right" });
@@ -39,6 +40,7 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   await expect(source).toBeVisible();
 
   await page.reload();
+  await revealTreeEntry(page, tree, group);
   await expect(group).toBeVisible();
   await expect(source).toBeVisible();
   // A raw bounding box can point outside the clipped tree after it scrolls. Use the

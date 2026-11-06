@@ -1,21 +1,15 @@
 import {
   type CreateWorkspaceCommandParams,
-  commandRef,
   type ExtensionWorkspace,
   l10n,
   type TreeAction,
   type TreeNode,
   type TreeViewSection,
-  workbenchPages,
+  workspaceCommands,
 } from "@pstdio/sdk/extensions";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import type { TicketResourceReference } from "../data/ticket-resource-hierarchy";
-import { workspacePresentation } from "../data/workspace-presentation";
-
-const createWorkspace = commandRef<CreateWorkspaceCommandParams>({
-  extensionId: "pstdio",
-  id: "workbench.workspace.create",
-});
+import { workspacePage, workspacePresentation } from "../data/workspace-presentation";
 
 // Prefer the (renamable) workspace name so the sidenav reflects renames; the immutable
 // shorthand is only a fallback. The tree re-runs on workspace collection changes, so the
@@ -46,7 +40,7 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
     resource,
     target: {
       kind: "page",
-      page: workbenchPages.workspace,
+      page: workspacePage(workspace),
       resource,
       parent: ticketPageTarget(ticket.resourceParent),
     },
@@ -60,7 +54,7 @@ const workspaceSectionActions = (options: CreateWorkspaceCommandParams): TreeAct
     id: "create-workspace",
     label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
     icon: "Plus",
-    command: createWorkspace,
+    command: workspaceCommands.create,
     params: options,
   },
 ];

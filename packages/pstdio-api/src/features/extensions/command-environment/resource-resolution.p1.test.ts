@@ -80,7 +80,20 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
     });
     expect(result.find((r) => r.resource.id === workspace.id)).toMatchObject({
       resource: { label: "Current workspace", extensionId: "pstdio" },
-      target: { kind: "page", page: { id: "workspace", extensionId: "pstdio" } },
+      target: { kind: "page", page: { id: "files", extensionId: "pstdio.pstdio-workspaces" } },
+    });
+    const worktree = await app.deps.workspaceService.createStandalone({
+      project_id: project.id,
+      provider_id: "pstdio.worktree",
+    });
+    const [worktreeLink] = await api.resolveMany([
+      { type: "workspace", id: worktree.id, extensionId: "pstdio", metadata: { workspaceSupportsDiff: false } },
+    ]);
+    expect(worktreeLink).toMatchObject({
+      resource: {
+        metadata: { workspaceProviderState: "ready", workspaceSupportsDiff: true, workspaceType: "worktree" },
+      },
+      target: { page: { id: "workspace", extensionId: "pstdio.pstdio-workspaces" } },
     });
     expect(result.find((r) => r.resource.id === "no-destination")?.target).toBeUndefined();
     await expect(api.resolveMany([{ ...ref("one"), projectId: "another-project" }])).rejects.toThrow("another project");

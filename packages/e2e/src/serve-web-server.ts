@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PlaywrightTestConfig } from "@playwright/test";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "./default-extensions";
+import { fixtureServerReady } from "./scripts/server-readiness";
 import { uiOrigin } from "./ui-server";
 
 const repoRoot = join(import.meta.dirname, "../../..");
@@ -23,7 +24,10 @@ export const serveWebServer = {
   // so it keeps the 30s budget the previous dashboard-boot server already
   // used (the API-only server it replaced needed less).
   command: `bun src/scripts/serve-ui.ts --host ${serverUrl.hostname} --port ${serverUrl.port}`,
-  url: `${uiOrigin}/healthz`,
+  // Liveness deliberately precedes background extension setup. Functional tests need their
+  // installed tools registered, inside this same server-start allowance, before creating projects.
+  // Playwright races URL and stdout conditions, so use only the combined completion signal.
+  wait: { stdout: fixtureServerReady },
   reuseExistingServer: false,
   timeout: 30_000,
   env: {

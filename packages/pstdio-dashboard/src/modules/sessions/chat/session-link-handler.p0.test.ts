@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { parsePageUrl } from "pstdio-api-contracts";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { buildDashboardWorkspaceOptionsFromRows } from "@/shared/workspaces/workspace-options";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionLinkHandler } from "./session-link-handler";
 
@@ -31,6 +32,7 @@ const workspace = (id: string) =>
 
 const projectWorkbench = () => {
   const workbench = createWorkbench();
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: projectId, name: "Chat links" });
   workbench.pageLocations.setProject(projectId);
@@ -105,7 +107,7 @@ test("chat paths use the session workspace while another workspace is selected",
   const workbench = projectWorkbench();
   workbench.pageLocations.navigate({
     kind: "page",
-    page: workbenchPages.workspace,
+    page: workspacePages.workspace,
     resource: { type: "workspace", id: "workspace-b" },
   });
   const errors: string[] = [];

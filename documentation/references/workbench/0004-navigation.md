@@ -140,3 +140,9 @@ During a tab drag, a closed eligible Side offers both allowed left/right edges a
 ## Project default page
 
 An application sets its default page with `createWorkbench({ startPage })`. Prompt Studio sets this directly to the ordinary project-local Home extension page. Project-root bookmarks open Home at its normal namespaced URL. Valid saved destinations and the last root-level page used by the project breadcrumb retain their existing precedence. If Home is unavailable, the selected mode and its shared panels remain active so the existing empty-panel UI can render. Prompt Studio-owned callers target Home directly. Start targets and parents contributed by other hosts remain ordinary references; they are not rewritten to the configured default.
+
+## Workspace provider destinations
+
+Use the Workspaces provider's public `workspacePages` refs for the grouped list, project Files, workspace, overview and synced history destinations. Files are documents in `workspaceFilePath` on the routed host-owned workspace resource. The default project folder uses `workspacePages.files` and has no Changes tab. Foreign resources use `workspacePages.history`; local file and execution actions require the host's current provider permissions.
+
+The legacy host `workbenchPages.workspace` and `workbenchPages.workspaces` refs are deprecated. Their saved URLs remain available through compatibility declarations while the provider views are installed. An ordinary extension can declare workspace page names under its own namespace; this does not grant ownership of the host's resource kind or file services.

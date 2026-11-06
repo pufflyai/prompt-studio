@@ -2,6 +2,8 @@ import type { TreeListNode, TreeListSection } from "@pstdio/ui";
 import { useState } from "react";
 import type { TreeActionParamsRequest } from "./tree-actions";
 
+const actionInputOwner = Symbol("tree action input owner");
+
 /** The native tree owns pending edits; extensions receive only the completed command. */
 export const withTreeInlineInput = (
   sections: TreeListSection[],
@@ -15,6 +17,7 @@ export const withTreeInlineInput = (
   const args = request.request.args && typeof request.request.args === "object" ? request.request.args : {};
   const initial = (args as Record<string, unknown>)[presentation.field] ?? descriptor.defaultValue;
   const input = {
+    [actionInputOwner]: request,
     ariaLabel: descriptor.label ?? request.request.label,
     defaultValue: typeof initial === "string" ? initial : undefined,
     onCommit: async (value: string) => {
@@ -58,6 +61,33 @@ export const withTreeInlineInput = (
         !presentation.nodeId && (request.sectionId || index === 0) ? [pending, ...section.nodes] : nodes(section.nodes),
     };
   });
+};
+
+interface TreeInputExpansion {
+  expandedNodeIds: string[];
+  expandedSectionIds: string[];
+}
+
+export const treeActionParamsFallback = (
+  sections: TreeListSection[],
+  request: TreeActionParamsRequest | null,
+  expansion: TreeInputExpansion = { expandedNodeIds: [], expandedSectionIds: [] },
+) => {
+  if (!request?.inlineInput) return request;
+  const hasInput = (nodes: TreeListNode[]): boolean =>
+    nodes.some(
+      (node) =>
+        (node.inlineInput && actionInputOwner in node.inlineInput && node.inlineInput[actionInputOwner] === request) ||
+        (expansion.expandedNodeIds.includes(node.id) && hasInput(node.children ?? [])),
+    );
+  const inlineVisible = sections.some(
+    (section) =>
+      (section.collapsible === false ||
+        section.label === undefined ||
+        expansion.expandedSectionIds.includes(section.id)) &&
+      hasInput(section.nodes),
+  );
+  return inlineVisible ? null : request;
 };
 
 export const useTreeActionInput = (scope: string, expandedNodeIds: string[]) => {

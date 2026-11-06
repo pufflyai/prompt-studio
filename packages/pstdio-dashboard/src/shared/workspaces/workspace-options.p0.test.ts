@@ -51,6 +51,7 @@ describe("dashboard workspace options", () => {
   test("carries local paths and remote capabilities into workspace resources", () => {
     const options = buildDashboardWorkspaceOptionsFromRows(rows, "project-1");
     const resources = options.map((workspace) => createDashboardWorkspaceOptionResource(workspace, "project-1"));
+    for (const resource of resources) expect(resource).toMatchObject({ extensionId: "pstdio", projectId: "project-1" });
 
     expect(resources).toEqual([
       expect.objectContaining({ metadata: expect.objectContaining({ workspacePath: "/repo/prompt-studio" }) }),

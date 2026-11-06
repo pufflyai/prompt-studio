@@ -72,28 +72,23 @@ test("the global workspace action uses declared cloud parameters without a repos
       },
     });
     expect(enabled.ok(), await enabled.text()).toBe(true);
-    await row.hover();
-    await row.getByRole("button", { name: "New workspace", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Create workspace", exact: true });
+    await row.click();
+    await page.getByRole("button", { name: /^Add to / }).click();
+    const dialog = page.frameLocator('iframe[title="Workspace action"]');
     await dialog.getByRole("textbox", { name: "Environment image" }).fill("documents");
-    const responsePromise = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === "/v1/workspaces" && response.request().method() === "POST",
-    );
     await dialog.getByRole("button", { name: "Create workspace", exact: true }).click();
-    const response = await responsePromise;
-    expect(response.status()).toBe(202);
-    expect(response.request().postDataJSON()).toEqual({
-      project_id: projectId,
-      provider_id: "example.cloud.workspace-type.remote",
-      params: { image: "documents" },
-    });
-    expect(await response.json()).toMatchObject({
-      root_path: null,
-      execution_kind: "remote",
-      provider_state: "ready",
-      provider_ref_json: { version: 1, data: { image: "documents" } },
-    });
-    await expect(dialog).not.toBeVisible();
+    await expect(page).toHaveURL(/extensions\/pstdio.pstdio-workspaces\/overview/);
+    const workspaces = await (await request.get(`${uiOrigin}/v1/workspaces?project_id=${projectId}`)).json();
+    expect(workspaces).toContainEqual(
+      expect.objectContaining({
+        root_path: null,
+        execution_kind: "remote",
+        provider_state: "ready",
+        provider_ref_json: { version: 1, data: expect.objectContaining({ image: "documents" }) },
+      }),
+    );
+    await expect(page.getByRole("tab", { name: "Changes", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "Search files" })).toHaveCount(0);
   } finally {
     if (projectId) expect((await request.delete(`${uiOrigin}/v1/projects/${projectId}`)).ok()).toBe(true);
     rmSync(sourcePath, { recursive: true, force: true });

@@ -1,34 +1,5 @@
 import type { ResourceRef } from "@pstdio/workbench";
 
-export const workspaceMetadataString = (resource: ResourceRef | undefined, key: string) => {
-  const value = resource?.metadata?.[key];
-  return typeof value === "string" ? value : undefined;
-};
-
-export const workspaceIdOf = (resource: ResourceRef | undefined) =>
-  workspaceMetadataString(resource, "workspaceId") ?? resource?.id;
-
-// A cloud project from another device has its data here but no folder yet.
-export const projectFolderMissingState = {
-  title: "Files are not on this device",
-  description: "Choose a folder for this project to work on its files.",
-};
-
-export const workspaceFilesUnavailableState = (resource: ResourceRef | undefined) => {
-  const error = workspaceMetadataString(resource, "workspaceError");
-  if (error) throw new Error(error);
-  if (resource?.metadata?.workspaceSupportsFiles === false) {
-    return { title: "Files unavailable", description: "This workspace is not available for file access." };
-  }
-  const state = workspaceMetadataString(resource, "workspaceProviderState");
-  if (state === "ready") return undefined;
-  if (state === "unattached") return projectFolderMissingState;
-  if (!state || state === "provisioning") {
-    return { title: "Preparing workspace", description: "Files will appear when the workspace is ready." };
-  }
-  return { title: "Files unavailable", description: "This workspace is not available for file access." };
-};
-
 export const workspaceFileResource = (resource: ResourceRef, path: string): ResourceRef => ({
   ...resource,
   metadata: {
@@ -37,33 +8,3 @@ export const workspaceFileResource = (resource: ResourceRef, path: string): Reso
     workspaceFilePath: path,
   },
 });
-
-export const workspaceDeleteResource = (
-  resource: ResourceRef,
-  path: string,
-  type: "file" | "directory",
-): ResourceRef => ({
-  ...resource,
-  metadata: {
-    ...resource.metadata,
-    workspaceDeletePath: path,
-    workspaceDeleteType: type,
-  },
-});
-
-export const workspaceRootResource = (resource: ResourceRef): ResourceRef => {
-  const {
-    workspaceDeletePath: _workspaceDeletePath,
-    workspaceDeleteType: _workspaceDeleteType,
-    workspaceFilePath: _workspaceFilePath,
-    ...metadata
-  } = resource.metadata ?? {};
-  return { ...resource, metadata: { ...metadata, workspaceView: "files" } };
-};
-
-export const absoluteWorkspaceEntryPath = (resource: ResourceRef, path: string) => {
-  const root = workspaceMetadataString(resource, "workspacePath")?.replace(/[/\\]+$/, "");
-  if (!root) return undefined;
-  const separator = root.includes("\\") && !root.includes("/") ? "\\" : "/";
-  return `${root}${separator}${path.split("/").join(separator)}`;
-};

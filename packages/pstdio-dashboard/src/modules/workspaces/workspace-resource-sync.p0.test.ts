@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
-import { createWorkbenchResourceActions } from "@pstdio/workbench/react";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
+
 import { createWorkspacesModule } from "./module";
 
 test("workspace links resolve current capabilities and retain their navigation metadata", () => {
@@ -21,6 +21,7 @@ test("workspace links resolve current capabilities and retain their navigation m
   };
   getWriter("workspaces")!.upsert(row);
   const workbench = createWorkbench();
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: row.project_id, name: "Workspace sync" });
   workbench.pageLocations.setProject(row.project_id);
@@ -34,9 +35,6 @@ test("workspace links resolve current capabilities and retain their navigation m
     workspaceSupportsDelete: true,
     workspaceView: "files",
   });
-  expect(createWorkbenchResourceActions(workbench, resource).map((action) => action.label)).toContain(
-    "Delete workspace",
-  );
   getWriter("workspaces")!.upsert({ ...row, provider_capabilities_json: { delete: false } });
   expect(workbench.getPrimaryResource()?.metadata).toMatchObject({
     workspaceSupportsDelete: false,
@@ -59,6 +57,7 @@ test("a workspace opened without an icon shows its kind's icon in the breadcrumb
   };
   getWriter("workspaces")!.upsert(row);
   const workbench = createWorkbench();
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: row.project_id, name: "Workspace icons" });
   workbench.pageLocations.setProject(row.project_id);
@@ -98,6 +97,7 @@ test("an open file tree reloads when its project gets a folder on this device", 
     refreshed.push(viewId);
     refreshView(viewId, input);
   };
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: row.project_id, name: "Cloud project" });
   workbench.pageLocations.setProject(row.project_id);
@@ -109,6 +109,41 @@ test("an open file tree reloads when its project gets a folder on this device", 
   getWriter("workspaces")!.upsert({ ...row, root_path: "/projects/cloud-project" });
 
   expect(workbench.getPrimaryResource()?.metadata?.workspaceProviderState).toBe("ready");
-  expect(refreshed).toContain(dashboardWidgetIds.workspaceFileTree);
+  expect(refreshed).toContain("pstdio.pstdio-workspaces.view.file-tree");
+  getWriter("workspaces")!.remove(row.id);
+});
+
+test("resource action resolution preserves the selected document and qualified owner", () => {
+  getCollection("workspaces");
+  const row = {
+    id: "action-workspace",
+    project_id: "action-project",
+    name: "Current name",
+    workspace_shorthand: "WS-A",
+    provider_state: "ready",
+    execution_kind: "local",
+    is_default: false,
+    provider_capabilities_json: { delete: true, files: "write", diff: true },
+  };
+  getWriter("workspaces")!.upsert(row);
+  const workbench = createWorkbench();
+  registerWorkspaceProviderViews(workbench);
+  workbench.registerModule(createWorkspacesModule());
+  selectDashboardProject(workbench, { id: row.project_id, name: "Action project" });
+  const subject = {
+    type: "workspace",
+    id: row.id,
+    extensionId: "pstdio",
+    projectId: row.project_id,
+    metadata: { workspaceFilePath: "src/app.ts", workspaceView: "files", workspaceSupportsDelete: false },
+  };
+  const resolved = workbench.resources.getKind("workspace", "pstdio")!.resolve!(subject)!;
+  expect(resolved).toMatchObject({
+    ...subject,
+    label: row.name,
+    metadata: { ...subject.metadata, workspaceSupportsDelete: true },
+  });
+  const foreign = { ...subject, projectId: "another-project" };
+  expect(workbench.resources.getKind("workspace", "pstdio")!.resolve!(foreign)).toEqual(foreign);
   getWriter("workspaces")!.remove(row.id);
 });

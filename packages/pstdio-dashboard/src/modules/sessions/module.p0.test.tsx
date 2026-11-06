@@ -7,12 +7,14 @@ import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/
 import { createDashboardResource, createDashboardSessionResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
 
 describe("createSessionsModule", () => {
   test("registers the session resource kind", () => {
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionsModule());
     expect(workbench.resources.getKind("session")).toMatchObject({
@@ -28,6 +30,7 @@ describe("createSessionsModule", () => {
   });
   test("renders aggregate sessions in the Sessions level and scoped sessions for a workspace resource", async () => {
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     const workspace = createDashboardResource("workspace", "workspace-1", "Workspace one", "GitBranch", "project-1");
     const ticket = createDashboardResource("ticket", "ticket-1", "PS-1", "FileText", "project-1");
@@ -47,6 +50,7 @@ describe("createSessionsModule", () => {
   });
   test("adds sessions navigation as a sidenav section", async () => {
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionsModule());
     const sessionsNode = (
@@ -60,6 +64,7 @@ describe("createSessionsModule", () => {
   });
   test("keeps the sessions root in the breadcrumb when a session opens", async () => {
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     const session = createDashboardSessionResource("session-1", "My session", "project-1", {
       status: "completed",
@@ -76,6 +81,7 @@ describe("createSessionsModule", () => {
   });
   test("replaces the Main session when another session is selected", () => {
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     const first = createDashboardSessionResource("session-1", "First session", "project-1");
     const second = createDashboardSessionResource("session-2", "Second session", "project-1");
@@ -89,6 +95,7 @@ describe("createSessionsModule", () => {
   });
   test("updates the breadcrumb when starting a new session from sessions", async () => {
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     const session = createDashboardSessionResource("session-1", "My session", "project-1", {
       status: "completed",
@@ -104,6 +111,7 @@ describe("createSessionsModule", () => {
   });
   test("navigates back from a session to the sessions root", async () => {
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     const session = createDashboardSessionResource("session-2", "Second session", "project-1", {
       status: "completed",
@@ -154,6 +162,7 @@ describe("createSessionsModule", () => {
   test("opens the project-owned sessions aggregate from global navigation", async () => {
     seedContractSessions();
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.registerModule(createSessionsModule());
@@ -166,6 +175,7 @@ describe("createSessionsModule", () => {
   test("opens the new-session landing from global navigation after viewing a session", async () => {
     seedContractSessions();
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     const session = createDashboardSessionResource("session-2", "Second session", "project-1", {
       status: "completed",
@@ -181,6 +191,7 @@ describe("createSessionsModule", () => {
   test("opens command palette session resources in Main", async () => {
     seedContractSessions();
     const workbench = createWorkbench();
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
@@ -230,6 +241,7 @@ const seedContractSessions = () =>
 
 test("global Sessions navigation establishes the selected project before opening its landing", async () => {
   const workbench = createWorkbench();
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   workbench.context.set(dashboardSelectedProjectIdContextKey, "project-1");

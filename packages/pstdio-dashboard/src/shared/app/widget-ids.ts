@@ -3,14 +3,6 @@
 export const dashboardWidgetIds = {
   projectHeader: "dashboard-workbench.project-header",
   extensions: "dashboard-workbench.extensions",
-  workspaces: WORKSPACES_COLLECTION_ID,
-  workspaceSummary: "dashboard-workbench.workspace.summary",
-  workspaceFiles: "dashboard-workbench.workspace.files",
-  workspaceDiffs: "dashboard-workbench.workspace.diffs",
-  workspaceFileTree: "dashboard-workbench.workspace.file-tree",
-  deleteWorkspaceEntry: "dashboard-workbench.delete-workspace-entry",
-  createWorkspace: "dashboard-workbench.create-workspace",
-  renameWorkspace: "dashboard-workbench.rename-workspace",
   dashboardSidenav: "dashboard-workbench.sidenav",
   extensionPanelRenderer: "dashboard-workbench.extension-panel-renderer",
   activityRail: "dashboard-workbench.activity-rail",
@@ -24,5 +16,3 @@ export const dashboardWidgetIds = {
   projectOpening: "dashboard-workbench.project-opening",
   sessionBubble: "dashboard-workbench.session-bubble",
 } as const;
-
-import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";

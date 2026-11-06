@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
+import { scrollSidenavToEnd } from "./helpers/sidenav-navigation";
 
 const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
@@ -36,6 +37,7 @@ const labFrame = (page: import("@playwright/test").Page, title: string) =>
   page.frameLocator(`iframe[title="${title}"]`);
 
 const openLabMode = async (page: import("@playwright/test").Page) => {
+  await scrollSidenavToEnd(page);
   await page.getByRole("option", { name: "Lab mode", exact: true }).click({ timeout: 30_000 });
   await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible({ timeout: 30_000 });
 };

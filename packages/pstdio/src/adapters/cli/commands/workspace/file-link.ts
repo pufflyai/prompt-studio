@@ -1,5 +1,6 @@
 import { posix } from "node:path";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workspacePages } from "@pstdio/sdk/extensions";
+import type { Workspace } from "@pstdio/sdk/resources";
 import { serializePageUrl } from "pstdio-api-contracts";
 import type { Argv } from "yargs";
 import { findProjectRoot, readConfig } from "@/features/config/config";
@@ -22,6 +23,18 @@ interface FileLinkInput {
 }
 const defaultDeps = { cwd: () => process.cwd(), findProjectRoot, readConfig, listWorkspaces, log: console.log };
 
+const workspaceFilePage = (workspace: Workspace) => {
+  if (
+    workspace.device ||
+    workspace.execution_kind === "remote" ||
+    workspace.provider_capabilities_json.files === "none"
+  )
+    throw new Error("Files are unavailable for this workspace.");
+  return workspace.is_default || !workspace.provider_capabilities_json.diff
+    ? workspacePages.files
+    : workspacePages.workspace;
+};
+
 export const createHandler =
   (deps = defaultDeps) =>
   async (input: FileLinkInput) => {
@@ -43,12 +56,13 @@ export const createHandler =
       (workspace) => workspace.id === input.workspace || workspace.workspace_shorthand === input.workspace,
     );
     if (!workspace) throw new Error(`Workspace not found: ${input.workspace}`);
+    const page = workspaceFilePage(workspace);
     const href = serializePageUrl({
       projectId: config.project_id,
       page: {
-        id: "workspace",
-        ref: workbenchPages.workspace,
-        path: "workspace",
+        id: page.id,
+        ref: page,
+        path: page.id,
         document: { metadataKey: "workspaceFilePath" },
       },
       resource: { type: "workspace", id: workspace.id, metadata: { workspaceFilePath: path } },

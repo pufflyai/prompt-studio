@@ -7,7 +7,9 @@ const extensionSource = (name: string) => {
   return name.includes("/") ? name : `extensions/${name}`;
 };
 const e2eExtension = (name: string) => ({
-  source: resolve(repoRoot, extensionSource(name)),
+  source:
+    (JSON.parse(process.env.E2E_EXTENSION_SOURCES ?? "{}") as Record<string, string>)[name] ??
+    resolve(repoRoot, extensionSource(name)),
   installName: name.split("/").at(-1) as string,
   skipInstall: !name.startsWith(".pstdio/extensions/"),
 });
@@ -16,6 +18,7 @@ const e2eExtension = (name: string) => ({
 // pstdio-reports stays out so the Marketplace lifecycle spec can install it.
 const e2eDefaultExtensions = [
   e2eExtension("pstdio-home"),
+  e2eExtension("pstdio-workspaces"),
   e2eExtension("pstdio-base-themes"),
   e2eExtension("canvas"),
   e2eExtension("pstdio-artifacts"),

@@ -255,7 +255,7 @@ test("leaving a tool restores project mode and its theme even when Home is disab
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-light");
     await view(page, "Pigeon").getByRole("button", { name: "Back to project", exact: true }).click();
-    await expect(page).toHaveURL(`/projects/${id}/workspaces`);
+    await expect(page).toHaveURL(`/projects/${id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-dark");
     expect(await page.evaluate(() => localStorage.getItem("theme-preference"))).toBe("pstdio-dark");
   } finally {

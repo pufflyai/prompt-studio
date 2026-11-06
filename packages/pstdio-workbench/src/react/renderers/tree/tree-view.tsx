@@ -103,6 +103,11 @@ const navigateTreeNode = (
   }
 };
 
+// Share one handler across every list so unrelated list props do not replace row navigation callbacks.
+const createTreeNavigator =
+  (context: TreeNavigationContext) => (event: { nodeId: string; intent?: { id?: string; payload?: unknown } }) =>
+    navigateTreeNode(context, event.nodeId, event.intent);
+
 interface ToggleTreeNodeContext {
   workbench: WorkbenchCore;
   treeViewId: string;
@@ -159,7 +164,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     props.placement,
   );
   const actionInput = useTreeActionInput(`${treeViewId}:${projectId}:${resource?.id}`, treeState.expandedNodeIds);
-  const paramsRequest = actionInput.request;
   const shortcutHints = useWorkbenchStore(workbench.keyboard.store, (state) => state.active || state.preview);
   const adapterContext = {
     workbench,
@@ -233,11 +237,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
   const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds);
 
-  const navigationContext = { workbench, treeViewId, onOpenResourceError };
-  // One handler for every list: an inline one inside a list's JSX changes whenever that list's other props do,
-  // and every row of the list would render again.
-  const navigate = (event: { nodeId: string; intent?: { id?: string; payload?: unknown } }) =>
-    navigateTreeNode(navigationContext, event.nodeId, event.intent);
+  const navigate = createTreeNavigator({ workbench, treeViewId, onOpenResourceError });
 
   return (
     <TreeListDragProvider
@@ -342,7 +342,9 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           </Flex>
         ) : null}
         <TreeParamsDialog
-          request={paramsRequest?.inlineInput ? null : paramsRequest}
+          request={actionInput.request}
+          sections={[...visibleHeaderSections, ...visibleSections, ...visibleFooterSections]}
+          expansion={{ ...treeState, expandedNodeIds: actionInput.expandedNodeIds }}
           renderParamField={renderParamField}
           workbench={workbench}
           onClose={actionInput.close}
