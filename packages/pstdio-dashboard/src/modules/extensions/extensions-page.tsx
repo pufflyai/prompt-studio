@@ -38,7 +38,14 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
       const extension = installed ?? available;
       return extension ? { ...resource, label: extension.displayName } : resource;
     },
-    subscribe: (listener) => getDashboardQueryClient().getQueryCache().subscribe(listener),
+    subscribe: (listener) =>
+      getDashboardQueryClient()
+        .getQueryCache()
+        .subscribe((event) => {
+          // Creating and observing queries happens during render; only changed extension data can rename a resource.
+          if (event.type !== "updated" && event.type !== "removed") return;
+          if (event.query.queryKey[0] === projectExtensionsQueryKey(undefined)[0]) listener();
+        }),
   });
   ctx.views.registerView({
     id: dashboardWidgetIds.extensions,
