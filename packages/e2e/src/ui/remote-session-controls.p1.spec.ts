@@ -206,7 +206,8 @@ test("remote workspace files and diff open on their owner; offline history stays
   ).toBeVisible();
   await expect(page.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
   await page.goto(`${fixture.origin}/projects/${fixture.projectId}/sessions/compose`);
-  await page.getByRole("button", { name: "This device", exact: true }).click();
+  // An empty local device value uses the native selection placeholder.
+  await page.locator('[data-workbench-panel="main"]').getByRole("button", { name: "Select", exact: true }).click();
   await page.getByRole("menuitemradio", { name: "Laptop", exact: true }).click();
   const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
   await editor.fill("New session on Laptop");
