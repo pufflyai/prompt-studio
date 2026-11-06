@@ -117,6 +117,8 @@ stop controls through the host relay, and unavailable remote history is read onl
 Do not infer ownership by comparing an absent account device ID. Queue snapshots
 may independently be read only without disabling question replies or other controls;
 set `queueReadOnly: true` and offer a refresh operation while recovering them.
+During a running response, the composer keeps typed text and Stop available instead
+of offering another queue submission; pending question and decision replies stay usable.
 Remote queues support editing, reordering, combining and removal, but exclude live
 steering: display “Live steering is unavailable on another device.”
 `ctx.sessions.create({ deviceId, ... })` targets an account device; omission targets
