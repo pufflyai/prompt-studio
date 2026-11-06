@@ -145,7 +145,7 @@ test("remote workspace files and diff open on their owner; offline history stays
   });
   expect(queuedResponse.ok()).toBe(true);
   await page.getByRole("tab", { name: "Changes", exact: true }).click();
-  await expect(page.getByTestId("diff-viewer")).toBeVisible();
+  await expect(page.getByTestId("diff-viewer").filter({ visible: true }).first()).toBeVisible();
   await expect(
     page.getByText("Target-owned changed content.", { exact: false }).filter({ visible: true }).first(),
   ).toBeVisible();
