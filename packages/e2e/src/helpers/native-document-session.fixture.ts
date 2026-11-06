@@ -7,6 +7,59 @@ import { createApp } from "pstdio-api/app";
 import { createNativeSourceKey } from "pstdio-api-contracts";
 import * as Y from "yjs";
 
+type DelayedSubscription = { id: string; release: Promise<void> };
+
+// Delay one logical watch while other editors keep receiving the shared socket.
+const delaySubscriptionFrames = (
+  body: ReadableStream<Uint8Array>,
+  getGate: () => DelayedSubscription | undefined,
+  released: (gate: DelayedSubscription) => void,
+) => {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  const delayed = new Map<Promise<void>, string[]>();
+  let pending = "";
+  let active = true;
+  const deliver = (frame: string, controller: TransformStreamDefaultController<Uint8Array>) => {
+    const data = frame.split("\n").find((line) => line.startsWith("data: "));
+    const subscriptionId = data ? JSON.parse(data.slice(6)).subscription_id : undefined;
+    const gate = getGate();
+    if (!gate || subscriptionId !== gate.id) {
+      controller.enqueue(encoder.encode(frame));
+      return;
+    }
+    let frames = delayed.get(gate.release);
+    if (!frames) {
+      frames = [];
+      delayed.set(gate.release, frames);
+      void gate.release.then(() => {
+        released(gate);
+        if (active) for (const frame of delayed.get(gate.release) ?? []) controller.enqueue(encoder.encode(frame));
+        delayed.delete(gate.release);
+      });
+    }
+    frames.push(frame);
+  };
+  return {
+    close: () => {
+      active = false;
+    },
+    body: body.pipeThrough(
+      new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, controller) {
+          pending += decoder.decode(chunk, { stream: true });
+          let end = pending.indexOf("\n\n");
+          while (end !== -1) {
+            deliver(pending.slice(0, end + 2), controller);
+            pending = pending.slice(end + 2);
+            end = pending.indexOf("\n\n");
+          }
+        },
+      }),
+    ),
+  };
+};
+
 export const createNativeDocumentSessionFixture = async () => {
   const root = await mkdtemp(join(tmpdir(), "native-editor-session-"));
   const previousHome = process.env.PSTDIO_HOME;
@@ -63,26 +116,41 @@ export const createNativeDocumentSessionFixture = async () => {
         release: ReturnType<typeof Promise.withResolvers<void>>;
       }
     | undefined;
+  let delayedSubscription: DelayedSubscription | undefined;
   const fetcher = (async (url, init) => {
     if (offline) throw new Error("Test network is offline");
-    const response = await handle.app.fetch(new Request(String(url), init));
     const path = new URL(String(url)).pathname;
+    const admission = path.endsWith("/subscriptions") && init?.method === "POST";
+    const streamGate = admission && pause?.operation === "stream" ? pause : undefined;
+    if (streamGate) {
+      const input = JSON.parse(String(init?.body)) as { subscription_id: string };
+      delayedSubscription = { id: input.subscription_id, release: streamGate.release.promise };
+    }
+    const response = await handle.app.fetch(new Request(String(url), init));
     let operation: "updates" | "open" | "stream" | undefined;
-    if (path.endsWith("/stream")) operation = "stream";
+    if (admission) operation = "stream";
     else if (path.endsWith("/updates")) operation = "updates";
     else if (path.endsWith("/native-documents")) operation = "open";
-    if (pause && (init?.method === "POST" || operation === "stream") && pause.operation === operation) {
+    if (pause && init?.method === "POST" && pause.operation === operation) {
       const gate = pause;
       pause = undefined;
       gate.entered.resolve();
       await gate.release.promise;
     }
-    if (String(url).includes("/stream?") && response.body) {
-      const reader = response.body.getReader();
+    if (response.headers.get("content-type")?.includes("text/event-stream") && response.body) {
+      const frames = delaySubscriptionFrames(
+        response.body,
+        () => delayedSubscription,
+        (gate) => {
+          if (delayedSubscription === gate) delayedSubscription = undefined;
+        },
+      );
+      const reader = frames.body.getReader();
       let disconnect = () => {};
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
           disconnect = () => {
+            frames.close();
             controller.error(new Error("Test network disconnected"));
             void reader.cancel().catch(() => {});
           };
@@ -92,15 +160,18 @@ export const createNativeDocumentSessionFixture = async () => {
           try {
             const next = await reader.read();
             if (next.done) {
+              frames.close();
               disconnects.delete(disconnect);
               controller.close();
             } else controller.enqueue(next.value);
           } catch (error) {
+            frames.close();
             disconnects.delete(disconnect);
             controller.error(error);
           }
         },
         async cancel() {
+          frames.close();
           disconnects.delete(disconnect);
           await reader.cancel().catch(() => {});
         },
