@@ -198,12 +198,24 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       const preferences = readShortcutPreferences(deps.preferences?.());
       const registered = store.getState().keybindings;
       const actionKey = action ? getNavigationTargetKey(action) : undefined;
-      const matchesAction = (binding: RegisteredKeybinding) =>
-        actionKey === undefined || getNavigationTargetKey(binding.action) === actionKey;
+      const matchesAction = (binding: RegisteredKeybinding) => {
+        if (!action) return true;
+        if (binding.action.kind !== action.kind) return false;
+        // Direct hints normally request one command. Unrelated command arguments
+        // cannot affect that hint and need no recursive canonical serialization.
+        if (
+          action.kind === "command" &&
+          binding.action.kind === "command" &&
+          action.commandId !== binding.action.commandId
+        )
+          return false;
+        return getNavigationTargetKey(binding.action) === actionKey;
+      };
       const bindings = registered.filter(matchesAction).sort(byContributionPriority);
-      const declared = new Set(registered.map(getId));
+      const overrides = Object.entries(preferences.overrides);
+      const declared = overrides.length ? new Set(registered.map(getId)) : new Set<string>();
       const assigned = new Set(
-        Object.entries(preferences.overrides)
+        overrides
           .filter(
             ([id, value]) =>
               !declared.has(id) &&
