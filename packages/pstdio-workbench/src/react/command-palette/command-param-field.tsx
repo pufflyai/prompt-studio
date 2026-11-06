@@ -5,6 +5,13 @@ import type { WorkbenchCommandExecutionContext } from "../../core";
 export { CommandParamField } from "@pstdio/ui/command-form";
 
 export interface CommandParamFieldProps extends FormFieldProps {
+  /** Host constraints for a native harness control. */
+  harness?: {
+    presentation?: "chat";
+    lockIdentity?: boolean;
+    preserveSettings?: boolean;
+    settingsMode?: "overrides" | "resolved";
+  };
   context?: WorkbenchCommandExecutionContext;
 }
 

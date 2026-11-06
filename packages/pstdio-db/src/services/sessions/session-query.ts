@@ -48,6 +48,7 @@ const queryConditions = (db: DbClient, projectId: string, input: ExtensionSessio
     conditions.push(statusCondition(input.status));
   }
   if (input.agent) conditions.push(eq(sessions.agent, input.agent));
+  if (input.search) conditions.push(sql`position(lower(${input.search}) in lower(${sessions.title})) > 0`);
   if (input.createdFrom) conditions.push(gte(sessions.created_at, new Date(input.createdFrom).toISOString()));
   if (input.createdTo) conditions.push(lte(sessions.created_at, new Date(input.createdTo).toISOString()));
   if (input.updatedFrom) conditions.push(gte(sessions.updated_at, new Date(input.updatedFrom).toISOString()));

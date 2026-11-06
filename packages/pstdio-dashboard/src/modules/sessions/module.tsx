@@ -37,7 +37,7 @@ const registerSessionView = (ctx: WorkbenchModuleContext, drafts?: DashboardSess
     {
       id: dashboardWidgetIds.session,
       title: "Session",
-      icon: "message-circle",
+      icon: "messages-circle",
       body: {
         kind: "react",
         render: (input) => (
@@ -131,11 +131,11 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       ctx.resources.registerKind({
         kind: "session",
         label: "Session",
-        icon: "MessageCircle",
+        icon: "messages-circle",
         resolve: (resource) => findDashboardSession(resource.id)?.resource,
         subscribe: subscribeSessionListData,
       });
-      ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "message-circle" });
+      ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "messages-circle" });
       ctx.registerChildModule(createSessionBubbleModule({ sessionDraftPersistence: input.sessionDraftPersistence }));
       registerSessionView(ctx, input.sessionDraftPersistence);
       registerSessionPages(ctx);

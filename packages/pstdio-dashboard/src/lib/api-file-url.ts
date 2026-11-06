@@ -35,28 +35,35 @@ export const useApiFileUrl = (url: string) => {
   return apiFile ? data : url;
 };
 
-const apiFileUrlsIn = (messages: SessionMessage[]) => [
+const apiFileUrlsIn = (messages: SessionMessage[], allowed: (url: string) => boolean) => [
   ...new Set(
     messages.flatMap((message) =>
-      message.parts.flatMap((part) => (part.type === "file" && isApiFilePath(part.url) ? [part.url] : [])),
+      message.parts.flatMap((part) =>
+        part.type === "file" && isApiFilePath(part.url) && allowed(part.url) ? [part.url] : [],
+      ),
     ),
   ),
 ];
 
 /** Resolves API file parts to blob URLs, so the chat can show and open them. */
-export const useApiFileParts = (messages: SessionMessage[]) => {
-  const urls = apiFileUrlsIn(messages);
-  const resolved = useQueries({
-    queries: urls.map(apiFileUrlQuery),
-    combine: (results) => results.map((result) => result.data),
-  });
+export const useApiFileParts = (messages: SessionMessage[], allowed: (url: string) => boolean = () => true) => {
+  const urls = apiFileUrlsIn(messages, allowed);
+  const blobUrls = useApiFileUrls(urls);
   if (urls.length === 0) return messages;
 
-  const blobUrls = new Map(urls.map((url, index) => [url, resolved[index] ?? ""]));
   return messages.map((message) => ({
     ...message,
     parts: message.parts.map((part) =>
       part.type === "file" && blobUrls.has(part.url) ? { ...part, url: blobUrls.get(part.url) ?? "" } : part,
     ),
   }));
+};
+
+/** Resolve an already scoped set of API file URLs with the existing authenticated cache. */
+export const useApiFileUrls = (urls: string[]) => {
+  const resolved = useQueries({
+    queries: urls.map(apiFileUrlQuery),
+    combine: (results) => results.map((result) => result.data),
+  });
+  return new Map(urls.map((url, index) => [url, resolved[index] ?? ""]));
 };

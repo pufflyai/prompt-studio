@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { dockedWorkbenchRegions, extensionPanelRegions } from "../extension-kernel/types/composition";
+import { chatRendererSnapshotSchema } from "./chat-renderer";
 import {
   extensionCommandPaletteContributionSchema,
   extensionCommandRecordSchema,
@@ -106,6 +107,23 @@ const dataTableBodySchema = extensionDataTableRendererRecordSchema
   });
 
 export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("chat"),
+    draftKey: z.string().min(1),
+    legacySessionDraft: z.boolean().optional(),
+    initial: chatRendererSnapshotSchema.optional(),
+    queryHandlerId: z.string(),
+    actionHandlerId: z.string(),
+    loadDraftHandlerId: z.string().optional(),
+    saveDraftHandlerId: z.string().optional(),
+    resolveLinkHandlerId: z.string().optional(),
+    resolveImageHandlerId: z.string().optional(),
+    stream: commandRefSchema.optional(),
+    refreshEventIds: z.array(z.string()).optional(),
+    resourceKind: z.string().optional(),
+    emptyTitle: localizableStringSchema.optional(),
+    emptyDescription: localizableStringSchema.optional(),
+  }),
   webviewBodySchema,
   treeBodySchema,
   fileBodySchema,

@@ -1,3 +1,4 @@
+import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
 import type { ExtensionHarnessInput } from "./sessions";
 
@@ -5,6 +6,12 @@ export type HarnessControlValue = Pick<ExtensionHarnessInput, keyof ExtensionHar
 /** The host supplies the same harness, model and option picker used by command forms. */
 export interface HarnessControl extends BaseControl {
   type: "harness";
+  /** Lock only harness identity, keeping models and parameters editable. */
+  lockIdentity?: boolean;
+  /** Keep saved request model/params even when discovery no longer advertises them. */
+  preserveSettings?: boolean;
+  /** Emit resolved defaults on edits for services that merge persisted settings. Defaults to overrides only. */
+  settingsMode?: "overrides" | "resolved";
   defaultValue: HarnessControlValue;
 }
 
@@ -253,5 +260,20 @@ export interface ControlGroup {
   defaultCollapsed?: boolean;
 }
 
-export type ControlValue = number | string | boolean | null | string[] | RangeValue | VectorValue | HarnessControlValue;
+/** Provider-owned workspace creation inputs. Existing workspace selections remain string IDs. */
+export type WorkspaceControlValue = {
+  providerId: string;
+  params?: JsonObject;
+};
+
+export type ControlValue =
+  | number
+  | string
+  | boolean
+  | null
+  | string[]
+  | RangeValue
+  | VectorValue
+  | HarnessControlValue
+  | WorkspaceControlValue;
 export type ControlValueMap = Record<string, ControlValue>;

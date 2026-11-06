@@ -54,7 +54,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
     const workspace = resolveSessionTabWorkspace(ctx, instance);
     return {
       label: selected?.title ?? instance.resource?.label ?? "New session",
-      icon: "message-circle",
+      icon: "messages-circle",
       indicator: createSessionIndicator(status),
       menu: [
         {
@@ -64,7 +64,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
             {
               id: "new-session",
               label: "New session",
-              icon: "MessageSquarePlus",
+              icon: "messages-circle",
               action: {
                 kind: "command",
                 commandId: dashboardCommandIds.createSession,

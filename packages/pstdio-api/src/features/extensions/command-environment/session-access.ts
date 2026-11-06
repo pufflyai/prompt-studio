@@ -25,5 +25,14 @@ export const createSessionAccess = (deps: ExtensionsRouteDeps, input: SessionApi
     if (!session) throw new Error(`Session not found: ${id}`);
     return session;
   };
-  return { read, getProjectSession, requireProjectSession, requireReadableSession };
+  const requireProjectWorkspace = async (id: string) => {
+    const byId = await read(() => deps.workspaceService.get(id));
+    const workspace =
+      byId?.project_id === input.projectId
+        ? byId
+        : await read(() => deps.workspaceService.getByShorthand(input.projectId, id));
+    if (!workspace || workspace.project_id !== input.projectId) throw new Error(`Workspace not found: ${id}`);
+    return workspace;
+  };
+  return { read, getProjectSession, requireProjectSession, requireReadableSession, requireProjectWorkspace };
 };

@@ -61,6 +61,9 @@ export const SelectionInput = (props: SelectionInputProps) => {
     size = "sm",
   } = props;
   const [value, setValue] = useState(defaultValue);
+  // An async option count must not replace an open root and its focused search.
+  // Adopt the current presentation on the next opening; choices keep refreshing.
+  const [menuState, setMenuState] = useState({ open: false, searchable });
   const [groupValue, setGroupValue] = useState(group?.defaultValue ?? "");
 
   useEffect(() => {
@@ -151,7 +154,9 @@ export const SelectionInput = (props: SelectionInputProps) => {
       multiSelect={multiSelect}
       reselectable={clearable}
       disabled={disabled}
-      searchable={searchable}
+      open={menuState.open}
+      onOpenChange={({ open }) => setMenuState({ open, searchable })}
+      searchable={menuState.open ? menuState.searchable : searchable}
       searchPlaceholder={searchPlaceholder}
       emptyText={emptyText}
       group={group ? { ...group, defaultValue: groupValue } : undefined}

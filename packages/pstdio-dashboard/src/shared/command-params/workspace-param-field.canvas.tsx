@@ -1,13 +1,25 @@
-import { Dialog, Stack, Text } from "@chakra-ui/react";
+import { Button, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
+import {
+  ChatDeviceMenu,
+  ChatInput,
+  ChatWorkspaceHub,
+  ChatWorkspaceMenu,
+  createSerializedPromptState,
+} from "@pstdio/ui/chat-ui";
+import { HarnessModelMenu } from "@pstdio/ui/param-editor";
 import { createWorkbench } from "@pstdio/workbench";
-import type { CommandParamEntry, CommandParamValue } from "@pstdio/workbench/react";
+import { type CommandParamEntry, type CommandParamValue, normalizeCommandParamValues } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { ExtensionIcon } from "@/shared/components/extension-icon";
+import { WorkspaceProviderFields } from "@/shared/workspaces/workspace-provider-fields";
+import { workspaceProviderParamSchema } from "@/shared/workspaces/workspace-provider-param-schema";
 import { workspaceProvidersQueryKey } from "@/shared/workspaces/workspace-providers";
 import { WorkspaceParamField } from "./workspace-param-field";
+import { defaultWorkspaceValues } from "./workspace-param-values";
 
 const projectId = "project-1";
 const workbench = createWorkbench();
@@ -103,4 +115,86 @@ export const GitWorktreeOnly: Story = {
 export const NoMatchingType: Story = {
   id: "commandparams-workspaceparamfield--no-matching-type",
   args: { providerIds: ["acme.missing"] },
+};
+
+const CustomHarnessIcon = () => (
+  <ExtensionIcon name="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTYgMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTIgMmwxMiA2LTEyIDZ6IiBmaWxsPSJjdXJyZW50Q29sb3IiLz48L3N2Zz4=" />
+);
+// Synthetic state only: creation does not touch a project or provider from Canvas.
+export const ComposerWorkspace = () => {
+  const [workspace, setWorkspace] = useState({
+    providerId: providers[0].id,
+    params: defaultWorkspaceValues(providers[0]),
+  });
+  const provider = providers.find((provider) => provider.id === workspace.providerId)!;
+  let invalid = false;
+  try {
+    normalizeCommandParamValues(workspaceProviderParamSchema(provider), workspace.params);
+  } catch {
+    invalid = true;
+  }
+  const [created, setCreated] = useState(false);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Stack gap="0">
+        <ChatWorkspaceHub
+          additions={0}
+          deletions={0}
+          workspaceControl={
+            <HStack gap="2xs">
+              <ChatDeviceMenu devices={[{ id: "", name: "This device", current: true }]} selectedDeviceId="" />
+              <ChatWorkspaceMenu
+                workspaces={created ? [{ id: "created", title: "New workspace" }] : []}
+                selectedWorkspaceId={created ? "created" : ""}
+                selectedWorkspaceLabel={created ? "New workspace" : "Create workspace"}
+                onSelectWorkspace={() => {}}
+                isDisabled={created}
+                onOpenWorkspace={created ? () => {} : undefined}
+                createItem={!created ? { id: "create", label: "New workspace", onSelect: () => {} } : undefined}
+              />
+            </HStack>
+          }
+          options={
+            !created && (
+              <Stack gap="xs">
+                <WorkspaceProviderFields
+                  typeLabel="Workspace type"
+                  providers={providers}
+                  provider={provider}
+                  values={workspace.params}
+                  disabled={false}
+                  optionStates={{}}
+                  onRetryOptions={() => {}}
+                  onProviderChange={(providerId) => {
+                    const next = providers.find((provider) => provider.id === providerId)!;
+                    setWorkspace({ providerId, params: defaultWorkspaceValues(next) });
+                  }}
+                  onValueChange={(key, value) =>
+                    setWorkspace((current) => ({ ...current, params: { ...current.params, [key]: value } }))
+                  }
+                />
+                <Button size="xs" disabled={invalid} onClick={() => setCreated(true)}>
+                  Create workspace
+                </Button>
+              </Stack>
+            )
+          }
+        />
+        <ChatInput
+          defaultState={createSerializedPromptState("Keep this draft")}
+          actions={
+            <HarnessModelMenu
+              agentOptions={[{ value: "custom", label: "External harness", icon: CustomHarnessIcon }]}
+              selectedAgent="custom"
+              onSelectAgent={() => {}}
+              modelOptions={[{ value: "model", label: "Saved model" }]}
+              selectedModel="model"
+              onSelectModel={() => {}}
+              size="xs"
+            />
+          }
+        />
+      </Stack>
+    </QueryClientProvider>
+  );
 };
