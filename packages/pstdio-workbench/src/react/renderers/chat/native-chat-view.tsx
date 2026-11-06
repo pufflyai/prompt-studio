@@ -141,6 +141,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
             accountBlocksSubmission(host.account, draft.text)
           }
           readOnlyQueue={conversation.readOnly || conversation.queueReadOnly}
+          queueSteeringUnavailableReason={conversation.queueSteeringUnavailableReason}
           onSubmitMessage={nativeChatInputHandler({
             account: host.account,
             session,

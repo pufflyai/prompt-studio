@@ -81,6 +81,8 @@ export const chatRendererSnapshotSchema = z.strictObject({
   readOnly: z.boolean().optional(),
   /** Disable queue edits independently while other execution controls remain usable. */
   queueReadOnly: z.boolean().optional(),
+  /** Conversation-level steering capability; null restores it without clearing per-request restrictions. */
+  queueSteeringUnavailableReason: z.string().nullable().optional(),
   submitDisabled: z.boolean().optional(),
   notice: z.string().optional(),
   /** Use the host's scoped workspace link/image resolver. */

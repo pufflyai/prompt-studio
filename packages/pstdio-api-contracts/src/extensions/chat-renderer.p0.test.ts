@@ -3,6 +3,17 @@ import type { ChatRendererContribution } from "../extension-kernel/types/chat-re
 import { chatRendererEventSchema, chatRendererSnapshotSchema } from "./chat-renderer";
 import { type WorkbenchExtensionViewBody, workbenchExtensionViewRecordSchema } from "./workbench-metadata";
 
+test("queue steering capability can be restored independently of individual requests", () => {
+  const blocked = chatRendererSnapshotSchema.parse({ queueSteeringUnavailableReason: "Harness cannot steer" });
+  expect(blocked.queueSteeringUnavailableReason).toBe("Harness cannot steer");
+  const restored = chatRendererSnapshotSchema.parse({
+    queueSteeringUnavailableReason: null,
+    queuedFollowUps: [{ id: "q", prompt: "Next", steeringUnavailableReason: "Delivery pending" }],
+  });
+  expect(restored.queueSteeringUnavailableReason).toBeNull();
+  expect(restored.queuedFollowUps?.[0]?.steeringUnavailableReason).toBe("Delivery pending");
+});
+
 test("side-effect-only action handlers need no return value", async () => {
   const perform = async () => {};
   const onAction: ChatRendererContribution["onAction"] = perform;

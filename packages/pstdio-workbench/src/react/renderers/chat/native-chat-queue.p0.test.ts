@@ -4,6 +4,24 @@ import { createChatSession } from "../../../extensions/contributions/chat-sessio
 import { runNativeChatAction } from "./native-chat-action";
 import { queuedChatDraft } from "./native-chat-queue";
 
+test("a live steering capability refresh clears a prior block but preserves per-request restrictions", () => {
+  const session = createChatSession({
+    initial: { queueSteeringUnavailableReason: "Harness cannot steer" },
+    query: async () => ({}),
+    action: async () => undefined,
+  });
+  expect(session.getSnapshot().conversation.queueSteeringUnavailableReason).toBe("Harness cannot steer");
+  session.accept({
+    revision: 1,
+    snapshot: {
+      queueSteeringUnavailableReason: null,
+      queuedFollowUps: [{ id: "q", prompt: "Next", steeringUnavailableReason: "Delivery pending" }],
+    },
+  });
+  expect(session.getSnapshot().conversation.queueSteeringUnavailableReason).toBeNull();
+  expect(session.getSnapshot().queuedFollowUps[0]?.steeringUnavailableReason).toBe("Delivery pending");
+});
+
 test("queued control echoes update presentation without replacing query-derived base settings", async () => {
   const base = { provider: { harnessId: "test.agent", model: "A", params: { thinking: "A" } } };
   const queued = { provider: { harnessId: "test.agent", model: "B", params: { thinking: "low" } } };
