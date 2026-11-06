@@ -136,6 +136,20 @@ newer typing. Recovery merges a different provider draft using the existing
 `recovered` behavior. This journal contains unsent drafts, not transcripts or
 execution state; closing a view does not discard an unacknowledged edit.
 
+Backend providers can apply canonical `/messages` patches with
+`applySessionMessagePatch` from `@pstdio/sdk/extensions`, without installing the UI
+package. The existing `@pstdio/ui/chat-ui` export delegates to that same reducer.
+It preserves presentation identity across prompt ID confirmation and reordering,
+including explicit provider animation keys. It does not create a second transcript
+or validate incoming service payloads.
+
+When an extension opens a Core session, qualify its resource as
+`{ type: "session", extensionId: "pstdio", projectId: ctx.projectId, id }`, including
+when using the deprecated Core panel placement. The bridge qualifies an authored
+bare `{ type: "session", id }` to the authoring extension; it does not imply Core
+ownership. Native Sessions validates that identity. Existing consumers that relied
+on the legacy viewer ignoring owner identity must migrate their references.
+
 Use `ctx.sessions.getExecutionState` for availability: local sessions work while
 signed out, online remote owners retain follow-up, question, approval, queue and
 stop controls through the host relay, and unavailable remote history is read only.
