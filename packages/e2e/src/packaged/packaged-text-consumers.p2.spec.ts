@@ -52,13 +52,13 @@ const test = base.extend<{ resources: Resources }>({
       await settle([...resources.connections].map((connection) => connection.disconnect()));
       console.info("Text consumer cleanup: transports drained");
     } finally {
-      console.info("Text consumer cleanup: stop browser and host");
+      // Browser placements still own text connections. Let them detach while their
+      // host can finish close requests, before stopping the runtime transport.
+      console.info("Text consumer cleanup: stop browser");
+      await settle([resources.browser?.close() ?? Promise.resolve()]);
+      console.info("Text consumer cleanup: browser stopped; stop host");
       pending?.finish();
-      await settle([
-        stopPendingTestProcesses(),
-        resources.browser?.close() ?? Promise.resolve(),
-        resources.child ? stopProcess(resources.child) : Promise.resolve(),
-      ]);
+      await settle([stopPendingTestProcesses(), resources.child ? stopProcess(resources.child) : Promise.resolve()]);
       rmSync(resources.root, { recursive: true, force: true });
     }
     if (failures.length)

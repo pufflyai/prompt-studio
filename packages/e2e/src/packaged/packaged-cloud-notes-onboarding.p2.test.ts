@@ -22,6 +22,44 @@ const signIn = async (client: ReturnType<typeof createClient>, origin: string) =
   expect((await fetch(callback)).ok).toBe(true);
 };
 
+const startDevices = async (
+  homes: [string, string],
+  env: Record<string, string>,
+  retain: (host: Awaited<ReturnType<typeof startPackagedServe>>, index: number) => void,
+) => {
+  const hosts = await Promise.allSettled(homes.map((home) => startPackagedServe(home, env)));
+  hosts.forEach((host, index) => {
+    if (host.status === "fulfilled") retain(host.value, index);
+  });
+  const errors = hosts.flatMap((host) => (host.status === "rejected" ? [host.reason] : []));
+  if (errors.length) throw new AggregateError(errors, "Cloud Notes runtimes failed to start");
+};
+
+const createCertificate = (root: string) => {
+  const key = join(root, "key.pem"),
+    cert = join(root, "cert.pem");
+  const openssl = Bun.spawnSync([
+    "openssl",
+    "req",
+    "-x509",
+    "-newkey",
+    "rsa:2048",
+    "-nodes",
+    "-keyout",
+    key,
+    "-out",
+    cert,
+    "-days",
+    "1",
+    "-subj",
+    "/CN=localhost",
+    "-addext",
+    "subjectAltName=IP:127.0.0.1,DNS:localhost",
+  ]);
+  expect(openssl.exitCode).toBe(0);
+  return { key, cert };
+};
+
 setupPackagedSmokeTests();
 // Critical risk: another device's ready workspace can leave Notes without local files or its creation control.
 test(
@@ -44,27 +82,7 @@ test(
       completeInitialSetup = resolve;
     });
     try {
-      const key = join(root, "key.pem"),
-        cert = join(root, "cert.pem");
-      const openssl = Bun.spawnSync([
-        "openssl",
-        "req",
-        "-x509",
-        "-newkey",
-        "rsa:2048",
-        "-nodes",
-        "-keyout",
-        key,
-        "-out",
-        cert,
-        "-days",
-        "1",
-        "-subj",
-        "/CN=localhost",
-        "-addext",
-        "subjectAltName=IP:127.0.0.1,DNS:localhost",
-      ]);
-      expect(openssl.exitCode).toBe(0);
+      const { key, cert } = createCertificate(root);
       const peer = createPackagedSyncPeer({ key: Bun.file(key), cert: Bun.file(cert) });
       peerCleanup = peer;
       const env = {
@@ -80,10 +98,12 @@ test(
       const aHome = join(root, "a");
       const bHome = join(root, "b");
       await Promise.all([mkdir(aHome), mkdir(bHome)]);
-      const first = await startPackagedServe(aHome, env);
-      firstCleanup = first;
-      const second = await startPackagedServe(bHome, env);
-      secondCleanup = second;
+      await startDevices([aHome, bHome], env, (host, index) => {
+        if (index === 0) firstCleanup = host;
+        else secondCleanup = host;
+      });
+      const first = firstCleanup!;
+      const second = secondCleanup!;
       const a = createClient({ baseUrl: first.baseUrl, token: first.descriptor.token });
       const b = createClient({ baseUrl: second.baseUrl, token: second.descriptor.token });
       phase("both runtimes ready; open browser");
@@ -93,13 +113,15 @@ test(
       const localFolder = join(root, "local");
       await Promise.all([mkdir(sourceFolder), mkdir(localFolder)]);
       const project = await a.projects.create(folderProjectInput({ name: "Cloud notes" }, sourceFolder));
-      const seeded = await a.extensions.execute("pstdio.pstdio-notes.command.notes.create", {
-        projectId: project.id,
-        params: { title: "From device A" },
-        source: "api",
-      });
+      const [seeded] = await Promise.all([
+        a.extensions.execute("pstdio.pstdio-notes.command.notes.create", {
+          projectId: project.id,
+          params: { title: "From device A" },
+          source: "api",
+        }),
+        b.projects.create(folderProjectInput({ name: "Local project" }, localFolder)),
+      ]);
       expect(seeded.outcome.ok).toBe(true);
-      await b.projects.create(folderProjectInput({ name: "Local project" }, localFolder));
       phase("both local projects created; sign in A");
       await signIn(a, peer.origin);
       await a.account.syncProject(project.id);
