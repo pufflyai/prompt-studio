@@ -268,3 +268,5 @@ Canonical session link resolution can call `sessionBrowser.commands.resolve` wit
 `{ resources: ResourceRef[] }`. The provider returns readable, unarchived
 `ResourceResolution[]` with its qualified page target while keeping core `pstdio`
 session identity. Treat a missing provider or an omitted resource as unavailable.
+
+The native renderer bounds chat to its placement and owns transcript scrolling. Long history is virtualized inside that viewport; it does not enlarge the outer workbench region.

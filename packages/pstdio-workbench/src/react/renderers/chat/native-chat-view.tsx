@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import type { ChatAttachment, ChatQueuedRequest } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
 import { type ComponentType, useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -39,7 +40,16 @@ const accountBlocksSubmission = (account: NativeChatHostServices["account"], tex
 
 const PassthroughChatHost = ({ children }: NativeChatHostProps) => children({});
 
-export const NativeChatView = (props: NativeChatViewProps) => {
+export const NativeChatView = (props: NativeChatViewProps) => (
+  <Box position="relative" h="full" minH="0" minW="0" overflow="hidden">
+    {/* Chat owns its viewport; transcript height must not grow the outer region. */}
+    <Box position="absolute" inset="0" minH="0" minW="0" overflow="hidden">
+      <NativeChatContent {...props} />
+    </Box>
+  </Box>
+);
+
+const NativeChatContent = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
