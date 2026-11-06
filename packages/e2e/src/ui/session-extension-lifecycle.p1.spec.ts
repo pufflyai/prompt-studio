@@ -130,9 +130,13 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
         .locator("[data-workbench-tab]")
         .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workbench-tab"))),
     ).toEqual(tabs);
-    // Restore Main through client-side navigation without replacing the shared transport.
-    await page.getByRole("option", { name: "Sessions", exact: true }).click();
-    await page.getByRole("option", { name: "Retained execution", exact: true }).click();
+    // Normal navigation reuses Side. History/deep-link restoration addresses Main
+    // explicitly while retaining this document and its shared client transport.
+    await page.evaluate((url) => {
+      history.pushState(null, "", url);
+      dispatchEvent(new PopStateEvent("popstate"));
+    }, target);
+    await expect(page).toHaveURL(new URL(target, page.url()).href);
     await expect(editor).toContainText("Unsent work survives provider disablement");
     await expect(main.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
     await expect.poll(() => watches.length).toBe(2);
