@@ -38,12 +38,12 @@ export const expectPackagedSessionsInstall = async (input: {
   );
   const installed = realpathSync(join(projectFolder, ".pstdio/extensions/pstdio-session-browser"));
   expect(installed).toBe(resolve(realpathSync(projectFolder), ".pstdio/extensions/pstdio-session-browser"));
-  for (const name of ["sdk", "ui"]) {
-    const dependency = realpathSync(join(installed, "node_modules/@pstdio", name));
-    const localPath = relative(join(installed, "node_modules"), dependency);
-    expect(localPath.startsWith("..")).toBe(false);
-    console.log(`Installed @pstdio/${name}: ${dependency}`);
-  }
+  const dependency = realpathSync(join(installed, "node_modules/@pstdio/sdk"));
+  const localPath = relative(join(installed, "node_modules"), dependency);
+  expect(localPath.startsWith("..")).toBe(false);
+  console.log(`Installed @pstdio/sdk: ${dependency}`);
+  // The backend provider uses the pure SDK reducer; UI is independently qualified by public consumers.
+  expect(existsSync(join(installed, "node_modules/@pstdio/ui"))).toBe(false);
   // The final installed source/dependencies must work after authoring source becomes unavailable.
   renameSync(source, `${source}.unavailable`);
   expect(existsSync(source)).toBe(false);
