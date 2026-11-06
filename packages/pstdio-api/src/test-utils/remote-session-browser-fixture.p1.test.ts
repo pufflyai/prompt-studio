@@ -19,22 +19,24 @@ const startFixture = () => {
   );
   let output = "";
   let root: string | undefined;
-  const ready = new Promise<{ origin: string; root: string }>((resolve, reject) => {
-    child.stdout.on("data", (chunk) => {
-      output += chunk.toString();
-      const line = output.split("\n").find((line) => line.startsWith("REMOTE_SESSION_FIXTURE "));
-      if (line) {
-        const fixture = JSON.parse(line.slice("REMOTE_SESSION_FIXTURE ".length));
-        root = fixture.root;
-        resolve(fixture);
-      }
-    });
-    child.stderr.on("data", (chunk) => {
-      output += chunk.toString();
-    });
-    child.once("error", reject);
-    child.once("exit", (code) => reject(new Error(`Fixture exited ${code}: ${output}`)));
-  });
+  const ready = new Promise<{ origin: string; root: string; projectId: string; sessionId: string }>(
+    (resolve, reject) => {
+      child.stdout.on("data", (chunk) => {
+        output += chunk.toString();
+        const line = output.split("\n").find((line) => line.startsWith("REMOTE_SESSION_FIXTURE "));
+        if (line) {
+          const fixture = JSON.parse(line.slice("REMOTE_SESSION_FIXTURE ".length));
+          root = fixture.root;
+          resolve(fixture);
+        }
+      });
+      child.stderr.on("data", (chunk) => {
+        output += chunk.toString();
+      });
+      child.once("error", reject);
+      child.once("exit", (code) => reject(new Error(`Fixture exited ${code}: ${output}`)));
+    },
+  );
   return {
     ready,
     output: () => output,
@@ -101,6 +103,26 @@ test("remote browser cleanup attempts later resources and reports a failed app c
     expect(output).toContain('"event":"fixture.remote_session.cleanup_failed"');
     expect(output).toContain("Injected source close failure");
     expect(existsSync(root)).toBe(false);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("browser queue failure injection crosses the owner relay and recovers its saved checkpoint", async () => {
+  const fixture = startFixture();
+  try {
+    const { origin, projectId, sessionId } = await fixture.ready;
+    expect((await fixtureAction(origin, "queue-unavailable")).ok).toBe(true);
+    const url = `${origin}/v1/sessions/${sessionId}/queued-messages?projectId=${projectId}`;
+    for (let read = 0; read < 2; read++) {
+      const response = await fetch(url);
+      expect(response.ok).toBe(true);
+      expect((await response.json()).queue.readOnly).toBe(true);
+    }
+    expect((await (await fetch(`${origin}/fixture/state`)).json()).failedQueueReads).toBeGreaterThanOrEqual(2);
+    expect((await fixtureAction(origin, "queue-available")).ok).toBe(true);
+    expect((await (await fetch(url)).json()).queue.readOnly).not.toBe(true);
+    expect(await fixture.stop()).toEqual([0, null]);
   } finally {
     await fixture.cleanup();
   }

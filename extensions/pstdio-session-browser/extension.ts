@@ -16,6 +16,7 @@ import {
 import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
 import { browse, browseChildren, search } from "./src/browse";
+import { connectionRefresh } from "./src/controls";
 import { readDraft, saveDraft } from "./src/drafts";
 import { acknowledgeNativeInputs } from "./src/native-recovery";
 import { nativeSubmissionIndex } from "./src/native-submission";
@@ -49,6 +50,7 @@ const conversation = defineView({
     initial: {
       messages: [],
       nativeLinks: true,
+      operations: [connectionRefresh],
       nativeHarnessAccount: { controlId: "harness" },
       controls: composerControls,
       values: { harness: { harnessId: "" } },

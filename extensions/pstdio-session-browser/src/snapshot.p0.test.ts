@@ -125,7 +125,11 @@ test("unavailable remote queue leaves online execution usable with a refresh ope
     throw new Error("Queue connection interrupted");
   };
   const snapshot = await readSnapshot(ctx, { type: "session", id: "s", extensionId: "pstdio" });
-  expect(snapshot).toMatchObject({ readOnly: false, queueReadOnly: true, operations: [{ id: "refresh-queue" }] });
+  expect(snapshot).toMatchObject({
+    readOnly: false,
+    queueReadOnly: true,
+    operations: [{ id: "connection", refresh: true }, { id: "refresh-queue" }],
+  });
   expect(snapshot.messages).toEqual([]);
   expect(snapshot.queuedFollowUps).toBeUndefined();
 });
@@ -169,4 +173,15 @@ test("native failure and clearing preserve queue and offline device feedback", a
       remote ? "Laptop is offline. Reconnect it before sending." : "Queue is recovering",
     );
   }
+});
+
+test("offline remote history exposes safe host refresh and hides unavailable workspace execution", async () => {
+  const ctx = fixture(true, false);
+  const get = ctx.sessions.get;
+  ctx.sessions.get = async (id) => ({ ...(await get(id))!, workspaceId: "remote-workspace" });
+  const snapshot = await readSnapshot(ctx, { type: "session", id: "s" });
+  expect(snapshot.readOnly).toBe(true);
+  expect(snapshot.operations).toContainEqual({ id: "connection", label: "Check connection", refresh: true });
+  expect(snapshot.resources).toEqual([]);
+  expect(snapshot.workspaceId).toBe("remote-workspace");
 });

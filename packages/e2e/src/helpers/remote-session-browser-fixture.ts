@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { preparedUiSourcesPath } from "../scripts/prepare-ui-fixtures";
 
 export interface RemoteSessionBrowserFixture {
   origin: string;
@@ -13,7 +15,13 @@ export interface RemoteSessionBrowserFixture {
 
 export const startRemoteSessionBrowserFixture = () => {
   const script = join(import.meta.dirname, "../../../pstdio-api/src/test-utils/remote-session-browser.fixture.ts");
-  const child = spawn("bun", ["--conditions=source", script], {
+  const sources = JSON.parse(readFileSync(preparedUiSourcesPath(process.env.E2E_HOME!), "utf8")) as Array<{
+    installName: string;
+    source: string;
+  }>;
+  const provider = sources.find((source) => source.installName === "pstdio-session-browser");
+  if (!provider) throw new Error("Prepared production Sessions source is unavailable.");
+  const child = spawn("bun", ["--conditions=source", script, provider.source], {
     stdio: ["pipe", "pipe", "pipe"],
     env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("PSTDIO_"))),
   });

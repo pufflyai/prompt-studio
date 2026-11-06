@@ -1,5 +1,5 @@
 import type { ChatRendererSnapshot, ControlValueMap, ExtensionContextBase, ResourceRef } from "@pstdio/sdk/extensions";
-import { composerControls } from "./controls";
+import { composerControls, conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
 import { draftSnapshot } from "./draft-snapshot";
 import { readDraft } from "./drafts";
@@ -83,8 +83,8 @@ export const readSessionSnapshot = async (
       ...values,
     },
     fork: fork.supported ? { disabledReason: fork.disabledReason } : undefined,
-    resources: workspaceId ? [{ id: workspaceId, label: "Open workspace" }] : [],
-    operations: display.queueReadOnly ? [{ id: "refresh-queue", label: "Refresh queue" }] : [],
+    resources: workspaceId && execution.available ? [{ id: workspaceId, label: "Open workspace" }] : [],
+    operations: conversationOperations(remote, Boolean(display.queueReadOnly)),
   };
   const draftValues = values ?? (options.messages === false ? undefined : (await readDraft(ctx, id)).values);
   const { notice: nativeNotice, ...native } = await nativePresentation(

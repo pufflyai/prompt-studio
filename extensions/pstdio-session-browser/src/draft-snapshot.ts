@@ -1,6 +1,6 @@
 import type { ChatRendererSnapshot, ControlValueMap, ExtensionContextBase, ResourceRef } from "@pstdio/sdk/extensions";
 import { commandDraftTag, commandIntent, commandSuggestions } from "./command-intent";
-import { composerControls } from "./controls";
+import { composerControls, conversationOperations } from "./controls";
 import { readDraft } from "./drafts";
 import { selectedHarness, selectedWorkspace } from "./selection";
 
@@ -73,6 +73,7 @@ export const draftSnapshot = async (
     nativeHarnessAccount: { controlId: "harness", ...(remote ? { remote: true } : {}) },
     workspaceId: workspace || undefined,
     controls,
+    operations: conversationOperations(remote, false),
     values,
     harness: commands && commandSuggestions(commands, commandIntent(values)),
     draftTag: commandDraftTag(values, harness?.harnessId ?? "", commands),

@@ -11,6 +11,7 @@ import {
   streamOf,
 } from "@pstdio/sdk/extensions";
 import { applySessionMessagePatch } from "@pstdio/ui/chat-ui";
+import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
 import { recoverNativeInputs } from "./native-recovery";
 import { readQueue } from "./queue-snapshot";
@@ -121,7 +122,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
       await write({
         notice: data.error,
         queueReadOnly: true,
-        operations: [{ id: "refresh-queue", label: "Refresh queue" }],
+        operations: conversationOperations(remote, true),
       });
       return;
     }
@@ -129,7 +130,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     queueMessages = data.messages;
     await write({
       ...display(),
-      operations: queue?.readOnly ? [{ id: "refresh-queue", label: "Refresh queue" }] : [],
+      operations: conversationOperations(remote, Boolean(queue?.readOnly)),
     });
   };
   const connect = (run?: number) => {
