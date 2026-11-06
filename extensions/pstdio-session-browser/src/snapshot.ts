@@ -34,7 +34,12 @@ export const readSessionSnapshot = async (
   values?: ControlValueMap,
   options: SnapshotOptions = {},
 ) => {
-  const execution = await ctx.sessions.getExecutionState(id);
+  // Own every started read immediately: an availability wait may abort before the
+  // queue result is needed, and its parallel rejection must still be observed.
+  const [execution, queued] = await Promise.all([
+    ctx.sessions.getExecutionState(id),
+    options.queue ?? readQueue(ctx, id),
+  ]);
   const remote = execution.kind === "remote";
   const readConversation = async () => {
     if (!remote && options.messages !== false) return ctx.sessions.getConversation(id);
@@ -44,9 +49,8 @@ export const readSessionSnapshot = async (
     const sources = remote && options.messages !== false ? await ctx.sessions.getConversationSources(id) : undefined;
     return { session, messages: sources?.checkpoint ?? [] };
   };
-  const [{ session, messages }, queued, harness, fork] = await Promise.all([
+  const [{ session, messages }, harness, fork] = await Promise.all([
     readConversation(),
-    options.queue ?? readQueue(ctx, id),
     remote ? undefined : ctx.sessions.getHarnessCommands(id),
     remote ? { supported: false, disabledReason: null } : ctx.sessions.getForkState(id, { scope: "reply" }),
   ]);

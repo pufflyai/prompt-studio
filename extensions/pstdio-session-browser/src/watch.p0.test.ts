@@ -300,3 +300,37 @@ test("steering projection falls back for canonical acknowledgment and reorder, t
   expect(updates[5]).toMatchObject({ patch: { path: "/messages/0", value: { ...delivery, createdAt: "later" } } });
   expect(frames.map((event) => event.revision)).toEqual(frames.map((_, index) => index));
 });
+
+test("cancelling while presence and queue reads are pending owns both rejections and closes the hold", async () => {
+  const controller = new AbortController();
+  let closed = 0;
+  let reads = 0;
+  const untilAbort = () =>
+    new Promise<never>((_, reject) => {
+      reads++;
+      controller.signal.addEventListener("abort", () => reject(controller.signal.reason), { once: true });
+    });
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      signal: controller.signal,
+      sessions: {
+        retainResources: async () => ({
+          close: () => {
+            closed++;
+          },
+        }),
+        getExecutionState: untilAbort,
+        getQueuedMessages: untilAbort,
+      },
+    },
+  });
+  const watching = watchConversation(ctx, { type: "session", id: "s" }).catch((error) => error);
+  await Bun.sleep(0);
+  expect(reads).toBe(2);
+  controller.abort();
+  expect((await watching).name).toBe("AbortError");
+  await Bun.sleep(0);
+  expect(closed).toBe(1);
+});
