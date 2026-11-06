@@ -36,9 +36,9 @@ export const expectPackagedChatHistory = async (page: Page, sessionId: string) =
   logTestPhase("Packaged chat history: switch away");
 
   let historyReads = 0;
-  const route = `**/v1/sessions/${sessionId}/conversation`;
+  const route = "**/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.query/execute";
   await page.route(route, async (request) => {
-    historyReads++;
+    if (request.request().postDataJSON()?.params?.renderer?.resource?.id === sessionId) historyReads++;
     await request.continue();
   });
   try {

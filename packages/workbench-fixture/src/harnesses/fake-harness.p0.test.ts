@@ -233,3 +233,39 @@ describe("createFakeHarness", () => {
     });
   });
 });
+
+test("fixture forks copy the selected reply independently while a later turn is held", async () => {
+  const folder = mkdtempSync(join(tmpdir(), "fake-fork-"));
+  try {
+    const harness = createFakeHarness();
+    const { sink } = recordingSink();
+    const original = await harness.start(ctx, { sessionId: "source", prompt: "First", events: sink });
+    await original.done;
+    const first = sink.getMessages()[1]!;
+    const later = await harness.resume(ctx, {
+      sessionId: "source",
+      agentSessionId: original.agentSessionId!,
+      prompt: "Second __fake_hold__",
+      cwd: folder,
+      events: sink,
+    });
+    let finished = false;
+    void later.done.then(() => {
+      finished = true;
+    });
+    const fork = await harness.fork(ctx, {
+      sessionId: "source",
+      agentSessionId: original.agentSessionId!,
+      messageId: first.id,
+    });
+    expect(fork.agentSessionId).not.toBe(original.agentSessionId);
+    expect(await harness.getMessages(ctx, { agentSessionId: fork.agentSessionId })).toEqual(
+      sink.getMessages().slice(0, 2),
+    );
+    expect(finished).toBe(false);
+    await later.stop();
+    await later.done;
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
+});

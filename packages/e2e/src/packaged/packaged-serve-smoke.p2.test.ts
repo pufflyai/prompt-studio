@@ -22,6 +22,9 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native chat declarations, static composer state and scoped action callbacks.
+// packaged-core-extensions-smoke.p1.test.ts installs the production Sessions provider with local public artifacts,
+// runs CLI dev -> add --force with package-local dependencies and unavailable authoring source,
+// then checks Main/Side native declarations and durable text/files through compiled-host command handlers.
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.
 // packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs and complete offline history after restart.

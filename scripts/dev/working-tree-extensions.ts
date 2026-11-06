@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 
 const WORKING_TREE_EXTENSIONS = [
   ["pstdio-home", "extensions/pstdio-home"],
+  ["pstdio-session-browser", "extensions/pstdio-session-browser"],
   ["pstdio-workspaces", "extensions/pstdio-workspaces"],
   ["harness-claude-code", "extensions/harness-claude-code"],
   ["harness-codex", "extensions/harness-codex"],

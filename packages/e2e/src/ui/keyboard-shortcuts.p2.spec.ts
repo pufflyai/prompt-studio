@@ -48,20 +48,24 @@ test("Go destinations use shortcut mode while history chords respect editing foc
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
   await page.keyboard.press("s");
-  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  const composer = page.locator(
+    '[data-workbench-panel="main"] [data-testid="content-editable"][contenteditable="true"]',
+  );
   const help = page.getByRole("button", { name: "Help", exact: true });
-  await page.locator('[data-workbench-region="main"]').getByRole("textbox").last().focus();
+  await expect(composer).toBeFocused();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
-  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
   await help.focus();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
   await expect(page).toHaveURL(home);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await help.focus();
   await page.keyboard.press("Alt+Shift+ArrowRight");
-  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await expect(composer).toBeFocused();
   // Shortcut help is available outside inputs; history restores the composer's focus.
   await page.getByRole("button", { name: "Help", exact: true }).focus();
   await page.keyboard.press("Shift+/");
@@ -300,7 +304,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
   for (const [key, label, destination] of [
-    ["S", "Sessions", /\/sessions\/compose$/],
+    ["S", "Sessions", /\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/],
     ["W", "Workspaces", /\/workspaces$/],
     ["N", "Notes", /\/notes$/],
     ["K", "Tickets", /\/tickets$/],

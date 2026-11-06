@@ -1,11 +1,9 @@
-import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import type { ResourceRef, WorkbenchPanelInstance } from "@pstdio/workbench";
+import type { ResourceRef } from "@pstdio/workbench";
 import type { HarnessParams, Session } from "pstdio-api-contracts";
 import { getCollection, getIndexedRows, getRuntimeCollections, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardSessionResource } from "@/shared/app/resources";
 import { type DashboardRows, isDashboardProjectRow, isVisibleDashboardRow } from "@/shared/sync/dashboard-rows";
 import { type DashboardResourceAnchor, listResourceAnchors } from "@/shared/sync/resource-anchors";
-import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
 export interface DashboardSession {
   device?: Session["device"];
   id: string;
@@ -21,24 +19,6 @@ export interface DashboardSession {
   workspaceShorthand: string;
   anchors: DashboardResourceAnchor[];
   resource: ResourceRef;
-}
-export interface DashboardSessionView {
-  device?: Session["device"];
-  status?: string;
-  lastRequestStarted: string | null;
-  id: string;
-  draftKey: string;
-  sessionId: string | undefined;
-  workspaceTitle: string;
-  workspaceId: string | null;
-  workspaceBranch: string | null;
-  workspaceShorthand: string;
-  agent: string | null;
-  lastSelectedModel: string | null;
-  params?: HarnessParams;
-  additions: number;
-  deletions: number;
-  messages: SessionMessage[];
 }
 const latestTimestamp = (...values: unknown[]) =>
   values
@@ -128,72 +108,3 @@ export const findDashboardSession = (sessionId: string | undefined, projectId?: 
   });
   return createSession(session, workspaces.at(-1));
 };
-export const draftSessionViewId = "draft";
-const draftSessionView: DashboardSessionView = {
-  id: draftSessionViewId,
-  draftKey: draftSessionViewId,
-  sessionId: undefined,
-  workspaceTitle: "",
-  workspaceId: null,
-  workspaceBranch: null,
-  workspaceShorthand: "",
-  agent: null,
-  lastSelectedModel: null,
-  params: {},
-  lastRequestStarted: null,
-  additions: 0,
-  deletions: 0,
-  messages: [],
-};
-const metadataString = (resource: ResourceRef | undefined, key: string) => {
-  const value = resource?.metadata?.[key];
-  return typeof value === "string" ? value : undefined;
-};
-const createDraftSessionView = (resource: ResourceRef | undefined): DashboardSessionView => ({
-  ...draftSessionView,
-  draftKey: resource?.id ?? draftSessionViewId,
-  agent: metadataString(resource, "agent") ?? null,
-  workspaceTitle: metadataString(resource, "workspaceTitle") ?? "",
-  workspaceId: metadataString(resource, "workspaceId") ?? null,
-  workspaceBranch: metadataString(resource, "workspaceBranch") ?? null,
-  workspaceShorthand: metadataString(resource, "workspaceShorthand") ?? "",
-});
-const createUnsyncedSessionView = (sessionId: string): DashboardSessionView => ({
-  ...draftSessionView,
-  id: sessionId,
-  draftKey: sessionId,
-  sessionId,
-});
-export const resolveDashboardSessionView = (sessionId: string | undefined): DashboardSessionView => {
-  if (!sessionId) return draftSessionView;
-  const session = findDashboardSession(sessionId);
-  if (!session) return createUnsyncedSessionView(sessionId);
-  const workspace = session.workspaceId ? getCollection("workspaces").get(session.workspaceId) : undefined;
-  const summary = session.workspaceId ? getDashboardWorkspaceDiffSummary(session.workspaceId) : undefined;
-  return {
-    device: session.device,
-    id: session.id,
-    draftKey: session.id,
-    sessionId: session.id,
-    status: session.status,
-    lastRequestStarted: (getCollection("sessions").get(session.id)?.last_request_started as string | null) ?? null,
-    workspaceTitle: (workspace?.name as string | null) ?? (workspace?.workspace_shorthand as string | undefined) ?? "",
-    workspaceId: workspace?.id ?? null,
-    workspaceBranch: (workspace?.branch as string | null) ?? session.workspaceBranch ?? null,
-    workspaceShorthand: session.workspaceShorthand,
-    agent: session.agent,
-    lastSelectedModel: session.lastSelectedModel,
-    params: session.params,
-    additions: summary?.additions ?? 0,
-    deletions: summary?.deletions ?? 0,
-    messages: [],
-  };
-};
-export const resolveDashboardSessionViewForResource = (resource: ResourceRef | undefined) => {
-  const sessionId = resource?.type === "session" ? resource.id : undefined;
-  if (sessionId) return resolveDashboardSessionView(sessionId);
-  if (resource?.type === "session-draft") return createDraftSessionView(resource);
-  return draftSessionView;
-};
-export const resolveDashboardSessionViewForPlacement = (placement: Pick<WorkbenchPanelInstance, "resource">) =>
-  resolveDashboardSessionViewForResource(placement.resource);

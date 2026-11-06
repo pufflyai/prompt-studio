@@ -1,172 +1,58 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { expect, test } from "bun:test";
+import { workbenchPages, workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
-import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
 import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
+import { registerSessionProvider } from "./session-provider.fixture";
 
-afterEach(() => {
-  getWriter("workspaces")?.truncateAndWrite([]);
-  getWriter("sessions")?.truncateAndWrite([]);
-  getWriter("workspace_sessions")?.truncateAndWrite([]);
-});
-
-const createWorkspaceSessionWorkbench = () => {
-  const workbench = createWorkbench();
-  workbench.registerModule(createSidenavModule());
-  registerWorkspaceProviderViews(workbench);
-  workbench.registerModule(createWorkspacesModule());
-  workbench.registerModule(createSessionsModule());
-  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-  return workbench;
-};
-describe("createSessionsModule workspace session scoping", () => {
-  test("scopes the project-mode session list to the open workspace resource", async () => {
-    getWriter("workspaces")?.truncateAndWrite([
-      {
-        id: "workspace-1",
-        project_id: "project-1",
-        name: "Workspace one",
-        branch: "workspace/PS-1",
-        root_path: "/repo/.pstdio/workspaces/PS-1",
-        archived: false,
-        workspace_shorthand: "PS-1",
-        setup_error: null,
-        created_at: "2026-06-01T08:00:00Z",
-        updated_at: "2026-06-01T08:00:00Z",
-        deleted_at: null,
+for (const page of [workspacePages.workspace, workbenchPages.workspace]) {
+  test(`${page.extensionId} workspace navigation queries the provider and opens sessions in shared Side`, async () => {
+    const workbench = createWorkbench();
+    workbench.registerModule(createSidenavModule());
+    registerWorkspaceProviderViews(workbench);
+    workbench.registerModule(createWorkspacesModule());
+    workbench.registerModule(createSessionsModule());
+    const queries: unknown[] = [];
+    registerSessionProvider(workbench, {
+      sessions: {
+        query: async (input) => {
+          queries.push(input);
+          return {
+            items: [
+              {
+                id: `session-${input?.workspaceId}`,
+                title: "Linked",
+                status: "completed",
+                updatedAt: "2026-06-02T10:00:00Z",
+                workspaceId: input?.workspaceId,
+              },
+            ] as never,
+            nextCursor: null,
+          };
+        },
       },
-    ]);
-    getWriter("sessions")?.truncateAndWrite([
-      {
-        id: "session-linked",
-        project_id: "project-1",
-        title: "Linked session",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        created_at: "2026-06-02T10:00:00Z",
-        updated_at: "2026-06-02T10:00:00Z",
-        deleted_at: null,
-      },
-      {
-        id: "session-unlinked",
-        project_id: "project-1",
-        title: "Unlinked session",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        created_at: "2026-06-02T11:00:00Z",
-        updated_at: "2026-06-02T11:00:00Z",
-        deleted_at: null,
-      },
-    ]);
-    getWriter("workspace_sessions")?.truncateAndWrite([
-      { id: "link-1", workspace_id: "workspace-1", session_id: "session-linked" },
-    ]);
-    const workbench = createWorkspaceSessionWorkbench();
-    const workspace = workbench.resources
-      .listResources("")
-      .find((entry) => entry.resource.type === "workspace")?.resource;
-    openWorkspacesPage(workbench, workspace!);
-    expect(workbench.modes.getActiveModeId()).toBe("project");
-    const sessionsGroup = (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
-      .flatMap((section) => section.nodes)
-      .find((node) => node.id === "workspace-sessions");
-    const sessionRowIds = (sessionsGroup?.children ?? [])
-      .filter((node) => node.resource || node.target)
-      .map((node) => node.id);
-    expect(sessionRowIds).toEqual([
-      resourceKey({ type: "session", id: "session-linked", extensionId: "pstdio", projectId: "project-1" }),
-    ]);
+    });
+    selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+    workbench.pageLocations.setProject("project-1");
+    for (const id of ["first", "second"]) {
+      const resource = createDashboardResource("workspace", id, id, "GitBranch", "project-1");
+      const result = workbench.pageLocations.navigate({ kind: "page", page, resource });
+      expect(result.ok).toBe(true);
+      expect(workbench.pages.store.getState().location?.page).toEqual(page);
+      const sections = await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav);
+      const group = sections.flatMap((section) => section.nodes).find((node) => node.id.endsWith("workspace-sessions"));
+      expect(queries.at(-1)).toMatchObject({ workspaceId: id, limit: 50 });
+      expect(group?.children?.filter((node) => node.resource).map((node) => node.resource?.id)).toEqual([
+        `session-${id}`,
+      ]);
+      expect(group?.children?.find((node) => node.resource)?.target).toMatchObject({ kind: "panel", open: "preview" });
+    }
+    workbench.dispose();
   });
-  test("rescopes the session list when switching between workspaces", async () => {
-    getWriter("workspaces")?.truncateAndWrite([
-      {
-        id: "workspace-1",
-        project_id: "project-1",
-        name: "Workspace one",
-        branch: "workspace/PS-1",
-        root_path: "/repo/.pstdio/workspaces/PS-1",
-        archived: false,
-        workspace_shorthand: "PS-1",
-        setup_error: null,
-        created_at: "2026-06-01T08:00:00Z",
-        updated_at: "2026-06-01T08:00:00Z",
-        deleted_at: null,
-      },
-      {
-        id: "workspace-2",
-        project_id: "project-1",
-        name: "Workspace two",
-        branch: "workspace/PS-2",
-        root_path: "/repo/.pstdio/workspaces/PS-2",
-        archived: false,
-        workspace_shorthand: "PS-2",
-        setup_error: null,
-        created_at: "2026-06-01T09:00:00Z",
-        updated_at: "2026-06-01T09:00:00Z",
-        deleted_at: null,
-      },
-    ]);
-    getWriter("sessions")?.truncateAndWrite([
-      {
-        id: "session-one",
-        project_id: "project-1",
-        title: "Session one",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        created_at: "2026-06-02T10:00:00Z",
-        updated_at: "2026-06-02T10:00:00Z",
-        deleted_at: null,
-      },
-      {
-        id: "session-two",
-        project_id: "project-1",
-        title: "Session two",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        created_at: "2026-06-02T11:00:00Z",
-        updated_at: "2026-06-02T11:00:00Z",
-        deleted_at: null,
-      },
-    ]);
-    getWriter("workspace_sessions")?.truncateAndWrite([
-      { id: "link-1", workspace_id: "workspace-1", session_id: "session-one" },
-      { id: "link-2", workspace_id: "workspace-2", session_id: "session-two" },
-    ]);
-    const workbench = createWorkspaceSessionWorkbench();
-    let displayed = await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav);
-    const renderSidenav = async () => {
-      displayed = await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav);
-    };
-    const displayedSessionRowIds = () =>
-      (displayed.flatMap((section) => section.nodes).find((node) => node.id === "workspace-sessions")?.children ?? [])
-        .filter((node) => node.resource || node.target)
-        .map((node) => node.id);
-    const workspaceResource = (id: string) =>
-      workbench.resources.listResources("").find((entry) => entry.resource.id === id)?.resource;
-    openWorkspacesPage(workbench, workspaceResource("workspace-1")!);
-    await renderSidenav();
-    expect(displayedSessionRowIds()).toEqual([
-      resourceKey({ type: "session", id: "session-one", extensionId: "pstdio", projectId: "project-1" }),
-    ]);
-    openWorkspacesPage(workbench, workspaceResource("workspace-2")!);
-    await renderSidenav();
-    expect(displayedSessionRowIds()).toEqual([
-      resourceKey({ type: "session", id: "session-two", extensionId: "pstdio", projectId: "project-1" }),
-    ]);
-  });
-});
+}

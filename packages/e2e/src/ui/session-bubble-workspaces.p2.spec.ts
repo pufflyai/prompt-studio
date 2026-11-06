@@ -71,6 +71,9 @@ test.describe("Session bubble workspace selection", () => {
     await bypassOnboarding(page, projectId);
 
     const workspace = await createWorkspaceViaApi(request, projectId);
+    const available = await (await request.get(`${apiBase}/v1/workspaces?project_id=${projectId}`)).json();
+    const current = available.find((item: { isDefault: boolean }) => item.isDefault);
+    expect(current).toBeTruthy();
     const ticket = await createPlannerTicket(request, apiBase, projectId, {
       content: "Choose a session workspace",
     });
@@ -87,12 +90,13 @@ test.describe("Session bubble workspace selection", () => {
     const sidePanel = page.getByTestId("workbench-side-panel-attached");
     await expect(sidePanel).toBeVisible();
 
-    await sidePanel.getByRole("button", { name: "Select workspace" }).click();
-    await page.locator("[data-testid='session-workspace-options']").getByText(workspace.workspace_shorthand).click();
+    // Native selections expose the selected public workspace label and radio choices.
+    await sidePanel.getByRole("button", { name: current.name ?? current.shorthand ?? current.id, exact: true }).click();
+    await page.getByRole("menuitemradio", { name: workspace.workspace_shorthand, exact: true }).click();
 
     await expect(page).toHaveURL(ticketUrl);
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).not.toContainText(workspace.workspace_shorthand);
-    await expect(sidePanel.getByRole("button", { name: "Select workspace" })).toContainText(
+    await expect(sidePanel.getByRole("button", { name: workspace.workspace_shorthand, exact: true })).toContainText(
       workspace.workspace_shorthand,
     );
   });

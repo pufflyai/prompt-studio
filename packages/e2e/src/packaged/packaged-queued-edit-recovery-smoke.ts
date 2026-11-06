@@ -1,5 +1,6 @@
 import { type Browser, expect } from "@playwright/test";
 import type { PendingQueuedFollowUpsResponse, Session, SessionAttachment } from "pstdio-api-contracts";
+import { isSessionChatAction } from "../helpers/session-chat-actions";
 import { logQueuedPhase } from "./packaged-queued-fixture";
 
 export const expectPackagedQueuedEditRecovery = async (
@@ -54,38 +55,41 @@ export const expectPackagedQueuedEditRecovery = async (
     const view = page.locator("[data-workbench-instance]").filter({ has: editor });
     await expect(editor).toBeEditable();
     await expect(view).toHaveCount(1);
+    logQueuedPhase(scenario, "editor ready; preserve independent draft");
     if (scenario === "occupied") {
       await editor.fill("Independent draft");
-      await view
-        .locator('input[type="file"]')
-        .last()
-        .setInputFiles({
-          name: "independent-draft.txt",
-          mimeType: "text/plain",
-          buffer: Buffer.from("Independent file"),
-        });
+      const chooser = page.waitForEvent("filechooser");
+      await view.getByRole("button", { name: "Attach files", exact: true }).click();
+      await (await chooser).setFiles({
+        name: "independent-draft.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from("Independent file"),
+      });
       await expect(page.getByRole("button", { name: "Remove independent-draft.txt", exact: true })).toBeVisible();
     }
+    logQueuedPhase(scenario, "select saved request");
     await page.getByRole("button", { name: "Edit queued message: Recovery request", exact: true }).click();
     await editor.fill("Retained complete edit");
     const cancel = page.getByRole("button", { name: "Cancel", exact: true });
     expect(await cancel.evaluate((element) => element.nextElementSibling?.textContent)).toBe("Update");
-    await page.getByRole("button", { name: "Select model", exact: true }).click();
-    await page
-      .getByTestId("workspace-agent-model-options")
-      .filter({ visible: true })
-      .getByText("two", { exact: true })
-      .click();
-    await page.getByRole("button", { name: "thinking: High", exact: true }).click();
+    logQueuedPhase(scenario, "change saved model and parameters");
+    await expect(page.getByRole("button", { name: "one", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "one", exact: true }).click();
+    await page.getByRole("menuitem", { name: "two", exact: true }).click();
+    await page.getByRole("button", { name: "High", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "Low", exact: true }).click();
-    const editUpload = page.waitForResponse(
-      (response) => response.url().endsWith("/session-attachments") && response.request().method() === "POST",
-    );
-    await view
-      .locator('input[type="file"]')
-      .last()
-      .setInputFiles({ name: "edited-context.txt", mimeType: "text/plain", buffer: Buffer.from("Edited context") });
-    const editedFile = (await (await editUpload).json()) as SessionAttachment;
+    logQueuedPhase(scenario, "attach edited context");
+    const editUpload = page.waitForResponse((response) => isSessionChatAction(response.request(), "upload"));
+    const chooser = page.waitForEvent("filechooser");
+    await view.getByRole("button", { name: "Attach files", exact: true }).click();
+    await (await chooser).setFiles({
+      name: "edited-context.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("Edited context"),
+    });
+    const uploadResult = (await (await editUpload).json()).outcome;
+    expect(uploadResult.ok).toBe(true);
+    const editedFileId = uploadResult.value.attachment.id as string;
     await expect(page.getByRole("button", { name: "Remove edited-context.txt", exact: true })).toBeVisible();
     logQueuedPhase(scenario, "steer edited request and recover draft");
     const queue = await request<PendingQueuedFollowUpsResponse>(path);
@@ -103,8 +107,8 @@ export const expectPackagedQueuedEditRecovery = async (
       ),
     ).toBe(true);
     await expect(editor).toHaveText("Retained complete edit");
-    await expect(page.getByRole("button", { name: "Select model", exact: true })).toHaveText("two");
-    await expect(page.getByRole("button", { name: "thinking: Low", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "two", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Low", exact: true })).toBeVisible();
     if (scenario === "empty") {
       await expect(page.getByRole("button", { name: "Update", exact: true })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Edit saved draft", exact: true })).toHaveCount(0);
@@ -141,7 +145,7 @@ export const expectPackagedQueuedEditRecovery = async (
     expect(created.model).toBe("two");
     expect(created.params).toEqual({ thinking: "low" });
     expect(created.attachments.map((file) => file.file_id)).toEqual(
-      scenario === "empty" ? [editedFile.file_id] : [savedFile.file_id, editedFile.file_id],
+      scenario === "empty" ? [editedFileId] : [savedFile.file_id, editedFileId],
     );
     if (scenario === "remaining")
       expect((await request<PendingQueuedFollowUpsResponse>(path)).requests[0].prompt).toBe("Other request");

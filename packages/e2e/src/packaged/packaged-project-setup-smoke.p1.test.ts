@@ -1,4 +1,4 @@
-import { afterAll, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -7,7 +7,6 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 // Covers composer drafts, rendered chat and idle sessions through the packaged host.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
-import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { expectPackagedDriveDiscovery } from "./packaged-filesystem-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -15,31 +14,13 @@ import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
-let sources: string;
-let composerDefaults: string;
-setupPackagedSmokeTests(async () => {
-  sources = mkdtempSync(join(tmpdir(), "packaged-project-sources-"));
-  const source = await preparePackagedExtensionSource(
-    sources,
-    join(import.meta.dirname, "../../../../extensions/pstdio-workspaces"),
-    { install: true },
-  );
-  const home = await preparePackagedExtensionSource(
-    join(sources, "home"),
-    join(import.meta.dirname, "../../../../extensions/pstdio-home"),
-    { install: true },
-  );
-  composerDefaults = JSON.stringify({
-    defaultExtensions: [
-      ...JSON.parse(e2eExtensions("workbench-fixture")).defaultExtensions,
-      { installName: "pstdio-home", source: home, skipInstall: true },
-      { installName: "pstdio-workspaces", source, skipInstall: true },
-    ],
-  });
-});
-afterAll(() => {
-  if (sources) rmSync(sources, { recursive: true, force: true });
-});
+setupPackagedSmokeTests();
+const composerDefaults = e2eExtensions(
+  "workbench-fixture",
+  "pstdio-session-browser",
+  "pstdio-home",
+  "pstdio-workspaces",
+);
 
 // Stable hosts use PSX; nightlies retain their exact main commit.
 const hostReleaseRef = /^(?:\{hostRelease\}|pstdio@\d|[0-9a-f]{40}$)/;

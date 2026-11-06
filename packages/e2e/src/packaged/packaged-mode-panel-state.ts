@@ -69,7 +69,19 @@ export const verifyExtensionModeSessionRestore = async (page: Page, projectId: s
   const composer = floating.locator('[data-testid="content-editable"][contenteditable="true"]:visible');
   await expect(composer).toBeVisible();
   await composer.fill("Keep this extension mode draft after reload");
-  await tabAction(page, floating.getByRole("tab", { selected: true }), "Pin tab");
+  const createdTab = floating.getByRole("tab", { selected: true });
+  await createdTab.focus();
+  await page.keyboard.press("Shift+F10");
+  const pin = page.getByRole("menuitem", { name: "Pin tab", exact: true });
+  const unpin = page.getByRole("menuitem", { name: "Unpin tab", exact: true });
+  await expect(pin.or(unpin)).toBeVisible();
+  // Explicit provider creation can already pin the draft; preserve that retained tab.
+  if (await pin.count()) await pin.click();
+  else {
+    await expect(unpin).toBeVisible();
+    await page.keyboard.press("Escape");
+  }
+  await expect(createdTab).toHaveCSS("font-style", "normal");
   await page.reload();
   await expect(composer).toHaveText("Keep this extension mode draft after reload");
   const sessionTab = floating.getByRole("tab", { selected: true });

@@ -1,4 +1,4 @@
-import { type CreateNotificationInput, type ResourceAnchor, workbenchPanels } from "@pstdio/sdk/extensions";
+import { type CreateNotificationInput, type ResourceAnchor, sessionBrowser } from "@pstdio/sdk/extensions";
 import type { Ticket } from "./data/types";
 import { ticketPageRef } from "./resource-kinds";
 
@@ -88,7 +88,7 @@ export const notifyBlocked = (ctx: NotifyActionContext, ticket: Ticket, sessionI
             id: "reply-to-agent",
             label: "Reply to agent",
             kind: "navigate",
-            target: { kind: "panel", panel: workbenchPanels.projectSession, resource: related[0] },
+            target: { kind: "panel", panel: sessionBrowser.panels.conversation, resource: related[0] },
             primary: true,
           },
         ]
