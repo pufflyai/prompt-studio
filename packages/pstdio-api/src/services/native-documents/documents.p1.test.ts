@@ -82,6 +82,7 @@ const setup = () => {
     deps,
     service: createService({
       storage: deps.extensionStorageService,
+      access: (input) => resolveNativeTextAccess(deps, input),
       load: (input) => loadNativeMarkdownFile(deps, input),
       save: (input) => saveNativeMarkdownFile(deps, input),
     }),
