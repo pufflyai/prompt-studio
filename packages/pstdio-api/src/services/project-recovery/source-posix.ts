@@ -15,7 +15,7 @@ const stat = (fd: number) =>
   );
 const sameIdentity = (before: BigIntStats, after: BigIntStats) => before.dev === after.dev && before.ino === after.ino;
 
-/** Private held-directory access. See ADR 0135. A path is never reconstructed for
+/** Private held-directory access. See ADR 0138. A path is never reconstructed for
  * child reads; swapping a parent pathname cannot redirect the selected handle. */
 export const openRecoverySource = async (selected: string) => {
   if (process.platform !== "darwin" && process.platform !== "linux")
