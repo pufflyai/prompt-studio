@@ -17,7 +17,7 @@ export const restoreFailedChatSubmission = (
   return { draft: restored, pending: pending?.filter((item) => item !== failed) };
 };
 
-/** A late canonical acknowledgement makes only this failure's newly saved recovery obsolete. */
+/** Transfer shared recovery ownership until the last failed input is delivered. */
 export const clearDeliveredChatRecoveries = (
   draft: ChatDraft,
   before: ChatPendingSubmission[],
@@ -27,10 +27,17 @@ export const clearDeliveredChatRecoveries = (
     (item) =>
       item.failure && item.recoveryAdded && !after?.some((remaining) => remaining.message.id === item.message.id),
   );
-  if (delivered.length)
-    return {
-      recovered: draft.recovered?.filter(
-        (saved) => !delivered.some((item) => chatDraftContentKey(item) === chatDraftContentKey(saved)),
-      ),
-    };
+  const keys = new Set(delivered.map(chatDraftContentKey));
+  let pending = after;
+  if (keys.size)
+    pending = after?.map((item) =>
+      item.failure && keys.has(chatDraftContentKey(item)) ? { ...item, recoveryAdded: true } : item,
+    );
+  const removable = new Set(
+    [...keys].filter((key) => !pending?.some((item) => item.failure && chatDraftContentKey(item) === key)),
+  );
+  const recovery = removable.size
+    ? { recovered: draft.recovered?.filter((saved) => !removable.has(chatDraftContentKey(saved))) }
+    : undefined;
+  return { pending, recovery };
 };

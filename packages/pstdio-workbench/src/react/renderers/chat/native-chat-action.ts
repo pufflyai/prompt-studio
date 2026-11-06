@@ -20,3 +20,19 @@ export const runNativeChatAction = (
         }
       : handler,
   );
+
+/** A failed queued input already belongs to the owner's durable recovery, not the editor's catch-and-restore path. */
+export const handoffNativeChatInput = async (session: ChatSession, send: () => Promise<unknown>) => {
+  const failures = new Set(
+    session
+      .getSnapshot()
+      .pending?.filter((item) => item.failure)
+      .map((item) => item.message.id),
+  );
+  try {
+    return await send();
+  } catch (error) {
+    if (!session.getSnapshot().pending?.some((item) => item.failure && !failures.has(item.message.id))) throw error;
+    return;
+  }
+};

@@ -265,3 +265,27 @@ test("an acknowledged queue receipt cannot steal the earlier ordinary input's de
   });
   expect(session.getSnapshot().pending).toBeUndefined();
 });
+
+test("identical failed inputs share recovery until their last acknowledgement without deleting prior saved work", async () => {
+  for (const preexisting of [false, true]) {
+    const failed = { text: action.text, attachments: action.attachments, values: action.values };
+    const session = createChatSession({
+      initial: { streaming: true },
+      query: async () => ({}),
+      action: async () => {
+        throw new Error("Delivery uncertain");
+      },
+    });
+    if (preexisting) session.changeDraft({ recovered: [failed] });
+    await session.run(action).catch(() => {});
+    await session.run(action).catch(() => {});
+    expect(session.getSnapshot().draft.recovered).toHaveLength(1);
+    const first = { id: "one", prompt: action.text, attachments: action.attachments };
+    session.accept({ revision: 1, snapshot: { queuedFollowUps: [first] } });
+    expect(session.getSnapshot().pending).toHaveLength(1);
+    expect(session.getSnapshot().draft.recovered).toHaveLength(1);
+    session.accept({ revision: 2, snapshot: { queuedFollowUps: [first, { ...first, id: "two" }] } });
+    expect(session.getSnapshot().pending).toBeUndefined();
+    expect(session.getSnapshot().draft.recovered ?? []).toHaveLength(preexisting ? 1 : 0);
+  }
+});

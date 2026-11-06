@@ -22,6 +22,9 @@ export interface ChatSessionInput {
   saveDraft?(draft: ChatDraft): Promise<unknown>;
 }
 
+const executeChatAction = async (action: ChatRendererAction, handler: ChatSessionInput["action"]) =>
+  chatRendererActionResultSchema.parse((await handler(chatRendererActionSchema.parse(action))) ?? {});
+
 const emptyChatDraft = (draft: ChatDraft) =>
   !draft.text && !draft.attachments.length && !draft.recovered?.length && !Object.keys(draft.values).length;
 
@@ -122,7 +125,8 @@ export const createChatSession = (input: ChatSessionInput) => {
     const merged = snapshots.merge(state, incoming, issued, expectedValues, action);
     publish({ ...merged.state, loading: false });
     const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
-    if (recovery) changeDraft(recovery);
+    if (recovery.pending !== state.pending) publish({ pending: recovery.pending });
+    if (recovery.recovery) changeDraft(recovery.recovery);
     if (expectedValues && merged.valuesChanged) {
       changes++;
       saveDraft();
@@ -242,9 +246,8 @@ export const createChatSession = (input: ChatSessionInput) => {
     const issued = ++clock;
     const changed = localEdits;
     const expectedValues = snapshots.values.capture();
-    const parsed = chatRendererActionSchema.parse(action);
-    const result = chatRendererActionResultSchema.parse((await handler(parsed)) ?? {});
-    if (result.snapshot) merge(result.snapshot, issued, expectedValues, parsed);
+    const result = await executeChatAction(action, handler);
+    if (result.snapshot) merge(result.snapshot, issued, expectedValues, action);
     if (result.draft) changeDraft(localEdits === changed ? result.draft : hydrateChatDraft(state.draft, result.draft));
     return result;
   };
