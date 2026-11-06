@@ -104,6 +104,17 @@ test("a new device restores another device's folder copy while that device is of
     await until(async () => (await call<ProjectFolderSource[]>("sources")).body.some((item) => item.current));
     await expect(lstat(join(restored, ".pstignore"))).rejects.toThrow();
 
+    // A project that already has its folder here keeps it; another restore stays beside it.
+    const beside = join(root, "beside");
+    expect((await call("restore", { ...copy, path: beside })).status).toBe(202);
+    await until(async () => (await call<ProjectFolderRecoveryStatus>("recovery")).body.restore.state !== "running");
+    expect((await call<ProjectFolderRecoveryStatus>("recovery")).body.restore).toMatchObject({
+      state: "complete",
+      result: { path: beside, attached: false },
+    });
+    expect((await destination.deps.workspaceService.getDefault(project.id))?.root_path).toBe(restored);
+    expect(await readFile(join(beside, "src/notes.md"), "utf8")).toBe("saved without a commit");
+
     const again = await call<{ code: string }>("restore", { ...copy, path: restored });
     expect(again).toMatchObject({ status: 409, body: { code: "destination_exists" } });
     const unknown = await call<{ code: string }>("restore", { ...copy, sourceId: "missing", path: join(root, "x") });

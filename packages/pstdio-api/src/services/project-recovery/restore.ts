@@ -10,7 +10,6 @@ import { createRecoveryGitLinks } from "./restore-git";
 import { planRecoveryRestore, type RecoveryRestorePlan, type RestoreRoot } from "./restore-plan";
 import { createRecoveryStagingJournal, removeRecoveryStaging, verifyRecoveryStaging } from "./restore-staging";
 
-
 const code = (error: unknown) => (error as NodeJS.ErrnoException).code;
 const within = (root: string, path: string) => path === root || path.startsWith(`${root}/`);
 
