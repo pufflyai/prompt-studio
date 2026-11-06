@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { BackgroundMenu } from "./background-menu";
 
 const meta: CanvasMeta<typeof BackgroundMenu> = {
-  title: "Extensions/Planner/Timeline/Create Menu",
+  title: "Extensions/Planner/Timeline/Create menu",
   component: BackgroundMenu,
 };
 export default meta;

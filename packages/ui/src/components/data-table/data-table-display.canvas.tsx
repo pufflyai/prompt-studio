@@ -4,7 +4,7 @@ import { DataTable } from "./data-table";
 
 const data = Array.from({ length: 24 }, (_, index) => ({ Name: `Item ${index + 1}`, Amount: index + 1 }));
 const meta: CanvasMeta<typeof DataTable> = {
-  title: "Components/Data Display/Data Table Display",
+  title: "Design system/Components/Data display/Data table/Display settings",
   component: DataTable,
   decorators: [
     (Story) => (

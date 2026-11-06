@@ -132,7 +132,7 @@ const RefreshSelectedNote = (props: { resourceFree?: boolean; aliases?: boolean 
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Tree selection reveal",
+  title: "Product/Workbench/Navigation/Tree/Tree selection reveal",
   component: RevealNewNote,
   decorators: [
     (Story) => (

@@ -4,7 +4,7 @@ import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { ParamEditorLabel } from "./param-editor-label";
 
 const meta = {
-  title: "Patterns/Param Editor/Label",
+  title: "Design system/Patterns/Parameter editor/Label",
   component: ParamEditorLabel,
   args: {
     name: "Workspace type",

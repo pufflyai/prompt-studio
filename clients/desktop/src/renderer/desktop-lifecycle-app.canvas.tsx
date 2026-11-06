@@ -10,7 +10,7 @@ const actions = {
   retryRuntime: async () => {},
 };
 const meta = {
-  title: "Patterns/Desktop/Lifecycle",
+  title: "Product/Desktop/Lifecycle",
   component: DesktopLifecycleView,
   fullscreen: true,
   decorators: [

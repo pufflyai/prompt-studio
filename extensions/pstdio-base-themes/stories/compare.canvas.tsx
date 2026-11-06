@@ -15,7 +15,7 @@ function Compare(props: { section: Section }) {
   );
 }
 const meta = {
-  title: "Themes/Compare",
+  title: "Design system/Foundations/Themes/Compare",
   fullscreen: true,
   component: Compare,
   args: { section: "all" },

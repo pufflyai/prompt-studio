@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { SessionIndicator, sessionCompletionStatuses } from "@/components/primitives/session-indicator";
 
 const meta: CanvasMeta<typeof SessionIndicator> = {
-  title: "Components/Feedback/Session Indicator",
+  title: "Design system/Components/Feedback/Session indicator",
   component: SessionIndicator,
 };
 export default meta;

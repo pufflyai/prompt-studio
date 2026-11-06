@@ -40,7 +40,7 @@ const MultilinePreview = (props: { readOnly?: boolean; grouped?: boolean; varian
   );
 };
 const meta = {
-  title: "Patterns/Param Editor/Multiline Text",
+  title: "Design system/Patterns/Parameter editor/Multiline text",
   component: MultilinePreview,
   fullscreen: true,
 } satisfies CanvasMeta<typeof MultilinePreview>;

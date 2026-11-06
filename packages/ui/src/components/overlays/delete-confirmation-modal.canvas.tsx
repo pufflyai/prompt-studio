@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/primitives/checkbox";
 
 type StoryFn = () => ReactNode;
 const meta = {
-  title: "Components/Overlays/Delete Confirmation Modal",
+  title: "Design system/Components/Overlays/Delete confirmation modal",
   component: DeleteConfirmationModal,
   decorators: [
     (Story: StoryFn) => (

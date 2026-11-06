@@ -73,7 +73,7 @@ isolatedProvidersWorkbench.statuses.registerStatusSet({
   save: async (statuses) => statuses,
 });
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Workflow status editor",
+  title: "Product/Workbench/Settings/Workflow status editor",
   description:
     "A workflow status set owns its query, optional save operation, and optional actions. Providers load and fail independently so one extension cannot break another provider's settings.",
   fullscreen: true,

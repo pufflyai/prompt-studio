@@ -28,7 +28,7 @@ const Example = (props: ExampleProps) => {
     </Box>
   );
 };
-export default { title: "Canvas/Workspace", fullscreen: true };
+export default { title: "Extensions/UI Canvas/Workspace", fullscreen: true };
 export const Interactive = () => <Example canvas={interactionFixture} />;
 export const ZoomedOut = () => <Example canvas={interactionFixture} zoom={0.5} />;
 export const SelectedFrame = () => <Example canvas={interactionFixture} selected="project-form" />;

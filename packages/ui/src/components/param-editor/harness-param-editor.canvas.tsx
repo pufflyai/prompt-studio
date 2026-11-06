@@ -122,7 +122,7 @@ const HarnessParamEditorStory = (props: {
   );
 };
 const meta: CanvasMeta<typeof HarnessParamEditorStory> = {
-  title: "Components/Param Editor/Harness run options",
+  title: "Design system/Patterns/Parameter editor/Harness run options",
   component: HarnessParamEditorStory,
 };
 export default meta;

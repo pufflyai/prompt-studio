@@ -11,7 +11,7 @@ import { useTreeListVisibilityStore, type VisibilityOverride } from "./tree-list
 import { buildTreeVisibilityMenuActions, filterVisibleSections } from "./tree-list-visibility-filter";
 
 const meta: CanvasMeta<typeof TreeList> = {
-  title: "Components/Data Display/Tree List",
+  title: "Design system/Components/Data display/Tree list/Overview",
   component: TreeList,
 };
 export default meta;

@@ -6,7 +6,7 @@ import { RichMessage } from "./rich-message";
 const source =
   'Keep **source** spelling.\n\n[Notes][notes]\n\n[notes]: https://example.com "Title"\n\n~~~ts\nconst value = 1;\n~~~';
 const meta: CanvasMeta<typeof RichMessage> = {
-  title: "Patterns/Chat/Rich Message Editing",
+  title: "Design system/Patterns/Chat/Rich message editing",
   component: RichMessage,
 };
 export default meta;

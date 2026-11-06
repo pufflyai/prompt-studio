@@ -3,7 +3,7 @@ import { useState } from "react";
 import { HarnessModelPicker } from "./harness-model-picker";
 
 const meta: CanvasMeta<typeof HarnessModelPicker> = {
-  title: "Components/Param Editor/Harness model picker",
+  title: "Design system/Patterns/Parameter editor/Harness model picker",
   component: HarnessModelPicker,
   args: {
     label: "Supervisor model",

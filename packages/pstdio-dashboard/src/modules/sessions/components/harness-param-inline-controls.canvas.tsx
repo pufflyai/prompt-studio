@@ -5,7 +5,7 @@ import { useState } from "react";
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
 
 const meta = {
-  title: "Sessions/Harness Inline Controls",
+  title: "Product/Sessions/Agent controls",
   component: HarnessParamInlineControls,
   args: {
     schema: {

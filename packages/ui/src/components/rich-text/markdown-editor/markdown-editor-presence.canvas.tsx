@@ -58,7 +58,7 @@ const PresenceScene = (props: { long?: boolean; narrow?: boolean }) => {
 };
 
 const meta = {
-  title: "Patterns/Editors/Markdown Editor/Presence",
+  title: "Design system/Patterns/Editors/Markdown editor/Presence",
   component: MarkdownEditor,
 } satisfies CanvasMeta<typeof MarkdownEditor>;
 export default meta;

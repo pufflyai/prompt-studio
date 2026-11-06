@@ -77,7 +77,7 @@ const overflowingFollowUpMessages: SessionMessage[] = [
   },
 ];
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Chat Panel",
+  title: "Design system/Patterns/Chat/Chat panel/Overview",
   component: ChatPanel,
 };
 export default meta;

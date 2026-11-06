@@ -3,7 +3,7 @@ import { Canvas } from "./canvas";
 import { FlowCanvasExample, FreeformCanvasExample, ScrollCanvasExample } from "./canvas.examples";
 
 const meta: CanvasMeta<typeof Canvas> = {
-  title: "Components/Layout/Canvas",
+  title: "Design system/Components/Layout/Canvas",
   component: Canvas,
   args: {
     onPan: () => {},

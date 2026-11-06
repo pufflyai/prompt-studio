@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 
 const meta: CanvasMeta<typeof ExtensionFolderDropZone> = {
-  title: "ProjectSettings/ExtensionFolderDropZone",
+  title: "Product/Settings/Extensions/Folder install",
   component: ExtensionFolderDropZone,
   args: { onDropFolder: () => {} },
 };

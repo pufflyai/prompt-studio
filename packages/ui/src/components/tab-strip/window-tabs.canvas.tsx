@@ -42,7 +42,7 @@ const Example = (props: { initialTabs?: WindowTab[]; platform?: string }) => {
   );
 };
 const meta = {
-  title: "Components/Navigation/Window Tabs",
+  title: "Design system/Components/Navigation/Window tabs",
   component: WindowTabs,
   description:
     "Native window title-bar tabs. The host owns selection, close behavior, and optional reordering. Drag a tab to the shared insertion line; the preview stays inside the strip and releasing outside cancels the move. Long labels ellipsize at the shared tab limit; crowded tabs shrink before scrolling. Focus a tab and use Alt+ArrowLeft or Alt+ArrowRight to reorder, or press Space, arrow keys, then Space to drop or Escape to cancel. Reordering keeps the selected tab. Native controls occupy the reserved area; stories do not draw them. The desktop host sets data-window-full-screen on the document in macOS full screen to release that space.",

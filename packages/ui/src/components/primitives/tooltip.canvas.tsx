@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { Tooltip } from "./tooltip";
 
 const meta = {
-  title: "Components/Overlays/Tooltip",
+  title: "Design system/Components/Overlays/Tooltip",
   component: Tooltip,
   description:
     "Tooltips wait 380 ms on the first hover. Pass overflowRef for a label tooltip that is useful only when its text is clipped. The tooltip updates when the label or its available width changes. Keyboard focus uses the shared tooltip behavior.",

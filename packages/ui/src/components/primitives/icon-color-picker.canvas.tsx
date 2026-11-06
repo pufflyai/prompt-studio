@@ -7,7 +7,7 @@ import { TagSwatch } from "./tag-swatch";
 
 type StoryFn = () => ReactNode;
 const meta = {
-  title: "Components/Inputs/Icon Color Picker",
+  title: "Design system/Components/Forms/Icon color picker",
   component: IconColorPicker,
   decorators: [
     (Story: StoryFn) => (

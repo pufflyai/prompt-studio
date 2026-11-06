@@ -73,9 +73,10 @@ const RecoveryHost = (props: RecoveryHostProps) => {
     </Box>
   );
 };
-const meta = { title: "Patterns/Chat/Queued edit recovery", component: RecoveryHost } satisfies CanvasMeta<
-  typeof RecoveryHost
->;
+const meta = {
+  title: "Design system/Patterns/Chat/Queued edit recovery",
+  component: RecoveryHost,
+} satisfies CanvasMeta<typeof RecoveryHost>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const EmptyDraft: Story = {

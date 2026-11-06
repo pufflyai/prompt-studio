@@ -2,7 +2,7 @@
 
 Patterns are composed UI surfaces. Prefer these when building product workflows instead of assembling primitives from scratch.
 
-Use `Foundations/Component Gallery / Composites` as the quickest visual reference for advanced components before building a new workflow surface.
+Use `Design system/Foundations/Component gallery / Composites` as the quickest visual reference for advanced components before building a new workflow surface.
 
 ## Chat
 

@@ -3,7 +3,7 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 import { createPolicyWorkbench } from "./panel-policy.fixture";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Panel policy",
+  title: "Product/Workbench/Panels/Panel policy",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

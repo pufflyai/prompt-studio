@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ParamEditorHorizontal } from "./param-editor-horizontal";
 
 const meta = {
-  title: "Patterns/Param Editor/Param Editor Horizontal",
+  title: "Design system/Patterns/Parameter editor/Horizontal layout",
   component: ParamEditorHorizontal,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditorHorizontal>;

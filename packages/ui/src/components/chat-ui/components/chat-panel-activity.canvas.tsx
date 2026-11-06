@@ -5,7 +5,7 @@ import { ChatPanel } from "./chat-panel";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const meta = {
-  title: "Patterns/Chat/Activity Layout",
+  title: "Design system/Patterns/Chat/Activity layout",
   component: ChatPanel,
   args: {
     conversationKey: "activity-layout",

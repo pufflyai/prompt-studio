@@ -34,7 +34,7 @@ const items = [
   },
 ];
 const meta: CanvasMeta<typeof Breadcrumb> = {
-  title: "Components/Navigation/Breadcrumb",
+  title: "Design system/Components/Navigation/Breadcrumb",
   component: Breadcrumb,
   decorators: [
     (Story: StoryFn) => (

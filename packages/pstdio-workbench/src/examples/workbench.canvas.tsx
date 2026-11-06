@@ -13,7 +13,7 @@ import { createRegionMapModule } from "./region-map/module";
 import { WorkbenchStory } from "./workbench-story";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Visual states",
+  title: "Product/Reference/Core API/Visual states",
   description:
     "Host API reference for @pstdio/workbench and @pstdio/workbench/react. These APIs build the application shell. Extension authors should use the separate Extension API reference.",
   fullscreen: true,

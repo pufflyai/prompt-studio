@@ -24,7 +24,7 @@ const LiveRowActions = () => {
     </Box>
   );
 };
-export default { title: "Components/Data Display/Data Table/Live updates", component: LiveRowActions };
+export default { title: "Design system/Components/Data display/Data table/Live updates", component: LiveRowActions };
 export const RowActionsDuringRefresh = {
   id: "components-data-display-data-table-live-updates--row-actions-during-refresh",
   render: () => <LiveRowActions />,

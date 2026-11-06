@@ -173,7 +173,7 @@ const QueueHost = (props: QueueHostProps) => {
     </Box>
   );
 };
-const meta = { title: "Patterns/Chat/Queued conversation", component: QueueHost } satisfies CanvasMeta<
+const meta = { title: "Design system/Patterns/Chat/Queued conversation", component: QueueHost } satisfies CanvasMeta<
   typeof QueueHost
 >;
 export default meta;

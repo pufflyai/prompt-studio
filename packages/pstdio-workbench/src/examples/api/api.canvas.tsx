@@ -6,7 +6,7 @@ import { StaticPlacementExample } from "./static-placement-example";
 import { TabPresentationExample } from "./tab-presentation-example";
 
 const meta = {
-  title: "pstdio-workbench/Guides/Panels and pages",
+  title: "Product/Reference/Examples/Panels and pages",
   description: "This Core API guide explains static and resource placements, then shows complete page replacement.",
 } satisfies CanvasMeta;
 export default meta;

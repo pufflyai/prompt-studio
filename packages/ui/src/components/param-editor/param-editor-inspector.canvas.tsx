@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ParamEditor } from "./param-editor";
 
 const meta = {
-  title: "Patterns/Param Editor/Inspector",
+  title: "Design system/Patterns/Parameter editor/Inspector",
   component: ParamEditor,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;

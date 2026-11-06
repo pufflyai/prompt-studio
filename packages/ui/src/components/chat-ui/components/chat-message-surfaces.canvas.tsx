@@ -6,7 +6,7 @@ import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const meta = {
-  title: "Patterns/Chat/Message Surfaces",
+  title: "Design system/Patterns/Chat/Message surfaces",
   component: ChatPanel,
   render: (args) => (
     <Box maxW="chat-content" h="md">

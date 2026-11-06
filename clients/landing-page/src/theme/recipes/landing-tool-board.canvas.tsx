@@ -3,7 +3,7 @@ import { ToolBoard } from "../../components/shapes/tool-board";
 import { BOARD_PREVIEW_HEIGHT, BOARD_WIDTH, SLOT_TRAY_HEIGHT } from "../../services/shapes/assembly-layout";
 
 const meta = {
-  title: "Theme/Progressive Tool Board",
+  title: "Website/Landing/Progressive tool board",
   component: ToolBoard,
   args: { x: 0, y: 0, scale: 1, unitScale: 1, view: { example: "icons", parts: [] } },
   decorators: [

@@ -34,9 +34,10 @@ const QueuedEditHost = () => {
     </Box>
   );
 };
-const meta = { title: "Patterns/Chat/Queued follow-up edit", component: QueuedEditHost } satisfies CanvasMeta<
-  typeof QueuedEditHost
->;
+const meta = {
+  title: "Design system/Patterns/Chat/Queued follow-up edit",
+  component: QueuedEditHost,
+} satisfies CanvasMeta<typeof QueuedEditHost>;
 export default meta;
 export const EditingSurface: CanvasFrame<typeof meta> = {
   id: "patterns-chat-queued-follow-up-edit--editing-surface",

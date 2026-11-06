@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Radio, RadioGroup } from "@/components/primitives/radio";
 
 const meta = {
-  title: "Components/Inputs/Radio",
+  title: "Design system/Components/Forms/Radio",
   component: Radio,
   decorators: [
     (Story: () => ReactNode) => (

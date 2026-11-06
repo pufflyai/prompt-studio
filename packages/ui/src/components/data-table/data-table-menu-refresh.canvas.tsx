@@ -25,7 +25,7 @@ const RefreshingRowMenu = () => {
   );
 };
 export default {
-  title: "Components/Data Display/Data Table/Menu refresh",
+  title: "Design system/Components/Data display/Data table/Menu refresh",
   component: RefreshingRowMenu,
 } satisfies CanvasMeta<typeof RefreshingRowMenu>;
 export const KeepsOpenDuringRefresh: CanvasFrame<typeof RefreshingRowMenu> = {

@@ -4,7 +4,10 @@ import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
-const meta: CanvasMeta<typeof ChatPanel> = { title: "Chat/ChatPanel/Async questions", component: ChatPanel };
+const meta: CanvasMeta<typeof ChatPanel> = {
+  title: "Design system/Patterns/Chat/Chat panel/Async questions",
+  component: ChatPanel,
+};
 export default meta;
 type Story = CanvasFrame<typeof ChatPanel>;
 const request = (

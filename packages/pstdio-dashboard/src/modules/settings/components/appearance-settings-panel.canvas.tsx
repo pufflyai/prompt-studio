@@ -17,7 +17,7 @@ const AppearanceExample = () => {
   return <AppearanceSettingsPanel workbench={workbench} />;
 };
 const meta = {
-  title: "Settings/Appearance",
+  title: "Product/Settings/Appearance",
   component: AppearanceExample,
   decorators: [
     (Story) => (

@@ -3,7 +3,9 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Terminal } from "lucide-react";
 import { SimpleCard, SimpleCardBody } from "./simple-card";
 
-const meta = { title: "Primitives/SimpleCard", component: SimpleCard } satisfies CanvasMeta<typeof SimpleCard>;
+const meta = { title: "Design system/Components/Layout/Simple card", component: SimpleCard } satisfies CanvasMeta<
+  typeof SimpleCard
+>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const Outline: Story = {

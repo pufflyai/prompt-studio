@@ -104,7 +104,7 @@ const WorkspaceListStory = (props: WorkspaceListStoryProps) => {
   );
 };
 const meta = {
-  title: "Dashboard/Workspace list",
+  title: "Product/Workspaces/List",
   component: WorkspaceListStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceListStory>;

@@ -5,7 +5,7 @@ import { ParamEditor } from "./param-editor";
 import type { ParamValueMap } from "./param-editor.types";
 
 const meta = {
-  title: "Patterns/Param Editor/Searchable Grouped Selection",
+  title: "Design system/Patterns/Parameter editor/Searchable grouped selection",
   component: ParamEditor,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;

@@ -13,7 +13,7 @@ type StoryFn = () => ReactNode;
  * truth for codepoints. `@pstdio/ui` declares the `@font-face` itself with woff2 only.
  */
 const meta = {
-  title: "Foundations/Icons/Prompt Studio Glyphs",
+  title: "Design system/Foundations/Icons/Prompt Studio glyphs",
   decorators: [
     (Story: StoryFn) => (
       <Box padding="lg" background="bg">

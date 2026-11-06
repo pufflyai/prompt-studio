@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 const items = Array.from({ length: 24 }, (_, index) => `Scrollable row ${index + 1}`);
 const layeredItems = Array.from({ length: 16 }, (_, index) => `Layered row ${index + 1}`);
 const meta: CanvasMeta<typeof ScrollArea> = {
-  title: "Components/Layout/Scroll Area",
+  title: "Design system/Components/Layout/Scroll area",
   component: ScrollArea,
   description: "Shared scrolling surface. The default xs size uses a 2px thumb with an 8px pointer target.",
   decorators: [

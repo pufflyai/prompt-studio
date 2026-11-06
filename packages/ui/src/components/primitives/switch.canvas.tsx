@@ -8,7 +8,7 @@ import { Switch } from "@/components/primitives/switch";
 // radius lives in packages/ui/src/theme/recipes/switch.ts, restated in the solid
 // variant because Chakra's default variant would otherwise pin "full".
 const meta = {
-  title: "Components/Inputs/Switch",
+  title: "Design system/Components/Forms/Switch",
   component: Switch,
   decorators: [
     (Story: () => ReactNode) => (

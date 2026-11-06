@@ -50,7 +50,7 @@ const valueRenderers: DataTableProps["columnRenderers"] = {
   Diff: { type: "diff" },
 };
 const meta = {
-  title: "Components/Data Display/Data Table",
+  title: "Design system/Components/Data display/Data table/Value renderers",
   component: DataTable,
 };
 export default meta;

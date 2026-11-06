@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ColorInput } from "./color-input";
 
 const meta = {
-  title: "Components/Inputs/Param Editor/Color Input",
+  title: "Design system/Patterns/Parameter editor/Color input",
   component: ColorInput,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ColorInput>;

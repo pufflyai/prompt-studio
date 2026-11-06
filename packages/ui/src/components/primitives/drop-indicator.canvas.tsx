@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DropIndicator } from "./drop-indicator";
 
 const meta = {
-  title: "Components/Drop indicator",
+  title: "Design system/Components/Feedback/Drop indicator",
   component: DropIndicator,
   render: (args) => (
     <Box position="relative" w="64" h="12" layerStyle="tabDropZone">

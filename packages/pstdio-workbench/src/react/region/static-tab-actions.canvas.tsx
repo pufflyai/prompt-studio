@@ -47,7 +47,7 @@ const StaticTabActions = () => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Static tab actions",
+  title: "Product/Workbench/Panels/Static tab actions",
   component: StaticTabActions,
   decorators: [
     (Story) => (

@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { PausedExtensionView } from "./paused-extension-view";
 
 const meta = {
-  title: "Extensions/Paused extension view",
+  title: "Product/Workbench/Views/Paused extension",
   component: PausedExtensionView,
   args: { installedExtensionId: "example", name: "Example tool" },
 } satisfies CanvasMeta<typeof PausedExtensionView>;

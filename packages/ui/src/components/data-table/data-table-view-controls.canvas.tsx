@@ -7,7 +7,7 @@ import type { DataTableProps, DataTableSavedView, DataTableViewsSource, RowData 
 import { useDataTableViewStore } from "./use-data-table-view";
 
 const meta: CanvasMeta<typeof DataTable> = {
-  title: "Patterns/Data Table/View Controls",
+  title: "Design system/Patterns/Data table/View controls",
   component: DataTable,
   fullscreen: true,
 };

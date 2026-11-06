@@ -73,7 +73,7 @@ const fixture = (resource = false, rendererLabel?: string) => {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Page grouping breadcrumbs",
+  title: "Product/Workbench/Navigation/Breadcrumbs/Page grouping breadcrumbs",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

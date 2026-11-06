@@ -19,7 +19,7 @@ import {
 } from "./edit-mode-story";
 
 const meta = {
-  title: "Components/Data Display/Data Table",
+  title: "Design system/Components/Data display/Data table/Overview",
   component: DataTable,
   args: {
     data: tableRows,

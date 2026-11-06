@@ -24,7 +24,7 @@ const resolveIcon = async (href: string) => {
 };
 const linkHandler: ChatLinkHandler = { resolveHref: () => null, resolveIcon, open: () => {} };
 const meta = {
-  title: "Chat/ChatPanel/Web links",
+  title: "Design system/Patterns/Chat/Chat panel/Web links",
   component: RichMessage,
   args: { defaultState: MESSAGE, linkHandler },
 } satisfies CanvasMeta<typeof RichMessage>;

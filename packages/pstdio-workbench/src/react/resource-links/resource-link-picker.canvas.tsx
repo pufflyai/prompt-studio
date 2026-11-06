@@ -3,7 +3,7 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { ResourceLinkPicker } from "./resource-link-picker";
 
 const meta = {
-  title: "Workbench/Resource link picker",
+  title: "Product/Workbench/Resource links/Resource link picker",
   component: ResourceLinkPicker,
   args: {
     excludeKey: "",

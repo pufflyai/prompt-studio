@@ -8,7 +8,7 @@ import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 type StoryFn = () => ReactNode;
 type InfoCardArgs = ComponentProps<typeof InfoCard>;
 const meta = {
-  title: "Components/Data Display/Info Card",
+  title: "Design system/Components/Data display/Info card",
   component: InfoCard,
   decorators: [
     (Story: StoryFn) => (

@@ -221,7 +221,7 @@ const EditorNotice = (props: { mode: Mode; message: string; retry: () => void; d
 };
 
 const meta = {
-  title: "pstdio-workbench/File editor/Public text sessions",
+  title: "Product/Workbench/File editor/Public text sessions",
   component: SharedTextEditors,
   fullscreen: true,
   description:

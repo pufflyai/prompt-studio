@@ -228,7 +228,7 @@ const openTicketPage = (workbench: WorkbenchCore) => {
 const openStartPage = (workbench: WorkbenchCore) =>
   void workbench.navigation.openTarget({ kind: "page", page: dashboardHomePage });
 const meta = {
-  title: "Dashboard/Sidenav",
+  title: "Product/Workbench/Navigation/Sidebar",
   fullscreen: true,
   decorators: [
     (Story) => (

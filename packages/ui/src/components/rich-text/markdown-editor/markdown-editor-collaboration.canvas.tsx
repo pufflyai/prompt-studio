@@ -175,7 +175,7 @@ const CollaborationScene = (props: {
 };
 
 const meta = {
-  title: "Patterns/Editors/Markdown Editor/Collaboration",
+  title: "Design system/Patterns/Editors/Markdown editor/Collaboration",
   component: MarkdownEditor,
 } satisfies CanvasMeta<typeof MarkdownEditor>;
 export default meta;

@@ -46,7 +46,7 @@ const buttonModePreviews: ButtonModePreview[] = [
   { id: "pstdio-dark", label: "Dark mode", mode: "dark" },
 ];
 const meta: CanvasMeta<typeof Button> = {
-  title: "Components/Inputs/Button",
+  title: "Design system/Components/Forms/Button",
   component: Button,
   decorators: [
     (Story: StoryFn) => (

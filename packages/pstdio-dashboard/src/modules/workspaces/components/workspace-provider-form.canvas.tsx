@@ -33,7 +33,7 @@ const remote = {
   },
 };
 const meta = {
-  title: "Workspaces/Provider selection",
+  title: "Product/Workspaces/Provider selection",
   component: WorkspaceProviderForm,
   args: { providers: [git, remote], onSubmit: async () => {}, onCancel: () => {} },
   decorators: [

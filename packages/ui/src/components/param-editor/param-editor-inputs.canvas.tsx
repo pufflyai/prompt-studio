@@ -44,7 +44,7 @@ const InputPreview = (props: { fixture: ParamEditorInputFixture }) => {
   );
 };
 const meta = {
-  title: "Patterns/Param Editor",
+  title: "Design system/Patterns/Parameter editor/Inputs",
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;

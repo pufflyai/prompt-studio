@@ -8,7 +8,7 @@ import { reorderDataTableColumns, toggleHiddenDataTableColumn } from "./data-tab
 import type { DataTableSettings } from "./types";
 
 const meta: CanvasMeta<typeof DataTableDisplayMenu> = {
-  title: "Patterns/Data Table/Display Menu",
+  title: "Design system/Patterns/Data table/Display menu",
   component: DataTableDisplayMenu,
 };
 export default meta;

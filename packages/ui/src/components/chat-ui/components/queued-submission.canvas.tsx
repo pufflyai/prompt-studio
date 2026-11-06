@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 
 const meta = {
-  title: "Patterns/Chat/Queued submission",
+  title: "Design system/Patterns/Chat/Queued submission",
   component: ChatPanel,
   decorators: [
     (Story) => (

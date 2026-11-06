@@ -9,7 +9,7 @@ const selectionModes = [
   { value: "multi_select", label: "Multiple" },
 ];
 const meta = {
-  title: "Components/Inputs/Segmented Control",
+  title: "Design system/Components/Forms/Segmented control",
   component: SegmentedControl,
   decorators: [
     (Story: StoryFn) => (

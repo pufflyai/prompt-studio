@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 
 const meta: CanvasMeta<typeof WorkspaceBadge> = {
-  title: "Components/Data Display/Workspace Badge",
+  title: "Design system/Components/Data display/Workspace badge",
   component: WorkspaceBadge,
   args: {
     workspaceType: "worktree",

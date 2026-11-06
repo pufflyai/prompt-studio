@@ -111,7 +111,7 @@ const KanbanViewRefresh = () => {
   );
 };
 const meta = {
-  title: "Renderers/Rebinding",
+  title: "Product/Workbench/Views/Rebinding",
   decorators: [
     (Story) => (
       <WorkbenchThemeProvider>

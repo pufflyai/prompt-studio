@@ -46,7 +46,7 @@ const VirtualSortableTree = () => {
   );
 };
 const meta = {
-  title: "Components/Data Display/Tree List/Virtual Sortable",
+  title: "Design system/Components/Data display/Tree list/Virtual sortable",
   component: VirtualSortableTree,
 } satisfies CanvasMeta<typeof VirtualSortableTree>;
 export default meta;

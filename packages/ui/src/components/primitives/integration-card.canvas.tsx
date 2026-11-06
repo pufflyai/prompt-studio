@@ -6,7 +6,7 @@ import { IntegrationCard } from "@/components/primitives/integration-card";
 type StoryFn = () => ReactNode;
 type IntegrationCardArgs = ComponentProps<typeof IntegrationCard>;
 const meta = {
-  title: "Components/Data Display/Integration Card",
+  title: "Design system/Components/Data display/Integration card",
   component: IntegrationCard,
   decorators: [
     (Story: StoryFn) => (

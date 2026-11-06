@@ -157,7 +157,7 @@ const createUnavailableMenuWorkbench = () => {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Panel tabs",
+  title: "Product/Workbench/Panels/Panel tabs",
   component: WorkbenchStory,
   description:
     "Single-resource Main pages have no tab. Pages supporting many resources and optional panels keep their last tab and Close button. alwaysShowTabs overrides the single-tab default. Header actions remain available without tabs.",

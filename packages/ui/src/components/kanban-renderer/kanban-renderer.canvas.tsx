@@ -7,7 +7,7 @@ import { CreateFormWrapper, Wrapper } from "./kanban-renderer-story-wrappers";
 import type { KanbanRendererSavedView, ViewMode } from "./types";
 
 const meta: CanvasMeta<typeof KanbanRenderer> = {
-  title: "Patterns/Kanban Renderer/Kanban Renderer",
+  title: "Design system/Patterns/Kanban renderer/Overview",
   component: KanbanRenderer,
   fullscreen: true,
 };

@@ -5,7 +5,7 @@ import { Bar } from "./collection-view-bar-story";
 import { storyFilter } from "./collection-view-story-fixtures";
 
 const meta: CanvasMeta<typeof CollectionViewBar> = {
-  title: "Patterns/Collection View/Filter Row",
+  title: "Design system/Patterns/Collection view/Filter row",
   component: CollectionViewBar,
   fullscreen: true,
 };

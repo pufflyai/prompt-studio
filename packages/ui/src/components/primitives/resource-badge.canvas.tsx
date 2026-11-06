@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { MissingResourceBadge, ResourceBadge } from "@/components/primitives/resource-badge";
 
 const meta: CanvasMeta<typeof ResourceBadge> = {
-  title: "Components/Data Display/Resource Badge",
+  title: "Design system/Components/Data display/Resource badge",
   component: ResourceBadge,
 };
 export default meta;

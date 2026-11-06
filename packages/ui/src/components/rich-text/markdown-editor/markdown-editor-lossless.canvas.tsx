@@ -48,7 +48,7 @@ const LosslessSourceStory = (props: { source?: string }) => {
   );
 };
 const meta: CanvasMeta<typeof MarkdownEditor> = {
-  title: "Patterns/Editors/Markdown Editor/Source Preservation",
+  title: "Design system/Patterns/Editors/Markdown editor/Source preservation",
   component: MarkdownEditor,
 };
 export default meta;

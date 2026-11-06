@@ -68,7 +68,7 @@ const Preview = (props: { completion: "row" | "menu" | "selection" }) => {
   );
 };
 export default {
-  title: "Prompt input/Preserve chosen focus while loading",
+  title: "Design system/Patterns/Editors/Prompt editor/Focus while loading",
   component: Preview,
   description:
     "Synthetic loading completes when the session row or its Info explanation gets focus, or when Rename is selected. Keep chosen focus in an open menu; after selecting an action, the ready composer accepts input. Open the row menu with ContextMenu. The product adds no control or appearance.",

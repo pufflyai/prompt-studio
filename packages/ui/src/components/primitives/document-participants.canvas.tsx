@@ -8,9 +8,10 @@ const participants: DocumentParticipant[] = [
   { id: "alex-laptop-tab", label: "Alex", color: "blue" },
   { id: "sam-desktop-tab", label: "Sam", color: "purple" },
 ];
-const meta = { title: "Primitives/DocumentParticipants", component: DocumentParticipants } satisfies CanvasMeta<
-  typeof DocumentParticipants
->;
+const meta = {
+  title: "Design system/Components/Data display/Document participants",
+  component: DocumentParticipants,
+} satisfies CanvasMeta<typeof DocumentParticipants>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
 

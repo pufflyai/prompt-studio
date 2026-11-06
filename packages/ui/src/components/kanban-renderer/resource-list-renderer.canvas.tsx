@@ -2,7 +2,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { ResourceListRenderer } from "./resource-list-renderer";
 
-export default { title: "Patterns/Resource List/Renderer", fullscreen: true };
+export default { title: "Design system/Patterns/Resource list/Renderer", fullscreen: true };
 
 export const GroupedAndNested = () => {
   const [opened, setOpened] = useState("");

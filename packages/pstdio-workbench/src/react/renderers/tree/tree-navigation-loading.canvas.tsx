@@ -107,7 +107,7 @@ const TreeNavigationLoading = (props: { pageOwned: boolean; composed?: boolean }
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Tree navigation loading",
+  title: "Product/Workbench/Navigation/Tree/Tree navigation loading",
   component: TreeNavigationLoading,
   args: { pageOwned: false },
   fullscreen: true,

@@ -32,7 +32,7 @@ const WindowsPicker = (props: ComponentProps<typeof FolderPickerDialog>) => {
   );
 };
 const meta = {
-  title: "Overlays/FolderPickerDialog/Windows",
+  title: "Design system/Components/Overlays/Folder picker/Windows",
   component: FolderPickerDialog,
   description:
     "Windows drives come from the runtime host. Selection only navigates; Open folder confirms. Matches Pencil frame XuQrP. Unix runtimes supply no drives. UNC paths leave the drive unselected.",

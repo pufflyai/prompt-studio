@@ -95,7 +95,7 @@ const TreeGroups = (props: { counts?: boolean; chrome?: boolean }) => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Tree groups",
+  title: "Product/Workbench/Navigation/Tree/Tree groups",
   component: TreeGroups,
   fullscreen: true,
 } satisfies CanvasMeta<typeof TreeGroups>;

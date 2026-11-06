@@ -17,7 +17,7 @@ const statusRows: RowData[] = [
   { Project: "Partner rollout", Owner: "Mia", Status: "On track" },
 ];
 const meta = {
-  title: "Components/Data Display/Data Table",
+  title: "Design system/Components/Data display/Data table/Color scales",
   component: DataTable,
 };
 export default meta;

@@ -62,7 +62,7 @@ const createPageContextWorkbench = (routed = false, contextView = false) => {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Page context",
+  title: "Product/Workbench/Navigation/Breadcrumbs/Page context",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

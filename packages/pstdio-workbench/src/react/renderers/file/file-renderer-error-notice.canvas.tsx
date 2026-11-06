@@ -3,7 +3,7 @@ import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 
 const meta = {
-  title: "pstdio-workbench/File editor/Resource removed",
+  title: "Product/Workbench/File editor/Resource removed",
   component: FileRendererErrorNotice,
   decorators: [
     (Story) => (

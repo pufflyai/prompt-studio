@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Slider } from "@/components/primitives/slider";
 
 const meta = {
-  title: "Components/Inputs/Slider",
+  title: "Design system/Components/Forms/Slider",
   component: Slider,
   args: {
     min: 0,

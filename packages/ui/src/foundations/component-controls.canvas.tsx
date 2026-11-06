@@ -2,7 +2,7 @@ import { Button, Field, Flex, Input, NumberInput, Stack, Text, Textarea } from "
 import { useState } from "react";
 import { Checkbox, Radio, RadioGroup, SegmentedControl, Slider, Switch } from "@/components/primitives";
 
-export default { title: "Design System/Component controls" };
+export default { title: "Design system/Foundations/Control states" };
 
 export const ButtonStates = () => (
   <Stack p="md" gap="lg">

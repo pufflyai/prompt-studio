@@ -22,7 +22,7 @@ import resourceListExtension from "./extensions/resource-list-extension";
 import { OnboardingFrame } from "./onboarding-frame";
 
 const meta = {
-  title: "pstdio-workbench/Guides/Onboarding",
+  title: "Product/Reference/Examples/Onboarding",
 } satisfies CanvasMeta;
 export default meta;
 type Story = CanvasFrame<typeof meta>;

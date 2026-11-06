@@ -63,7 +63,7 @@ const StructureLoading = () => {
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Structure before contents",
+  title: "Product/Workbench/Navigation/Tree/Structure before contents",
   component: StructureLoading,
   fullscreen: true,
 } satisfies CanvasMeta<typeof StructureLoading>;

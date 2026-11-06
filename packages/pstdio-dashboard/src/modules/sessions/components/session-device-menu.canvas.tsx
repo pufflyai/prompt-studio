@@ -44,7 +44,7 @@ const Header = (props: { device: SessionDeviceOption; locked: boolean }) => (
 );
 
 const meta = {
-  title: "Modules/Sessions/Device selector",
+  title: "Product/Sessions/Device selector",
   component: SessionDeviceMenu,
   args: { devices: [thisDevice], selectedDeviceId: thisDevice.id },
   render: () => (

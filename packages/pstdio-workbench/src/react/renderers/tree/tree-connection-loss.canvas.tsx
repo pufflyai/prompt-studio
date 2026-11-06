@@ -70,7 +70,7 @@ const NavigationConnection = (props: NavigationConnectionProps) => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Navigation connection loss",
+  title: "Product/Workbench/Navigation/Tree/Navigation connection loss",
   component: NavigationConnection,
   decorators: [
     (Story) => (

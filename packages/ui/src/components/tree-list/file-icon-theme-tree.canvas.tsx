@@ -7,7 +7,7 @@ import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
 const meta: CanvasMeta<typeof TreeList> = {
-  title: "Components/Data Display/File Icon Theme Tree",
+  title: "Design system/Components/Data display/File icon theme tree",
   component: TreeList,
 };
 export default meta;

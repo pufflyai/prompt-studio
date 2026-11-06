@@ -6,7 +6,7 @@ import { EmptyState, type EmptyStateProps } from "@/components/primitives/empty-
 
 type StoryFn = () => ReactNode;
 const meta: CanvasMeta<typeof EmptyState> = {
-  title: "Components/Feedback/Empty State",
+  title: "Design system/Components/Feedback/Empty state",
   component: EmptyState,
   decorators: [
     (Story: StoryFn) => (

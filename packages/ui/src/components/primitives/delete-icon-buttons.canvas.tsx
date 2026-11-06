@@ -4,7 +4,7 @@ import { Trash2 } from "lucide-react";
 import { getThemePreferenceClassNames } from "@/utils/apply-theme-preference";
 
 const meta = {
-  title: "Components/Inputs/Delete Icon Buttons",
+  title: "Design system/Components/Forms/Delete icon buttons",
   args: { mode: "light" as "light" | "dark" },
   render: ({ mode }) => (
     <Stack

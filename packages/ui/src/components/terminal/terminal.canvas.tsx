@@ -6,7 +6,7 @@ import { Terminal } from "./terminal";
 import type { TerminalBridge } from "./types";
 
 const meta: CanvasMeta<typeof Terminal> = {
-  title: "Components/Terminal",
+  title: "Design system/Components/Media/Terminal",
   component: Terminal,
 };
 export default meta;

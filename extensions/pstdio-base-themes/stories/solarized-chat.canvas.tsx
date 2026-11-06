@@ -67,7 +67,7 @@ function SolarizedChat(props: SolarizedChatProps) {
   );
 }
 const meta = {
-  title: "Themes/Solarized chat",
+  title: "Design system/Foundations/Themes/Solarized chat",
   fullscreen: true,
   component: SolarizedChat,
 } satisfies CanvasMeta<typeof SolarizedChat>;

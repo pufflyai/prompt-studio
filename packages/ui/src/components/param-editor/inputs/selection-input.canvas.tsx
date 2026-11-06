@@ -4,7 +4,7 @@ import { SelectionInput } from "./selection-input";
 const main = { id: "main", name: "main", icon: "git-commit-horizontal" };
 const develop = { id: "develop", name: "develop", icon: "git-commit-horizontal" };
 const meta = {
-  title: "Patterns/Param Editor/Selection",
+  title: "Design system/Patterns/Parameter editor/Selection",
   component: SelectionInput,
   args: {
     id: "base",

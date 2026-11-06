@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Checkbox } from "@/components/primitives/checkbox";
 
 const meta = {
-  title: "Components/Inputs/Checkbox",
+  title: "Design system/Components/Forms/Checkbox",
   component: Checkbox,
   decorators: [
     (Story: () => ReactNode) => (

@@ -4,7 +4,7 @@ import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { ChatWorkspaceHub } from "./workspace-hub";
 
 const meta: CanvasMeta<typeof ChatWorkspaceHub> = {
-  title: "Patterns/Chat/Workspace Hub",
+  title: "Design system/Patterns/Chat/Workspace hub",
   component: ChatWorkspaceHub,
 };
 export default meta;

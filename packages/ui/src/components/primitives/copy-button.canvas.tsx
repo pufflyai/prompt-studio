@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { CopyButton } from "./copy-button";
 
 const meta: CanvasMeta<typeof CopyButton> = {
-  title: "Components/Inputs/CopyButton",
+  title: "Design system/Components/Forms/Copy button",
   component: CopyButton,
   args: { text: "Build the tools that make your work easier." },
   description:

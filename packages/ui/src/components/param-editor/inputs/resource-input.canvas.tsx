@@ -60,7 +60,7 @@ const reviewLinks: ResourceParam = {
   options: [{ id: "pr-42", name: "PR #42", icon: "code", href: "https://example.com/pr/42" }],
 };
 const meta = {
-  title: "Components/Inputs/Param Editor/Resource Input",
+  title: "Design system/Patterns/Parameter editor/Resource input",
   component: ParamEditor,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;

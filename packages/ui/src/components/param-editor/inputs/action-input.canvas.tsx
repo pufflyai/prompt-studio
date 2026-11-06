@@ -3,7 +3,7 @@ import { ActionInput } from "./action-input";
 
 const run = { id: "run", name: "Run" };
 const meta = {
-  title: "Patterns/Param Editor/Actions",
+  title: "Design system/Patterns/Parameter editor/Actions",
   component: ActionInput,
   args: {
     id: "action",
