@@ -7,7 +7,12 @@ import type { ChatSession } from "../../../extensions/contributions/chat-session
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { nativeChatInputHandler, submitWithNativeChatAccount } from "./native-chat-account-submit";
 import { runNativeChatAction } from "./native-chat-action";
-import { NativeChatAttachmentActions, NativeChatAttachmentList } from "./native-chat-attachments";
+import {
+  NativeChatAttachmentActions,
+  NativeChatAttachmentList,
+  nativeChatTextAttachment,
+  uploadNativeChatAttachments,
+} from "./native-chat-attachments";
 import {
   NativeChatApproval,
   NativeChatControls,
@@ -17,7 +22,8 @@ import {
 } from "./native-chat-controls";
 import type { NativeChatHostProps, NativeChatHostServices } from "./native-chat-host";
 import { findQueuedChatRequest, queuedChatDraft } from "./native-chat-queue";
-import { NativeChatNotices, NativeChatResources } from "./native-chat-status";
+import { NativeChatNotices } from "./native-chat-status";
+import { NativeChatWorkspace } from "./native-chat-workspace";
 
 interface NativeChatViewProps extends NativeChatHostServices {
   Host?: ComponentType<NativeChatHostProps>;
@@ -33,13 +39,6 @@ interface NativeChatViewProps extends NativeChatHostServices {
   emptyDescription?: string;
   renderParamField?: CommandParamFieldRenderer;
 }
-
-const encodeFile = async (file: File) => {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-};
 
 const accountBlocksSubmission = (account: NativeChatHostServices["account"], text: string) =>
   Boolean(account?.blocked && !account.isCommand(text));
@@ -75,6 +74,9 @@ const NativeChatContent = (props: NativeChatViewProps) => {
   const edit = selected ? edits[selected.id] : undefined;
   const activeDraft = edit ? { ...draft, ...edit } : draft;
   const values = activeDraft.values;
+  const workspacePending = Boolean(
+    conversation.workspace && typeof values[conversation.workspace.controlId] === "object",
+  );
   const attachments = visibleChatDraftAttachments(activeDraft.attachments, selected ? undefined : pending);
   const changeActive = (update: Partial<typeof activeDraft>) => {
     if (selected) setEdits((current) => ({ ...current, [selected.id]: { values, attachments, ...update } }));
@@ -84,15 +86,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
     setUploading((count) => count + files.length);
     const target = selected?.id;
     try {
-      for (const file of files) {
-        const result = await run({
-          type: "upload",
-          name: file.name,
-          mediaType: file.type,
-          data: await encodeFile(file),
-        });
-        const attachment = result && "attachment" in result ? result.attachment : undefined;
-        if (!attachment) throw new Error("The attachment was not uploaded.");
+      await uploadNativeChatAttachments(files, run, (attachment) => {
         if (target)
           setEdits((current) => {
             const currentDraft = current[target] ?? { values, attachments: [] };
@@ -102,7 +96,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
             };
           });
         else session.changeDraft({ attachments: [...session.getSnapshot().draft.attachments, attachment] });
-      }
+      });
     } catch (error) {
       session.reportError(error);
     } finally {
@@ -131,7 +125,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
           conversation,
           draft: activeDraft,
           editingQueuedRequest: Boolean(selected),
-          unavailable: host.account?.blocked,
+          unavailable: host.account?.blocked || workspacePending,
           initializing,
           renderParamField,
           changeValues: (next) => changeActive({ values: next }),
@@ -161,6 +155,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
             inputDisabled={sending || conversation.readOnly || uploading > 0 || Boolean(host.account?.progress)}
             submitDisabled={
               conversation.submitDisabled ||
+              workspacePending ||
               Boolean(selected && conversation.queueReadOnly) ||
               sending ||
               uploading > 0 ||
@@ -190,22 +185,27 @@ const NativeChatContent = (props: NativeChatViewProps) => {
               values,
               sending,
             )}
-            workspaceHub={<NativeChatResources resources={conversation.resources} run={run} />}
+            workspaceHub={
+              <NativeChatWorkspace
+                conversation={conversation}
+                draft={activeDraft}
+                initializing={initializing || Boolean(selected)}
+                renderParamField={renderParamField}
+                currentValues={() => session.getSnapshot().draft.values}
+                run={run}
+                changeValues={(next) =>
+                  changeActive({ values: typeof next === "function" ? next(session.getSnapshot().draft.values) : next })
+                }
+              />
+            }
             actions={<NativeChatControls {...controlProps} />}
             conversationNotices={<NativeChatNotices host={host} state={state} session={session} />}
             onAttachFiles={(files) => {
               void upload(files).catch(() => undefined);
             }}
-            onAttachText={(text) => {
-              void upload([new File([text], "pasted-text.txt", { type: "text/plain" })]).catch(() => undefined);
-            }}
+            onAttachText={nativeChatTextAttachment(upload)}
             attachmentActions={
-              <NativeChatAttachmentActions
-                disabled={Boolean(conversation.readOnly) || uploading > 0}
-                upload={(files) => {
-                  void upload(files).catch(() => undefined);
-                }}
-              />
+              <NativeChatAttachmentActions disabled={Boolean(conversation.readOnly) || uploading > 0} upload={upload} />
             }
             attachmentList={
               <NativeChatAttachmentList

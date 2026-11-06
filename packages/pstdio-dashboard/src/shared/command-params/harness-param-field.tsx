@@ -17,6 +17,7 @@ import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
 import { useHarnessParamDefaults } from "@/shared/agents/use-harness-param-defaults";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { ExtensionIcon } from "@/shared/components/extension-icon";
 import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { useProject } from "@/shared/projects/use-project";
 import { changedHarnessParams } from "./harness-settings";
@@ -71,6 +72,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     value: agent.id,
     disabled: agent.availability.type === "NOT_FOUND",
     description: agent.availability.reason,
+    icon: agent.icon ? () => <ExtensionIcon name={agent.icon} /> : undefined,
   }));
   const modelOptions = models.map((entry) => ({
     label: entry.label ?? entry.id,

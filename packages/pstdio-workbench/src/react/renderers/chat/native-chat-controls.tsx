@@ -65,9 +65,12 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
     changeValues(values);
     void run({ type: "control", id, values }).catch(() => undefined);
   };
+  const fields = conversation.controls?.filter(
+    (param) => param.id !== conversation.workspace?.controlId && param.id !== conversation.workspace?.deviceControlId,
+  );
   return (
     <Flex align="center" gap="2xs" wrap="wrap">
-      {conversation.controls
+      {fields
         ?.filter((param) => param.type === "harness")
         .map((param) => (
           <HarnessControl
@@ -80,10 +83,10 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
             onChange={(value) => change(param.id, value)}
           />
         ))}
-      {conversation.controls?.some((param) => param.type !== "harness") ? (
+      {fields?.some((param) => param.type !== "harness") ? (
         <ParamEditor
           variant="small"
-          params={conversation.controls.filter((param) => param.type !== "harness")}
+          params={fields!.filter((param) => param.type !== "harness")}
           defaultValues={draft.values}
           readOnly={conversation.readOnly || props.initializing}
           onChange={change}

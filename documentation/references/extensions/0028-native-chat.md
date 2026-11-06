@@ -42,6 +42,49 @@ still compare that exact source. The dashboard uses its existing canonical resou
 legacy core URLs and qualified provider targets share one owner; explicit foreign
 owner/project scopes remain distinct. Other hosts retain their supplied identities.
 
+## Workspace contribution
+
+An optional snapshot `workspace` binding places workspace/device identity, creation inputs,
+setup status, diff counts and opening in the shared workspace hub. It references provider-owned
+selection controls by `controlId` and optional `deviceControlId`; those controls are consumed
+there once instead of appearing among generic composer fields. Existing conversations can keep
+read-only selectors visible, including their owning device. Omit `create` to lock creation.
+Use `null` to remove the binding. Existing `resources` actions remain available independently.
+
+```ts
+workspace: {
+  controlId: "workspace",
+  deviceControlId: "device",
+  create: { actionId: "create-workspace" },
+  openResourceId: workspaceId,
+  status: "ready", additions: 12, deletions: 3,
+}
+```
+
+An existing workspace selection is a string ID. Selecting New workspace stages the typed
+control value `{ providerId: string, params?: JsonObject }` in the same draft values map;
+it survives saves, recovery, action and queue serialization. The host reuses the workspace
+provider's declared schema, defaults, dynamic choices and validation through its ordinary
+workspace form renderer. JSON strings are only the existing host command-form adapter detail,
+never draft/wire values. Pending/invalid provider choices prevent creation. The native host
+blocks submission and executing harness modes while creation is unresolved.
+
+The explicit creation operation receives current values. Call `ctx.workspaces.create` with
+the selected provider inputs, then acknowledge the committed ID in `snapshot.values[controlId]`;
+do not lose that acknowledgement if optional metadata refresh fails. A successful full snapshot
+may also refresh the new label, setup state and open action. Existing per-control action clocks
+preserve later selections. Creation errors keep the form and draft for correction/retry. The
+public create service runs on this device: do not create locally for a different selected
+account device. Providers retain their own execution targets and operations; Sessions never
+interprets provider-specific field names. Existing sessions keep their bound workspace.
+
+Harness choices use agent metadata's exact owning `extensionId` and installed manifest `icon`.
+The host resolves package SVG assets with the same bounded asset reader used by Extensions;
+the native picker uses that icon for each harness and its selected parent row. An absent or
+unreadable icon falls back without removing the harness. No ID/name inference or marketplace
+icon lookup is involved. Attach files is an icon-only file action with an accessible label and
+tooltip; upload and attachment ownership are unchanged.
+
 ## Snapshot and stream handoff
 
 `query` returns a `ChatRendererSnapshot`: canonical session messages, queue entries,
