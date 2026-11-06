@@ -55,18 +55,18 @@ export const createLocalRecoverySource = (input: {
 }) => {
   // Local retention and capture never overlap: a capture may reuse cached ciphertext.
   let pruning: Promise<void> | undefined;
+  let lastError: unknown = null;
+  const sourceId = (workspaceId: string, folder: string) =>
+    `${workspaceId}:${createHash("sha256").update(folder).digest("hex").slice(0, 16)}`;
+  const journalFor = (id: string) =>
+    openRecoveryJournal({ root: input.root, source: [input.workbenchId, input.accountId, input.deviceId, id] });
   const source = async () => {
     const workspace = await input.workspaces.getDefault(input.workbenchId);
     if (!workspace?.root_path || workspace.execution_kind !== "local") return null;
     // A folder still being provisioned is not the project's folder yet; never seed or read it.
     if (workspace.initializing || workspace.provider_state !== "ready") return null;
-    const digest = createHash("sha256").update(workspace.root_path).digest("hex").slice(0, 16);
-    const id = `${workspace.id}:${digest}`;
-    const journal = await openRecoveryJournal({
-      root: input.root,
-      source: [input.workbenchId, input.accountId, input.deviceId, id],
-    });
-    return { id, folder: workspace.root_path, journal };
+    const id = sourceId(workspace.id, workspace.root_path);
+    return { id, folder: workspace.root_path, journal: await journalFor(id) };
   };
   const gitRoots = async () =>
     (await input.workspaces.list(input.workbenchId)).flatMap((workspace) =>
@@ -163,7 +163,9 @@ export const createLocalRecoverySource = (input: {
     run: async (_reasons, runSignal) => {
       try {
         await capture(AbortSignal.any([runSignal, input.signal]));
+        lastError = null;
       } catch (error) {
+        lastError = error;
         input.failed(error);
         throw error;
       } finally {
@@ -234,7 +236,13 @@ export const createLocalRecoverySource = (input: {
         pending,
         capturing: scheduler.status().running,
         needsAttention: scheduler.status().failed,
+        error: scheduler.status().failed ? lastError : null,
       };
+    },
+    /** A restored folder keeps the policy of its copy, including deliberate absence: its
+     * starter decision is already made before it becomes this device's source. */
+    async enroll(workspaceId: string, folder: string) {
+      await (await journalFor(sourceId(workspaceId, folder))).update({ enrolled: true });
     },
     async close() {
       await scheduler.close();

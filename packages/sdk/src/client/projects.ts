@@ -9,8 +9,12 @@ import type {
   ProjectCreateRequest,
   ProjectDetails,
   ProjectFolder,
+  ProjectFolderRecoveryStatus,
+  ProjectFolderSource,
+  ProjectFolderSourceRef,
   ProjectRecoveryPoint,
   ProjectUpdateRequest,
+  RestoreProjectFolderInput,
   RestoreProjectInput,
   RestoreProjectResult,
   UpdateProjectInput,
@@ -44,6 +48,21 @@ export type ProjectClient = {
   open(projectId: string): Promise<Workspace & ExtensionWorkspace>;
   /** Gives a project without a folder on this device its folder, by cloning its git remote or using a checkout. */
   chooseFolder(projectId: string, input: ChooseProjectFolderInput): Promise<Workspace & ExtensionWorkspace>;
+  /** Folder copies of a cloud project that your devices completed, and whether each is fully on this device. */
+  folderSources(projectId: string): Promise<ProjectFolderSource[]>;
+  /** Folder capture, download and restore progress on this device. Also in `account.projectSyncStatus`. */
+  folderRecovery(projectId: string): Promise<ProjectFolderRecoveryStatus>;
+  /** Captures this device's project folder now; it uploads when Cloud is reachable. */
+  captureFolder(projectId: string): Promise<ProjectFolderRecoveryStatus>;
+  /** Starts downloading one folder copy into this device's recovery store. Read progress with `folderRecovery`. */
+  downloadFolder(projectId: string, source: ProjectFolderSourceRef): Promise<ProjectFolderRecoveryStatus>;
+  /**
+   * Starts restoring a folder copy into a new folder that does not exist yet, downloading it first if needed.
+   * The folder appears only after every entry is verified, then becomes the project's folder unless it has one.
+   */
+  restoreFolder(projectId: string, input: RestoreProjectFolderInput): Promise<ProjectFolderRecoveryStatus>;
+  /** Cancels the running folder download or restore and removes only its staging. */
+  cancelFolderRecovery(projectId: string): Promise<ProjectFolderRecoveryStatus>;
   retrySetup(projectId: string): Promise<Workspace & ExtensionWorkspace>;
   update(projectId: string, input: ProjectUpdateRequest | UpdateProjectInput): Promise<Project & ProjectDetails>;
   delete(projectId: string): Promise<void>;
@@ -65,6 +84,16 @@ export const createProjectClient = (request: RequestFn): ProjectClient => ({
   open: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/open`, { method: "POST" }),
   chooseFolder: (projectId, input) =>
     request(`/v1/projects/${encodeURIComponent(projectId)}/folder`, { method: "POST", body: input }),
+  folderSources: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/folder/sources`),
+  folderRecovery: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/folder/recovery`),
+  captureFolder: (projectId) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/folder/capture`, { method: "POST" }),
+  downloadFolder: (projectId, source) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/folder/download`, { method: "POST", body: source }),
+  restoreFolder: (projectId, input) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/folder/restore`, { method: "POST", body: input }),
+  cancelFolderRecovery: (projectId) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/folder/cancel`, { method: "POST" }),
   retrySetup: (projectId) => request(`/v1/projects/${projectId}/retry-setup`, { method: "POST" }),
   update: (projectId, input) => request(`/v1/projects/${projectId}`, { method: "PATCH", body: input }),
   delete: (projectId) => request(`/v1/projects/${projectId}`, { method: "DELETE" }),
