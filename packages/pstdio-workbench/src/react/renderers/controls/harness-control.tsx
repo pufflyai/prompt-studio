@@ -4,6 +4,7 @@ import type { CommandParamFieldRenderer } from "../../command-palette/command-pa
 
 interface HarnessControlProps {
   param: HarnessControlDeclaration;
+  presentation?: "chat";
   value: ControlValue;
   readOnly: boolean;
   renderParamField?: CommandParamFieldRenderer;
@@ -16,6 +17,7 @@ export const HarnessControl = (props: HarnessControlProps) => {
     entry: { key: param.id, label: param.name, description: param.description, type: "harness", required: true },
     value: JSON.stringify(value),
     harness: {
+      presentation: props.presentation,
       lockIdentity: param.lockIdentity,
       preserveSettings: param.preserveSettings,
       settingsMode: param.settingsMode,

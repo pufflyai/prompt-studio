@@ -16,11 +16,11 @@ export const createDashboardChatHost = (workbench: WorkbenchCore, projectId?: st
     children,
     linkHandler,
   }: NativeChatHostProps) {
-    const { conversation, messages: presented } = useSyncExternalStore(
-      session.subscribe,
-      session.getSnapshot,
-      session.getSnapshot,
-    );
+    const {
+      conversation,
+      messages: presented,
+      initializing,
+    } = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
     const messages = useApiFileParts(presented, (url) => nativeChatFileAllowed(url, projectId, extensionId));
     const attachmentUrls = useApiFileUrls([
       ...new Set(
@@ -33,6 +33,7 @@ export const createDashboardChatHost = (workbench: WorkbenchCore, projectId?: st
       projectId,
       session,
       readOnly: conversation.readOnly,
+      initializing,
       binding: conversation.nativeHarnessAccount,
       value: conversation.nativeHarnessAccount ? values[conversation.nativeHarnessAccount.controlId] : undefined,
     });

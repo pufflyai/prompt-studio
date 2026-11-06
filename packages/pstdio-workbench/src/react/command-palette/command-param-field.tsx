@@ -6,7 +6,12 @@ export { CommandParamField } from "@pstdio/ui/command-form";
 
 export interface CommandParamFieldProps extends FormFieldProps {
   /** Host constraints for a native harness control. */
-  harness?: { lockIdentity?: boolean; preserveSettings?: boolean; settingsMode?: "overrides" | "resolved" };
+  harness?: {
+    presentation?: "chat";
+    lockIdentity?: boolean;
+    preserveSettings?: boolean;
+    settingsMode?: "overrides" | "resolved";
+  };
   context?: WorkbenchCommandExecutionContext;
 }
 

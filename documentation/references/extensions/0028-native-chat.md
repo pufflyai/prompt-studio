@@ -182,6 +182,11 @@ navigation and preserve standard unavailable-target feedback.
 
 ## Trusted host features
 
+Native chat uses the compact model menu and inline harness parameters from
+`@pstdio/ui/param-editor` (`HarnessModelMenu` and `HarnessParamInlineControls`).
+Command forms keep the labeled `HarnessModelPicker` and `HarnessParamEditor`.
+Both presentations use the same control values, identity locks and settings/reset semantics.
+
 Set `nativeHarnessAccount: { controlId: "your-harness-control" }` to use native `/login` and `/logout` handling and
 the host account progress, browser and secret-input UI. Authentication replies use
 the dedicated authentication channel, never chat actions, command history or

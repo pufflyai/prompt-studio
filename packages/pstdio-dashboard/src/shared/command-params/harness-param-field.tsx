@@ -1,7 +1,9 @@
+import { HStack } from "@chakra-ui/react";
 import {
   filterHarnessParamValues,
   HarnessModelPicker,
   HarnessParamEditor,
+  HarnessParamInlineControls,
   type HarnessParamValues,
   harnessParamValuesEqual,
   resolveHarnessParamDefaults,
@@ -15,6 +17,7 @@ import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
 import { useHarnessParamDefaults } from "@/shared/agents/use-harness-param-defaults";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { useProject } from "@/shared/projects/use-project";
 import { changedHarnessParams } from "./harness-settings";
 import { parseParamRecord, serializeParamRecord } from "./param-field-shared";
@@ -175,6 +178,34 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
       }),
     );
   };
+
+  if (props.harness?.presentation === "chat")
+    return (
+      <HStack gap="2xs" minW="0">
+        <WorkspaceAgentMenu
+          agentOptions={agentOptions}
+          selectedAgent={isResolvedAgent ? harnessId : ""}
+          onSelectAgent={handleSelectAgent}
+          modelOptions={modelOptions}
+          selectedModel={model}
+          onSelectModel={handleSelectModel}
+          offersModels={selectedAgentInfo?.supportsModels}
+          isDisabled={disabled}
+          isAgentSwitchDisabled={lockIdentity}
+          isAgentsLoading={isAgentsLoading}
+          isModelsLoading={modelsQuery.isLoading}
+          size="xs"
+        />
+        <HarnessParamInlineControls
+          schema={effectiveParamSchema ?? undefined}
+          defaults={effectiveParamDefaults}
+          overrides={effectiveParams}
+          onOverridesChange={handleParamsChange}
+          disabled={disabled || !isResolvedAgent}
+          size="xs"
+        />
+      </HStack>
+    );
 
   return (
     <>

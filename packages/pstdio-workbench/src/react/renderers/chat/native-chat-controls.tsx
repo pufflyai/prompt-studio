@@ -1,7 +1,7 @@
 import { Button, Flex, Text } from "@chakra-ui/react";
 import type { ChatDraft, ChatRendererSnapshot, ControlValueMap } from "@pstdio/sdk/extensions";
 import { HarnessControls } from "@pstdio/ui/chat-ui";
-import { type Param, ParamEditor } from "@pstdio/ui/param-editor";
+import { ParamEditor } from "@pstdio/ui/param-editor";
 import { controlValueSchema } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
@@ -65,25 +65,30 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
     changeValues(values);
     void run({ type: "control", id, values }).catch(() => undefined);
   };
-  const hostParam = (param: NonNullable<ChatRendererSnapshot["controls"]>[number]): Param => {
-    if (param.type !== "harness") return param;
-    return {
-      id: param.id,
-      name: "",
-      type: "property",
-      value: (
-        <HarnessControl
-          param={{ ...param, preserveSettings: param.preserveSettings || props.editingQueuedRequest }}
-          value={draft.values[param.id] ?? param.defaultValue}
-          readOnly={Boolean(conversation.readOnly || props.initializing)}
-          renderParamField={renderParamField}
-          onChange={(value) => change(param.id, value)}
-        />
-      ),
-    };
-  };
   return (
-    <Flex direction="column" gap="xs">
+    <Flex align="center" gap="2xs" wrap="wrap">
+      {conversation.controls
+        ?.filter((param) => param.type === "harness")
+        .map((param) => (
+          <HarnessControl
+            key={param.id}
+            presentation="chat"
+            param={{ ...param, preserveSettings: param.preserveSettings || props.editingQueuedRequest }}
+            value={draft.values[param.id] ?? param.defaultValue}
+            readOnly={Boolean(conversation.readOnly || props.initializing)}
+            renderParamField={renderParamField}
+            onChange={(value) => change(param.id, value)}
+          />
+        ))}
+      {conversation.controls?.some((param) => param.type !== "harness") ? (
+        <ParamEditor
+          variant="small"
+          params={conversation.controls.filter((param) => param.type !== "harness")}
+          defaultValues={draft.values}
+          readOnly={conversation.readOnly || props.initializing}
+          onChange={change}
+        />
+      ) : null}
       <NativeChatHarnessControls
         run={run}
         conversation={conversation}
@@ -91,15 +96,6 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
         unavailable={props.unavailable}
         initializing={props.initializing}
       />
-      {conversation.controls?.length ? (
-        <ParamEditor
-          variant="small"
-          params={conversation.controls.map(hostParam)}
-          defaultValues={draft.values}
-          readOnly={conversation.readOnly || props.initializing}
-          onChange={change}
-        />
-      ) : null}
       {conversation.operations?.length ? (
         <Flex gap="xs" wrap="wrap">
           {conversation.operations.map((operation) => (
