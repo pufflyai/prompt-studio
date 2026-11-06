@@ -85,7 +85,7 @@ const DeviceMenuPreview = (props: { initial?: "create" }) => {
                   Cancel
                 </Button>
                 <Button size="sm" variant="primary" onClick={close}>
-                  <Plus size={14} /> Create workspace
+                  <Plus /> Create workspace
                 </Button>
               </HStack>
             </Dialog.Footer>

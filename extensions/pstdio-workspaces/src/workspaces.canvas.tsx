@@ -87,7 +87,7 @@ const WorkspacesPreview = (props: { compact?: boolean; initial?: "create" }) => 
               {
                 key: "create",
                 label: "Create workspace",
-                icon: <Plus size={14} />,
+                icon: <Plus />,
                 onClick: () => setDialog("create"),
               },
             ],
@@ -245,7 +245,7 @@ const CreateWorkspaceForm = (props: { onCreate: (name: string) => void }) => {
         onChange={(event) => setName(event.target.value)}
       />
       <Button variant="primary" disabled={!name.trim()} onClick={() => props.onCreate(name.trim())}>
-        <Plus size={14} /> Create workspace
+        <Plus /> Create workspace
       </Button>
     </Stack>
   );
