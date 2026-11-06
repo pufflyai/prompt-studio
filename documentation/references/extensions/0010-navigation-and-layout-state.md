@@ -12,6 +12,8 @@ Page slots and mode placements share static-view and resource-binding items. Bot
 
 Workspace Changes and Files use static slots that can close and reopen. They receive the page's workspace resource and remain available while switching workspaces. The dashboard's chat bubble opens a New session tab when Side is empty and preserves existing tabs on reopen. Hosts can supply this launcher action through Workbench's `onOpenSidePanel` prop.
 
+A dialog target (`{ kind: "dialog", page, resource?, params? }`) presents a page with one Main view and no panel slots in the host modal layer. The page reference, resource constraint, and declared params are validated just as for page navigation. Panel menus are not rendered in dialogs. Its renderer receives its own resource and params; Main, the route, and browser history stay in place. Escape, the close button, or a declared `placement.close` webview capability dismisses the form. Switching projects or removing the page closes it. Dialog targets cannot appear in compound navigation. Webviews receive `presentation: "dialog"`; `client.page` reads and updates that form's params without changing Main. A native number control can declare `enabledBy` with a boolean control ID; its count remains visible and disabled until that toggle is on.
+
 A page target changes location and selects its mode. A panel target preserves location and requires an active owner. A compound target prepares its page and panel steps against proposed state, then commits once. A failed preparation changes no history, breadcrumbs, page instances, shared placements, selection, or region visibility. Commands and external links are standalone actions.
 
 On a collection page with panels, the rendered breadcrumb also shows the selected panel's

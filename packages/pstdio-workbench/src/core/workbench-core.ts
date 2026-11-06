@@ -37,7 +37,6 @@ import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-pl
 import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
 import { actionErrorTarget } from "./registries/notifications/action-error-target";
 import { createNotificationRegistry } from "./registries/notifications/notification-registry";
-import { createWorkbenchOverlayRegistry } from "./registries/overlays/overlay-registry";
 import { pageContentOwners } from "./registries/pages/page-content";
 import { createWorkbenchPlaceholderRegistry } from "./registries/placeholders/placeholder-registry";
 import { createWorkbenchShellPlacementRegistry } from "./registries/placements/shell-placement-registry";
@@ -119,7 +118,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       isFullscreenRegionFocusable(core, region) ?? layout.getLayout().regions[region].visible,
   });
 
-  const { views, viewMenus, statusBar } = createCoreViews(input, renderers);
+  const { views, viewMenus, statusBar, overlays } = createCoreViews(input, renderers, layout);
   const pageResources = input.pageResources ?? defaultPageResourceCodec;
 
   const modePlacements = createWorkbenchModePlacementRegistry({
@@ -161,7 +160,6 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   const navigationTrees = createWorkbenchNavigationTrees(renderers);
 
-  const overlays = createWorkbenchOverlayRegistry({ layout, views, viewMenus });
   const placeholders = createWorkbenchPlaceholderRegistry({ layout, views });
   const breadcrumbs = createWorkbenchBreadcrumbController();
   const panelMenuState = createWorkbenchPanelMenuStateController({
@@ -204,6 +202,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     views,
     viewMenus,
     resources: pageResources,
+    overlays,
   });
 
   const pageLocations = createPageLocations(

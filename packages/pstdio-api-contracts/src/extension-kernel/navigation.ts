@@ -41,6 +41,11 @@ const isPanelTarget = (value: unknown) => {
 const isItemTarget = (value: unknown): value is Exclude<NavigationTarget, { kind: "compound" }> => {
   if (!isRecord(value)) return false;
   if (value.kind === "page") return isPageTarget(value);
+  if (value.kind === "dialog")
+    return (
+      isPageTarget({ ...value, kind: "page" }) &&
+      Object.keys(value).every((key) => ["kind", "page", "resource", "params"].includes(key))
+    );
   if (value.kind === "panel") return isPanelTarget(value);
   if (value.kind === "viewer")
     return (
@@ -98,6 +103,8 @@ export const qualifyNavigationTarget = (
 ): NavigationTarget => {
   if (!isNavigationTarget(target)) throw new Error("Invalid navigation target.");
   if (target.kind === "page") return toPageTarget(target, extensionId, projectId);
+  if (target.kind === "dialog")
+    return { ...toPageTarget({ ...target, kind: "page" }, extensionId, projectId), kind: "dialog" };
   if (target.kind === "viewer")
     return {
       ...target,

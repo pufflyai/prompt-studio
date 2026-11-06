@@ -25,6 +25,7 @@ export {
   createWorkbenchWebviewHostAdapters,
   createWorkbenchWebviewHostCapabilities,
 } from "./bridge/webview-host-capabilities";
+export { resolveWebviewPageProps } from "./bridge/webview-page-props";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
 export {
   registerWorkbenchExtensionControlsRenderers,

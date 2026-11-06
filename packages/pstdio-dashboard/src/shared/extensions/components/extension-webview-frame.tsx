@@ -62,7 +62,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     else toaster.create(notice);
   });
   const [hostEvents] = useState(createHostEventPublisher);
-  const { pageLocation, pageParams } = useWebviewPageProps(props.workbench);
+  const { pageLocation, pageParams } = useWebviewPageProps(props.workbench, props.placement);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
   const paused = usePausedExtensions();
@@ -90,11 +90,12 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       base: {
         hostEvents,
         terminal,
-        executeCommand: (commandInput, signal) => {
+        executeCommand: (commandInput, signal, invocation) => {
           clearError();
           return executeWebviewCommand({
             ...commandInput,
             placement: props.placement?.placementIdentity,
+            isViewerCurrent: invocation?.isViewerCurrent,
             signal,
             resource: commandInput.resource ?? resource ?? props.placement?.resource,
             slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
@@ -188,6 +189,11 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         view={view}
         extensionProps={{
           projectId,
+          presentation: props.workbench?.layout
+            .getLayout()
+            .regions.overlay.widgets.some((item) => item.widgetId === props.placement?.instanceId)
+            ? "dialog"
+            : undefined,
           themePreference,
           locale,
           lastCommand,

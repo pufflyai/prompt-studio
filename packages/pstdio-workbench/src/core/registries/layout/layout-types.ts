@@ -272,6 +272,7 @@ export interface WorkbenchLayoutStoreState {
 }
 
 export interface OpenWidgetInput {
+  pageContext?: ViewLocation["pageContext"];
   viewId?: string | null;
   resource?: ResourceRef | null;
   title?: string;
@@ -299,6 +300,7 @@ export type WorkbenchPanelOpenStrategy =
   | { kind: "preview"; position?: WorkbenchTabPosition };
 
 export interface OpenWorkbenchPanelInput {
+  pageContext?: ViewLocation["pageContext"];
   /** Set by the view registry. Low-level layout callers should leave this undefined. */
   viewId?: string | null;
   /** `null` explicitly clears an existing singleton placement's resource binding. */

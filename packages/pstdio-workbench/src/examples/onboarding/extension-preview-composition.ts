@@ -22,6 +22,7 @@ const pageTarget = (target: NavigationTargetPage): Extract<MetadataTarget, { kin
 });
 export const previewNavigationTarget = (target: NavigationTarget): MetadataTarget => {
   if (target.kind === "page") return pageTarget(target);
+  if (target.kind === "dialog") return { ...target, page: previewRef(target.page) };
   if (target.kind === "viewer") return { ...target, page: target.page ? previewRef(target.page) : undefined };
   if (target.kind === "panel")
     return {

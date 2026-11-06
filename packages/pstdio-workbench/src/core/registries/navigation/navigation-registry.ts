@@ -1,4 +1,5 @@
 import type {
+  NavigationTargetDialog,
   NavigationTargetViewer,
   PlacementIdentity,
   NavigationTargetPage as SdkNavigationTargetPage,
@@ -52,6 +53,7 @@ export interface NavigationTargetHref {
 
 export type NavigationTargetItem =
   | NavigationTargetPage
+  | NavigationTargetDialog
   | NavigationTargetPanel
   | NavigationTargetViewer
   | NavigationTargetCommand
@@ -81,6 +83,7 @@ export interface NavigationDispatcherContext {
   prepareNavigation?(targets: readonly (NavigationTargetPage | NavigationTargetPanel)[]): { commit(): unknown };
   openPanelTarget?(target: NavigationTargetPanel): unknown;
   openPageTarget?(target: NavigationTargetPage): unknown;
+  openDialogTarget?(target: NavigationTargetDialog): unknown;
   openViewerTarget?(target: NavigationTargetViewer, context?: NavigationInvocationContext): unknown;
   executeCommand(
     commandId: string,
@@ -145,6 +148,10 @@ const dispatchItem = async (
   dispatcher: NavigationDispatcherContext,
   context?: NavigationInvocationContext,
 ) => {
+  if (target.kind === "dialog") {
+    if (!dispatcher.openDialogTarget) throw new Error("Dialog navigation is not configured");
+    return dispatcher.openDialogTarget(target);
+  }
   if (target.kind === "page") {
     if (!dispatcher.openPageTarget) throw new Error("navigation.openTarget: page target dispatcher is not configured");
     return dispatcher.openPageTarget(target);

@@ -70,7 +70,11 @@ export interface ExtensionWebviewHostAdapters {
   resourceActions?: (
     input: WebviewHostCapabilityParams["resources.actions"],
   ) => MaybePromise<WebviewHostCapabilityResults["resources.actions"]>;
-  executeCommand?(input: WebviewCommandsExecuteParams, signal?: AbortSignal): MaybePromise<unknown>;
+  executeCommand?(
+    input: WebviewCommandsExecuteParams,
+    signal?: AbortSignal,
+    invocation?: import("../../core/registries/navigation/navigation-registry").NavigationInvocationContext,
+  ): MaybePromise<unknown>;
   streamCommand?(input: WebviewCommandsExecuteParams, signal: AbortSignal): AsyncIterable<CommandStreamClientEvent>;
   commandCompleted?(response: CommandExecutionResult): void;
   hostEvents?: HostEventPublisher;

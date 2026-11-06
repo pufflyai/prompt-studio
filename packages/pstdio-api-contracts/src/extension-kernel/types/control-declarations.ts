@@ -17,6 +17,8 @@ export interface BaseControl {
 }
 
 export interface NumberControl extends BaseControl {
+  /** ID of a boolean control whose checked value enables this input. */
+  enabledBy?: string;
   type: "number";
   defaultValue: number;
   min?: number;
