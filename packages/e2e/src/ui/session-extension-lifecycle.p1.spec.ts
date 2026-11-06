@@ -153,8 +153,9 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     writeFileSync(join(before.cwd, ".fake-hold-release"), "release");
     await expect.poll(async () => (await readSession()).status).toBe("completed");
     expect((await readSession()).agent_session_id).toBe(before.agent_session_id);
-    // Removing the project clears even inactive saved tabs and releases core interest.
-    const removed = await request.delete(`/v1/projects/${project.id}`);
+    // Remove the completed test resource while this project/client are still active.
+    // Project teardown can close the whole transport instead of deleting each interest.
+    const removed = await request.delete(`/v1/sessions/${sessionId}`);
     expect(removed.ok()).toBe(true);
     await expect.poll(() => [...watches, ...holds].every((id) => deleted.includes(id))).toBe(true);
     expect(stops).toBe(0);
