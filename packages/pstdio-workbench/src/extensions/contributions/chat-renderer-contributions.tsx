@@ -1,5 +1,5 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { commandRefId, resourceKey } from "@pstdio/sdk/extensions";
+import { type ChatRendererAction, commandRefId, resourceKey } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, parseChatLink } from "@pstdio/ui/chat-ui";
 import { chatLinkPresentationSchema } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
@@ -34,11 +34,16 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
   let input = initialInput;
   const body = view.body;
   let Host: ComponentType<NativeChatHostProps> | undefined;
-  const sessions = new Map<string, { session: ChatSession; render: WorkbenchPanelRenderInput }>();
+  const sessions = new Map<
+    string,
+    { session: ChatSession; render: WorkbenchPanelRenderInput; presentationKey: string }
+  >();
+  const keyFor = (resource: WorkbenchPanelRenderInput["instance"]["resource"]) =>
+    JSON.stringify([input.projectId, view.id, resourceKey(resource) ?? body.draftKey]);
   const sessionFor = (render: WorkbenchPanelRenderInput) => {
     const resource = render.instance.resource;
     const draftKey = resource?.id ?? body.draftKey;
-    const key = JSON.stringify([input.projectId, view.id, resourceKey(resource) ?? draftKey]);
+    const key = keyFor(resource);
     let owner = sessions.get(key);
     if (owner) owner.render = render;
     const binding = () => {
@@ -64,6 +69,26 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
           slot,
           signal,
           placement: current.instance.placementIdentity,
+          onViewerReplace: (resource) => {
+            const state = owner!.session.getSnapshot();
+            const action = params.action as ChatRendererAction | undefined;
+            // The command's authorized replacement owns this receipt. Explicit switches,
+            // stale results and already displayed targets never inherit another prompt.
+            if (
+              commandId !== body.actionHandlerId ||
+              action?.type !== "submit" ||
+              action.questionResponse ||
+              !state.pending?.length ||
+              state.conversation.messages?.length ||
+              sessions.has(keyFor(resource))
+            )
+              return;
+            const target = sessionFor({ ...current, instance: { ...current.instance, resource } });
+            owner!.session.transferPending(target.session.receivePending);
+            const destination = sessions.get(keyFor(resource))!;
+            destination.presentationKey = owner!.presentationKey;
+            owner!.presentationKey = crypto.randomUUID();
+          },
         });
       return { renderer, slot, run };
     };
@@ -101,7 +126,7 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
             }
           : undefined,
       });
-      owner = { session, render };
+      owner = { session, render, presentationKey: crypto.randomUUID() };
       sessions.set(key, owner);
     }
     const { session } = owner;
@@ -130,7 +155,7 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
     };
     return {
       session,
-      key,
+      key: owner.presentationKey,
       linkHandler,
       action: (action: Parameters<ChatSession["run"]>[0]) => run(body.actionHandlerId, { action }),
     };

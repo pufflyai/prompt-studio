@@ -214,6 +214,13 @@ operation without waiting for a transcript echo. Rejection restores the submitte
 unsent work. Questions keep their separate draft semantics, and a streaming
 conversation's queued follow-up remains queue-owned.
 
+When a first submit replaces its invoking draft viewer with a newly created
+resource, the host transfers only the transient submitted receipt and presentation
+identity after the ordinary viewer guards authorize the replacement. The new
+resource owns its query, stream and durable draft. The source remains empty and
+reusable; a stale navigation result or an unrelated explicit switch cannot carry
+that submitted prompt into another conversation.
+
 
 A snapshot operation with `refresh: true` reconnects the native owner's existing
 query/watch, preserving its draft. It does not dispatch `onAction` or run a provider
