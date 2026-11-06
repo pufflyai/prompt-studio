@@ -579,6 +579,54 @@ test("native controls wait for query and saved settings while the first-paint co
   await new Promise((done) => setTimeout(done, 0));
   expect(session.getSnapshot().initializing).toBe(false);
   expect(session.getSnapshot().draft.text).toBe("Typed before reads");
-  expect(session.getSnapshot().draft.values.harness).toEqual({ harnessId: "session-harness" });
+  expect(session.getSnapshot().draft.values.harness).toEqual({ harnessId: "session-harness", model: "saved" });
+  release();
+});
+
+test("hydration preserves explicitly edited control keys alongside other saved settings", async () => {
+  const hydration = deferred<{ text: string; attachments: []; values: { model: string; workspace: string } }>();
+  let saved: unknown;
+  const session = createChatSession({
+    query: async () => ({ values: { model: "query-A", workspace: "query-workspace" } }),
+    loadDraft: () => hydration.promise,
+    saveDraft: async (draft) => {
+      saved = draft;
+    },
+    action: async () => undefined,
+  });
+  const release = session.retain();
+  await Promise.resolve();
+  session.changeDraft({
+    text: "New work",
+    values: { ...session.getSnapshot().draft.values, workspace: "user-workspace" },
+  });
+  hydration.resolve({
+    text: "Older work",
+    attachments: [],
+    values: { model: "saved-B", workspace: "saved-workspace" },
+  });
+  await session.flushDraft();
+  expect(session.getSnapshot().draft).toMatchObject({
+    text: "New work",
+    values: { model: "saved-B", workspace: "user-workspace" },
+  });
+  expect(saved).toMatchObject({ text: "New work", values: { model: "saved-B", workspace: "user-workspace" } });
+  release();
+});
+
+test("restoring a draft claims its settings even when they equal untouched query defaults", async () => {
+  const hydration = deferred<{ text: string; attachments: []; values: { model: string } }>();
+  const session = createChatSession({
+    query: async () => ({ values: { model: "A" } }),
+    loadDraft: () => hydration.promise,
+    action: async () => undefined,
+  });
+  const release = session.retain();
+  await Promise.resolve();
+  session.accept({ revision: 0, recoverDraft: { text: "Recovered work", attachments: [], values: { model: "A" } } });
+  session.restoreDraft(0);
+  hydration.resolve({ text: "Older saved work", attachments: [], values: { model: "B" } });
+  await new Promise((done) => setTimeout(done, 0));
+  expect(session.getSnapshot().draft).toMatchObject({ text: "Recovered work", values: { model: "A" } });
   release();
 });

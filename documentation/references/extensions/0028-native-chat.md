@@ -28,7 +28,9 @@ page/panel conversion. `initial` is serializable metadata available on the first
 render; neither query, draft hydration nor connection establishment gates the
 text composer. Control fields stay read-only until the initial query and saved draft
 settle, so automatic field defaults cannot replace saved selections during hydration.
-Stream notices do not finish this initialization. State is shared by project, view and resource. The resource ID overrides
+Stream notices do not finish this initialization. Early text edits preserve saved
+control settings; only locally edited control keys take precedence over hydration. Explicit draft
+restoration selects all restored settings, including those equal to current defaults. State is shared by project, view and resource. The resource ID overrides
 the fallback `draftKey`. Actions receive the invoking placement's renderer context,
 including page params, project, mode and resource, through ordinary scoped routing.
 Reads, draft persistence and new watches use the latest placement context.
