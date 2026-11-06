@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, statSync, unlinkSync } from "node:fs";
-import { cp, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
@@ -11,7 +11,7 @@ import {
 import { parseRegistrySourceRef, unpackExtension } from "pstdio-extensions/distribution";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
-import { createExtensionIgnoreMatcher } from "./extension-ignore";
+import { copyExtensionSource } from "./copy-extension-source";
 import {
   checkExtensionSource,
   checkExtensionsRoot,
@@ -139,22 +139,6 @@ const assertCanCopy = (sourcePath: string, targetPath: string) => {
   if (nested(sourceToTarget) || nested(targetToSource)) {
     throw new Error("Refusing to copy an extension into itself");
   }
-};
-
-const copyExtensionSource = async (sourcePath: string, targetPath: string) => {
-  mkdirSync(dirname(targetPath), { recursive: true });
-  const matcher = createExtensionIgnoreMatcher(sourcePath, { ignoreGit: false });
-  await cp(sourcePath, targetPath, {
-    filter: (path) => {
-      const rel = relative(sourcePath, path).replaceAll("\\", "/");
-      if (!rel) return true;
-      if (rel === ".git" || rel.startsWith(".git/")) return true;
-      if (rel === "node_modules" || rel.startsWith("node_modules/")) return false;
-      if (matcher.ignores(rel)) return false;
-      return true;
-    },
-    recursive: true,
-  });
 };
 
 const removeDirectory = (path: string) => rm(path, { recursive: true, force: true });

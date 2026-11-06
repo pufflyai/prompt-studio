@@ -8,10 +8,11 @@ test("status details retain their state across closing and reopening", async ({ 
     "packages/pstdio-workbench/src/react/workbench/workbench-status-bar.canvas.tsx#DetailPopover",
   );
   const trigger = preview.getByRole("button", { name: "Activity", exact: true });
-  await expect(preview.getByRole("button", { name: "Activity checked 0 times", includeHidden: true })).toHaveCount(1);
+  await expect(preview.getByRole("button", { name: "Activity checked 0 times", includeHidden: true })).toHaveCount(0);
   const ticks = preview.locator("[data-activity-ticks]");
-  await expect(ticks).toHaveAttribute("data-activity-ticks", "0");
+  await expect(ticks).toHaveCount(0);
   await trigger.click();
+  await expect(preview.getByRole("button", { name: "Activity checked 0 times" })).toBeVisible();
   await expect(ticks).not.toHaveAttribute("data-activity-ticks", "0");
   await preview.getByRole("button", { name: "Activity checked 0 times" }).click();
   await page.keyboard.press("Escape");

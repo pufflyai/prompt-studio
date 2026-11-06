@@ -352,6 +352,7 @@ test("a new device downloads a large owner from chunked latest states with a bou
   const third = await device(fixture.relay);
   await third.sync.synchronize();
   expect((await third.records.list()).length).toBe(300);
+  expect(fixture.requests.reads - reads).toBeLessThanOrEqual(3);
   for (const round of [0, 4]) expect(await third.value(`record-${round}-59`)).toMatchObject({ round, index: 59 });
   // 300 records arrive through a few reads and chunk downloads, not one request per record.
   expect(fixture.requests.reads - reads + fixture.requests.blobs).toBeLessThan(20);
