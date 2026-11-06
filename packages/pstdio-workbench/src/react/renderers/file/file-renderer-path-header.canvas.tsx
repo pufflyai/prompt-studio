@@ -25,5 +25,6 @@ export const Unsaved: Story = {
 };
 export const Saving: Story = {
   id: "pstdio-workbench-file-editor-save-status--saving",
-  args: { dirty: true, saving: true },
+  args: { dirty: true },
+  description: "A pending write keeps the manual unsaved marker stable without a saving status.",
 };

@@ -32,10 +32,11 @@
 2. Show system errors in the status bar and chat errors in the conversation.
 3. Never use toast notifications for errors.
 4. Keep recovery and dismissal controls visible.
+5. Document saving is silent. Never show a saving banner, label, spinner, badge, toast, or other progress status on a document. Keep save failures, recovery controls, and manual unsaved-change markers visible.
 
 ## 6. Interaction
 
-1. Show progress during work and keep elapsed time after completion.
+1. Show progress during work and keep elapsed time after completion, except document saving (002.5.5).
 2. Never shimmer or pulse status text.
 3. Make hover feedback immediate and delay explanatory tooltips.
 4. Keep destructive actions visually distinct from close and dismiss actions.
@@ -45,3 +46,10 @@
 
 1. Cut taglines, unnecessary helper text, and secondary labels. If the UI needs them to make sense, fix the design.
 2. Shorten long names in the middle, preserving their beginning and ending.
+
+## 8. Parameter editor
+
+1. Keep bounded values on one line with their label: IDs, timestamps, status, and other single choices.
+2. Put growing values below their label: dependencies, blocked reasons, review links, multi-value fields, and multiline content. Let the value area wrap as needed.
+3. Keep dropdown triggers within their parent width and dropdown menus within the available viewport. Long selected values and options must truncate without pushing controls outside their container.
+4. Omit the Review links row when there are no links.

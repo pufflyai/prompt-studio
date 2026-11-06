@@ -56,3 +56,31 @@ test("title bar controls fit the native window reservation", async ({ page }) =>
   await preview.getByRole("button", { name: "Close Project 1", exact: true }).click();
   await expect(preview.getByRole("tab", { name: "Project 1", exact: true })).toHaveCount(0);
 });
+
+// Critical: long values must not hide neighboring fields or make selection unreachable.
+test("long resource dropdowns stay inside their field and remain selectable", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/param-editor/inputs/resource-input.canvas.tsx#LongMilestone",
+  );
+  const trigger = preview.getByRole("button", { name: /Launch milestone/ });
+  await expect(trigger).toBeVisible();
+  expect(
+    await trigger.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const field = element.closest("section")!.getBoundingClientRect();
+      return bounds.left >= field.left && bounds.right <= field.right;
+    }),
+  ).toBe(true);
+  await trigger.click();
+  const menu = preview.getByRole("menu");
+  await expect(menu).toBeVisible();
+  expect(
+    await menu.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= element.ownerDocument.documentElement.clientWidth;
+    }),
+  ).toBe(true);
+  await preview.getByRole("menuitemradio", { name: "Next", exact: true }).click();
+  await expect(preview.getByRole("button", { name: "Next", exact: true })).toBeVisible();
+});

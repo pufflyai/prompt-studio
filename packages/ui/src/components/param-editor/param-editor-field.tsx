@@ -11,7 +11,7 @@ import { TextInput } from "./inputs/text-input";
 import type { Param, ParamValue, ParamValueMap, ResourceRefValue } from "./param-editor.types";
 import { ParamEditorAdvancedField } from "./param-editor-advanced-field";
 import { ParamEditorLabel } from "./param-editor-label";
-import { isParamEditorRichControl } from "./param-editor-presentation";
+import { isParamEditorGrowingControl, isParamEditorRichControl } from "./param-editor-presentation";
 import { ParamEditorReadOnlyField } from "./param-editor-read-only-field";
 import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 import { resolveParamValue } from "./resolve-param-value";
@@ -58,10 +58,11 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
     onChange,
     onOpenResource,
     readOnly,
-    fullWidth = false,
+    fullWidth: requestedFullWidth = false,
     presentation = "stacked",
     size = "sm",
   } = props;
+  const fullWidth = requestedFullWidth && isParamEditorGrowingControl(param);
   const horizontal = presentation === "horizontal";
   const richControl = isParamEditorRichControl(param);
   const common = {

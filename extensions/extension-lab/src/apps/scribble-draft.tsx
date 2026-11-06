@@ -34,7 +34,7 @@ export const ScribbleDraftCanvas = (props: { input: ExampleViewInput }) => {
       onIconChange={(icon) => draft.update({ icon })}
       onContentChange={(content) => draft.update({ content })}
       action={
-        <Button size="sm" loading={saving} disabled={!draft.ready} onClick={() => void save()}>
+        <Button size="sm" disabled={!draft.ready || saving} onClick={() => void save()}>
           Save page
         </Button>
       }
