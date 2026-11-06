@@ -157,7 +157,7 @@ presentation values, never replacements for the provider's persisted attachment 
 Declared `resolveLink` and `resolveImage` callbacks keep priority, with host
 resolution as a fallback. With this opt-in, generic app-page URLs defer to the
 host's destination validation; an unavailable page remains an actionable error,
-not an unvalidated browser navigation. External web links remain available.
+not an unvalidated browser navigation. External web links use the host's native icon, fallback globe and safe new-tab presentation.
 Without opt-in the provider's handlers remain unchanged.
 
 A harness control accepts `harnessId: ""` while unselected. Execution still
