@@ -44,7 +44,15 @@ const waitForRefresh = (signal: AbortSignal) =>
 
 export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
   const id = sessionId(resource);
-  if (!id) return;
+  if (!id) {
+    // A visible draft owns the same shared watch as a saved conversation. Ending
+    // immediately churns the client connection before its first session opens.
+    await new Promise<void>((done) => {
+      if (ctx.signal.aborted) done();
+      else ctx.signal.addEventListener("abort", () => done(), { once: true });
+    });
+    return;
+  }
   const hold = await ctx.sessions.retainResources(id);
   let revision = 0;
   let messages: SessionMessage[] = [];

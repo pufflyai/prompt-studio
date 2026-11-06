@@ -390,3 +390,33 @@ test("a saved read-only queue checkpoint yields to the next editable online owne
   expect(reads).toBe(2);
   expect(closed).toBe(1);
 });
+
+test("a draft view keeps its declared shared watch until disposal without retaining execution resources", async () => {
+  const controller = new AbortController();
+  let retained = 0;
+  let ended = false;
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
+    params: {},
+    overrides: {
+      signal: controller.signal,
+      sessions: {
+        retainResources: async () => {
+          retained++;
+          return { close: () => {} };
+        },
+      },
+    },
+  });
+  const watching = watchConversation(ctx).finally(() => {
+    ended = true;
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+  const endedWhileVisible = ended;
+  controller.abort();
+  await watching;
+  expect(endedWhileVisible).toBe(false);
+  expect(ended).toBe(true);
+  expect(retained).toBe(0);
+});
