@@ -35,17 +35,8 @@ interface PreviewProps {
   observations: Observation[];
   onMapObservation: (id: string, ref: string) => void;
 }
-function RulePreview({
-  rule,
-  rules,
-  chapters,
-  onMove,
-  observations,
-  onMapObservation,
-  onOpen,
-  onEdit,
-  onRemove,
-}: PreviewProps) {
+function RulePreview(props: PreviewProps) {
+  const { rule, rules, chapters, onMove, observations, onMapObservation, onOpen, onEdit, onRemove } = props;
   return (
     <Stack h="full" minH="0" w="full" gap="lg" p="lg">
       <HStack justify="space-between" align="start" gap="md" flexShrink="0">

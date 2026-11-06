@@ -43,7 +43,8 @@ export function TestTag(props: { path: string }) {
   );
 }
 
-export function RuleIdTag({ reference }: { reference: string }) {
+export function RuleIdTag(props: { reference: string }) {
+  const { reference } = props;
   const [state, setState] = useState<"ready" | "copied" | "failed">("ready");
   useEffect(() => {
     if (state === "ready") return;

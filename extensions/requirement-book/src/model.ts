@@ -44,7 +44,12 @@ export type Operation = z.infer<typeof operationSchema>;
 export const findRule = (rules: Rule[], ref: string) => rules.find((rule) => rule.ref === ref);
 export const sameRule = (left: Rule | undefined | null, right: Rule | undefined | null) =>
   contentJson(left) === contentJson(right);
-export const emptyBook = (): Book => ({ version: 1, chapters: [], rules: [], retired: [] });
+export const emptyBook = () => ({
+  version: 1 as const,
+  chapters: [] as Chapter[],
+  rules: [] as Rule[],
+  retired: [] as string[],
+});
 
 export const bookIssues = (book: Book) => {
   const issues: string[] = [];
@@ -125,8 +130,8 @@ export const reconcileOperations = (book: Book, operations: Operation[]) =>
     const after = operation.type === "MOVE" ? { ...before, chapter: operation.after!.chapter } : operation.after;
     return { ...operation, before, after };
   });
-export const removalOperations = (book: Book, target: Rule): Operation[] => [
-  { type: "REMOVE", before: target, after: null },
+export const removalOperations = (book: Book, target: Rule) => [
+  { type: "REMOVE" as const, before: target, after: null },
   ...book.rules
     .filter((rule) => rule.related.includes(target.ref) || rule.governing.includes(target.ref))
     .map((before) => ({
