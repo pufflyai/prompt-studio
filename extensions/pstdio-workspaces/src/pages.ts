@@ -5,9 +5,10 @@ import { actionView, changesView, historyView, summaryView, workspacesView } fro
 
 const mode = workbenchModes.project;
 const resource = { kinds: [workbenchResourceKinds.workspace] };
+const workspaceListTitle = l10n("page.workspaces", "Workspaces");
 export const workspaces = definePage({
   id: "workspaces",
-  title: "Workspaces",
+  title: workspaceListTitle,
   icon: "folder-git-2",
   path: "workspaces",
   mode,
@@ -18,6 +19,7 @@ export const workspaces = definePage({
     presentation: "tabs",
     tab: {
       query: () => ({
+        label: workspaceListTitle,
         menu: [
           {
             id: "workspaces",

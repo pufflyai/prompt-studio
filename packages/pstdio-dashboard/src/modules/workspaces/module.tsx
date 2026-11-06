@@ -98,6 +98,7 @@ export const createWorkspacesModule = () =>
               presentation: "tabs",
               tab: {
                 getSnapshot: () => ({
+                  label: "Workspaces",
                   menu: [
                     {
                       id: "workspaces",

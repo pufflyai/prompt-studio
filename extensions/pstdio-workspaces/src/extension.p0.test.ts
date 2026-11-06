@@ -23,6 +23,7 @@ test("the Workspaces title menu opens the shared creation dialog", async () => {
   const page = extension.pages.find((page) => page.id === "workspaces")!;
   if (page.main.kind !== "view" || !page.main.tab) throw new Error("Missing Workspaces title menu");
   const tab = await page.main.tab.query();
+  expect(tab.label).toEqual(page.title);
   expect(tab.menu).toContainEqual(
     expect.objectContaining({
       rows: expect.arrayContaining([
