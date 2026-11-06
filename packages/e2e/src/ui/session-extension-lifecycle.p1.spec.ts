@@ -81,6 +81,12 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     const tabs = await side
       .locator("[data-workbench-tab]")
       .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workbench-tab")));
+    const projectNavigation = async () => {
+      const back = page.getByRole("button", { name: "Back to project", exact: true });
+      if (await back.isVisible()) await back.click();
+    };
+    await projectNavigation();
+    await expect(page.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(1);
     const disabled = await request.patch(`/v1/projects/${project.id}/extensions/${provider.id}`, {
       data: { enabled: false },
     });
@@ -107,7 +113,14 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
       data: { enabled: true },
     });
     expect(enabled.ok()).toBe(true);
+    await projectNavigation();
     await expect(page.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(1);
+    // Core owns panel visibility; reopening activates the existing retained tab.
+    await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+    await page
+      .getByRole("dialog", { name: "Side Panel", exact: true })
+      .getByRole("button", { name: "Reattach Side Panel", exact: true })
+      .click();
     await expect(
       side.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
     ).toContainText("Unsent work survives provider disablement");
