@@ -200,8 +200,14 @@ test("remote workspaces open synced history; offline sessions stay readable and 
   ).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("offline-readable.png") });
-  await request.post(`${fixture.origin}/fixture/action`, { data: { action: "online" } });
-  await main.getByRole("button", { name: "Check connection", exact: true }).click();
+  // Preserve the reconnect/presence race at the actual server-side owner boundary.
+  await request.post(`${fixture.origin}/fixture/action`, { data: { action: "hold-presence" } });
+  try {
+    await request.post(`${fixture.origin}/fixture/action`, { data: { action: "online" } });
+    await main.getByRole("button", { name: "Check connection", exact: true }).click();
+  } finally {
+    await request.post(`${fixture.origin}/fixture/action`, { data: { action: "release-presence" } });
+  }
   await expect(
     main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
   ).toHaveAttribute("contenteditable", "true");

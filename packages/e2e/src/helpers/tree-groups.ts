@@ -39,7 +39,14 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   await group.click();
   await expect(source).toBeVisible();
 
+  const projectId = new URL(page.url()).pathname.split("/")[2]!;
+  const registered = page.waitForEvent("console", {
+    predicate: (message) =>
+      message.text().includes('"event":"registration-ready"') && message.text().includes(projectId),
+  });
   await page.reload();
+  await registered;
+  await expect(tree.locator("section[aria-busy]")).toHaveAttribute("aria-busy", "false");
   await revealTreeEntry(page, tree, group);
   await expect(group).toBeVisible();
   await expect(source).toBeVisible();

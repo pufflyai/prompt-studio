@@ -35,16 +35,15 @@ test("the fullscreen shortcut toggles from editing and completes shortcut mode",
   await expect(action.locator("kbd").last()).toHaveText("Z");
 });
 
-test("Go destinations use shortcut mode while history chords and Shift slash remain available", async ({
-  page,
-  request,
-}) => {
+test("Go destinations use shortcut mode while history chords respect editing focus", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Direct core shortcuts" }),
   });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.goto(`/projects/${project.id}`);
+  const home = new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`);
+  await expect(page).toHaveURL(home);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
@@ -54,12 +53,15 @@ test("Go destinations use shortcut mode while history chords and Shift slash rem
   const composer = page.locator(
     '[data-workbench-panel="main"] [data-testid="content-editable"][contenteditable="true"]',
   );
+  const help = page.getByRole("button", { name: "Help", exact: true });
   await expect(composer).toBeFocused();
-  // Built-in history chords are available outside inputs; native Sessions focuses its composer.
-  await page.getByRole("button", { name: "Help", exact: true }).focus();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
+  await help.focus();
+  await page.keyboard.press("Alt+Shift+ArrowLeft");
+  await expect(page).toHaveURL(home);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await help.focus();
   await page.keyboard.press("Alt+Shift+ArrowRight");
   await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();

@@ -7,6 +7,29 @@ remain included unless explicitly excluded in `.pstignore`. This document and
 [PRD 0014](0014-local-first-sync.md) reflect that decision. Runtime work is not yet
 implemented by this documentation change.
 
+## Implementation status
+
+Checked 2026-11-06 on the PS-1069 draft branch; not released. Core captures and downloads
+folders, but no restore, public API, CLI or Cloud UI exists yet. Nothing advertises recovery.
+
+- Done in core: bounded encrypted capture on macOS and Linux, Git dependencies limited to
+  registered repository roots, acknowledged upload before publication, the private
+  per-source catalog, scheduled capture, durable enrollment, and automatic download.
+- Scheduling: startup, reconnect, watcher loss and an explicit request run a full scan.
+  Change hints wait for a quiet period. Files whose source identity is unchanged reuse their
+  encrypted content. The final pass still re-checks every identity.
+- One process owns a source through a lock in recovery storage. A complete capture waits
+  there as a candidate until the relay acknowledges it, including across restarts.
+- Local retention keeps every graph that current catalog roots or the candidate reference.
+  Superseded ciphertext stays for one hour, like the relay's grace copy.
+- R53 client snapshots do not include folder captures. A snapshot restore is a normal edit.
+  Restoring an older catalog root would need blobs that latest-plus-grace retention has
+  already released. Folder history is the latest complete capture of each source, plus the
+  grace copy. Removed devices keep their catalog entries, so remaining devices can still
+  restore them.
+- Still open: a worker for capture hashing and encryption, Windows access, restore, the
+  public SDK/API/CLI, separate progress in project status, and the 5 GiB qualification.
+
 ## Outcome and boundary
 
 A person opens a cloud project on a new device, chooses a new folder, and gets every

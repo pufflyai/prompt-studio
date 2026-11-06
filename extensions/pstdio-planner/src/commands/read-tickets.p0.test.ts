@@ -44,8 +44,8 @@ describe("readTicketsCommand", () => {
       content: "Ticket body",
       draft: true,
       files: [],
-      tagIds: ["default-priority-high", "api", "ui"],
     });
+    expect(result[0]?.tagIds.toSorted()).toEqual(["api", "default-priority-high", "ui"]);
     expect(result[0]).not.toHaveProperty("tags");
   });
 });
