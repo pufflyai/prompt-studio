@@ -37,5 +37,18 @@ export const registerPlacementCloseGuard = (
 export const preparePlacementClose = (workbench: WorkbenchCore, identity: PlacementIdentity) => {
   const guards = owners.get(workbench)?.get(placementIdentityKey(identity));
   const current = [...(guards ?? [])].filter((guard) => guard.current());
-  if (current.length) return Promise.all(current.map((guard) => guard.prepare())).then(() => {});
+  if (!current.length) return;
+  const invocation = workbench.viewers.captureContext(identity);
+  return (async () => {
+    const prepared = new Set<CloseGuard>();
+    let pending = current;
+    while (pending.length) {
+      await Promise.all(pending.map((guard) => guard.prepare()));
+      if (invocation.isViewerCurrent?.() === false) return;
+      for (const guard of pending) prepared.add(guard);
+      pending = [...(owners.get(workbench)?.get(placementIdentityKey(identity)) ?? [])].filter(
+        (guard) => !prepared.has(guard) && guard.current(),
+      );
+    }
+  })();
 };
