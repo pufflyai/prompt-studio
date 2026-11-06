@@ -7,11 +7,10 @@ export const fakeHarnessId = "pstdio.workbench-fixture.harness.fake";
 export const switchSession = async (page: Page, title: string) => {
   await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "Switch session", exact: true });
-  await picker.getByRole("textbox").fill(title);
-  await picker
-    .getByRole("option")
-    .filter({ has: page.getByText(title, { exact: true }) })
-    .click();
+  await picker.getByRole("textbox", { name: "Search sessions", exact: true }).fill(title);
+  await picker.getByRole("button", { name: "Select session", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: title, exact: true }).click();
+  await picker.getByRole("button", { name: "Run", exact: true }).click();
 };
 
 // Creates a project with two finished fake-harness sessions and shows both, one after the other, in
