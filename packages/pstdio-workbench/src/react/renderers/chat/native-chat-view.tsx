@@ -1,14 +1,20 @@
 import { Box } from "@chakra-ui/react";
 import type { ChatAttachment, ChatQueuedRequest } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
-import { type ComponentType, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ComponentProps, type ComponentType, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { visibleChatDraftAttachments } from "../../../extensions/contributions/chat-pending-submission";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { nativeChatInputHandler, submitWithNativeChatAccount } from "./native-chat-account-submit";
 import { runNativeChatAction } from "./native-chat-action";
 import { NativeChatAttachmentActions, NativeChatAttachmentList } from "./native-chat-attachments";
-import { NativeChatApproval, NativeChatControls, nativeChatCommands } from "./native-chat-controls";
+import {
+  NativeChatApproval,
+  NativeChatControls,
+  NativeChatHarnessControls,
+  nativeChatCommands,
+  nativeChatDecision,
+} from "./native-chat-controls";
 import type { NativeChatHostProps, NativeChatHostServices } from "./native-chat-host";
 import { findQueuedChatRequest, queuedChatDraft } from "./native-chat-queue";
 import { NativeChatNotices, NativeChatResources } from "./native-chat-status";
@@ -119,19 +125,17 @@ const NativeChatContent = (props: NativeChatViewProps) => {
       linkHandler={props.linkHandler}
     >
       {(host) => {
-        const controls = (
-          <NativeChatControls
-            run={run}
-            reconnect={session.reconnect}
-            conversation={conversation}
-            draft={activeDraft}
-            editingQueuedRequest={Boolean(selected)}
-            unavailable={host.account?.blocked}
-            initializing={initializing}
-            renderParamField={renderParamField}
-            changeValues={(next) => changeActive({ values: next })}
-          />
-        );
+        const controlProps = {
+          run,
+          reconnect: session.reconnect,
+          conversation,
+          draft: activeDraft,
+          editingQueuedRequest: Boolean(selected),
+          unavailable: host.account?.blocked,
+          initializing,
+          renderParamField,
+          changeValues: (next) => changeActive({ values: next }),
+        } satisfies ComponentProps<typeof NativeChatControls>;
         return (
           <ChatPanel
             conversationKey={conversationKey}
@@ -178,26 +182,15 @@ const NativeChatContent = (props: NativeChatViewProps) => {
             }
             approvalPrompt={<NativeChatApproval run={run} conversation={conversation} />}
             chatInputCommands={nativeChatCommands(conversation, host.account, run, values)}
-            composerDecision={
-              conversation.decision
-                ? {
-                    ...conversation.decision,
-                    controls,
-                    pending: sending,
-                    onAction: async (actionId) => {
-                      await run({
-                        type: "decision",
-                        id: conversation.decision!.id,
-                        actionId,
-                        values,
-                        modeSnapshot: conversation.decision!.modeSnapshot,
-                      });
-                    },
-                  }
-                : undefined
-            }
+            composerDecision={nativeChatDecision(
+              conversation,
+              <NativeChatHarnessControls {...controlProps} />,
+              run,
+              values,
+              sending,
+            )}
             workspaceHub={<NativeChatResources resources={conversation.resources} run={run} />}
-            actions={controls}
+            actions={<NativeChatControls {...controlProps} />}
             conversationNotices={<NativeChatNotices host={host} state={state} session={session} />}
             onAttachFiles={(files) => {
               void upload(files).catch(() => undefined);

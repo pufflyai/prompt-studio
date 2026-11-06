@@ -3,6 +3,7 @@ import type { ChatDraft, ChatRendererSnapshot, ControlValueMap } from "@pstdio/s
 import { HarnessControls } from "@pstdio/ui/chat-ui";
 import { type Param, ParamEditor } from "@pstdio/ui/param-editor";
 import { controlValueSchema } from "pstdio-api-contracts";
+import type { ReactNode } from "react";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { HarnessControl } from "../controls/harness-control";
@@ -29,6 +30,32 @@ const inputTag = (tag: ChatRendererSnapshot["draftTag"], run: ChatSession["run"]
         },
       }
     : undefined;
+
+export const NativeChatHarnessControls = (
+  props: Pick<NativeChatControlsProps, "run" | "conversation" | "draft" | "unavailable" | "initializing">,
+) => {
+  const { run, conversation, draft } = props;
+  if (!conversation.harness && !conversation.draftTag && !conversation.sentTag) return null;
+  return (
+    <HarnessControls
+      modes={conversation.harness?.modes ?? []}
+      unavailable={conversation.readOnly || props.unavailable || props.initializing}
+      draftTag={inputTag(conversation.draftTag, run, draft.values)}
+      sentTag={inputTag(conversation.sentTag, run, draft.values)}
+      onRequestConfirmation={(modeId) => {
+        void run({ type: "confirmation", modeId, values: draft.values }).catch(() => undefined);
+      }}
+      onAction={async (modeId, actionId, argument, modeSnapshot) => {
+        await run({
+          type: "harness",
+          operation: { kind: "mode-action", modeId, actionId, argument },
+          modeSnapshot,
+          values: draft.values,
+        });
+      }}
+    />
+  );
+};
 
 export const NativeChatControls = (props: NativeChatControlsProps) => {
   const { run, conversation, draft, renderParamField, changeValues } = props;
@@ -57,25 +84,13 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
   };
   return (
     <Flex direction="column" gap="xs">
-      {conversation.harness || conversation.draftTag || conversation.sentTag ? (
-        <HarnessControls
-          modes={conversation.harness?.modes ?? []}
-          unavailable={conversation.readOnly || props.unavailable || props.initializing}
-          draftTag={inputTag(conversation.draftTag, run, draft.values)}
-          sentTag={inputTag(conversation.sentTag, run, draft.values)}
-          onRequestConfirmation={(modeId) => {
-            void run({ type: "confirmation", modeId, values: draft.values }).catch(() => undefined);
-          }}
-          onAction={async (modeId, actionId, argument, modeSnapshot) => {
-            await run({
-              type: "harness",
-              operation: { kind: "mode-action", modeId, actionId, argument },
-              modeSnapshot,
-              values: draft.values,
-            });
-          }}
-        />
-      ) : null}
+      <NativeChatHarnessControls
+        run={run}
+        conversation={conversation}
+        draft={draft}
+        unavailable={props.unavailable}
+        initializing={props.initializing}
+      />
       {conversation.controls?.length ? (
         <ParamEditor
           variant="small"
@@ -148,3 +163,22 @@ export const nativeChatCommands = (
         : undefined,
     })) ?? []),
 ];
+
+export const nativeChatDecision = (
+  conversation: ChatRendererSnapshot,
+  controls: ReactNode,
+  run: ChatSession["run"],
+  values: ControlValueMap,
+  pending: boolean,
+) => {
+  const decision = conversation.decision;
+  if (!decision) return undefined;
+  return {
+    ...decision,
+    controls,
+    pending,
+    onAction: async (actionId: string) => {
+      await run({ type: "decision", id: decision.id, actionId, values, modeSnapshot: decision.modeSnapshot });
+    },
+  };
+};

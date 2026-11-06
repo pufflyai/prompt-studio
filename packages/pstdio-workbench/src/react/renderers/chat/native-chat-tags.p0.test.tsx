@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { chatRendererSnapshotSchema } from "pstdio-api-contracts";
-import { NativeChatControls } from "./native-chat-controls";
+import { NativeChatControls, NativeChatHarnessControls } from "./native-chat-controls";
 
 test("draft and submitted native input tags coexist and hide through provider actions without requiring discovered modes", async () => {
   const conversation = chatRendererSnapshotSchema.parse({
@@ -13,15 +13,13 @@ test("draft and submitted native input tags coexist and hide through provider ac
     },
   });
   const actions: unknown[] = [];
-  const controls = NativeChatControls({
+  const tags = NativeChatHarnessControls({
     conversation,
     draft: { text: "Unsent", attachments: [], values: { provider: "B" } },
     run: async (action) => {
       actions.push(action);
     },
-    changeValues: () => {},
-  });
-  const tags = controls.props.children[0];
+  })!;
   expect(tags.props.modes).toEqual([]);
   expect(tags.props.draftTag.label).toBe("Plan");
   expect(tags.props.sentTag.closeLabel).toBe("Hide submitted goal");
