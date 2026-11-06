@@ -12,6 +12,7 @@ import { inertSessionChannelHooks } from "../../features/sessions/session-store.
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createSessionLogFiles } from "./log-files";
 import { createLogPublisher } from "./log-publisher";
+import { createPersonalLogStreams } from "./log-stream";
 
 if (!process.argv.includes("--worker")) {
   const results = [];
@@ -72,6 +73,12 @@ if (!process.argv.includes("--worker")) {
     files,
     namespace: "probe",
     deviceId: "device",
+    streams: createPersonalLogStreams({
+      service: app.deps.extensionStorageService.logs,
+      owner: { workbenchId: project.id, extensionId: "personal-history-memory-diagnostic" },
+      files,
+      namespace: "probe",
+    }),
     deps: app.deps,
     published() {},
   });

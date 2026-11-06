@@ -217,6 +217,8 @@
         "src/services/extension-storage/document-storage.p3.bench.ts",
         "src/services/extension-storage/document-scale.diagnostic.ts",
         "src/services/extension-storage/record-read-scale.diagnostic.ts",
+        "src/services/extension-storage/ordered-log-query-plan.diagnostic.ts",
+        "src/services/extension-storage/ordered-log-scale.diagnostic.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner and durability tests launch these by path.
         "src/**/*.integration.ts",

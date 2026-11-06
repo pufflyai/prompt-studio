@@ -247,14 +247,24 @@ test("three independent packaged devices keep extension content, offline collabo
             status: "right",
             nested: { left: 2, right: 2 },
             body: "FIRST\nLAST",
-            items: [
-              { id: "a", title: "Edited A" },
-              { id: "b", title: "Edited B" },
-            ],
           },
         },
       });
-    const rows = await read<{ cards: StorageRecord[]; migrated: StorageRecord[] }>(device, projectId);
+    const rows = await read<{
+      cards: StorageRecord[];
+      migrated: StorageRecord[];
+      shape: { value: { items: unknown } };
+    }>(device, projectId);
+    expect([
+      [
+        { id: "a", title: "Edited A" },
+        { id: "b", title: "B" },
+      ],
+      [
+        { id: "a", title: "A" },
+        { id: "b", title: "Edited B" },
+      ],
+    ]).toContainEqual(rows.shape.value.items);
     expect(rows.migrated).toHaveLength(2);
     expect(rows.cards.map((row) => row.recordId).sort()).toEqual(["card-a", "card-b", "card-c"]);
     expect(new Set(rows.cards.map((row) => (row.value as { position: string }).position)).size).toBe(3);
@@ -349,7 +359,7 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
 }) => {
   const { fixture, first, second, third, devices, projectId } = await setup(resources);
   const space = await createSyncSpace({ projectId, spaceOwner: null, keys: [packagedProjectKey] });
-  const documentId = await space.documentId(JSON.stringify([acceptanceOwner, "record-stream"]));
+  const documentId = await space.documentId(JSON.stringify([acceptanceOwner, "record-stream-v2"]));
   const group = (round: string) =>
     Array.from({ length: 8 }, (_, index) => ({
       recordId: `large-${index}`,

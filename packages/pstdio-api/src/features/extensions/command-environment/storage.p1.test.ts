@@ -116,8 +116,10 @@ test("host storage exposes document groups, verified assets, legacy access, and 
           operationId: "open-caller",
           edits: [{ recordId: first.records.id("setting"), expectedRevision: observed.revision, replace: "retained" }],
         })
-      ).status,
-    ).toBe("saved-locally");
+      ).state,
+    ).toBe("refused");
+    expect(await first.get<string>("setting")).toBe("new API");
+    await first.set("setting", "retained");
     expect(await first.get<string>("setting")).toBe("retained");
     const scoped = first.scope({ type: "resource", resource: { type: "example.note", id: "note" } });
     await scoped.set("setting", "scoped");

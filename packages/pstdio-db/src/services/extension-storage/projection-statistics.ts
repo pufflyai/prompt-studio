@@ -7,19 +7,22 @@ import type { DbClient } from "../../db/connection.pglite";
  * This uses the autovacuum default rule: analyze after 50 rows plus 10% of the table changed.
  * PGlite reports pg_stat change counters late, so writers count their own projected rows.
  */
-export const createProjectionStatistics = (db: Pick<DbClient, "execute">) => {
+export const createProjectionStatistics = (
+  db: Pick<DbClient, "execute">,
+  table: "storage_current_records" | "storage_log_entries" = "storage_current_records",
+) => {
   let changed = 0;
   let pending: Promise<void> | undefined;
   const stale = async () => {
     const { rows } = await db.execute<{ rows: number }>(
-      sql`SELECT greatest(reltuples, 0) AS rows FROM pg_class WHERE relname = 'storage_current_records'`,
+      sql`SELECT greatest(reltuples, 0) AS rows FROM pg_class WHERE relname = ${table}`,
     );
     return changed > 50 + 0.1 * Number(rows[0]?.rows ?? 0);
   };
   const run = async () => {
     while (await stale()) {
       changed = 0;
-      await db.execute(sql`ANALYZE storage_current_records`);
+      await db.execute(sql`ANALYZE ${sql.identifier(table)}`);
     }
   };
   return {

@@ -8,6 +8,7 @@ import { createLiveReceiver, personalLiveTopic } from "../personal-history/live-
 import { historyNamespace, type SessionLogFiles } from "../personal-history/log-files";
 import type { createLogProgress } from "../personal-history/log-progress";
 import { createLogReceiver } from "../personal-history/log-receiver";
+import { createPersonalLogStreams } from "../personal-history/log-stream";
 import { createHistoryReferences, historyReferenceName } from "../personal-history/references";
 import { createPersonalHistoryStore, type PersonalHistoryStore } from "../personal-history/store";
 import type { RelayWorkbench } from "./runtime";
@@ -76,6 +77,8 @@ export const createPersonalContext = (config: RelayWorkbench, deps: ExtensionsRo
     managerOrigin: config.managerOrigin,
     documents: deps.extensionStorageService.documents,
     files: deps.personalHistoryService.logs,
+    index: deps.extensionStorageService.personalHistoryIndex,
+    logs: deps.extensionStorageService.logs,
   });
   const references = createHistoryReferences(
     deps.extensionStorageService.documents.open(historyReferenceName),
@@ -87,10 +90,18 @@ export const createPersonalContext = (config: RelayWorkbench, deps: ExtensionsRo
     projectId: config.workbenchId,
   });
   let legacyDiscarded = false;
+  const streams = createPersonalLogStreams({
+    owner: history.owner,
+    service: deps.extensionStorageService.logs,
+    files: deps.personalHistoryService.logs,
+    namespace,
+  });
   return {
     history,
     references,
     namespace,
+    streams,
+    logs: deps.extensionStorageService.logs,
     async discardLegacy() {
       if (legacyDiscarded) return;
       await discardLegacyHistory(config, deps);
@@ -115,6 +126,7 @@ export const createPersonalReaders = (
   logs: SessionLogFiles,
   namespace: string,
   deviceId: string,
+  context: ReturnType<typeof createPersonalContext>,
 ) => {
   const liveReceiver = createLiveReceiver((id, index, message) =>
     deps.personalHistoryService.messageReceived(id, { index, message, live: true }),
@@ -122,21 +134,29 @@ export const createPersonalReaders = (
   const receiver = createLogReceiver({
     files: logs,
     namespace,
+    streams: context.streams,
+    source: context.history.logSource,
     received: (sessionId, index, message) => {
       liveReceiver.completed(sessionId, index);
       deps.personalHistoryService.messageReceived(sessionId, { index, message, live: false });
     },
   });
 
-  const requested = new Set<string>();
-  const catchUp = async (id: string, personal: SyncSpace, relay: (id: string) => DocumentRelay) => {
-    requested.add(id);
-    await receiver.read([id], personal, relay);
-    requested.delete(id);
+  const requested = new Map<string, { format?: "append-log-v1" }>();
+  const catchUp = async (
+    id: string,
+    personal: SyncSpace,
+    relay: (id: string) => DocumentRelay,
+    format?: "append-log-v1",
+  ) => {
+    const request = { format };
+    requested.set(id, request);
+    await receiver.read([id], personal, relay, format);
+    if (requested.get(id) === request) requested.delete(id);
   };
   return {
     liveReceiver,
-    requestLog: (id: string) => requested.add(id),
+    requestLog: (id: string, format?: "append-log-v1") => requested.set(id, { format }),
     catchUp,
     async readLogs(
       personal: SyncSpace,
@@ -147,11 +167,11 @@ export const createPersonalReaders = (
       statusChanged?: () => void,
     ) {
       const remote = await remotePersonalSessions(history, deviceId);
-      const reading = new Set([...requested, ...(await receiver.behind(remote, await history.readHeads()))]);
+      const reading = new Set([...requested.keys(), ...(await receiver.behind(remote, await history.readHeads()))]);
       progress.receive(own, remote, reading);
       statusChanged?.();
       for (const id of reading) {
-        await catchUp(id, personal, relay);
+        await catchUp(id, personal, relay, requested.get(id)?.format);
         progress.received(id);
         statusChanged?.();
       }

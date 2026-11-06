@@ -19,3 +19,12 @@ test("module consumers use the entry point while implementation details stay loc
   expect(syncModuleViolation(file("encryption"), "../shared")).toBeUndefined();
   expect(syncModuleViolation(file("relay"), "../encryption")).toBeUndefined();
 });
+
+test("append-only logs own their engine and use lower module entry points", () => {
+  for (const dependency of ["shared", "records", "encryption", "relay"]) {
+    expect(syncModuleViolation(file("logs"), `../${dependency}`)).toBeUndefined();
+  }
+  expect(syncModuleViolation(file("logs"), "../relay/document-sync")).toContain("entry point");
+  expect(syncModuleViolation(file("logs"), "pstdio-api-contracts")).toContain("must not import");
+  expect(syncModuleViolation(file("records"), "../logs")).toContain("must not depend on logs");
+});

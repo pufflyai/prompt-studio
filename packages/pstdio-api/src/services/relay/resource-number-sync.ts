@@ -13,7 +13,7 @@ export const createResourceNumberSync = async (input: {
   quarantine: (documentId: string) => (failure: SyncFailure) => Promise<void>;
 }) => {
   const store = input.service.recordStream(input.owner.workbenchId);
-  const documentId = await input.space.documentId(JSON.stringify([coreOwnerId, "record-stream"]));
+  const documentId = await input.space.documentId(JSON.stringify([coreOwnerId, "record-stream-v2"]));
   const relay = input.relay(documentId);
   const cursor = await store.open();
   if (!cursor.joined) {

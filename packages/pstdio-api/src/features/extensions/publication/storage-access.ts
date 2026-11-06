@@ -99,6 +99,8 @@ export const guardPublicationStorage = (
       }
     },
     records: guard(storage.records, ["commit", "resolve"]),
+    text: (recordId, field) => guard(storage.text(recordId, field), ["edit"]),
+    log: (name, options) => guard(storage.log(name, options), ["append"]),
     files: guard(storage.files, ["put", "update", "delete"]),
     assets: guard(storage.assets, ["stage", "cancel"]),
     collection: <TItem = unknown>(name: string) => {

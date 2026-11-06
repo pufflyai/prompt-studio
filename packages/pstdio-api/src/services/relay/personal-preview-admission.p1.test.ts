@@ -24,6 +24,7 @@ test("a sole preview during held ownership reaches its reader after admission wi
   let stop: (() => void) | undefined;
   try {
     const project = await app.deps.projectService.create({ name: "Held ownership" });
+    const sourceId = (await app.deps.environmentService.get()).environmentId;
     const session = await app.deps.sessionService.create({
       project_id: project.id,
       title: "Sole preview",
@@ -47,13 +48,13 @@ test("a sole preview during held ownership reaches its reader after admission wi
       config: {
         accountId: "bob",
         workbenchId: project.id,
-        environmentId: "bob-source",
+        environmentId: sourceId,
         managerOrigin: peer.origin,
         relayOrigin: peer.origin,
         renewalGrant: "grant",
       },
       signal: controller.signal,
-      access: async () => ({ token: "bob-source", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+      access: async () => ({ token: sourceId, expiresAt: new Date(Date.now() + 60_000).toISOString() }),
     });
     await entered.promise;
     const received: unknown[] = [];

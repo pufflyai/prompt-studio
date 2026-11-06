@@ -15,6 +15,16 @@ const history = async (document: Y.Doc) => {
     throw new TextEditorFrameError("missing_history", "The text frame is missing causal history");
   if ([...document.share.keys()].some((key) => !roots.has(key)))
     throw new TextEditorFrameError("invalid_frame", "A text session cannot contain unrelated roots");
+  // These host roots only grow. A full recovery includes deletion sets too;
+  // accepting a removed proof would detach its text from the pending save.
+  const immutable = new Set<unknown>([
+    document.getMap(textDocumentKeys.genesisContext),
+    document.getMap(textDocumentKeys.orderedFrontier),
+  ]);
+  for (const structs of document.store.clients.values())
+    for (const item of structs)
+      if (item instanceof Y.Item && item.deleted && immutable.has(item.parent))
+        throw new TextEditorFrameError("invalid_frame", "Text recovery cannot remove immutable host metadata");
   await readTextDocumentSeed(document);
   if (
     document
@@ -31,6 +41,9 @@ const open = async (state: Uint8Array) => {
   const document = new Y.Doc({ gc: false });
   try {
     Y.applyUpdate(document, state);
+    // Root types decoded without an accessor remain AbstractType. Materialize host
+    // maps so deletion-only frames also report their changed parent to the guard.
+    for (const key of roots) if (key !== textDocumentKeys.content) document.getMap(key);
     await history(document);
     return document;
   } catch (error) {
