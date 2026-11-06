@@ -160,10 +160,9 @@ export const createChatSession = (input: ChatSessionInput) => {
         .then((value) => {
           const draft = chatDraftSchema.parse(value);
           hydrated = true;
-          if (changes === started) {
-            snapshots.values.hydrate(draft.values);
-            publish({ draft: { ...draft, values: { ...state.draft.values, ...draft.values } } });
-          } else publish({ draft: hydrateChatDraft(state.draft, draft) });
+          const values = snapshots.values.hydrate(state.draft.values, draft.values);
+          const hydratedDraft = changes === started ? draft : hydrateChatDraft(state.draft, draft);
+          publish({ draft: { ...hydratedDraft, values } });
         })
         .catch((error) => {
           fail(error);
@@ -242,7 +241,9 @@ export const createChatSession = (input: ChatSessionInput) => {
     accept,
     changeDraft,
     restoreDraft(index: number) {
-      changeDraft(restoreChatDraft(state.draft, index));
+      const draft = restoreChatDraft(state.draft, index);
+      snapshots.values.claim(draft.values);
+      changeDraft(draft);
     },
     run,
     reconnect() {
