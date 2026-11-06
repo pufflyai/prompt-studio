@@ -36,6 +36,11 @@ test("Session menus share resource actions and switch through the full history",
   });
   await nav.getByRole("option", { name: "Keep open", exact: true }).click();
   const route = page.url();
+  // Opening the provider page replaces the navigation view. Reveal its virtualized
+  // history again before using another old row; offscreen rows have no DOM node.
+  await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
+    for (const element of elements) element.scrollTop = element.scrollHeight;
+  });
   await nav.getByRole("option", { name: "Inspect this session", exact: true }).click({ button: "right" });
   const resourceGroup = () => page.getByRole("group", { name: "Session", exact: true });
   const expected = await resourceGroup().getByRole("menuitem").allTextContents();
