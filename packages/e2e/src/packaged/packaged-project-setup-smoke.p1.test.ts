@@ -39,7 +39,7 @@ test(
 
     try {
       const started = await startPackagedServe(tempRoot, {
-        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "pstdio-session-browser"),
       });
       child = started.child;
 

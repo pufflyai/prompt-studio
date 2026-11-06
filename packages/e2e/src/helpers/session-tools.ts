@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { isSessionChatAction } from "./session-chat-actions";
 
 export const verifySessionTools = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
@@ -12,20 +13,22 @@ export const verifySessionTools = async (page: Page) => {
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
   await expect(main.getByRole("tab")).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Add panel", exact: true })).toHaveCount(0);
-  const created = page.waitForResponse(
-    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/sessions",
-  );
+  const created = page.waitForResponse((response) => isSessionChatAction(response.request(), "submit"));
   await editor.fill("Main session");
   await main.getByTestId("send-message-button").filter({ visible: true }).click();
   const response = await created;
-  expect(response.status()).toBe(201);
-  const session = (await response.json()) as { id: string };
-  await expect(page).toHaveURL(new RegExp(`/session\\?.*${session.id}`));
+  expect(response.ok()).toBe(true);
+  const outcome = (await response.json()).outcome;
+  expect(outcome.ok).toBe(true);
+  const session = outcome.navigationRequests[0].resource as { id: string };
+  await expect(page).toHaveURL(
+    (url) => url.pathname.endsWith("/conversation") && Boolean(url.searchParams.get("resource")?.includes(session.id)),
+  );
   await expect(main.getByRole("tab")).toHaveCount(0);
   const mainUrl = page.url();
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
   await page.getByRole("menuitem", { name: "New session", exact: true }).click();
-  await expect(page).toHaveURL(/\/sessions\/new\?/);
+  await expect(page).toHaveURL(/\/conversations\/new\?/);
   await expect(breadcrumb).toContainText("New session");
   await page.goBack();
   await expect(page).toHaveURL(mainUrl);
@@ -37,12 +40,12 @@ export const verifySessionTools = async (page: Page) => {
   await page.getByRole("menuitem", { name: "New session", exact: true }).click();
   const draft = side.getByRole("tab", { name: "New session", exact: true });
   await expect(draft).toBeVisible();
-  const sideCreated = page.waitForResponse(
-    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/sessions",
-  );
+  const sideCreated = page.waitForResponse((response) => isSessionChatAction(response.request(), "submit"));
   await side.getByTestId("content-editable").filter({ visible: true }).fill("Side session");
   await side.getByTestId("send-message-button").filter({ visible: true }).click();
-  expect((await sideCreated).status()).toBe(201);
+  const sideResponse = await sideCreated;
+  expect(sideResponse.ok()).toBe(true);
+  expect((await sideResponse.json()).outcome.ok).toBe(true);
   const sideSession = side.getByRole("tab", { name: /Side session/ });
   await expect(sideSession).toBeVisible();
   await expect(page).toHaveURL(mainUrl);

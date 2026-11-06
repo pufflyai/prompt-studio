@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { isSessionChatAction, sessionChatActionRoute } from "../helpers/session-chat-actions";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { expectPackagedCollapsedMessage } from "./packaged-collapsed-message-smoke";
@@ -38,8 +39,8 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
-    await page.route(`${baseUrl}/v1/sessions`, async (route) => {
-      if (route.request().method() === "POST") await held;
+    await page.route(sessionChatActionRoute, async (route) => {
+      if (isSessionChatAction(route.request(), "submit")) await held;
       await route.continue();
     });
     const prompt = "Packaged composer first message";
@@ -56,15 +57,15 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
       release();
     }
     await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
-    await page.unroute(`${baseUrl}/v1/sessions`);
+    await page.unroute(sessionChatActionRoute);
     phase("creation draft handed off");
     const next = "Packaged composer follow-up";
     let releaseFollowUp!: () => void;
     const heldFollowUp = new Promise<void>((resolve) => {
       releaseFollowUp = resolve;
     });
-    await page.route("**/follow-up", async (route) => {
-      await heldFollowUp;
+    await page.route(sessionChatActionRoute, async (route) => {
+      if (isSessionChatAction(route.request(), "submit")) await heldFollowUp;
       await route.continue();
     });
     await editor.fill(next);
@@ -79,7 +80,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     }
     await expect(editor).toHaveAttribute("contenteditable", "true");
     await expect(editor).toBeFocused();
-    await page.unroute("**/follow-up");
+    await page.unroute(sessionChatActionRoute);
     phase("follow-up draft handed off");
 
     for (const recalled of [next, prompt]) {

@@ -33,7 +33,7 @@ for (const kind of ["streaming", "panels"] as const) {
       let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
       try {
         const startingRuntime = startPackagedServe(root, {
-          PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
+          PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "pstdio-session-browser"),
         }).then((runtime) => {
           child = runtime.child;
           return runtime;
