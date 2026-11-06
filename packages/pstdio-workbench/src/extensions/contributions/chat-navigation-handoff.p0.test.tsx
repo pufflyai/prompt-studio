@@ -6,11 +6,27 @@ import {
   viewerPage,
   viewerResource,
 } from "../../core/controllers/resource-viewers/resource-viewer-test-fixture";
+import { createChatSubmissionPresentation } from "./chat-pending-submission";
 import { registerWorkbenchExtensionChatRenderers } from "./chat-renderer-contributions";
 import type { ChatSession } from "./chat-session";
 import { emptyWorkbenchExtensionMetadata } from "./extension-contributions";
 
 type ChatElement = ReactElement<{ session: ChatSession; conversationKey: string }>;
+
+const confirmMessage = (session: ChatSession, revision: number, id: string) =>
+  session.accept({
+    revision,
+    patch: {
+      op: "replace",
+      path: "/messages/0",
+      value: {
+        id,
+        createdAt: 1793923200000,
+        role: "user",
+        parts: [{ type: "text", text: "First" }],
+      },
+    },
+  });
 
 for (const region of ["main", "side"] as const) {
   for (const stale of [false, true]) {
@@ -160,11 +176,25 @@ for (const region of ["main", "side"] as const) {
           target.props.session.accept({
             revision: 2,
             snapshot: {
-              messages: [{ id: "optimistic-created", role: "user", parts: [{ type: "text", text: "First" }] }],
+              messages: [
+                {
+                  id: "optimistic-created",
+                  createdAt: 1793923200000,
+                  role: "user",
+                  parts: [{ type: "text", text: "First" }],
+                },
+              ],
             },
           });
           expect(target.props.session.getSnapshot().messages[0]?.animationKey).toBe(receipt.id);
           expect(target.props.session.getSnapshot().pending).toBeUndefined();
+          for (const [revision, id] of [
+            [3, "confirmed-created"],
+            [4, "reconfirmed-created"],
+          ] as const) {
+            confirmMessage(target.props.session, revision, id);
+            expect(target.props.session.getSnapshot().messages[0]?.animationKey).toBe(receipt.id);
+          }
           const shared = getWorkbenchRenderers(w)
             .getRenderer("chat")!
             .render({
@@ -205,3 +235,27 @@ for (const region of ["main", "side"] as const) {
     }
   }
 }
+
+test("presentation retains chained canonical identities but respects an unrelated explicit provider key", () => {
+  const present = createChatSubmissionPresentation();
+  const message = {
+    id: "optimistic",
+    role: "user" as const,
+    createdAt: 1793923200000,
+    parts: [{ type: "text" as const, text: "First" }],
+  };
+  present([{ ...message, animationKey: "pending-input" }]);
+  expect(present([{ ...message, id: "confirmed", animationKey: "optimistic" }]).messages[0]?.animationKey).toBe(
+    "pending-input",
+  );
+  expect(present([{ ...message, id: "reconfirmed", animationKey: "optimistic" }]).messages[0]?.animationKey).toBe(
+    "pending-input",
+  );
+  expect(present([{ ...message, id: "reconfirmed", animationKey: "provider-reset" }]).messages[0]?.animationKey).toBe(
+    "provider-reset",
+  );
+  present([]);
+  expect(present([{ ...message, id: "confirmed", animationKey: "optimistic" }]).messages[0]?.animationKey).toBe(
+    "optimistic",
+  );
+});

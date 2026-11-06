@@ -41,10 +41,25 @@ export type ChatPendingSubmission = ReturnType<typeof createChatPendingSubmissio
 /** Presentation is separate from canonical indexes so live patches never address optimistic rows. */
 export const createChatSubmissionPresentation = () => {
   let previous: SessionMessage[] = [];
+  let identities = new Map<string, { id: string; upstream: string; presentation: string }>();
   const claimed = new Map<string, string>();
   const queuePresentation = createPendingChatQueuePresentation(claimed);
   return (messages: SessionMessage[], pending: ChatPendingSubmission[] = [], queued: ChatQueuedRequest[] = []) => {
-    const canonical = applySessionMessagePatch(previous, { op: "replace", path: "/messages", value: messages });
+    const canonical = applySessionMessagePatch(previous, { op: "replace", path: "/messages", value: messages }).map(
+      (message, index) => {
+        // An upstream normalizer may retain its optimistic ID when the harness confirms it.
+        // Compose that identity with our already displayed receipt instead of replacing the row.
+        const incoming = messages[index];
+        const upstream = chatMessageIdentity(incoming);
+        const known = identities.get(incoming.id) ?? identities.get(upstream);
+        const retained =
+          known &&
+          (known.upstream === upstream ||
+            known.id === upstream ||
+            (!incoming.animationKey && known.id === incoming.id));
+        return retained ? { ...message, animationKey: known.presentation } : message;
+      },
+    );
     const retained = new Set(canonical.map((message) => message.animationKey));
     for (const identity of claimed.keys()) if (!retained.has(identity)) claimed.delete(identity);
     const receipts = queuePresentation.transfer(queued, pending, canonical);
@@ -83,6 +98,21 @@ export const createChatSubmissionPresentation = () => {
       }
     }
     previous = present;
+    // Keep only aliases of retained canonical rows, including the upstream optimistic identity.
+    // A genuinely different explicit animation key remains the provider's new identity.
+    identities = new Map(
+      messages.flatMap((message, index) => {
+        const identity = {
+          id: message.id,
+          upstream: chatMessageIdentity(message),
+          presentation: chatMessageIdentity(present[index]),
+        };
+        return [
+          [identity.id, identity],
+          [identity.upstream, identity],
+        ];
+      }),
+    );
     const waitingById = new Map(waiting.map((item) => [item.message.id, item]));
     const ordered = pending.flatMap((item) => waitingById.get(item.message.id) ?? []);
     return { messages: present, queuedFollowUps: queue.items, pending: ordered.length ? ordered : undefined };
