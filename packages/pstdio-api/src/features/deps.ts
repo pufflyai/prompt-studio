@@ -59,6 +59,8 @@ export interface RouteDeps {
   assetTransferService: ReturnType<typeof createAssetTransferService>;
   environmentService: ReturnType<typeof createEnvironmentDBService>;
   storagePositions: ExtensionStoragePositionsApi;
+  /** Folder recovery working storage, outside every captured project folder. */
+  projectRecovery: { root: string };
   boardViewsService: ReturnType<typeof createBoardViewsDBService>;
   extensionWebviewAccess: ExtensionWebviewAccess;
   readiness: ReadinessChecks;

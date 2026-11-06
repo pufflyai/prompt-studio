@@ -1,0 +1,199 @@
+import { createHash } from "node:crypto";
+import { hostname } from "node:os";
+import type { createDocumentRelay } from "pstdio-sync/relay";
+import { captureRecoveryFolder } from "./capture";
+import { sourceRecoveryPolicy } from "./capture-source";
+import type { createRecoveryCatalog } from "./catalog";
+import type { RecoveryChunk } from "./chunks";
+import { openRecoveryJournal } from "./journal";
+import { type RecoveryChunkStore, readRecoveryManifest } from "./manifest";
+import { pruneRecoveryStore } from "./retention";
+import { createRecoveryScheduler } from "./schedule";
+import { openRecoverySource } from "./source-posix";
+import { prepareRecoveryCapture } from "./transfer";
+import { watchRecoveryFolder } from "./watch";
+
+interface LocalWorkspace {
+  id: string;
+  root_path: string | null;
+  execution_kind: string;
+}
+type Transport = Awaited<ReturnType<ReturnType<typeof createDocumentRelay>["manifestBlobs"]>>;
+// Superseded local ciphertext stays this long, like the relay's grace copy.
+const localGraceMs = 60 * 60_000;
+
+const sameCapture = (
+  a: Awaited<ReturnType<typeof readRecoveryManifest>>["capture"],
+  b: Awaited<ReturnType<typeof captureRecoveryFolder>>,
+) =>
+  a.inventory.blobId === b.inventory.blobId &&
+  a.exclusions?.blobId === b.exclusions?.blobId &&
+  a.policy === b.policy &&
+  a.rootMode === b.rootMode &&
+  JSON.stringify(a.git) === JSON.stringify(b.git);
+
+/** This device's project folder: enrollment, scheduled capture, the durable candidate
+ * awaiting acknowledgement and local retention. It runs without a relay connection. */
+export const createLocalRecoverySource = (input: {
+  workbenchId: string;
+  accountId: string;
+  deviceId: string;
+  root: string;
+  workspaces: {
+    getDefault(projectId: string): Promise<LocalWorkspace | null | undefined>;
+    list(projectId: string): Promise<Omit<LocalWorkspace, "id">[]>;
+  };
+  catalog: ReturnType<typeof createRecoveryCatalog>;
+  chunks: () => RecoveryChunkStore | undefined;
+  signal: AbortSignal;
+  schedule?: { quietMs?: number; gapMs?: number };
+  captured: () => void;
+  failed: (error: unknown) => void;
+  statusChanged?: () => void;
+}) => {
+  // Local retention and capture never overlap: a capture may reuse cached ciphertext.
+  let pruning: Promise<void> | undefined;
+  const source = async () => {
+    const workspace = await input.workspaces.getDefault(input.workbenchId);
+    if (!workspace?.root_path || workspace.execution_kind !== "local") return null;
+    const digest = createHash("sha256").update(workspace.root_path).digest("hex").slice(0, 16);
+    const id = `${workspace.id}:${digest}`;
+    const journal = await openRecoveryJournal({
+      root: input.root,
+      source: [input.workbenchId, input.accountId, input.deviceId, id],
+    });
+    return { id, folder: workspace.root_path, journal };
+  };
+  const gitRoots = async () =>
+    (await input.workspaces.list(input.workbenchId)).flatMap((workspace) =>
+      workspace.root_path && workspace.execution_kind === "local" ? [workspace.root_path] : [],
+    );
+  const ownRoot = async (sourceId: string) =>
+    (await input.catalog.list()).find((entry) => entry.deviceId === input.deviceId && entry.sourceId === sourceId)
+      ?.root;
+
+  // This process owns the source's capture and publication until the owner stops.
+  let ownership: { id: string; release: () => Promise<void> } | undefined;
+  const own = async (current: NonNullable<Awaited<ReturnType<typeof source>>>) => {
+    if (ownership?.id === current.id) return;
+    await ownership?.release();
+    ownership = undefined;
+    const release = await current.journal.acquire();
+    if (!release) throw new Error("Another Prompt Studio process owns this folder's recovery");
+    ownership = { id: current.id, release };
+  };
+  const capture = async (runSignal: AbortSignal) => {
+    const store = input.chunks();
+    // Private-project keys arrive with the first relay pass; that pass requests a scan.
+    if (!store) return;
+    await pruning;
+    const current = await source();
+    if (!current) return;
+    restartWatch(current.folder);
+    await own(current);
+    if (!(await current.journal.read()).enrolled) {
+      const opened = await openRecoverySource(current.folder);
+      try {
+        await sourceRecoveryPolicy(opened.root, true, store.directory);
+      } finally {
+        opened.close();
+      }
+      await current.journal.update({ enrolled: true });
+    }
+    const captured = await captureRecoveryFolder({
+      root: current.folder,
+      chunks: store,
+      gitRoots: await gitRoots(),
+      signal: runSignal,
+    });
+    const previous = (await current.journal.read()).candidate ?? (await ownRoot(current.id));
+    const prior = previous && (await readRecoveryManifest(store, previous).catch(() => null));
+    if (prior && sameCapture(prior.capture, captured)) return;
+    const candidate = await prepareRecoveryCapture({
+      chunks: store,
+      source: {
+        id: current.id,
+        deviceId: input.deviceId,
+        name: hostname() || "This device",
+        folder: current.folder,
+      },
+      capture: captured,
+    });
+    await current.journal.update({ candidate });
+    input.captured();
+  };
+  let watching: { folder: string; handle: { close(): void } } | undefined;
+  let watchHints: { changed: () => void; lost: () => void } | undefined;
+  const restartWatch = (next: string) => {
+    if (!watchHints || watching?.folder === next) return;
+    watching?.handle.close();
+    watching = { folder: next, handle: watchRecoveryFolder(next, watchHints.changed, watchHints.lost) };
+  };
+  const scheduler = createRecoveryScheduler({
+    ...input.schedule,
+    run: async (_reasons, runSignal) => {
+      try {
+        await capture(AbortSignal.any([runSignal, input.signal]));
+      } catch (error) {
+        input.failed(error);
+        throw error;
+      } finally {
+        input.statusChanged?.();
+      }
+    },
+    watch: (changed, lost) => {
+      watchHints = { changed, lost };
+      return {
+        close: () => {
+          watchHints = undefined;
+          watching?.handle.close();
+          watching = undefined;
+        },
+      };
+    },
+  });
+
+  const publish = async (store: RecoveryChunkStore, transport: Transport, attempt: AbortSignal) => {
+    const current = await source();
+    const candidate = current && ownership?.id === current.id && (await current.journal.read()).candidate;
+    if (!current || !candidate) return;
+    await input.catalog.publish({ chunks: store, candidate, transport, signal: attempt });
+    // A newer capture may have replaced the candidate during the upload.
+    await current.journal.update((state) => (state.candidate?.blobId === candidate.blobId ? { candidate: null } : {}));
+  };
+  const prune = async (store: RecoveryChunkStore) => {
+    if (scheduler.status().running || pruning) return;
+    pruning = (async () => {
+      const current = await source();
+      const candidate = current && (await current.journal.read()).candidate;
+      const roots: RecoveryChunk[] = (await input.catalog.list()).map((entry) => entry.root);
+      if (candidate) roots.push(candidate);
+      await pruneRecoveryStore({ chunks: store, roots, graceMs: localGraceMs });
+    })()
+      .catch(() => {})
+      .finally(() => {
+        pruning = undefined;
+      });
+    await pruning;
+  };
+
+  return {
+    request: scheduler.request,
+    publish,
+    prune,
+    async status() {
+      const current = await source();
+      const pending = !!current && (!!(await current.journal.read()).candidate || scheduler.status().pending);
+      return {
+        folder: current?.folder ?? null,
+        pending,
+        capturing: scheduler.status().running,
+        needsAttention: scheduler.status().failed,
+      };
+    },
+    async close() {
+      await scheduler.close();
+      await ownership?.release();
+    },
+  };
+};

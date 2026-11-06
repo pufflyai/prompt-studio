@@ -24,6 +24,9 @@ const verifySource = (entry: Entry, manifest: RecoveryManifest) => {
     throw new Error("Recovery catalog does not match its completed source");
 };
 
+const catalogExtension = "pstdio.folder-recovery.catalog-v1";
+export const isRecoveryCatalogOwner = (extensionId: string) => extensionId.startsWith(`["${catalogExtension}",`);
+
 /** One encrypted private document discovers independent device/workspace roots.
  * Only acknowledged complete candidates enter it; failures keep the prior root. */
 export const createRecoveryCatalog = (input: {
@@ -35,7 +38,7 @@ export const createRecoveryCatalog = (input: {
 }) => {
   const owner = {
     workbenchId: input.projectId,
-    extensionId: JSON.stringify(["pstdio.folder-recovery.catalog-v1", input.managerOrigin, input.accountId]),
+    extensionId: JSON.stringify([catalogExtension, input.managerOrigin, input.accountId]),
   };
   const store = input.documents.open("records");
   type Transfer = Parameters<typeof publishRecoveryCapture>[0];
@@ -65,6 +68,9 @@ export const createRecoveryCatalog = (input: {
     },
     references(transfer: Omit<Transfer, "candidate" | "complete">) {
       assertSpace(transfer.chunks);
+      // Roots are immutable: one verified upload or download per connection attempt is enough.
+      const uploaded = new Set<string>();
+      const available = new Set<string>();
       const references: NonNullable<DocumentSyncInput["references"]> = {
         validate(document) {
           entries(document);
@@ -72,16 +78,21 @@ export const createRecoveryCatalog = (input: {
         async upload(document) {
           const roots = [];
           for (const entry of entries(document)) {
+            roots.push(entry.root.blobId);
+            if (uploaded.has(entry.root.blobId)) continue;
             const manifest = await readRecoveryManifest(transfer.chunks, entry.root);
             verifySource(entry, manifest);
             await publishRecoveryCapture({ ...transfer, candidate: entry.root, complete: async () => {} });
-            roots.push(entry.root.blobId);
+            uploaded.add(entry.root.blobId);
           }
           return [...new Set(roots)];
         },
         async download(document) {
-          for (const entry of entries(document))
+          for (const entry of entries(document)) {
+            if (available.has(entry.root.blobId)) continue;
             verifySource(entry, await downloadRecoveryCapture({ ...transfer, candidate: entry.root }));
+            available.add(entry.root.blobId);
+          }
         },
       };
       return references;
