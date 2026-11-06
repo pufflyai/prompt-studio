@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TreeResourceActionsStory } from "./tree-resource-actions-story";
 
 const meta = {
-  title: "pstdio-workbench/Guides/Tree resource actions",
+  title: "Product/Workbench/Navigation/Tree/Tree resource actions",
   component: TreeResourceActionsStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof TreeResourceActionsStory>;

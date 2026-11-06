@@ -27,7 +27,7 @@ function FormPreview(props: { children: ReactNode }) {
   );
 }
 const meta: CanvasMeta<typeof AutoBuildForm> = {
-  title: "Extensions/Planner/Auto Build form",
+  title: "Extensions/Planner/Auto Build/Form",
   component: AutoBuildForm,
   decorators: [
     (Story) => (

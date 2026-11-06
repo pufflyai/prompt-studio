@@ -25,6 +25,7 @@ import {
   PRIVATE_EXPORT_LIMITS,
   RELATIVE_ESCAPE_ALLOWLIST,
 } from "./boundary-rules";
+import { clientEventTransportViolations } from "./client-event-transport";
 import { checkExtensionRegistryResolution, type ExtensionPackageDependencies } from "./extension-registry-resolution";
 import { sourceImports } from "./source-imports";
 import { syncModuleViolation } from "./sync-module-boundaries";
@@ -224,6 +225,7 @@ const checkSourceImports = (pkg: WorkspacePackage, workspace: Workspace, errors:
   for (const file of collectFiles(pkgRoot, /\.(ts|tsx)$/)) {
     const relativeFile = path.relative(workspace.root, file).replaceAll("\\", "/");
     const source = readFileSync(file, "utf8");
+    errors.push(...clientEventTransportViolations(relativeFile, source));
     if (
       (/^packages\/e2e\/src\/(?:ui|vite-terminal)\//.test(relativeFile) ||
         /^packages\/e2e\/playwright(?:\.vite-terminal)?\.config\.ts$/.test(relativeFile)) &&

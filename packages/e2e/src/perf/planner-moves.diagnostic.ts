@@ -161,7 +161,8 @@ try {
           if (beforeTitle) {
             const before = tickets.find(({ title }) => title === beforeTitle)!;
             const savedBefore = await executePlanner<StressTicket>(api, project.id, "get-ticket", { id: before.id });
-            assert(saved.value.sortOrder < savedBefore.value.sortOrder);
+            assert(saved.value.position && savedBefore.value.position);
+            assert(saved.value.position < savedBefore.value.position);
           }
           const result = {
             ...scenario,

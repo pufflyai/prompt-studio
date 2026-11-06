@@ -22,7 +22,7 @@ import { ChatSkeleton } from "./chat-skeleton";
 import type { SessionMessage } from "./message-types";
 
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Chat Panel Performance",
+  title: "Design system/Patterns/Chat/Chat panel performance",
   component: ChatPanel,
   description:
     "Performance benchmarks for ChatPanel mount, streaming, and session switching. Excluded from agent manifests.",

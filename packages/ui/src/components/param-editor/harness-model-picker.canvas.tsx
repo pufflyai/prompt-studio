@@ -1,9 +1,10 @@
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { HarnessModelPicker } from "./harness-model-picker";
 
 const meta: CanvasMeta<typeof HarnessModelPicker> = {
-  title: "Components/Param Editor/Harness model picker",
+  title: "Design system/Patterns/Parameter editor/Harness model picker",
   component: HarnessModelPicker,
   args: {
     label: "Supervisor model",
@@ -34,16 +35,19 @@ const meta: CanvasMeta<typeof HarnessModelPicker> = {
     );
   },
 };
-export default meta;
+export default {
+  title: "Design system/Patterns/Parameter editor/Harness model picker",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof HarnessModelPicker>;
-export const Default: Story = {
+const Default: Story = {
   id: "components-param-editor-harness-model-picker--default",
 };
-export const Loading: Story = {
+const Loading: Story = {
   id: "components-param-editor-harness-model-picker--loading",
   args: { models: [], loadingModels: true },
 };
-export const UnavailableHarness: Story = {
+const UnavailableHarness: Story = {
   id: "components-param-editor-harness-model-picker--unavailable-harness",
   args: {
     harnesses: [
@@ -52,3 +56,8 @@ export const UnavailableHarness: Story = {
     ],
   },
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Default, Loading, UnavailableHarness });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

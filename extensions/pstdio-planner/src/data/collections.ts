@@ -8,7 +8,7 @@ import type { StoredStatus, StoredTag, StoredTicket, Ticket } from "./types";
 export { TICKETS_COLLECTION } from "./ticket-records";
 
 import { readTicketIdentity, type TicketContext, withTicketIdentities, withTicketIdentity } from "./ticket-identity";
-import { ticketRecord, ticketRecords } from "./ticket-records";
+import { changeTicketRecord, ticketRecord, ticketRecords } from "./ticket-records";
 export const STATUSES_COLLECTION = "ticket-statuses";
 export const TAGS_COLLECTION = "ticket-tags";
 
@@ -16,10 +16,20 @@ export const TAGS_COLLECTION = "ticket-tags";
 // the ticket before such a change would bring back references to deleted blobs. So only
 // changeTicketFiles changes `files` and `attachments`, and every other write runs in the
 // ticket's queue and keeps the stored ones.
-const withStoredBlobRefs = async (storage: ExtensionStorageApi, id: string, ticket: StoredTicket) => {
-  const stored = await ticketRecords(storage).get(id);
-  return stored ? { ...ticket, files: stored.files, attachments: stored.attachments } : ticket;
+const withStoredOrder = (stored: StoredTicket, ticket: StoredTicket) => {
+  const { sortOrder: _legacy, ...next } = ticket;
+  return {
+    ...next,
+    ...(Object.hasOwn(stored, "sortOrder") ? { sortOrder: stored.sortOrder } : {}),
+    position: stored.position ?? ticket.position,
+  };
 };
+
+const withStoredBlobRefs = (stored: StoredTicket, ticket: StoredTicket) => ({
+  ...withStoredOrder(stored, ticket),
+  files: stored.files,
+  attachments: stored.attachments,
+});
 
 export const ticketsCollection = (ctx: TicketContext) => {
   const records = ticketRecords(ctx.storage);
@@ -39,12 +49,19 @@ export const ticketsCollection = (ctx: TicketContext) => {
     },
     list: async () => withTicketIdentities(ctx, await records.list()),
     put: (id: string, ticket: StoredTicket) =>
-      queueTicketWrite(id, async () =>
-        records.put(id, ticketRecord(await withStoredBlobRefs(ctx.storage, id, ticket))),
-      ),
+      queueTicketWrite(id, async () => {
+        if (await records.createIfAbsent(id, ticketRecord(ticket))) return;
+        const saved = await changeTicketRecord(ctx.storage, id, (current) => withStoredBlobRefs(current, ticket));
+        if (!saved) throw new Error(`Item not found: ${id}`);
+      }),
     update: (id: string, ticket: StoredTicket) =>
-      queueTicketWrite(id, async () =>
-        records.update(id, ticketRecord(await withStoredBlobRefs(ctx.storage, id, ticket))),
+      queueTicketWrite(id, async () => {
+        const saved = await changeTicketRecord(ctx.storage, id, (current) => withStoredBlobRefs(current, ticket));
+        if (!saved) throw new Error(`Item not found: ${id}`);
+      }),
+    change: (id: string, change: (current: Ticket) => Promise<StoredTicket>) =>
+      queueTicketWrite(id, () =>
+        changeTicketRecord(ctx.storage, id, async (current) => change(await withTicketIdentity(ctx, current))),
       ),
     // The ticket's blobs, file bodies and images alike, have no other owner.
     delete: (id: string) =>
@@ -68,7 +85,8 @@ export const changeTicketFiles = (ctx: TicketContext, ticketId: string, change: 
     const changed = await change(stored);
     if (changed === stored) return stored;
     const next = await withDerivedTicketState(ctx, changed);
-    await ticketRecords(ctx.storage).update(ticketId, ticketRecord(next));
+    const saved = await changeTicketRecord(ctx.storage, ticketId, (current) => withStoredOrder(current, next));
+    if (!saved) throw new Error(`Item not found: ${ticketId}`);
     const unused = (ids: string[], kept: string[]) => ids.filter((id) => !kept.includes(id));
     const bodies = (ticket: StoredTicket) => (ticket.files ?? []).map((file) => file.blobId);
     const images = (ticket: StoredTicket) => (ticket.attachments ?? []).map((attachment) => attachment.id);
@@ -106,15 +124,19 @@ export const putTag = async (storage: ExtensionStorageApi, tag: StoredTag) => {
   return tag;
 };
 
-export const readTicketSnapshot = async (ctx: TicketContext) => {
-  const [tickets, requests] = await Promise.all([ticketsCollection(ctx).list(), readTicketReviewRequests(ctx.storage)]);
+export const readTicketSnapshot = async (ctx: TicketContext, snapshot?: Ticket[]) => {
+  const [tickets, requests] = await Promise.all([
+    snapshot ?? ticketsCollection(ctx).list(),
+    readTicketReviewRequests(ctx.storage),
+  ]);
   return {
     tickets: withIndependentBlockers(tickets),
     requests,
   };
 };
 
-export const readTicketsWithReviewState = async (ctx: TicketContext) => (await readTicketSnapshot(ctx)).tickets;
+export const readTicketsWithReviewState = async (ctx: TicketContext, snapshot?: Ticket[]) =>
+  (await readTicketSnapshot(ctx, snapshot)).tickets;
 
 export const withDerivedTicketState = async (ctx: TicketContext, ticket: Ticket) => withIndependentBlocker(ctx, ticket);
 

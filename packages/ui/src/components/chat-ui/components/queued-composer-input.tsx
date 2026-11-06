@@ -32,7 +32,6 @@ export const QueuedComposerInput = (props: QueuedComposerInputProps) => {
   } = props;
   const { editing, hasQueuedFollowUps } = props;
   const actionLabel = queuedComposer.createNew ? "Create new queue item" : "Update";
-  const updateLabel = queuedComposer.updating ? "Saving…" : actionLabel;
   return (
     <Box
       onKeyDown={(event) => {
@@ -92,7 +91,7 @@ export const QueuedComposerInput = (props: QueuedComposerInputProps) => {
         autoFocus={chatInputAutoFocus}
         focusSignal={queuedComposer.focusSignal}
         submitTitle={editing ? actionLabel : undefined}
-        submitLabel={editing ? updateLabel : undefined}
+        submitLabel={editing ? actionLabel : undefined}
         retainTextUntilAcknowledged={editing}
         commands={chatInputCommands}
       />

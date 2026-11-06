@@ -10,7 +10,7 @@ const ExampleChapters = () => {
   return <ExamplesView exampleId={example} onNavigate={setExample} />;
 };
 const meta = {
-  title: "Theme/Landing Chapters",
+  title: "Website/Landing/Chapters",
   component: WhatIsPromptStudioView,
   fullscreen: true,
   decorators: [

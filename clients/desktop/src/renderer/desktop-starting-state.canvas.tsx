@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DesktopStartupProgress } from "./desktop-starting-state";
 
 const meta = {
-  title: "Patterns/Desktop/Startup progress",
+  title: "Product/Desktop/Startup progress",
   component: DesktopStartupProgress,
   args: { phase: "database" },
 } satisfies CanvasMeta<typeof DesktopStartupProgress>;

@@ -1,7 +1,9 @@
 import { Container } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { ParamEditor } from "../param-editor";
 import type { ResourceParam } from "../param-editor.types";
+import { ParamEditorRow } from "../param-editor-row";
 
 const status: ResourceParam = {
   id: "status",
@@ -59,13 +61,16 @@ const reviewLinks: ResourceParam = {
   options: [{ id: "pr-42", name: "PR #42", icon: "code", href: "https://example.com/pr/42" }],
 };
 const meta = {
-  title: "Components/Inputs/Param Editor/Resource Input",
+  title: "Design system/Patterns/Parameter editor/Resource input",
   component: ParamEditor,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;
-export default meta;
+export default {
+  title: "Design system/Patterns/Parameter editor/Resource input",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const Demo: Story = {
+const Demo: Story = {
   id: "components-inputs-param-editor-resource-input--demo",
   render: (props) => (
     <Container padding="md" maxW="sm">
@@ -79,7 +84,7 @@ export const Demo: Story = {
     params: [id, status, tags, dependsOn, reviewLinks],
   },
 };
-export const ImmediateMultiSelectChanges: Story = {
+const ImmediateMultiSelectChanges: Story = {
   id: "components-inputs-param-editor-resource-input--immediate-multi-select-changes",
   ...Demo,
   args: {
@@ -87,3 +92,71 @@ export const ImmediateMultiSelectChanges: Story = {
     onChange: () => {},
   },
 };
+
+// Fixed-size properties share a row; growing values own the next line.
+const TicketProperties: Story = {
+  description:
+    "ID, timestamps and status stay inline. Dependencies, blocked reasons and populated review links stack. Empty review links are omitted.",
+  render: () => (
+    <Container padding="md" maxW="sm">
+      {[
+        id,
+        {
+          id: "created",
+          name: "Created at",
+          type: "date" as const,
+          readOnly: true,
+          defaultValue: "2026-11-05T10:00:00Z",
+        },
+        status,
+        dependsOn,
+        {
+          id: "blocked",
+          name: "Blocked reason",
+          type: "readOnly" as const,
+          value: "Waiting for the dependent ticket to finish before continuing.",
+        },
+        reviewLinks,
+      ].map((param) => (
+        <ParamEditorRow
+          key={param.id}
+          param={param}
+          fullWidth={param.id === "depends-on" || param.id === "blocked" || param.id === "review-links"}
+        />
+      ))}
+    </Container>
+  ),
+};
+const LongMilestone: Story = {
+  description: "The selected milestone and its dropdown stay bounded by the field, including an unbroken name.",
+  render: () => (
+    <Container padding="md" maxW="xs">
+      <ParamEditor
+        fullWidth
+        params={[
+          {
+            id: "milestone",
+            name: "Milestone",
+            type: "resource",
+            editable: true,
+            defaultValue: "launch",
+            options: [
+              { id: "launch", name: "Launch milestone with an extremely long name and additional release details" },
+              { id: "next", name: "Next" },
+            ],
+          },
+        ]}
+      />
+    </Container>
+  ),
+};
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Demo,
+  ImmediateMultiSelectChanges,
+  TicketProperties,
+  LongMilestone,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Demo };

@@ -5,7 +5,7 @@ import { DownloadPanel } from "../downloads/download-panel";
 import { AssemblyFrame } from "./assembly-frame";
 
 const meta = {
-  title: "Landing/Initial Editor Frame",
+  title: "Website/Landing/Initial editor frame",
   component: AssemblyFrame,
   fullscreen: true,
   decorators: [

@@ -43,7 +43,7 @@ const DelayedEnableComposer = (props: { autoFocus?: boolean; lockedOnMount?: boo
   );
 };
 const meta: CanvasMeta<typeof DelayedEnableComposer> = {
-  title: "Patterns/Chat/Chat Input/Delayed enable",
+  title: "Design system/Patterns/Chat/Chat input/Delayed enable",
   component: DelayedEnableComposer,
 };
 export default meta;

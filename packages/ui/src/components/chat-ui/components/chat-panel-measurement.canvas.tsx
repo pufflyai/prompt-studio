@@ -24,7 +24,7 @@ const MeasuredChatStory = () => {
   );
 };
 const meta: CanvasMeta<typeof MeasuredChatStory> = {
-  title: "Patterns/Chat/Measurement",
+  title: "Design system/Patterns/Chat/Measurement",
   component: MeasuredChatStory,
 };
 export default meta;

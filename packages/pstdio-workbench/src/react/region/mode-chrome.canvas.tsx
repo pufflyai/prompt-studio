@@ -56,7 +56,7 @@ const RetainedModeViews = () => {
   );
 };
 export default {
-  title: "pstdio-workbench/Workbench/Mode view retention",
+  title: "Product/Workbench/Panels/Mode view retention",
   render: () => <RetainedModeViews />,
 } satisfies CanvasMeta;
 export const NavigateAndReturn: CanvasFrame = {

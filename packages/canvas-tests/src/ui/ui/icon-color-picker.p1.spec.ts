@@ -5,7 +5,8 @@ import { openCanvasPreview } from "../preview";
 test("color and icon choices fit inside the popover with balanced horizontal padding", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
-    "packages/ui/src/components/primitives/icon-color-picker.canvas.tsx#PopoverOpen",
+    "packages/ui/src/components/primitives/icon-color-picker.canvas.tsx#Default",
+    "Popover open",
   );
   await preview.getByRole("button", { name: "Pick color and icon", exact: true }).click();
   const dialog = preview.getByRole("dialog");

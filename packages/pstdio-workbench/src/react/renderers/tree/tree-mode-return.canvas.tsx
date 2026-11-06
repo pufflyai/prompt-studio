@@ -87,7 +87,7 @@ const ModeReturnStory = (props: { modeLabel: string; showHeader: boolean }) => {
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Fixed mode return",
+  title: "Product/Workbench/Navigation/Tree/Fixed mode return",
   component: ModeReturnStory,
   fullscreen: true,
   args: { modeLabel: "Project", showHeader: true },

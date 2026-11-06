@@ -7,24 +7,24 @@ import { homeFrame, homePage } from "../helpers/home-loading";
 
 // Critical risk: changing one project's default Home must not change another project's Home.
 test("projects own editable Home sources and keep their customizations through setup", async ({ page, request }) => {
-  const projects = [];
-  for (const name of ["Custom Home", "Default Home"]) {
-    const input = folderProjectInput({ name });
-    const response = await request.post("/v1/projects", { data: input });
-    expect(response.status()).toBe(201);
-    const project = (await response.json()) as { id: string };
-    const listed = await request.get(`/v1/projects/${project.id}/extensions`);
-    expect(listed.ok()).toBe(true);
-    const { extensions } = (await listed.json()) as ListProjectExtensionsResponse;
-    const home = extensions.find((extension) => extension.extensionId === "pstdio.pstdio-home")!;
-    expect(home).toBeTruthy();
-    expect(home.scope).toBe("repo");
-    expect(home.sourcePath).toBe(
-      join(realpathSync(input.initial_workspace.params.path), ".pstdio/extensions/pstdio-home"),
-    );
-    projects.push({ ...project, home });
-  }
-  const [custom, original] = projects;
+  const [custom, original] = await Promise.all(
+    ["Custom Home", "Default Home"].map(async (name) => {
+      const input = folderProjectInput({ name });
+      const response = await request.post("/v1/projects", { data: input });
+      expect(response.status()).toBe(201);
+      const project = (await response.json()) as { id: string };
+      const listed = await request.get(`/v1/projects/${project.id}/extensions`);
+      expect(listed.ok()).toBe(true);
+      const { extensions } = (await listed.json()) as ListProjectExtensionsResponse;
+      const home = extensions.find((extension) => extension.extensionId === "pstdio.pstdio-home")!;
+      expect(home).toBeTruthy();
+      expect(home.scope).toBe("repo");
+      expect(home.sourcePath).toBe(
+        join(realpathSync(input.initial_workspace.params.path), ".pstdio/extensions/pstdio-home"),
+      );
+      return { ...project, home };
+    }),
+  );
   const component = "src/components/start-about-panel.tsx";
   const originalSource = readFileSync(join(original.home.sourcePath, component), "utf8");
   const customizedSource = "export const StartAboutPanel = () => <p>Project-specific welcome notes</p>;\n";

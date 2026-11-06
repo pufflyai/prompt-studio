@@ -36,7 +36,7 @@ const userMessageWithAttachments: SessionMessage = {
   ],
 };
 const meta: CanvasMeta<typeof MessagePartsRenderer> = {
-  title: "Patterns/Chat/Message Parts Renderer",
+  title: "Design system/Patterns/Chat/Message parts renderer",
   component: MessagePartsRenderer,
 };
 export default meta;

@@ -56,7 +56,7 @@ const FieldShell = (props: FieldShellProps) => {
 
   if (fullWidth) {
     return (
-      <Box>
+      <Box minW="0" maxW="full">
         <Box mb="xs">{label}</Box>
         {control}
       </Box>
@@ -64,8 +64,8 @@ const FieldShell = (props: FieldShellProps) => {
   }
 
   return (
-    <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
-      {label}
+    <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs" minW="0">
+      <Box flexShrink={0}>{label}</Box>
       {control}
     </Flex>
   );
@@ -198,7 +198,9 @@ export const ResourceInput = (props: ResourceInputProps) => {
   const triggerLabel = selected ? (
     <Flex align="center" gap="2xs" minW="0">
       {selectionOptionIcon(selected, "14px")}
-      {selected.name}
+      <Box as="span" truncate>
+        {selected.name}
+      </Box>
     </Flex>
   ) : (
     (placeholder ?? "Select")

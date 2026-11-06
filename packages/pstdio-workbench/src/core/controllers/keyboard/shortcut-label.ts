@@ -8,7 +8,7 @@ const destinationLabel = (core: WorkbenchCore, action: NavigationTarget): string
   if (action.kind === "href") return action.href;
   if (action.kind === "viewer") return action.resource.label ?? action.resource.id;
   if (action.kind === "compound") return action.targets.map((target) => destinationLabel(core, target)).join(" + ");
-  if (action.kind === "page") {
+  if (action.kind === "page" || action.kind === "dialog") {
     const title = core.pages.store.getState().pages[contributionRefId(action.page)]?.title;
     if (isLocalizedString(title)) return title.default ?? title.$l10n;
     return title ?? action.page.id;

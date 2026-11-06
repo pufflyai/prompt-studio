@@ -45,7 +45,7 @@ const createPageWorkbench = (
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Page content",
+  title: "Product/Workbench/Panels/Page content",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

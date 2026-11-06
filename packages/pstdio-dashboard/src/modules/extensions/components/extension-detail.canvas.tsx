@@ -113,7 +113,7 @@ const settings = [
   },
 ] as never;
 const meta: CanvasMeta<typeof ExtensionDetail> = {
-  title: "ProjectSettings/ExtensionDetail",
+  title: "Product/Settings/Extensions/Installed extension",
   component: ExtensionDetail,
   fullscreen: true,
   args: {

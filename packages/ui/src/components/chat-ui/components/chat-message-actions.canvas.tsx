@@ -81,7 +81,7 @@ const incompleteTurnMessages: SessionMessage[] = [
   },
 ];
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Message Actions",
+  title: "Design system/Patterns/Chat/Message actions",
   component: ChatPanel,
 };
 export default meta;

@@ -106,7 +106,7 @@ const ChromeContinuityStory = () => {
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Navigation chrome continuity",
+  title: "Product/Workbench/Navigation/Tree/Navigation chrome continuity",
   component: ChromeContinuityStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ChromeContinuityStory>;

@@ -65,7 +65,7 @@ const PagedBoard = () => {
   );
 };
 const meta = {
-  title: "Patterns/Kanban Renderer/Paged board",
+  title: "Design system/Patterns/Kanban renderer/Paged board",
   component: PagedBoard,
   fullscreen: true,
 } satisfies CanvasMeta<typeof PagedBoard>;

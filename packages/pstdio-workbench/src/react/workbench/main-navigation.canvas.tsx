@@ -4,7 +4,7 @@ import { createArrangementWorkbench } from "../region/panel-arrangement-workbenc
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { Workbench } from "./workbench";
 
-export default { title: "pstdio-workbench/Reference/Core API/Main navigation", fullscreen: true };
+export default { title: "Product/Workbench/Main navigation", fullscreen: true };
 const Preview = (props: { bottom?: boolean; dark?: boolean }) => {
   const [workbench] = useState(() => {
     const core = createArrangementWorkbench();

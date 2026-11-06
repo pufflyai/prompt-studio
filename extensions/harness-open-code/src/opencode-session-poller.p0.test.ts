@@ -1,5 +1,4 @@
 import { describe, expect, it } from "bun:test";
-import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
 import {
@@ -149,8 +148,7 @@ describe("pollOpencodeMessages", () => {
     await tick();
 
     const result = await poll;
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const finalMessages = messagePatches.at(-1)?.value as SessionMessage[];
+    const finalMessages = sink.getMessages();
 
     expect(finalMessages.at(-1)).toMatchObject({ parts: [{ type: "text", text: "Great, using TypeScript!" }] });
     expect(lastStatusPatch(patches)?.value).toBe("completed");
@@ -299,8 +297,7 @@ describe("pollOpencodeQuestionReply", () => {
     await Bun.sleep(50);
 
     const result = await poll;
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const finalMessages = messagePatches.at(-1)?.value as SessionMessage[];
+    const finalMessages = sink.getMessages();
 
     expect(result).toEqual({ status: "completed" });
     expect(finalMessages.at(-1)?.parts).toContainEqual({ type: "text", text: "Got it - Nice." });

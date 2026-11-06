@@ -4,7 +4,7 @@ import { Tooltip } from "../primitives/tooltip";
 import { PaletteShortcut } from "./palette-shortcut";
 
 const meta = {
-  title: "Components/PaletteShortcut",
+  title: "Design system/Components/Overlays/Palette/Shortcut",
   component: PaletteShortcut,
   args: { binding: "Alt+Shift+N" },
 } satisfies CanvasMeta<typeof PaletteShortcut>;

@@ -27,5 +27,5 @@ Do not invent component props from common design-system conventions. If a prop i
 - `Agent Guide/Component Map`: component categories and default choices.
 - `Agent Guide/Patterns`: higher-level workflows and composed UI.
 - `Agent Guide/Preview Authoring`: example structure and coverage rules.
-- `Foundations/Component Gallery / Foundations`: lightweight components, tokens, and primitive states.
-- `Foundations/Component Gallery / Composites`: advanced component examples for assembled product workflows.
+- `Design system/Foundations/Component gallery / Foundations`: lightweight components, tokens, and primitive states.
+- `Design system/Foundations/Component gallery / Composites`: advanced component examples for assembled product workflows.

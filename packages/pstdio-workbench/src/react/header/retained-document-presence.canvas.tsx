@@ -132,7 +132,7 @@ const RetainedDocumentPresence = () => {
 };
 
 const meta = {
-  title: "pstdio-workbench/Guides/Header presence/Retained views",
+  title: "Product/Workbench/Header/Retained views",
   component: RetainedDocumentPresence,
   fullscreen: true,
 } satisfies CanvasMeta<typeof RetainedDocumentPresence>;

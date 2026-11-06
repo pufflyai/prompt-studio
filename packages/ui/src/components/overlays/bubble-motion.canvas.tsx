@@ -22,7 +22,7 @@ const FloatingPanel = () => {
   );
 };
 const meta = {
-  title: "Components/Overlays/Bubble/Motion",
+  title: "Design system/Components/Overlays/Bubble/Motion",
   component: FloatingPanel,
   fullscreen: true,
 } satisfies CanvasMeta<typeof FloatingPanel>;

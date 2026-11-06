@@ -29,11 +29,11 @@ import type {
   UpdateQueuedFollowUpInput,
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
-import type { ClientOptions, RequestFn } from "./request";
+import type { RequestFn } from "./request";
 import { createSessionImportsClient } from "./session-imports";
 import { createSessionQueryClient } from "./session-query";
 import { retainSessionResources } from "./session-resource-retention";
-import { createSessionStreamTransport } from "./session-stream";
+import type { createSessionStreamTransport } from "./session-stream";
 import type { SseEvent } from "./sse";
 
 /** @deprecated Use ExtensionSessionQuery from @pstdio/sdk/extensions with query or iterate. */
@@ -178,8 +178,7 @@ const dispatchSessionStreamEvent = (event: string, data: unknown, handlers: Sess
 
 export const createSessionClient = (
   request: RequestFn,
-  clientOptions: ClientOptions,
-  streams = createSessionStreamTransport(request, clientOptions),
+  streams: ReturnType<typeof createSessionStreamTransport>,
 ): SessionClient => {
   return {
     ...createSessionQueryClient(request),

@@ -46,7 +46,7 @@ const SearchOverlayStory = (props: SearchOverlayStoryProps) => {
   return <WorkbenchOverlayLayer workbench={workbench} />;
 };
 const meta = {
-  title: "Dashboard/Search overlays",
+  title: "Product/Commands/Search overlays",
   component: SearchOverlayStory,
   decorators: [
     (Story) => (

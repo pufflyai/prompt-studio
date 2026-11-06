@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import { FrameLoading } from "./frame-loading";
-export default { title: "Canvas/Frame loading" };
+export default { title: "Extensions/UI Canvas/Frame loading" };
 export const Loading = {
   id: "canvas-frame-loading--loading",
   render: () => (

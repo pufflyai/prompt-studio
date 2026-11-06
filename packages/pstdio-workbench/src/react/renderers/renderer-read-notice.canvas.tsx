@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { RendererReadNotice } from "./renderer-read-notice";
 
 const meta = {
-  title: "Renderers/Read failure",
+  title: "Product/Workbench/Views/Read failure",
   component: RendererReadNotice,
   args: { error: "The view could not be refreshed. Try again.", retry: () => {} },
 } satisfies CanvasMeta<typeof RendererReadNotice>;

@@ -141,6 +141,8 @@ export const createNativeDocumentRoutes = (service: ReturnType<typeof createNati
     createRoute({
       method: "get",
       path: `${base}/{documentKey}/stream`,
+      deprecated: true,
+      description: "Use native_document subscriptions on /v1/session-stream.",
       tags: ["Native documents"],
       request: { params: documentParams, query: roomQuery },
       responses: {

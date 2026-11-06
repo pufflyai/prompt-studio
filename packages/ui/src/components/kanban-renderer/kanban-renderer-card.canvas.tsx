@@ -4,7 +4,7 @@ import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 import { KanbanRendererCard } from "./kanban-renderer-card";
 
 const meta: CanvasMeta<typeof KanbanRendererCard> = {
-  title: "Patterns/Kanban Renderer/Card",
+  title: "Design system/Patterns/Kanban renderer/Card",
   component: KanbanRendererCard,
   decorators: [
     (Story) => (

@@ -1,10 +1,11 @@
 import { Box, Center, Stack, Text } from "@chakra-ui/react";
+import type { WebviewHostProps } from "@pstdio/sdk/extensions";
 import { useUiScope } from "@pstdio/ui";
-import { resolvePageParams } from "pstdio-api-contracts";
 import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { useWebviewKeyboardShortcuts } from "../../react/keybindings/use-webview-keyboard-shortcuts";
+import { resolveWebviewPageProps } from "./webview-page-props";
 
 type BridgeWebviewFrameProps = Omit<ExtensionFrameProps, "onDiagnostics" | "onError" | "onReady"> & {
   workbench: WorkbenchCore;
@@ -17,11 +18,8 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
   const keyboard = useWebviewKeyboardShortcuts(workbench);
   const [pageState, setPageState] = useState(workbench.pages.store.getState);
   useEffect(() => workbench.pages.store.subscribe((state) => setPageState(state)), [workbench]);
-  const page = pageState.activePageId ? workbench.pages.getPage(pageState.activePageId) : undefined;
-  const pageProps = {
-    pageLocation: pageState.location,
-    pageParams: resolvePageParams(page?.params, pageState.location?.params),
-  };
+  const host = frameProps.props as Partial<WebviewHostProps> | undefined;
+  const pageProps = resolveWebviewPageProps(pageState, { ...host?.viewLocation, resource: host?.resource });
   const [error, setError] = useState<string | null>(null);
   const diagnostics = createWebviewDiagnostics(view);
 

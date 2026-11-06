@@ -36,7 +36,7 @@ const EditableTableDemo = (props: EditableTableDemoProps) => {
   );
 };
 const meta = {
-  title: "Patterns/Editors/Markdown Editor/Tables",
+  title: "Design system/Patterns/Editors/Markdown editor/Tables",
   component: MarkdownEditor,
   fullscreen: true,
   decorators: [

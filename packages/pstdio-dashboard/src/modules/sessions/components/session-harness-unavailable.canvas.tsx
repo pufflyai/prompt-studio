@@ -4,7 +4,7 @@ import { ChatPanel, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import { SessionHarnessUnavailable } from "./session-harness-unavailable";
 
 const meta = {
-  title: "Modules/Sessions/Harness Unavailable",
+  title: "Product/Sessions/Agent unavailable",
   component: SessionHarnessUnavailable,
   args: { onReviewExtensions: () => {} },
   render: (args) => (

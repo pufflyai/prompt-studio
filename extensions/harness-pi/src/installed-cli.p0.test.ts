@@ -9,10 +9,12 @@ describe.if(process.env.INSTALLED_CLI_TESTS === "1")("installed Pi CLI", () => {
 
   test("detects the installed CLI and discovers a configured model", async () => {
     fixture = await piFixture(true);
-    expect(await fixture.harness.detect!(fixture.context)).toMatchObject({ available: true });
-    expect(await fixture.harness.listModels!(fixture.context)).toContainEqual(
-      expect.objectContaining({ id: "fixture/test" }),
-    );
+    const [detection, models] = await Promise.all([
+      fixture.harness.detect!(fixture.context),
+      fixture.harness.listModels!(fixture.context),
+    ]);
+    expect(detection).toMatchObject({ available: true });
+    expect(models).toContainEqual(expect.objectContaining({ id: "fixture/test" }));
   });
 
   test("runs a tool and resumes its native session without an account", async () => {

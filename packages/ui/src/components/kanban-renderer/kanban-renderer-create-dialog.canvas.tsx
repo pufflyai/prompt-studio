@@ -64,7 +64,7 @@ const config: KanbanRendererCreateRowConfig = {
   labels,
 };
 const meta = {
-  title: "Patterns/Kanban Renderer/Create Dialog",
+  title: "Design system/Patterns/Kanban renderer/Create dialog",
   component: KanbanRendererCreateDialog,
   fullscreen: true,
 } satisfies CanvasMeta<typeof KanbanRendererCreateDialog>;

@@ -67,3 +67,10 @@ test("native harness controls preserve an unselected picker before a harness is 
   };
   expect(controlsQueryResultSchema.parse(result)).toEqual(result);
 });
+
+test("numeric controls retain the boolean control that enables input", () => {
+  const result = {
+    params: [{ id: "count", name: "Count", type: "number" as const, defaultValue: 6, enabledBy: "limited" }],
+  };
+  expect(controlsQueryResultSchema.parse(result)).toEqual(result);
+});

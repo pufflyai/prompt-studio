@@ -86,7 +86,7 @@ const claudeToolInvocations: ToolPart[] = [
   },
 ];
 const meta: CanvasMeta<typeof ToolInvocationTimeline> = {
-  title: "Patterns/Chat/Tool Invocation Timeline",
+  title: "Design system/Patterns/Chat/Tool invocation timeline",
   component: ToolInvocationTimeline,
 };
 export default meta;

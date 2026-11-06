@@ -209,7 +209,7 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Breadcrumb resource actions",
+  title: "Product/Workbench/Navigation/Breadcrumbs/Breadcrumb resource actions",
   component: NoteBreadcrumb,
   decorators: [
     (Story) => (

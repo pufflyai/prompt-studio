@@ -111,7 +111,7 @@ There is no optimistic state layer — the UI updates only after the SSE event a
 
 1. **Endpoints emit events after mutations.** The EventBus is the single mechanism for notifying clients. No client polls for changes.
 2. **Cascade deletes emit per-row events.** Clients must receive individual `sync:delete` events for every dependent row — not just the parent.
-3. **Each client holds at most two long-lived connections.** Browsers allow six HTTP/1.1 connections per origin. The client keeps table sync and one shared session stream, `GET /v1/session-stream`, which carries every session it shows. Both send a `heartbeat` event every 8 seconds, keeping the connection alive within the Bun idle timeout (20 s).
+3. **Each client holds at most two long-lived HTTP event connections per runtime origin.** Browsers allow six HTTP/1.1 connections per origin. The client keeps table sync and one shared stream, `GET /v1/session-stream`, carrying all sessions, commands, text guests, and native-document observations across projects. Retained presentations add logical subscriptions, never physical event connections. Both streams send a `heartbeat` event every 8 seconds, keeping the connection alive within the Bun idle timeout (20 s).
 4. **Session content stays out of the stream.** Sessions reference files via `session_file_id`. Content is fetched on demand.
 5. **Planner ticket data stays out of core table sync.** Dashboard ticket views use planner commands for planner-owned data and core sync for host rows such as sessions/workspaces.
 6. **Y.js tables are excluded.** Y.js has its own binary sync protocol.
@@ -121,3 +121,19 @@ There is no optimistic state layer — the UI updates only after the SSE event a
 The shared `/v1/session-stream` transport also carries extension command streams. `createClient` owns one transport for both sessions and commands. A command subscription body is `{ subscription_id, command: { project_id, command_id, body } }`. Existing session subscription bodies remain valid.
 
 Command events are `chunk`, `end`, and `error`, wrapped in `{ subscription_id, data }`. `end` contains the full command response, including emitted event IDs. Deleting a subscription or closing its connection aborts the command's signal. Commands do not resume after connection loss. See [ADR 0065](../../adrs/0065-stream-command-results-over-the-shared-client-stream.md).
+
+### Text and native-document subscriptions
+
+`createClient` passes the same shared transport to every live resource adapter. Text guests subscribe with `{ subscription_id, text_editing: { project_id, token } }`; the token retains its existing presentation permissions and lease. Events are `text_ready`, `text`, and `text_error`. A retrying guest rejoins on the shared transport and recovers current state and active close barriers.
+
+Native-document watches subscribe with `{ subscription_id, native_document: { project_id, document_key, room_id } }`. The host checks the room against its project and document before observing. Events are `document`, `presence`, `end`, and `error`, with the same subscription envelope. The SDK decodes binary snapshots as before. A dropped watch rejects; its owner can observe the same room again. Cancelling a watch releases only its observation and transient presence, leaving the durable room and other subscriptions intact.
+
+The native observer coalesces full document and presence states while writes are blocked. Closing or cancelling an observation detaches its listeners without waiting for shared socket backpressure. Text observers retain their existing distinct-event and byte bounds. Closing a guest still drains authored frames through its close barrier. A late subscription acknowledgement cannot resurrect a cancelled owner: transport removal waits for admission before deleting the subscription.
+
+The direct native-document and text-editing HTTP stream routes remain available for existing HTTP callers and are deprecated in favor of shared subscriptions. The SDK uses shared subscriptions exclusively. Finite asset downloads are not live observations and retain their streaming response support.
+
+### Enforcement and validation
+
+`bun run verify:boundaries` runs [client event transport checks](../../../scripts/verify/client-event-transport.ts) over SDK, dashboard, workbench, UI, and extension sources. Only the sync/shared transport owners consume SSE; resource adapters use logical subscriptions. [Verifier regression tests](../../../scripts/verify/verify-boundaries.p0.test.ts) prove that introducing a per-resource stream fails the required boundary check.
+
+Before completing a live-resource or transport change, run the [mixed-resource browser regression](../../../packages/e2e/src/ui/resource-stream-budget.p1.spec.ts). It checks actual HTTP/1.1 event responses against the overall two-connection budget with five tickets, several files, sessions, commands, late cancellation, edits at close, reconnects, and destination metadata. It also exercises retained dashboard views and project switching. See the [resource ownership lesson](../../lessons-learned/0020-resource-stream-ownership.md).

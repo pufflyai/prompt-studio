@@ -50,7 +50,7 @@ const MotionTree = (props: { draggable?: boolean; virtualize?: boolean }) => {
   );
 };
 const meta = {
-  title: "Components/Tree List/Motion",
+  title: "Design system/Components/Data display/Tree list/Motion",
   component: MotionTree,
 } satisfies CanvasMeta<typeof MotionTree>;
 export default meta;

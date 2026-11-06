@@ -96,7 +96,7 @@ const ResourceNavigation = (props: { pageOwned: boolean; resourceDependent: bool
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Tree resource navigation",
+  title: "Product/Workbench/Navigation/Tree/Tree resource navigation",
   component: ResourceNavigation,
   args: { pageOwned: false, resourceDependent: false },
   fullscreen: true,

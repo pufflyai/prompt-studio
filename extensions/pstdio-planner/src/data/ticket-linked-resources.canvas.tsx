@@ -62,7 +62,7 @@ function TicketResourceBadges(props: { resources: LinkedResource[] }) {
 }
 
 export default {
-  title: "Planner/Ticket linked resources",
+  title: "Extensions/Planner/Tickets/Linked resources",
   description: "One linked-resource badge list for workspaces, PRs, and artifacts. Sample data only.",
 } satisfies CanvasMeta;
 

@@ -1,6 +1,7 @@
 import { Box, Stack } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { SegmentedControl } from "./segmented-control";
 
 type StoryFn = () => ReactNode;
@@ -9,7 +10,7 @@ const selectionModes = [
   { value: "multi_select", label: "Multiple" },
 ];
 const meta = {
-  title: "Components/Inputs/Segmented Control",
+  title: "Design system/Components/Forms/Segmented control",
   component: SegmentedControl,
   decorators: [
     (Story: StoryFn) => (
@@ -19,8 +20,11 @@ const meta = {
     ),
   ],
 };
-export default meta;
-export const Default = {
+export default {
+  title: "Design system/Components/Forms/Segmented control",
+  fullscreen: true,
+};
+const Default = {
   id: "components-inputs-segmented-control--default",
   render: () => {
     const [value, setValue] = useState("single_select");
@@ -29,16 +33,8 @@ export const Default = {
     );
   },
 };
-export const Toggle = {
-  id: "components-inputs-segmented-control--toggle",
-  render: () => {
-    const [value, setValue] = useState("single_select");
-    return (
-      <SegmentedControl options={selectionModes} value={value} onValueChange={setValue} aria-label="Selection mode" />
-    );
-  },
-};
-export const Sizes = {
+
+const Sizes = {
   id: "components-inputs-segmented-control--sizes",
   render: () => {
     const [value, setValue] = useState("multi_select");
@@ -50,9 +46,14 @@ export const Sizes = {
     );
   },
 };
-export const Disabled = {
+const Disabled = {
   id: "components-inputs-segmented-control--disabled",
   render: () => (
     <SegmentedControl options={selectionModes} value="single_select" disabled onValueChange={() => undefined} />
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Default, Sizes, Disabled });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

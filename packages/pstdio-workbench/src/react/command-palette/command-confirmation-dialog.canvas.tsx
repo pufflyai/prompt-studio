@@ -3,7 +3,7 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandConfirmationDialog } from "./palette-params-dialog";
 
 const meta = {
-  title: "pstdio-workbench/Commands/Confirmation",
+  title: "Product/Workbench/Commands/Confirmation",
   component: CommandConfirmationDialog,
   decorators: [
     (Story) => (

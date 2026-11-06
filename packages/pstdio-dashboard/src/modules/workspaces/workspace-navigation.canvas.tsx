@@ -51,7 +51,7 @@ const WorkspaceNavigationStory = (props: { providers: WorkspaceProviderDescripto
   );
 };
 const meta = {
-  title: "Dashboard/Workspace navigation",
+  title: "Product/Workspaces/Navigation",
   component: WorkspaceNavigationStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceNavigationStory>;

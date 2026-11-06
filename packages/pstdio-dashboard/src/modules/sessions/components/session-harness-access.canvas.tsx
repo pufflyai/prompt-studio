@@ -33,7 +33,7 @@ const AccessStory = (props: { installed: boolean; signedIn: boolean }) => {
   );
 };
 const meta: CanvasMeta<typeof AccessStory> = {
-  title: "Sessions/Harness access",
+  title: "Product/Sessions/Agent access",
   component: AccessStory,
   args: { installed: true, signedIn: false },
 };

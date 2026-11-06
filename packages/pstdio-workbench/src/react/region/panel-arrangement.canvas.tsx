@@ -7,7 +7,7 @@ import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { createArrangementWorkbench } from "./panel-arrangement-workbench";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Panel arrangement",
+  title: "Product/Workbench/Panels/Panel arrangement",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

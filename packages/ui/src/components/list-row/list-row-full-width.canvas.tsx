@@ -4,7 +4,7 @@ import { Check, FileText, Folder } from "lucide-react";
 import { ListRow } from "./list-row";
 
 const meta: CanvasMeta<typeof ListRow> = {
-  title: "Components/Data Display/List Row/Full Width",
+  title: "Design system/Components/Data display/List row/Full width",
   component: ListRow,
 };
 export default meta;

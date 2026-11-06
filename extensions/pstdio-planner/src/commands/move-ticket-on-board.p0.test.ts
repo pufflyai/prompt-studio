@@ -67,7 +67,7 @@ test("archived cards retain attribute moves without joining active manual order"
   expect(await ticketsCollection(f.storage).get(first.id)).toMatchObject({
     archived: true,
     statusId: "done",
-    sortOrder: first.sortOrder,
+    position: first.position,
   });
   expect(f.writes).toEqual([first.id]);
   expect(f.events).toEqual(["tickets.changed"]);
@@ -83,7 +83,7 @@ test("creating a ticket during an append move cannot save the same position", as
   // A busy order guard rejects one writer; its retry must still land on a free position.
   if (outcomes[0].status === "rejected") await create();
   if (outcomes[1].status === "rejected") await move();
-  const orders = (await ticketsCollection(f.storage).list()).map(({ sortOrder }) => sortOrder);
+  const orders = (await ticketsCollection(f.storage).list()).map(({ position }) => position);
   expect(orders).toHaveLength(4);
   expect(new Set(orders).size).toBe(4);
 });

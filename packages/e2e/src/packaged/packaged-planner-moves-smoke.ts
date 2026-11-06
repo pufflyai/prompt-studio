@@ -38,7 +38,8 @@ export const expectPackagedPlannerMoves = async (input: {
   ]);
   const saved = (await command("get-ticket", { id: last.id })).outcome.value;
   expect(saved).toMatchObject({ statusId: "ready", tagIds: ["default-priority-high"] });
-  expect(saved.sortOrder).toBeLessThan(first.sortOrder);
+  expect(typeof saved.position).toBe("string");
+  expect(saved.position < first.position).toBe(true);
   const repeated = await execute(board.body.moveHandlerId, {
     rowId: last.id,
     attributes: { status: "ready" },

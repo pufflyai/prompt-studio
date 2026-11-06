@@ -115,7 +115,7 @@ const SharedFeatures = () => {
   );
 };
 const meta = {
-  title: "Theme/Landing Services",
+  title: "Website/Landing/Services",
   component: SharedFeatures,
   fullscreen: true,
 } satisfies CanvasMeta<typeof SharedFeatures>;

@@ -34,7 +34,7 @@ const NavigableBranch = () => {
   );
 };
 const meta = {
-  title: "Components/Data Display/Tree List/Branch navigation",
+  title: "Design system/Components/Data display/Tree list/Branch navigation",
   component: NavigableBranch,
 } satisfies CanvasMeta<typeof NavigableBranch>;
 export default meta;

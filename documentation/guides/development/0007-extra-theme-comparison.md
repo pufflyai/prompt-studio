@@ -4,7 +4,7 @@ The built-in themes are **Prompt Light**, **Prompt Dark**, **Prompt Contrast Lig
 and **Prompt Contrast Dark**. The first two retain the stored IDs `pstdio-light`
 and `pstdio-dark`; existing choices do not need migration. Contrast themes live
 in the shared UI package and remain available while project extensions load.
-The Canvas examples `Foundations/Component Gallery` and `Patterns/Chat/Message Surfaces`
+The Canvas examples `Design system/Foundations/Component gallery` and `Design system/Patterns/Chat/Message surfaces`
 include contrast variants as well as normal light and dark variants.
 
 The comparison Canvas belongs to `extensions/pstdio-base-themes`. It renders Solarized Light, Solarized Dark, Dracula, and Monokai side by side using the shipped theme assets and the public UI components.

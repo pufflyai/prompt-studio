@@ -77,7 +77,7 @@ const ProgressiveSettings = () => {
   return <Workbench workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Settings progressive loading",
+  title: "Product/Workbench/Settings/Settings progressive loading",
   component: ProgressiveSettings,
   decorators: [
     (Story) => (

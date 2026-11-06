@@ -43,7 +43,7 @@ export const registerWorkbenchViewPlacement = (
     icon: view.icon,
     rendererId: view.id,
     resourceKinds: item?.kind === "binding" ? item.binding.kinds.map((kind) => kind.id) : undefined,
-    panelMenus: viewMenus?.definitionsFor(view.id, input.id),
+    panelMenus: input.region === "overlay" ? undefined : viewMenus?.definitionsFor(view.id, input.id),
   });
 };
 

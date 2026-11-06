@@ -1,10 +1,11 @@
 import { Box, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Trash2 } from "lucide-react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { getThemePreferenceClassNames } from "@/utils/apply-theme-preference";
 
 const meta = {
-  title: "Components/Inputs/Delete Icon Buttons",
+  title: "Design system/Components/Forms/Delete icon buttons",
   args: { mode: "light" as "light" | "dark" },
   render: ({ mode }) => (
     <Stack
@@ -41,12 +42,20 @@ const meta = {
 } satisfies CanvasMeta<{
   mode: "light" | "dark";
 }>;
-export default meta;
+export default {
+  title: "Design system/Components/Forms/Delete icon buttons",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const Light: Story = {
+const Light: Story = {
   id: "components-inputs-delete-icon-buttons--light",
 };
-export const Dark: Story = {
+const Dark: Story = {
   id: "components-inputs-delete-icon-buttons--dark",
   args: { mode: "dark" },
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Light, Dark });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Light };

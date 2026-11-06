@@ -1,5 +1,6 @@
 import type { HarnessExit, HarnessSession, HarnessStartInput } from "@pstdio/sdk/extensions";
-import { normalizePiMessages, type PiMessage } from "./messages";
+import { publishConversationChanges } from "@pstdio/sdk/extensions";
+import { normalizePiMessages, type PiMessage, retainPiToolResult } from "./messages";
 import { type PiProcessOptions, piRecords, startPiProcess } from "./process";
 
 export const startPiTurn = (input: HarnessStartInput & { agentSessionId?: string }, options: PiProcessOptions = {}) => {
@@ -30,7 +31,7 @@ export const startPiTurn = (input: HarnessStartInput & { agentSessionId?: string
           url: file.url,
         })),
       ];
-    input.events.push({ op: "replace", path: "/messages", value: [...prefix, ...messages] });
+    publishConversationChanges(input.events, [...prefix, ...messages]);
   };
   const accept = (record: Record<string, unknown>) => {
     if (record.type === "session" && typeof record.id === "string") {
@@ -39,10 +40,10 @@ export const startPiTurn = (input: HarnessStartInput & { agentSessionId?: string
     }
     if (record.type === "message_start") {
       current = native.length;
-      native.push(record.message as PiMessage);
+      native.push(retainPiToolResult(record.message as PiMessage));
       publish();
     } else if ((record.type === "message_update" || record.type === "message_end") && record.message) {
-      native[current] = record.message as PiMessage;
+      native[current] = retainPiToolResult(record.message as PiMessage);
       publish();
     }
   };

@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { EditingSessionsPlayground } from "./editing-sessions-playground.fixture";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Extension API/Shared editing sessions",
+  title: "Product/Reference/Extension API/Shared editing sessions",
   component: EditingSessionsPlayground,
   description:
     "Use the real SDK editing client, capability gate, host event publisher and host-owned save queue. Only the transport and persistence are in memory. Views share edits before saving, coalesce pending writes, and preview or cancel compound changes. Sandboxed iframe transport is covered by the packaged editing-session journeys.",

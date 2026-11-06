@@ -13,7 +13,7 @@ const Example = (props: ExampleProps) => (
   </Stack>
 );
 export default {
-  title: "Design System/Frame parameters",
+  title: "Extensions/UI Canvas/Frame parameters",
   component: Example,
   args: { amount: 2, enabled: true, treatment: "calm", time: 0 },
   controls: {

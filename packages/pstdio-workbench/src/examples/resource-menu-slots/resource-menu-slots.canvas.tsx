@@ -3,7 +3,7 @@ import { WorkbenchThemeProvider } from "../../react";
 import { ResourceMenuSlotsExample } from "./module";
 
 const meta = {
-  title: "pstdio-workbench/Guides/Resource menu slots",
+  title: "Product/Reference/Examples/Resource menu slots",
   component: ResourceMenuSlotsExample,
   description:
     "A resource kind declares its public or owner-only menu slots. Commands target those typed slots, and the host maps them onto the resource header or context menu.",

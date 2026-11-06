@@ -35,7 +35,7 @@ const CrowdedTabs = (props: { longLabel?: boolean }) => {
   );
 };
 const meta: CanvasMeta = {
-  title: "Patterns/Collection View/View Tabs",
+  title: "Design system/Patterns/Collection view/View tabs",
 };
 export default meta;
 type Story = CanvasFrame;

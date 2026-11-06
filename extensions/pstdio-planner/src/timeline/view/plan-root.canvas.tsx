@@ -69,7 +69,7 @@ function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "
   );
 }
 const meta: CanvasMeta<typeof TimelineStory> = {
-  title: "Extensions/Planner/Timeline",
+  title: "Extensions/Planner/Timeline/Overview",
   component: TimelineStory,
 };
 export default meta;

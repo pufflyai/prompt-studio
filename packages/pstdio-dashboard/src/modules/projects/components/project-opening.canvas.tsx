@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ProjectOpening } from "./project-opening";
 
 const meta = {
-  title: "Projects/Opening a cloud project",
+  title: "Product/Projects/Opening a cloud project",
   component: ProjectOpening,
   decorators: [
     (Story) => (

@@ -73,15 +73,10 @@ const getEditorSectionNavigation = (
     targetId: resolveFileSectionTargetId(navigation, selectedNodeId),
   };
 };
-const FileRendererHeader = (props: { file: LoadedFile; dirty: boolean; saving: boolean }) => {
-  const { file, dirty, saving } = props;
+const FileRendererHeader = (props: { file: LoadedFile; dirty: boolean }) => {
+  const { file, dirty } = props;
   return file.filePath ? (
-    <FileRendererPathHeader
-      fileName={file.fileName ?? file.filePath}
-      filePath={file.filePath}
-      dirty={dirty}
-      saving={saving}
-    />
+    <FileRendererPathHeader fileName={file.fileName ?? file.filePath} filePath={file.filePath} dirty={dirty} />
   ) : null;
 };
 
@@ -286,11 +281,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       }}
     >
       {currentLoaded && !sharedEditor && (
-        <FileRendererHeader
-          file={currentLoaded}
-          dirty={manualSave && editState.dirty}
-          saving={manualSave && editState.saving}
-        />
+        <FileRendererHeader file={currentLoaded} dirty={manualSave && editState.dirty} />
       )}
       <Box flex="1" minH="0">
         <FileRendererContentView

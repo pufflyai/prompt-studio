@@ -51,7 +51,7 @@ const listBranches: ExecuteOptionCommand = async () => [
   { branch: "origin/hotfix" },
 ];
 const meta: CanvasMeta<typeof ExtensionSettingsForm> = {
-  title: "ProjectSettings/ExtensionSettingsForm",
+  title: "Product/Settings/Extensions/Settings form",
   component: ExtensionSettingsForm,
   decorators: [
     (Story) => (

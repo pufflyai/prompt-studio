@@ -18,7 +18,7 @@ const assistantResponseForStory =
     .map(firstPartText)
     .find((text) => typeof text === "string" && text.length > 0) ?? "No assistant message available.";
 const meta: CanvasMeta<typeof Response> = {
-  title: "Patterns/Chat/AI Response",
+  title: "Design system/Patterns/Chat/AI response",
   component: Response,
 };
 export default meta;

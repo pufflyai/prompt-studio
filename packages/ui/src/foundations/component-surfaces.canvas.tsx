@@ -11,7 +11,7 @@ import {
   Tooltip,
 } from "@/components/primitives";
 
-export default { title: "Design System/Component surfaces" };
+export default { title: "Design system/Foundations/Surface states" };
 
 export const FeedbackStates = () => (
   <Stack p="md" gap="md">

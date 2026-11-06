@@ -9,12 +9,24 @@ export const recordingSink = () => {
     push: (patch) => {
       patches.push(patch);
       if (patch.path === "/messages" && Array.isArray(patch.value)) messages = patch.value as SessionMessage[];
+      else if (/^\/messages\/\d+$/.test(patch.path)) {
+        const index = Number(patch.path.split("/").at(-1));
+        if (patch.op === "remove") messages.splice(index, 1);
+        else if (patch.op === "add") messages.splice(index, 0, patch.value as SessionMessage);
+        else messages[index] = patch.value as SessionMessage;
+      }
     },
   };
   return { patches, sink };
 };
 
 export const lastStatusPatch = (patches: JsonPatch[]) => patches.filter((patch) => patch.path === "/status").at(-1);
+
+export const messagesFromPatches = (patches: JsonPatch[]) => {
+  const { sink } = recordingSink();
+  for (const patch of patches) sink.push(patch);
+  return sink.getMessages();
+};
 
 export const userMessage = (text: string): OpencodeSessionMessage => ({
   role: "user",

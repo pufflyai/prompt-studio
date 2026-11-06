@@ -1,7 +1,7 @@
 import { Box, Stack, Tabs, Text } from "@chakra-ui/react";
 import { PageContentLayout } from "./page-content-layout";
 export default {
-  title: "Dashboard/Page content layout",
+  title: "Product/Workbench/Page content layout",
   description: "Headers stay outside the scrolling body; nested pages use the workbench parent breadcrumb.",
 };
 const Content = () =>

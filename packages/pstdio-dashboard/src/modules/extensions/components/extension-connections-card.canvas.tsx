@@ -29,7 +29,7 @@ const definitions: NonNullable<WorkbenchExtensionMetadata["connections"]> = [
   },
 ];
 const meta: CanvasMeta<typeof ExtensionConnectionsCard> = {
-  title: "ProjectSettings/ExtensionConnectionsCard",
+  title: "Product/Settings/Extensions/Connections",
   component: ExtensionConnectionsCard,
   decorators: [
     (Story) => (

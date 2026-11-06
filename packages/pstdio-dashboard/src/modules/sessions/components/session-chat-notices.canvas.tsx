@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { SessionChatNotices } from "./session-chat-notices";
 
 const meta = {
-  title: "Sessions/Chat notices",
+  title: "Product/Sessions/Chat notices",
   component: SessionChatNotices,
   args: {
     reconnect: () => {},

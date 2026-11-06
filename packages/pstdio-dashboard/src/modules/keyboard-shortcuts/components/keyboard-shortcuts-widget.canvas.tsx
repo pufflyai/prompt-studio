@@ -21,7 +21,7 @@ workbench.keybindings.registerKeybinding({
   action: { kind: "command", commandId: "sessions.open" },
 });
 const meta = {
-  title: "Help/Keyboard shortcuts",
+  title: "Product/Help/Keyboard shortcuts",
   component: WorkbenchKeyboardShortcutsPanel,
   args: { workbench },
   decorators: [

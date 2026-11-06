@@ -37,7 +37,7 @@ function ApplyControlsPreview() {
   );
 }
 const meta: CanvasMeta<typeof ApplyControlsPreview> = {
-  title: "Workbench/Controls/Apply drafts",
+  title: "Product/Workbench/Views/Controls/Apply drafts",
   component: ApplyControlsPreview,
   decorators: [
     (Story) => (

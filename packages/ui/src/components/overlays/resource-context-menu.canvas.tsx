@@ -106,7 +106,7 @@ const LongVisibilityMenu = () => {
   );
 };
 const meta: CanvasMeta<typeof ResourceContextMenu> = {
-  title: "Components/Overlays/Resource Context Menu",
+  title: "Design system/Components/Overlays/Resource context menu",
   component: ResourceContextMenu,
   description:
     "Right-click menu for resource and Sidenav actions. Menus taller than the space left in the viewport scroll inside the menu.",

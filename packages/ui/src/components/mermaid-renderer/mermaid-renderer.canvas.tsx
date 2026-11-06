@@ -6,7 +6,7 @@ import { mermaidFixtures } from "./mermaid-fixtures";
 import { MermaidRenderer } from "./mermaid-renderer";
 
 const meta: CanvasMeta<typeof MermaidRenderer> = {
-  title: "Patterns/Editors/Mermaid Renderer",
+  title: "Design system/Patterns/Editors/Mermaid renderer",
   component: MermaidRenderer,
   decorators: [
     (Story) => (

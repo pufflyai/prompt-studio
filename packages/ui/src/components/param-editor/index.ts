@@ -75,3 +75,5 @@ export { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
 export type { ParamEditorRowProps } from "./param-editor-row";
 export { ParamEditorRow } from "./param-editor-row";
 export { ParamEditorSection } from "./param-editor-section";
+
+export { resolveParamEditorValues } from "./param-editor-values";

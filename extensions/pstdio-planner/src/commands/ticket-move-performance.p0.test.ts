@@ -25,19 +25,19 @@ test("no-op and self-target moves write and emit nothing", async () => {
   expect(f.events).toEqual([]);
 });
 
-test("rebalance restores a representable gap without changing the intended order", async () => {
+test("successive moves into one gap keep neighbours and write only moved cards", async () => {
   const f = await ticketMoveFixture();
   const [first, hidden, last] = f.tickets;
-  await ticketsCollection(f.storage).put(first.id, { ...first, sortOrder: 1 });
-  await ticketsCollection(f.storage).put(hidden.id, { ...hidden, sortOrder: 1 + Number.EPSILON });
   await reorderTicket(f.ctx, { rowId: last.id, beforeRowId: hidden.id });
-  expect(await f.ordered()).toEqual([first.id, last.id, hidden.id]);
-  const orders = (await ticketsCollection(f.storage).list()).map(({ sortOrder }) => sortOrder);
+  await reorderTicket(f.ctx, { rowId: first.id, beforeRowId: hidden.id });
+  expect(await f.ordered()).toEqual([last.id, first.id, hidden.id]);
+  const orders = (await ticketsCollection(f.storage).list()).map(({ position }) => position);
   expect(new Set(orders).size).toBe(3);
-  expect(orders.every(Number.isFinite)).toBe(true);
+  expect(f.writes).toEqual([last.id, first.id]);
+  expect(await ticketsCollection(f.storage).get(hidden.id)).toEqual(hidden);
 });
 
-test("concurrent moves cannot assign the same numeric position", async () => {
+test("concurrent moves cannot assign the same position", async () => {
   const f = await ticketMoveFixture();
   const [first, hidden, last] = f.tickets;
   const outcomes = await Promise.allSettled([
@@ -49,6 +49,6 @@ test("concurrent moves cannot assign the same numeric position", async () => {
     "Another Planner write",
   );
   await reorderTicket(f.ctx, { rowId: hidden.id, beforeRowId: first.id });
-  const orders = (await ticketsCollection(f.storage).list()).map(({ sortOrder }) => sortOrder);
+  const orders = (await ticketsCollection(f.storage).list()).map(({ position }) => position);
   expect(new Set(orders).size).toBe(3);
 });

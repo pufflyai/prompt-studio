@@ -1,6 +1,7 @@
 import { Box, Container, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { ParamEditor } from "./param-editor";
 import type { Param, ParamValueMap } from "./param-editor.types";
 import { ParamEditorHorizontal } from "./param-editor-horizontal";
@@ -40,26 +41,34 @@ const MultilinePreview = (props: { readOnly?: boolean; grouped?: boolean; varian
   );
 };
 const meta = {
-  title: "Patterns/Param Editor/Multiline Text",
+  title: "Design system/Patterns/Parameter editor/Multiline text",
   component: MultilinePreview,
   fullscreen: true,
 } satisfies CanvasMeta<typeof MultilinePreview>;
-export default meta;
+export default {
+  title: "Design system/Patterns/Parameter editor/Multiline text",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const Editable: Story = {
+const Editable: Story = {
   id: "patterns-param-editor-multiline-text--editable",
 };
-export const Grouped: Story = {
+const Grouped: Story = {
   id: "patterns-param-editor-multiline-text--grouped",
   ...Editable,
   args: { grouped: true },
 };
-export const Small: Story = {
+const Small: Story = {
   id: "patterns-param-editor-multiline-text--small",
   ...Editable,
   args: { grouped: true, variant: "small" },
 };
-export const ReadOnly: Story = {
+const ReadOnly: Story = {
   id: "patterns-param-editor-multiline-text--read-only",
   args: { grouped: true, readOnly: true },
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Editable, Grouped, Small, ReadOnly });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Editable };

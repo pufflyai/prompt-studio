@@ -60,7 +60,7 @@ const createDropFeedbackWorkbench = (pinned = false, floating = false) => {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Drop feedback",
+  title: "Product/Workbench/Panels/Drop feedback",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

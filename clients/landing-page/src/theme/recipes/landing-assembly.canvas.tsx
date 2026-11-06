@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ShapeField } from "../../components/shapes/shape-field";
 
 const meta = {
-  title: "Theme/Tool Assembly",
+  title: "Website/Landing/Tool assembly",
   component: ShapeField,
   decorators: [
     (Story) => (

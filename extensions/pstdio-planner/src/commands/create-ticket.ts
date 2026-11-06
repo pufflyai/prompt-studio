@@ -1,11 +1,12 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { putTicket, ticketsCollection } from "../data/collections";
+import { putTicket } from "../data/collections";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
+import { readMigratedTickets } from "../data/read-migrated-tickets";
 import { resolveDependencyIds, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
-import { withTicketOrder } from "../data/ticket-order";
+import { appendTicketPosition, withTicketOrder } from "../data/ticket-order";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { StoredTicketAttachment } from "../data/types";
@@ -81,8 +82,8 @@ export const createTicketCommand = defineCommand({
         : (commandParams.parentId ?? null);
 
     const { existing, ticket } = await withTicketOrder(ctx, async () => {
-      const existing = await ticketsCollection(ctx).list();
-      const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
+      const existing = await readMigratedTickets(ctx);
+      const position = appendTicketPosition(ctx.storage, existing);
       const ticket = await putTicket(ctx, {
         id,
         title: ticketTitle(commandParams),
@@ -96,7 +97,7 @@ export const createTicketCommand = defineCommand({
         userPrompt: null,
         draft: false,
         archived: false,
-        sortOrder,
+        position,
         createdAt: now,
         updatedAt: now,
       });

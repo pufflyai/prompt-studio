@@ -6,7 +6,7 @@ import { Header, type HeaderVariant } from "@/components/layout/header";
 import { PANEL_HEADER_CONTROL_SIZE, PANEL_HEADER_TAB_SIZE } from "@/components/layout/panel-header.constants";
 
 const meta = {
-  title: "Components/Navigation/Header",
+  title: "Design system/Components/Navigation/Header",
   component: Header,
   decorators: [
     (Story: () => ReactNode) => (

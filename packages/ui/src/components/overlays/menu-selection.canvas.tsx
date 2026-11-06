@@ -77,7 +77,7 @@ const SelectionMenus = () => {
   );
 };
 const meta = {
-  title: "Components/Overlays/Menu Selection",
+  title: "Design system/Components/Overlays/Menu selection",
   component: SelectionMenus,
 } satisfies CanvasMeta<typeof SelectionMenus>;
 export default meta;

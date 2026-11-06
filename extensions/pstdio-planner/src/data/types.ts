@@ -62,7 +62,9 @@ export interface StoredTicket {
   userPrompt?: string | null;
   draft?: boolean;
   archived: boolean;
-  sortOrder: number;
+  position?: string;
+  /** Read only while upgrading numeric positions. Migration removes it. */
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 }

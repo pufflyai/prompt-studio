@@ -1,4 +1,8 @@
 import type { PageLocation, ResourceRef } from "@pstdio/sdk/extensions";
+import {
+  getNavigationTreeNodeSource,
+  setNavigationTreeNodeSource,
+} from "../../registries/navigation/navigation-tree-node-source";
 import type { NavigationTreeRegistry, NavigationTreeSlot } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
 import type { TreeViewSection } from "../../registries/renderers/tree-renderer-types";
@@ -23,7 +27,15 @@ interface LevelNavigationHost {
 const pinnedOnly = (sections: TreeViewSection[]) =>
   sections
     .filter((section) => section.nodes.length > 0)
-    .map((section) => ({ ...section, nodes: section.nodes.map((node) => ({ ...node, pinnedOnly: true })) }));
+    .map((section) => ({
+      ...section,
+      nodes: section.nodes.map((node) => {
+        const pinned = { ...node, pinnedOnly: true };
+        const source = getNavigationTreeNodeSource(node);
+        if (source) setNavigationTreeNodeSource(pinned, source);
+        return pinned;
+      }),
+    }));
 
 // Owners can share a section id, such as the navigation root. The first owner keeps its section settings.
 const mergeSections = (sections: TreeViewSection[]) => {
@@ -60,12 +72,20 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
 
   // Header and footer rows accumulate from the mode inward; the innermost owner fills the body.
   const ordered = (slot: NavigationTreeSlot) => (slot === "content" ? queries().reverse() : queries());
-  // Outer body rows stay available, so rows users pinned to the header or footer persist inside levels.
-  const levelSections = (slot: NavigationTreeSlot, index: number, sections: TreeViewSection[]) =>
-    slot === "content" && index > 0 ? pinnedOnly(sections) : sections;
+  // Saved placement can move rows between slots. Every enclosing row must stay out of the body,
+  // including declared header/footer rows users moved there.
+  const levelSections = (slot: NavigationTreeSlot, index: number, sections: TreeViewSection[], count: number) => {
+    const enclosing = slot === "content" ? index > 0 : index < count - 1;
+    return enclosing ? pinnedOnly(sections) : sections;
+  };
   const structureOf = (slot: NavigationTreeSlot, levels: ReturnType<typeof queries>) =>
     levels.map(({ owner, resource, projectId }, index) =>
-      levelSections(slot, index, host.navigationTrees.getStructure(owner, slot, { resource, projectId })),
+      levelSections(
+        slot,
+        index,
+        host.navigationTrees.getStructure(owner, slot, { resource, projectId }),
+        levels.length,
+      ),
     );
 
   return {
@@ -86,7 +106,7 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
         levels.map(({ owner, resource, projectId }, index) => async (signal) => {
           const publish = (sections: TreeViewSection[]) => {
             signal.throwIfAborted();
-            available[index] = levelSections(slot, index, sections);
+            available[index] = levelSections(slot, index, sections, levels.length);
             onProgress?.(mergeSections(available.flat()));
           };
           publish(

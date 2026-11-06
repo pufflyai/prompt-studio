@@ -56,7 +56,7 @@ const ProgressiveRead = () => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Progressive read continuity",
+  title: "Product/Workbench/Views/Progressive read continuity",
   component: ProgressiveRead,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ProgressiveRead>;

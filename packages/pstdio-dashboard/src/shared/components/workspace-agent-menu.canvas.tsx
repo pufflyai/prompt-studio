@@ -5,7 +5,7 @@ import { useState } from "react";
 import { WorkspaceAgentMenu, type WorkspacePanelMenuOption } from "./workspace-agent-menu";
 
 const meta: CanvasMeta<typeof WorkspaceAgentMenu> = {
-  title: "Shared/WorkspaceAgentMenu",
+  title: "Product/Workspaces/Agent menu",
   component: WorkspaceAgentMenu,
   decorators: [
     (Story) => (

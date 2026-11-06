@@ -32,6 +32,11 @@ export interface NavigationTargetViewer extends Pick<ViewLocation, "section" | "
   page?: PageRef;
 }
 
+/** Present a single-view page in a host modal without changing Main or browser history. */
+export interface NavigationTargetDialog extends Pick<NavigationTargetPage, "page" | "resource" | "params"> {
+  kind: "dialog";
+}
+
 export interface NavigationTargetPanel {
   kind: "panel";
   panel: PanelRef;
@@ -54,6 +59,7 @@ export interface NavigationTargetHref {
 
 export type NavigationTargetItem =
   | NavigationTargetPage
+  | NavigationTargetDialog
   | NavigationTargetPanel
   | NavigationTargetViewer
   | NavigationTargetCommand

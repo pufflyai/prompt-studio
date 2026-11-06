@@ -182,7 +182,7 @@ const DiffViewerStressStory = () => {
   );
 };
 const meta: CanvasMeta<typeof DiffViewer> = {
-  title: "Patterns/Diff/Diff Viewer",
+  title: "Design system/Patterns/Diff/Diff viewer",
   component: DiffViewer,
   fullscreen: true,
   decorators: [

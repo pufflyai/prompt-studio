@@ -21,7 +21,7 @@ const info: OnboardingInfo = {
 };
 
 const meta = {
-  title: "Onboarding/Setup",
+  title: "Extensions/Onboarding/Setup",
   description: "Open only after the project confirms an enabled setup contribution; otherwise show no setup overlay.",
   component: OnboardingPreview,
   args: { info, harnessIcons },

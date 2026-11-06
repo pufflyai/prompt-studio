@@ -86,7 +86,7 @@ const ProjectSwitchStory = (props: { workbench: WorkbenchCore }) => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Project switch",
+  title: "Product/Workbench/Project switch",
   component: ProjectSwitchStory,
   description:
     "A project switch keeps the workbench shell mounted. Only views that belong to the project start fresh: open the Notes view, edit it, then open the other project.",

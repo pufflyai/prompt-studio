@@ -38,6 +38,12 @@ const createBlockedRegistry = (delayAfterGets: number) => {
 
   return {
     ...registry,
+    dispose: async () => {
+      // A stopped host releases a pending harness lookup before waiting for dispatches.
+      const closing = registry.dispose();
+      resolution.resolve();
+      await closing;
+    },
     get: async (...args: Parameters<typeof registry.get>) => {
       const shouldDelay = getCount >= delayAfterGets;
       getCount += 1;

@@ -6,7 +6,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
 const meta: CanvasMeta<typeof ProjectDefaultsCard> = {
-  title: "ProjectSettings/ProjectDefaultsCard",
+  title: "Product/Settings/Project defaults",
   component: ProjectDefaultsCard,
   decorators: [
     (Story) => (

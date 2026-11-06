@@ -59,7 +59,9 @@ import { steerSessionHandler, steerSessionRoute } from "./endpoints/steer-sessio
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
 import { createSessionStreamConnections } from "./session-stream-connections";
 
-export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDeps & Pick<RouteDeps, "textEditing">) => {
+export const createSessionRoutes = (
+  deps: SessionsRouteDeps & ExtensionsRouteDeps & Pick<RouteDeps, "textEditing" | "nativeDocuments">,
+) => {
   const routes = new OpenAPIHono<AppBindings>();
   routes.openapi(querySessionsRoute, querySessionsHandler(deps));
   const streamConnections = createSessionStreamConnections();
