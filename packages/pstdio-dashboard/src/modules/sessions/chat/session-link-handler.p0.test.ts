@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { parsePageUrl } from "pstdio-api-contracts";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { buildDashboardWorkspaceOptionsFromRows } from "@/shared/workspaces/workspace-options";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionLinkHandler } from "./session-link-handler";
 
@@ -31,6 +32,7 @@ const workspace = (id: string) =>
 
 const projectWorkbench = () => {
   const workbench = createWorkbench();
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: projectId, name: "Chat links" });
   workbench.pageLocations.setProject(projectId);
@@ -80,7 +82,7 @@ test("chat paths become resources only when the session workspace has the file",
       handler.resolveResource!({ source, origin });
 
     const href = handler.resolveHref({ source: "src/app.ts:12", origin: "inline-code" });
-    expect(href).toContain("workspace");
+    expect(href).toContain("/extensions/pstdio.pstdio-workspaces/files");
     expect(await resolve("src/app.ts:12", "inline-code")).toEqual({ href });
     expect(await resolve("README.md", "text")).toMatchObject({ href: expect.any(String) });
     expect(await resolve("large/big.ts", "text")).toMatchObject({ href: expect.any(String) });
@@ -105,7 +107,7 @@ test("chat paths use the session workspace while another workspace is selected",
   const workbench = projectWorkbench();
   workbench.pageLocations.navigate({
     kind: "page",
-    page: workbenchPages.workspace,
+    page: workspacePages.workspace,
     resource: { type: "workspace", id: "workspace-b" },
   });
   const errors: string[] = [];

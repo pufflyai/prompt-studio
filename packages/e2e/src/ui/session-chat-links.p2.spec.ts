@@ -213,7 +213,7 @@ test("opens a same-origin canonical document in another project and returns to i
       );
     const [source, destination] = projects;
     const [workspace] = await (await request.get(`${apiBase}/v1/workspaces?project_id=${destination!.id}`)).json();
-    const destinationHref = `/projects/${destination!.id}/workspace?resource=${encodeURIComponent(`pstdio://extension-resource/workspace/${workspace.id}`)}&document=README.md`;
+    const destinationHref = `/projects/${destination!.id}/extensions/pstdio.pstdio-workspaces/files?resource=${encodeURIComponent(`pstdio://extension-resource/workspace/${workspace.id}`)}&document=README.md`;
     const session = await (
       await request.post(`${apiBase}/v1/sessions`, {
         data: {
@@ -231,12 +231,12 @@ test("opens a same-origin canonical document in another project and returns to i
     await expect(link).toHaveAttribute("href", destinationHref);
     await link.click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Destination\s+project/);
-    await expect(page).toHaveURL(new RegExp(`/projects/${destination!.id}/workspace`));
+    await expect(page).toHaveURL(new RegExp(`/projects/${destination!.id}/extensions/pstdio.pstdio-workspaces/files`));
     await page.goBack();
     await expect(page.getByRole("link", { name: "Source file", exact: true }).last()).toBeVisible();
     await page.getByRole("link", { name: "Source file", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Source\s+project/);
-    await expect(page).toHaveURL(new RegExp(`/projects/${source!.id}/workspace`));
+    await expect(page).toHaveURL(new RegExp(`/projects/${source!.id}/extensions/pstdio.pstdio-workspaces/files`));
   } finally {
     for (const project of projects) await request.delete(`${apiBase}/v1/projects/${project.id}`);
     for (const root of roots) rmSync(root, { recursive: true, force: true });

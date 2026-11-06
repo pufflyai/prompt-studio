@@ -6,6 +6,7 @@ import {
   type ResourceResolution,
   resourceKey,
   workbenchPages,
+  workspacePages,
 } from "pstdio-api-contracts/extension-kernel";
 import { type ExtensionRuntime, isRuntimeNavigationTargetAvailable } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -17,8 +18,29 @@ const resolveHostResource = async (deps: ExtensionsRouteDeps, ref: ResourceRef) 
   if (ref.device) return;
   const record = ref.type === "workspace" ? await deps.workspaceService.get(ref.id) : undefined;
   if (record && record.project_id === ref.projectId) {
-    const resource = { ...ref, label: record.name || record.workspace_shorthand, icon: "folder" };
-    return { resource, target: { kind: "page" as const, page: workbenchPages.workspace, resource } };
+    const resource = {
+      ...ref,
+      label: record.name || record.workspace_shorthand,
+      icon: "folder",
+      metadata: {
+        ...ref.metadata,
+        workspaceId: record.id,
+        workspaceIsDefault: record.is_default,
+        workspaceReadOnly: false,
+        workspaceExecutionKind: record.execution_kind,
+        workspaceProviderState: record.provider_state,
+        workspaceSupportsFiles:
+          record.execution_kind === "local" && record.provider_capabilities_json?.files !== "none",
+        workspaceSupportsDiff: !record.is_default && record.provider_capabilities_json?.diff === true,
+        workspaceType: record.provider_id === "pstdio.worktree" ? "worktree" : "folder",
+        workspaceError: record.setup_error,
+      },
+    };
+    let page = workspacePages.workspace;
+    if (record.execution_kind === "remote" || record.provider_capabilities_json?.files === "none")
+      page = workspacePages.overview;
+    else if (record.is_default || !record.provider_capabilities_json?.diff) page = workspacePages.files;
+    return { resource, target: { kind: "page" as const, page, resource } };
   }
   if (ref.type === "session") {
     const session = await deps.sessionService.get(ref.id);

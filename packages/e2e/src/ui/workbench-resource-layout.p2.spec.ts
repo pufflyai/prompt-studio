@@ -39,9 +39,13 @@ const prepareDashboard = async (page: Page, projectId: string) => {
 };
 
 const openWorkspace = async (page: Page, shorthand: string) => {
-  const row = page.getByRole("row").filter({ hasText: shorthand }).first();
+  const row = page
+    .getByRole("region", { name: "Main", exact: true })
+    .getByRole("option")
+    .filter({ hasText: shorthand })
+    .first();
   await expect(row).toBeVisible();
-  await row.getByRole("cell").filter({ hasText: shorthand }).first().click();
+  await row.click();
 };
 
 test("keeps the mode's secondary panel preference across resources and reload", async ({ page, request }) => {

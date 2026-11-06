@@ -1,13 +1,14 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { revealTreeEntry } from "../helpers/tree-entry";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 
 test.use({ notificationsEnabled: true });
 
-const allSectionRowNames = ["Home", "Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
+const allSectionRowNames = ["Home", "Search", "Notifications", "Sessions", "Tickets", "Files", "Workspaces"] as const;
 const withoutWorkspaces = allSectionRowNames.filter((name) => name !== "Workspaces");
 
 const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
@@ -72,16 +73,25 @@ const row = (sidenav: Locator, name: (typeof allSectionRowNames)[number]) =>
 
 const expectSidenavSections = async (
   sidenav: Locator,
-  visibleNames: readonly (typeof allSectionRowNames)[number][] = withoutWorkspaces,
+  visibleNames: readonly (typeof allSectionRowNames)[number][] = allSectionRowNames,
 ) => {
   const rows = visibleNames.map((name) => row(sidenav, name));
-  for (const sectionRow of rows) await expect(sectionRow).toBeVisible({ timeout: 30_000 });
-
   const topEdges: number[] = [];
   for (const sectionRow of rows) {
-    topEdges.push(await sectionRow.evaluate((element) => element.getBoundingClientRect().top));
+    await revealTreeEntry(sidenav.page(), sidenav, sectionRow);
+    await expect(sectionRow).toBeVisible({ timeout: 30_000 });
+    topEdges.push(
+      await sectionRow.evaluate(
+        (element) =>
+          element.getBoundingClientRect().top +
+          (element.closest('[data-scope="scroll-area"][data-part="viewport"]')?.scrollTop ?? 0),
+      ),
+    );
   }
   expect(topEdges).toEqual([...topEdges].sort((left, right) => left - right));
+  await sidenav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
+    for (const element of elements) element.scrollTop = 0;
+  });
   await expect(sidenav.locator('[data-workbench-panel-header="sidenav"]')).toHaveCount(0);
   await expect(sidenav.getByRole("tablist")).toHaveCount(0);
 };
@@ -106,16 +116,16 @@ test("removes and restores owner-scoped collections across project and session p
   expect(projectBox!.x).toBeLessThan(breadcrumbBox!.x);
   await expectSidenavSections(sidenav);
 
-  const stableElements = [await projectButton.elementHandle()];
-  for (const name of withoutWorkspaces) stableElements.push(await row(sidenav, name).elementHandle());
-  expect(stableElements.every(Boolean)).toBe(true);
+  // Project chrome persists; virtualized tree rows may unmount while scrolling.
+  const stableProjectButton = await projectButton.elementHandle();
+  expect(stableProjectButton).toBeTruthy();
 
   await (await showSidenavEntry(page, "Workspaces")).click();
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Workspaces", { exact: true }),
   ).toBeVisible();
   await expectSidenavSections(sidenav, allSectionRowNames);
-  for (const element of stableElements) expect(await element!.evaluate((node) => node.isConnected)).toBe(true);
+  expect(await stableProjectButton!.evaluate((node) => node.isConnected)).toBe(true);
 
   await row(sidenav, "Sessions").click();
   await expect(
@@ -152,12 +162,14 @@ test("customizes the Sidenav from any point and persists section visibility", as
   await row(sidenav, "Search").click({ button: "right" });
   await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   const searchToggle = page.getByRole("menuitem", { name: /Search/ });
-  const workspacesToggle = page.getByRole("menuitem", { name: /Workspaces/ });
+  const workspacesToggle = page.getByRole("menuitem", { name: "Workspaces", exact: true });
   await expect(searchToggle).toBeVisible();
   await expect(workspacesToggle).toBeVisible();
   for (const name of ["Header", "Navigation", "Footer"]) {
     await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
   }
+  await workspacesToggle.click();
+  await expect(row(sidenav, "Workspaces")).toHaveCount(0);
   await workspacesToggle.click();
   await expect(row(sidenav, "Workspaces")).toBeVisible();
   await workspacesToggle.click();
@@ -245,10 +257,25 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   };
   const middleOf = (target: Locator) => async () => {
     await expect(target).toHaveCount(1);
+    await target.scrollIntoViewIfNeeded();
     const box = (await target.boundingBox())!;
     return box.y + box.height / 2;
   };
   const drag = async (source: Locator, targetY: () => Promise<number>) => {
+    await revealTreeEntry(page, sidenav, source);
+    await expect
+      .poll(() =>
+        source.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return (
+            document
+              .elementFromPoint(box.x + 40, box.y + box.height / 2)
+              ?.closest("[data-tree-list-node-id]")
+              ?.getAttribute("data-tree-list-node-id") === element.getAttribute("data-tree-list-node-id")
+          );
+        }),
+      )
+      .toBe(true);
     const from = (await source.boundingBox())!;
     await page.mouse.move(from.x + 40, from.y + from.height / 2);
     await page.mouse.down();
@@ -259,7 +286,6 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
     // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click.
     await page.waitForTimeout(100);
   };
-  const top = async (target: Locator) => (await target.boundingBox())!.y;
 
   await drag(option("Home"), lowerHalfOf(option("Workspaces")));
   await drag(option("Search"), lowerHalfOf(option("Workspaces")));
@@ -274,7 +300,21 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   await drag(option("Settings"), lowerHalfOf(option("Workspaces")));
   await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Workspaces")));
   await drag(option("Extensions"), lowerHalfOf(option("Workspaces")));
-  expect(await top(option("Settings"))).toBeLessThan(await top(option("Scribble")));
+  const contentListbox = await option("Workspaces").evaluateHandle((element) => element.closest('[role="listbox"]'));
+  expect(
+    await option("Settings").evaluate(
+      (element, content) => element.closest('[role="listbox"]') === content,
+      contentListbox,
+    ),
+  ).toBe(true);
   await drag(option("Settings"), middleOf(zone));
-  expect(await top(option("Settings"))).toBeGreaterThan(await top(option("Scribble")));
+  expect(
+    await option("Settings").evaluate(
+      (element, content) => element.closest('[role="listbox"]') === content,
+      contentListbox,
+    ),
+  ).toBe(false);
+  await expect(
+    sidenav.getByRole("listbox").last().getByRole("option", { name: "Settings", exact: true }),
+  ).toBeVisible();
 });

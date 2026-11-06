@@ -81,6 +81,7 @@ and undeclared views use the lifecycle below.
 - Dirty editors are never overwritten by refresh events or late load results.
 - Refresh work is scoped to one resource when the event provides that identity.
 - Load and save errors remain recoverable.
+- Document errors, read-only notices, and draft recovery controls stay in a sticky footer below the scrolling editor. Showing or dismissing a notice does not move the document's first line, and the last line remains reachable. Ordinary document saving stays silent.
 
 ## Concepts
 

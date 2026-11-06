@@ -63,7 +63,6 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
   }
   return (
     <Flex ref={rendererRef} direction="column" h="full" minH="0" overflow="hidden" bg="bg">
-      {errorNotice}
       {positionNotice}
       <Box flex="1" minH="0" overflowY="auto">
         <LazyMarkdownEditor
@@ -76,6 +75,7 @@ export const MarkdownFileContent = (props: MarkdownFileContentProps) => {
           onChange={editable ? onChange : undefined}
         />
       </Box>
+      {errorNotice}
     </Flex>
   );
 };

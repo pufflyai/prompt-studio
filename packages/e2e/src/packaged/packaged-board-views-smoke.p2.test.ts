@@ -4,8 +4,8 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";
-import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
@@ -33,12 +33,29 @@ const readSnapshot = async (baseUrl: string, headers: Record<string, string>) =>
   }
 };
 
-setupPackagedSmokeTests();
+let sources: string;
+let env: Record<string, string>;
+setupPackagedSmokeTests(async () => {
+  sources = mkdtempSync(join(tmpdir(), "packaged-board-sources-"));
+  // This test owns board persistence. Install its packed public dependencies during fixture setup;
+  // cold extension installation has separate smoke coverage and timing evidence.
+  const defaultExtensions = await Promise.all(
+    ["pstdio-planner", "pstdio-workspaces"].map(async (installName) => ({
+      installName,
+      skipInstall: true,
+      source: await preparePackagedExtensionSource(
+        join(sources, installName),
+        join(import.meta.dirname, "../../../../extensions", installName),
+        { install: true },
+      ),
+    })),
+  );
+  env = { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({ defaultExtensions }) };
+});
 
 test("packaged collection views include native Workspaces and survive a runtime restart", async () => {
   const root = mkdtempSync(join(tmpdir(), "packaged-board-views-"));
   let child: ChildProcess | undefined;
-  const env = { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner") };
   try {
     let runtime = await startPackagedServe(root, env);
     child = runtime.child;
@@ -69,6 +86,9 @@ test("packaged collection views include native Workspaces and survive a runtime 
       filter: { conjunction: "and", rules: [] },
     });
     expect(boards).toContainEqual(expect.objectContaining({ id: board, kind: "kanban" }));
+    expect(boards).toContainEqual(
+      expect.objectContaining({ id: "pstdio.pstdio-workspaces.view.workspaces", kind: "resourceList" }),
+    );
     expect(boards).toContainEqual(expect.objectContaining({ id: WORKSPACES_COLLECTION_ID, extensionId: null }));
     const nativeFields = boards.find((entry: { id: string }) => entry.id === WORKSPACES_COLLECTION_ID).fields;
     expect(nativeFields).toEqual(
@@ -237,5 +257,6 @@ test("packaged collection views include native Workspaces and survive a runtime 
   } finally {
     if (child) await stopProcess(child);
     rmSync(root, { recursive: true, force: true });
+    rmSync(sources, { recursive: true, force: true });
   }
 }, 30_000);

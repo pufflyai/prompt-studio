@@ -7,18 +7,19 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { createDashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
   getDashboardExtensionsReadyProjectId,
   subscribeDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { registerHomePage } from "./home-page.test-support";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
 import { createDashboardWorkbench as createWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
 
 const createDashboardWorkbench = (input: Parameters<typeof createWorkbench>[0] = {}) => {
   const workbench = createWorkbench(input);
+  registerWorkspaceProviderViews(workbench);
   registerHomePage(workbench);
   return workbench;
 };
@@ -244,7 +245,11 @@ describe("createDashboardWorkbench restoration", () => {
     await first.dispose();
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
-    expect(second.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardWidgetIds.workspaces);
+    expect(second.pages.store.getState().location?.page).toEqual({
+      kind: "page",
+      extensionId: "pstdio.pstdio-workspaces",
+      id: "workspaces",
+    });
     expect(sidePanelSessionUris(second)).toEqual([resourceKey(sessionResource)]);
   });
   test("does not duplicate a primary session into the Side Panel after refresh", async () => {

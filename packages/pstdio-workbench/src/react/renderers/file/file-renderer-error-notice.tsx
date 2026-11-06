@@ -5,14 +5,11 @@ export const FileRendererErrorNotice = (props: { message: string; onRetry?: () =
   return (
     <Flex
       flex="none"
+      layerStyle="documentNotice"
       alignItems="center"
       justifyContent="space-between"
       gap="sm"
-      borderBottomWidth="1px"
-      borderColor="border.muted"
-      bg="bg.muted"
-      px="sm"
-      py="xs"
+      wrap="wrap"
     >
       <Text color="fg.muted" textStyle="label/S/regular">
         {message}

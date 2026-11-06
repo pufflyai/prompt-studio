@@ -15,8 +15,3 @@ export const createDashboardWorkspace = (input: CreateDashboardWorkspaceInput) =
     anchors: input.anchors,
     shorthand_base: input.shorthand_base,
   });
-
-export const deleteDashboardWorkspace = (workspaceId: string) => getApiClient().workspaces.delete(workspaceId);
-
-export const renameDashboardWorkspace = (workspaceId: string, name: string) =>
-  getApiClient().workspaces.rename(workspaceId, { name });

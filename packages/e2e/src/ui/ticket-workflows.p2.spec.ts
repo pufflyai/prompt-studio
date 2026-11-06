@@ -126,18 +126,12 @@ for (const action of ["Delete workspace"]) {
     await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
     await expect(page.getByRole("menuitem", { name: "Delete workspace", exact: true })).toBeVisible();
     const response = page.waitForResponse(
-      (response) =>
-        response.url().includes(`/v1/workspaces/${workspace.id}`) && response.request().method() === "DELETE",
+      (response) => response.url().includes(".command.show-delete/execute") && response.request().method() === "POST",
     );
     await page.getByRole("menuitem", { name: action, exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
     expect((await response).ok()).toBe(true);
-    // The success toast covers the breadcrumb and pauses while the pointer is over it.
-    await page
-      .getByRole("status")
-      .filter({ hasText: workspace.workspace_shorthand })
-      .getByRole("button", { name: "Dismiss notification", exact: true })
-      .click();
-    await page.getByRole("button", { name: `${fixture.ticket.shorthand} Ticket workflow`, exact: true }).click();
+    await openTicket(page, fixture.project.id);
     await expect(workspaceRow).toHaveCount(0);
   });
 }

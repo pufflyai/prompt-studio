@@ -67,9 +67,10 @@ const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): Dash
   };
 };
 
-export const createDashboardWorkspaceOptionResource = (workspace: DashboardWorkspaceOption, projectId?: string) =>
-  createDashboardResource("workspace", workspace.id, workspace.title, workspaceIcon(workspace.type), projectId, {
+export const createDashboardWorkspaceOptionResource = (workspace: DashboardWorkspaceOption, projectId?: string) => ({
+  ...createDashboardResource("workspace", workspace.id, workspace.title, workspaceIcon(workspace.type), projectId, {
     workspaceId: workspace.id,
+    workspaceReadOnly: Boolean(workspace.device),
     ...(workspace.device ? { workspaceDeviceId: workspace.device.id, workspaceReadOnly: true } : {}),
     workspaceShorthand: workspace.shorthand,
     workspaceType: workspace.type,
@@ -77,7 +78,11 @@ export const createDashboardWorkspaceOptionResource = (workspace: DashboardWorks
     ...createDashboardWorkspaceCapabilityMetadata(workspace),
     ...(workspace.workspacePath ? { workspacePath: workspace.workspacePath } : {}),
     ...(workspace.branch ? { workspaceBranch: workspace.branch } : {}),
-  });
+  }),
+  extensionId: "pstdio",
+  projectId,
+  ...(workspace.device ? { device: workspace.device } : {}),
+});
 
 // The default workspace (root repo) is pinned first; the rest follow newest-first.
 export const buildDashboardWorkspaceOptionsFromRows = (rows: Pick<DashboardRows, "workspaces">, projectId?: string) => {

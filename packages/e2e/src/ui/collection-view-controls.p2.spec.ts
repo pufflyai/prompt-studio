@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { scrollSidenavToEnd } from "./helpers/sidenav-navigation";
 
 const ticketsBoard = "pstdio.pstdio-planner.view.tickets";
 const artifactsTable = "pstdio.workbench-fixture.view.artifacts";
@@ -159,6 +160,7 @@ test("data tables sort from the header and share saved views", async ({ page, re
     for (let index = 0; index < 3; index += 1)
       await execute(request, project.id, "pstdio.workbench-fixture.command.glass-lab-artifacts.create", {});
     await page.goto(`/projects/${project.id}`);
+    await scrollSidenavToEnd(page);
     await page.getByRole("option", { name: "Lab mode", exact: true }).click();
     await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
     const header = page.locator('[data-column-id="trustSignal"]').first();
