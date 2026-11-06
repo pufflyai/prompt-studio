@@ -6,6 +6,7 @@ import { readDraft } from "./drafts";
 import { nativePresentation } from "./native-presentation";
 import { readQueue } from "./queue-snapshot";
 import { sessionId } from "./resource";
+import { savedWorkspaceControls, workspacePresentation } from "./workspace";
 
 export { composerControls } from "./controls";
 
@@ -55,6 +56,8 @@ export const readSessionSnapshot = async (
     remote ? { supported: false, disabledReason: null } : ctx.sessions.getForkState(id, { scope: "reply" }),
   ]);
   const workspaceId = session.workspaceId ?? undefined;
+  const workspaces = await ctx.workspaces.list();
+  const workspaceInfo = workspaces.find((workspace) => workspace.id === workspaceId);
   const savedControls = composerControls.map((control) =>
     control.type === "harness" ? { ...control, lockIdentity: Boolean(session.agent), readOnly: remote } : control,
   );
@@ -70,7 +73,13 @@ export const readSessionSnapshot = async (
     nativeLinks: true,
     nativeHarnessAccount: { controlId: "harness", remote },
     workspaceId,
-    controls: savedControls.filter((control) => control.id !== "workspace"),
+    workspace: await workspacePresentation(ctx, workspaceInfo, {
+      id: workspaceId,
+      locked: true,
+      available: execution.available,
+      remote,
+    }),
+    controls: [...savedControls, ...savedWorkspaceControls(workspaceId, workspaceInfo, session.device)],
     harness,
     streaming: ["in_progress", "awaiting_input"].includes(session.status),
     ...(session.lastRequestStarted ? { streamingStartedAt: new Date(session.lastRequestStarted).getTime() } : {}),
@@ -85,10 +94,11 @@ export const readSessionSnapshot = async (
         params: session.params ?? {},
       },
       workspace: workspaceId ?? "",
+      device: session.device?.id ?? "",
       ...values,
     },
     fork: fork.supported ? { disabledReason: fork.disabledReason } : undefined,
-    resources: workspaceId && execution.available ? [{ id: workspaceId, label: "Open workspace" }] : [],
+    resources: [],
     operations: conversationOperations(remote, Boolean(display.queueReadOnly)),
   };
   const draftValues = values ?? (options.messages === false ? undefined : (await readDraft(ctx, id)).values);
