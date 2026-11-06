@@ -102,6 +102,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     expect((await request.get(`/v1/workspaces/${before.workspace_id}/files`)).ok()).toBe(true);
     await page.getByRole("option", { name: "Settings", exact: true }).click();
     await expect(page.getByText("Appearance", { exact: true }).first()).toBeVisible();
+    await page.keyboard.press("Escape");
     const enabled = await request.patch(`/v1/projects/${project.id}/extensions/${provider.id}`, {
       data: { enabled: true },
     });
@@ -116,7 +117,8 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
         .locator("[data-workbench-tab]")
         .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workbench-tab"))),
     ).toEqual(tabs);
-    await page.goBack();
+    // Settings is an overlay; reopen the retained resource through its supported URL.
+    await page.goto(target);
     await expect(editor).toContainText("Unsent work survives provider disablement");
     await expect(main.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
     await expect.poll(() => watches.length).toBe(2);
