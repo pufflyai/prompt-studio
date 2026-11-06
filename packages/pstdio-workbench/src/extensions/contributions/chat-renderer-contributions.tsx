@@ -11,6 +11,7 @@ import type { NativeChatHostProps } from "../../react/renderers/chat/native-chat
 import { NativeChatView } from "../../react/renderers/chat/native-chat-view";
 import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workbench-extension-host-types";
+import { createChatDraftPersistence } from "./chat-draft-persistence";
 import { type LegacyChatDraftTransfer, transferLegacyChatDraft } from "./chat-legacy-draft";
 import { type ChatSession, createChatSession } from "./chat-session";
 
@@ -38,7 +39,12 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
   let Host: ComponentType<NativeChatHostProps> | undefined;
   const sessions = new Map<
     string,
-    { session: ChatSession; render: WorkbenchPanelRenderInput; presentationKey: string }
+    {
+      session: ChatSession;
+      render: WorkbenchPanelRenderInput;
+      presentationKey: string;
+      releaseDrafts?(): void;
+    }
   >();
   const normalizeResource = (resource: ResourceRef | undefined) =>
     resource ? (input.resolveChatResource?.(resource, input.projectId) ?? resource) : undefined;
@@ -97,21 +103,31 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
       return { renderer, slot, run };
     };
     if (!owner) {
+      let drafts: ReturnType<typeof createChatDraftPersistence> | undefined;
+      const loadDraft = body.loadDraftHandlerId
+        ? () =>
+            transferLegacyChatDraft(
+              () => binding().run(body.loadDraftHandlerId!, {}),
+              body.saveDraftHandlerId ? (draft) => drafts!.saveDraft(draft) : undefined,
+              body.legacySessionDraft && input.projectId
+                ? input.readLegacySessionDraft?.(input.projectId, draftKey)
+                : undefined,
+            )
+        : undefined;
+      drafts = body.saveDraftHandlerId
+        ? createChatDraftPersistence({
+            key,
+            load: loadDraft,
+            save: (draft) => binding().run(body.saveDraftHandlerId!, { draft }),
+          })
+        : undefined;
       const session = createChatSession({
         initial: body.initial,
         query: (signal) => binding().run(body.queryHandlerId, {}, signal),
         action: (action) => binding().run(body.actionHandlerId, { action }),
-        loadDraft: body.loadDraftHandlerId
-          ? () =>
-              transferLegacyChatDraft(
-                () => binding().run(body.loadDraftHandlerId!, {}),
-                body.saveDraftHandlerId ? (draft) => binding().run(body.saveDraftHandlerId!, { draft }) : undefined,
-                body.legacySessionDraft && input.projectId
-                  ? input.readLegacySessionDraft?.(input.projectId, draftKey)
-                  : undefined,
-              )
-          : undefined,
-        saveDraft: body.saveDraftHandlerId ? (draft) => binding().run(body.saveDraftHandlerId!, { draft }) : undefined,
+        loadDraft: drafts?.loadDraft ?? loadDraft,
+        saveDraft: drafts?.saveDraft,
+        stageDraft: drafts?.stageDraft,
         watch: body.stream
           ? (signal) => {
               if (!input.streamChatCommand) throw new Error("This host cannot stream native conversations.");
@@ -130,7 +146,8 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
             }
           : undefined,
       });
-      owner = { session, render, presentationKey: crypto.randomUUID() };
+      drafts?.restore(session);
+      owner = { session, render, presentationKey: crypto.randomUUID(), releaseDrafts: drafts?.dispose };
       sessions.set(key, owner);
     }
     const { session } = owner;
@@ -198,7 +215,8 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
       );
     },
     dispose() {
-      for (const { session } of sessions.values()) session.dispose();
+      for (const { session, releaseDrafts } of sessions.values())
+        void session.dispose().then(releaseDrafts, releaseDrafts);
       sessions.clear();
     },
   };

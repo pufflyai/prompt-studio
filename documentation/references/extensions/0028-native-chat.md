@@ -127,6 +127,15 @@ Restore saved draft swaps them without discarding current work. Failed hydration
 prevents overwriting unread storage; save errors stay visible. Saves may finish
 after the view closes. Project and draft identity must also scope storage keys.
 
+The native host synchronously stages unacknowledged edits in browser storage,
+scoped by project, view and canonical resource/draft identity. A document reload
+can restore text, uploaded-file references and control values before provider
+reads finish. The provider remains the durable draft owner: matching save
+acknowledgements clear staged edits, while an older acknowledgement cannot clear
+newer typing. Recovery merges a different provider draft using the existing
+`recovered` behavior. This journal contains unsent drafts, not transcripts or
+execution state; closing a view does not discard an unacknowledged edit.
+
 Use `ctx.sessions.getExecutionState` for availability: local sessions work while
 signed out, online remote owners retain follow-up, question, approval, queue and
 stop controls through the host relay, and unavailable remote history is read only.
