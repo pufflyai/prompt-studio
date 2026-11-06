@@ -1,13 +1,12 @@
 import { afterEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import * as Y from "yjs";
 import * as schema from "../../db/schemas.pg";
-import { storage_document_operations, storage_documents } from "../../db/schemas.pg";
+import { storage_documents, storage_ordered_operations } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
-import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
+import { resourceDocumentId } from "./resource-document-persistence";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -22,7 +21,7 @@ const fixture = async () => {
   return { ...f, owner, service, storage: service.open({ owner }) };
 };
 
-test("each record is its own document and a group commit writes all of its records or none", async () => {
+test("a group commit writes all of its records or none", async () => {
   const f = await fixture();
   await f.storage.records.commit({
     operationId: "seed",
@@ -31,10 +30,6 @@ test("each record is its own document and a group commit writes all of its recor
       { recordId: "b", replace: "text" },
     ],
   });
-  const documents = (await f.db.select({ id: storage_documents.document_id }).from(storage_documents)).map(
-    (row) => row.id,
-  );
-  expect(documents).toEqual(expect.arrayContaining([resourceDocumentId("a"), resourceDocumentId("b")]));
 
   const failure = await f.storage.records
     .commit({
@@ -62,8 +57,8 @@ test("a retried operation keeps its first result and rejects a changed payload",
   ).rejects.toThrow("changed payload");
   const receipts = await f.db
     .select()
-    .from(storage_document_operations)
-    .where(eq(storage_document_operations.operation_id, "once"));
+    .from(storage_ordered_operations)
+    .where(eq(storage_ordered_operations.operation_id, "once"));
   expect(receipts).toHaveLength(1);
 });
 
@@ -161,7 +156,6 @@ test("a group commit larger than one write statement is saved in statements of b
   };
   const db = drizzle(f.db.$client, { schema, logger: { logQuery } });
   const records = createDocumentStorageDBService(db as unknown as typeof f.db).open({ owner: f.owner }).records;
-  // Batched by row count, one statement would carry all twenty records into PGlite's heap at once.
   const content = "x".repeat(100_000);
   await records.commit({
     operationId: "large",
@@ -171,19 +165,20 @@ test("a group commit larger than one write statement is saved in statements of b
     })),
   });
   expect(await records.list()).toHaveLength(20);
-  const documentWrites = statements.filter(({ bytes }) => bytes > 100_000);
-  expect(documentWrites.length).toBeGreaterThan(1);
-  // A statement holds several rows only while it stays under the 4 MB cap; a larger row stands alone.
-  for (const { rows, bytes } of documentWrites) if (rows > 1) expect(bytes).toBeLessThanOrEqual(4_000_000);
+  const projectionWrites = statements.filter(({ bytes }) => bytes > 100_000);
+  expect(projectionWrites.length).toBeGreaterThan(0);
+  // A statement holds several rows only while it stays under the 4 MB cap (json-batches.p0 covers
+  // splitting); a larger row stands alone.
+  for (const { rows, bytes } of projectionWrites) if (rows > 1) expect(bytes).toBeLessThanOrEqual(4_000_000);
 });
 
-const writerVector = async (f: Awaited<ReturnType<typeof fixture>>, recordId: string) => {
-  const id = resourceDocumentId(recordId);
-  const { sources } = await f.db.transaction((tx) => loadResourceDocuments(tx, f.owner, [id]));
-  return Y.decodeStateVector(Y.encodeStateVectorFromUpdate(Y.mergeUpdates(sources.get(id)!.states)));
-};
+// Plain record values are canonical JSON, so saves add no per-record Yjs document or writer.
+const recordDocuments = async (f: Awaited<ReturnType<typeof fixture>>) =>
+  (await f.db.select({ id: storage_documents.document_id }).from(storage_documents)).filter(({ id }) =>
+    id.startsWith(resourceDocumentId("").slice(0, -2)),
+  );
 
-test("concurrent saves through one handle preserve every edit across a checkpoint without growing writers", async () => {
+test("concurrent saves through one handle preserve every edit without creating record writers", async () => {
   const f = await fixture();
   const records = f.storage.records;
   await records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { title: "Shared" } }] });
@@ -200,19 +195,7 @@ test("concurrent saves through one handle preserve every edit across a checkpoin
   });
   for (const save of saves)
     expect(await records.outcome(save.operationId)).toMatchObject({ operationId: save.operationId });
-  expect((await writerVector(f, "note")).size).toBe(1);
-});
-
-test("separately opened record handles retain independent writer identities", async () => {
-  const f = await fixture();
-  const other = f.service.open({ owner: f.owner }).records;
-  await f.storage.records.commit({ operationId: "first", edits: [{ recordId: "first", replace: "First" }] });
-  await other.commit({ operationId: "second", edits: [{ recordId: "second", replace: "Second" }] });
-  const first = await writerVector(f, "first");
-  const second = await writerVector(f, "second");
-  expect(first.size).toBe(1);
-  expect(second.size).toBe(1);
-  expect([...first.keys()]).not.toEqual([...second.keys()]);
+  expect(await recordDocuments(f)).toEqual([]);
 });
 
 test("concurrent handles preserve their accepted edits to the same record", async () => {
@@ -241,7 +224,7 @@ test("concurrent handles preserve their accepted edits to the same record", asyn
   });
   for (const { records, operationId } of saves)
     expect(await records.outcome(operationId)).toMatchObject({ operationId });
-  expect((await writerVector(f, "note")).size).toBe(2);
+  expect(await recordDocuments(f)).toEqual([]);
 });
 
 test("concurrent commits inside one transaction preserve every accepted edit", async () => {
@@ -270,7 +253,7 @@ test("concurrent commits inside one transaction preserve every accepted edit", a
   expect(await f.storage.records.outcome("invalid")).toBeUndefined();
   expect(await f.storage.records.outcome("first")).toBeDefined();
   expect(await f.storage.records.outcome("second")).toBeDefined();
-  expect((await writerVector(f, "note")).size).toBe(1);
+  expect(await recordDocuments(f)).toEqual([]);
 });
 
 test("a rejected concurrent transaction drains its saves before rollback and the handle can continue", async () => {
@@ -292,5 +275,31 @@ test("a rejected concurrent transaction drains its saves before rollback and the
   expect(await f.storage.records.outcome("rolled-back")).toBeUndefined();
   await f.storage.records.commit({ operationId: "continued", edits: [{ recordId: "note", replace: "Continued" }] });
   expect((await f.storage.records.read("note")).value).toBe("Continued");
-  expect((await writerVector(f, "note")).size).toBe(1);
+  expect(await recordDocuments(f)).toEqual([]);
+});
+
+test("a save started while a failed transaction drains is rolled back with it instead of escaping", async () => {
+  const f = await fixture();
+  await f.storage.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Shared" }] });
+  let late: Promise<unknown> | undefined;
+  const outcome = f.storage.records.transaction(async (records) => {
+    const chain = (async () => {
+      await records.commit({ operationId: "first", edits: [{ recordId: "other", replace: "X" }] });
+      late = records.commit({ operationId: "late", edits: [{ recordId: "note", replace: "Y" }] });
+      return late;
+    })();
+    chain.catch(() => {});
+    await Promise.all([
+      chain,
+      (async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        throw new Error("Cancel transaction");
+      })(),
+    ]);
+  });
+  await expect(outcome).rejects.toThrow("Cancel transaction");
+  await late?.catch(() => {});
+  expect((await f.storage.records.read("other")).exists).toBe(false);
+  expect((await f.storage.records.read("note")).value).toBe("Shared");
+  expect(await f.storage.records.outcome("late")).toBeUndefined();
 });

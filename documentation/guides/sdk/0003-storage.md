@@ -81,12 +81,15 @@ const outcome = await records.commit({
 });
 ```
 
-An edit without `expectedRevision` applies to the record's current value on this
-device. Pass the `revision` from an earlier `read` only when the save must apply to
-exactly what a caller read. Until the deprecated conflict members are removed, a
-revision that no longer matches keeps the group aside and reports `needs-attention`
-when the edit replaces a value that changed, deletes or restores the record, changes
-an asset that changed, or sets a map key that changed. Text and list edits still merge.
+API 0.4 applies plain changed paths in relay order. Arrays and undeclared strings
+are whole values. Pass `observedRevision` from a read when a replacement should
+change only what the author changed from that baseline. Use `set` and `unset`
+with JSON Pointers when the intended paths are known. Add `expectedRevision` only
+when an earlier overlapping save must refuse this entire group; read the eventual
+`refused` outcome after sync. A sibling-field edit does not invalidate that condition.
+
+Declare collaborative fields and append-only logs explicitly in the extension's
+`storage` declaration. See [Declared text and append-only logs](../../references/sdk/0004-storage.md#declared-text-and-append-only-logs).
 
 ## Keep records small
 
@@ -124,7 +127,7 @@ in several smaller commits. See [Size limits](../../references/sdk/0004-storage.
 ## Wait for sync
 
 `outcome.state` is the save's sync state: `saved-locally`, `waiting-to-sync`,
-`synced`, `offline`, or `needs-attention`. In a project that does not sync,
+`synced`, `refused`, `offline`, or `needs-attention`. In a project that does not sync,
 `saved-locally` is final. Keep the state visible to the command caller. To wait until a save has
 synced, read it again later:
 

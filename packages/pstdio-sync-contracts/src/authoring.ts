@@ -20,6 +20,19 @@ export interface RecordEdit {
   replace?: Json;
   asset?: Asset | null;
   deleted?: boolean;
+  /** Replacement baseline. Unlike expectedRevision, this does not make a save conditional. */
+  observedRevision?: string;
+  /** Changed value paths as JSON Pointers. Arrays and undeclared strings are whole values. */
+  set?: Record<string, Json>;
+  /** Remove value paths named by JSON Pointer. */
+  unset?: string[];
+  /** Character edits to explicitly declared text fields, addressed by JSON Pointer. */
+  text?: Record<string, Extract<SharedEdit, { kind: "text.insert" | "text.delete" }>[]>;
+}
+
+export interface StorageTextDeclaration {
+  prefix: string;
+  fields: string[];
 }
 
 export interface StorageRecord {
@@ -76,7 +89,13 @@ export interface StorageConflictInspection {
 }
 
 /** Sync state of a save: saved locally, waiting to sync, synced, offline, or a problem that needs attention. */
-export type StorageSaveState = "saved-locally" | "waiting-to-sync" | "synced" | "offline" | "needs-attention";
+export type StorageSaveState =
+  | "saved-locally"
+  | "waiting-to-sync"
+  | "synced"
+  | "refused"
+  | "offline"
+  | "needs-attention";
 
 /** Result of a save. Read `state`. The next breaking release removes `status` and its relay fields. */
 export type StorageSaveOutcome = {

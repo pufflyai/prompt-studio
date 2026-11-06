@@ -106,9 +106,9 @@ export const createExtensionResourceSequencesDBService = (
           await ready();
           return store.open();
         },
-        snapshot: async () => {
+        snapshot: async (...input: Parameters<typeof store.snapshot>) => {
           await ready();
-          return store.snapshot();
+          return store.snapshot(...input);
         },
         apply: async (...input: Parameters<typeof store.apply>) => {
           await ready();

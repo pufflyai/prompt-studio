@@ -12,6 +12,7 @@ import {
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_operations } from "../../db/schemas.pg";
 import { bindNativeRecordSource } from "./bind-native-source";
+import { createCommitQueue } from "./commit-queue";
 import { dataMigrationContext } from "./data-migration-context";
 import { prepareNativeRecordWrite } from "./native-record-write";
 import type { createProjectionStatistics } from "./projection-statistics";
@@ -31,23 +32,6 @@ const outcome = (operationId: string) => ({
   state: "saved-locally" as const,
   status: "saved-locally" as const,
 });
-
-// A row lock serializes separate transactions, but overlapping calls inside one transaction
-// also need to load the preceding save before continuing their writer's clock.
-const createCommitQueue = () => {
-  let previous = Promise.resolve();
-  const run = <T>(save: () => Promise<T>) => {
-    const result = previous.then(save);
-    // Preserve the caller's rejection while allowing a caught validation error to be followed
-    // by a valid commit in the same transaction.
-    previous = result.then(
-      () => {},
-      () => {},
-    );
-    return result;
-  };
-  return { run, settled: () => previous };
-};
 
 /** Records of one owner. Each record is its own Yjs document; reads use the SQL projection. */
 export const createResourceRecords = (

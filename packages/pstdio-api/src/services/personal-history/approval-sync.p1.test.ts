@@ -50,13 +50,16 @@ test("personal session followers receive pending approvals and their resolution 
       ...login,
       projectId: project.id,
       documents: source.deps.extensionStorageService.documents,
+      index: source.deps.extensionStorageService.personalHistoryIndex,
+      logs: source.deps.extensionStorageService.logs,
       files: source.deps.personalHistoryService.logs,
     });
     const references = createHistoryReferences(
       source.deps.extensionStorageService.documents.open(historyReferenceName),
       project.id,
     );
-    const device = { id: "source-device", ownerId: "alice", name: "Laptop" };
+    // Index logs are addressed by their writer, which is the capturing device's storage.
+    const device = { id: await source.deps.extensionStorageService.logs.writerId(), ownerId: "alice", name: "Laptop" };
     const space = await createSyncSpace({
       projectId: project.id,
       spaceOwner: login.accountId,
@@ -67,6 +70,8 @@ test("personal session followers receive pending approvals and their resolution 
       ...login,
       projectId: project.id,
       documents: destination.deps.extensionStorageService.documents,
+      index: destination.deps.extensionStorageService.personalHistoryIndex,
+      logs: destination.deps.extensionStorageService.logs,
       files: destination.deps.personalHistoryService.logs,
     });
     const capture = async (incremental = false) => {

@@ -45,8 +45,8 @@ test("protocol 2 streams private previews and catches up completed history with 
       project.id,
     );
     for (const [app, device] of [
-      [source, "source-device"],
-      [destination, "destination-device"],
+      [source, (await source.deps.environmentService.get()).environmentId],
+      [destination, (await destination.deps.environmentService.get()).environmentId],
     ] as const)
       syncs.push(
         startRelayPersonalHistory({
@@ -93,7 +93,7 @@ test("protocol 2 streams private previews and catches up completed history with 
         (messages) => messages.length === 1,
       ),
     );
-    expect(peer.subscriptions().map((entry) => entry.topics.length)).toEqual([4, 6]);
+    expect(peer.subscriptions().map((entry) => entry.topics.length)).toEqual([3, 5]);
     stop();
   } finally {
     for (const sync of syncs) sync.close();

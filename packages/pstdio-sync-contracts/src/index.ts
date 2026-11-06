@@ -5,4 +5,11 @@ export * from "./identity";
 export * from "./protocol";
 export type * from "./record-query";
 export * from "./storage-limits";
+export type {
+  StorageLogApi,
+  StorageLogDefinition,
+  StorageLogEntry,
+  StorageLogPage,
+  StorageLogRead,
+} from "./storage-logs";
 export * from "./wire";

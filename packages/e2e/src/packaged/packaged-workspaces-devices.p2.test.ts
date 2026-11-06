@@ -146,8 +146,8 @@ test(
         };
         return { client, id: identity.environmentId, command, query };
       };
-      const first = await connect(a, "a"),
-        second = await connect(b, "b");
+      // Each device owns its setup; neither needs the other device to finish signing in.
+      const [first, second] = await Promise.all([connect(a, "a"), connect(b, "b")]);
       await first.command("command.set-limit", { limit: 4 });
       await second.command("command.set-limit", { limit: 7 });
       const session = await first.client.sessions.create(projectId, {

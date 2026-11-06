@@ -36,6 +36,8 @@ const remoteQueue = async () => {
     ...login,
     projectId: project.id,
     documents: source.deps.extensionStorageService.documents,
+    index: source.deps.extensionStorageService.personalHistoryIndex,
+    logs: source.deps.extensionStorageService.logs,
     files: source.deps.personalHistoryService.logs,
   });
   await history.writeRecords("sessions", { ownerId: login.accountId, id: targetId, name: "Laptop" }, [

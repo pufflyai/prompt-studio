@@ -48,7 +48,11 @@ const memberGrant = async (
   let grant = await sourceGrant(deps, connection, request);
   if (member.grant) {
     if (grant !== member.grant && grant.token !== connection.selected) connection.grants.delete(grant.token);
-    if (member.grant.documentKey !== grant.documentKey || member.grant.ownerId !== grant.ownerId)
+    if (
+      member.grant.documentKey !== grant.documentKey ||
+      member.grant.ownerId !== grant.ownerId ||
+      member.grant.generation !== grant.generation
+    )
       throw textFailure("source_changed", "An open member cannot select another source lifetime");
     grant = member.grant;
   }
@@ -97,7 +101,9 @@ const reopen = async (
     expectedSource: {
       owner: { workbenchId: connection.projectId, extensionId: grant.ownerId },
       documentKey: grant.documentKey,
+      generation: grant.generation,
     },
+    generation: request.generation,
     sourceState: request.sourceState ? Buffer.from(request.sourceState, "base64") : undefined,
     pendingUpdate: request.pendingUpdate ? Buffer.from(request.pendingUpdate, "base64") : undefined,
   });
@@ -137,7 +143,7 @@ export const openTextMember = (
     await validateRecovery(request);
     requireCurrentMember(connection, member);
     const identity = createHash("sha256")
-      .update(JSON.stringify([grant.token, request.sourceState, request.pendingUpdate]))
+      .update(JSON.stringify([grant.token, request.generation, request.sourceState, request.pendingUpdate]))
       .digest("hex");
     if (request.pendingUpdate && member.replay?.identity === identity)
       return {

@@ -2,12 +2,11 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSyncSpace } from "pstdio-sync/encryption";
 import { streamPersonalSession } from "../../features/sessions/endpoints/stream-personal-session";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createNativeStore } from "../account/native-store";
 import { capturePersonalHistory } from "./capture";
-import { logRelayFixture } from "./log-transport.fixture";
+import { transferPersonalIndex } from "./index-transfer.fixture";
 import { maxSharedQueuePrompt } from "./queue-snapshot";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore } from "./store";
@@ -63,32 +62,26 @@ test("another device's queued messages are readable in order, kept out of sessio
       managerOrigin,
       accountId,
       documents: source.deps.extensionStorageService.documents,
-      files: source.deps.personalHistoryService.logs,
+      index: source.deps.extensionStorageService.personalHistoryIndex,
+      logs: source.deps.extensionStorageService.logs,
     });
     const references = createHistoryReferences(
       source.deps.extensionStorageService.documents.open(historyReferenceName),
       project.id,
     );
-    const device = { ownerId: accountId, id: "source-device", name: "Laptop" };
+    const device = {
+      ownerId: accountId,
+      id: (await source.deps.environmentService.get()).environmentId,
+      name: "Laptop",
+    };
     const capture = () =>
       capturePersonalHistory({ projectId: project.id, device, history, references, deps: source.deps });
-    const space = await createSyncSpace({
-      projectId: project.id,
-      spaceOwner: accountId,
-      keys: [{ generation: 1, secret: "A".repeat(43) }],
-    });
-    const relay = logRelayFixture();
-    const copyRecords = async () => {
-      await history.synchronizeIndex(device.id, true, space, relay.relay);
-      const target = createPersonalHistoryStore({
+    const copyRecords = () =>
+      transferPersonalIndex(source.deps.extensionStorageService, destination.deps.extensionStorageService, {
         projectId: project.id,
-        managerOrigin,
         accountId,
-        documents: destination.deps.extensionStorageService.documents,
-        files: destination.deps.personalHistoryService.logs,
+        managerOrigin,
       });
-      await target.synchronizeIndex(device.id, false, space, relay.relay);
-    };
     await capture();
 
     // Saving messages rewrites session records; the queue lives in its own record, only while it has requests.

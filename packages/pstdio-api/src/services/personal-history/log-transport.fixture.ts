@@ -36,13 +36,28 @@ export const logRelayFixture = () => {
         more: (page.at(-1)?.sequence ?? after) < entries.length,
       };
     },
-    async state() {
-      return new Uint8Array(Buffer.from(states.get(documentId)!.payload, "base64"));
+    async state(id) {
+      const state = states.get(documentId);
+      if (!state || state.stateId !== id.stateId) throw new Error("Missing session log state");
+      return Buffer.from(state.payload, "base64");
     },
     async replace(state) {
       if ((states.get(documentId)?.stateId ?? null) !== state.baseStateId) return false;
       states.set(documentId, state);
       return true;
+    },
+    async manifestBlobs() {
+      return {
+        async put(id, bytes, children) {
+          if (children.some((child) => !blobs.has(child))) throw new Error("Missing session log child");
+          blobs.set(id, bytes.slice());
+        },
+        async get(id, length) {
+          const bytes = blobs.get(id);
+          if (!bytes || bytes.byteLength !== length) throw new Error("Missing session log blob extent");
+          return bytes.slice();
+        },
+      };
     },
     blobs: {
       async put(id, bytes) {
