@@ -1,5 +1,6 @@
 import { Button, Field, HStack, Input, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useState } from "react";
+import { SearchableMenu } from "../../components/overlays/searchable-menu";
 import { ScrollArea } from "../../components/primitives/scroll-area";
 import { findRule, type Rule } from "./book-model";
 
@@ -13,6 +14,8 @@ export function RuleEditor(props: EditorProps) {
   const { rule, rules, onSave, onCancel } = props;
   const [title, setTitle] = useState(rule.title);
   const [statement, setStatement] = useState(rule.statement);
+  const [scope, setScope] = useState(rule.scope);
+  const [level, setLevel] = useState(rule.level);
   const [acceptance, setAcceptance] = useState(rule.acceptance[0]?.statement ?? "");
   const [tests, setTests] = useState(rule.acceptance[0]?.tests.join("\n") ?? "");
   const [related, setRelated] = useState(rule.related.join(", "));
@@ -25,7 +28,7 @@ export function RuleEditor(props: EditorProps) {
     .split("\n")
     .map((path) => path.trim())
     .filter(Boolean);
-  const valid = title.trim() && statement.trim() && acceptance.trim() && testPaths.length > 0 && unknown.length === 0;
+  const valid = title.trim() && statement.trim() && scope.trim() && acceptance.trim() && unknown.length === 0;
   return (
     <Stack
       as="form"
@@ -41,6 +44,8 @@ export function RuleEditor(props: EditorProps) {
             ...rule,
             title: title.trim(),
             statement: statement.trim(),
+            scope: scope.trim(),
+            level,
             acceptance: [{ statement: acceptance.trim(), tests: testPaths }],
             related: references,
           });
@@ -55,7 +60,7 @@ export function RuleEditor(props: EditorProps) {
             Cancel
           </Button>
           <Button size="xs" variant="primary" type="submit" disabled={!valid}>
-            Save
+            Save suggestion
           </Button>
         </HStack>
       </HStack>
@@ -68,6 +73,29 @@ export function RuleEditor(props: EditorProps) {
           <Field.Root required>
             <Field.Label>Requirement</Field.Label>
             <Textarea value={statement} onChange={(event) => setStatement(event.target.value)} />
+          </Field.Root>
+          <Field.Root required>
+            <Field.Label>Scope</Field.Label>
+            <Input value={scope} onChange={(event) => setScope(event.target.value)} />
+          </Field.Root>
+          <Field.Root>
+            <Field.Label>Level</Field.Label>
+            <SearchableMenu
+              trigger={
+                <Button size="xs" variant="outline">
+                  L{level}
+                </Button>
+              }
+              items={[0, 1, 2, 3].map((value) => ({
+                id: String(value),
+                label: `L${value}`,
+                isSelected: level === value,
+                onSelect: () => setLevel(value),
+              }))}
+              showSearch={false}
+              searchPlaceholder="Choose level"
+              emptyState="No levels"
+            />
           </Field.Root>
           <Field.Root required>
             <Field.Label>Acceptance</Field.Label>

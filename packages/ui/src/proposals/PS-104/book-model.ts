@@ -8,6 +8,8 @@ export interface Acceptance {
 export interface Rule {
   ref: string;
   chapter: number;
+  level: number;
+  scope: string;
   title: string;
   statement: string;
   acceptance: Acceptance[];
@@ -20,10 +22,12 @@ export const initialRules: Rule[] = chapters.flatMap((chapter) =>
   chapter.topics.map(([title, statement, acceptance], index) => ({
     ref: `RB ${chapter.id}.A.${index + 1}`,
     chapter: chapter.id,
+    level: index < 2 ? 2 : 3,
+    scope: chapter.title,
     title,
     statement,
     acceptance: [{ statement: acceptance, tests: [chapter.test] }],
-    related: chapter.id === 11 ? ["RB 8.A.2", "RB 19.A.3"] : ["RB 4.A.1"],
+    related: chapter.id === 11 ? ["RB 8.A.2", "RB 19.A.3"] : [chapter.id === 4 ? "RB 1.A.1" : "RB 4.A.1"],
     section: index < 2 ? "Behavior" : "Contracts",
   })),
 );

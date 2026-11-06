@@ -1,12 +1,14 @@
-import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Badge, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { Pencil, Trash2 } from "lucide-react";
 import { ResizableSplitLayout } from "../../components/layout/resizable-split-layout";
 import { ActionIconButton } from "../../components/list-row/action-icon-button";
+import { SearchableMenu } from "../../components/overlays/searchable-menu";
 import { ScrollArea } from "../../components/primitives/scroll-area";
 import { TreeList } from "../../components/tree-list/tree-list";
 import { RuleEditor } from "./book-editor";
 import { findRule, type Rule } from "./book-model";
 import { RuleIdTag, RuleTag, TestTag } from "./book-resource-tag";
+import type { Observation } from "./book-workflow";
 
 interface BrowserProps {
   rules: Rule[];
@@ -20,6 +22,8 @@ interface BrowserProps {
   onRemove: (rule: Rule) => void;
   onSave: (rule: Rule) => void;
   onCancel: () => void;
+  observations: Observation[];
+  onMapObservation: (id: string, ref: string) => void;
 }
 interface PreviewProps {
   rule: Rule;
@@ -27,14 +31,17 @@ interface PreviewProps {
   onOpen: (ref: string) => void;
   onEdit: (rule: Rule) => void;
   onRemove: (rule: Rule) => void;
+  observations: Observation[];
+  onMapObservation: (id: string, ref: string) => void;
 }
-function RulePreview({ rule, rules, onOpen, onEdit, onRemove }: PreviewProps) {
+function RulePreview({ rule, rules, observations, onMapObservation, onOpen, onEdit, onRemove }: PreviewProps) {
   return (
     <Stack h="full" minH="0" w="full" gap="lg" p="lg">
       <HStack justify="space-between" align="start" gap="md" flexShrink="0">
         <Stack gap="xs">
           <HStack>
             <RuleIdTag reference={rule.ref} />
+            <Badge variant="plain">L{rule.level}</Badge>
           </HStack>
           <Text as="h2" textStyle="label/L/medium">
             {rule.title}
@@ -66,6 +73,12 @@ function RulePreview({ rule, rules, onOpen, onEdit, onRemove }: PreviewProps) {
           <Text textStyle="paragraph/S/regular">{rule.statement}</Text>
           <Stack gap="sm">
             <Text as="h3" textStyle="label/M/medium">
+              Scope
+            </Text>
+            <Text textStyle="paragraph/S/regular">{rule.scope}</Text>
+          </Stack>
+          <Stack gap="sm">
+            <Text as="h3" textStyle="label/M/medium">
               Acceptance
             </Text>
             {rule.acceptance.map((condition) => (
@@ -91,13 +104,73 @@ function RulePreview({ rule, rules, onOpen, onEdit, onRemove }: PreviewProps) {
               </HStack>
             </Stack>
           )}
+          {observations
+            .filter((item) => item.requirements.includes(rule.ref))
+            .map((item) => (
+              <Stack key={item.id} gap="sm">
+                <Text as="h3" textStyle="label/M/medium">
+                  Evidence · {item.id}
+                </Text>
+                <Badge alignSelf="start" colorPalette="blue">
+                  {item.kind}
+                </Badge>
+                <Text textStyle="paragraph/S/regular">{item.claim}</Text>
+                <Text textStyle="paragraph/XS/regular" color="fg.muted">
+                  {item.revision} · {item.conditions}
+                </Text>
+                <Text textStyle="paragraph/S/regular" color="fg.muted">
+                  {item.limits}
+                </Text>
+                <HStack gap="xs" flexWrap="wrap">
+                  {item.requirements
+                    .filter((ref) => ref !== rule.ref)
+                    .map((ref) => (
+                      <RuleTag key={ref} reference={ref} onOpen={onOpen} />
+                    ))}
+                  <SearchableMenu
+                    trigger={
+                      <Button size="xs" variant="outline">
+                        Map to another requirement
+                      </Button>
+                    }
+                    items={rules
+                      .filter((target) => !item.requirements.includes(target.ref))
+                      .map((target) => ({
+                        id: target.ref,
+                        label: `${target.ref} ${target.title}`,
+                        searchText: target.statement,
+                        onSelect: () => onMapObservation(item.id, target.ref),
+                      }))}
+                    searchPlaceholder="Find another requirement…"
+                    emptyState="All requirements are already mapped"
+                  />
+                </HStack>
+                <Button size="xs" variant="ghost" alignSelf="start" onClick={() => onMapObservation(item.id, rule.ref)}>
+                  Remove mapping
+                </Button>
+              </Stack>
+            ))}
         </Stack>
       </ScrollArea>
     </Stack>
   );
 }
 export function BookBrowser(props: BrowserProps) {
-  const { rules, chapter, selected, editor, onSelect, onOpen, onCreate, onEdit, onRemove, onSave, onCancel } = props;
+  const {
+    rules,
+    chapter,
+    selected,
+    editor,
+    observations,
+    onMapObservation,
+    onSelect,
+    onOpen,
+    onCreate,
+    onEdit,
+    onRemove,
+    onSave,
+    onCancel,
+  } = props;
   const results = rules.filter((rule) => rule.chapter === chapter);
   const rule = findRule(rules, selected);
   return (
@@ -150,7 +223,15 @@ export function BookBrowser(props: BrowserProps) {
         <>
           {editor && <RuleEditor key={editor.ref} rule={editor} rules={rules} onSave={onSave} onCancel={onCancel} />}
           {!editor && rule && (
-            <RulePreview rule={rule} rules={rules} onOpen={onOpen} onEdit={onEdit} onRemove={onRemove} />
+            <RulePreview
+              rule={rule}
+              rules={rules}
+              observations={observations}
+              onMapObservation={onMapObservation}
+              onOpen={onOpen}
+              onEdit={onEdit}
+              onRemove={onRemove}
+            />
           )}
           {!editor && !rule && (
             <Text p="lg" color="fg.muted">
