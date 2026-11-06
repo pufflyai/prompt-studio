@@ -53,6 +53,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   let harnessId: string | undefined;
   let remote = false;
   let hasTranscript = false;
+  let canonicalDisplay = false;
   let queueClock = 0;
   let runClock = 0;
   let streamActive = false;
@@ -62,7 +63,12 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   let stream = Promise.resolve();
   let writes = Promise.resolve();
   const emittedRecovery = new Set<string>();
-  const writeEvent = (event: { snapshot: ChatRendererSnapshot } | { recoverDraft: ChatDraft }) => {
+  const writeEvent = (
+    event:
+      | { snapshot: ChatRendererSnapshot }
+      | { recoverDraft: ChatDraft }
+      | { patch: Extract<ChatRendererEvent, { patch: unknown }>["patch"] },
+  ) => {
     writes = writes.then(async () => {
       if (ctx.signal.aborted) return;
       await ctx.stream.write(
@@ -71,24 +77,43 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     });
     return writes;
   };
-  const write = (snapshot: ChatRendererSnapshot) => writeEvent({ snapshot });
+  const matchesCanonicalMessages = (displayed: SessionMessage[]) =>
+    displayed.length === messages.length && displayed.every((message, index) => message === messages[index]);
+  const write = (snapshot: ChatRendererSnapshot) => {
+    if (snapshot.messages) canonicalDisplay = matchesCanonicalMessages(snapshot.messages);
+    return writeEvent({ snapshot });
+  };
   const display = () => {
     const state = conversationState(id, [...messages, ...queueMessages], queue, harnessId, remote);
-    if (!hasTranscript) {
-      const { messages: _unread, ...withoutTranscript } = state;
-      return withoutTranscript;
-    }
-    return state;
+    return { ...state, messages: hasTranscript ? state.messages : undefined };
   };
   const patch = async (data: Extract<ExtensionSessionStreamEvent, { event: "patch" }>["data"]) => {
     if (data.path === "/approval_requests") {
       approvals = Array.isArray(data.value) ? (data.value as ApprovalRequest[]) : [];
       await write({ approval: approvalSnapshot(approvals[0]) });
-    } else {
-      messages = applySessionMessagePatch(messages, data);
-      if (data.path === "/messages") hasTranscript = true;
-      await write(display());
+      return;
     }
+    const next = applySessionMessagePatch(messages, data);
+    if (next === messages) return;
+    messages = next;
+    if (data.path === "/messages") hasTranscript = true;
+    // The native owner already holds history. Forward indexes only while queue projection leaves
+    // the transcript unchanged; reconnect snapshots and projected/reordered queues re-establish it.
+    const displayed = display();
+    if (
+      data.path !== "/messages" &&
+      canonicalDisplay &&
+      displayed.messages &&
+      matchesCanonicalMessages(displayed.messages)
+    ) {
+      await writeEvent({
+        patch: {
+          op: data.op,
+          path: data.path,
+          ...(data.op === "remove" ? {} : { value: messages[Number(data.path.slice("/messages/".length))] }),
+        },
+      });
+    } else await write(displayed);
   };
   const queued = async (data: Extract<ExtensionSessionStreamEvent, { event: "queued_messages" }>["data"]) => {
     queueClock++;

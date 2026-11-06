@@ -8,6 +8,8 @@ import { expectCoreRecordIds } from "./packaged-core-record-ids-smoke";
 import { expectExtensionDraftStorage } from "./packaged-extension-storage-smoke";
 import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
 import { runtimeAuthorization } from "./packaged-serve-helpers";
+import { expectPackagedSessionsInstall } from "./packaged-sessions-install-smoke";
+import { expectPackagedSessionsProvider } from "./packaged-sessions-provider-smoke";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { expectTicketWorkspaceCleanup } from "./packaged-ticket-workspace-cleanup-smoke";
 
@@ -77,12 +79,18 @@ setupPackagedSmokeTests();
 test(
   "loads packaged core defaults with usable assets and safe extension storage",
   async () => {
-    await withPackagedCoreExtensions(async ({ started, projectFolder, project, extensions, metadata }) => {
+    await withPackagedCoreExtensions(async ({ started, tempRoot, projectFolder, project, extensions, metadata }) => {
       expect(project.extension_warnings).toBeUndefined();
       const body = { extensions };
       expect(body.extensions).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ enabled: true, installName: "pstdio-onboarding" }),
+          expect.objectContaining({
+            enabled: true,
+            installName: "pstdio-session-browser",
+            scope: "repo",
+            sourcePath: join(realpathSync(projectFolder), ".pstdio/extensions/pstdio-session-browser"),
+          }),
           expect.objectContaining({ enabled: true, installName: "harness-claude-code" }),
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
           expect.objectContaining({ enabled: true, installName: "harness-open-code" }),
@@ -102,6 +110,18 @@ test(
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),
       );
+      const installedSessionsMetadata = await expectPackagedSessionsInstall({
+        started,
+        tempRoot,
+        projectFolder,
+        projectId: project.id,
+      });
+      await expectPackagedSessionsProvider({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+        metadata: installedSessionsMetadata,
+      });
       expect(metadata.projectSetups).toContainEqual(
         expect.objectContaining({ extensionId: "pstdio.pstdio-onboarding" }),
       );

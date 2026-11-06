@@ -73,7 +73,6 @@
     "storage-scale-fixture": "workspace:*",
     "workbench-fixture": "workspace:*",
     "pstdio-home": "workspace:*",
-    "yjs": "^13.6.29",
-    "pstdio-session-browser": "workspace:*"
+    "yjs": "^13.6.29"
   }
 }
