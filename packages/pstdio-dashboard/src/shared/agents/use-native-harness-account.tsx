@@ -19,10 +19,11 @@ const NativeHarnessSetup = (props: {
   account: ReturnType<typeof useHarnessAccount>;
   agent?: AgentInfo;
   agentsChecked: boolean;
+  selectionPending: boolean;
   workbench: WorkbenchCore;
 }) => {
   const { account, agent, agentsChecked, workbench } = props;
-  if (account.progress) return null;
+  if (props.selectionPending || account.progress) return null;
   if (agent?.availability.type === "INSTALLED" && account.authenticationError)
     return (
       <Stack gap="xs">
@@ -47,6 +48,7 @@ export const useNativeHarnessAccount = (props: {
   binding: ChatRendererSnapshot["nativeHarnessAccount"];
   value: ControlValue | undefined;
   readOnly?: boolean;
+  initializing?: boolean;
   session: NativeChatHostProps["session"];
 }): NativeChatHostServices["account"] => {
   const { workbench, projectId, binding, value, readOnly, session } = props;
@@ -55,15 +57,17 @@ export const useNativeHarnessAccount = (props: {
   const agent =
     binding && !readOnly && !binding.remote ? agents.find((agent) => agent.id === harness.harnessId) : undefined;
   const account = useHarnessAccount(agent, { projectId, model: harness.model });
-  const ready = nativeHarnessReady({
-    remote: binding?.remote,
-    agentsChecked,
-    agent,
-    authenticationChecked: account.checked,
-    status: account.authentication?.status,
-    model: harness.model,
-    authenticating: Boolean(account.progress),
-  });
+  const ready =
+    !props.initializing &&
+    nativeHarnessReady({
+      remote: binding?.remote,
+      agentsChecked,
+      agent,
+      authenticationChecked: account.checked,
+      status: account.authentication?.status,
+      model: harness.model,
+      authenticating: Boolean(account.progress),
+    });
   if (!binding) return undefined;
   return {
     commands: account.commands,
@@ -80,7 +84,13 @@ export const useNativeHarnessAccount = (props: {
     notice: (
       <>
         {binding.remote ? null : (
-          <NativeHarnessSetup account={account} agent={agent} agentsChecked={agentsChecked} workbench={workbench} />
+          <NativeHarnessSetup
+            account={account}
+            agent={agent}
+            agentsChecked={agentsChecked}
+            selectionPending={Boolean(props.initializing || (!harness.harnessId && agents.length))}
+            workbench={workbench}
+          />
         )}
         {account.notice}
       </>

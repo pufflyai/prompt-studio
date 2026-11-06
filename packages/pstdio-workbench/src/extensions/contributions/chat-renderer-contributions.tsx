@@ -204,8 +204,8 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
                 visible: render.visible,
                 extensionId: view.extensionId,
                 refreshKey: getWorkbenchRenderers(render.workbench).store.getState().refreshKeys[view.id],
-                emptyTitle: text(body.emptyTitle),
-                emptyDescription: text(body.emptyDescription),
+                emptyTitle: body.emptyTitle === undefined ? undefined : text(body.emptyTitle),
+                emptyDescription: body.emptyDescription === undefined ? undefined : text(body.emptyDescription),
                 renderParamField: input.createChatParamField?.(render.workbench),
               });
             },

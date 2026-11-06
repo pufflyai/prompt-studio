@@ -1,34 +1,31 @@
 import { expect, test } from "bun:test";
 import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
-import type { ComponentProps, ReactElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { createChatSession } from "../../../extensions/contributions/chat-session";
-import { HarnessControl } from "../controls/harness-control";
+import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { NativeChatControls } from "./native-chat-controls";
 
 // Exercise the actual native-to-host field binding: enabled harness fields may
 // automatically select the project's default before the user opens the picker.
 const harnessField = (session: ReturnType<typeof createChatSession>) => {
   const { conversation, draft, initializing } = session.getSnapshot();
-  const element = NativeChatControls({
-    conversation,
-    draft,
-    initializing,
-    run: session.run,
-    changeValues: (values) => session.changeDraft({ values }),
-  }) as ReactElement<{ children: ReactElement[] }>;
-  const editor = element.props.children[1] as ReactElement<{
-    params: { value: ReactElement<ComponentProps<typeof HarnessControl>> }[];
-  }>;
   let disabled: boolean | undefined;
-  const control = editor.props.params[0]!.value;
-  HarnessControl({
-    ...control.props,
-    renderParamField: (field) => {
-      disabled = field.disabled;
-      if (!field.disabled) field.onChange(JSON.stringify({ harnessId: "project-default" }));
-      return <span />;
-    },
-  });
+  renderToStaticMarkup(
+    <WorkbenchThemeProvider>
+      <NativeChatControls
+        conversation={conversation}
+        draft={draft}
+        initializing={initializing}
+        run={session.run}
+        changeValues={(values) => session.changeDraft({ values })}
+        renderParamField={(field) => {
+          disabled = field.disabled;
+          if (!field.disabled) field.onChange(JSON.stringify({ harnessId: "project-default" }));
+          return <span />;
+        }}
+      />
+    </WorkbenchThemeProvider>,
+  );
   return disabled;
 };
 

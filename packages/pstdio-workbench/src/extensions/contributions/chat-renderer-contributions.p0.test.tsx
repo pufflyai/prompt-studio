@@ -225,3 +225,35 @@ test("native host owns page validation while provider callbacks and external lin
     globalThis.window = previousWindow;
   }
 });
+
+test("an undeclared chat empty state retains the native conversation guidance", () => {
+  const workbench = createWorkbench();
+  const registration = registerWorkbenchExtensionChatRenderers({
+    workbench,
+    projectId: "p",
+    metadata: {
+      ...emptyWorkbenchExtensionMetadata,
+      views: [
+        {
+          id: "acme.chat",
+          localId: "chat",
+          extensionId: "acme",
+          title: "Chat",
+          body: { kind: "chat", draftKey: "draft", queryHandlerId: "q", actionHandlerId: "a" },
+        },
+      ],
+    },
+    executeCommand: async () => ({}),
+  });
+  const view = getWorkbenchRenderers(workbench)
+    .getRenderer("acme.chat")!
+    .render({
+      workbench,
+      panel: { id: "chat", title: "Chat", region: "side", rendererId: "acme.chat" },
+      instance: { instanceId: "side", panelId: "chat", closable: true },
+      refresh() {},
+    }) as ReactElement<{ emptyTitle?: string; emptyDescription?: string }>;
+  expect(view.props.emptyTitle).toBeUndefined();
+  expect(view.props.emptyDescription).toBeUndefined();
+  registration.dispose();
+});
