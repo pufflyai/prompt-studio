@@ -26,7 +26,9 @@ Reference `conversation.ref` from an ordinary page Main, slot or resource bindin
 The [generic layout](0008-contextual-workbench-composition.md) owns selection and
 page/panel conversion. `initial` is serializable metadata available on the first
 render; neither query, draft hydration nor connection establishment gates the
-composer. State is shared by project, view and resource. The resource ID overrides
+text composer. Control fields stay read-only until the initial query and saved draft
+settle, so automatic field defaults cannot replace saved selections during hydration.
+Stream notices do not finish this initialization. State is shared by project, view and resource. The resource ID overrides
 the fallback `draftKey`. Actions receive the invoking placement's renderer context,
 including page params, project, mode and resource, through ordinary scoped routing.
 Reads, draft persistence and new watches use the latest placement context.

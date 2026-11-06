@@ -29,6 +29,7 @@ const initialChatState = (initial?: ChatRendererSnapshot) => ({
   },
   draft: { text: "", attachments: [], values: { ...initial?.values } } as ChatDraft,
   loading: false,
+  initializing: true,
   sending: false,
   error: undefined as string | undefined,
 });
@@ -137,7 +138,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     const queried = ++clock;
     const active = () => current === generation && !signal.aborted;
     publish({ loading: true, error: persistenceError });
-    void input
+    const query = input
       .query(signal)
       .then((value) => {
         if (!active()) return;
@@ -171,6 +172,11 @@ export const createChatSession = (input: ChatSessionInput) => {
           hydrating = false;
         });
     }
+    // Control defaults can commit local ownership. Settle initial values before allowing
+    // those effects, while the text composer remains usable during both reads.
+    void Promise.all([query, hydration]).then(() => {
+      if (active()) publish({ initializing: false });
+    });
     if (input.watch)
       void (async () => {
         try {

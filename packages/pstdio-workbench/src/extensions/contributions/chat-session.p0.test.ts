@@ -548,3 +548,37 @@ test("a query echo of a locally owned value does not suppress an unchanged delay
   expect(saved).toMatchObject({ values: { intent: "/goal" } });
   close();
 });
+
+test("native controls wait for query and saved settings while the first-paint composer accepts typing", async () => {
+  const query = deferred<{ controls: []; values: { harness: { harnessId: string } } }>();
+  const hydration = deferred<{
+    text: string;
+    attachments: [];
+    values: { harness: { harnessId: string; model: string } };
+  }>();
+  const session = createChatSession({
+    query: () => query.promise,
+    loadDraft: () => hydration.promise,
+    action: async () => undefined,
+  });
+  const release = session.retain();
+  expect(session.getSnapshot().initializing).toBe(true);
+  session.changeDraft({ text: "Typed before reads" });
+  session.accept({ revision: 0, snapshot: { notice: "Connected" } });
+  expect(session.getSnapshot().initializing).toBe(true);
+  query.resolve({ controls: [], values: { harness: { harnessId: "session-harness" } } });
+  await query.promise;
+  await Promise.resolve();
+  expect(session.getSnapshot().initializing).toBe(true);
+  hydration.resolve({
+    text: "",
+    attachments: [],
+    values: { harness: { harnessId: "session-harness", model: "saved" } },
+  });
+  await hydration.promise;
+  await new Promise((done) => setTimeout(done, 0));
+  expect(session.getSnapshot().initializing).toBe(false);
+  expect(session.getSnapshot().draft.text).toBe("Typed before reads");
+  expect(session.getSnapshot().draft.values.harness).toEqual({ harnessId: "session-harness" });
+  release();
+});
