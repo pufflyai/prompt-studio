@@ -1,10 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
-import type { StorageOwner } from "pstdio-sync";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentSync, createRecordStreamSync } from "pstdio-sync/relay";
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
-import { createDocumentStorageDBService } from "./document-storage";
+import { createDocumentStorageDBService, type StorageChange } from "./document-storage";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";
 
 const cleanup: (() => Promise<unknown>)[] = [];
@@ -62,7 +61,7 @@ const device = async () => {
       quarantine,
     }),
   };
-  const notified: (StorageOwner & { documentId?: string })[] = [];
+  const notified: StorageChange[] = [];
   const stop = service.watch((changed) => notified.push(changed));
   cleanup.push(async () => stop());
   return {

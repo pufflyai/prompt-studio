@@ -106,6 +106,20 @@ export const startAppArtifactMountWatch = (deps: RouteDeps, projectService: Retu
     listProjectIds: async () => (await projectService.list()).map((project) => project.id),
   });
 
+const traceShutdownPhase = async <T>(phase: string, close: () => Promise<T>) => {
+  const startedAt = performance.now();
+  const fields = { event: "runtime.shutdown.phase", phase };
+  apiLogger.info({ ...fields, state: "started" }, "Runtime shutdown step started");
+  try {
+    return await close();
+  } finally {
+    apiLogger.info(
+      { ...fields, state: "settled", duration_ms: Math.round(performance.now() - startedAt) },
+      "Runtime shutdown step settled",
+    );
+  }
+};
+
 const createAppCloser = (input: {
   startupAbort: AbortController;
   startupDone: Promise<void>;
@@ -129,30 +143,34 @@ const createAppCloser = (input: {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
-      const hooksStopped = input.closeSessionHooks();
-      const installationsStopped = input.extensionInstallations.dispose();
+      const hooksStopped = traceShutdownPhase("session_hooks", () => input.closeSessionHooks());
+      const installationsStopped = traceShutdownPhase("extension_installations", () =>
+        input.extensionInstallations.dispose(),
+      );
       installationsStopped.catch(() => {});
-      const nativeDocumentsStopped = input.textEditing.dispose().finally(() => input.nativeDocuments.dispose());
+      const nativeDocumentsStopped = traceShutdownPhase("text_editing", () => input.textEditing.dispose()).finally(() =>
+        traceShutdownPhase("native_documents", () => input.nativeDocuments.dispose()),
+      );
       try {
         input.startupAbort.abort();
-        const queueStopped = input.sessionQueueLifecycle.close();
+        const queueStopped = traceShutdownPhase("session_queue", () => input.sessionQueueLifecycle.close());
         // A queued startup can need worker disposal to settle. Stop admission first,
         // then begin cleanup before waiting for those dispatches to finish.
-        const harnessesStopped = input.harnessRegistry.dispose();
+        const harnessesStopped = traceShutdownPhase("harnesses", () => input.harnessRegistry.dispose());
         harnessesStopped.catch(() => {});
-        await input.stopQueueReadiness();
+        await traceShutdownPhase("queue_readiness", () => input.stopQueueReadiness());
         await queueStopped;
-        await input.startupDone;
-        await input.getStartupBackgroundDone();
+        await traceShutdownPhase("startup", () => input.startupDone);
+        await traceShutdownPhase("startup_background", () => input.getStartupBackgroundDone());
         await hooksStopped;
         await nativeDocumentsStopped;
         clearInterval(input.notificationWakeTimer);
         input.unsubscribeExtensionEvents();
-        await input.extensionRuntime.dispose();
-        await input.artifactMountWatch.dispose();
-        await input.extensionScheduler.dispose();
-        await input.automationService.close();
-        await input.terminalSupervisor.dispose();
+        await traceShutdownPhase("extension_runtime", () => input.extensionRuntime.dispose());
+        await traceShutdownPhase("artifact_mounts", () => input.artifactMountWatch.dispose());
+        await traceShutdownPhase("extension_scheduler", () => input.extensionScheduler.dispose());
+        await traceShutdownPhase("automation", () => input.automationService.close());
+        await traceShutdownPhase("terminals", () => input.terminalSupervisor.dispose());
         await harnessesStopped;
       } finally {
         // A part that fails to stop must not leave PGlite open (lessons 0002 and 0014).
@@ -162,7 +180,7 @@ const createAppCloser = (input: {
           try {
             await nativeDocumentsStopped;
           } finally {
-            await input.closeDb();
+            await traceShutdownPhase("database", () => input.closeDb());
           }
         }
       }
