@@ -254,7 +254,7 @@ describe("page identity and hierarchy validation", () => {
       defineExtension({
         views: [pageView],
         pages: [
-          makePage("reserved", "workspaces"),
+          makePage("reserved", "sessions"),
           makePage("bad", "Bad Path"),
           makePage("a", "tools"),
           makePage("b", "tools"),
@@ -326,4 +326,22 @@ describe("page identity and hierarchy validation", () => {
     const diagnostics = diagnosticsFor(defineExtension({ views: [pageView], pages: [page] }));
     expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_page_missing")).toHaveLength(1);
   });
+});
+
+test("ordinary publishers can own workspace page names while deprecated host refs retain their owner", () => {
+  const pages = ["workspaces", "workspace"].map((id) =>
+    definePage({
+      id,
+      title: id,
+      path: id,
+      mode: workbenchModes.project,
+      main: { kind: "view", view: pageView.ref, cardinality: "one" },
+      slots: [],
+    }),
+  );
+  const input = source(defineExtension({ views: [pageView], pages }));
+  input.manifest = { ...input.manifest, id: "alice.files", publisher: "alice", name: "files" };
+  const result = normalizeExtensionSources([input]);
+  expect(result.diagnostics).toEqual([]);
+  expect(result.pages.map((page) => page.extensionId)).toEqual(["alice.files", "alice.files"]);
 });

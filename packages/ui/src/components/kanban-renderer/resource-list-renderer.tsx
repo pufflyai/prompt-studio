@@ -40,7 +40,26 @@ export const ResourceListRenderer = (props: ResourceListRendererProps) => {
     filter: state.filter,
     sorts: state.sorts,
     search,
-    onCreate: props.createRow && props.onCreateRow ? setCreateGroup : undefined,
+    onCreate:
+      props.createRow && props.onCreateRow
+        ? async (columnId) => {
+            if (props.createRow?.presentation !== "command") {
+              setCreateGroup(columnId);
+              return;
+            }
+            try {
+              await props.onCreateRow!({
+                columnId,
+                columnAttributeId: settings.columnGrouping,
+                values: {},
+                attributeValues: {},
+                files: [],
+              });
+            } catch (error) {
+              props.onActionError?.(error, "Create resource");
+            }
+          }
+        : undefined,
   });
   return (
     <Stack data-testid="resource-list-renderer" height="full" minH="0" gap="0" bg="bg" overflow="hidden">

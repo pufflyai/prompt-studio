@@ -55,6 +55,10 @@
       "import": "./dist/kanban-renderer.js",
       "types": "./dist/kanban-renderer.d.ts"
     },
+    "./command-form": {
+      "import": "./dist/command-form.js",
+      "types": "./dist/command-form.d.ts"
+    },
     "./param-editor": {
       "import": "./dist/param-editor.js",
       "types": "./dist/param-editor.d.ts"

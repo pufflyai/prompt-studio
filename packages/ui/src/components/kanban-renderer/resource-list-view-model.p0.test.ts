@@ -178,3 +178,23 @@ test("resource IDs that resemble generated groups collapse independently and ret
   expect(opened).toEqual(["group::local"]);
   expect(changed).toEqual(["group::local"]);
 });
+
+test("group note actions remain independent from creation and expansion", () => {
+  let opened = false;
+  const source = structuredClone(attributes);
+  if (source[0].type.kind !== "enum" || !Array.isArray(source[0].type.options)) throw new Error("Expected enum");
+  source[0].type.options[0].onNoteClick = () => {
+    opened = true;
+  };
+  const items = buildResourceListItems({
+    rows,
+    attributes: source,
+    settings: resourceListSettings({ columnGrouping: "device" }),
+    filter: { conjunction: "and", rules: [] },
+    sorts: [],
+    search: "",
+  });
+  items[0].onNoteClick?.();
+  expect(opened).toBe(true);
+  expect(items[0].onCreate).toBeUndefined();
+});

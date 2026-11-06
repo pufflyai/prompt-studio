@@ -10,6 +10,33 @@ const command = {
   resourceMutation: { kind: "rename" as const, resourceType: "note", idParam: "noteId", labelParam: "title" },
 };
 const setup = () => ({ projectId: "project", workbench: createWorkbench(), executeCommand: () => undefined });
+test("removes the declared subject when an extension acts on a host-owned resource", async () => {
+  const context = setup();
+  const subject = { type: "workspace", id: "one", extensionId: "pstdio", projectId: "project" };
+  const remove = {
+    ...command,
+    resourceMutation: { kind: "remove" as const, resourceType: "workspace", idParam: "id" },
+  };
+  let finish!: () => void;
+  const pending = runResourceMutation(
+    context,
+    remove,
+    { id: "one" },
+    { resource: subject },
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  context.workbench.commandPalette.store.getState().confirmation!.resolve(true);
+  await Promise.resolve();
+  expect(context.workbench.resources.preview.resolve(subject)).toBeUndefined();
+  expect(context.workbench.resources.preview.resolve({ ...subject, extensionId: "another" })).toBeDefined();
+  await Promise.resolve();
+  await Promise.resolve();
+  finish();
+  await pending;
+});
 test("renames immediately, then restores the previous label on command failure", async () => {
   const context = setup();
   let reject!: (error: Error) => void;

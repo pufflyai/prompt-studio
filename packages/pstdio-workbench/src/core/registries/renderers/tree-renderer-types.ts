@@ -36,6 +36,8 @@ export interface TreeAction {
   commandId?: string;
   args?: unknown;
   params?: CommandParamSchema;
+  inlineInput?: { field: string; placement: "replace" | "child"; nodeId?: string };
+  copyText?: string;
   // Confirm-button label for the action's params dialog (defaults to "Run").
   submitLabel?: string;
   when?: string;
@@ -61,6 +63,7 @@ export interface TreeNode {
   label: string;
   icon?: string;
   iconElement?: unknown;
+  fileName?: string;
   iconColor?: string;
   badge?: { label: string; color?: string };
   iconTooltip?: string;

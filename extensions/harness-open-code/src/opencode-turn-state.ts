@@ -37,7 +37,12 @@ const getTrailingAssistantCreatedAt = (rawMessages: OpencodeSessionMessage[]) =>
 // but the agent is idle — waiting for user input, not processing.
 const hasQuestionPart = (message: OpencodeSessionMessage) => {
   const parts = "parts" in message && Array.isArray(message.parts) ? message.parts : [];
-  return parts.some((part) => part.type === "tool" && part.tool?.toLowerCase() === "question");
+  return parts.some(
+    (part) =>
+      part.type === "tool" &&
+      part.tool?.toLowerCase() === "question" &&
+      !["completed", "error", "failed", "output-error"].includes(part.state?.status ?? ""),
+  );
 };
 
 const hasActiveNonQuestionToolPart = (message: OpencodeSessionMessage) => {

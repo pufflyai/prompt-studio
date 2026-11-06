@@ -8,6 +8,7 @@ import {
   failTurn,
   hasErrorParts,
   nativeMessages,
+  nativeWasInterrupted,
   OPENCODE_STALE_TURN_TIMEOUT_MS,
   type PollSnapshot,
   type PostState,
@@ -280,6 +281,7 @@ export const pollOpencodeQuestionReply = async (input: {
     });
   }
 
+  if (nativeWasInterrupted(state.lastObserved)) return cancelTurn(events);
   const messages = nativeMessages(state.lastObserved);
   // Only the answered turn decides the outcome; earlier turns may have failed on their own.
   const questionIndex = state.lastObserved.findIndex((message) => getQuestionReplyState([message], questionTool));

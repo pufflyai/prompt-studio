@@ -109,6 +109,11 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
       body: {
         kind: "file",
         resourceKind: record.resourceKind,
+        saveMode: record.saveMode,
+        documentKey: record.document
+          ? (resource) =>
+              JSON.stringify([resourceKey(resource), resource?.metadata?.[record.document!.metadataKey] ?? null])
+          : undefined,
         connectText: input.textEditing
           ? (presentation, pageParams) =>
               createNativeTextPresentation({

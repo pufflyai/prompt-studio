@@ -1,7 +1,7 @@
 import type { TextOpenInput, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
-import type { createTextReplica } from "pstdio-sync/text";
 import type { GuestHost } from "./guest-host";
 import { decodeTextSnapshot, encodeTextBytes, textEditingError } from "./text-editing-codec";
+import type { createTextEditingReplica } from "./text-editing-replica";
 import type { TextEditingSnapshot, TextSelection } from "./text-editing-types";
 
 export const createTextEditingOperations = (input: {
@@ -59,7 +59,7 @@ interface TextPumpInput {
   memberId: string;
   source: TextOpenInput;
   sourceIdentity: string;
-  replica: () => ReturnType<typeof createTextReplica>;
+  replica: () => ReturnType<typeof createTextEditingReplica>;
   fences: ReturnType<typeof createTextEditingFences>;
   tickets: number[];
   handle: () => string;
@@ -85,7 +85,7 @@ export const createTextEditingPump = (input: TextPumpInput) => {
     if ("grant" in input.source) input.source.grant = joined.grant;
     return joined;
   };
-  const adopt = async (replica: ReturnType<typeof createTextReplica>) => {
+  const adopt = async (replica: ReturnType<typeof createTextEditingReplica>) => {
     const joined = await open();
     input.setHandle(joined.handle);
     input.receive(joined.snapshot);

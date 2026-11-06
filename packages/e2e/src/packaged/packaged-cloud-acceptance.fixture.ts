@@ -35,7 +35,11 @@ export const createCloudAcceptanceFixture = async (root: string, children: Set<C
   );
   const source = join(root, "unrelated-extension");
   mkdirSync(source);
-  for (const name of ["grouped-storage-extension.ts", "cloud-acceptance-commands.ts"])
+  for (const name of [
+    "grouped-storage-extension.ts",
+    "cloud-acceptance-commands.ts",
+    "collection-observation-command.ts",
+  ])
     cpSync(join(import.meta.dirname, "fixtures", name), join(source, name));
   writeFileSync(
     join(source, "package.json"),

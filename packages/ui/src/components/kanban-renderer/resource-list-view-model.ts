@@ -112,6 +112,7 @@ export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRen
       statusIcon: Circle,
       statusColorPalette: option?.color,
       note: option?.note,
+      onNoteClick: option?.onNoteClick,
       onCreate: option?.canCreate && onCreate ? () => onCreate(group.key) : undefined,
       children: sorted(group.rows).map((row) => rowItem(row)),
     };

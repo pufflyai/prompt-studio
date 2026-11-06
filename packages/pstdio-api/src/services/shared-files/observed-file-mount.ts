@@ -14,6 +14,9 @@ import {
 const bytesRevision = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 export const workspaceFileObservationKey = (root: string, path: string) =>
   JSON.stringify(["workspace-file", resolve(root), normalizeMountRelativePath(path)]);
+export const observeWorkspaceFileBytes = (root: string, path: string, bytes: Uint8Array) => {
+  if (isObservingStorage()) observeStorageVersion(workspaceFileObservationKey(root, path), bytesRevision(bytes));
+};
 const absentRevision = (error: unknown) => {
   const code = (error as NodeJS.ErrnoException).code;
   if (code === "ENOENT" || code === "ENOTDIR") return "missing";

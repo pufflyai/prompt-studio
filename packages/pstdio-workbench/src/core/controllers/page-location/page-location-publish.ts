@@ -85,6 +85,27 @@ export const createPageLocationReplayer =
     );
   };
 
+// Page parameter edits refresh the existing viewers without selecting the landing panel again.
+export const createPageParamsUpdater =
+  <Value>(input: {
+    registry: WorkbenchPageRegistry<Value>;
+    prepare(projectId: string, resolved: ResolvedPageLocation, action: string): WorkbenchPageRegistryStoreState<Value>;
+    publish: ReturnType<typeof createPageLocationPublisher<Value>>;
+  }) =>
+  (projectId: string, resolved: ResolvedPageLocation) => {
+    const action = "updatePageParams";
+    const current = input.registry.store.getState();
+    const state = input.prepare(projectId, resolved, action);
+    const next = getWorkbenchPageRegistryInternals(input.registry).prepare.compose(current, {
+      ...current,
+      location: state.location,
+      pageStates: refreshOpenPageInstances(current.pageStates, state.pageStates),
+      activate: [],
+      action,
+    });
+    return input.publish(projectId, next, "replace", action);
+  };
+
 export const createPageLocationPreparer = <Value>(registry: WorkbenchPageRegistry<Value>) => {
   const internals = getWorkbenchPageRegistryInternals(registry);
   const target = (projectId: string, resolved: ResolvedPageLocation, action: string) => ({

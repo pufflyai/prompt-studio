@@ -35,6 +35,8 @@ If the new runtime exits before it is ready, the CLI reports its exit code or si
 
 Workspaces always live in `$PSTDIO_HOME/workspaces`.
 
+`PSTDIO_HOME` must be private to the operating-system account running Prompt Studio. It contains runtime access tokens and saved harness server credentials. On POSIX systems, that account must own its state directory and files so their permissions can be tightened. On Windows, keep the default home under your user profile, or restrict a custom home's ACL to that account before starting the runtime. [POSIX file modes do not restrict Windows ACLs](https://nodejs.org/api/fs.html#file-modes); do not use a shared or publicly readable directory for `PSTDIO_HOME`.
+
 ### Runtime startup
 
 | Variable | Default | Purpose |
