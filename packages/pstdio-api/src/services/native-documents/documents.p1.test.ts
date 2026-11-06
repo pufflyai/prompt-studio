@@ -3,12 +3,12 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
-import { Hono } from "hono";
 import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
 import { saveTextDocument, seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
 import { createNativeDocumentRoutes } from "../../features/native-documents/routes";
+import { createTextStreamTestApp } from "../../features/text-editing/stream.test-utils";
 import { createNativeDocumentService } from "./documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
 import { resolveNativeTextAccess } from "./source-access";
@@ -1099,7 +1099,7 @@ test("reconnect acknowledges pending raw editor frames from their received basel
 
 test("the browser client receives live participants and stream cancellation removes its connection", async () => {
   const { service } = setup();
-  const routes = new Hono().route("/v1", createNativeDocumentRoutes(service));
+  const routes = createTextStreamTestApp(undefined, service);
   const client = createClient({
     baseUrl: "http://localhost",
     fetch: ((url, init) => routes.fetch(new Request(String(url), init))) as typeof fetch,
@@ -1165,7 +1165,7 @@ test("the browser client receives live participants and stream cancellation remo
 
 test("the browser client uses the local API for binary edits and document streams", async () => {
   const { service } = setup();
-  const routes = new Hono().route("/v1", createNativeDocumentRoutes(service));
+  const routes = createTextStreamTestApp(undefined, service);
   const client = createClient({
     baseUrl: "http://localhost",
     fetch: ((url, init) => routes.fetch(new Request(String(url), init))) as typeof fetch,
