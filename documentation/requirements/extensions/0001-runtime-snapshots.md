@@ -13,7 +13,7 @@ Loading extensions independently for every command, settings read, or renderer r
 
 1. One application-owned catalog serves all extension consumers for a project.
 2. Repeated reads of unchanged state reuse the same published snapshot and source imports.
-3. Concurrent reads share loading work. Invalidations during a load prevent obsolete publication.
+3. Concurrent reads share loading work. A read reflects every invalidation made before it started. Contribution changes during a load prevent obsolete publication; a webview build during a load only refreshes later reads.
 4. A snapshot contains a consistent normalized runtime, enabled-source records, project identity, and diagnostics.
 5. Project commands, views, scheduler, templates, settings, and harnesses consume that snapshot.
 6. Source and enablement changes invalidate the affected project set. One project's mutation must not unnecessarily invalidate every project.

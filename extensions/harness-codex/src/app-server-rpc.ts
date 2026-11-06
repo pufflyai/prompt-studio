@@ -109,7 +109,6 @@ export const createAppServerRpc = (
       }
     });
   });
-  child.onExit.then(close);
   child.stderr.resume();
   return { request, write, finished };
 };
