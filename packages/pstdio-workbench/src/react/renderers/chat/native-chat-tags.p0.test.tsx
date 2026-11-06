@@ -48,7 +48,7 @@ test("read-only conversations can reconnect through explicit host refresh withou
       refreshes++;
     },
   });
-  const buttons = controls.props.children[2].props.children;
+  const buttons = controls.props.children.at(-1).props.children;
   expect(buttons[0].props.disabled).toBeFalsy();
   expect(buttons[1].props.disabled).toBe(true);
   buttons[0].props.onClick();
