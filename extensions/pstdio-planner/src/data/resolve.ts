@@ -1,7 +1,7 @@
 import { resolveByIdOrName } from "@pstdio/sdk/data";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { statusesCollection, tagsCollection, ticketsCollection, withDerivedTicketState } from "./collections";
-import { type TicketContext, ticketWithIdentity } from "./ticket-identity";
+import { type TicketContext, ticketWithCurrentTitle, ticketWithIdentity } from "./ticket-identity";
 import { ticketRecords } from "./ticket-records";
 
 export const resolveStatusId = async (storage: ExtensionStorageApi, value: string) =>
@@ -23,7 +23,7 @@ export const findStoredTickets = async (ctx: TicketContext, value: string) => {
   const matches = await Promise.all(
     identities.map(async (identity) => {
       const ticket = await records.get(identity.id);
-      return ticket ? ticketWithIdentity(ticket, identity) : undefined;
+      return ticket ? ticketWithIdentity(ticketWithCurrentTitle(ticket), identity) : undefined;
     }),
   );
   return matches.filter((ticket) => ticket !== undefined);
