@@ -38,7 +38,7 @@ const PassthroughChatHost = ({ children }: NativeChatHostProps) => children({});
 
 export const NativeChatView = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
-  const { conversation, draft, loading, sending, error } = useSyncExternalStore(
+  const { conversation, draft, loading, initializing, sending, error } = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
     session.getSnapshot,
@@ -183,6 +183,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
               draft={activeDraft}
               editingQueuedRequest={Boolean(selected)}
               unavailable={host.account?.blocked}
+              initializing={initializing}
               renderParamField={renderParamField}
               changeValues={(next) => changeActive({ values: next })}
             />

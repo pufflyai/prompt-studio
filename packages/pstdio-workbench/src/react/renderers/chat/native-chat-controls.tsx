@@ -15,6 +15,7 @@ interface NativeChatControlsProps {
   renderParamField?: CommandParamFieldRenderer;
   editingQueuedRequest?: boolean;
   unavailable?: boolean;
+  initializing?: boolean;
   changeValues(values: ControlValueMap): void;
 }
 
@@ -31,6 +32,7 @@ const inputTag = (tag: ChatRendererSnapshot["draftTag"], run: ChatSession["run"]
 export const NativeChatControls = (props: NativeChatControlsProps) => {
   const { run, conversation, draft, renderParamField, changeValues } = props;
   const change = (id: string, value: unknown) => {
+    if (props.initializing) return;
     const values = { ...draft.values, [id]: controlValueSchema.parse(value) };
     changeValues(values);
     void run({ type: "control", id, values }).catch(() => undefined);
@@ -45,7 +47,7 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
         <HarnessControl
           param={{ ...param, preserveSettings: param.preserveSettings || props.editingQueuedRequest }}
           value={draft.values[param.id] ?? param.defaultValue}
-          readOnly={Boolean(conversation.readOnly)}
+          readOnly={Boolean(conversation.readOnly || props.initializing)}
           renderParamField={renderParamField}
           onChange={(value) => change(param.id, value)}
         />
@@ -57,7 +59,7 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
       {conversation.harness || conversation.draftTag || conversation.sentTag ? (
         <HarnessControls
           modes={conversation.harness?.modes ?? []}
-          unavailable={conversation.readOnly || props.unavailable}
+          unavailable={conversation.readOnly || props.unavailable || props.initializing}
           draftTag={inputTag(conversation.draftTag, run, draft.values)}
           sentTag={inputTag(conversation.sentTag, run, draft.values)}
           onRequestConfirmation={(modeId) => {
@@ -78,7 +80,7 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
           variant="small"
           params={conversation.controls.map(hostParam)}
           defaultValues={draft.values}
-          readOnly={conversation.readOnly}
+          readOnly={conversation.readOnly || props.initializing}
           onChange={change}
         />
       ) : null}
