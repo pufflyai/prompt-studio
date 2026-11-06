@@ -247,14 +247,13 @@ export const createChatSession = (input: ChatSessionInput) => {
       });
     if (!hydrated && !hydrating && input.loadDraft) {
       hydrating = true;
-      const started = changes;
       hydration = input
         .loadDraft()
         .then((value) => {
           const draft = chatDraftSchema.parse(value);
           hydrated = true;
           const values = snapshots.values.hydrate(state.draft.values, draft.values);
-          const hydratedDraft = changes === started ? draft : hydrateChatDraft(state.draft, draft);
+          const hydratedDraft = changes === 0 ? draft : hydrateChatDraft(state.draft, draft);
           publish({ draft: { ...hydratedDraft, values } });
         })
         .catch((error) => {

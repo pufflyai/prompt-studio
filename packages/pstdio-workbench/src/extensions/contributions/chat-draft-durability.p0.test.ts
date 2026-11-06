@@ -235,3 +235,43 @@ test("disposing an idle replacement preserves ordering behind an older owner wri
   expect(provider).toEqual(newer);
   expect(storage.length).toBe(0);
 });
+
+test("typing before or during provider load does not hydrate initial placeholder controls over resolved session settings", async () => {
+  for (const retainFirst of [true, false]) {
+    let resolveLoad!: (draft: ChatDraft) => void;
+    const loading = new Promise<ChatDraft>((resolve) => {
+      resolveLoad = resolve;
+    });
+    const saved: ChatDraft[] = [];
+    const persistence = createChatDraftPersistence({
+      storage: memoryStorage(),
+      key: "project/view/idle-session",
+      load: () => loading,
+      save: async (draft) => {
+        saved.push(structuredClone(draft));
+      },
+    });
+    const resolved = { provider: { harnessId: "fixture", model: "saved-model" } };
+    const session = createChatSession({
+      ...persistence,
+      initial: { values: { provider: { harnessId: "" } } },
+      query: async () => ({ values: resolved }),
+      action: async () => undefined,
+    });
+    persistence.restore(session);
+    let release = () => {};
+    if (retainFirst) release = session.retain();
+    session.changeDraft({ text: "First idle-session message" });
+    if (!retainFirst) release = session.retain();
+    await tick();
+    expect(session.getSnapshot().draft.values).toEqual(resolved);
+    resolveLoad(empty());
+    await session.flushDraft();
+    expect(session.getSnapshot().draft).toMatchObject({ text: "First idle-session message", values: resolved });
+    expect(session.getSnapshot().draft.recovered ?? []).toEqual([]);
+    expect(saved.at(-1)).toMatchObject({ text: "First idle-session message", values: resolved });
+    release();
+    await session.dispose();
+    persistence.dispose();
+  }
+});

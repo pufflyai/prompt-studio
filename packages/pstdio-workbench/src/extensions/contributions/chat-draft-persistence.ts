@@ -32,9 +32,15 @@ export const createChatDraftPersistence = (input: ChatDraftPersistenceInput) => 
   scoped.set(key, writer);
   let closed = false;
   const current = () => !closed && writer.owner === owner;
+  let recoveryRead = false;
+  let recovery: ChatDraft | undefined;
   const pending = () => {
-    const raw = storage.getItem(key);
-    return raw === null ? undefined : chatDraftSchema.parse(JSON.parse(raw));
+    if (!recoveryRead) {
+      const raw = storage.getItem(key);
+      recovery = raw === null ? undefined : chatDraftSchema.parse(JSON.parse(raw));
+      recoveryRead = true;
+    }
+    return recovery;
   };
   return {
     /** Release after the owner's final save settles, retaining no visited-resource registry. */
@@ -68,8 +74,10 @@ export const createChatDraftPersistence = (input: ChatDraftPersistenceInput) => 
     },
     loadDraft: input.load
       ? async () => {
-          const saved = chatDraftSchema.parse(await input.load!());
+          // Current-owner edits already live in ChatSession. Hydrate only the incoming
+          // journal, not placeholder controls staged while this provider read waits.
           const staged = pending();
+          const saved = chatDraftSchema.parse(await input.load!());
           return staged ? hydrateChatDraft(staged, saved) : saved;
         }
       : undefined,
