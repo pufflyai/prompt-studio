@@ -261,10 +261,10 @@ export interface ControlGroup {
 }
 
 /** Provider-owned workspace creation inputs. Existing workspace selections remain string IDs. */
-export interface WorkspaceControlValue {
+export type WorkspaceControlValue = {
   providerId: string;
   params?: JsonObject;
-}
+};
 
 export type ControlValue =
   | number
