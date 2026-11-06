@@ -73,8 +73,13 @@ export default defineExtension({
 
 Use `params.template({ type: "ticket" })` when a command selects a template. The dashboard lists templates from the
 matching extension-owned template type and renders a dropdown. Use `params.resource({ resourceType: "workspace" })`
-for project resources. The dashboard lists registered resources of that type and passes the selected `{ type, id }`
-reference to the command.
+for project resources. A command with one required resource parameter opens the native, virtualized
+resource search. It combines registered resources with matching `commandPaletteResources` providers,
+refreshes from their declared events, and preserves the complete selected reference (including owner,
+project and device) as the command argument. Selection executes the original command in its captured
+viewer context, rather than activating the provider's ordinary navigation target. Other forms keep
+resource fields beside their remaining parameters. Providers may page their public data to honor the
+requested aggregate `limit`; More resources retains the current query and focus.
 
 Use `params.workspace({ providers: ["pstdio.worktree"] })` when a command creates a workspace. The dashboard shows
 the same fields as **Create workspace**: a workspace type, then that provider's parameters, such as **Base branch** for
