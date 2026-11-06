@@ -35,7 +35,12 @@ restoration selects all restored settings, including those equal to current defa
 the fallback `draftKey`. Actions receive the invoking placement's renderer context,
 including page params, project, mode and resource, through ordinary scoped routing.
 Reads, draft persistence and new watches use the latest placement context.
-Placements sharing a resource must refer to the same conversation.
+Placements sharing a resource must refer to the same conversation. Host adapters can
+normalize resource defaults with `resolveChatResource` before native owner selection.
+Command bindings keep the invoking placement resource so captured viewer/from checks
+still compare that exact source. The dashboard uses its existing canonical resource policy so
+legacy core URLs and qualified provider targets share one owner; explicit foreign
+owner/project scopes remain distinct. Other hosts retain their supplied identities.
 
 ## Snapshot and stream handoff
 
