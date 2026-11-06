@@ -149,3 +149,35 @@ test("hiding a submitted reference preserves pending recovery and refuses anothe
     nativeAction(ctx, "other", { type: "operation", id: `hide-native:${recordId}`, values }),
   ).rejects.toThrow("this conversation");
 });
+
+test("a completed idle native operation keeps its result through refresh until the next request", async () => {
+  const { nativeSubmissionIndex } = await import("./native-submission");
+  const { nativePresentation } = await import("./native-presentation");
+  let requestStarted = "before";
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
+    params: {},
+    overrides: {
+      sessions: {
+        getHarnessCommands: async () => state,
+        get: async () => ({ id: "s", lastRequestStarted: requestStarted }) as never,
+        invokeHarnessOperation: async () => {
+          // Idle control operations enter the existing resume lifecycle too.
+          requestStarted = "native-control";
+          return { status: "completed", message: "Native action completed" };
+        },
+      },
+    },
+  });
+  await act(ctx, {
+    renderer,
+    draftKey: "s",
+    action: { type: "submit", text: "/goal Objective", attachments: [], values },
+  });
+  const present = () =>
+    nativePresentation(ctx, "s", state, "agent", values, { status: "completed", lastRequestStarted: requestStarted });
+  expect((await present()).notice).toBe("Native action completed");
+  expect((await present()).notice).toBe("Native action completed");
+  requestStarted = "later-ordinary";
+  expect((await present()).notice).toBe("");
+});

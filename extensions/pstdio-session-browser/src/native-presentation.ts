@@ -46,7 +46,8 @@ export const nativePresentation = async (
   return {
     notice:
       failureNotice ??
-      (!submitted?.value.started && session?.lastRequestStarted === submitted?.value.previousRequest
+      (!submitted?.value.started &&
+      session?.lastRequestStarted === (submitted?.value.requestStarted ?? submitted?.value.previousRequest)
         ? (submitted?.body.message ?? "")
         : ""),
     sentTag,

@@ -48,7 +48,7 @@ export const submitNativeDraft = async (
   if (!result)
     throw new Error("The host did not acknowledge the native operation. Check the conversation before retrying.");
   const draft = { text: action.text, attachments: action.attachments, values: action.values };
-  const accepted = result.status === "started" ? await ctx.sessions.get(target).catch(() => null) : null;
+  const accepted = await ctx.sessions.get(target).catch(() => null);
   const recordId = await saveNativeSubmission(
     ctx,
     target,
