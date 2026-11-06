@@ -103,6 +103,7 @@ export const createCloudAcceptanceFixture = async (root: string, children: Set<C
           environmentId: device.environmentId,
           pid: device.host.child.pid,
           exitCode: device.host.child.exitCode,
+          signalCode: device.host.child.signalCode,
           status: projectId
             ? await fetch(`${device.host.baseUrl}/v1/account/projects/${projectId}/sync`, {
                 headers: runtimeAuthorization(device.host.descriptor),
