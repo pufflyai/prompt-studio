@@ -12,6 +12,7 @@ test("native composer requests compact harness controls without changing setting
         conversation={{
           harness: {
             commands: [],
+            slashCommands: true,
             modes: [{ id: "goal", label: "Goal", description: "Goal", state: "Inactive", actions: [] }],
           },
           controls: [
