@@ -1,6 +1,6 @@
 import type { TextOpenInput, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
 import type { GuestHost } from "./guest-host";
-import { encodeTextBytes, textEditingError, textEditingFailure } from "./text-editing-codec";
+import { assertTextGeneration, encodeTextBytes, textEditingError, textEditingFailure } from "./text-editing-codec";
 import { createTextEditingDraft } from "./text-editing-draft";
 import type { createTextEditingFences } from "./text-editing-queue";
 
@@ -8,6 +8,7 @@ interface LifecycleInput {
   host: GuestHost;
   source: TextOpenInput;
   sourceIdentity: string;
+  generation?: string;
   fences: ReturnType<typeof createTextEditingFences>;
   sourceState: () => Uint8Array;
   flush: (prefix: number) => Promise<number>;
@@ -93,9 +94,11 @@ export const createTextEditingLifecycle = (input: LifecycleInput) => {
               memberId,
               input: input.source,
               sourceIdentity: input.sourceIdentity,
+              generation: input.generation,
               sourceState: encodeTextBytes(source),
               pendingUpdate: encodeTextBytes(update),
             });
+            assertTextGeneration(joined.snapshot.generation, input.generation);
             input.receive(joined.snapshot);
             input.fences.complete(ticket, joined.snapshot.revision);
             admitted();

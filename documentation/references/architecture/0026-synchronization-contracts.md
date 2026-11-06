@@ -25,7 +25,7 @@ for the relay.
 
 ## Sync modules
 
-The private package has six entry points. Consumers import the module that owns the
+The private package has seven entry points. Consumers import the module that owns the
 operation instead of a root barrel that exposes every implementation.
 
 | Entry point | Owns | May depend on |
@@ -35,7 +35,8 @@ operation instead of a root barrel that exposes every implementation.
 | `pstdio-sync/records` | Structured values, resource lifetimes, record queries and record-to-text bindings | Shared ports and text |
 | `pstdio-sync/presence` | Transient, connection-owned participant values and leases | Shared owner identity |
 | `pstdio-sync/encryption` | Sealing, opening and sync-space keys | Shared byte utilities |
-| `pstdio-sync/relay` | Encrypted document and record-stream transport | Shared ports, records, text and encryption |
+| `pstdio-sync/relay` | Encrypted document and record-stream transport, authenticated manifest-node primitives | Shared ports, records, text and encryption |
+| `pstdio-sync/logs` | Immutable append-only entries, bounded cursor pages, retention and lazy encrypted transport | Shared ports, records, encryption and relay |
 
 The text engine has no Markdown, Monaco, React, HTTP or database dependency. Its
 replica owns received history and pending local frames. Workbench sessions supply
@@ -67,6 +68,11 @@ stay in the public SDK. UI components remain outside `pstdio-sync`.
 modules must use their entry points. Text and presence cannot import record, relay,
 host or editor implementations. Public workbench bundles inline their private text
 engine dependency; published packages do not require a private workspace package.
+
+The logs module owns a distinct append-only data kind. Its store ports accept
+SQL or file-backed payload adapters without importing host or database code.
+It reuses encrypted manifest nodes and relay transport through their module
+entry points. Structured record engines cannot depend on logs.
 
 ## Indexed current records
 

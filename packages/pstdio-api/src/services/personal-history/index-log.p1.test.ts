@@ -1,153 +1,182 @@
-import { afterAll, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { createMemoryDocumentStore } from "pstdio-sync";
-import { createSyncSpace } from "pstdio-sync/encryption";
-import { createSessionLogFiles } from "./log-files";
-import { logRelayFixture } from "./log-transport.fixture";
-import { createPersonalHistoryStore } from "./store";
+import { expect, test } from "bun:test";
+import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
+import { transferPersonalIndex } from "./index-transfer.fixture";
+import { createPersonalHistoryStore, legacyPersonalHistoryOwner } from "./store";
 
-const root = await mkdtemp(join(tmpdir(), "index-log-"));
-afterAll(() => rm(root, { recursive: true, force: true }));
-const space = await createSyncSpace({
-  projectId: "project",
-  spaceOwner: "alice",
-  keys: [{ generation: 1, secret: "A".repeat(43) }],
-});
-const device = { ownerId: "alice", id: "laptop", name: "Laptop" };
-const store = (folder: string) =>
-  createPersonalHistoryStore({
-    projectId: "project",
-    accountId: "alice",
-    managerOrigin: "https://manager.example",
-    documents: { open: () => createMemoryDocumentStore() },
-    files: createSessionLogFiles(join(root, folder)),
-  });
-
-test("a device index appends only changed rows and readers resume from their durable cursor", async () => {
-  const source = store("source");
-  const peer = logRelayFixture();
-  const rows = Array.from({ length: 2000 }, (_, index) => ({ id: String(index), title: "Saved" }));
-  await source.writeRecords("sessions", device, rows);
-  await source.synchronizeIndex(device.id, true, space, peer.relay);
-  const initial = [...peer.updates.values()].flat().length;
-  rows[1000] = { id: "1000", title: "Changed" };
-  await source.writeRecords("sessions", device, rows);
-  await source.synchronizeIndex(device.id, true, space, peer.relay);
-  expect([...peer.updates.values()].flat()).toHaveLength(initial + 1);
-  const destination = store("reader");
-  await destination.synchronizeIndex(device.id, false, space, peer.relay);
-  expect(await destination.readRecords("sessions")).toHaveLength(2000);
-  expect((await destination.readRecords("sessions")).find((row) => row.id === "1000")?.title).toBe("Changed");
-  const restarted = store("reader");
-  await restarted.synchronizeIndex(device.id, false, space, peer.relay);
-  expect(peer.reads.at(-1)).toBe(initial + 1);
-  await source.writeRecords("sessions", device, rows.slice(1));
-  await source.writeHeads(new Map([["1000", 7]]));
-  await source.synchronizeIndex(device.id, true, space, peer.relay);
-  await destination.synchronizeIndex(device.id, false, space, peer.relay);
-  expect(await destination.readRecords("sessions")).toHaveLength(1999);
-  expect(await destination.readHeads()).toEqual(new Map([["1000", 7]]));
-});
-
-test("publishing one device keeps another device's pending rows in its own log", async () => {
-  const source = store("partitioned-source");
-  const peer = logRelayFixture();
-  const other = { ...device, id: "desktop", name: "Desktop" };
-  await source.patchRecords("sessions", device, [{ id: "laptop-session", title: "Laptop" }]);
-  await source.patchRecords("sessions", other, [{ id: "desktop-session", title: "Desktop" }]);
-  await source.synchronizeIndex(device.id, true, space, peer.relay);
-  const reader = store("partitioned-reader");
-  await reader.synchronizeIndex(device.id, false, space, peer.relay);
-  expect((await reader.readRecords("sessions")).map((row) => row.id)).toEqual(["laptop-session"]);
-  expect(source.indexPending()).toBe(true);
-  await source.synchronizeIndex(other.id, true, space, peer.relay);
-  await reader.synchronizeIndex(other.id, false, space, peer.relay);
-  expect((await reader.readRecords("sessions")).map((row) => row.id).sort()).toEqual([
-    "desktop-session",
-    "laptop-session",
-  ]);
-  expect(source.indexPending()).toBe(false);
-  await source.patchRecords("sessions", device, [], ["laptop-session"]);
-  await source.synchronizeIndex(device.id, true, space, peer.relay);
-  await reader.synchronizeIndex(device.id, false, space, peer.relay);
-  expect((await reader.readRecords("sessions")).map((row) => row.id)).toEqual(["desktop-session"]);
-});
-
-test("a fresh reader starts from the device snapshot and keeps the newer tail and other devices' rows", async () => {
-  const source = store("snapshot-source");
-  const peer = logRelayFixture();
-  for (let index = 0; index < 1000; index++) {
-    await source.patchRecords("sessions", device, [{ id: "session", title: `Edit ${index}` }]);
-    await source.synchronizeIndex(device.id, true, space, peer.relay);
-  }
-  expect(peer.states.size).toBe(1);
-  await source.patchRecords("sessions", device, [{ id: "session", title: "After snapshot" }]);
-  await source.synchronizeIndex(device.id, true, space, peer.relay);
-  const fresh = store("snapshot-reader");
-  await fresh.writeRecords("sessions", { ...device, id: "desktop" }, [{ id: "other", title: "Other device" }]);
-  await fresh.synchronizeIndex(device.id, false, space, peer.relay);
-  expect((await fresh.readRecords("sessions")).map((row) => row.title).sort()).toEqual([
-    "After snapshot",
-    "Other device",
-  ]);
-  expect(peer.reads.slice(-2)).toEqual([0, 1000]);
-});
-
-test("a local edit during an in-flight publish remains queued and survives the next publish", async () => {
-  const source = store("concurrent-source");
-  const peer = logRelayFixture();
-  await source.patchRecords("sessions", device, [{ id: "session", title: "First" }]);
-  const relay: typeof peer.relay = (id) => {
-    const target = peer.relay(id);
-    return {
-      ...target,
-      update: async (update) => {
-        await source.patchRecords("sessions", device, [{ id: "session", title: "Newer edit" }]);
-        return target.update(update);
-      },
+test("personal index rows are durable device-log deltas rather than CRDT index content", async () => {
+  const { db, close } = await createDb({ path: ":memory:" });
+  try {
+    const now = new Date().toISOString();
+    await db
+      .insert(projects)
+      .values({ id: "private-project", name: "History", shorthand: "H", created_at: now, updated_at: now });
+    const storage = createExtensionStorageDBService(db);
+    const input = {
+      projectId: "private-project",
+      accountId: "alice",
+      managerOrigin: "https://manager.example",
+      documents: storage.documents,
+      index: storage.personalHistoryIndex,
+      logs: storage.logs,
     };
-  };
-  await source.synchronizeIndex(device.id, true, space, relay);
-  expect((await source.readRecords("sessions"))[0]?.title).toBe("Newer edit");
-  expect(source.indexPending()).toBe(true);
-  await source.synchronizeIndex(device.id, true, space, peer.relay);
-  const fresh = store("concurrent-reader");
-  await fresh.synchronizeIndex(device.id, false, space, peer.relay);
-  expect((await fresh.readRecords("sessions"))[0]?.title).toBe("Newer edit");
+    const history = createPersonalHistoryStore(input);
+    const device = { ownerId: "alice", id: await storage.logs.writerId(), name: "Laptop" };
+    await history.writeRecords("sessions", device, [{ id: "one", title: "Private title" }]);
+    expect(await createPersonalHistoryStore(input).readRecords("sessions")).toEqual([
+      { id: "one", title: "Private title", device },
+    ]);
+    expect(
+      await history.records.transaction(history.owner, async ({ document }) => document.getMap("sessions").size),
+    ).toBe(0);
+    expect(await storage.logs.pending(history.owner)).toBe(true);
+    const stream = await storage.logs.stream(history.owner, {
+      name: "index",
+      scope: "project",
+      stream: device.id,
+      writer: "device",
+    });
+    const before = (await stream.pending(100)).length;
+    await history.writeRecords("sessions", device, [{ id: "one", title: "Private title" }]);
+    expect((await stream.pending(100)).length).toBe(before);
+  } finally {
+    await close();
+  }
 });
 
-test("a lost snapshot acknowledgement reloads its base and the next index change reaches a fresh reader", async () => {
-  const source = store("lost-snapshot-source");
-  const peer = logRelayFixture();
-  for (let index = 0; index < 999; index++) {
-    await source.patchRecords("sessions", device, [{ id: "session", title: `Edit ${index}` }]);
-    await source.synchronizeIndex(device.id, true, space, peer.relay);
-  }
-  let dropped = false;
-  const losing: typeof peer.relay = (id) => {
-    const target = peer.relay(id);
-    return {
-      ...target,
-      replace: async (snapshot) => {
-        const result = await target.replace(snapshot);
-        if (!dropped) {
-          dropped = true;
-          throw new Error("Lost snapshot acknowledgement");
-        }
-        return result;
-      },
+test("private index delta pages preserve remote rows, queue deletion and saved cursors after restart", async () => {
+  const connections: Awaited<ReturnType<typeof createDb>>[] = [];
+  try {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const peer = async () => {
+      const connection = await createDb({ path: ":memory:" });
+      connections.push(connection);
+      await connection.db
+        .insert(projects)
+        .values({ id, name: "Private", shorthand: "P", created_at: now, updated_at: now });
+      const storage = createExtensionStorageDBService(connection.db);
+      const input = {
+        projectId: id,
+        accountId: "alice",
+        managerOrigin: "https://manager.example",
+        documents: storage.documents,
+        index: storage.personalHistoryIndex,
+        logs: storage.logs,
+      };
+      const history = createPersonalHistoryStore(input);
+      return { storage, history, input };
     };
-  };
-  await source.patchRecords("sessions", device, [{ id: "session", title: "Snapshot" }]);
-  await expect(source.synchronizeIndex(device.id, true, space, losing)).rejects.toThrow(
-    "Lost snapshot acknowledgement",
-  );
-  await source.patchRecords("sessions", device, [{ id: "session", title: "After failure" }]);
-  await source.synchronizeIndex(device.id, true, space, peer.relay);
-  const reader = store("lost-snapshot-reader");
-  await reader.synchronizeIndex(device.id, false, space, peer.relay);
-  expect((await reader.readRecords("sessions"))[0]?.title).toBe("After failure");
-  expect(source.indexPending()).toBe(false);
+    const source = await peer();
+    const destination = await peer();
+    const device = { ownerId: "alice", id: await source.storage.logs.writerId(), name: "Laptop" };
+    await source.history.writeRecords("sessions", device, [{ id: "one", title: "Private one" }]);
+    await source.history.writeRecords("queues", device, [{ id: "one", requests: [{ id: "queued" }] }]);
+    const synchronize = () =>
+      transferPersonalIndex(source.storage, destination.storage, {
+        projectId: id,
+        accountId: "alice",
+        managerOrigin: "https://manager.example",
+      });
+    await synchronize();
+    expect((await destination.history.readRecords("sessions"))[0]?.title).toBe("Private one");
+    expect((await destination.history.readRecords("queues"))[0]?.id).toBe("one");
+    await source.history.writeRecords("sessions", device, [{ id: "two", title: "Private two" }]);
+    await source.history.writeRecords("queues", device, []);
+    await synchronize();
+    const restarted = createPersonalHistoryStore(destination.input);
+    expect((await restarted.readRecords("sessions")).map((row) => row.id)).toEqual(["two"]);
+    expect(await restarted.readRecords("queues")).toEqual([]);
+    const cursor = await destination.storage.personalHistoryIndex.cursor(restarted.owner);
+    await synchronize();
+    expect(await destination.storage.personalHistoryIndex.cursor(restarted.owner)).toBe(cursor);
+    const other = createPersonalHistoryStore({ ...destination.input, accountId: "bob" });
+    expect(await other.readRecords("sessions")).toEqual([]);
+  } finally {
+    await Promise.all(connections.map((connection) => connection.close()));
+  }
+});
+
+test("upgrade retains the original index until its device-log conversion is durable", async () => {
+  const connection = await createDb({ path: ":memory:" });
+  try {
+    const now = new Date().toISOString();
+    await connection.db
+      .insert(projects)
+      .values({ id: "upgrade-project", name: "Upgrade", shorthand: "U", created_at: now, updated_at: now });
+    const storage = createExtensionStorageDBService(connection.db);
+    const input = {
+      projectId: "upgrade-project",
+      accountId: "alice",
+      managerOrigin: "https://manager.example",
+      documents: storage.documents,
+      index: storage.personalHistoryIndex,
+      logs: storage.logs,
+    };
+    const device = { ownerId: "alice", id: await storage.logs.writerId(), name: "Laptop" };
+    const legacy = storage.documents.open("records");
+    await legacy.transaction(legacyPersonalHistoryOwner(input), async ({ document }) => {
+      document.getMap("sessions").set("saved", JSON.stringify({ id: "saved", title: "Saved private history", device }));
+      document.getMap("heads").set("saved", 4);
+    });
+    const history = createPersonalHistoryStore(input);
+    expect((await history.readRecords("sessions"))[0]?.id).toBe("saved");
+    expect((await history.readHeads()).get("saved")).toBe(4);
+    expect(await storage.logs.pending(history.owner)).toBe(true);
+    expect(
+      await legacy.transaction(
+        legacyPersonalHistoryOwner(input),
+        async ({ document }) => document.getMap("sessions").size,
+      ),
+    ).toBe(1);
+  } finally {
+    await connection.close();
+  }
+});
+
+test("a new device recovers a cached legacy writer's history and later honors its deletion over late seeds", async () => {
+  const connections: Awaited<ReturnType<typeof createDb>>[] = [];
+  try {
+    const identity = { projectId: crypto.randomUUID(), accountId: "alice", managerOrigin: "https://manager.example" };
+    const peer = async () => {
+      const connection = await createDb({ path: ":memory:" });
+      connections.push(connection);
+      const now = new Date().toISOString();
+      await connection.db
+        .insert(projects)
+        .values({ id: identity.projectId, name: "Seed recovery", shorthand: "S", created_at: now, updated_at: now });
+      const storage = createExtensionStorageDBService(connection.db);
+      const history = createPersonalHistoryStore({
+        ...identity,
+        documents: storage.documents,
+        logs: storage.logs,
+        index: storage.personalHistoryIndex,
+      });
+      return { storage, history };
+    };
+    const origin = await peer();
+    const cached = await peer();
+    const reader = await peer();
+    const late = await peer();
+    const device = { ownerId: identity.accountId, id: await origin.storage.logs.writerId(), name: "Offline origin" };
+    const row = { id: "saved", title: "Cached private history", device };
+    const seed = async (current: typeof cached) => {
+      await current.storage.documents
+        .open("records")
+        .transaction(legacyPersonalHistoryOwner(identity), async ({ document }) =>
+          document.getMap("sessions").set(row.id, JSON.stringify(row)),
+        );
+      await current.history.readRecords("sessions");
+      await transferPersonalIndex(current.storage, reader.storage, identity);
+    };
+    await seed(cached);
+    expect(await reader.history.readRecords("sessions")).toEqual([row]);
+    await origin.history.writeRecords("sessions", device, [row]);
+    await origin.history.writeRecords("sessions", device, []);
+    await transferPersonalIndex(origin.storage, reader.storage, identity);
+    expect(await reader.history.readRecords("sessions")).toEqual([]);
+    await seed(late);
+    expect(await reader.history.readRecords("sessions")).toEqual([]);
+  } finally {
+    await Promise.all(connections.map((connection) => connection.close()));
+  }
 });

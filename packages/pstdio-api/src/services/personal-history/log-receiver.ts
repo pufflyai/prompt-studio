@@ -1,9 +1,20 @@
 import type { SessionMessage } from "pstdio-api-contracts";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import type { DocumentRelay } from "pstdio-sync/relay";
+import type { StorageLogEntry } from "pstdio-sync-contracts";
 import { createLineReader } from "./log-entries";
 import type { SessionLogFiles } from "./log-files";
 import { sessionLogName } from "./log-publisher";
+import type { PersonalLogStreams } from "./log-stream";
+
+const personalLogLines = (entries: StorageLogEntry[]) =>
+  entries.flatMap((entry) => {
+    const value = entry.value as { lines?: unknown };
+    if (!value || !Array.isArray(value.lines) || value.lines.some((line) => typeof line !== "string"))
+      throw new Error("Invalid personal log lines");
+    return value.lines as string[];
+  });
+
 import { readLogUpdate } from "./log-updates";
 
 /**
@@ -13,18 +24,22 @@ import { readLogUpdate } from "./log-updates";
 export const createLogReceiver = (input: {
   files: SessionLogFiles;
   namespace: string;
+  streams?: PersonalLogStreams;
+  source?: (id: string) => Promise<{ writerId?: string; format?: "append-log-v1" }>;
   received: (sessionId: string, index: number, message: SessionMessage) => void;
 }) => {
   const { files, namespace } = input;
   const documentIds = new Map<string, string>();
   // Read positions and the heads last compared, kept in memory so a check costs only the heads that moved.
   const positions = new Map<string, number>();
-  const compared = new Map<string, number>();
+  const compared = new Map<string, string>();
   const position = async (sessionId: string) => {
-    let after = positions.get(sessionId);
+    const source = await input.source?.(sessionId);
+    const key = `${sessionId}:${source?.format ?? "legacy"}`;
+    let after = positions.get(key);
     if (after === undefined) {
-      after = (await files.readPosition(namespace, sessionId)).after;
-      positions.set(sessionId, after);
+      after = (await files.readPosition(namespace, sessionId, source?.format)).after;
+      positions.set(key, after);
     }
     return after;
   };
@@ -38,11 +53,7 @@ export const createLogReceiver = (input: {
     return id;
   };
 
-  // Saves one page of new entries and reports each completed message.
-  const savePage = async (sessionId: string, lines: string[], after: number) => {
-    if (!lines.length) return;
-    await files.savePage(namespace, sessionId, after, lines);
-    positions.set(sessionId, after);
+  const emitLines = (sessionId: string, lines: string[]) => {
     const read = readers.get(sessionId) ?? createLineReader();
     readers.set(sessionId, read);
     for (const line of lines) {
@@ -50,8 +61,15 @@ export const createLogReceiver = (input: {
       if (entry) input.received(sessionId, entry.index, entry.message);
     }
   };
+  // Saves one page of new entries and reports each completed message.
+  const savePage = async (sessionId: string, lines: string[], after: number) => {
+    if (!lines.length) return;
+    await files.savePage(namespace, sessionId, after, lines);
+    positions.set(`${sessionId}:legacy`, after);
+    emitLines(sessionId, lines);
+  };
 
-  const readOne = async (sessionId: string, space: SyncSpace, relay: (documentId: string) => DocumentRelay) => {
+  const readLegacy = async (sessionId: string, space: SyncSpace, relay: (documentId: string) => DocumentRelay) => {
     const id = await documentId(space, sessionId);
     const source = relay(id);
     let after = await position(sessionId);
@@ -67,11 +85,35 @@ export const createLogReceiver = (input: {
       if (!result.more) return;
     }
   };
+  const readOne = async (
+    sessionId: string,
+    space: SyncSpace,
+    relay: (id: string) => DocumentRelay,
+    format?: "append-log-v1",
+  ) => {
+    const known = await input.source?.(sessionId);
+    const source = { ...known, format: format ?? known?.format };
+    if (!source?.format) return readLegacy(sessionId, space, relay);
+    if (!source.writerId || !input.streams) throw new Error("Personal generic log source unavailable");
+    const stream = await input.streams.open(sessionId, source.writerId, space, relay);
+    let saved = await files.readGenericPosition(namespace, sessionId);
+    while (true) {
+      const page = await stream.sync.read({ after: saved.cursor || 0, limit: 1 });
+      const lines = personalLogLines(page.entries);
+      const head = page.more ? saved.head : (await stream.store.status()).head;
+      if (lines.length || page.cursor !== saved.cursor || head !== saved.head)
+        await files.saveGenericPage(namespace, sessionId, { lines, head, cursor: page.cursor });
+      saved = { ...saved, head, cursor: page.cursor };
+      positions.set(`${sessionId}:append-log-v1`, head);
+      emitLines(sessionId, lines);
+      if (!page.more) return;
+    }
+  };
 
   const reading = new Map<string, Promise<void>>();
-  const read = (id: string, space: SyncSpace, relay: (id: string) => DocumentRelay) => {
+  const read = (id: string, space: SyncSpace, relay: (id: string) => DocumentRelay, format?: "append-log-v1") => {
     const previous = reading.get(id) ?? Promise.resolve();
-    const work = previous.catch(() => {}).then(() => readOne(id, space, relay));
+    const work = previous.catch(() => {}).then(() => readOne(id, space, relay, format));
     reading.set(id, work);
     void work
       .finally(() => {
@@ -86,9 +128,11 @@ export const createLogReceiver = (input: {
       const found: string[] = [];
       for (const sessionId of sessionIds) {
         const head = heads.get(sessionId);
-        if (!head || compared.get(sessionId) === head) continue;
+        const source = await input.source?.(sessionId);
+        const proof = `${source?.format ?? "legacy"}:${head}`;
+        if (!head || compared.get(sessionId) === proof) continue;
         if ((await position(sessionId)) < head) found.push(sessionId);
-        else compared.set(sessionId, head);
+        else compared.set(sessionId, proof);
       }
       return found;
     },
@@ -99,8 +143,13 @@ export const createLogReceiver = (input: {
         if (documentIds.has(await documentId(space, sessionId))) found.push(sessionId);
       return found;
     },
-    async read(sessionIds: Iterable<string>, space: SyncSpace, relay: (documentId: string) => DocumentRelay) {
-      for (const sessionId of sessionIds) await read(sessionId, space, relay);
+    async read(
+      sessionIds: Iterable<string>,
+      space: SyncSpace,
+      relay: (documentId: string) => DocumentRelay,
+      format?: "append-log-v1",
+    ) {
+      for (const sessionId of sessionIds) await read(sessionId, space, relay, format);
     },
   };
 };

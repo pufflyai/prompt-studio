@@ -1,5 +1,11 @@
 import { expect } from "bun:test";
-import { liveProtocolHeader, liveProtocolVersion, syncRoute } from "pstdio-sync-contracts";
+import {
+  blobManifestBeginSchema,
+  liveProtocolHeader,
+  liveProtocolVersion,
+  syncBlobReferencesFeature,
+  syncRoute,
+} from "pstdio-sync-contracts";
 import { createPeerLive, type PeerLiveData } from "./packaged-live.fixture";
 import { createPackagedDocumentStore } from "./packaged-sync-document-store.fixture";
 import { createPackagedSyncIdentity } from "./packaged-sync-identity.fixture";
@@ -23,13 +29,25 @@ const privateSpaceOwner = (parts: string[]) => {
 
 // Blobs the compiled host uploads: latest-state chunks, large saves and files.
 const createBlobStore = () => {
-  const blobs = new Map<string, { parts: Map<number, Uint8Array>; complete: boolean }>();
+  const blobs = new Map<string, { parts: Map<number, Uint8Array>; complete: boolean; children?: string[] }>();
   const bytes = (blob: { parts: Map<number, Uint8Array> }) =>
     Buffer.concat([...blob.parts].sort(([a], [b]) => a - b).map(([, part]) => part));
   const json = (body: unknown) => Response.json(body);
+  const beginManifest = async (request: Request, id: string) => {
+    const input = blobManifestBeginSchema.safeParse(await request.json());
+    if (!input.success || input.data.children.some((child) => !blobs.get(`~${child}`)?.complete))
+      return Response.json({ error: "invalid-request" }, { status: 400 });
+    const previous = blobs.get(id);
+    if (previous && JSON.stringify(previous.children) !== JSON.stringify(input.data.children))
+      return Response.json({ error: "invalid-request" }, { status: 400 });
+    const blob = previous ?? { parts: new Map(), complete: false, children: input.data.children };
+    blobs.set(id, blob);
+    return json({ partSize: 1_048_576, completed: blob.complete, parts: [] });
+  };
   const request = async (request: Request, path: string, parts: string[]) => {
     const id = parts[5]!;
     let blob = blobs.get(id);
+    if (path.endsWith("/begin-manifest")) return beginManifest(request, id);
     if (path.endsWith("/begin")) {
       await validateLeafBegin(request);
       blob ??= { parts: new Map(), complete: false };
@@ -90,6 +108,7 @@ export const createPackagedSyncPeer = (
     return null;
   };
   const storedRequest = (request: Request, path: string, deviceId: string) => {
+    if (path.endsWith("/capabilities")) return json({ protocolVersion: 1, features: [syncBlobReferencesFeature] });
     const parts = path.split("/");
     const spaceOwner = privateSpaceOwner(parts);
     if (spaceOwner !== null && spaceOwner !== "owner") return new Response(null, { status: 403 });
