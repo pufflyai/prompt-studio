@@ -76,13 +76,17 @@ export const readNativeSubmissions = async (ctx: ExtensionContextBase, id: strin
   });
   const records = await ctx.storage.records.readMany(page.records.map((row) => row.recordId));
   return Promise.all(
-    records.map(async (record) => {
-      const value = record.value as unknown as NativeSubmission;
-      const body = JSON.parse(
-        new TextDecoder().decode(await ctx.storage.files.getBytes(value.fileId)),
-      ) as NativeSubmissionBody;
-      return { recordId: record.recordId, value, body };
-    }),
+    records
+      .filter((record) => record.exists && !record.deleted)
+      .map(async (record) => {
+        const value = record.value as unknown as NativeSubmission;
+        if (!value || typeof value.fileId !== "string" || value.sessionId !== id)
+          throw new Error("The saved native input needs recovery. Its record has been kept.");
+        const body = JSON.parse(
+          new TextDecoder().decode(await ctx.storage.files.getBytes(value.fileId)),
+        ) as NativeSubmissionBody;
+        return { recordId: record.recordId, value, body };
+      }),
   );
 };
 export const updateNativeSubmission = async (

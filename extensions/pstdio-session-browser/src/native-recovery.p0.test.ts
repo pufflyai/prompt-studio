@@ -56,3 +56,34 @@ test("a failed presentation handoff leaves native input available for a reconnec
   });
   expect(recovered).toEqual([draft]);
 });
+
+test("deleting a confirmed native input between index query and read leaves pending recovery usable", async () => {
+  const ctx = fixture();
+  const recordId = await saveNativeSubmission(ctx, "s", { draft, operation }, null, false);
+  expect((await readNativeSubmissions(ctx, "s"))[0]?.body.draft).toEqual(draft);
+  const readMany = ctx.storage.records.readMany.bind(ctx.storage.records);
+  let race = true;
+  ctx.storage.records.readMany = async (...args) => {
+    if (race) {
+      race = false;
+      await updateNativeSubmission(ctx, recordId, { hidden: true }, "s");
+    }
+    return readMany(...args);
+  };
+  expect(await readNativeSubmissions(ctx, "s")).toEqual([]);
+  expect(await readNativeSubmissions(ctx, "s")).toEqual([]);
+  const pending = await saveNativeSubmission(ctx, "other", { draft, operation }, null, true);
+  await updateNativeSubmission(ctx, pending, { hidden: true }, "other");
+  expect((await readNativeSubmissions(ctx, "other", true))[0]?.body.draft).toEqual(draft);
+});
+
+test("a corrupt live native input remains a visible error instead of disappearing", async () => {
+  const ctx = fixture();
+  const recordId = await saveNativeSubmission(ctx, "s", { draft, operation }, null, false);
+  await ctx.storage.records.commit({
+    operationId: ctx.storage.ids.create(),
+    edits: [{ recordId, replace: { sessionId: "s", state: "confirmed", createdAt: new Date().toISOString() } }],
+  });
+  await expect(readNativeSubmissions(ctx, "s")).rejects.toThrow();
+  expect((await ctx.storage.records.read(recordId)).exists).toBe(true);
+});
