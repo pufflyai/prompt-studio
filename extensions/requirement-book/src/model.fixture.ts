@@ -8,7 +8,6 @@ export const bookFixture = () => ({
     ref: `RB 1.A.${n}`,
     chapter: 1,
     level: 2,
-    scope: "Local workspaces",
     title: `Rule ${n}`,
     statement: "Preserve user work.",
     rationale: "",

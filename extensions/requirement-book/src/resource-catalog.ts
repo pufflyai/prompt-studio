@@ -25,7 +25,7 @@ export const resourceEntries = (data: ResourceData, type: BookResourceType) => {
     return data.rules.map((rule) => ({
       id: rule.ref,
       label: rule.title,
-      text: `${rule.ref} ${rule.statement} ${rule.scope}`,
+      text: `${rule.ref} ${rule.statement}`,
       chapter: rule.chapter,
     }));
   if (type === "chapter")

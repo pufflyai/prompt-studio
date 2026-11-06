@@ -1,16 +1,8 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { freshness } from "./checks";
 import { type Book, operationIssues } from "./model";
-import {
-  type Draft,
-  digest,
-  type Finding,
-  listRecords,
-  type Observation,
-  type ReadRecord,
-  type Suggestion,
-  suggestionDigest,
-} from "./records";
+import { readRecordGroups } from "./read-index";
+import { digest, suggestionDigest } from "./records";
 import { readRepository } from "./repository";
 
 export const readBook = async (
@@ -18,14 +10,8 @@ export const readBook = async (
   input: { workspaceId?: string; revision?: "working" | "accepted"; query?: string } = {},
 ) => {
   const snapshot = await readRepository(ctx, input.workspaceId, input.revision);
-  const [workspaces, allSuggestions, allObservations, allFindings, reads, drafts] = await Promise.all([
-    ctx.workspaces.list(),
-    listRecords<Suggestion>(ctx.storage, "suggestion"),
-    listRecords<Observation>(ctx.storage, "observation"),
-    listRecords<Finding>(ctx.storage, "finding"),
-    listRecords<ReadRecord>(ctx.storage, "read"),
-    listRecords<Draft>(ctx.storage, "draft"),
-  ]);
+  const [workspaces, records] = await Promise.all([ctx.workspaces.list(), readRecordGroups(ctx)]);
+  const { suggestions: allSuggestions, observations: allObservations, findings: allFindings, reads, drafts } = records;
   const suggestions = allSuggestions
     .filter((item) => item.workspaceId === snapshot.workspaceId)
     .map((item) => ({
@@ -55,7 +41,7 @@ export const readBook = async (
   const query = input.query?.trim().toLowerCase();
   const rules =
     snapshot.book?.rules.filter(
-      (rule) => !query || `${rule.ref} ${rule.title} ${rule.statement} ${rule.scope}`.toLowerCase().includes(query),
+      (rule) => !query || `${rule.ref} ${rule.title} ${rule.statement}`.toLowerCase().includes(query),
     ) ?? [];
   return {
     workspaceId: snapshot.workspaceId,

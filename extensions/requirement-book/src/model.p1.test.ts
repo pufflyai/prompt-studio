@@ -17,14 +17,14 @@ describe("repository requirement changes", () => {
     const [a, b, c] = book.rules;
     const added = { ...a, ref: "RB 1.A.4", title: "Fourth" };
     const operations = [
-      { type: "AMEND" as const, before: a, after: { ...a, scope: "New scope" } },
+      { type: "AMEND" as const, before: a, after: { ...a, statement: "New statement" } },
       { type: "ADD" as const, before: null, after: added },
       { type: "MOVE" as const, before: b, after: { ...b, chapter: 2 } },
       { type: "REMOVE" as const, before: c, after: null },
     ];
     const changed = applyOperations(book, operations);
     expect(changed.rules.map((x) => x.ref)).toEqual([a.ref, b.ref, added.ref]);
-    expect(changed.rules[0].scope).toBe("New scope");
+    expect(changed.rules[0].statement).toBe("New statement");
     expect(changed.rules[1].chapter).toBe(2);
     expect(changed.retired).toContain(c.ref);
     expect(book.rules).toEqual([a, b, c]);
@@ -33,7 +33,7 @@ describe("repository requirement changes", () => {
     const book = bookFixture();
     const before = book.rules[0];
     expect(() =>
-      applyOperations({ ...book, rules: [{ ...before, scope: "new" }, ...book.rules.slice(1)] }, [
+      applyOperations({ ...book, rules: [{ ...before, statement: "new" }, ...book.rules.slice(1)] }, [
         { type: "AMEND", before, after: { ...before, title: "Edit" } },
       ]),
     ).toThrow("changed");
@@ -85,4 +85,11 @@ test("extension rules use RBE and keep relationships and identities when moved w
   expect(() =>
     applyOperations(added, [{ type: "MOVE", before: extension, after: { ...extension, chapter: 1 } }]),
   ).toThrow("RB");
+});
+
+test("a rule needs its statement and identity without a separate scope entry", () => {
+  const book = bookFixture();
+  const rule = { ...book.rules[0], acceptance: [] };
+  delete (rule as { scope?: string }).scope;
+  expect(() => parseBook(serializeBook({ ...book, rules: [rule] }))).not.toThrow();
 });

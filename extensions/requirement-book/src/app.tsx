@@ -91,10 +91,7 @@ export function BookApp(props: Props) {
             editor={state.editor}
             observations={data.observations}
             onMapObservation={state.map}
-            onSelect={(ref) => {
-              state.setSelected(ref);
-              state.setEditor(null);
-            }}
+            onSelect={state.open}
             onOpen={state.open}
             onEdit={state.edit}
             onRemove={state.setRemoving}
@@ -111,7 +108,7 @@ export function BookApp(props: Props) {
             id: rule.ref,
             label: rule.title,
             secondaryLabel: rule.ref,
-            searchText: `${rule.statement} ${rule.scope}`,
+            searchText: rule.statement,
             onActivate: () => {
               state.setSearch(false);
               state.open(rule.ref);

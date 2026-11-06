@@ -2,6 +2,7 @@ import { Button, Field, HStack, Input, Stack, Text, Textarea } from "@chakra-ui/
 import { ScrollArea, SearchableMenu } from "@pstdio/ui";
 import { useState } from "react";
 import { findRule, type Rule } from "./book-model";
+import { acceptanceConditions } from "./forms";
 
 interface EditorProps {
   rule: Rule;
@@ -14,7 +15,6 @@ export function RuleEditor(props: EditorProps) {
   const [reason, setReason] = useState("");
   const [title, setTitle] = useState(rule.title);
   const [statement, setStatement] = useState(rule.statement);
-  const [scope, setScope] = useState(rule.scope);
   const [level, setLevel] = useState(rule.level);
   const [acceptance, setAcceptance] = useState(rule.acceptance[0]?.statement ?? "");
   const [tests, setTests] = useState(rule.acceptance[0]?.tests.join("\n") ?? "");
@@ -29,7 +29,11 @@ export function RuleEditor(props: EditorProps) {
     .map((path) => path.trim())
     .filter(Boolean);
   const valid =
-    reason.trim() && title.trim() && statement.trim() && scope.trim() && acceptance.trim() && unknown.length === 0;
+    reason.trim() &&
+    title.trim() &&
+    statement.trim() &&
+    (acceptance.trim() || testPaths.length === 0) &&
+    unknown.length === 0;
   return (
     <Stack
       as="form"
@@ -46,9 +50,8 @@ export function RuleEditor(props: EditorProps) {
               ...rule,
               title: title.trim(),
               statement: statement.trim(),
-              scope: scope.trim(),
               level,
-              acceptance: [{ statement: acceptance.trim(), tests: testPaths }, ...rule.acceptance.slice(1)],
+              acceptance: [...acceptanceConditions(acceptance, tests), ...rule.acceptance.slice(1)],
               related: references,
             },
             reason.trim(),
@@ -78,13 +81,10 @@ export function RuleEditor(props: EditorProps) {
             <Field.Label>Requirement</Field.Label>
             <Textarea value={statement} onChange={(event) => setStatement(event.target.value)} />
           </Field.Root>
-          <Field.Root required>
-            <Field.Label>Scope</Field.Label>
-            <Input value={scope} onChange={(event) => setScope(event.target.value)} />
-          </Field.Root>
           <Field.Root>
             <Field.Label>Level</Field.Label>
             <SearchableMenu
+              lazyMount
               trigger={
                 <Button size="xs" variant="outline">
                   L{level}
@@ -105,11 +105,11 @@ export function RuleEditor(props: EditorProps) {
             <Field.Label>Reason for this change</Field.Label>
             <Textarea value={reason} onChange={(event) => setReason(event.target.value)} />
           </Field.Root>
-          <Field.Root required>
+          <Field.Root>
             <Field.Label>Acceptance</Field.Label>
             <Textarea value={acceptance} onChange={(event) => setAcceptance(event.target.value)} />
           </Field.Root>
-          <Field.Root required>
+          <Field.Root>
             <Field.Label>Tests</Field.Label>
             <Textarea
               value={tests}

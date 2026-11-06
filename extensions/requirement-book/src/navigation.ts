@@ -10,9 +10,9 @@ import {
 } from "@pstdio/sdk/extensions";
 import { bookMenu } from "./book-menu";
 import { chapterReference } from "./model";
-import { readBook } from "./read";
+import { readIndex } from "./read-index";
 import { changed } from "./records";
-import { resourceTarget, ruleTarget } from "./resources";
+import { resourceTarget, ruleTarget } from "./targets";
 
 export const view = defineView({
   id: "book",
@@ -44,10 +44,12 @@ export const openCommand = defineCommand({
   params: { reference: params.text() },
   async run(ctx, input) {
     if (input.reference) {
-      const data = await readBook(ctx);
+      const data = await readIndex(ctx);
       const rule = data.rules.find((item) => item.ref === input.reference);
       if (!rule) throw new Error("Requirement not found.");
-      ctx.navigation.open(ruleTarget(rule.ref, rule.title, ctx.projectId));
+      ctx.navigation.open(
+        ruleTarget(rule.ref, rule.title, ctx.projectId, data.chapters.find((chapter) => chapter.id === rule.chapter)!),
+      );
     } else ctx.navigation.open({ kind: "page", page: page.ref });
     return { opened: true };
   },
@@ -59,9 +61,9 @@ export const navigationView = defineView({
     kind: "tree",
     refreshEvents: [changed],
     async body(ctx) {
-      let data: Awaited<ReturnType<typeof readBook>>;
+      let data: Awaited<ReturnType<typeof readIndex>>;
       try {
-        data = await readBook(ctx);
+        data = await readIndex(ctx);
       } catch {
         return [];
       }

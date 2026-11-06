@@ -22,14 +22,12 @@ function RuleVersion(props: VersionProps) {
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
             L{rule.level} · {rule.ref}
           </Text>
-          <MarkdownPreview key={rule.statement} defaultState={rule.statement} isEditable={false} fullWidth />
+          <MarkdownPreview defaultState={rule.statement} isEditable={false} fullWidth />
           <Text textStyle="paragraph/XS/regular">
             {rule.status} · {rule.section}
           </Text>
           {rule.rationale && <Text>{rule.rationale}</Text>}
-          <Text textStyle="label/S/medium">Scope</Text>
-          <Text textStyle="paragraph/S/regular">{rule.scope}</Text>
-          <Text textStyle="label/S/medium">Acceptance</Text>
+          {rule.acceptance.length > 0 && <Text textStyle="label/S/medium">Acceptance</Text>}
           {rule.acceptance.map((condition) => (
             <Stack key={condition.statement} gap="xs">
               <Text textStyle="paragraph/S/regular">{condition.statement}</Text>

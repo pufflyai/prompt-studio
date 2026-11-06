@@ -13,6 +13,7 @@ export function BookSelect(props: Props) {
   const options = field.options ?? [];
   return (
     <SearchableMenu
+      lazyMount
       trigger={
         <Button aria-label={field.label} variant="outline" justifyContent="space-between">
           {options.find((option) => option.value === String(value))?.label ?? "Choose…"}

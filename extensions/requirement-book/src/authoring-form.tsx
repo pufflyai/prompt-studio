@@ -1,6 +1,14 @@
 import { BookForm } from "./book-form";
 import type { BookClient } from "./client";
-import { chapterFields, findingFields, observationFields, ruleFields, splitLines, splitRefs } from "./forms";
+import {
+  acceptanceConditions,
+  chapterFields,
+  findingFields,
+  observationFields,
+  ruleFields,
+  splitLines,
+  splitRefs,
+} from "./forms";
 import { createRuleReference, ruleSchema } from "./model";
 import type { BookData } from "./read";
 import type { Draft } from "./records";
@@ -19,7 +27,7 @@ export function AuthoringForm(props: Props) {
   const { mode, chapter, data, client, promoteId, onClose, onSaved, onDraftSaved } = props;
   const draftChapter = mode === "rule" ? chapter : -["observation", "finding", "chapter"].indexOf(mode) - 1;
   const fields = {
-    rule: ruleFields(data.chapters.find((item) => item.id === chapter)?.title ?? "Project"),
+    rule: ruleFields(),
     observation: observationFields,
     finding: findingFields,
     chapter: chapterFields,
@@ -38,13 +46,12 @@ export function AuthoringForm(props: Props) {
         ref: createRuleReference(targetChapter),
         chapter,
         level: Number(values.level),
-        scope: String(values.scope),
         title: String(values.title),
         statement: String(values.statement),
         rationale: "",
         status: "proposed",
         section: Number(values.level) === 3 ? "Contracts" : "Behavior",
-        acceptance: [{ statement: String(values.acceptance), tests: splitLines(values.tests) }],
+        acceptance: acceptanceConditions(values.acceptance, values.tests),
         related: splitRefs(values.related),
         governing: [],
       });

@@ -11,7 +11,6 @@ export const ruleSchema = z
     chapter: z.number().int().positive(),
     title: z.string().trim().min(1),
     level: z.number().int().min(0).max(3),
-    scope: z.string().trim().min(1),
     statement: z.string().trim().min(1),
     rationale: z.string().default(""),
     status: z.enum(["accepted", "proposed"]),

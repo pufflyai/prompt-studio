@@ -13,6 +13,12 @@ import { resourceSpecs } from "./resource-catalog";
 export default { title: "Extensions/Requirement book", fullscreen: true };
 export function Documentation() {
   const book = bookFixture();
+  book.rules[0] = {
+    ...book.rules[0],
+    title:
+      "Preserve user work when a very long requirement title needs to fit within a narrow rule tree without widening the panel",
+    acceptance: [],
+  };
   const [selected, setSelected] = useState(book.rules[0].ref);
   const [editor, setEditor] = useState<Rule | null>(null);
   return (

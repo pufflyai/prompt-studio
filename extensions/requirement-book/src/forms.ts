@@ -1,7 +1,6 @@
-export const ruleFields = (title: string, test = "") => [
+export const ruleFields = (test = "") => [
   { id: "title", label: "Title", type: "text" as const, required: true },
   { id: "statement", label: "Requirement", type: "longtext" as const, required: true },
-  { id: "scope", label: "Scope", type: "text" as const, required: true, defaultValue: title },
   {
     id: "level",
     label: "Level",
@@ -10,7 +9,7 @@ export const ruleFields = (title: string, test = "") => [
     defaultValue: "2",
     options: [0, 1, 2, 3].map((level) => ({ value: String(level), label: `L${level}` })),
   },
-  { id: "acceptance", label: "Acceptance", type: "longtext" as const, required: true },
+  { id: "acceptance", label: "Acceptance", type: "longtext" as const },
   { id: "tests", label: "Test or result paths (one per line)", type: "longtext" as const, defaultValue: test },
   { id: "related", label: "Related requirements (comma-separated)", type: "text" as const },
   { id: "reason", label: "Reason for this change", type: "longtext" as const, required: true },
@@ -83,3 +82,10 @@ export const chapterFields = [
     ],
   },
 ];
+
+export const acceptanceConditions = (statement: unknown, tests: unknown) => {
+  const text = String(statement ?? "").trim();
+  const paths = splitLines(tests);
+  if (!text && paths.length) throw new Error("Describe the acceptance condition for the linked tests.");
+  return text ? [{ statement: text, tests: paths }] : [];
+};

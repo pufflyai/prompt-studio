@@ -63,6 +63,7 @@ export function BookObservation(props: ObservationProps) {
             </Button>
             <HStack gap="sm" flexWrap="wrap">
               <SearchableMenu
+                lazyMount
                 trigger={
                   <Button size="xs" variant="outline">
                     Map to requirement

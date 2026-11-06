@@ -4,7 +4,7 @@
 
 Open Requirement book in Prompt Studio LOCAL. Select WS-94 and Working branch to inspect this migration. Accepted intent reads the target branch; it will contain the book only after repository review and merge. Different Git revisions are review states, not independently editable authorities.
 
-Each rule has a stable reference, chapter, L0–L3 detail level, scope, statement, status, governing/related references and acceptance conditions. `accepted` describes governing intent in this revision; it does not mean implemented, released or verified. `proposed` retains unaccepted plans and source-derived candidates. Do not silently promote these while importing them.
+Each rule has a stable reference, chapter, L0–L3 detail level, statement, status, governing/related references and acceptance conditions. `accepted` describes governing intent in this revision; it does not mean implemented, released or verified. `proposed` retains unaccepted plans and source-derived candidates. Do not silently promote these while importing them.
 
 People and agents use the same public commands:
 

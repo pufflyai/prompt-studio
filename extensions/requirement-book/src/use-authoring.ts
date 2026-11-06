@@ -4,6 +4,7 @@ import type { FormMode } from "./authoring-form";
 import type { BookClient } from "./client";
 import { chapterReference, findRule, type Rule, removalOperations } from "./model";
 import { resourceSelection } from "./resource-catalog";
+import { ruleSelectionTarget } from "./targets";
 import { useBook } from "./use-book";
 export function useAuthoring(client: BookClient, props: WebviewHostProps) {
   const book = useBook(client);
@@ -45,13 +46,17 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
     if (!rule) return;
     setSelected(ref);
     setEditor(null);
-    run(() =>
-      client.navigation.open({
-        kind: "page",
-        page: { kind: "page", id: "requirement" },
-        resource: { type: "requirement", id: ref, label: rule.title },
-      }),
-    );
+    void client.navigation
+      .open(
+        ruleSelectionTarget(
+          rule,
+          data!.chapters.find((chapter) => chapter.id === rule.chapter)!,
+          props.projectId!,
+          findRule(data!.rules, resource),
+          props.resource,
+        ),
+      )
+      .catch((failure) => book.setError(String(failure)));
   };
   const edit = (rule: Rule) =>
     run(async () => {

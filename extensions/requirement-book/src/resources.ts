@@ -8,17 +8,11 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { bookMenu } from "./book-menu";
-import { readBook } from "./read";
+import { readIndex } from "./read-index";
 import { changed } from "./records";
-import { type BookResourceType, resourceEntries, resourceSpecs } from "./resource-catalog";
+import { resourceEntries, resourceSpecs } from "./resource-catalog";
 
-export const resourceTarget = (type: BookResourceType, id: string, label: string, projectId: string) => ({
-  kind: "page" as const,
-  page: { kind: "page" as const, id: type },
-  resource: { type, id, label, extensionId: "pstdio.requirement-book", projectId },
-});
-export const ruleTarget = (id: string, label: string, projectId: string) =>
-  resourceTarget("requirement", id, label, projectId);
+import { resourceTarget, ruleTarget } from "./targets";
 export const resourceContributions = resourceSpecs.map((spec) => {
   const resolve = defineCommand({
     id: spec.id === "requirement" ? "resolve" : `resolve.${spec.id}`,
@@ -26,7 +20,7 @@ export const resourceContributions = resourceSpecs.map((spec) => {
     cli: true,
     params: { reference: params.text({ resolvedFrom: "resource" }) },
     async run(ctx, input) {
-      const data = await readBook(ctx);
+      const data = await readIndex(ctx);
       const entry = resourceEntries(data, spec.id).find((item) => item.id === (input.reference ?? ctx.resource?.id));
       return entry ? resourceTarget(spec.id, entry.id, entry.label, ctx.projectId).resource : null;
     },
@@ -54,7 +48,7 @@ export const resourceContributions = resourceSpecs.map((spec) => {
     resourceKind: kind.ref,
     refreshEvents: [changed],
     async query(ctx, input) {
-      const data = await readBook(ctx);
+      const data = await readIndex(ctx);
       const query = input.query?.trim().toLowerCase() ?? "";
       return {
         items: resourceEntries(data, spec.id)
@@ -64,7 +58,15 @@ export const resourceContributions = resourceSpecs.map((spec) => {
             id: item.id,
             label: spec.id === "requirement" ? `${item.id} ${item.label}` : item.label,
             icon: spec.icon,
-            target: resourceTarget(spec.id, item.id, item.label, ctx.projectId),
+            target:
+              spec.id === "requirement"
+                ? ruleTarget(
+                    item.id,
+                    item.label,
+                    ctx.projectId,
+                    data.chapters.find((chapter) => chapter.id === item.chapter)!,
+                  )
+                : resourceTarget(spec.id, item.id, item.label, ctx.projectId),
           })),
       };
     },

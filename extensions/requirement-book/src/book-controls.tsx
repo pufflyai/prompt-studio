@@ -55,6 +55,7 @@ export function BookControls(props: Props) {
           </Button>
         )}
         <SearchableMenu
+          lazyMount
           trigger={
             <Button size="xs" variant="ghost" aria-label="Book revision">
               <GitBranch />
@@ -88,6 +89,7 @@ export function BookControls(props: Props) {
           emptyState="No revisions"
         />
         <SearchableMenu
+          lazyMount
           trigger={
             <Button size="xs" variant="ghost" aria-label="Book workspace">
               {data.workspaces.find((item) => item.id === data.workspaceId)?.label ?? "Workspace"}

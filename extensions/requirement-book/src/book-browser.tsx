@@ -2,6 +2,7 @@ import { IconButton as ActionIconButton, Badge, Button, HStack, Stack, Text } fr
 import { ResizableSplitLayout, ScrollArea, SearchableMenu, TreeList } from "@pstdio/ui";
 import { MarkdownPreview } from "@pstdio/ui/rich-text";
 import { Pencil, Trash2 } from "lucide-react";
+import { useRef } from "react";
 import { RuleEditor } from "./book-editor";
 import { type Chapter, chapterReference, findRule, type Rule } from "./book-model";
 import { RuleIdTag, RuleTag, TestTag } from "./book-resource-tag";
@@ -37,9 +38,9 @@ interface PreviewProps {
 function RulePreview(props: PreviewProps) {
   const { rule, rules, chapters, onMove, observations, onMapObservation, onOpen, onEdit, onRemove } = props;
   return (
-    <Stack h="full" minH="0" w="full" gap="lg" p="lg">
+    <Stack h="full" minH="0" minW="0" w="full" gap="lg" p="lg">
       <HStack justify="space-between" align="start" gap="md" flexShrink="0">
-        <Stack gap="xs">
+        <Stack gap="xs" minW="0" flex="1">
           <HStack>
             <RuleIdTag reference={rule.ref} />
             <Badge variant="plain">L{rule.level}</Badge>
@@ -49,8 +50,9 @@ function RulePreview(props: PreviewProps) {
             {rule.title}
           </Text>
         </Stack>
-        <HStack gap="2xs">
+        <HStack gap="2xs" flexShrink="0">
           <SearchableMenu
+            lazyMount
             trigger={
               <Button size="xs" variant="ghost">
                 Move
@@ -85,7 +87,7 @@ function RulePreview(props: PreviewProps) {
       </HStack>
       <ScrollArea flex="1" minH="0">
         <Stack gap="lg">
-          <MarkdownPreview key={rule.statement} defaultState={rule.statement} isEditable={false} fullWidth />
+          <MarkdownPreview defaultState={rule.statement} isEditable={false} fullWidth />
           {rule.rationale && <Text>{rule.rationale}</Text>}
           {rule.governing.length > 0 && (
             <Stack gap="sm">
@@ -97,27 +99,23 @@ function RulePreview(props: PreviewProps) {
               </HStack>
             </Stack>
           )}
-          <Stack gap="sm">
-            <Text as="h3" textStyle="label/M/medium">
-              Scope
-            </Text>
-            <Text textStyle="paragraph/S/regular">{rule.scope}</Text>
-          </Stack>
-          <Stack gap="sm">
-            <Text as="h3" textStyle="label/M/medium">
-              Acceptance
-            </Text>
-            {rule.acceptance.map((condition) => (
-              <Stack key={condition.statement} gap="sm">
-                <Text textStyle="paragraph/S/regular">{condition.statement}</Text>
-                <HStack flexWrap="wrap" gap="xs">
-                  {condition.tests.map((path) => (
-                    <TestTag key={path} path={path} />
-                  ))}
-                </HStack>
-              </Stack>
-            ))}
-          </Stack>
+          {rule.acceptance.length > 0 && (
+            <Stack gap="sm">
+              <Text as="h3" textStyle="label/M/medium">
+                Acceptance
+              </Text>
+              {rule.acceptance.map((condition) => (
+                <Stack key={condition.statement} gap="sm">
+                  <Text textStyle="paragraph/S/regular">{condition.statement}</Text>
+                  <HStack flexWrap="wrap" gap="xs">
+                    {condition.tests.map((path) => (
+                      <TestTag key={path} path={path} />
+                    ))}
+                  </HStack>
+                </Stack>
+              ))}
+            </Stack>
+          )}
           {rule.related.length > 0 && (
             <Stack gap="sm">
               <Text as="h3" textStyle="label/M/medium">
@@ -154,6 +152,7 @@ function RulePreview(props: PreviewProps) {
                       <RuleTag key={ref} reference={ref} onOpen={onOpen} />
                     ))}
                   <SearchableMenu
+                    lazyMount
                     trigger={
                       <Button size="xs" variant="outline">
                         Map to another requirement
@@ -198,6 +197,7 @@ export function BookBrowser(props: BrowserProps) {
     onSave,
     onCancel,
   } = props;
+  const treeScroll = useRef<HTMLDivElement>(null);
   const results = rules.filter((rule) => rule.chapter === chapter);
   const rule = findRule(rules, selected);
   return (
@@ -209,12 +209,14 @@ export function BookBrowser(props: BrowserProps) {
       collapsible={false}
       separator="line"
       resizablePanel={
-        <Stack h="full" minH="0" gap="xs" py="xs" px="0">
+        <Stack h="full" minH="0" minW="0" overflow="hidden" gap="xs" py="xs" px="0">
           <HStack justify="space-between" px="sm">
             <Text textStyle="label/S/medium">Rules</Text>
           </HStack>
-          <ScrollArea flex="1" minH="0">
+          <ScrollArea flex="1" minH="0" minW="0" viewportRef={treeScroll} contentProps={{ minW: "0", w: "full" }}>
             <TreeList
+              virtualize
+              scrollRef={treeScroll}
               sections={[...new Set(["Behavior", "Contracts", ...results.map((rule) => rule.section)])]
                 .map((section) => ({
                   id: section,
@@ -224,7 +226,11 @@ export function BookBrowser(props: BrowserProps) {
                     .filter((item) => item.section === section)
                     .map((item) => ({
                       id: item.ref,
-                      label: item.title,
+                      label: (
+                        <Text minW="0" maxW="full" truncate title={item.title}>
+                          {item.title}
+                        </Text>
+                      ),
                       startContent: <RuleIdTag reference={item.ref} />,
                       rowVariant: "file" as const,
                       isNavigable: true,
