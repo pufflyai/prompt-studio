@@ -66,8 +66,10 @@ const renderDashboard = async () => {
     return;
   }
 
-  const storage = await createDesktopWorkbenchStorage(window.promptStudioDesktop);
-  const projectTabs = await createDesktopProjectTabs(window.promptStudioDesktop);
+  const [storage, projectTabs] = await Promise.all([
+    createDesktopWorkbenchStorage(window.promptStudioDesktop),
+    createDesktopProjectTabs(window.promptStudioDesktop),
+  ]);
   const desktopLifecycle = resolveDesktopLifecycleBridge(window.promptStudioDesktop);
   const dashboardWorkbench = createDashboardWorkbench({
     storage,
