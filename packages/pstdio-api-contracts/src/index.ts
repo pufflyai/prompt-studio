@@ -36,6 +36,7 @@ export { createFileRendererLoadKey, createNativeDocumentKey, type NativeDocument
 export * from "./notifications/types";
 export * from "./pagination";
 export * from "./project-folder";
+export * from "./project-folder-recovery";
 export * from "./project-recovery";
 export * from "./projects";
 export * from "./queued-follow-ups";

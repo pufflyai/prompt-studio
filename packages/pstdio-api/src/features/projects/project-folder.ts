@@ -54,12 +54,18 @@ const extensionSetupError = async (setup?: () => Promise<ExtensionSetupWarning[]
 
 type ProjectWorkspace = NonNullable<Awaited<ReturnType<ProjectsRouteDeps["workspaceService"]["getDefault"]>>>;
 
+interface WorkspaceSetupOptions {
+  /** The folder came from a recovered copy: its own `.pstdio/extensions` stay disabled until a person enables them. */
+  restored?: boolean;
+}
+
 const initializeLocalProjectWorkspace = async (
   deps: ProjectsRouteDeps,
   projectId: string,
   workspace: ProjectWorkspace,
   rootPath: string,
   setupExtensions?: () => Promise<ExtensionSetupWarning[]>,
+  options: WorkspaceSetupOptions = {},
 ) => {
   await deps.workspaceService.setInitializing(workspace.id, true);
   const context = { project_id: projectId, workspace_id: workspace.id };
@@ -74,7 +80,7 @@ const initializeLocalProjectWorkspace = async (
     const defaults = await traceSetupPhase("project.defaults", context, () =>
       resolveDefaultExtensionsConfig(process.env),
     );
-    await traceSetupPhase("project.repo_extensions", context, () =>
+    const installed = await traceSetupPhase("project.repo_extensions", context, () =>
       installRepoDefaultExtensions({
         defaultExtensions: defaults.defaultExtensions,
         repoPath: rootPath,
@@ -87,6 +93,8 @@ const initializeLocalProjectWorkspace = async (
         installedExtensionSourcesService: deps.installedExtensionSourcesService,
         projectId,
         repoPath: rootPath,
+        // Only defaults this host just installed are trusted in a restored folder.
+        enable: options.restored ? (name) => installed.materialized.includes(name) : undefined,
       }),
     );
     deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
@@ -111,6 +119,7 @@ export const initializeProjectWorkspace = async (
   projectId: string,
   initial: CreateProjectInput["initial_workspace"],
   setupExtensions?: () => Promise<ExtensionSetupWarning[]>,
+  options: WorkspaceSetupOptions = {},
 ) => {
   let existing = await deps.workspaceService.getDefault(projectId);
   const remoteSetupError = initial.provider_id !== rootProviderId ? await extensionSetupError(setupExtensions) : null;
@@ -151,5 +160,6 @@ export const initializeProjectWorkspace = async (
     workspace,
     workspace.root_path,
     initial.provider_id === rootProviderId ? setupExtensions : undefined,
+    options,
   );
 };
