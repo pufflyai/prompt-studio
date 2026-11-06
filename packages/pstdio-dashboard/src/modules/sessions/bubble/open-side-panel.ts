@@ -17,10 +17,11 @@ export const openDashboardSidePanel = async (workbench: WorkbenchModuleContext) 
   await projectModeStarted(workbench);
   const viewId = contributionRefId(sessionBrowser.views.conversation);
   const active = workbench.layout.getActivePanel("side");
-  const session =
-    active?.viewId === viewId
-      ? active
-      : workbench.layout.listPanelInstances("side").find((panel) => panel.viewId === viewId);
+  // Resource replacement can clear the instance view override without changing its
+  // registered renderer. Both identify the same provider-owned conversation.
+  const isSession = (panel: NonNullable<typeof active>) =>
+    (panel.viewId ?? workbench.layout.getPanel(panel.panelId)?.rendererId) === viewId;
+  const session = active && isSession(active) ? active : workbench.layout.listPanelInstances("side").find(isSession);
   if (session) {
     workbench.layout.activatePanel(session.instanceId);
   } else {

@@ -160,3 +160,52 @@ test("a Side Panel requested while the project loads opens its session once the 
     expect.objectContaining({ viewId: contributionRefId(sessionBrowser.views.conversation) }),
   ]);
 });
+
+test("reopens the provider session after resource navigation clears an instance view override", async () => {
+  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionsModule());
+  registerSessionProvider(workbench);
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  openWorkspacesPage(workbench);
+  await openDashboardSidePanel(workbench);
+  const draft = workbench.layout.getActivePanel("side")!;
+  const resource = createDashboardResource(
+    "session",
+    "session-1",
+    "Retained conversation",
+    "MessageCircle",
+    "project-1",
+  );
+  // Public resource replacement removes the instance override; its registered renderer remains canonical.
+  workbench.layout.updatePanel(draft.instanceId, { resource });
+  const session = workbench.layout.getActivePanel("side")!;
+  expect(session.viewId).toBeUndefined();
+  expect(workbench.layout.getPanel(session.panelId)?.rendererId).toBe(
+    contributionRefId(sessionBrowser.views.conversation),
+  );
+  const location = workbench.pages.store.getState().location;
+  workbench.sidePanel.setMode("closed");
+  await openDashboardSidePanel(workbench);
+  expect(workbench.layout.listPanelInstances("side")).toEqual([session]);
+  expect(workbench.layout.getActivePanel("side")?.resource).toEqual(resource);
+  expect(workbench.pages.store.getState().location).toEqual(location);
+});
+
+test("an explicit reader override does not reuse its registered session renderer", async () => {
+  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionsModule());
+  registerSessionProvider(workbench);
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  openWorkspacesPage(workbench);
+  await openDashboardSidePanel(workbench);
+  const session = workbench.layout.getActivePanel("side")!;
+  workbench.views.registerView({ id: "reader", title: "Reader", body: { kind: "react", render: () => null } });
+  workbench.layout.updatePanel(session.instanceId, { viewId: "reader" });
+  expect(workbench.layout.getActivePanel("side")?.viewId).toBe("reader");
+  workbench.sidePanel.setMode("closed");
+  await openDashboardSidePanel(workbench);
+  expect(workbench.layout.listPanelInstances("side")).toHaveLength(2);
+  expect(workbench.layout.getActivePanel("side")?.instanceId).not.toBe(session.instanceId);
+});
