@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { sessionBrowser } from "../refs";
-import { archive, create, open, remove, switchConversation } from "./navigation";
+import { archive, create, open, remove, resolve, switchConversation } from "./navigation";
 
 test("new drafts keep explicit and contextual workspace, harness and device identity", async () => {
   const opened: unknown[] = [];
@@ -123,4 +123,32 @@ test("typed Switch refuses foreign kind, owner and project references before rea
     session: { type: "session", extensionId: "pstdio", projectId: ctx.projectId, id: "s" },
   });
   expect(reads).toBe(1);
+});
+
+test("public resolution preserves canonical identity and omits explicit foreign references before lookup", async () => {
+  const reads: string[] = [];
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      sessions: {
+        get: async (id) => {
+          reads.push(id);
+          return { id, title: "Saved", status: "completed" } as never;
+        },
+      },
+    },
+  });
+  const foreign = [
+    { type: "session", id: "s", extensionId: "foreign.owner" },
+    { type: "session", id: "s", projectId: "foreign-project" },
+  ];
+  expect(await resolve.run(ctx, { resources: foreign })).toEqual([]);
+  expect(reads).toEqual([]);
+  const canonical = { type: "session", id: "s", extensionId: "pstdio", projectId: ctx.projectId };
+  expect(await resolve.run(ctx, { resources: [canonical] })).toMatchObject([{ resource: canonical }]);
+  expect(await resolve.run(ctx, { resources: [{ type: "session", id: "s" }] })).toMatchObject([
+    { resource: canonical },
+  ]);
+  expect(reads).toEqual(["s", "s"]);
 });

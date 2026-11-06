@@ -9,7 +9,7 @@ import {
   workbenchResourceKinds,
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "../refs";
-import { draftResource, sessionResource, sessionTarget } from "./resource";
+import { draftResource, isProjectSessionResource, sessionResource, sessionTarget } from "./resource";
 
 export const create = defineCommand({
   id: "new",
@@ -161,7 +161,7 @@ export const resolve = defineCommand({
     const refs = input.resources ?? (ctx.resource ? [ctx.resource] : []);
     const result = await Promise.all(
       refs.map(async (ref) => {
-        if (ref.type !== "session") return null;
+        if (!isProjectSessionResource(ref, ctx.projectId)) return null;
         const session = await ctx.sessions.get(ref.id);
         if (!session || session.archived) return null;
         const resource = { ...ref, ...sessionResource(session, ctx.projectId) };
@@ -219,11 +219,7 @@ export const switchConversation = defineCommand({
   },
   run(ctx, input) {
     const selected = input.session;
-    if (
-      selected.type !== "session" ||
-      (selected.extensionId && selected.extensionId !== "pstdio") ||
-      (selected.projectId && selected.projectId !== ctx.projectId)
-    )
+    if (!isProjectSessionResource(selected, ctx.projectId))
       throw new Error("Choose a saved session from this project.");
     return open.run(ctx, { sessionId: selected.id, replace: true });
   },

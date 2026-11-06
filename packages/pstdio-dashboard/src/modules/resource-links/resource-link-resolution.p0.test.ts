@@ -49,3 +49,30 @@ test("omits malformed owner presentation fields", async () => {
   });
   expect(result).toEqual([]);
 });
+
+test("canonical sessions resolve through their installed public provider without a second host browse list", async () => {
+  const { contributionRefId, sessionBrowser } = await import("@pstdio/sdk/extensions");
+  const ctx = createWorkbench();
+  ctx.pageLocations.setProject("project");
+  const ref = { type: "session", id: "s", extensionId: "pstdio", projectId: "project" };
+  const target = { kind: "page" as const, page: sessionBrowser.pages.session, resource: ref };
+  const calls: unknown[] = [];
+  const provider = ctx.commands.registerCommand(
+    { id: contributionRefId(sessionBrowser.commands.resolve), label: "Resolve session" },
+    {
+      execute: (args, context) => {
+        calls.push({ args, context });
+        return [{ resource: ref, target }];
+      },
+    },
+  );
+  const result = await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [ref]);
+  expect(result).toMatchObject([{ resource: ref, target }]);
+  expect(calls).toMatchObject([{ args: { resources: [ref] }, context: { projectId: "project" } }]);
+  provider.dispose();
+  expect(await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [ref])).toEqual([]);
+  expect(
+    await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [{ ...ref, projectId: "foreign" }]),
+  ).toEqual([]);
+  expect(calls).toHaveLength(1);
+});

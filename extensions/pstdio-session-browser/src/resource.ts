@@ -33,3 +33,8 @@ export const draftResource = (
   },
 });
 export const sessionId = (resource?: ResourceRef) => (resource?.type === "session" ? resource.id : undefined);
+
+export const isProjectSessionResource = (resource: ResourceRef, projectId: string) =>
+  resource.type === "session" &&
+  (!resource.extensionId || resource.extensionId === "pstdio") &&
+  (!resource.projectId || resource.projectId === projectId);
