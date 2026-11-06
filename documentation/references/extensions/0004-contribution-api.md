@@ -22,7 +22,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `statuses`                                        | Deprecated workflow providers; use query-owned enums and an extension settings panel.                     |
 | `settings`, `settingsSections` | Extension setting definitions and grouped settings sections. |
 | `templateTypes` | Commands and metadata for extension-owned template editing. |
-| `commandPaletteResources` | Searchable resources with explicit activation targets. |
+| `commandPaletteResources` | Searchable resources with explicit activation targets and optional accessible status `indicator` (`icon`, `color`, `label`). Declare `resourceKind` to supply matching resource-parameter pickers. |
 | `translations`, `defaultLocale` | Localized contribution labels and the fallback locale. |
 | `settingsPanels`                                  | References that place views in host-owned settings slots.                                          |
 | `modes`                                           | Typed Workbench mode contributions.                                                                |
