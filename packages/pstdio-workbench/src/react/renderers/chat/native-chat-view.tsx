@@ -1,6 +1,7 @@
 import type { ChatAttachment, ChatQueuedRequest } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
 import { type ComponentType, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { visibleChatDraftAttachments } from "../../../extensions/contributions/chat-pending-submission";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { submitWithNativeChatAccount } from "./native-chat-account-submit";
@@ -38,7 +39,7 @@ const PassthroughChatHost = ({ children }: NativeChatHostProps) => children({});
 
 export const NativeChatView = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
-  const { conversation, draft, loading, initializing, sending, error } = useSyncExternalStore(
+  const { conversation, draft, messages, pending, loading, initializing, sending, error } = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
     session.getSnapshot,
@@ -59,7 +60,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
   const edit = selected ? edits[selected.id] : undefined;
   const activeDraft = edit ? { ...draft, ...edit } : draft;
   const values = activeDraft.values;
-  const attachments = activeDraft.attachments;
+  const attachments = visibleChatDraftAttachments(activeDraft.attachments, selected ? undefined : pending);
   const changeActive = (update: Partial<typeof activeDraft>) => {
     if (selected) setEdits((current) => ({ ...current, [selected.id]: { values, attachments, ...update } }));
     else session.changeDraft(update);
@@ -120,7 +121,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
         <ChatPanel
           conversationKey={conversationKey}
           linkHandler={host.linkHandler ?? props.linkHandler}
-          messages={host.messages ?? conversation.messages ?? []}
+          messages={host.messages ?? messages}
           onForkMessage={
             conversation.fork ? (messageId) => run({ type: "fork", messageId }).then(() => undefined) : undefined
           }

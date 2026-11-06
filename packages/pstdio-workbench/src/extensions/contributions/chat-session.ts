@@ -1,5 +1,5 @@
 import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
-import { applySessionMessagePatch } from "@pstdio/ui/chat-ui";
+import { applySessionMessagePatch, type SessionMessage } from "@pstdio/ui/chat-ui";
 import {
   chatDraftSchema,
   chatRendererActionResultSchema,
@@ -8,7 +8,9 @@ import {
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
 import { hydrateChatDraft, recoverChatDraft, restoreChatDraft } from "./chat-draft-recovery";
+import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./chat-pending-submission";
 import { createChatSnapshot } from "./chat-snapshot";
+import { createChatSubmissionRunner } from "./chat-submission";
 
 export interface ChatSessionInput {
   initial?: ChatRendererSnapshot;
@@ -28,6 +30,8 @@ const initialChatState = (initial?: ChatRendererSnapshot) => ({
     ...(initial?.decisions && !initial.decision ? { decision: initial.decisions[0] ?? null } : {}),
   },
   draft: { text: "", attachments: [], values: { ...initial?.values } } as ChatDraft,
+  messages: (initial?.messages ?? []) as SessionMessage[],
+  pending: undefined as ChatPendingSubmission[] | undefined,
   loading: false,
   initializing: true,
   sending: false,
@@ -41,12 +45,33 @@ const assertChatActionAvailable = (conversation: ChatRendererSnapshot, action: C
     throw new Error("This queue is read-only. Refresh it before editing.");
 };
 
+const watchChatSession = async (
+  watch: NonNullable<ChatSessionInput["watch"]>,
+  signal: AbortSignal,
+  accept: (event: unknown) => void,
+  fail: (error: unknown) => void,
+) => {
+  try {
+    const stream = watch(signal);
+    for await (const event of stream) {
+      if (signal.aborted) break;
+      accept(event);
+    }
+    await stream.result;
+  } catch (error) {
+    fail(error);
+  }
+};
+
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
   const listeners = new Set<() => void>();
+  const present = createChatSubmissionPresentation();
   const publish = (update: Partial<typeof state>) => {
-    state = { ...state, ...update };
+    const next = { ...state, ...update };
+    const unchanged = next.conversation.messages === state.conversation.messages && next.pending === state.pending;
+    state = unchanged ? next : { ...next, ...present(next.conversation.messages ?? [], next.pending) };
     for (const listener of listeners) listener();
   };
   const fail = (error: unknown) => publish({ error: error instanceof Error ? error.message : String(error) });
@@ -65,7 +90,6 @@ export const createChatSession = (input: ChatSessionInput) => {
   let save = Promise.resolve();
   let persistedChanges = 0;
   let persistenceError: string | undefined;
-  let submission: Promise<void> | undefined;
   let recoverableDraft: ChatDraft | undefined;
   const merge = (
     incoming: ChatRendererSnapshot,
@@ -177,18 +201,16 @@ export const createChatSession = (input: ChatSessionInput) => {
       if (active()) publish({ initializing: false });
     });
     if (input.watch)
-      void (async () => {
-        try {
-          const stream = input.watch!(signal);
-          for await (const event of stream) {
-            if (!active()) break;
-            accept(event);
-          }
-          await stream.result;
-        } catch (error) {
+      void watchChatSession(
+        input.watch,
+        signal,
+        (event) => {
+          if (active()) accept(event);
+        },
+        (error) => {
           if (active()) fail(error);
-        }
-      })();
+        },
+      );
     saveDraft();
   };
   const execute = async (action: ChatRendererAction, handler = input.action) => {
@@ -202,29 +224,18 @@ export const createChatSession = (input: ChatSessionInput) => {
     if (result.draft) changeDraft(localEdits === changed ? result.draft : hydrateChatDraft(state.draft, result.draft));
     return result;
   };
+  const submit = createChatSubmissionRunner({
+    read: () => ({ ...state, edits: localEdits }),
+    execute,
+    publish: (update) => publish({ ...update, ...(update.sending ? { error: persistenceError } : {}) }),
+    changeDraft,
+    fail,
+    markRecoverable: () => {
+      recoverableDraft = state.draft;
+    },
+  });
   const run = (action: ChatRendererAction, handler = input.action) => {
-    if (action.type === "submit") {
-      if (submission) return submission;
-      const submitted = localEdits;
-      publish({ sending: true, error: persistenceError });
-      submission = execute(action, handler)
-        .then(() => {
-          // A newer draft typed during a slow send must not be cleared by the older request.
-          if (!action.questionResponse && localEdits === submitted) {
-            changeDraft({ text: "", attachments: [] });
-            recoverableDraft = state.draft;
-          }
-        })
-        .catch((error) => {
-          fail(error);
-          throw error;
-        })
-        .finally(() => {
-          submission = undefined;
-          publish({ sending: false });
-        });
-      return submission;
-    }
+    if (action.type === "submit") return submit(action, handler);
     return execute(action, handler).catch((error) => {
       fail(error);
       throw error;

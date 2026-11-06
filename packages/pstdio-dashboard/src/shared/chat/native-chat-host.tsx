@@ -16,10 +16,12 @@ export const createDashboardChatHost = (workbench: WorkbenchCore, projectId?: st
     children,
     linkHandler,
   }: NativeChatHostProps) {
-    const { conversation } = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
-    const messages = useApiFileParts(conversation.messages ?? [], (url) =>
-      nativeChatFileAllowed(url, projectId, extensionId),
+    const { conversation, messages: presented } = useSyncExternalStore(
+      session.subscribe,
+      session.getSnapshot,
+      session.getSnapshot,
     );
+    const messages = useApiFileParts(presented, (url) => nativeChatFileAllowed(url, projectId, extensionId));
     const attachmentUrls = useApiFileUrls([
       ...new Set(
         attachments.flatMap(({ url }) => (url && nativeChatFileAllowed(url, projectId, extensionId) ? [url] : [])),

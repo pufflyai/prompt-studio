@@ -198,3 +198,15 @@ containing this contract and a compatible host; see [API versioning](0014-api-ve
 The independent fixture is `packages/e2e/src/fixtures/native-chat/extension.ts`.
 
 Native conversation owners survive unrelated tool installation or metadata refresh in the same project. The host retains an owner only while its extension and chat view declarations are unchanged. Changing or removing that declaration, switching projects, or disposing the host releases its subscriptions; re-enabling creates a new owner and loads the durable draft. This preserves edits made before asynchronous draft hydration finishes.
+
+
+An ordinary message handoff has transient presentation owned by the native chat
+resource, including its submitted files. It survives page/Side remounts while the
+action is pending, without adding rows to canonical transcript indexes. A matching
+new canonical echo replaces it once. Acceptance releases the request lock while
+accepted pending rows remain until their separate echoes. Consecutive sends keep
+separate identities even for identical text and files. An action result with an explicit
+`sentTag` (including null), or a terminal message snapshot, ends a no-message
+operation without waiting for a transcript echo. Rejection restores the submitted draft or retains it beside newer
+unsent work. Questions keep their separate draft semantics, and a streaming
+conversation's queued follow-up remains queue-owned.
