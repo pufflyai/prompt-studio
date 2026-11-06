@@ -127,6 +127,9 @@ export const SharedTextEditors = () => {
             <Text textStyle="label/S/regular" color="fg.muted">
               Markdown
             </Text>
+            <Box h="lg" bg="bg">
+              <LazyMarkdownEditor defaultState="" collaboration={{ document: preview }} isEditable={editable} />
+            </Box>
             {message && (
               <EditorNotice
                 key={mode}
@@ -136,23 +139,11 @@ export const SharedTextEditors = () => {
                 discard={() => setMode("Read only")}
               />
             )}
-            <Box h="lg" bg="bg">
-              <LazyMarkdownEditor defaultState="" collaboration={{ document: preview }} isEditable={editable} />
-            </Box>
           </Stack>
           <Stack flex="1" minW="0" gap="xs">
             <Text textStyle="label/S/regular" color="fg.muted">
               Installed text editor
             </Text>
-            {message && (
-              <EditorNotice
-                key={mode}
-                mode={mode}
-                message={message}
-                retry={retry}
-                discard={() => setMode("Read only")}
-              />
-            )}
             <Textarea
               aria-label="Installed editor source"
               value={recovering ? draft.getText("content").toString() : content}
@@ -167,6 +158,15 @@ export const SharedTextEditors = () => {
               textStyle="mono/M"
               h="lg"
             />
+            {message && (
+              <EditorNotice
+                key={mode}
+                mode={mode}
+                message={message}
+                retry={retry}
+                discard={() => setMode("Read only")}
+              />
+            )}
           </Stack>
         </Flex>
       )}
@@ -178,7 +178,7 @@ const EditorNotice = (props: { mode: Mode; message: string; retry: () => void; d
   const [discardError, setDiscardError] = useState(false);
   const recovering = mode === "Draft recovery" || mode === "Draft waiting";
   return (
-    <Stack gap="xs" bg="bg.muted" px="sm" py="xs">
+    <Stack gap="xs" layerStyle="documentNotice">
       <Flex gap="sm" align="center" justify="space-between">
         <Flex align="center" gap="xs">
           {mode === "Restoring editing" && <Spinner size="xs" color="fg.muted" aria-label={mode} />}

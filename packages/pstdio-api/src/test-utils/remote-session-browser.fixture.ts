@@ -255,6 +255,30 @@ const createSession = async (title: string) => {
 const session = await createSession("Remote conversation");
 const unrelated = await createSession("Other running session");
 await mirror();
+const workspacesSource = JSON.parse(process.env.E2E_EXTENSION_SOURCES ?? "{}")["pstdio-workspaces"];
+// API cleanup tests need only the server fixture; browser callers supply the installed tool source.
+if (workspacesSource) {
+  const workspacesManifest = await Bun.file(join(workspacesSource, "package.json")).json();
+  const installedWorkspaces = await source.app.request(
+    `/v1/projects/${project.id}/extensions/installed/pstdio-workspaces/enable`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        displayName: "Workspaces",
+        extensionId: "pstdio.pstdio-workspaces",
+        manifest: { id: "pstdio.pstdio-workspaces", name: "pstdio-workspaces" },
+        name: "pstdio-workspaces",
+        sourceHash: crypto.randomUUID(),
+        sourceKind: "local_path",
+        sourcePath: workspacesSource,
+        sourceRef: null,
+        version: workspacesManifest.version,
+      }),
+    },
+  );
+  if (!installedWorkspaces.ok) throw new Error(await installedWorkspaces.text());
+}
 const snapshot = async () => {
   await syncing;
   return {
@@ -283,8 +307,6 @@ const admin = async (request: Request) => {
     releasePresence = undefined;
     return Response.json({ ok: true });
   }
-  if (input.action === "queue-unavailable") queueUnavailable = true;
-  if (input.action === "queue-available") queueUnavailable = false;
   const entry = target.deps.sessionService.store.get(session.id);
   if (input.action === "fail-mirror") {
     await mirror(true);
@@ -301,6 +323,8 @@ const admin = async (request: Request) => {
       throw new Error("Injected source close failure");
     };
   }
+  if (input.action === "queue-unavailable") queueUnavailable = true;
+  if (input.action === "queue-available") queueUnavailable = false;
   if (input.action === "offline") online = false;
   if (input.action === "online") online = true;
   if (input.action === "question") {

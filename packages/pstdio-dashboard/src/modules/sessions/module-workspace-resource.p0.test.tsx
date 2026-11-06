@@ -5,6 +5,7 @@ import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
@@ -13,6 +14,7 @@ import { registerSessionProvider } from "./session-provider.fixture";
 test("workspace navigation queries the installed provider for each workspace and opens sessions in shared Side", async () => {
   const workbench = createWorkbench();
   workbench.registerModule(createSidenavModule());
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   const queries: unknown[] = [];

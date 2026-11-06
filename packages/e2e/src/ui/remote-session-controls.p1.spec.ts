@@ -120,7 +120,7 @@ test("an online owner's queue recovers by itself after its automatic refresh als
   await expect(draft).toHaveText("Keep queue recovery draft");
 });
 
-test("remote workspace files and diff open on their owner; offline history stays readable and new drafts choose a device", async ({
+test("remote workspaces open synced history; offline sessions stay readable and new drafts choose a device", async ({
   page,
   request,
 }) => {
@@ -134,26 +134,28 @@ test("remote workspace files and diff open on their owner; offline history stays
     );
   }, fixture.projectId);
   await page.goto(sessionUrl());
-  const filesRead = page.waitForResponse(
-    (response) => response.url().includes(`/v1/workspaces/${fixture.workspaceId}/files`) && response.ok(),
-  );
+  const fileRequests: string[] = [];
+  page.on("request", (request) => {
+    if (
+      request.url().includes(`/v1/workspaces/${fixture.workspaceId}/`) &&
+      /\/(files|file|diff)(\?|$)/.test(request.url())
+    )
+      fileRequests.push(request.url());
+  });
   await main.getByRole("button", { name: "Open workspace", exact: true }).click();
-  await page.getByRole("tab", { name: "Files", exact: true }).click();
-  await filesRead;
-  const file = page.getByRole("option").filter({ hasText: "target-note.md" }).first();
-  await file.getByText("target-note.md", { exact: true }).click();
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-workspaces\/history\?/);
   await expect(
-    main.getByText("Target-owned changed content.", { exact: false }).filter({ visible: true }).first(),
+    page
+      .getByRole("region", { name: "Main", exact: true })
+      .getByRole("option")
+      .filter({ hasText: "Remote conversation" }),
   ).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Changes", exact: true })).toHaveCount(0);
+  expect(fileRequests).toEqual([]);
   const queuedResponse = await request.post(`${fixture.origin}/v1/sessions/${fixture.sessionId}/follow-up`, {
     data: { prompt: "Readable offline queue" },
   });
   expect(queuedResponse.ok()).toBe(true);
-  await page.getByRole("tab", { name: "Changes", exact: true }).click();
-  await expect(page.getByTestId("diff-viewer").filter({ visible: true }).first()).toBeVisible();
-  await expect(
-    main.getByText("Target-owned changed content.", { exact: false }).filter({ visible: true }).first(),
-  ).toBeVisible();
   // An incomplete saved queue must not hide essential controls for an online owner.
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-unavailable" } });
   await page.goto(sessionUrl());

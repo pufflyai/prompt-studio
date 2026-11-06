@@ -2,6 +2,7 @@ import { createWorkbench, type WorkbenchModuleContext } from "@pstdio/workbench"
 import { createWorkbenchTerminalModule } from "@pstdio/workbench/react";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createSessionsModule } from "../sessions/module";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
@@ -9,6 +10,7 @@ import { createWorkspacesModule } from "./module";
 export const setupWorkspaceOpening = (ready = true) => {
   if (ready) markInitialCollectionsSyncComplete();
   const workbench = createWorkbench();
+  registerWorkspaceProviderViews(workbench);
   for (const module of [
     createSidenavModule(),
     createWorkspacesModule(),

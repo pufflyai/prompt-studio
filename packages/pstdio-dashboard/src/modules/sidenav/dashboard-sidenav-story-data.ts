@@ -1,5 +1,4 @@
 import { getWriter } from "@/lib/sync/collections";
-import { seedWorkspaceViewsStory } from "../workspaces/collections/workspace-views-story";
 
 export const seedSidenavStory = (projectId: string) => {
   getWriter("settings")?.truncateAndWrite([
@@ -52,7 +51,6 @@ export const seedSidenavStory = (projectId: string) => {
       expires_at: null,
     },
   ]);
-  seedWorkspaceViewsStory(projectId);
 };
 const sessionRow = (
   projectId: string,

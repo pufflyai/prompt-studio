@@ -10,8 +10,17 @@ import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { expectPackagedDriveDiscovery } from "./packaged-filesystem-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
+
+setupPackagedSmokeTests();
+const composerDefaults = e2eExtensions(
+  "workbench-fixture",
+  "pstdio-session-browser",
+  "pstdio-home",
+  "pstdio-workspaces",
+);
 
 // Stable hosts use PSX; nightlies retain their exact main commit.
 const hostReleaseRef = /^(?:\{hostRelease\}|pstdio@\d|[0-9a-f]{40}$)/;
@@ -39,7 +48,7 @@ test(
 
     try {
       const started = await startPackagedServe(tempRoot, {
-        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "pstdio-session-browser"),
+        PSTDIO_DEFAULT_EXTENSIONS: composerDefaults,
       });
       child = started.child;
 

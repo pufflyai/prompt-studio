@@ -3,7 +3,7 @@ import {
   type PageLocation,
   type PageRef,
   sessionBrowser,
-  workbenchPages,
+  workspacePages,
 } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -50,13 +50,22 @@ export const openSessionsPage = (ctx: WorkbenchModuleContext, resource?: Resourc
     ...(resource ? { resource } : {}),
   });
 };
+export const workspacePageForResource = (resource?: ResourceRef) => {
+  if (!resource) return workspacePages.list;
+  if (resource.device || resource.metadata?.workspaceReadOnly === true) return workspacePages.history;
+  if (resource.metadata?.workspaceExecutionKind === "remote" || resource.metadata?.workspaceSupportsFiles === false)
+    return workspacePages.overview;
+  if (resource.metadata?.workspaceIsDefault === true || resource.metadata?.workspaceSupportsDiff === false)
+    return workspacePages.files;
+  return workspacePages.workspace;
+};
 export const openWorkspacesPage = (
   ctx: WorkbenchModuleContext,
   resource?: ResourceRef,
   parent?: NavigationTargetPage,
 ) =>
   navigateDashboardPage(ctx, {
-    page: resource ? workbenchPages.workspace : workbenchPages.workspaces,
+    page: workspacePageForResource(resource),
     ...(resource ? { resource } : {}),
     ...(parent ? { parent } : {}),
   });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workspaceCommands, workspacePages } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -64,7 +64,7 @@ describe("ticket files tree workspace commands", () => {
       actions: [
         expect.objectContaining({
           id: "create-workspace",
-          command: { extensionId: "pstdio", kind: "command", id: "workbench.workspace.create" },
+          command: workspaceCommands.create,
           params: {
             shorthand_base: ticket.shorthand,
             anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],
@@ -78,7 +78,7 @@ describe("ticket files tree workspace commands", () => {
           icon: "GitBranch",
           target: {
             kind: "page",
-            page: workbenchPages.workspace,
+            page: workspacePages.workspace,
             parent: {
               kind: "page",
               page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
@@ -194,7 +194,7 @@ describe("ticket files tree workspace commands", () => {
       actions: [
         expect.objectContaining({
           id: "create-workspace",
-          command: { extensionId: "pstdio", kind: "command", id: "workbench.workspace.create" },
+          command: workspaceCommands.create,
           params: {
             shorthand_base: ticket.shorthand,
             anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],

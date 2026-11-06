@@ -139,6 +139,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-artifacts",
     "pstdio-home",
     "pstdio-session-browser",
+    "pstdio-workspaces",
     "pstdio-base-themes",
     "pstdio-dashboard",
     "pstdio-notes",

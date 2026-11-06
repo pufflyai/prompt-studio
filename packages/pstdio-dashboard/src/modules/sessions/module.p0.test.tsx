@@ -5,12 +5,14 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardSessionResource } from "@/shared/app/resources";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
 import { registerSessionProvider } from "./session-provider.fixture";
 
 const fixture = () => {
   const workbench = createWorkbench();
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);

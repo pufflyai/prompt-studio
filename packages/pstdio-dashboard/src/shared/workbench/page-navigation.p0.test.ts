@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages, workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { navigateDashboardPage } from "./page-navigation";
+import { navigateDashboardPage, workspacePageForResource } from "./page-navigation";
 
 for (const { type, page, root } of [
   { type: "session", page: workbenchPages.session, root: workbenchPages.sessions },
   { type: "session-draft", page: workbenchPages.newSession, root: workbenchPages.sessions },
-  { type: "workspace", page: workbenchPages.workspace, root: workbenchPages.workspaces },
+  { type: "workspace", page: workspacePages.workspace, root: workspacePages.list },
 ]) {
   test(`native ${type} navigation keeps one resource identity through metadata refresh and removal`, () => {
     const w = createWorkbench();
@@ -44,3 +44,23 @@ for (const { type, page, root } of [
     w.dispose();
   });
 }
+
+test("workspace links choose only the pages supported by the provider", () => {
+  const resource = { type: "workspace", id: "one" };
+  expect(workspacePageForResource({ ...resource, metadata: { workspaceSupportsFiles: false } })).toEqual(
+    workspacePages.overview,
+  );
+  expect(workspacePageForResource({ ...resource, metadata: { workspaceExecutionKind: "remote" } })).toEqual(
+    workspacePages.overview,
+  );
+  expect(workspacePageForResource({ ...resource, metadata: { workspaceSupportsDiff: false } })).toEqual(
+    workspacePages.files,
+  );
+  expect(workspacePageForResource({ ...resource, metadata: { workspaceIsDefault: true } })).toEqual(
+    workspacePages.files,
+  );
+  expect(
+    workspacePageForResource({ ...resource, metadata: { workspaceReadOnly: true, workspaceSupportsFiles: false } }),
+  ).toEqual(workspacePages.history);
+  expect(workspacePageForResource(resource)).toEqual(workspacePages.workspace);
+});

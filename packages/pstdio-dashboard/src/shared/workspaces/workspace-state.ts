@@ -19,10 +19,3 @@ export const isProjectWorkspaceReady = (projectId: string) =>
   [...getCollection("workspaces").state.values()].some(
     (row) => row.project_id === projectId && isDefaultWorkspaceOnThisDevice(row) && workspaceState(row) === "ready",
   );
-
-// A cloud project from another device has its data here, but its project folder is not on this device yet.
-export const isProjectFolderMissing = (projectId: string) =>
-  [...getCollection("workspaces").state.values()].some(
-    (row) =>
-      row.project_id === projectId && isDefaultWorkspaceOnThisDevice(row) && workspaceState(row) === "unattached",
-  );

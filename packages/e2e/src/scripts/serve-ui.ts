@@ -7,15 +7,14 @@ const repoRoot = join(import.meta.dirname, "../../../..");
 const defaults = JSON.parse(process.env.PSTDIO_DEFAULT_EXTENSIONS!);
 // This is the same built-package registry/staged source mechanism as the packaged core smoke.
 // Published compatibility remains the separate published_extensions check's responsibility.
-const sources = JSON.parse(await readFile(preparedUiSourcesPath(process.env.E2E_HOME!), "utf8")) as Array<{
-  installName: string;
-  source: string;
-}>;
-for (const { installName, source } of sources) {
-  const entry = defaults.defaultExtensions.find((entry: { installName: string }) => entry.installName === installName);
-  if (!entry) continue;
+const sources = JSON.parse(
+  process.env.E2E_EXTENSION_SOURCES ?? (await readFile(preparedUiSourcesPath(process.env.E2E_HOME!), "utf8")),
+) as Record<string, string>;
+for (const entry of defaults.defaultExtensions) {
+  const source = sources[entry.installName];
+  if (!source) continue;
   entry.source = source;
-  if (installName === "extension-lab") entry.skipInstall = true;
+  if (entry.installName === "extension-lab") entry.skipInstall = true;
   else delete entry.skipInstall;
 }
 const npmConfigPath = join(process.env.E2E_HOME!, ".npmrc");
@@ -30,6 +29,7 @@ const child = Bun.spawn(
     cwd: join(repoRoot, "packages/pstdio"),
     env: {
       ...process.env,
+      E2E_EXTENSION_SOURCES: JSON.stringify(sources),
       NPM_CONFIG_USERCONFIG: npmConfigPath,
       BUN_INSTALL_CACHE_DIR: process.env.E2E_BUN_CACHE_DIR ?? process.env.BUN_INSTALL_CACHE_DIR,
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults),

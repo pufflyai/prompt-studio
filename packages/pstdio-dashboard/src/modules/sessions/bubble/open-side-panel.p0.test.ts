@@ -5,6 +5,7 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionsModule } from "../module";
 import { registerSessionProvider } from "../session-provider.fixture";
@@ -12,6 +13,7 @@ import { openDashboardSidePanel } from "./open-side-panel";
 
 test("opens an empty chat panel with a workspace session draft and reuses it on reopen", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
@@ -40,6 +42,7 @@ test("opens an empty chat panel with a workspace session draft and reuses it on 
 
 test("opens the session draft in the Side Panel while a session page is open", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
@@ -59,6 +62,7 @@ test("opens the session draft in the Side Panel while a session page is open", a
 
 test("opens a session beside an extension page and keeps each mode's sessions separate", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
@@ -96,6 +100,7 @@ test("opens a session beside an extension page and keeps each mode's sessions se
 
 test("opens a session tab alongside an extension reader", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "attached" });
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
@@ -123,6 +128,7 @@ test("opens a session tab alongside an extension reader", async () => {
 
 test("reopens the active session when several session tabs exist", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
@@ -143,6 +149,7 @@ test("reopens the active session when several session tabs exist", async () => {
 
 test("a Side Panel requested while the project loads opens its session once the project mode starts", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);

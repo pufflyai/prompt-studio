@@ -2,7 +2,7 @@ import {
   createWebviewClient,
   type GuestHost,
   type WebviewCommandsExecuteParams,
-  workbenchPages,
+  workspacePages,
 } from "@pstdio/sdk/extensions";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -54,7 +54,7 @@ export function EditableCardPreview(props: EditableCardPreviewProps) {
         {
           id: "workspace",
           label: "P-1_A1",
-          action: { kind: "page", page: workbenchPages.workspace, resource: { type: "workspace", id: "workspace" } },
+          action: { kind: "page", page: workspacePages.workspace, resource: { type: "workspace", id: "workspace" } },
         },
       ],
     },

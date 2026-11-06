@@ -24,15 +24,3 @@ export const treeViewSections = (
     refresh: () => workbench.views.refreshView(viewId),
     setSelectedNode: (nodeId) => workbench.treeViews.setSelectedNode(viewId, nodeId),
   });
-
-export const fileViewBody = (workbench: WorkbenchCore, viewId: string) => {
-  const body = viewBody(workbench, viewId);
-  if (body.kind !== "file") throw new Error(`View is not a file: ${viewId}`);
-  return body;
-};
-
-export const dataTableViewBody = (workbench: WorkbenchCore, viewId: string) => {
-  const body = viewBody(workbench, viewId);
-  if (body.kind !== "dataTable") throw new Error(`View is not a data table: ${viewId}`);
-  return body;
-};

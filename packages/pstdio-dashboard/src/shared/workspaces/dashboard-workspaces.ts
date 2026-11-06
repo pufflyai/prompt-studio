@@ -83,6 +83,7 @@ const createWorkspaceResourceMetadata = (input: {
     | undefined;
   const metadata: Record<string, unknown> = {
     workspaceId: input.workspace.id,
+    workspaceReadOnly: Boolean(input.workspace.device),
     ...(input.workspace.device
       ? { workspaceDeviceId: (input.workspace.device as { id: string }).id, workspaceReadOnly: true }
       : {}),
@@ -153,14 +154,19 @@ export const buildDashboardWorkspacesFromRows = (
         supportsDiff: metadata.workspaceSupportsDiff === true,
         provider: (workspace.provider_id as string | undefined) ?? "pstdio.root",
         providerState: workspaceState(workspace),
-        resource: createDashboardResource(
-          "workspace",
-          workspace.id,
-          title,
-          workspaceIcon(type),
-          workspace.project_id as string,
-          metadata,
-        ),
+        resource: {
+          ...createDashboardResource(
+            "workspace",
+            workspace.id,
+            title,
+            workspaceIcon(type),
+            workspace.project_id as string,
+            metadata,
+          ),
+          extensionId: "pstdio",
+          projectId: workspace.project_id as string,
+          ...(workspace.device ? { device: workspace.device as ResourceRef["device"] } : {}),
+        },
       } satisfies DashboardWorkspace;
     })
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));

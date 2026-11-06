@@ -14,16 +14,20 @@ export interface RemoteSessionBrowserFixture {
 }
 
 export const startRemoteSessionBrowserFixture = () => {
+  const sources = JSON.parse(
+    process.env.E2E_EXTENSION_SOURCES ?? readFileSync(preparedUiSourcesPath(process.env.E2E_HOME!), "utf8"),
+  ) as Record<string, string>;
+  if (!sources["pstdio-workspaces"])
+    throw new Error("The remote browser fixture requires a prepared Workspaces source.");
   const script = join(import.meta.dirname, "../../../pstdio-api/src/test-utils/remote-session-browser.fixture.ts");
-  const sources = JSON.parse(readFileSync(preparedUiSourcesPath(process.env.E2E_HOME!), "utf8")) as Array<{
-    installName: string;
-    source: string;
-  }>;
-  const provider = sources.find((source) => source.installName === "pstdio-session-browser");
+  const provider = sources["pstdio-session-browser"];
   if (!provider) throw new Error("Prepared production Sessions source is unavailable.");
-  const child = spawn("bun", ["--conditions=source", script, provider.source], {
+  const child = spawn("bun", ["--conditions=source", script, provider], {
     stdio: ["pipe", "pipe", "pipe"],
-    env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("PSTDIO_"))),
+    env: {
+      ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("PSTDIO_"))),
+      E2E_EXTENSION_SOURCES: JSON.stringify(sources),
+    },
   });
   let output = "";
   let stdout = "";

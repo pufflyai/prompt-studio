@@ -9,7 +9,7 @@ import {
   workbenchCommands,
 } from "@pstdio/sdk/extensions";
 import { AlertMessage, ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { Activity, useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { commands } from "./commands";
 import { ProjectSetupStatus } from "./components/project-setup-status";
@@ -161,12 +161,21 @@ const HomeApp = (props: AppProps) => {
   );
 };
 
+const subscribeVisibility = (listener: () => void) => {
+  document.addEventListener("visibilitychange", listener);
+  return () => document.removeEventListener("visibilitychange", listener);
+};
+const isVisible = () => !document.hidden;
+
 const View = (props: AppProps) => {
   const { context } = props;
   const hostProps = useSyncExternalStore(context.propsStore.subscribe, context.propsStore.get, context.propsStore.get);
+  const visible = useSyncExternalStore(subscribeVisibility, isVisible, () => true);
   return (
     <ChakraProvider value={psTheme}>
-      <HomeApp key={hostProps.projectId} context={context} />
+      <Activity mode={visible ? "visible" : "hidden"}>
+        <HomeApp key={hostProps.projectId} context={context} />
+      </Activity>
     </ChakraProvider>
   );
 };

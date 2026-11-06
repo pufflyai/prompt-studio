@@ -4,13 +4,10 @@ import { preparedUiSourcesPath } from "./scripts/prepare-ui-fixtures";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 const sourcesPath = process.env.E2E_HOME ? preparedUiSourcesPath(process.env.E2E_HOME) : undefined;
-const preparedSources = new Map<string, string>(
-  sourcesPath && existsSync(sourcesPath)
-    ? (JSON.parse(readFileSync(sourcesPath, "utf8")) as Array<{ installName: string; source: string }>).map(
-        ({ installName, source }) => [installName, source],
-      )
-    : [],
-);
+const preparedSources = JSON.parse(
+  process.env.E2E_EXTENSION_SOURCES ??
+    (sourcesPath && existsSync(sourcesPath) ? readFileSync(sourcesPath, "utf8") : "{}"),
+) as Record<string, string>;
 
 const extensionSource = (name: string) => {
   if (name === "workbench-fixture") return "packages/workbench-fixture";
@@ -18,7 +15,7 @@ const extensionSource = (name: string) => {
 };
 const e2eExtension = (name: string) => {
   const installName = name.split("/").at(-1) as string;
-  const prepared = preparedSources.get(installName);
+  const prepared = preparedSources[installName];
   return {
     source: prepared ?? resolve(repoRoot, extensionSource(name)),
     installName,
@@ -32,6 +29,7 @@ const e2eExtension = (name: string) => {
 const e2eDefaultExtensions = [
   e2eExtension("pstdio-home"),
   e2eExtension("pstdio-session-browser"),
+  e2eExtension("pstdio-workspaces"),
   e2eExtension("pstdio-base-themes"),
   e2eExtension("canvas"),
   e2eExtension("pstdio-artifacts"),

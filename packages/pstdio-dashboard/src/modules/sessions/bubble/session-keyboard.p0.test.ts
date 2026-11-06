@@ -4,12 +4,14 @@ import { createWorkbench } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionsModule } from "../module";
 import { registerSessionProvider } from "../session-provider.fixture";
 
 test("new session in an open tab targets the chosen presentation without adding a tab", async () => {
   const core = createWorkbench();
+  registerWorkspaceProviderViews(core);
   core.registerModule(createWorkspacesModule());
   core.registerModule(createSessionsModule());
   registerSessionProvider(core);

@@ -1,15 +1,16 @@
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, expect as expectPage } from "@playwright/test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workspacePages } from "@pstdio/sdk/extensions";
 import { serializePageUrl } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
-import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { preparePackagedExtensionSource } from "./packaged-extension-source";
+import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
 const source = `
@@ -26,14 +27,27 @@ export default { workspaceTypes: [{
 }] };
 `;
 
-setupPackagedSmokeTests();
+let sources: string;
+let defaults: string;
+setupPackagedSmokeTests(async () => {
+  sources = mkdtempSync(join(tmpdir(), "packaged-capabilities-sources-"));
+  const source = await preparePackagedExtensionSource(
+    sources,
+    join(import.meta.dirname, "../../../../extensions/pstdio-workspaces"),
+    { install: true },
+  );
+  defaults = JSON.stringify({ defaultExtensions: [{ installName: "pstdio-workspaces", source, skipInstall: true }] });
+});
+afterAll(() => {
+  if (sources) rmSync(sources, { recursive: true, force: true });
+});
 
 test("packaged remote workspace shows its state and actions without requesting files", async () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-workspace-capabilities-"));
   let child: ChildProcess | undefined;
   const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
   try {
-    const runtime = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
+    const runtime = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: defaults });
     child = runtime.child;
     const headers = runtimeAuthorization(runtime.descriptor);
     const jsonHeaders = { ...headers, "content-type": "application/json" };
@@ -83,25 +97,31 @@ test("packaged remote workspace shows its state and actions without requesting f
     });
     expect(workspace.status).toBe(202);
     const { id: workspaceId } = (await workspace.json()) as { id: string };
-    const page = await browser.newPage({ extraHTTPHeaders: headers });
+    const page = await browser.newPage();
     const fileRequests: string[] = [];
     page.on("request", (request) => {
       const path = new URL(request.url()).pathname;
       if (path.startsWith(`/v1/workspaces/${workspaceId}/`) && /\/(files|file)$/.test(path)) fileRequests.push(path);
     });
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.addInitScript(() => {
+      if (window.top === window) localStorage.setItem("onboarding-complete", "true");
+    });
     const workspaceUrl = serializePageUrl({
       projectId,
-      page: { id: "workspace", ref: workbenchPages.workspace, path: "workspace" },
+      page: { id: "overview", ref: workspacePages.overview, path: "overview" },
       resource: { type: "workspace", id: workspaceId },
     });
+    await signInBrowser(page, runtime.descriptor);
     await page.goto(new URL(workspaceUrl, runtime.baseUrl).href);
-    await expectPage(page.getByText("Workspace state: Ready", { exact: true })).toBeVisible();
+    await expectPage(page.getByText("ready", { exact: true })).toBeVisible();
     await expectPage(page.getByRole("region", { name: "Files", exact: true })).toHaveCount(0);
     await expectPage(page.getByText("Select a file", { exact: true })).toHaveCount(0);
-    await expectPage(page.getByRole("button", { name: "Delete workspace", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Rename workspace", exact: true }).click();
-    await expectPage(page.getByRole("dialog", { name: "Rename workspace", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: /^Actions for / }).click();
+    await expectPage(page.getByRole("menuitem", { name: "Delete workspace", exact: true })).toBeVisible();
+    await page.getByRole("menuitem", { name: "Rename workspace", exact: true }).click();
+    await expectPage(
+      page.frameLocator('iframe[title="Workspace action"]').getByRole("textbox", { name: "Name", exact: true }),
+    ).toBeVisible();
     expect(fileRequests).toEqual([]);
   } finally {
     await browser.close();
