@@ -12,6 +12,7 @@ import { dashboardHomePage } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { registerExtensionsPage } from "../extensions/extensions-page";
 import { createHeadersModule } from "../headers/module";
@@ -196,6 +197,26 @@ const bootstrapWorkbench = (desktop = false) => {
   seedSidenavStory(PROJECT_ID);
   linkSessionsToWorkspace();
   const workbench = createWorkbench({ startPage: dashboardHomePage });
+  registerWorkspaceProviderViews(workbench);
+  workbench.navigationTrees.registerContribution({
+    id: "story.workspace-navigation",
+    owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+    sourceExtensionId: "pstdio",
+    declarationIndex: 0,
+    getSections: () => [
+      {
+        id: "navigation.root",
+        nodes: [
+          {
+            id: "workspaces",
+            label: "Workspaces",
+            icon: "FolderGit2",
+            target: { kind: "page", page: workspacePages.list },
+          },
+        ],
+      },
+    ],
+  });
   for (const module of [
     createSidenavModule(),
     createCommandPaletteModule(),
@@ -325,7 +346,23 @@ export const SessionMode: Story = {
   id: "dashboard-sidenav--session-mode",
   render: () => <SidenavStory open={(workbench) => void openSessionsPage(workbench)} />,
 };
-// Workspace resource: global collections stay fixed above the expanded, workspace-scoped Sessions group.
+export const ProjectFolder: Story = {
+  id: "dashboard-sidenav--project-folder",
+  name: "Project folder keeps project navigation",
+  render: () => (
+    <SidenavStory
+      open={(workbench) => {
+        const folder = workbench.resources
+          .listResources("")
+          .find(
+            (entry) => entry.resource.type === "workspace" && entry.resource.metadata?.workspaceIsDefault,
+          )?.resource;
+        if (folder) openWorkspacesPage(workbench, folder);
+      }}
+    />
+  ),
+};
+// Workspace pages replace project navigation with their own sessions and a return control.
 export const WorkspaceResource: Story = {
   id: "dashboard-sidenav--workspace-resource",
   render: () => (
@@ -333,7 +370,9 @@ export const WorkspaceResource: Story = {
       open={(workbench) => {
         const workspace = workbench.resources
           .listResources("")
-          .find((entry) => entry.resource.type === "workspace")?.resource;
+          .find(
+            (entry) => entry.resource.type === "workspace" && !entry.resource.metadata?.workspaceIsDefault,
+          )?.resource;
         if (workspace) openWorkspacesPage(workbench, workspace);
       }}
     />

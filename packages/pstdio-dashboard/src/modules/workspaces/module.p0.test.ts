@@ -104,3 +104,26 @@ test("workspace palette navigation follows provider availability", () => {
     workbench.dispose();
   }
 });
+
+test("saved Workspaces URLs keep the provider's creation action in the title menu", () => {
+  const workbench = createWorkbench();
+  try {
+    registerWorkspaceProviderViews(workbench);
+    workbench.registerModule(createWorkspacesModule());
+    const main = workbench.pages.getPage(workbenchPages.workspaces.id)!.main;
+    if (main.kind !== "view") throw new Error("Expected workspace collection");
+    expect(main.tab?.getSnapshot?.({ instanceId: "list", panelId: "workspaces", closable: false }).menu).toContainEqual(
+      expect.objectContaining({
+        rows: expect.arrayContaining([
+          expect.objectContaining({
+            id: "create-workspace",
+            icon: "plus",
+            action: { kind: "command", commandId: commandRefId(workspaceCommands.create) },
+          }),
+        ]),
+      }),
+    );
+  } finally {
+    workbench.dispose();
+  }
+});

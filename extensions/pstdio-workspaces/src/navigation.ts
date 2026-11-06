@@ -93,8 +93,8 @@ export const device = defineCommand({
   title: "Device details",
   cli: true,
   params: { deviceId: params.text({ required: true }) },
-  run(ctx, args) {
-    ctx.navigation.open({ kind: "dialog", page: workspacePages.device, params: { "device-id": args.deviceId } });
+  run(ctx) {
+    ctx.navigation.open({ kind: "page", page: workspacePages.list });
   },
 });
 

@@ -104,7 +104,7 @@ export const buildSessionsLevelSections = (sessions?: DashboardSession[]): TreeV
     nodes: sessions ? buildSessionRows(sessions, "resource") : [],
   },
 ];
-// Inside project navigation, a workspace's sessions stay one collapsible group next to other sections.
+// Workspace pages own a navigation level containing their scoped sessions.
 export const buildWorkspaceSessionsSections = (
   sessions: DashboardSession[],
   workspace?: ResourceRef,
