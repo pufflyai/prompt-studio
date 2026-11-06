@@ -33,7 +33,16 @@ export const sessionBrowser = {
       },
       void
     >({ extensionId: sessionBrowserId, id: "new" }),
-    open: commandRef<{ sessionId: string; side?: boolean; replace?: boolean }, void>({
+    open: commandRef<
+      {
+        sessionId: string;
+        side?: boolean;
+        /** With side, open in this declared placement; defaults to the Sessions Project placement. */
+        panel?: PlacementRef;
+        replace?: boolean;
+      },
+      void
+    >({
       extensionId: sessionBrowserId,
       id: "open",
     }),

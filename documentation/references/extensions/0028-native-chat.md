@@ -24,7 +24,8 @@ const conversation = defineView({
 
 Reference `conversation.ref` from an ordinary page Main, slot or resource binding.
 The [generic layout](0008-contextual-workbench-composition.md) owns selection and
-page/panel conversion. `initial` is serializable metadata available on the first
+page/panel conversion. Visible native conversations request composer focus on opening;
+hidden retained presentations do not request focus. `initial` is serializable metadata available on the first
 render; neither query, draft hydration nor connection establishment gates the
 text composer. Control fields stay read-only until the initial query and saved draft
 settle, so automatic field defaults cannot replace saved selections during hydration.
@@ -117,6 +118,8 @@ stop controls through the host relay, and unavailable remote history is read onl
 Do not infer ownership by comparing an absent account device ID. Queue snapshots
 may independently be read only without disabling question replies or other controls;
 set `queueReadOnly: true` and offer a refresh operation while recovering them.
+During a running response, the composer keeps typed text and Stop available instead
+of offering another queue submission; pending question and decision replies stay usable.
 Remote queues support editing, reordering, combining and removal, but exclude live
 steering: display “Live steering is unavailable on another device.”
 `ctx.sessions.create({ deviceId, ... })` targets an account device; omission targets
@@ -218,3 +221,14 @@ command. This explicit refresh remains usable in a read-only conversation (for
 example Check connection for offline history). Ordinary operations, submission
 and execution controls retain their read-only guards; `disabled` still disables
 a refresh button.
+
+
+The implementation-free `sessionBrowser.commands.open` and `.create` references
+accept an optional `panel` placement with `side: true`. A host compatibility bridge
+can select the existing Side placement of the active mode without moving Main.
+The provider validates the declared placement through ordinary navigation ownership.
+
+Resource removal commands use their existing `description` as confirmation details,
+name the selected resource, and keep failed saves in the confirmation dialog for retry.
+The button uses the command title. Preview rollback and canonical write serialization
+remain owned by the workbench.

@@ -20,6 +20,8 @@ interface NativeChatViewProps extends NativeChatHostServices {
   linkHandler?: ChatLinkHandler;
   conversationKey: string;
   refreshKey?: number;
+  /** Hidden retained presentations must not request composer focus. */
+  visible?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
   renderParamField?: CommandParamFieldRenderer;
@@ -128,6 +130,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
           emptyStateTitle={props.emptyTitle ?? "No messages yet"}
           emptyStateDescription={props.emptyDescription ?? "Send a message to start this session."}
           chatInputPlaceholder="Reply to the agent..."
+          chatInputAutoFocus={props.visible !== false}
           chatInputDefaultValue={draft.text}
           onChatInputChange={(text) => session.changeDraft({ text })}
           streaming={conversation.streaming}
