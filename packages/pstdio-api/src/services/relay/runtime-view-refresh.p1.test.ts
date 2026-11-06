@@ -117,87 +117,101 @@ test("finishing views keeps downloaded Cloud documents subscribed without downlo
   }
 });
 
-test("finishing setup at the same folder starts projection for already downloaded artifacts", async () => {
+test("finishing setup at the same folder projects artifacts downloaded from another device", async () => {
   const root = await mkdtemp(join(tmpdir(), "cloud-ready-mount-"));
-  const app = await createTestApp({ storageRoot: join(root, "home") });
+  const apps = await Promise.all(
+    ["sender", "receiver"].map((name) => createTestApp({ storageRoot: join(root, name) })),
+  );
   const peer = documentPeer();
   const owner = { workbenchId: crypto.randomUUID(), extensionId: "test.notes" };
-  let runtime: Awaited<ReturnType<typeof startRelayRuntime>> | undefined;
+  const runtimes: Awaited<ReturnType<typeof startRelayRuntime>>[] = [];
+  const configs: RelayWorkbench[] = [];
+  const folders = [join(root, "sender-checkout"), join(root, "receiver-checkout")];
+  const synced = async (runtime: Awaited<ReturnType<typeof startRelayRuntime>>) => {
+    const end = Date.now() + 3000;
+    while ((await runtime.status(owner.workbenchId)).state !== "synced" && Date.now() < end) await Bun.sleep(10);
+    expect((await runtime.status(owner.workbenchId)).state).toBe("synced");
+  };
   try {
-    await app.deps.projectService.create({ id: owner.workbenchId, name: "Downloaded files" });
-    const folder = join(root, "checkout");
-    await mkdir(folder);
-    await initializeProjectWorkspace(
-      app.deps,
-      owner.workbenchId,
-      { provider_id: "pstdio.root", params: { path: folder } },
-      async () => [],
-    );
-    const workspace = await app.deps.workspaceService.getDefault(owner.workbenchId);
-    const path = createTestExtensionSource({
-      root: join(root, "source"),
-      installName: "notes",
-      name: "notes",
-      displayName: "Notes",
-      version: "1.0.0",
-    });
-    await writeFile(
-      join(path, "extension.ts"),
-      `export default { artifactMounts: [
-      { id: "documents", ref: { kind: "artifact-mount", id: "documents" }, path: "documents", label: "Documents", watch: false }
-    ] };`,
-    );
-    const source = await loadExtensionSource(path);
-    await app.deps.extensionService.enableInstalledSourceForProject({
-      projectId: owner.workbenchId,
-      sourcePath: path,
-      extensionId: source.metadata.id,
-      installName: "notes",
-      name: "notes",
-      displayName: "Notes",
-      manifest: source.manifest,
-      version: "1.0.0",
-    });
-    const mount = createSharedArtifactMount(app.deps, {
+    for (const [index, app] of apps.entries()) {
+      await app.deps.projectService.create({ id: owner.workbenchId, name: "Downloaded files" });
+      await mkdir(folders[index]!);
+      await initializeProjectWorkspace(
+        app.deps,
+        owner.workbenchId,
+        { provider_id: "pstdio.root", params: { path: folders[index]! } },
+        async () => [],
+      );
+      const path = createTestExtensionSource({
+        root: join(root, `source-${index}`),
+        installName: "notes",
+        name: "notes",
+        displayName: "Notes",
+        version: "1.0.0",
+      });
+      await writeFile(
+        join(path, "extension.ts"),
+        `export default { artifactMounts: [
+        { id: "documents", ref: { kind: "artifact-mount", id: "documents" }, path: "documents", label: "Documents", watch: false }
+      ] };`,
+      );
+      const source = await loadExtensionSource(path);
+      await app.deps.extensionService.enableInstalledSourceForProject({
+        projectId: owner.workbenchId,
+        sourcePath: path,
+        extensionId: source.metadata.id,
+        installName: "notes",
+        name: "notes",
+        displayName: "Notes",
+        manifest: source.manifest,
+        version: "1.0.0",
+      });
+      const environmentId = (await app.deps.environmentService.get()).environmentId;
+      const prior = await app.deps.accountService.status();
+      app.deps.accountService.status = async () => ({
+        ...prior,
+        login: { accountId: "owner", deviceId: environmentId, managerOrigin: peer.origin, relayOrigin: peer.origin },
+        cloudProjects: [owner.workbenchId],
+        cloudProjectsLoaded: true,
+      });
+      app.deps.accountService.devices = async () => [];
+      configs.push({
+        accountId: "owner",
+        workbenchId: owner.workbenchId,
+        environmentId,
+        managerOrigin: peer.origin,
+        relayOrigin: peer.origin,
+        renewalGrant: "fixture",
+      });
+    }
+    const receiver = apps[1]!;
+    const workspace = await receiver.deps.workspaceService.getDefault(owner.workbenchId);
+    await receiver.deps.workspaceService.setInitializing(workspace!.id, true);
+    const mount = createSharedArtifactMount(apps[0]!.deps, {
       projectId: owner.workbenchId,
       extensionId: owner.extensionId,
-      repoRoot: folder,
+      repoRoot: folders[0]!,
       name: "documents",
       mountPath: "documents",
     });
     await mount.writeText("recovered.txt", "Downloaded while setup runs");
-    const file = join(folder, ".pstdio/extension-storage/test.notes/documents/recovered.txt");
-    await rm(file);
-    await app.deps.workspaceService.setInitializing(workspace!.id, true);
-    const environmentId = (await app.deps.environmentService.get()).environmentId;
-    const prior = await app.deps.accountService.status();
-    app.deps.accountService.status = async () => ({
-      ...prior,
-      login: { accountId: "owner", deviceId: environmentId, managerOrigin: peer.origin, relayOrigin: peer.origin },
-      cloudProjects: [owner.workbenchId],
-      cloudProjectsLoaded: true,
-    });
-    app.deps.accountService.devices = async () => [];
-    const config: RelayWorkbench = {
-      accountId: "owner",
-      workbenchId: owner.workbenchId,
-      environmentId,
-      managerOrigin: peer.origin,
-      relayOrigin: peer.origin,
-      renewalGrant: "fixture",
-    };
-    runtime = await startRelayRuntime({ deps: app.deps });
-    await runtime.update([config]);
+    for (const [index, app] of apps.entries()) {
+      const runtime = await startRelayRuntime({ deps: app.deps });
+      runtimes.push(runtime);
+      await runtime.update([configs[index]!]);
+      await synced(runtime);
+    }
+    const file = join(folders[1]!, ".pstdio/extension-storage/test.notes/documents/recovered.txt");
     expect(await Bun.file(file).exists()).toBe(false);
-    await app.deps.workspaceService.setInitializing(workspace!.id, false);
-    await runtime.update([config]);
+    await receiver.deps.workspaceService.setInitializing(workspace!.id, false);
+    await runtimes[1]!.update([configs[1]!]);
     const end = Date.now() + 3000;
     while (!(await Bun.file(file).exists()) && Date.now() < end) await Bun.sleep(10);
     expect(await Bun.file(file).exists()).toBe(true);
     expect(await readFile(file, "utf8")).toBe("Downloaded while setup runs");
   } finally {
-    await runtime?.close();
-    await app.close();
+    await Promise.all(runtimes.map((runtime) => runtime.close()));
+    await Promise.all(apps.map((app) => app.close()));
     await peer.close();
     await rm(root, { recursive: true, force: true });
   }
