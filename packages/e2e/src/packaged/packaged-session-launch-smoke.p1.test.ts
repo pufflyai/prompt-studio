@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { expect as expectEventually } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { stopChildProcess } from "../scripts/child-process";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -35,14 +36,16 @@ test.each([false, true])(
         join(source, "extension.ts"),
         `
         const gate = Promise.withResolvers();
+        let disposed = false;
         export default {
           harnesses: [{
             id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker",
             capabilities: () => [], listModels: () => [],
-            dispose() { gate.resolve(); },
-              resume() { throw new Error("Not used by the startup fixture"); },
+            dispose() { disposed = true; gate.resolve(); },
+            resume() { throw new Error("Not used by the startup fixture"); },
             async start(_ctx, input) {
               await gate.promise;
+              if (disposed) throw new Error("Harness disposed before startup completed");
               return { agentSessionId: "accepted:" + input.prompt, done: new Promise(() => {}), stop() {} };
             },
           }],
@@ -92,9 +95,9 @@ test.each([false, true])(
           agent_session_id: null,
         });
         if (restart) {
-          // Stop while startup still belongs to the host, before releasing the fixture harness.
+          // Interrupt the host before startup completes. Forced API shutdown deliberately cancels active work.
           console.info("Packaged launch: stopping with harness startup pending");
-          await stopProcess(child);
+          await stopChildProcess(child);
           child = undefined;
           started = await startPackagedServe(root, env);
           child = started.child;
