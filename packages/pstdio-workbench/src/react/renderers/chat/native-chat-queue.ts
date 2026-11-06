@@ -8,3 +8,9 @@ export const queuedChatDraft = (
   values: { ...draft.values, ...item.values },
   attachments: item.attachments ?? [],
 });
+
+export const findQueuedChatRequest = (items: ChatQueuedRequest[] | undefined, id: string) => {
+  const item = items?.find((candidate) => candidate.id === id);
+  if (!item) throw new Error("The queued request is no longer available.");
+  return item;
+};

@@ -157,7 +157,7 @@ presentation values, never replacements for the provider's persisted attachment 
 Declared `resolveLink` and `resolveImage` callbacks keep priority, with host
 resolution as a fallback. With this opt-in, generic app-page URLs defer to the
 host's destination validation; an unavailable page remains an actionable error,
-not an unvalidated browser navigation. External web links remain available.
+not an unvalidated browser navigation. External web links use the host's native icon, fallback globe and safe new-tab presentation.
 Without opt-in the provider's handlers remain unchanged.
 
 A harness control accepts `harnessId: ""` while unselected. Execution still
@@ -210,3 +210,11 @@ separate identities even for identical text and files. An action result with an 
 operation without waiting for a transcript echo. Rejection restores the submitted draft or retains it beside newer
 unsent work. Questions keep their separate draft semantics, and a streaming
 conversation's queued follow-up remains queue-owned.
+
+
+A snapshot operation with `refresh: true` reconnects the native owner's existing
+query/watch, preserving its draft. It does not dispatch `onAction` or run a provider
+command. This explicit refresh remains usable in a read-only conversation (for
+example Check connection for offline history). Ordinary operations, submission
+and execution controls retain their read-only guards; `disabled` still disables
+a refresh button.

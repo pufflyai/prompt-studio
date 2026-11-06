@@ -16,6 +16,7 @@ interface NativeChatControlsProps {
   editingQueuedRequest?: boolean;
   unavailable?: boolean;
   initializing?: boolean;
+  reconnect?(): void;
   changeValues(values: ControlValueMap): void;
 }
 
@@ -91,10 +92,11 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
               key={operation.id}
               size="xs"
               variant="ghost"
-              disabled={conversation.readOnly || operation.disabled}
-              onClick={() =>
-                void run({ type: "operation", id: operation.id, values: draft.values }).catch(() => undefined)
-              }
+              disabled={operation.disabled || (operation.refresh ? !props.reconnect : conversation.readOnly)}
+              onClick={() => {
+                if (operation.refresh) props.reconnect?.();
+                else void run({ type: "operation", id: operation.id, values: draft.values }).catch(() => undefined);
+              }}
             >
               {operation.label}
             </Button>

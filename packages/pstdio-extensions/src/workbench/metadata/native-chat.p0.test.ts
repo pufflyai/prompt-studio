@@ -17,6 +17,7 @@ test("an independent extension declares native chat with normal private callback
       legacySessionDraft: true,
       initial: {
         messages: [],
+        operations: [{ id: "connection", label: "Check connection", refresh: true }],
         nativeLinks: true,
         workspaceId: "workspace",
         nativeHarnessAccount: { controlId: "provider" },
@@ -65,6 +66,7 @@ test("an independent extension declares native chat with normal private callback
     legacySessionDraft: true,
     initial: {
       messages: [],
+      operations: [{ id: "connection", label: "Check connection", refresh: true }],
       nativeLinks: true,
       workspaceId: "workspace",
       nativeHarnessAccount: { controlId: "provider" },

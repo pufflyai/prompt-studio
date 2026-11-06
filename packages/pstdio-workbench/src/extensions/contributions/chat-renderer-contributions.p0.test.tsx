@@ -201,7 +201,9 @@ test("native host owns page validation while provider callbacks and external lin
     const page = { source: `${origin}/projects/project-one/unknown`, origin: "markdown" as const };
     expect(linkHandler.resolveHref(page)).toBeNull();
     expect(linkHandler.resolveHref({ ...page, source: "/projects/project-one/unknown" })).toBeNull();
-    expect(linkHandler.resolveHref({ ...page, source: "https://example.com/" })).toBe("https://example.com/");
+    expect(linkHandler.resolveHref({ ...page, source: "https://example.com/" })).toBeNull();
+    for (const source of ["mailto:person@example.com", "sms:+1234", "tel:+1234"])
+      expect(linkHandler.resolveHref({ ...page, source })).toBe(source);
     expect(await linkHandler.resolveResource?.({ ...page, source: "custom:owned" })).toEqual({
       href: "custom:owned",
       label: "Owned",
@@ -209,6 +211,7 @@ test("native host owns page validation while provider callbacks and external lin
     expect(await linkHandler.resolveImageSource?.("custom:image")).toBe("data:image/png;base64,owned");
     session.accept({ revision: 1, snapshot: { nativeLinks: false } });
     expect(linkHandler.resolveHref(page)).toBe(page.source);
+    expect(linkHandler.resolveHref({ ...page, source: "https://example.com/" })).toBe("https://example.com/");
     session.accept({ revision: 2, snapshot: { nativeLinks: true } });
     expect(linkHandler.resolveHref(page)).toBeNull();
   } finally {

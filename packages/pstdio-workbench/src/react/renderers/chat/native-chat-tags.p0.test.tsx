@@ -29,3 +29,31 @@ test("draft and submitted native input tags coexist and hide through provider ac
   await Promise.resolve();
   expect(actions).toEqual([{ type: "operation", id: "hide-sent", values: { provider: "B" } }]);
 });
+
+test("read-only conversations can reconnect through explicit host refresh without executing provider mutations", () => {
+  let refreshes = 0;
+  const actions: unknown[] = [];
+  const controls = NativeChatControls({
+    conversation: chatRendererSnapshotSchema.parse({
+      readOnly: true,
+      operations: [
+        { id: "connection", label: "Check connection", refresh: true },
+        { id: "mutate", label: "Change data" },
+      ],
+    }),
+    draft: { text: "Keep draft", attachments: [], values: {} },
+    run: async (action) => {
+      actions.push(action);
+    },
+    changeValues: () => {},
+    reconnect: () => {
+      refreshes++;
+    },
+  });
+  const buttons = controls.props.children[2].props.children;
+  expect(buttons[0].props.disabled).toBeFalsy();
+  expect(buttons[1].props.disabled).toBe(true);
+  buttons[0].props.onClick();
+  expect(refreshes).toBe(1);
+  expect(actions).toEqual([]);
+});
