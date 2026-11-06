@@ -23,6 +23,8 @@ export interface SelectionMenuProps {
   options: SelectionMenuOption[];
   selectedIds: string[];
   multiSelect: boolean;
+  open?: boolean;
+  onOpenChange?: (details: { open: boolean }) => void;
   /** Selecting the active item can clear a value or repeat an action. */
   reselectable?: boolean;
   disabled?: boolean;
@@ -63,6 +65,8 @@ export const selectionOptionIcon = (option: SelectionMenuOption | undefined, box
 export const SelectionMenu = (props: SelectionMenuProps) => {
   const {
     triggerLabel,
+    open,
+    onOpenChange,
     options,
     selectedIds,
     multiSelect,
@@ -140,6 +144,8 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
     return (
       <SearchableMenu
         trigger={trigger}
+        open={open}
+        onOpenChange={onOpenChange}
         items={items}
         listId={group?.defaultValue}
         showSearch={searchable || allowCustomValues}
@@ -208,7 +214,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
   }
 
   return (
-    <Menu.Root closeOnSelect={!multiSelect}>
+    <Menu.Root closeOnSelect={!multiSelect} open={open} onOpenChange={onOpenChange}>
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       {/* Portaled like every other menu: rendered inline it is clipped by the
           panel's overflow and can extend past the viewport. */}
