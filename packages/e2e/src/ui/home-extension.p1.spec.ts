@@ -159,7 +159,7 @@ test("Home keeps setup recovery feedback beside the action", async ({ page, requ
     await expect(home.getByRole("button", { name: "Retry setup", exact: true })).toHaveCount(0);
     expect(retries).toBe(2);
   } finally {
-    // Finish response injections before test completion cancels in-flight routes.
-    await page.unrouteAll({ behavior: "wait" });
+    // Assertions are complete; late read injections may finish after interception is removed.
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   }
 });
