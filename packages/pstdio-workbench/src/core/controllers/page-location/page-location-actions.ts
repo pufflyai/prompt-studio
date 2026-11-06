@@ -19,13 +19,20 @@ interface PageLocationControllerActionsInput<Value> {
   clearProject(projectId: string | undefined): void;
   resetHistory(): void;
   rootLevelTarget(): ResolvedPageLocation;
-  restore(projectId: string, source: "boot" | "project-switch", useCurrentUrl: boolean): WorkbenchPageNavigationResult;
+  clearMissingPage(): boolean;
+  restore(
+    projectId: string,
+    source: "boot" | "project-switch",
+    useCurrentUrl: boolean,
+    selectedModeId?: string,
+  ): WorkbenchPageNavigationResult;
   resolveUrl(projectId: string, entry: WorkbenchPageBrowserEntry): ResolvedPageLocation | undefined;
   normalizeTarget(target: NavigationTargetPage): ResolvedPageLocation;
   normalizeStored(location: PageLocation): ResolvedPageLocation;
   locationsEqual(left: PageLocation | undefined, right: PageLocation | undefined): boolean;
   replay(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
   select(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
+  replaceParams(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
   commit(
     projectId: string,
     resolved: ResolvedPageLocation,
@@ -89,8 +96,9 @@ export const createPageLocationControllerActions = <Value>(
     },
     boot: (projectId) => actions.restore(projectId, "boot", true),
     switchProject(projectId) {
+      const modeId = input.registry.store.getState().activeModeId ?? input.modes.getActiveModeId?.();
       actions.clearProject(projectId);
-      return actions.restore(projectId, "project-switch", false);
+      return actions.restore(projectId, "project-switch", false, modeId);
     },
     navigate(target) {
       const projectId = input.registry.store.getState().projectId;
@@ -124,7 +132,7 @@ export const createPageLocationControllerActions = <Value>(
       const { params: previous, ...location } = current.location;
       const resolved = actions.normalizeStored({ ...location, ...(params ? { params } : {}) });
       if (actions.locationsEqual(current.location, resolved.location)) return current.location;
-      const result = actions.commit(current.projectId, resolved, "replace", "updatePageParams");
+      const result = actions.replaceParams(current.projectId, resolved);
       if (!result.ok) throw new Error(result.diagnostic.message);
       return result.location;
     },
@@ -170,8 +178,18 @@ export const createPageLocationControllerActions = <Value>(
       if (!current.projectId) {
         return actions.fail("navigation", new Error("Cannot navigate before a project is active"));
       }
+      let resolved: ResolvedPageLocation;
       try {
-        const resolved = actions.rootLevelTarget();
+        resolved = actions.rootLevelTarget();
+      } catch (error) {
+        try {
+          if (actions.clearMissingPage()) input.activateLocation?.();
+        } catch (commitError) {
+          return actions.fail("navigation", commitError);
+        }
+        return actions.fail("navigation", error);
+      }
+      try {
         const history = actions.locationsEqual(current.location, resolved.location) ? "none" : "push";
         return navigated(actions.commit(current.projectId, resolved, history, "navigateToRootLevelPageLocation"));
       } catch (error) {

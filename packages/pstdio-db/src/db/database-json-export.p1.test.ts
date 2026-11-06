@@ -3,7 +3,8 @@ import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PGlite } from "pglite-previous";
-import { createDocumentStorage, createMemoryDocumentStore } from "pstdio-sync";
+import { createMemoryDocumentStore } from "pstdio-sync";
+import { createDocumentStorage } from "pstdio-sync/records";
 import { exportDatabaseAsJson } from "./database-json-export";
 
 const lines = async (path: string) =>

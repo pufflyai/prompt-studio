@@ -8,10 +8,13 @@ import type {
   PageQuery,
   RemoveWorktreeResponse,
   RenameWorkspaceInput,
+  UpdateWorkspaceCapacityInput,
+  WorkspaceCapacity,
   WorkspaceFileContent,
   WorkspaceFileEntry,
   WorkspaceFilesResponse,
   WorkspaceProviderDescriptor,
+  WorkspaceResolvedEntry,
   WriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
 import type { ExtensionWorkspace, ExtensionWorkspaceCreateInput } from "pstdio-api-contracts/extension-kernel";
@@ -21,6 +24,10 @@ import type { RequestFn } from "./request";
 import { createWorkspaceDiffClient } from "./workspace-diffs";
 
 export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
+  /** Resolve a protected existing local entry for platform integrations. */
+  resolveEntry(workspaceId: string, path: string): Promise<WorkspaceResolvedEntry>;
+  getCapacity(): Promise<WorkspaceCapacity>;
+  updateCapacity(input: UpdateWorkspaceCapacityInput): Promise<WorkspaceCapacity>;
   queryProviders(
     projectId: string,
     input?: PageQuery,
@@ -58,11 +65,16 @@ export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
   moveEntry(workspaceId: string, path: string, destinationPath: string): Promise<void>;
   deleteEntry(workspaceId: string, path: string): Promise<void>;
   removeWorktree(workspaceId: string): Promise<RemoveWorktreeResponse>;
-  delete(workspaceId: string): Promise<void>;
+  /** Forget only a remote missing-provider record without a backing reference or local path. Abandons recovery; remote resources are not deleted. */
+  delete(workspaceId: string, options?: { forget?: boolean }): Promise<void>;
 };
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
   ...createWorkspaceDiffClient(request),
+  resolveEntry: (workspaceId, path) =>
+    request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/entry?${new URLSearchParams({ path })}`),
+  getCapacity: () => request("/v1/workspaces/capacity"),
+  updateCapacity: (input) => request("/v1/workspaces/capacity", { method: "PATCH", body: input }),
   queryProviders: (projectId, input, options) =>
     request(`/v1/projects/${encodeURIComponent(projectId)}/workspace-providers/query${pageQuery(input)}`, options),
   listProviders: (projectId, options) =>
@@ -140,5 +152,8 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
     }),
   rename: (workspaceId, input) => request(`/v1/workspaces/${workspaceId}`, { method: "PATCH", body: input }),
   removeWorktree: (workspaceId) => request(`/v1/workspaces/${workspaceId}/remove-worktree`, { method: "POST" }),
-  delete: (workspaceId) => request(`/v1/workspaces/${workspaceId}`, { method: "DELETE" }),
+  delete: (workspaceId, options) =>
+    request(`/v1/workspaces/${encodeURIComponent(workspaceId)}${options?.forget ? "?forget=true" : ""}`, {
+      method: "DELETE",
+    }),
 });

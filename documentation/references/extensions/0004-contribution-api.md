@@ -158,7 +158,7 @@ Controls with `onApply` keep edited values during background refreshes. Apply sa
 
 Dashboard UI contributions have one ownership model:
 
-- a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
+- a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, `kanban`, or `resourceList`
 - a page owns a route, mode, optional resource constraint, Main presentation, and extra slots
 - a non-rendering parent uses `main: { kind: "group", default: child.ref }`; the default child opens without a resource in the same mode, while the group remains a breadcrumb label and navigation-tree owner
 - a placement owns a shared mode panel with a static-view or resource-binding item
@@ -473,9 +473,45 @@ The host sends only `params.filter`, `params.sorts`, and display settings. Histo
 
 `defaultViews` defines the starting views for a collection with no saved views. The host saves them as ordinary project views that people and agents can edit, rename, reorder, and delete. At least one view must remain. `defaultActiveViewId` chooses the initial default. Saved project views and their shared default take precedence after initialization. Do not store a second copy in extension storage.
 
-The host saves user-created views for kanban and data table views per project, extension instance and local view ID. Query-returned attributes, columns, and status options are used to validate settings, rules, and sorts. Keep field IDs stable across releases. A successful query can clean rules for removed fields and options from saved views; a failed query never removes them.
+The host saves user-created views for kanban, resource list and data table views per project, extension instance and local view ID. Query-returned attributes, columns, and status options are used to validate settings, rules, and sorts. Keep field IDs stable across releases. A successful query can clean rules for removed fields and options from saved views; a failed query never removes them.
 
 Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` and `DataTableViewsSource` supply shared views and asynchronous mutations to the UI renderers. The workbench accepts a subscribable views provider from its host. Standalone callers need a views source to persist view changes.
+
+## Resource lists
+
+Available on `main`, after 0.46.0 (`view.resourceList.v1`). A `resourceList` body renders the native kanban detailed list with the shared view bar, filters, ordering and properties. It has one display, one grouping and no row dragging. Extensions supply data through the public SDK; no webview is needed.
+
+```ts
+import { defineView } from "@pstdio/sdk/extensions";
+
+const resources = defineView({
+  id: "resources",
+  title: "Resources",
+  body: {
+    kind: "resourceList",
+    attributes: [{
+      id: "device", label: "Device", groupable: true, filterable: true,
+      type: { kind: "enum", options: [
+        { value: "local", label: "This device", color: "green", note: "Online", canCreate: true },
+      ] },
+    }],
+    defaultSettings: { columnGrouping: "device", showChildren: true },
+    query: async () => ({ rows: [{
+      id: "workspace", title: "Improve search", icon: "folder",
+      attributes: { id: "WS-12", device: "local" },
+      children: [{ id: "session", title: "Check results", icon: "message-square", attributes: {} }],
+    }] }),
+  },
+});
+```
+
+Enum options define group labels, dot colors and optional short `note` text. `canCreate: true` shows an Add action when the body also declares `createRow`. Its `columnParam` receives the group value, using the same creation form as kanban. Groups count parent resources and collapse independently; children nest one level. Row IDs must be unique across parents and children.
+
+Groups without source resources are absent, so their Add actions are also absent. Supply a creation toolbar action for a new empty collection or to create the first resource in an unused group.
+
+Rows reuse kanban shorthand (`attributes.id`), property chips, badges, dates and resource menus. Each row can declare an optional icon and navigation target. The Display menu offers grouping, Children (Nested or Hidden), ordering and visible properties. `defaultViews` uses `ResourceListRendererSettings`: `columnGrouping`, `displayProperties` and optional `showChildren`. The host persists these alongside the filter and sorts using the existing collection-view store. Its wire settings also contain the fixed `viewMode: "list"` and `rowGrouping: "none"` fields.
+
+See the [example extension](../../../packages/pstdio-workbench/src/examples/onboarding/extensions/resource-list-extension.ts) and the **ResourceList** onboarding Canvas preview. The shared list skeleton and empty state cover first load and empty queries. `queryMode: "paged"`, refresh events, toolbar actions, row actions and activation callbacks follow the kanban contracts.
 
 ## Sidenav levels
 
@@ -675,3 +711,29 @@ obsolete request is cancelled and cannot replace a newer page. Refresh events
 remain scoped to the renderer; after an edit they reset its page sequence while
 keeping the previous rows visible until the replacement arrives. A stale revision
 keeps those rows and shows Retry, which reloads from the first page.
+
+
+## Project setup views (API 0.3.1 on main)
+
+An optional `projectSetup: { view, hiddenSetting? }` on `defineExtension` offers an owned,
+declared view after a newly created project opens. The host waits for authoritative enabled
+setup contributions before opening anything; absent, disabled or hidden setup shows no setup UI.
+Multiple contributions run in declaration order;
+closing one advances to the next. Ordinary project navigation does not replay setup.
+
+`hiddenSetting` names a declared boolean extension setting. When true it suppresses automatic
+setup; a device-scoped setting shares this preference across projects. Unknown or nonboolean
+keys fail extension validation. Disabling/removing an active setup contribution closes its view.
+The host owns the dialog and focus trap: webviews render standalone content with their own
+providers, without nested dialogs. Declare `placement.close` to let Skip/Finish close the calling
+overlay; that capability cannot close another placement.
+
+Reopening a folder that already has a project does not offer setup. Disabled or removed
+extensions contribute no setup. These additions require a published SDK and host containing
+API 0.3.1 and `project-setup.v1`.
+
+## Dashboard commands and session ordering (API 0.3.1 on main)
+
+Dashboard webviews with `commands.execute` can use public `workbenchCommands` refs: `newConversation`, `openToolSearch`, `retryProjectSetup`, and `recentResources`. Pass the ref's `id` to the host capability. Commands run in the webview's selected project; stale project invocations are rejected. Setup retry uses the existing project setup service and returns only after it finishes. `recentResources` returns the five most recently opened resources in the selected project with their explicit navigation targets. It uses this device’s saved navigation activity, preserves resource ownership, and uses live built-in metadata and last-seen extension presentation refreshed by the normal view lifecycle. Removed or unavailable resources are omitted. Subscribe to `viewDataEvents.recentResourcesChanged` to refresh while a view remains open. These are dashboard commands, not server-side extension commands or CLI actions. Publish the SDK and host before extensions adopt these additions.
+
+`ctx.sessions.query({ orderBy: "updated", limit: 5 })` returns the most recently updated conversations. Unlike `lastActivity`, this order uses only `updatedAt`, with descending IDs to break ties. Its cursor preserves that order across local and synced personal history.

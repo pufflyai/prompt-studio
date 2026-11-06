@@ -29,9 +29,20 @@ Both references must name registered views.
 
 The host opens the detail view above the item, aligned with its leading or trailing
 slot. Its content can extend beyond the status bar iframe. Webviews use their
-intrinsic height, and long details scroll inside the shared popover. Closing it
-unmounts the detail view and releases its subscriptions. The status view remains
-mounted. Existing items without `popover` keep their current behavior.
+intrinsic height, and long details scroll inside the shared popover. Details
+preload before the first click. Closing hides them and keeps their state and
+webview, so reopening reuses the loaded view. Removing the status item
+or unmounting the workbench releases the detail view. The status view remains
+mounted while the details are closed. Existing items without `popover` keep their
+current behavior.
+
+Native view effects pause while hidden. Webviews keep their bridge connected and receive
+`document.hidden`, `document.visibilityState`, and `visibilitychange` updates for their
+host presentation as well as the browser document. Webviews should suspend subscriptions
+and timers while hidden; React views can place their content inside an `Activity` driven
+by document visibility. The visibility listener must sit outside that Activity so it can
+resume the content. Performance Monitoring follows this contract and prepares one snapshot
+without retaining a live subscription while closed.
 
 ## Examples
 

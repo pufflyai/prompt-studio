@@ -59,7 +59,7 @@ export const verifyPackagedCollectionBreadcrumb = async (
       const navigation = button.closest("section");
       return navigation?.querySelector('[data-scope="scroll-area"][data-part="viewport"]')?.contains(button);
     }),
-  ).toBe(true);
+  ).toBe(false);
   const search = await sidenav.getByRole("option", { name: "Search", exact: true }).boundingBox();
   const back = await modeReturn.boundingBox();
   expect(back!.y).toBeGreaterThanOrEqual(search!.y + search!.height);

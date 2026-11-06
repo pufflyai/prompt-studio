@@ -10,14 +10,14 @@ import {
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { attentionPanelTarget } from "../../attention-panel";
-import { stepReview } from "../model/review";
 import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
+import { formatDay } from "./flags";
 import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { PlanLoading } from "./plan-loading";
 import { useViewSections } from "./plan-state";
+import { TicketRequestsDialog } from "./ticket-requests-dialog";
 import { reportPlannerError } from "./timeline-notice";
 import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
@@ -81,6 +81,24 @@ interface PlanContentProps extends PlanRootProps {
 function PlanContent(props: PlanContentProps) {
   const { host, t, client, plan, viewsSource } = props;
   const [search, setSearch] = useState("");
+  const [attention, setAttention] = useState<{
+    kind: "ticket" | "milestone";
+    id: string | null;
+    open: boolean;
+    pendingOnly: boolean;
+    trigger: HTMLElement | null;
+    fallback?: HTMLElement | null;
+  }>();
+  const attentionSection = plan.sections.find(({ deadline }) => (deadline?.id ?? null) === attention?.id);
+  const attentionRows =
+    attention?.kind === "milestone"
+      ? (attentionSection?.rows ?? [])
+      : plan.sections.flatMap(({ rows }) => rows).filter(({ id }) => id === attention?.id);
+  const attentionTitle =
+    attention?.kind === "milestone"
+      ? (attentionSection?.deadline?.name ??
+        (attentionSection?.deadline ? formatDay(attentionSection.deadline.date) : "Unscheduled"))
+      : attentionRows.map(({ shorthand, title }) => `${shorthand} · ${title}`).join("");
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const displayProperties = useCollectionViewStore(
@@ -92,8 +110,23 @@ function PlanContent(props: PlanContentProps) {
   const matching = searchRows(filtered, search, (row) => [row.title, String(row.attributes.id)]);
   const tracks = visibleTracks(plan, filter, queryData.attributes);
   const { sections, toggle } = useViewSections(plan, new Set(matching.map(({ id }) => id)));
-  const { viewProps, selected, open, review, editor, context, setSelectedId, setContext, setEditor, done } =
-    usePlanActions({ host, client, plan, sections, tracks, toggle });
+  const { viewProps, selected, open, editor, context, setSelectedId, setContext, setEditor, done } = usePlanActions({
+    host,
+    client,
+    plan,
+    sections,
+    tracks,
+    toggle,
+    onReview: (id, trigger, fallback) =>
+      setAttention({
+        kind: "milestone",
+        id,
+        open: true,
+        pendingOnly: true,
+        trigger,
+        fallback,
+      }),
+  });
   return (
     <Flex direction="column" h="full" minH="0" minW="0">
       <PlanHeader
@@ -117,8 +150,14 @@ function PlanContent(props: PlanContentProps) {
               rows: new Map(queryData.rows.map((row) => [row.id, row])),
             }}
             onOpenRequests={(row) => {
-              setSelectedId(undefined);
-              void host.call("navigation.open", { target: attentionPanelTarget(row.target.resource!, "timeline") });
+              viewProps.onSelect(row.id);
+              setAttention({
+                pendingOnly: row.requests.some(({ state }) => state === "open"),
+                kind: "ticket",
+                id: row.id,
+                open: true,
+                trigger: document.activeElement as HTMLElement | null,
+              });
             }}
           />
         </Box>
@@ -132,19 +171,24 @@ function PlanContent(props: PlanContentProps) {
               onOpen={open}
               onSelect={setSelectedId}
               onClose={() => setSelectedId(undefined)}
-              review={
-                review?.includes(selected.id)
-                  ? {
-                      position: review.indexOf(selected.id) + 1,
-                      total: review.length,
-                      onStep: (direction) => setSelectedId(stepReview(review, selected.id, direction)),
-                    }
-                  : undefined
-              }
             />
           </Suspense>
         ) : null}
       </Flex>
+      {attention ? (
+        <TicketRequestsDialog
+          key={`${attention.kind}:${attention.id}`}
+          rows={attentionRows}
+          title={attentionTitle}
+          open={attention.open}
+          pendingOnly={attention.pendingOnly}
+          trigger={attention.trigger}
+          fallback={attention.fallback}
+          onClose={() => setAttention({ ...attention, open: false })}
+          onAnswer={(requestId, response) => client.commands.review({ requestId, response })}
+          onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
+        />
+      ) : null}
       {editor ? (
         <Suspense fallback={null}>
           <PlanEditor

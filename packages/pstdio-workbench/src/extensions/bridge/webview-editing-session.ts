@@ -9,12 +9,15 @@ import {
   type WebviewEditingSnapshot,
 } from "pstdio-api-contracts/extension-kernel";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
-import type { WorkbenchCore } from "../../core";
+import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
+import { settingsLeaveGuard } from "../../react/settings/settings-leave-guard";
 
 interface Member {
   id: string;
   events: HostEventPublisher;
   document: EditingDocument;
+  unregister?: () => void;
+  changed?: () => void;
 }
 interface EditingDocument {
   key: string;
@@ -34,6 +37,8 @@ interface Owner {
   projectId: string;
   extensionId: string;
   events: HostEventPublisher;
+  settings?: ReturnType<typeof settingsLeaveGuard>;
+  title?: string;
 }
 type OpenRequest = Extract<WebviewEditingSessionParams, { operation: "open" }>;
 const fail = (code: string) => Object.assign(new Error(code), { code });
@@ -49,7 +54,8 @@ const snapshot = (document: EditingDocument) =>
 const publish = (document: EditingDocument, accepted?: { member: Member; sequence: number }) => {
   document.version++;
   const current = snapshot(document);
-  for (const member of document.members)
+  for (const member of document.members) {
+    member.changed?.();
     member.events.emit({
       scope: "editing.session",
       payload: {
@@ -58,6 +64,7 @@ const publish = (document: EditingDocument, accepted?: { member: Member; sequenc
         ...(accepted?.member === member ? { appliedSequence: accepted.sequence } : {}),
       },
     });
+  }
 };
 
 const preview = (member: Member, input: Extract<WebviewEditingSessionParams, { changes: unknown }>) => {
@@ -128,6 +135,7 @@ const createSessions = () => {
   };
   const close = (member: Member) => {
     const document = member.document;
+    member.unregister?.();
     document.members.delete(member);
     connections.get(member.events)?.delete(member.id);
     cancel(member);
@@ -156,9 +164,11 @@ const createSessions = () => {
         })
         .finally(() => {
           document.writing = null;
+          publish(document);
           clean(document);
         });
     }
+    publish(document);
     return document.writing;
   };
   const connection = (events: HostEventPublisher) => {
@@ -189,9 +199,34 @@ const createSessions = () => {
       documents.set(key, document);
     }
     if (!member) {
-      const joined = { id: input.sessionId, events: owner.events, document };
+      const joined: Member = { id: input.sessionId, events: owner.events, document };
       members.set(input.sessionId, joined);
       document.members.add(joined);
+      if (owner.settings) {
+        const draft = document;
+        joined.changed = owner.settings.changed;
+        joined.unregister = owner.settings.register({
+          title: owner.title ?? "Settings",
+          get dirty() {
+            return diffEditingState(draft.saved, snapshot(draft).value).length > 0;
+          },
+          get saving() {
+            return draft.writing !== null;
+          },
+          save: async () => {
+            do {
+              commit(joined, { operation: "commit", sessionId: joined.id, sequence: 0, changes: [] });
+              await flush(draft);
+            } while (diffEditingState(draft.saved, snapshot(draft).value).length);
+          },
+          reset: () => {
+            draft.value = structuredClone(draft.saved);
+            draft.revision = draft.savedRevision;
+            draft.previews.clear();
+            publish(draft);
+          },
+        });
+      }
     }
     return snapshot(document);
   };
@@ -235,6 +270,7 @@ export const createWorkbenchEditingSessionAdapter = (input: {
   extensionId?: string;
   projectId?: string;
   hostEvents?: HostEventPublisher;
+  placement?: WorkbenchPanelInstance;
 }) => {
   const { workbench, extensionId, projectId, hostEvents } = input;
   if (!extensionId || !projectId || !hostEvents) return;
@@ -243,5 +279,6 @@ export const createWorkbenchEditingSessionAdapter = (input: {
     owner = createSessions();
     sessions.set(workbench, owner);
   }
-  return owner({ extensionId, projectId, events: hostEvents });
+  const settings = input.placement?.resource?.type === "workbench-settings" ? settingsLeaveGuard(workbench) : undefined;
+  return owner({ extensionId, projectId, events: hostEvents, settings, title: input.placement?.resource?.label });
 };

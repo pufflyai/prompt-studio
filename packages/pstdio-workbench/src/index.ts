@@ -232,6 +232,7 @@ export type {
   WorkbenchViewMenuRegistry,
   WorkbenchViewRegistry,
   WorkbenchViewRegistryStoreState,
+  WorkbenchWebviewBody,
   WorkbenchWidgetPlacement,
   WorkbenchWidgetTab,
   WorkflowStatus,
@@ -285,3 +286,9 @@ export {
   workbenchTopHeaderTrailingMenuPath,
   workbenchViewIdContextKey,
 } from "./core";
+export {
+  createNativeDocumentSession,
+  type NativeDocumentSession,
+  type NativeDocumentSessionInput,
+  type NativeDocumentSessionSnapshot,
+} from "./core/native-documents/native-document-session";

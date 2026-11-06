@@ -1,23 +1,24 @@
 # Needs attention
 
-**Needs attention** is the place for ticket actions that need a person. It currently contains review requests: tasks and decisions that ask for input on a ticket. Other agent actions can use this area as they are added.
+**Needs attention** collects decisions a person needs to make. Use a request only for an unresolved choice that the agent cannot settle from existing instructions or authority.
 
-Planner owns every review request: attempt handoffs, timeline tasks, and decisions all use the same commands and storage. The numbered **Needs attention** bubble counts open or unreadable requests.
+Identify the ticket in the title and keep request text to at most 80 words, excluding document links. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. Include each choice’s main cost and a marked recommendation. Keep question and option labels short, without repeating the summary.
 
-"Review" here means a person's answer. Code reviews of an attempt use `run-review` and `submit-review` instead. See [Attempts](0002-attempts.md).
+Use descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Include as many relevant links as needed. Reuse existing documents and link evidence, background, and implementation detail instead of copying them into the request. The choice and essential trade-offs should be clear without opening the links.
 
-## Kinds of requests
+Missing resources, credentials, access, reproduction details and non-decision actions use **Blocked** and a specific blocked reason: what is missing and what allows work to continue. Clear the reason when resolved. Dependency waiting belongs in dependency links. Routine assumptions, risk checklists and handing in work do not by themselves need a request.
 
-- A **task** asks a person to do something and confirm it. Its response is `{"confirmed":true}`.
-- A **decision** asks one or more questions. Each question takes text, one choice, or several choices. Its response is `{"answers":{"<question-id>":"<answer>"}}`. A text or single-choice answer is a string. A multiple-choice answer is an array of choice IDs.
+Planner owns the saved requests and answers used by Auto Build, card and milestone modals, and the ticket page. The numbered **Needs attention** bubble counts open or unreadable requests. “Review” here means a person's answer. Code reviews use `run-review` and `submit-review`; see [Attempts](0002-attempts.md).
 
-Planner checks every response before it saves it. Required answers must be present. Unknown questions, unknown choices, duplicate choices, and wrong value types are refused.
+## Request forms
 
-Attempt handoffs ask one required text question with the ID `result`. Its answer describes the decision and the action that was completed.
+A **decision** asks one or more questions using text, one choice, or several choices. Its response is `{"answers":{"<question-id>":"<answer>"}}`. A text or single-choice answer is a string; multiple-choice answers are arrays of choice IDs. Required answers must be present. Unknown questions, unknown choices, duplicates and wrong value types are refused.
+
+Previously saved task confirmations and handoffs remain readable and answerable. A task response is `{"confirmed":true}`. The task API remains available for existing integrations; new agent guidance reserves requests for decisions.
 
 ## Lifecycle
 
-1. `request-human` saves the request and updates the Needs attention count. It does not start or continue an agent session.
+1. `request-review` saves the request and updates the Needs attention count. It does not start or continue an agent session.
 2. A person or an agent answers with `review` or cancels with `review-requests cancel`. Schedules, automations, and event handlers cannot do either.
 3. Each request has one current outcome: an answer or a cancellation. If the first answer races another answer or cancellation, the first write wins and the other caller sees the saved outcome.
 4. When no open request is left on the ticket, the bubble shows the resolved count. Planner does not change the ticket status; the implementation agent updates it when it continues.
@@ -34,20 +35,24 @@ Revising an answer does not undo actions already taken using the earlier answer.
 
 New requests need a ticket that is not done. Answers and cancellations still work after the ticket is done, because a merge can finish the ticket before its approval request is answered. Deleting a ticket deletes its requests.
 
-Answering or cancelling the last open request resolves pending input when no unreadable record remains. In Tickets and Project Timeline, attention counts open the ticket's forms in the Side Panel without leaving the current view. Board cards with pending input open that panel too. Choosing another ticket's attention count reuses the panel and loads that ticket's requests. The ticket sidebar's **Needs attention** entry still opens the full page beside the ticket navigation. Both surfaces use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
+Answering or cancelling the last open request resolves pending input when no unreadable record remains. In Project Timeline, only a card’s Needs attention bubble opens that ticket’s forms in a modal. The milestone’s bubble opens the same modal for requests from its tickets, with each request labeled by ticket. Closing it restores focus to the activating bubble. Clicking the rest of the card keeps its normal ticket preview behavior. Tickets board attention counts continue to open the Side Panel. Auto Build shows warnings first, then its current work’s requests inline, Supervisor, and Agents. Previous and Next show one pending request and its position, preserving each draft. Saving removes the resolved item and selects the next; a failed save preserves the draft and shows an inline error. A single request has no carousel controls. The ticket sidebar's **Needs attention** entry still opens the full page beside the ticket navigation. Both surfaces use the same question controls as questions an agent asks in chat: one step tab per question, with radio buttons or checkboxes for choices. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
 
 ## CLI
 
-```sh
-pst pstdio-planner request-human --ticket PS-32 --title 'Check the preview' --instructions 'Open the preview and confirm its layout.' --request '{"kind":"task"}'
-pst pstdio-planner review --request-id <id> --response '{"confirmed":true}'
-```
-
-A decision with a choice and a text question:
+This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
 
 ```sh
-pst pstdio-planner request-human --ticket PS-32 --title 'Choose the release scope' --instructions 'Choose the scope and describe any limits.' --request '{"kind":"decision","questions":[{"id":"scope","label":"Release scope","required":true,"input":{"kind":"single-choice","options":[{"id":"preview","label":"Preview"},{"id":"full","label":"Full release"}]}},{"id":"limits","label":"Limits","required":false,"input":{"kind":"text"}}]}'
-pst pstdio-planner review --request-id <id> --response '{"answers":{"scope":"preview","limits":"Use the internal project first."}}'
+pst pstdio-planner request-review --ticket PS-32 \
+  --title 'PS-32 · Choose the first release audience' \
+  --instructions '**Problem:** The export is ready, but its first release audience is undecided.
+
+**Solution:** Release to the internal project first (recommended), or to everyone now.
+
+**Downside:** An internal release delays wider access; releasing to everyone exposes more people to faults.
+
+**Details:** [Release plan](files/release-plan.md).' \
+  --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
+pst pstdio-planner review --request-id <id> --response '{"answers":{"audience":"internal"}}'
 ```
 
 Read, cancel, or open requests:
@@ -65,7 +70,7 @@ Each read returns the request with its derived `state` (`open`, `answered`, or `
 
 Requests live in the `planner-review-requests` collection. Outcomes live in `planner-review-request-outcomes`, one per request, under the request ID. A request without an outcome is open. The design is recorded in [ADR 0068](../../../documentation/adrs/0068-planner-owns-review-requests.md).
 
-Legacy free-text requests in `planner-human-requests` are not inferred as actionable requests. Inspect the ticket for an actual outstanding task or decision. If one exists, create a structured request with concrete instructions and questions. Otherwise no human input is needed.
+Legacy free-text requests are not inferred as actionable requests. Inspect the ticket for a genuine unresolved decision. If one exists, create a structured request with concrete instructions and questions. Otherwise no review input is needed.
 
 Board, CLI, and timeline reads derive pending input and counts from current requests, including on archived and completed tickets. Request changes refresh readers without rewriting ticket tags. The storage upgrade removes the old Needs attention tag option and its ticket references, while preserving custom flag options and request history.
 

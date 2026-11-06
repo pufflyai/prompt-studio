@@ -29,7 +29,7 @@ Before saving a proposal that adds or changes UI, read `pst pstdio-planner refin
    - Do not add implementation steps, code paths, or open questions to `ticket.md`.
 7. Create supporting files only as described below.
 8. Run `pst tickets save --id <shorthand>`.
-9. Ask for review as described below.
+9. Create a review request only for a genuine unresolved decision, as described below.
 
 ## Ticket files
 
@@ -48,41 +48,30 @@ Contracts, schemas, and cookbooks belong to the implementation tickets, not the 
 
 ## Review request
 
-Do not write assumptions, risks, or open questions in the ticket. Put them in one Planner review request, so the person answers them in a form. Skip the request when nothing needs an answer.
+Create a review request only for a genuine unresolved decision that the existing instructions and your authority cannot settle. Do not ask for routine assumptions, blanket risk acceptance, handoff acknowledgement, missing credentials, access, resources, reproduction details, or a non-decision action.
+
+For an independent non-decision blocker, discover the configured Blocked status with `pst statuses list`, then use `pst tickets update --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
+
+Keep request text to at most 80 words, excluding document links. Identify the ticket in the title. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. State the decision, mark the recommended choice, and name the main cost of each option. Keep question and option labels short; do not repeat the summary in them. Use a required choice question; add optional notes only when useful. Do not add confirmation or risk checklists that contain no decision.
+
+Use descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Include as many relevant links as needed. Reuse existing documents and link supporting evidence, background, and implementation detail instead of copying them into the request. Keep the choice and essential trade-offs visible without opening the links.
+
+This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
 
 ```bash
-pst pstdio-planner request-human --ticket PS-12 \
-  --title "Review the proposal" \
-  --instructions "- **D1.** Mounted background tabs use memory. A cap keeps memory bounded.
-- **C1.** Resizing a panel on one workspace resizes it on every workspace of the same page type.
-- **R1.** Every user's tab layout resets once when the layout cache is discarded." \
-  --request '{"kind":"decision","questions":[
-    {"id":"d1-tab-cap","label":"D1. Cap mounted background tabs?","required":true,"input":{"kind":"single-choice","options":[
-      {"id":"cap-5","label":"Cap at 5, unmount the oldest (recommended)"},
-      {"id":"no-cap","label":"No cap"}]}},
-    {"id":"confirm","label":"Tick each assumption you accept","required":false,"input":{"kind":"multiple-choice","options":[
-      {"id":"c1-shared-sizes","label":"C1. Panel sizes are shared by page type"}]}},
-    {"id":"risks","label":"Tick each risk you accept","required":false,"input":{"kind":"multiple-choice","options":[
-      {"id":"r1-layout-reset","label":"R1. Tab layouts reset once for every user"}]}},
-    {"id":"notes","label":"Corrections or other answers","required":false,"input":{"kind":"text"}}]}'
+pst pstdio-planner request-review --ticket PS-12 \
+  --title "PS-12 · Choose the first release audience" \
+  --instructions "**Problem:** The export is ready, but its first release audience is undecided.
+
+**Solution:** Release to the internal project first (recommended), or to everyone now.
+
+**Downside:** An internal release delays wider access; releasing to everyone exposes more people to faults.
+
+**Details:** [Release plan](files/release-plan.md)." \
+  --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
 ```
 
-Use these question types:
-
-- **Decide** (`D1`, `D2`, ...): a choice only the person can make. Use a required single-choice question. Put your recommended option first and end its label with "(recommended)".
-- **Confirm** (`C1`, `C2`, ...): an assumption you made. List them as options of one multiple-choice question. An option the person leaves unticked needs a correction.
-- **Risk** (`R1`, `R2`, ...): a cost or danger the person should accept. List them as options of one multiple-choice question.
-- **Notes**: always add one optional text question for corrections and answers outside the given options.
-
-The form shows every option as its own radio button or checkbox, so each option label must make sense alone. Keep each label to one short sentence. Write `--instructions` as a Markdown list with one item per line, using the same IDs, and put any context the person needs there. Ask at most seven items in total. If you have more, the proposal is too large; split it.
-
-When the person answers:
-
-1. Read the answers with `pst pstdio-planner review-requests read --request-id <request-id>`.
-2. Update the proposal so it states the decided behavior. Do not copy the answers into the ticket; the request keeps them.
-3. If an answer raises a new question, create a new request for it. Answered requests do not change.
-
-Never answer your own request.
+Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.
 
 ## Finish condition
 

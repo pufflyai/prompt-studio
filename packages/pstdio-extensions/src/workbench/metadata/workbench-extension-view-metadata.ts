@@ -1,8 +1,13 @@
 import type { WorkbenchExtensionMetadata, WorkbenchExtensionViewBody } from "@pstdio/sdk/api";
 import type { CommandRef, PackageAssetDescriptor, ViewBody, WebviewContribution } from "@pstdio/sdk/extensions";
-import { normalizeKanbanViewDefaults } from "pstdio-api-contracts";
+import { normalizeKanbanViewDefaults, normalizeResourceListViewDefaults } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "../../types/runtime";
-import { commandRef, normalizedRef, refreshEventIds } from "./workbench-extension-metadata-normalizers";
+import {
+  commandRef,
+  normalizedRef,
+  normalizeTarget,
+  refreshEventIds,
+} from "./workbench-extension-metadata-normalizers";
 
 type WorkbenchExtensionWebview = Extract<WorkbenchExtensionViewBody, { kind: "webview" }>["webview"];
 
@@ -71,6 +76,8 @@ const toNativeViewBody = (
     return {
       kind: "file",
       ...common,
+      saveMode: body.saveMode,
+      document: body.document,
       loadHandlerId: String(handlers.loadHandlerId),
       saveHandlerId: handlers.saveHandlerId as string | undefined,
     };
@@ -111,10 +118,22 @@ const toNativeViewBody = (
     };
   }
   return {
-    kind: "kanban",
+    kind: body.kind,
     queryMode: body.queryMode,
     ...common,
-    attributes: body.attributes,
+    attributes: body.attributes?.map((attribute) => ({
+      ...attribute,
+      type:
+        attribute.type.kind === "enum" || attribute.type.kind === "enum-multi"
+          ? {
+              ...attribute.type,
+              options: attribute.type.options.map((option) => ({
+                ...option,
+                noteAction: option.noteAction ? normalizeTarget(option.noteAction, view.extensionId) : undefined,
+              })),
+            }
+          : attribute.type,
+    })),
     queryHandlerId: String(handlers.queryHandlerId),
     attributeChangeHandlerId: handlers.attributeChangeHandlerId as string | undefined,
     moveHandlerId: handlers.moveHandlerId as string | undefined,
@@ -141,7 +160,7 @@ const toNativeViewBody = (
       ...action,
       params: action.params ? { ...action.params } : undefined,
     })),
-    ...normalizeKanbanViewDefaults(body),
+    ...(body.kind === "resourceList" ? normalizeResourceListViewDefaults(body) : normalizeKanbanViewDefaults(body)),
     defaultActiveViewId: body.defaultActiveViewId,
     hideToolbar: body.hideToolbar,
   };

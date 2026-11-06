@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 export const entries = {
+  charts: path.resolve(import.meta.dirname, "src/components/charts/index.ts"),
+  "keyframe-timeline": path.resolve(import.meta.dirname, "src/components/keyframe-timeline/index.ts"),
   index: path.resolve(import.meta.dirname, "src/index.ts"),
   canvas: path.resolve(import.meta.dirname, "src/components/canvas/index.ts"),
   "dependency-timeline": path.resolve(import.meta.dirname, "src/components/dependency-timeline/index.ts"),
@@ -10,6 +12,7 @@ export const entries = {
   "chat-ui": path.resolve(import.meta.dirname, "src/components/chat-ui/index.ts"),
   diff: path.resolve(import.meta.dirname, "src/components/diff-viewer/index.ts"),
   "kanban-renderer": path.resolve(import.meta.dirname, "src/components/kanban-renderer/index.ts"),
+  "command-form": path.resolve(import.meta.dirname, "src/components/command-form/index.ts"),
   "param-editor": path.resolve(import.meta.dirname, "src/components/param-editor/index.ts"),
   "data-table": path.resolve(import.meta.dirname, "src/components/data-table/index.ts"),
   "collection-view": path.resolve(import.meta.dirname, "src/components/collection-view/index.ts"),

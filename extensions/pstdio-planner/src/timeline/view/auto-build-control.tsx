@@ -1,5 +1,4 @@
 import { type GuestHost, workbenchPanels } from "@pstdio/sdk/extensions";
-import { ticketRequestsTarget } from "../../data/ticket-page-target";
 import { AutoBuildButton } from "./auto-build-button";
 import type { timelineQueryData } from "./timeline-query";
 import { useAutoBuild } from "./use-auto-build";
@@ -22,11 +21,8 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
       paused={autoBuild.mode?.state === "paused"}
       reviewRequests={autoBuild.mode?.reviewRequests}
       requestErrors={autoBuild.mode?.requestErrors}
-      onOpenRequest={(request) =>
-        void host.call("navigation.open", {
-          target: ticketRequestsTarget({ type: "ticket", id: request.ticketId, extensionId: "pstdio.pstdio-planner" }),
-        })
-      }
+      onAnswerRequest={(requestId, response) => client.commands.review({ requestId, response })}
+      onOpenRequestChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
       onPause={() => autoBuild.transition("pause")}
       onResume={() => autoBuild.transition("resume")}
       completed={autoBuild.mode?.completed}

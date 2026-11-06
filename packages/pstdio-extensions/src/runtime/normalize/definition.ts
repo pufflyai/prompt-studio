@@ -22,6 +22,7 @@ const contributionKeys = new Set(
     navigationTrees: true,
     pages: true,
     placements: true,
+    projectSetup: true,
     resourceKinds: true,
     resourceHierarchyProviders: true,
     schedules: true,
@@ -34,6 +35,7 @@ const contributionKeys = new Set(
     templateTypes: true,
     templates: true,
     themes: true,
+    textSources: true,
     translations: true,
     views: true,
     viewMenus: true,
@@ -67,6 +69,7 @@ const collectionKinds = new Map<string, ContributionKind>([
   ["templates", "template"],
   ["templateTypes", "template-type"],
   ["themes", "theme"],
+  ["textSources", "text-source"],
   ["viewMenus", "view-menu"],
   ["views", "view"],
   ["workspaceTypes", "workspace-type"],
@@ -193,6 +196,35 @@ export const validateExtensionDefinition = (
         metadata: { key },
       }),
     );
+  }
+  const setup = source.definition.projectSetup;
+  if (setup?.hiddenSetting && source.definition.settings?.properties[setup.hiddenSetting]?.type !== "boolean") {
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "invalid_project_setup",
+        message: "Project setup hiddenSetting must reference a declared boolean setting",
+        extensionId: ext.id,
+        sourcePath: source.sourcePath,
+      }),
+    );
+    return false;
+  }
+  if (
+    setup &&
+    (!setup.view ||
+      setup.view.kind !== "view" ||
+      (setup.view.extensionId && setup.view.extensionId !== ext.id) ||
+      !source.definition.views?.some((view) => view.id === setup.view.id))
+  ) {
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "invalid_project_setup",
+        message: "Project setup must reference this extension's declared view",
+        extensionId: ext.id,
+        sourcePath: source.sourcePath,
+      }),
+    );
+    return false;
   }
   return validateContributionCollections(ext, source, runtime);
 };

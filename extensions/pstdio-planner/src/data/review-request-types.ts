@@ -1,6 +1,6 @@
 import type { ActorRef } from "./attempt-types";
 
-export type HumanRequestReason =
+export type ReviewRequestReason =
   | "approved-revision"
   | "ambiguous-dependency-attempt"
   | "divergent-dependency-attempts"
@@ -40,7 +40,7 @@ export interface ReviewRequest {
   requestedBy: ActorRef;
   context: {
     affectedAction?: "implementation" | "merge";
-    reason: HumanRequestReason | null;
+    reason: ReviewRequestReason | null;
     workspaceId: string | null;
     attemptRevision: number | null;
     sessionId: string | null;
@@ -58,6 +58,7 @@ export type StoredReviewOutcome = ReviewOutcome & { requestId: string };
 export type ReviewRequestState = "open" | "answered" | "cancelled";
 
 export interface ReviewRequestView extends ReviewRequest {
+  ticketLabel?: string;
   state: ReviewRequestState;
   outcome: ReviewOutcome | null;
   outcomeText: string | null;

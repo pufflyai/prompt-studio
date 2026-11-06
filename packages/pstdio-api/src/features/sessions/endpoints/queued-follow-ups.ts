@@ -9,6 +9,7 @@ import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { HarnessParamError } from "../harness-params";
 import { QueuedRequestConflict, updateQueuedRequest } from "../queued-request-operations";
+import { remoteSessionAction } from "../remote-session-action";
 import { SessionAttachmentError } from "../session-attachments";
 import { withSchedulingLock } from "../session-scheduler-internals";
 
@@ -80,7 +81,16 @@ export const updateQueuedFollowUpHandler =
     const { id, queuePosition } = c.req.valid("param");
     const input = c.req.valid("json");
     const session = await deps.sessionService.get(id);
-    if (!session) return c.json({ error: `Session not found: ${id}` }, 404);
+    if (!session) {
+      const forwarded = await remoteSessionAction(
+        updateQueuedFollowUpRoute,
+        deps,
+        id,
+        { type: "session.queueUpdate", id, queuePosition, input },
+        c.req.raw.signal,
+      );
+      return forwarded ?? c.json({ error: `Session not found: ${id}` }, 404);
+    }
     try {
       return c.json({ ok: true as const, request: await updateQueuedRequest(deps, id, queuePosition, input) }, 200);
     } catch (error) {
@@ -95,6 +105,16 @@ export const deleteQueuedFollowUpHandler =
   (deps: SessionsRouteDeps): AppRouteHandler<typeof deleteQueuedFollowUpRoute> =>
   async (c) => {
     const { id, queuePosition } = c.req.valid("param");
+    if (!(await deps.sessionService.get(id))) {
+      const forwarded = await remoteSessionAction(
+        deleteQueuedFollowUpRoute,
+        deps,
+        id,
+        { type: "session.queueDelete", id, queuePosition, expectedRevision: c.req.valid("query").expectedRevision },
+        c.req.raw.signal,
+      );
+      return forwarded ?? c.json({ error: `Session not found: ${id}` }, 404);
+    }
     return withSchedulingLock(async () => {
       const entry = await deps.sessionQueueEntriesService.get(queuePosition);
       if (!entry || entry.session_id !== id) return c.json({ error: "Queued request not found." }, 404);
@@ -109,6 +129,16 @@ export const moveQueuedFollowUpHandler =
   async (c) => {
     const { id, queuePosition } = c.req.valid("param");
     const input = c.req.valid("json");
+    if (!(await deps.sessionService.get(id))) {
+      const forwarded = await remoteSessionAction(
+        moveQueuedFollowUpRoute,
+        deps,
+        id,
+        { type: "session.queueMove", id, queuePosition, input },
+        c.req.raw.signal,
+      );
+      return forwarded ?? c.json({ error: `Session not found: ${id}` }, 404);
+    }
     return withSchedulingLock(async () => {
       const moved = await deps.sessionQueueEntriesService.movePending({ sessionId: id, queuePosition, ...input });
       if (!moved) return c.json({ error: "The queue changed. Refresh before moving this request." }, 409);

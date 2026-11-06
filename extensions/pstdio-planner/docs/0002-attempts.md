@@ -47,15 +47,21 @@ Planner then does the following:
 
 Planner does not merge work. Merging, delivering, and moving the ticket to a completed status are your decisions, or the implementation agent's when its task requires it.
 
-If two implementation sessions are already running in the project, Run attempt does not start another one. To change the limit, open **Settings → Project → Extensions**, select **Project Planner**, and set **Maximum in-progress tickets** on its **Settings** tab.
+If two implementation sessions are already running in the project, Run attempt does not start another one. To change the limit, open **Settings → Project Planner → Workflow & automation**, set **Maximum in-progress tickets**, and select **Save changes**.
 
 `pst tickets implement` is a lighter option. It starts one agent session with the implement-ticket prompt. The agent updates the ticket status itself. It does not create a worktree, a managed attempt, or a review.
+
+## Recover a missing workspace
+
+Run the same `run-attempt --ticket <ticket>` command after explicitly deciding to resume. When the selected attempt's workspace is unavailable, Planner creates a managed continuation from its surviving branch, submitted commit, saved event commit, or available base. Its new owner receives the previous session, revisions, reports and linked PRs. Historical revisions and review verdicts stay on the old attempt; they do not approve the continuation. The new owner validates recovered code and submits a fresh revision.
+
+This manual command works with Auto Build disabled. It can resume work that was previously stopped, but a new stop or a running owner prevents recovery. Planner rechecks capacity, dependencies, pending input and workspace availability before launching. An intact workspace keeps its original owner and conversation. A linked audit workspace with a live session is not adopted or reassigned by recovery.
 
 ## Auto Build
 
 Auto Build uses a supervisor to query work with `pst tickets next` and dispatch matching tickets through the same readiness checks as manual implementation. It reuses stopped implementation owners when they can continue, assigns changed-stack repair in their existing workspaces, and asks owners to repair PR conflicts or failed CI. It does not approve or merge PRs.
 
-Submitted revisions can provide dependency bases without a review verdict. With **Require merged dependencies** on, children wait until dependency code is in the target branch. Missing, ambiguous, actively replaced, and human-blocked dependencies still wait. Independent dependency branches can be combined when their changes merge cleanly. Independent tickets can run together up to the implementation session limit. Stop prevents future prompts and dispatches while running work continues.
+Submitted revisions can provide dependency bases without a review verdict. With **Require merged dependencies** on, children wait until dependency code is in the target branch. Missing, ambiguous, actively replaced, and review-blocked dependencies still wait. Independent dependency branches can be combined when their changes merge cleanly. Independent tickets can run together up to the implementation session limit. Stop prevents future prompts and dispatches while running work continues.
 
 See [Auto Build](0007-auto-build.md) for scope filters, recovery, CLI commands, and settings.
 
@@ -65,7 +71,7 @@ A ticket can depend on other tickets. Set dependencies with `--depends-on` on [`
 
 Before an attempt starts, Planner checks every ticket the ticket depends on, directly or through other tickets:
 
-- Completed statuses describe ticket completion. Choose them in Planner's workflow settings: open **Settings → Project → Extensions**, select **Project Planner**, and use its **Settings** tab. Selections use status IDs, so renaming or reordering columns keeps them. A completed status does not prove that a managed dependency's code reached the chosen base. Planner checks whether that base contains the submitted commit or its recorded merge commit. A completed human task with no managed attempt needs no Git integration.
+- Completed statuses describe ticket completion. Choose them in Planner's workflow settings: open **Settings → Project Planner → Workflow & automation**. Selections use status IDs, so renaming or reordering columns keeps them. A completed status does not prove that a managed dependency's code reached the chosen base. Planner checks whether that base contains the submitted commit or its recorded merge commit. A completed manual task with no managed attempt needs no Git integration.
 - When all dependency code is integrated, the attempt starts from the commit you chose, or from the project folder's current commit.
 - An unfinished dependency needs exactly one submitted attempt, or the attempt selected for that ticket. A review verdict is not required. Retired attempts and attempts whose owner is still running cannot supply a dependency commit. The new attempt starts from a dependency tip that contains all required code and the chosen base. Otherwise, Planner combines the submitted branches into an attempt base without changing the target branch. If those branches conflict, the implementation owner starts from a clean base and reconciles them in its assigned workspace.
 - If a dependency has no submitted or selected attempt yet, Run attempt cannot start.
@@ -84,17 +90,17 @@ pst pstdio-planner update-stack --workspace-id <workspace> --implementation-sess
 
 The command requires committed changes and no other live workspace session. It integrates the current dependency base with a Git merge so existing published history remains intact. If the merge conflicts, resolve and commit it, then retry. Run the affected checks, save a fresh change request report, and submit the exact resulting HEAD with `--expected-revision <last-revision-number>`. Updating the base does not submit or validate a revision by itself.
 
-Git conflicts are the implementation owner's work. It must preserve the required behavior from both sides, reconcile the files, commit the resolution, and validate. Planner does not create a human request for conflicting code. Ask for human input only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot decide the intended behavior. When dependency branches need reconciliation, the recorded base stays on the original clean commit and the submitted revision includes the dependency integration and resolution. Submission checks that its HEAD contains every required dependency commit. Describe those prerequisite changes in the change request report.
+Git conflicts are the implementation owner's work. It must preserve the required behavior from both sides, reconcile the files, commit the resolution, and validate. Planner does not create a review request for conflicting code. Ask for review input only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot decide the intended behavior. When dependency branches need reconciliation, the recorded base stays on the original clean commit and the submitted revision includes the dependency integration and resolution. Submission checks that its HEAD contains every required dependency commit. Describe those prerequisite changes in the change request report.
 
 An attempt with no submitted revision can also need this repair. Keep its existing workspace and implementation owner, commit any work in progress, and run `update-stack`. This is authorized dependency integration; it does not approve work, merge into the delivery target, or mark prerequisites Done. The assigned branch is where the agent edits. The dependency base supplies prerequisite code. The delivery target is the branch where reviewed work will eventually be merged.
 
-Answering a human request does not change Git. After an answer, the owner must check the actual files and dependency commits. If the same missing-code blocker remains, repair the stack before resuming implementation rather than repeating the request.
+Answering a review request does not change Git. After an answer, the owner must check the actual files and dependency commits. If the same missing-code blocker remains, repair the stack before resuming implementation rather than repeating the request.
 
 For a root ticket deliberately moved to another target branch, pass `--base <target-branch>` to align its recorded base. Dependencies whose code is absent still determine a dependent ticket's base; this option cannot bypass them.
 
 A revision identifies both its base and HEAD. Correcting a recorded base can create a fresh revision with the same HEAD and a fresh report; prior review evidence remains on the original base/HEAD pair. Even retrying an existing submission rechecks current dependency ancestry.
 
-An owner can submit a later correction after a passed review. Earlier review evidence stays attached to its original commit. Attempts no longer store a workflow state. The optional `--expected-attempt-state` parameter is deprecated in 0.44 and removed in 0.45. It is accepted but ignored; ownership, exact HEAD, and `--expected-revision` protect submission. Human review requests also ignore it; use the workspace owner and `--revision` guard instead. No extra mandatory managed review is introduced by stack repair. A live implementation owner cannot supply a dependency revision while replacing that work.
+An owner can submit a later correction after a passed review. Earlier review evidence stays attached to its original commit. Attempts no longer store a workflow state. The optional `--expected-attempt-state` parameter is deprecated in 0.44 and removed in 0.45. It is accepted but ignored; ownership, exact HEAD, and `--expected-revision` protect submission. Review requests also ignore it; use the workspace owner and `--revision` guard instead. No extra mandatory managed review is introduced by stack repair. A live implementation owner cannot supply a dependency revision while replacing that work.
 
 ## Who sets the ticket status
 
@@ -126,7 +132,7 @@ Extensions and agents drive attempts through Planner's commands. Each ID below i
 | `workflow-statuses.read` | Reads the completed, blocked, active, and merge-destination status IDs.         |
 | `reconcile-attempt`     | Recovers an attempt whose session disconnected.                                  |
 | `select-attempt`        | Chooses which attempt of a ticket later tickets build on. Not for automations.   |
-| `request-human`         | Asks a person for a task confirmation or a decision and updates the Needs attention count.      |
+| `request-review`         | Asks a person for an unresolved decision and updates the Needs attention count.      |
 | `review`                | Answers a review request. Only a person or an agent can do this.                 |
 | `workspace-activity`    | Returns a workspace's sessions and whether any of them is still running.         |
 

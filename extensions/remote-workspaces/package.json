@@ -8,7 +8,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.2.0 || ^0.3.0"
+    "pstdio": "^0.2.0 || ^0.3.0 || ^0.4.0"
   },
   "scripts": {
     "typecheck": "bun check",
@@ -22,5 +22,6 @@
   "devDependencies": {
     "typescript": "6.0.2",
     "@types/bun": "1.4.4"
-  }
+  },
+  "icon": "Cloud"
 }

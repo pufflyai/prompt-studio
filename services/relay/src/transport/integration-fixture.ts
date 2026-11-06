@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,9 +12,7 @@ import {
 } from "pstdio-account-manager";
 import { createRelayAssets } from "../assets/assets";
 import { defaultRelayLimits, type RelayLimits } from "../limits";
-import { createRecoveryProofs } from "../recovery-proofs";
 import { migrateRelayStorage } from "../storage/database";
-import { createRelayStorage } from "../storage/storage";
 import { createSyncOwners } from "./owners";
 
 export const createTransportFixture = () => {
@@ -35,7 +32,6 @@ export const createTransportFixture = () => {
   const managerDatabase = database("manager");
   const relayDatabase = database("relay");
   const bucket = `relay-transport-${crypto.randomUUID()}`;
-  const recoveryKey = randomBytes(32);
   const s3 = {
     endpoint,
     region: "us-east-1",
@@ -71,7 +67,7 @@ export const createTransportFixture = () => {
       const client = new Client({ connectionString: relayDatabase.url });
       await client.connect();
       await client.query("BEGIN");
-      await client.query("LOCK relay_scopes IN ACCESS EXCLUSIVE MODE");
+      await client.query("LOCK relay_sync_documents IN ACCESS EXCLUSIVE MODE");
       return async () => {
         await client.query("ROLLBACK");
         await client.end();
@@ -97,7 +93,6 @@ export const createTransportFixture = () => {
     ) {
       const manager = createAccountManager(managerDatabase.url);
       const assets = createRelayAssets({ databaseUrl: relayDatabase.url, bucket, s3 });
-      const storage = createRelayStorage(relayDatabase.url, assets);
       const sync = createSyncOwners({
         databaseUrl: relayDatabase.url,
         bucket,
@@ -124,7 +119,7 @@ export const createTransportFixture = () => {
       };
       const environmentId = options.environmentId ?? crypto.randomUUID();
       const close = async () => {
-        await Promise.all([storage.close(), sync.sync.close(), assets.close(), manager.close(), auth.close()]);
+        await Promise.all([sync.sync.close(), assets.close(), manager.close(), auth.close()]);
         await rm(directory, { recursive: true, force: true });
       };
       try {
@@ -149,19 +144,14 @@ export const createTransportFixture = () => {
         };
         const trustFile = join(directory, "trust.json");
         await writeFile(trustFile, JSON.stringify(trust));
-        const recoveryFile = join(directory, "recovery-key");
-        await writeFile(recoveryFile, recoveryKey, { mode: 0o600 });
-        await storage.initialize(scope, "published-notes");
         return {
           scope,
           environmentId,
           token: access.token,
-          storage,
           assets,
           ...sync,
           verifyAccess: createEnvironmentAccessVerifier(trust),
           managerHandler: createManagerHandler(auth, "https://manager.fixture.test"),
-          recovery: createRecoveryProofs(recoveryKey),
           renew: () => auth.renew(device.token, scope.workbenchId),
           issue: (token: string) => auth.renew(token, scope.workbenchId),
           manager,
@@ -175,7 +165,6 @@ export const createTransportFixture = () => {
             S3_ACCESS_KEY_ID: s3.credentials.accessKeyId,
             S3_SECRET_ACCESS_KEY: s3.credentials.secretAccessKey,
             RELAY_ACCESS_TRUST_FILE: trustFile,
-            RELAY_RECOVERY_KEY_FILE: recoveryFile,
           },
           close,
         };

@@ -15,7 +15,6 @@ import { attentionPanelTarget } from "./attention-panel";
 import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
-import { getTicketContent } from "./commands/get-ticket-content";
 import { moveTicketOnBoard } from "./commands/move-ticket-on-board";
 import { queryTickets } from "./commands/query-tickets";
 import { saveTicketContent } from "./commands/save-ticket-content";
@@ -29,6 +28,7 @@ import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ticketBoard, timelineBoard } from "./data/ticket-board";
 import { ticketActivationTarget } from "./data/ticket-page-target";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
+import { loadTicketText } from "./text-source";
 import { ticketCreateForm } from "./ticket-create-form";
 import { ticketNavigationStructure } from "./ticket-navigation-structure";
 import { createTicketPages } from "./ticket-pages";
@@ -46,7 +46,7 @@ const createTagSettingsView = (baseUrl: string) =>
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/tags-settings-panel.tsx", baseUrl),
-      capabilities: ["commands.execute"],
+      capabilities: ["commands.execute", "editing.session"],
     },
   });
 export const createPlannerUi = (baseUrl: string) => {
@@ -59,16 +59,17 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/status-settings-panel.tsx", baseUrl),
-      capabilities: ["commands.execute"],
+      capabilities: ["commands.execute", "editing.session"],
     },
   });
   const workflowSettings = defineView({
     id: "workflow-settings",
-    title: l10n("views.workflowSettings.title", "Planner workflow"),
+    title: "Workflow & automation",
+    icon: "Workflow",
     body: {
       kind: "controls",
       query: queryWorkflowSettings,
-      onValueChange: (ctx, input) => saveWorkflowSettings(ctx, input.values),
+      onApply: (ctx, input) => saveWorkflowSettings(ctx, input.values),
       refreshEvents: [plannerTicketsChanged],
     },
   });
@@ -96,6 +97,8 @@ export const createPlannerUi = (baseUrl: string) => {
         planChanged,
         viewDataEvents.sessionsChanged,
         viewDataEvents.workspacesChanged,
+        viewDataEvents.resourceAnchorsChanged,
+        viewDataEvents.resourcesChanged,
       ],
       onRowActivate: async (ctx, { row }) => {
         if (!row.resource) return;
@@ -155,8 +158,9 @@ export const createPlannerUi = (baseUrl: string) => {
     title: l10n("panels.ticketEditor.title", "Ticket"),
     body: {
       kind: "file",
-      load: (ctx, input) => getTicketContent(ctx, { resource: input.renderer.resource }),
+      load: (ctx, input) => loadTicketText(ctx, { resource: input.renderer.resource }),
       refreshEvents: [plannerTicketsChanged],
+      // Code files keep ordinary saves; public Markdown sessions own their own projection.
       save: (ctx, input) => saveTicketContent(ctx, { content: input.content, resource: input.renderer.resource }),
     },
   });
@@ -246,7 +250,8 @@ export const createPlannerUi = (baseUrl: string) => {
       defineSettingsPanel({
         id: "workflow-settings",
         view: workflowSettings.ref,
-        slot: workbenchSlots.extensionSettings,
+        slot: workbenchSlots.projectSettings,
+        section: settingsSection.ref,
       }),
       defineSettingsPanel({
         id: "ticket-tags",

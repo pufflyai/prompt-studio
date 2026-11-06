@@ -149,7 +149,8 @@ export const invokeSessionHarnessOperation = async (
     }
     if (["in_progress", "awaiting_input", "queued"].includes(session.status))
       throw new HarnessOperationError("Finish or stop the current work before running this command.", 409);
-    if (prepared.execution === "exclusive" && !(await hasCreateCapacity(deps)))
+    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
+    if (prepared.execution === "exclusive" && !(await hasCreateCapacity(deps, workspace?.id)))
       throw new HarnessOperationError("All execution slots are in use. Try again when one is free.", 409);
     const resumed = await deps.sessionService.resume(id, {
       expectedStatus: session.status as "completed" | "failed" | "cancelled" | "disconnected",
@@ -204,7 +205,7 @@ export const invokeSessionHarnessOperation = async (
       startup.resolve({ status: "completed" });
       const run = { done: Promise.resolve({ status: "completed" as const }), stop: () => {} };
       deps.sessionService.store.setSession(id, run, entry);
-      void trackHarnessSession(id, run, entry.eventStore.subscribe(), deps, undefined, entry);
+      void trackHarnessSession(id, run, entry.eventStore.subscribe({ activityOnly: true }), deps, undefined, entry);
       return { status: "completed" as const, message: result.message };
     }
     const run = result.session;
@@ -214,7 +215,7 @@ export const invokeSessionHarnessOperation = async (
     await rejectPersistedSessionCancellation(run, deps, id, entry);
     if (!deps.sessionService.store.setSession(id, run, entry))
       await rejectStoreSessionCancellation(run, deps, id, entry);
-    void trackHarnessSession(id, run, entry.eventStore.subscribe(), deps, undefined, entry);
+    void trackHarnessSession(id, run, entry.eventStore.subscribe({ activityOnly: true }), deps, undefined, entry);
     return { status: "started" as const };
   } catch (error) {
     if (accepted && invocationSignal.aborted) await accepted.stop();
@@ -222,7 +223,7 @@ export const invokeSessionHarnessOperation = async (
     startup.resolve({ status });
     const failed = { done: Promise.resolve({ status }), stop: () => {} };
     deps.sessionService.store.setSession(id, failed, entry);
-    await trackHarnessSession(id, failed, entry.eventStore.subscribe(), deps, undefined, entry);
+    await trackHarnessSession(id, failed, entry.eventStore.subscribe({ activityOnly: true }), deps, undefined, entry);
     if (error instanceof HarnessOperationError) throw error;
     throw new HarnessOperationError(error instanceof Error ? error.message : String(error), 400);
   }

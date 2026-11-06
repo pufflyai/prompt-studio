@@ -9,14 +9,19 @@ type SessionRow = Awaited<ReturnType<RouteDeps["personalHistoryService"]["sessio
 type TimedSession = Pick<SessionRow, "created_at" | "updated_at" | "last_request_started" | "last_request_ended">;
 const activityAt = (row: TimedSession) =>
   [row.created_at, row.updated_at, row.last_request_started ?? "", row.last_request_ended ?? ""].sort().at(-1)!;
-const timeOf = (row: TimedSession, input: ExtensionSessionQuery) =>
-  input.orderBy === "lastActivity" ? activityAt(row) : row.created_at;
+const timeOf = (row: TimedSession, input: ExtensionSessionQuery) => {
+  if (input.orderBy === "lastActivity") return activityAt(row);
+  if (input.orderBy === "updated") return row.updated_at;
+  return row.created_at;
+};
 
 const boundary = (cursor: string | undefined, projectId: string, input: ExtensionSessionQuery) => {
   if (!cursor) return null;
   try {
     const value = JSON.parse(Buffer.from(cursor, "base64url").toString());
-    const timestamp = input.orderBy === "lastActivity" ? value.activityAt : value.createdAt;
+    const timestamp = { created: value.createdAt, lastActivity: value.activityAt, updated: value.updatedAt }[
+      input.orderBy ?? "created"
+    ];
     if (
       value.projectId === projectId &&
       (value.orderBy ?? "created") === (input.orderBy ?? "created") &&
@@ -89,12 +94,12 @@ export const queryReadableSessions = async (
             JSON.stringify({
               projectId,
               id: last.id,
-              ...(input.orderBy === "lastActivity"
-                ? {
-                    orderBy: "lastActivity",
-                    activityAt: activityAt(last),
-                  }
-                : { createdAt: last.created_at }),
+              ...(input.orderBy ? { orderBy: input.orderBy } : {}),
+              ...{
+                created: { createdAt: last.created_at },
+                lastActivity: { activityAt: activityAt(last) },
+                updated: { updatedAt: last.updated_at },
+              }[input.orderBy ?? "created"],
             }),
           ).toString("base64url")
         : null,

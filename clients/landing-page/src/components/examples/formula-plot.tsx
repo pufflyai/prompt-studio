@@ -1,41 +1,55 @@
-import { chakra, HStack, Stack, Text } from "@chakra-ui/react";
-import { useToolDemoStyles } from "../../hooks/use-landing-styles";
+import { HStack, Stack, Text } from "@chakra-ui/react";
+import { Chart, chartColor } from "@pstdio/ui/charts";
+import { defineChart, dot, lineY, ruleY } from "@tanstack/charts";
+import { scaleLinear } from "@tanstack/charts/scales/linear";
+import { tooltip } from "@tanstack/charts/tooltip";
 import { type FormulaResult, formatMoney } from "../../services/financial-formulas";
 
 export const FormulaPlot = (props: { result: FormulaResult; years: number }) => {
   const { result, years } = props;
-  const styles = useToolDemoStyles();
   const all = [...result.values, ...result.comparison];
   const minimum = Math.min(0, ...all);
   const maximum = Math.max(1, ...all);
-  const plotY = (value: number) => 200 - ((value - minimum) / (maximum - minimum)) * 176;
-  const points = (values: number[]) =>
-    values.map((value, index) => `${24 + (index / (values.length - 1)) * 352},${plotY(value)}`).join(" ");
+  const primary = result.values.map((value, index) => ({
+    year: (index * years) / Math.max(1, result.values.length - 1),
+    value,
+  }));
+  const comparison = result.comparison.map((value, index) => ({
+    year: (index * years) / Math.max(1, result.comparison.length - 1),
+    value,
+  }));
+  const definition = defineChart(
+    {
+      marks: [
+        ruleY([0], { stroke: chartColor("vis.grid") }),
+        lineY(comparison, { x: "year", y: "value", stroke: chartColor("vis.categorical.2"), strokeDasharray: "4 4" }),
+        lineY(primary, { x: "year", y: "value", stroke: chartColor("vis.categorical.1"), strokeWidth: 2 }),
+        dot(primary.slice(-1), { x: "year", y: "value", fill: chartColor("vis.categorical.1") }),
+      ],
+      guides: false,
+      scales: { x: { scale: scaleLinear }, y: { scale: scaleLinear().domain([minimum, maximum]) } },
+    },
+    {
+      tooltip: {
+        use: tooltip,
+        format: ({ datum }) => `Year ${Number(datum.year.toFixed(1))}: ${formatMoney(datum.value)}`,
+      },
+    },
+  );
   return (
     <Stack gap="xs">
       <HStack justify="space-between" textStyle="label/XS/regular" color="fg.muted">
         <Text>{formatMoney(minimum)}</Text>
         <Text>{formatMoney(maximum)}</Text>
       </HStack>
-      <chakra.svg
-        css={styles.plot}
-        viewBox="0 0 400 224"
-        role="img"
-        aria-label={`${result.chartLabel} over ${years} years`}
-      >
-        <chakra.path css={styles.plotGrid} d="M24 24H376 M24 112H376 M24 200H376 M24 24V200 M200 24V200 M376 24V200" />
-        <chakra.path css={styles.plotGrid} d={`M24 ${plotY(0)}H376`} />
-        <chakra.polyline css={styles.plotComparison} points={points(result.comparison)} />
-        <chakra.polyline css={styles.plotCurve} points={points(result.values)} />
-        <chakra.circle css={styles.plotPoint} cx="376" cy={plotY(result.values.at(-1)!)} r="5" />
-      </chakra.svg>
+      <Chart definition={definition} height="56" ariaLabel={`${result.chartLabel} over ${years} years`} />
       <HStack justify="space-between" textStyle="label/XS/regular" color="fg.muted">
         <Text>Today</Text>
         <Text>Year {years}</Text>
       </HStack>
       <HStack gap="md" flexWrap="wrap" textStyle="label/XS/regular">
-        <Text color="fg.info">━ {result.chartLabel}</Text>
-        <Text color="fg.muted">┄ {result.comparisonLabel}</Text>
+        <Text color="vis.categorical.1">━ {result.chartLabel}</Text>
+        <Text color="vis.categorical.2">┄ {result.comparisonLabel}</Text>
       </HStack>
     </Stack>
   );

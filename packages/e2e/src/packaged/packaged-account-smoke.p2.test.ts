@@ -39,7 +39,7 @@ test(
       expect(await client.account.loginStatus(login.id)).toEqual({ status: "failed" });
       await expect(client.account.syncProject(project.id)).rejects.toThrow();
       await expect(client.account.devices()).rejects.toThrow();
-      expect(await client.account.status()).toEqual(loggedOut);
+      expect(await client.account.status()).toEqual({ ...loggedOut, loginAttempt: { id: login.id, status: "failed" } });
       await stopProcess(host.child);
       host = await startPackagedServe(root);
       client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });

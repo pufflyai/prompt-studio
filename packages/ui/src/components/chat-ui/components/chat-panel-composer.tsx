@@ -22,6 +22,8 @@ export interface ChatPanelComposerProps {
   attachmentActions?: ReactNode;
   composerHeader?: ReactNode;
   composerFallback?: ReactNode;
+  /** Show the queue read-only above `composerFallback`. Without it the fallback hides the queue. */
+  readOnlyQueue?: boolean;
   attachedResources?: string[];
   attachmentList?: ReactNode;
   chatInputAutoFocus: boolean;
@@ -59,6 +61,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   const {
     composerHeader,
     composerFallback,
+    readOnlyQueue = false,
     chatInputQuestionPrompt,
     composerDecision,
     hasWorkspaceHub,
@@ -93,11 +96,19 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           </Flex>
         )}
         {composerHeader}
+        {composerFallback && readOnlyQueue && (
+          <QueuedFollowUpList
+            items={queuedFollowUps}
+            steeringUnavailableReason={queueSteeringUnavailableReason}
+            readOnly
+          />
+        )}
         {composerFallback}
         {!composerFallback && (
           <>
             <QueuedFollowUpList
               items={queuedFollowUps}
+              readOnly={readOnlyQueue}
               editor={editing ? editor : undefined}
               retainedEditor={editing && queuedComposer.createNew ? editor : undefined}
               retainedEditorPosition={queuedComposer.editingItem?.position}

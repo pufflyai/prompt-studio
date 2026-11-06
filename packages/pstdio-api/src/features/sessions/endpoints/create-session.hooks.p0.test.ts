@@ -29,6 +29,7 @@ const createContext = (body: {
   return {
     context: {
       req: {
+        raw: new Request("http://localhost/sessions", { method: "POST" }),
         valid: () => body,
       },
       json: (jsonBody: unknown, status: number) => {
@@ -80,6 +81,7 @@ describe("createSessionHandler hooks", () => {
         createDispatchStarted: async () => ({ queue_position: 1 }),
         remove: async () => {},
       },
+      workspaceCapacityService: { hasCapacity: async () => true },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },
@@ -158,6 +160,7 @@ describe("createSessionHandler hooks", () => {
         transitionStatus: mock(async () => null),
         store: createTrackedSessionStore(),
       },
+      workspaceCapacityService: { hasCapacity: async () => true },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },
@@ -222,6 +225,7 @@ describe("createSessionHandler hooks", () => {
         createDispatchStarted: async () => ({ queue_position: 1 }),
         remove: async () => {},
       },
+      workspaceCapacityService: { hasCapacity: async () => true },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },

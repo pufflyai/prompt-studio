@@ -4,6 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime-html";
 import { expect, test } from "../scripts/playwright-test";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+
+test.use({ channel: PROVISIONED_CHROMIUM.channel });
 
 test("built settings frames own independent captures through replacement and disposal", async ({ page }) => {
   const root = mkdtempSync(join(tmpdir(), "webview-lifetime-"));
@@ -45,7 +48,7 @@ test("built settings frames own independent captures through replacement and dis
         });
       return route.fulfill({
         contentType: "text/html",
-        body: '<div id="app"></div><output id="ownership"></output><button id="close">Close host</button><button id="emit">Emit sample</button><script type="module" src="/host.js"></script>',
+        body: '<div id="app"></div><output id="ownership"></output><output id="replayed"></output><button id="close">Close host</button><button id="emit">Emit sample</button><button id="replay">Replay disposed frame request</button><script type="module" src="/host.js"></script>',
       });
     });
     await page.goto("http://lifetime-fixture.test/");
@@ -73,6 +76,9 @@ test("built settings frames own independent captures through replacement and dis
     await page.getByRole("button", { name: "Remove First", exact: true }).click();
     await expect(page.locator('iframe[title="First"]')).toHaveCount(0);
     await expect.poll(ownership).toEqual({ retained: 3, released: 2, subscriptions: 1 });
+    // A copied RPC from the disposed frame must not allocate a new host capture.
+    await page.locator("#replay").dispatchEvent("click");
+    await expect(page.locator("#replayed")).toHaveText(JSON.stringify({ retained: 3, released: 2, subscriptions: 1 }));
     await page.locator("#emit").dispatchEvent("click");
     await expect(second.locator("output")).toHaveText("Received 3");
     await page.locator("#close").dispatchEvent("click");

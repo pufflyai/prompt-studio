@@ -1,5 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
-import { AlertMessage } from "@pstdio/ui";
+import { AlertMessage, SettingsContentSkeleton } from "@pstdio/ui";
 import { ParamEditorRow, type ReadOnlyParam, type SelectionParam } from "@pstdio/ui/param-editor";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -41,21 +41,19 @@ export const UpdateChannelContent = (props: UpdateChannelContentProps) => {
   };
 
   return (
-    <Stack gap="md" padding="lg" maxW="720px">
-      <Stack gap="2xs">
-        <Text textStyle="heading/S">{t("updates.title")}</Text>
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("updates.description")}
-        </Text>
-      </Stack>
+    <Stack gap="md">
       {error ? <AlertMessage status="error" title={error} onClose={onDismissError} /> : null}
-      <Stack gap="0" borderWidth="1px" borderColor="border.subtle" borderRadius="md" py="xs">
-        <ParamEditorRow
-          param={channelParam}
-          onChange={(_id, value) => {
-            if (value === "stable" || value === "nightly") onChange(value);
-          }}
-        />
+      <Stack gap="0">
+        {channel === undefined && !error ? (
+          <SettingsContentSkeleton />
+        ) : (
+          <ParamEditorRow
+            param={channelParam}
+            onChange={(_id, value) => {
+              if (value === "stable" || value === "nightly") onChange(value);
+            }}
+          />
+        )}
         {channel && (
           <Stack gap="2xs" px="sm" pb="xs">
             <Text textStyle="label/S/regular" color="fg.muted">

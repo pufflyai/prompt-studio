@@ -1,20 +1,26 @@
 import { Box, Button, Center, Flex, Text } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { RegisteredFileRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type {
+  RegisteredFileRendererContribution,
+  WorkbenchCore,
+  WorkbenchPanelInstance,
+  WorkbenchPanelRenderInput,
+} from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
 import {
   getFileSectionNavigation,
   resolveFileSectionTargetId,
 } from "../../../core/registries/renderers/file-section-navigation";
+import { useOpenPlacementIds } from "../../shared/use-open-placement-ids";
 import { usePageParams } from "../use-page-params";
+import { getNativeMarkdownConnection, getPublicMarkdownConnection } from "./file-renderer-connections";
 import { FileRendererContentView } from "./file-renderer-content";
 import {
   createFileEditController,
   type FileEditController,
   type FileEditControllerState,
 } from "./file-renderer-edit-state";
-import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
 import {
   acceptFileRendererLoad,
@@ -25,6 +31,8 @@ import {
 } from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
 import { useFileSectionSelection } from "./file-renderer-sections";
+import { FileRendererStatusNotice } from "./file-renderer-status-notice";
+import { SelectedTextEditor } from "./selected-text-editor";
 
 interface WorkbenchFileRendererViewProps {
   workbench: WorkbenchCore;
@@ -32,6 +40,7 @@ interface WorkbenchFileRendererViewProps {
   // The bound resource (e.g. the open ticket / ticket-file) the load/save
   // commands operate on.
   placement?: WorkbenchPanelInstance;
+  presentationInput?: WorkbenchPanelRenderInput;
 }
 const SAVE_DEBOUNCE_MS = 600;
 const describeError = (error: unknown) => (error instanceof Error ? error.message : "Failed to load file.");
@@ -85,6 +94,8 @@ const fileRendererOwnerKey = (
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
+  const openPlacements = useOpenPlacementIds(workbench);
+  const open = !props.placement?.placementIdentity || openPlacements.has(props.placement.instanceId);
   const position = props.placement?.position;
   const sectionNavigation = getFileSectionNavigation(resource);
   const requestedSection = props.placement?.section;
@@ -195,6 +206,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       if (resourceKey(resource) !== resourceKey(resourceRef.current)) return [];
       removed = true;
       const retain = controllerRef.current?.markRemoved();
+      setEditState((state) => ({ ...state, removed: true }));
       const identity = placementRef.current?.placementIdentity;
       return retain && identity ? [identity] : [];
     });
@@ -228,11 +240,10 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [manualSave]);
-  const handleChange = (value: string) => {
-    controllerRef.current?.handleChange(value);
-  };
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
+  if (currentLoaded?.textEditor)
+    return <SelectedTextEditor {...props} open={open} content={currentLoaded} pageParams={pageParams} />;
   if (loadError && !currentLoaded) {
     return (
       <Center h="full" minH="0" bg="bg" p="md" flexDirection="column" gap="sm">
@@ -246,19 +257,20 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // The key must carry the document identity, not just the contribution: two
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
-  const editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
-  let errorNotice: ReactNode = null;
-  if (editState.removed) {
-    errorNotice = (
-      <FileRendererErrorNotice message="This resource was removed. Your draft is kept here. Copy it before closing this tab." />
-    );
-  } else if (loadError) {
-    errorNotice = <FileRendererErrorNotice message={loadError} onRetry={() => retryReadRef.current?.()} />;
-  } else if (editState.saveError) {
-    errorNotice = (
-      <FileRendererErrorNotice message={editState.saveError} onRetry={() => controllerRef.current?.retry()} />
-    );
-  }
+  let editorKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
+  const connectDocument = getNativeMarkdownConnection(contribution, currentLoaded, resource, pageParams);
+  const connectText = getPublicMarkdownConnection(contribution, currentLoaded, props.presentationInput, pageParams);
+  const sharedEditor = connectText ?? connectDocument;
+  if (sharedEditor && currentLoaded) editorKey = currentLoaded.loadKey;
+  const errorNotice = (
+    <FileRendererStatusNotice
+      state={editState}
+      loadError={loadError}
+      retryRead={() => retryReadRef.current?.()}
+      retrySave={() => controllerRef.current?.retry()}
+    />
+  );
+  if (!open && editState.removed) return errorNotice;
   return (
     <Flex
       direction="column"
@@ -273,7 +285,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
         }
       }}
     >
-      {currentLoaded && (
+      {currentLoaded && !sharedEditor && (
         <FileRendererHeader
           file={currentLoaded}
           dirty={manualSave && editState.dirty}
@@ -282,6 +294,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       )}
       <Box flex="1" minH="0">
         <FileRendererContentView
+          presence={workbench.presence}
+          open={open}
           content={currentLoaded}
           position={position}
           editorKey={editorKey}
@@ -292,10 +306,12 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
               ? (sectionId) => syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId })
               : undefined
           }
-          onChange={handleChange}
+          onChange={(value) => controllerRef.current?.handleChange(value)}
           rendererRef={rendererRef}
           sectionNavigation={editorSectionNavigation}
-          title={contribution.title}
+          title={resource?.label ?? contribution.title}
+          connectDocument={connectDocument}
+          connectText={connectText}
         />
       </Box>
     </Flex>

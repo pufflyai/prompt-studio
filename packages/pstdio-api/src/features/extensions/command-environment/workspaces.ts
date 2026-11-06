@@ -6,6 +6,7 @@ import type {
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { readableWorkspaces } from "../../../services/personal-history/queries";
+import { readDeviceWorkspaceCapacity } from "../../workspaces/device-capacity";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
 import { deleteWorkspace } from "../../workspaces/workspace-deletion";
@@ -21,6 +22,7 @@ import { fireExtensionEventAsync } from "../extension-event-runtime";
 import { validateLegacyAnchors } from "./resource-link-policy";
 import { createResourceLinksApi } from "./resource-links";
 import type { CommandEnvironmentRuntimeDeps } from "./types";
+import { createWorkspacePresentationApi } from "./workspace-presentation";
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["workspaceService"]["get"]>>>;
 type LocalExecutionTarget = Awaited<ReturnType<typeof resolveWorkspaceExecutionTarget>>;
@@ -107,6 +109,12 @@ export const createWorkspacesApi = (
     workspace ? projectWorkspace(workspace) : null;
 
   return {
+    ...createWorkspacePresentationApi(deps, input),
+    getCapacity: (options) => read(() => readDeviceWorkspaceCapacity(deps, input, options)),
+    updateCapacity: async (value) => {
+      input.signal?.throwIfAborted();
+      return deps.workspaceCapacityService.update(value);
+    },
     listProviders: () => read(() => listWorkspaceProviders(deps, input.projectId)),
     getDefault: async () =>
       read(async () => projectOptionalWorkspace(await read(() => deps.workspaceService.getDefault(input.projectId)))),

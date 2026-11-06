@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { readDocumentRecord } from "pstdio-sync";
+import { readDocumentRecord } from "pstdio-sync/records";
 import * as Y from "yjs";
 
 /** The query surface shared by the previous and the current PGlite engine. */
@@ -17,7 +17,7 @@ Prompt Studio 0.46 starts with a new database. This folder keeps everything the 
   plain records with \`recordId\`, \`value\`, \`shared\`, \`asset\`, and \`deleted\`.
 - \`../database\`: the original database folder, unchanged except for this export.
 
-To bring data back, ask an agent to read these files and recreate what you need with the \`pst\` CLI.
+To recover conversations, run \`pst sessions import --source <this folder> --dry-run\` and map the exported projects to current projects. Provide \`--storage <folder>\` when the referenced conversation and attachment files are elsewhere. For other data, ask an agent to read these files and use the owning extension’s \`pst\` commands.
 `;
 
 const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;

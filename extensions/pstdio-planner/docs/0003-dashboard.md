@@ -13,7 +13,7 @@ To reach off-screen columns, hold the primary mouse button and drag empty board 
 Each card shows the ticket's title and these properties:
 
 - The ID, such as `PS-12`. A sub-ticket also shows the IDs of its parent tickets.
-- The workspaces linked to the ticket, newest first. Each workspace badge shows the status of its running session, or of its last session when none is running. Select a badge to open the workspace.
+- **Linked resources**: workspaces, artifacts, and resources supplied by enabled extensions. Each badge shows its owner’s current label and icon. Badges wrap within the card. Click one, or focus it and press Enter or Space, to open the resource without opening or dragging the ticket. Unavailable resources retain their saved label with an unavailable indication. Tickets without linked resources show no badges.
 - The Type and Priority tags.
 - **Needs attention**, shown by default. Its count opens the ticket's request forms in the Side Panel while Tickets stays open. Orange counts show pending items; green counts show resolved items. Closing the panel keeps the board open.
 
@@ -41,7 +41,9 @@ The display menu switches between **Board** and **List**. It also sets the group
 
 Every view, including **All**, can be edited and renamed. Save your filter and display changes with **Save view**. Right-click a view to rename, duplicate, or delete it. At least one view must remain.
 
-Existing saved display choices are preserved. Enable **Needs attention** in Display settings if a saved view hides it. In Project Timeline, the attention count also opens the same Side Panel while keeping the timeline open. Selecting another ticket's count reuses that panel.
+Use **Linked resources** in Display settings to show or hide the complete badge list, including workspaces, in Board, List, and Project Timeline. Link, unlink, rename, and owner availability changes refresh the list. The existing workspace display choice now controls this complete list.
+
+Existing saved display choices are preserved. Enable **Needs attention** in Display settings if a saved view hides it. In Project Timeline, a card with pending decisions or its attention count opens a modal scoped to that ticket. Closing the modal returns focus to its card control.
 
 The board starts with a **Ticket is Active** filter. Remove it to show both active and archived tickets, or choose **Archived** to show only archived tickets. Use the filter menu to filter by status, parent, or tag.
 
@@ -102,7 +104,7 @@ Planner sends a notification when a ticket needs you:
 
 Planner adds these settings for each project:
 
-- **Settings → Project → Extensions → Project Planner → Settings** holds the options for the implement-ticket workflow. See the [Planner overview](../README.md#implementation-options).
+- **Settings → Project Planner → Workflow & automation** holds the options for the implement-ticket workflow. See the [Planner overview](../README.md#implementation-options).
 - **Settings → Project Planner → Ticket tags** edits the project's [tags](0001-tags-and-statuses.md#tags).
 - **Settings → Project Planner → Ticket status** edits the project's [statuses](0001-tags-and-statuses.md#statuses).
 - **Settings → Project → Templates** edits Planner's ticket, prompt, and document templates. The prompt templates hold the instructions Planner gives agents, for example when it runs an attempt or a review. Edit them to change how agents work on your tickets.

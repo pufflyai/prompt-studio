@@ -2,7 +2,7 @@
 // id, and other slices (routing, bootstrap) open it by the same id.
 export const dashboardWidgetIds = {
   projectHeader: "dashboard-workbench.project-header",
-  start: "dashboard-workbench.start",
+  extensions: "dashboard-workbench.extensions",
   workspaces: WORKSPACES_COLLECTION_ID,
   workspaceSummary: "dashboard-workbench.workspace.summary",
   workspaceFiles: "dashboard-workbench.workspace.files",

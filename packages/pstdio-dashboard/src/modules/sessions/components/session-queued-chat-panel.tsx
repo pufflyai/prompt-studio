@@ -1,15 +1,18 @@
 import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
+import type { Session } from "pstdio-api-contracts";
 import type { ComponentProps } from "react";
 import { useApiFileParts } from "@/lib/api-file-url";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { projectSteeringSubmission } from "../chat/optimistic-steering";
+import { queuedFollowUpSteeringReason } from "../chat/queued-follow-ups";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionComposerActions } from "./session-composer-actions";
+import { SessionPersonalDevice } from "./session-personal-device";
 import { useQueuedRequestSelection } from "./use-queued-request-selection";
 import type { useSessionDraftAttachments } from "./use-session-draft-attachments";
 
@@ -23,7 +26,19 @@ interface SessionQueuedChatPanelProps extends ComponentProps<typeof ChatPanel> {
   draftAttachments: ReturnType<typeof useSessionDraftAttachments>;
   modelControls: ComponentProps<typeof SessionComposerActions>;
   messagesBlocked?: boolean;
+  /** Unavailable owner: the queue remains readable above the device notice. */
+  device?: Session["device"];
+  connectionUnknown?: boolean;
+  remote?: boolean;
+  onDeviceReconnect?(): unknown;
 }
+
+const queueIsReadOnly = (device: Session["device"], queue: PendingQueuedFollowUpsResponse | undefined) =>
+  Boolean(device) || queue?.readOnly;
+
+const requireEditableQueue = (queue: PendingQueuedFollowUpsResponse | undefined) => {
+  if (queue?.readOnly) throw new Error("Refresh the queue before editing this request.");
+};
 
 export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
   const {
@@ -36,6 +51,10 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
     draftAttachments,
     modelControls,
     messagesBlocked,
+    device,
+    connectionUnknown,
+    remote,
+    onDeviceReconnect,
     ...panel
   } = props;
   const selection = useQueuedRequestSelection(projectId, draftKey, drafts);
@@ -48,6 +67,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
     refreshQueue,
     activeRunStartedAt: queue?.activeRunStartedAt,
     editRequest: (id, prompt) => {
+      requireEditableQueue(queue);
       const edit = selection.edits[id];
       if (!edit?.item.revision) throw new Error("Refresh the queue before editing this request.");
       return {
@@ -74,6 +94,18 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
   return (
     <ChatPanel
       {...panel}
+      composerFallback={
+        device ? (
+          <SessionPersonalDevice
+            name={device.name}
+            connectionUnknown={connectionUnknown}
+            onReconnect={onDeviceReconnect}
+          />
+        ) : (
+          panel.composerFallback
+        )
+      }
+      readOnlyQueue={queueIsReadOnly(device, queue)}
       messages={messages}
       queuedFollowUps={display.queuedFollowUps}
       conversationNotices={
@@ -115,10 +147,8 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
       onQueuedFollowUpSelect={selection.select}
       onQueuedFollowUpDiscard={selection.discard}
       onQueuedFollowUpCombine={actions.handleQueuedFollowUpCombine}
-      onQueuedFollowUpSteer={messagesBlocked ? undefined : actions.handleQueuedFollowUpSteer}
-      queueSteeringUnavailableReason={
-        queue ? queue.steeringUnavailableReason : "Refresh the queue to check live input support."
-      }
+      onQueuedFollowUpSteer={messagesBlocked || remote ? undefined : actions.handleQueuedFollowUpSteer}
+      queueSteeringUnavailableReason={queuedFollowUpSteeringReason(remote, queue)}
       unsavedQueueItemIds={selection.dirtyItemIds}
       onQueuedFollowUpRemove={sessionId ? actions.handleQueuedFollowUpRemove : undefined}
       onQueuedFollowUpMove={sessionId ? actions.handleQueuedFollowUpMove : undefined}

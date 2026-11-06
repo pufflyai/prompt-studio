@@ -27,6 +27,8 @@ Use this map to choose the first component to inspect in the live Canvas catalog
 - Start from `Components/Layout/Canvas` canvas for both native scrolling with sticky headers and transformed live previews. Ordinary lists and documents still use `ScrollArea`.
 - Use `DependencyTimeline` from `@pstdio/ui/dependency-timeline` for dependency cards arranged in milestone sections and collapsible tracks. It uses `Canvas` and owns card measurement, dependency arrows, sticky headers, and windowed rendering. Supply `TimelineSection`, `TimelineTrack`, and `TimelineItem` data with your own card content, headers, editors, and action callbacks. Keep domain data and saved presentation in the caller. See `Components/Layout/Dependency Timeline`.
 
+- Use `KeyframeTimeline` from `@pstdio/ui/keyframe-timeline` for animation/video property tracks, keyframe editing, frame snapping, time rulers and playhead scrubbing. Callers own data, playback and persistence. Omit `onTracksChange` for review-only tracks; use `markers` for named moments. See `Components/Media/Keyframe Timeline`.
+
 ## Data display
 
 - `DataTable` handles tabular data.
@@ -38,8 +40,13 @@ Use this map to choose the first component to inspect in the live Canvas catalog
 
 - `AlertMessage`, `EmptyState`, `SessionIndicator`, and `Toaster` cover status and feedback.
 - `DeleteConfirmationModal`, `Palette`, and `RepoPickerDialog` cover overlay interactions.
+- `PopoverHeader` gives titled popovers a shared icon, title, and optional actions. Pass `Popover.Title` as its title inside a Chakra popover. Keep dismissal on Escape and outside clicks; do not add a close icon.
 
 ## Text and agent UI
 
 - `MarkdownEditor`, `PromptEditor`, `RichMessage`, and collaborative editor canvas examples cover rich-text surfaces.
 - `ChatPanel`, `ChatInput`, `ChatMessage`, `ChatPrimitives`, `AttachmentList`, and `ToolInvocationTimeline` cover agent conversation UI.
+
+## Charts
+
+Import `Chart`, `GanttChart`, `chartColor`, and `chartPalette` from `@pstdio/ui/charts`. Use TanStack Charts for chart definitions and the shared components for theme, sizing, and tooltip integration. See [chart authoring](../../components/charts/README.md). Keep application data, forecasts, and filters outside the shared chart components.

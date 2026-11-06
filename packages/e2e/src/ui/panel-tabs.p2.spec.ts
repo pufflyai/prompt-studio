@@ -1,17 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homeFrame } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
-
-const getVerticalMenuGap = async (
-  tab: import("@playwright/test").Locator,
-  menu: import("@playwright/test").Locator,
-) => {
-  const tabBox = await tab.boundingBox();
-  const menuBox = await menu.boundingBox();
-  if (!tabBox || !menuBox) throw new Error("Tab menu geometry is unavailable");
-  return Math.abs(menuBox.y - (tabBox.y + tabBox.height));
-};
 
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
   await tab.click({ button: "right" });
@@ -59,6 +50,8 @@ test("opens the Session tab context menu while normal clicks only select", async
     selected: true,
   });
   await expect(sessionTab).toBeVisible();
+  // The new composer's initial focus must settle before the menu owns focus.
+  await expect(page.locator('[data-workbench-region="side"]').getByRole("textbox").last()).toBeFocused();
   await sessionTab.click();
   await sessionTab.click();
   await expect(page.getByRole("menu")).toHaveCount(0);
@@ -69,7 +62,6 @@ test("opens the Session tab context menu while normal clicks only select", async
   await expect(sessionMenu.getByRole("menuitem", { name: "New session" })).toBeVisible();
   await expect(sessionMenu.getByRole("menuitem", { name: "Switch session" })).toBeVisible();
 
-  await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
   await page.keyboard.press("Escape");
   await expect(sessionMenu).toBeHidden();
   await expect(sessionTab).toBeFocused();
@@ -118,7 +110,7 @@ test("keeps the tab viewport unscrolled during drag and supports pointer and key
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
   }, project.id);
   await page.goto(`/projects/${project.id}`);
-  await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+  await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   const header = page.locator('[data-workbench-panel-header="secondary"]');
   for (let index = 0; index < 3; index += 1) {

@@ -1,13 +1,11 @@
 import { expect, type Page } from "@playwright/test";
+import { createClient } from "@pstdio/sdk/client";
+import { createTextEditingClient } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 
-export const verifyPackagedNoteHeadings = async (
-  page: Page,
-  origin: string,
-  projectId: string,
-  headers: Record<string, string>,
-) => {
+export const verifyPackagedNoteHeadings = async (page: Page, origin: string, projectId: string, token: string) => {
+  const headers = { authorization: `Bearer ${token}` };
   const endpoint = `${origin}/v1/projects/${projectId}/extensions`;
   const execute = async (id: string, params: object) => {
     const response = await fetch(`${endpoint}/commands/${id}/execute`, {
@@ -30,9 +28,34 @@ export const verifyPackagedNoteHeadings = async (
   };
   const renderer = { rendererId: view.id, projectId, resource: { type: "note", id: note.id } };
   const paragraphs = ["First paragraph.", "Second paragraph.", "Third paragraph."];
-  await execute(view.body.saveHandlerId!, { renderer, content: paragraphs.join("\n\n\n\n") });
+  const client = createClient({ baseUrl: origin, token });
+  const connection = await client.textEditing.connect({
+    projectId,
+    scope: { kind: "agent", target: { fileRendererId: view.id, resource: { type: "note", id: note.id } } },
+  });
+  const guest = connection.guest();
+  let header = "";
+  try {
+    const editing = createTextEditingClient(guest.host);
+    const grant = await editing.current();
+    expect(grant).toBeDefined();
+    const session = await editing.open({ grant: grant! });
+    try {
+      session.transact((text) => {
+        header = `${text.toString()}\n\n`;
+        text.insert(text.length, `\n\n${paragraphs.join("\n\n\n\n")}`);
+      });
+      await session.flush();
+      await session.project();
+    } finally {
+      await session.close();
+    }
+  } finally {
+    await guest.close();
+  }
   await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.pstdio-notes/notes`);
-  await (await showSidenavEntry(page, "Notes")).click();
+  const notes = await showSidenavEntry(page, "Notes");
+  if ((await notes.getAttribute("aria-expanded")) !== "true") await notes.click();
   await page.locator('[data-workbench-region="sidenav"]').getByText("Heading formatting", { exact: true }).click();
   const editor = page.locator('[contenteditable="true"]:visible');
   await expect(editor).toContainText("Third paragraph.");
@@ -42,7 +65,7 @@ export const verifyPackagedNoteHeadings = async (
     .locator(".floating-text-format-toolbar.active")
     .getByRole("button", { name: "Heading 2", exact: true })
     .click();
-  const expected = paragraphs.map((paragraph) => `## ${paragraph}`).join("\n\n\n\n");
+  const expected = header + paragraphs.map((paragraph) => `## ${paragraph}`).join("\n\n\n\n");
   const loadHandlerId = view.body.loadHandlerId;
   await expect.poll(async () => (await execute(loadHandlerId, { renderer })).content).toBe(expected);
   // Reopening verifies the saved Markdown, rather than the unsaved Lexical view.

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { viewFilterGroupSchema, viewSortsSchema } from "./collection-view";
 import { extensionParamObjectSchema } from "./commands";
 import { localizableStringSchema } from "./common";
+import { navigationTargetSchema } from "./navigation-target-metadata";
 import { extensionRendererRecordBaseSchema } from "./renderers";
 import { viewToolbarActionRecordSchema } from "./view-toolbar-action";
 
@@ -10,6 +11,9 @@ const kanbanRendererEnumOptionSchema = z.object({
   label: localizableStringSchema,
   color: z.string().optional(),
   icon: z.string().nullable().optional(),
+  note: localizableStringSchema.optional(),
+  noteAction: navigationTargetSchema.optional(),
+  canCreate: z.boolean().optional(),
 });
 
 const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
@@ -48,6 +52,7 @@ export const kanbanViewSettingsSchema = z.object({
   columnGrouping: z.string(),
   rowGrouping: z.string(),
   displayProperties: z.array(z.string()),
+  showChildren: z.boolean().optional(),
 });
 
 export const kanbanRendererSavedViewSchema = z.object({
@@ -62,6 +67,7 @@ const extensionKanbanRendererCreateRowSchema = z.object({
   commandId: z.string(),
   title: localizableStringSchema.optional(),
   submitLabel: localizableStringSchema.optional(),
+  presentation: z.enum(["inline", "command"]).optional(),
   columnParam: z.string().optional(),
   params: extensionParamObjectSchema.optional(),
   attributesParam: z.string().optional(),
@@ -91,6 +97,7 @@ const extensionKanbanRendererRowActionSchema = z.object({
 });
 
 export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
+  kind: z.enum(["kanban", "resourceList"]).optional(),
   queryMode: z.literal("paged").optional(),
   toolbarActions: z.array(viewToolbarActionRecordSchema).optional(),
   extensionInstanceId: z.string().optional(),

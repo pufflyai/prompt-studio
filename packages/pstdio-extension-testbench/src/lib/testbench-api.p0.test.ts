@@ -92,7 +92,7 @@ describe("createExtensionTestbenchApi", () => {
     }
   });
 
-  test("renders ticket-linked workspaces in the files tree", async () => {
+  test("renders seeded workspaces in the ticket tree and linked-resource badges", async () => {
     const previousHome = process.env.PSTDIO_HOME;
     const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
 
@@ -124,6 +124,26 @@ describe("createExtensionTestbenchApi", () => {
       const sections = response.outcome.value as Array<{ id: string; nodes: Array<{ id: string }> }>;
       const workspaces = sections.find((section) => section.id === "workspaces");
       expect(workspaces?.nodes.map((node) => node.id)).toEqual(["workspace-ws-preview-1", "workspace-ws-preview-2"]);
+
+      const cards = await readJson<ExtensionBenchCommandResponse>(
+        await api.handleRequest(
+          jsonRequest(`http://bench${apiPrefix}/command`, {
+            benchId: bench.benchId,
+            commandId: "pstdio.pstdio-planner.command.query-tickets",
+            request: { params: {}, projectId: bench.projectId, source: "dashboard" },
+          }),
+        ),
+      );
+      if (!cards.outcome.ok) throw new Error(cards.outcome.reason);
+      const rows = cards.outcome.value as {
+        rows: { id: string; attributes: { linkedResourceItems: { label: string; action?: unknown }[] } }[];
+      };
+      const badges = rows.rows.find((row) => row.id === "PS-16")?.attributes.linkedResourceItems;
+      expect(badges?.map((item) => item.label).sort()).toEqual(["WS-1", "WS-2"]);
+      expect(badges).toEqual([
+        expect.objectContaining({ action: expect.objectContaining({ kind: "page" }) }),
+        expect.objectContaining({ action: expect.objectContaining({ kind: "page" }) }),
+      ]);
     } finally {
       api.cleanup();
       if (previousHome === undefined) delete process.env.PSTDIO_HOME;

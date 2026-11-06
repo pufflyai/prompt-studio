@@ -4,6 +4,7 @@ import { withPackagedPlanner } from "./packaged-planner-helpers";
 import {
   expectPackagedDependencyStacks,
   expectPackagedDraftAdoption,
+  expectPackagedManualWorkspaceRecovery,
   expectPackagedWorkspaceRecovery,
 } from "./packaged-planner-stacks-smoke";
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
@@ -41,5 +42,11 @@ test(
 test(
   "packaged Planner adopts a feature draft without changing its Git state",
   () => withPackagedPlanner(expectPackagedDraftAdoption),
+  PACKAGED_TEST_TIMEOUT,
+);
+
+test(
+  "packaged Planner manually resumes missing stopped work with Auto Build disabled",
+  () => withPackagedPlanner(expectPackagedManualWorkspaceRecovery),
   PACKAGED_TEST_TIMEOUT,
 );

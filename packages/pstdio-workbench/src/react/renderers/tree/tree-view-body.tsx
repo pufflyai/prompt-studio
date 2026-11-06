@@ -13,7 +13,7 @@ const TREE_SKELETON_WIDTHS = ["70%", "50%", "82%", "60%", "44%", "76%"];
 const TreeViewSkeleton = () => (
   <Stack gap="sm" px="sm" py="xs" aria-hidden>
     {TREE_SKELETON_WIDTHS.map((width, index) => (
-      <Skeleton key={`${width}-${index}`} height="4" width={width} borderRadius="xs" />
+      <Skeleton variant="none" key={`${width}-${index}`} height="4" width={width} borderRadius="xs" />
     ))}
   </Stack>
 );
@@ -21,9 +21,9 @@ const TreeViewSkeleton = () => (
 interface TreeViewBodyProps {
   error?: string | null;
   loading: boolean;
+  loadingContent?: ReactNode;
   moduleLoading?: boolean;
   sections: TreeListSection[];
-  leadingContent?: ReactNode;
   backgroundContextActions?: ResourceContextAction[];
   draggable?: boolean;
   customizationAvailable?: boolean;
@@ -46,7 +46,6 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     loading,
     moduleLoading,
     sections,
-    leadingContent,
     backgroundContextActions,
     draggable,
     customizationAvailable,
@@ -63,19 +62,9 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     onNavigate,
   } = props;
 
-  if ((error || loading) && sections.length === 0) return <TreeList sections={[]} leadingContent={leadingContent} />;
-  if (moduleLoading)
-    return (
-      <TreeList
-        sections={[]}
-        leadingContent={
-          <>
-            {leadingContent}
-            <TreeViewSkeleton />
-          </>
-        }
-      />
-    );
+  if (loading && sections.length === 0) return props.loadingContent ?? <TreeViewSkeleton />;
+  if (error && sections.length === 0) return <TreeList sections={[]} />;
+  if (moduleLoading) return <TreeList sections={[]} leadingContent={<TreeViewSkeleton />} />;
 
   // Keep an empty-but-customizable tree right-clickable so a fully-hidden tree
   // can still be restored from the back-of-tree menu.
@@ -86,7 +75,6 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
   return (
     <TreeList
       sections={sections}
-      leadingContent={leadingContent}
       backgroundContextActions={backgroundContextActions}
       draggable={draggable}
       expandedNodeIds={expandedNodeIds}

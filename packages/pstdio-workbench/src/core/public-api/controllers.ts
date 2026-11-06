@@ -21,6 +21,7 @@ export type {
   WorkbenchCompositionRegionPanels,
 } from "../controllers/composition/composition-controller";
 export { createWorkbenchCompositionController } from "../controllers/composition/composition-controller";
+export { registerPlacementCloseGuard } from "../controllers/composition/placement-close-guards";
 export type {
   CreateWorkbenchFocusControllerInput,
   WorkbenchFocusChangeListener,

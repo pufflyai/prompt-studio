@@ -6,10 +6,18 @@ import { deleteWorkspace } from "../workspace-deletion";
 export const deleteWorkspaceRoute = createRoute({
   method: "delete",
   path: "/workspaces/{id}",
-  description: "Soft-delete a workspace.",
+  description:
+    "Delete a workspace, or explicitly forget an orphaned missing-provider record without deleting remote resources.",
   tags: ["Workspaces"],
   request: {
-    query: z.object({}).strict(),
+    query: z
+      .object({
+        forget: z.enum(["true", "false"]).optional().openapi({
+          description:
+            "Discard a remote missing-provider record with no backing reference or local path. Does not remove remote resources and abandons recovery.",
+        }),
+      })
+      .strict(),
     params: z
       .object({
         id: z.string().openapi({ description: "Workspace ID" }),
@@ -31,6 +39,7 @@ export const deleteWorkspaceRoute = createRoute({
 export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof deleteWorkspaceRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
+    const forget = c.req.valid("query").forget === "true";
 
     const workspace = await deps.workspaceService.get(id);
 
@@ -38,7 +47,7 @@ export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
     // a failed provider delete keeps the row so the operation can be retried.
     if (workspace) {
       try {
-        await deleteWorkspace(deps, workspace);
+        await deleteWorkspace(deps, workspace, { forget });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return c.json({ error: message }, 409);

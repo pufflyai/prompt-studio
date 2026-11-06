@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessAttachment, HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
+import { acceptedPrompt, nativeMessagesResponse } from "./native-api.test-helpers";
 import { messagesFromPatches, recordingSink } from "./opencode-session-poller.test-helpers";
 
 const notesPath = join(tmpdir(), "pstdio-oc-notes.txt");
@@ -41,33 +42,44 @@ const attachment: HarnessAttachment = {
 };
 
 const serviceOverrides = (messages: Record<string, unknown[]>) => ({
-  startServer: async () => ({ url: "http://localhost:4096", dispose: async () => {} }),
+  startServer: async () => ({ running: true, url: "http://localhost:4096", dispose: async () => {} }),
   serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
   pingServer: async () => true,
   isPortOpen: async () => true,
   fetcher: async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    if (url.includes("/wait") || url.includes("/model")) return new Response(null, { status: 204 });
     const method = init?.method ?? "GET";
 
-    if (method === "POST" && url.includes("/session?")) {
+    if (method === "POST" && url.includes("/api/session?")) {
       messages["oc-1"] = [];
-      return new Response(JSON.stringify({ id: "oc-1" }));
+      return new Response(JSON.stringify({ data: { id: "oc-1" } }));
     }
 
-    const postMatch = method === "POST" && url.match(/\/session\/([^/]+)\/message/);
+    const postMatch = method === "POST" && url.match(/\/session\/([^/]+)\/prompt/);
     if (postMatch) {
       const id = postMatch[1]!;
-      const body = JSON.parse(String(init?.body)) as { parts: unknown[] };
+      const body = JSON.parse(String(init?.body));
+      const parts = [
+        { type: "text", text: body.text },
+        ...(body.files ?? []).map((file: { name: string; uri: string }, index: number) => ({
+          type: "file",
+          filename: file.name,
+          url: file.uri,
+          mime: "text/plain",
+          fileId: body.metadata?.pstdioAttachments?.[index],
+        })),
+      ];
       messages[id] = [
         ...(messages[id] ?? []),
-        { role: "user", content: body.parts },
+        { role: "user", content: parts },
         { role: "assistant", content: [{ type: "text", text: "done" }] },
       ];
-      return new Response(JSON.stringify({ info: {}, parts: [] }));
+      return acceptedPrompt();
     }
 
     const getMatch = method === "GET" && url.match(/\/session\/([^/]+)\/message/);
-    if (getMatch) return new Response(JSON.stringify(messages[getMatch[1]!] ?? []));
+    if (getMatch) return nativeMessagesResponse((messages[getMatch[1]!] as never) ?? []);
 
     return new Response("{}", { status: 404 });
   },

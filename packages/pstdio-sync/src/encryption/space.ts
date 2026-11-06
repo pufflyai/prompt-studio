@@ -1,5 +1,5 @@
 import { type SpaceKey, spaceKeySchema } from "pstdio-sync-contracts";
-import { decodeBytes, encodeBytes } from "../encoding";
+import { decodeBytes, encodeBytes } from "../shared";
 
 const encoder = new TextEncoder();
 export const toBase64url = (bytes: Uint8Array) =>

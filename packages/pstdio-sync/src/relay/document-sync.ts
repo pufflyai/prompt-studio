@@ -1,15 +1,16 @@
 import type { ReadResult, StateInfo, StoredUpdate } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import { decodeBytes, encodeBytes } from "../encoding";
 import { openState, openSummary, openUpdate, sealState, sealUpdate } from "../encryption";
+import { checkSummary, cloneDocument, decodeBytes, encodeBytes, isEmptyDocument, missingUpdate } from "../shared";
 import {
   downloadDocumentBlobs,
+  hasDocumentAssets,
   prepareDocumentBlobs,
   uploadDocumentBlobs,
   validateDocumentBlobs,
 } from "./document-blobs";
-import { checkSummary, cloneDocument, missingUpdate } from "./document-merge";
 import { type DocumentSyncInput, DocumentUpdateTooLarge, type SyncFailure } from "./document-sync-types";
+import { retainNativeSource, withSourceRecovery } from "./source-recovery";
 
 export const latestStateLimits = { bytes: 1_048_576, updates: 1_000 };
 
@@ -40,6 +41,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
       Y.applyUpdate(next, await openState(space, documentId, state, payload));
       checkSummary(next, await openSummary(space, documentId, state));
       validateDocumentBlobs(next);
+      await store.initialHistory?.validate(next);
       incomplete = false;
     } catch {
       next.destroy();
@@ -60,6 +62,7 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     try {
       Y.applyUpdate(next, await openUpdate(space, documentId, update));
       validateDocumentBlobs(next);
+      await store.initialHistory?.validate(next);
     } catch {
       next.destroy();
       await quarantine({ kind: "update", id: update.updateId, envelope: update });
@@ -94,14 +97,15 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
       if (await readUpdates(result)) return;
       // A later page may introduce an incomplete state ahead of this cursor. Keep the edits we
       // already received in the local owner before replacing the relay replica with that state.
-      if (!readOnly) {
+      if (!readOnly && (!store.initialHistory || stateId)) {
         const local = await mergeLocal();
-        local.destroy();
+        local?.destroy();
       }
     }
   };
   const mergeLocal = async () => {
     await downloadDocumentBlobs(input, remote);
+    if (store.initialHistory) return store.initialHistory.merge(owner, remote);
     return store.transaction(owner, async ({ document }) => {
       Y.applyUpdate(document, Y.encodeStateAsUpdate(remote));
       return cloneDocument(document);
@@ -139,6 +143,85 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
       await replace(local, blobIds);
     }
   };
+  const foundInitialHistory = async () => {
+    if (!store.initialHistory || stateId) return "ready";
+    // A null state can still have a tail. Found that received history before
+    // adopting it; otherwise a CAS loser could already have changed local seeds.
+    const initial = after
+      ? cloneDocument(remote)
+      : await store.transaction(owner, async ({ document }) => cloneDocument(document));
+    try {
+      if (isEmptyDocument(initial)) return "waiting";
+      await store.initialHistory.validate(initial);
+      await prepareDocumentBlobs(input, initial);
+      const blobIds = await uploadDocumentBlobs(input, initial);
+      await replace(initial, blobIds);
+      return "retry";
+    } finally {
+      initial.destroy();
+    }
+  };
+  const compact = async () => {
+    if (incomplete || after <= through || (bytes <= limits.bytes && updates <= limits.updates)) return true;
+    const blobIds = await uploadDocumentBlobs(input, remote);
+    return replace(remote, blobIds);
+  };
+  const publishAdoption = async () => {
+    const candidate = await store.initialHistory?.prepare(owner, remote);
+    if (!candidate) return false;
+    try {
+      await prepareDocumentBlobs(input, candidate);
+      const blobIds = await uploadDocumentBlobs(input, candidate);
+      await replace(candidate, blobIds);
+      return true;
+    } finally {
+      candidate.destroy();
+    }
+  };
+  const prepareLocalHistory = async () => {
+    if (store.initialHistory && incomplete) return "waiting";
+    const initial = await foundInitialHistory();
+    if (initial !== "ready") return initial;
+    if (await publishAdoption()) return "retry";
+    return "ready";
+  };
+  const unchanged = async () =>
+    downloaded &&
+    store.revision &&
+    (await store.revision(owner)) === acknowledgedRevision &&
+    !hasDocumentAssets(remote);
+  const synchronizeLocal = async () => {
+    const initialHistory = await prepareLocalHistory();
+    if (initialHistory === "waiting") return true;
+    if (initialHistory === "retry") return false;
+    const local = await mergeLocal();
+    if (!local) return false;
+    try {
+      await prepareDocumentBlobs(input, local);
+      const update = missingUpdate(local, remote);
+      if (update) {
+        await sendUpdate(local, update);
+        // Do not jump to our receipt's sequence: another device may have written just before it.
+        return false;
+      }
+      if (!(await compact())) return false;
+      downloaded = !incomplete;
+      await acknowledge();
+      return true;
+    } finally {
+      local.destroy();
+    }
+  };
+  const synchronize = async () => {
+    while (true) {
+      await read();
+      // Reading invalidates downloaded whenever the relay changed. An acknowledged local
+      // revision proves an unchanged pass needs neither a document clone nor another diff.
+      // Asset files can disappear independently of that revision and still need normal repair.
+      if (await unchanged()) return;
+      if (await synchronizeLocal()) return;
+    }
+  };
   const acknowledge = async () => {
     if (!store.revision) return;
     const acknowledged = await store.transaction(owner, async ({ document, revision }) =>
@@ -147,36 +230,13 @@ export const createDocumentSync = (input: DocumentSyncInput) => {
     if (acknowledged !== undefined) acknowledgedRevision = acknowledged;
   };
   return {
-    /** A format upgrade can read its old relay source once without writing that format again. */
+    /** Format upgrades read the old stream without publishing into it. */
     async download() {
       await read(true);
       if (incomplete) throw new Error("Cannot import an incomplete relay document");
       return cloneDocument(remote);
     },
-    async synchronize() {
-      while (true) {
-        await read();
-        const local = await mergeLocal();
-        try {
-          await prepareDocumentBlobs(input, local);
-          const update = missingUpdate(local, remote);
-          if (update) {
-            await sendUpdate(local, update);
-            // Do not jump to our receipt's sequence: another device may have written just before it.
-            continue;
-          }
-          if (!incomplete && after > through && (bytes > limits.bytes || updates > limits.updates)) {
-            const blobIds = await uploadDocumentBlobs(input, remote);
-            if (!(await replace(remote, blobIds))) continue;
-          }
-          downloaded = !incomplete;
-          await acknowledge();
-          return;
-        } finally {
-          local.destroy();
-        }
-      }
-    },
+    synchronize: () => withSourceRecovery(synchronize, () => retainNativeSource(input, remote, quarantine)),
     // Compare against the relay replica, including delete-only edits. A durable local
     // transaction after synchronization must immediately stop reporting synced.
     status: async () => {

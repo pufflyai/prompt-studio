@@ -14,7 +14,9 @@ test("packaged Sessions creates in Main and preserves independent Side session t
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
   try {
-    const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") });
+    const started = await startPackagedServe(root, {
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-home", "workbench-fixture"),
+    });
     child = started.child;
     const response = await fetch(`${started.baseUrl}/v1/projects`, {
       method: "POST",

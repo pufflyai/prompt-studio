@@ -16,7 +16,10 @@ for (const workload of workloads) {
         window.__longTasks?.push(...list.getEntries().map((entry) => ({ duration: entry.duration })));
       }).observe({ type: "longtask", buffered: true });
     });
-    const preview = await openPerformancePreview(page, "patterns-chat-chat-panel-rendering--rendering-workloads");
+    const preview = await openPerformancePreview(
+      page,
+      "packages/ui/src/components/chat-ui/components/chat-panel-rendering.canvas.tsx#RenderingWorkloads",
+    );
     await preview.getByRole("button", { name: workload, exact: true }).waitFor();
     await preview.evaluate(() => document.fonts.ready);
     const samples = [];

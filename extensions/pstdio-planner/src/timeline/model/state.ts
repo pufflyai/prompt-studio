@@ -6,7 +6,7 @@ import type { PlannerTicket } from "../planner";
 export type TicketState = "await-input" | "input-received" | "done" | "not-started" | "in-progress" | "blocked";
 
 export interface StateSignals {
-  humanNeeded: boolean;
+  reviewNeeded: boolean;
   // Every request is settled and at least one was answered; an agent still has to verify the result.
   inputReceived: boolean;
   unmet: boolean;
@@ -22,7 +22,7 @@ export function ticketState(
   if (selections.completedStatusIds.includes(status)) {
     return "done" as const;
   }
-  if (signals.humanNeeded) {
+  if (signals.reviewNeeded) {
     return "await-input" as const;
   }
   // Active work supersedes old answers; input-received only marks idle tickets an agent should pick up.

@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import type { ExtensionWorkspace, ResourceAnchor } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt } from "../data/attempt-storage";
-import { createTicketWorkspaceLookup } from "../data/mappers";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { sessionQuery } from "./session-query.fixture";
@@ -67,7 +66,6 @@ for (const target of ["workspace", "session"] as const) {
     if (target === "workspace") {
       for (const ticket of env.tickets) {
         expect(await ticketWorkspacesCommand.run(...env.args({ id: ticket.id }))).toHaveLength(1);
-        expect(createTicketWorkspaceLookup([env.workspace]).get(ticket.id)).toHaveLength(1);
       }
       await linkTicketCommand.run(...env.args({ id: one.id, workspace: "WS-1" }));
     }

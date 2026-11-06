@@ -1,5 +1,6 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
@@ -112,4 +113,42 @@ export const TurnBoundaries: Story = {
       </Box>
     </HStack>
   ),
+};
+
+export const MessageForkActions: Story = {
+  id: "patterns-chat-message-actions--message-fork-actions",
+  render: function MessageForkExample() {
+    const [selected, setSelected] = useState<string>();
+    return (
+      <Box width="480px" height="560px">
+        <ChatPanel {...panelProps} messages={completedTurnMessages} onForkMessage={setSelected} />
+        {selected ? (
+          <Text textStyle="label/S/regular" aria-live="polite">
+            Fork selected: {selected}
+          </Text>
+        ) : null}
+      </Box>
+    );
+  },
+};
+
+export const ForkWhileStreaming: Story = {
+  id: "patterns-chat-message-actions--fork-while-streaming",
+  fullscreen: true,
+  description:
+    "Fork an earlier reply while the active reply keeps streaming. Copy remains available on the active reply.",
+  render: function ForkWhileStreamingExample() {
+    const [selected, setSelected] = useState<string>();
+    return (
+      <Box height="full">
+        <ChatPanel
+          {...panelProps}
+          messages={[...completedTurnMessages, ...incompleteTurnMessages]}
+          streaming
+          onForkMessage={setSelected}
+        />
+        {selected ? <Text aria-live="polite">Fork selected: {selected}</Text> : null}
+      </Box>
+    );
+  },
 };

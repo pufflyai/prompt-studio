@@ -1,7 +1,7 @@
 import { Button, Flex, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { ChatMessage } from "./ai-message";
-import { messageFadeInProps } from "./chat-message-animation";
+import { useMessageFadeIn } from "./chat-message-animation";
 import { MessageActionPanel } from "./message-action-panel";
 import { MessagePartsRenderer } from "./message-parts-renderer";
 import { getMessageOrigin, type SessionMessage } from "./message-types";
@@ -10,17 +10,28 @@ interface ChatMessageListResponseProps {
   message: SessionMessage;
   streaming: boolean;
   hideQuestionForms?: boolean;
-  animate?: boolean;
+  animatedKeys: Set<string>;
   showAssistantActions: boolean;
+  onForkMessage?: (messageId: string) => void | Promise<void>;
+  forkDisabledReason?: string;
 }
 
 export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => {
-  const { message, streaming, hideQuestionForms = false, animate = false, showAssistantActions } = props;
+  const {
+    message,
+    streaming,
+    hideQuestionForms = false,
+    animatedKeys,
+    showAssistantActions,
+    onForkMessage,
+    forkDisabledReason,
+  } = props;
+  const fadeInProps = useMessageFadeIn(message.animationKey ?? message.id, animatedKeys);
   const from = getMessageOrigin(message.role);
   const showActions = from === "user" || (from === "assistant" && showAssistantActions);
 
   return (
-    <ChatMessage.Root from={from} {...(animate ? messageFadeInProps : undefined)}>
+    <ChatMessage.Root from={from} {...fadeInProps}>
       <ChatMessage.Content from={from}>
         <MessagePartsRenderer
           message={message}
@@ -28,7 +39,13 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
           hideQuestionForms={hideQuestionForms}
         />
         {showActions ? (
-          <MessageActionPanel message={message} alwaysVisible={from === "user"} copyAlwaysVisible={from !== "user"} />
+          <MessageActionPanel
+            message={message}
+            alwaysVisible={from === "user"}
+            copyAlwaysVisible={from !== "user"}
+            onForkMessage={streaming ? undefined : onForkMessage}
+            forkDisabledReason={forkDisabledReason}
+          />
         ) : null}
       </ChatMessage.Content>
     </ChatMessage.Root>

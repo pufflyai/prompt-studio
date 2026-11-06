@@ -1,5 +1,6 @@
 import { dirname, relative } from "node:path";
 import { suites } from "pstdio-benchmarks";
+import { canvasTestOwner } from "./canvas-test-owner";
 import { selectPriorityTests, testRunner } from "./test-discovery";
 import type { TestPriority } from "./test-policy";
 
@@ -158,7 +159,7 @@ export const createPriorityPlan = (
     };
     const runner = testRunner(file);
     const { subgroup, componentOwner } = groupDetails(file, runner, owner);
-    const sourceOwner = componentOwner ? packages.find((pkg) => pkg.dir === `packages/${componentOwner}`) : undefined;
+    const sourceOwner = componentOwner ? canvasTestOwner(packages, componentOwner) : undefined;
     const scopedOwners = sourceOwner ? [owner, sourceOwner] : [owner];
     if (
       options.scope &&

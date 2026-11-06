@@ -1,6 +1,10 @@
+import type { NativeDocumentSource } from "../../native-document-source";
 import type { RendererCallback } from "./context";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
+import type { TextFilePresentation } from "./text-source";
+
+export type { NativeDocumentSource } from "../../native-document-source";
 
 export type FileRendererResourceRef = ResourceRef;
 
@@ -25,8 +29,12 @@ export interface FileRendererLoadParams {
 // The host dispatches to a markdown editor, a code editor, or an image preview
 // based on `fileName` / `mimeType`. Text-ish files return `content`; images
 // return a `dataUrl`. An absent `fileName` falls back to the markdown editor.
-export interface FileRendererLoadResult {
+export interface FileRendererLoadResult extends TextFilePresentation {
+  /** @deprecated Use textDocument and defineTextSource for presentation-independent source ownership. */
+  documentSource?: NativeDocumentSource;
   fileName?: string;
+  /** Workspace-relative path shown above the file preview. */
+  filePath?: string;
   mimeType?: string;
   content?: string;
   dataUrl?: string;
@@ -49,6 +57,10 @@ export interface FileRendererSaveParams {
 }
 
 export interface FileRendererContribution extends RendererContributionBase {
+  /** Manual files write only on an explicit save. Defaults to autosave. */
+  saveMode?: "auto" | "manual";
+  /** Stable selected-document identity, independent of unrelated resource metadata. */
+  document?: { metadataKey: string };
   load: RendererCallback<FileRendererLoadParams, FileRendererLoadResult>;
   // Omit to make the renderer read-only. Images are always read-only regardless.
   save?: RendererCallback<FileRendererSaveParams, unknown>;

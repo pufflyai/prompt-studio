@@ -5,6 +5,7 @@ import type {
   PointerEvent as ReactPointerEvent,
   RefObject,
 } from "react";
+import { useLayoutEffect } from "react";
 import type { getResizableSplitAxis } from "@/components/layout/resizable-split-layout.geometry";
 import { type ResizableSplitSeparator, ResizeHandle } from "@/components/layout/resizable-split-layout.handle";
 import { SplitPanelMotionContext } from "./split-panel-motion-context";
@@ -57,6 +58,23 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
     onResizeKeyDown,
     onResizeStart,
   } = props;
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const panel = resizablePanelRef.current;
+    const content = contentPanelRef.current;
+    const separator = separatorRef.current;
+    if (!root || !panel || !content || !separator) return;
+    const move = (node: HTMLElement, before: HTMLElement | null) => {
+      if (node.nextSibling === before) return;
+      if (root.moveBefore) root.moveBefore(node, before);
+      // Temporary WebKit fallback: ADR 0053 covers iframe reloads during explicit moves.
+      else root.insertBefore(node, before);
+    };
+    // Keep reading and focus order aligned with placement without resetting connected iframes.
+    move(axis.panelFirst ? panel : content, separator);
+    move(axis.panelFirst ? content : panel, null);
+  });
+
   const resizablePanelNode = (
     <Box
       key="resizable-panel"
@@ -97,24 +115,15 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
       onResizeStart={onResizeStart}
     />
   ) : (
-    <Box css={styles.separator} aria-hidden="true" />
+    <Box ref={separatorRef} css={styles.separator} aria-hidden="true" />
   );
 
-  if (axis.panelFirst) {
-    return (
-      <>
-        {resizablePanelNode}
-        {resizeTrigger}
-        {contentPanelNode}
-      </>
-    );
-  }
-
+  // Keep React's child order stable; the layout effect owns state-preserving DOM moves.
   return (
     <>
-      {contentPanelNode}
-      {resizeTrigger}
       {resizablePanelNode}
+      {resizeTrigger}
+      {contentPanelNode}
     </>
   );
 };

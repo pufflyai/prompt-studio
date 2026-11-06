@@ -11,6 +11,7 @@ export type {
   BoardViews,
   BoardViewUpdate,
   CreateAutomationRunInput,
+  DeviceCommand,
   ExtensionDiagnosticsResponse,
   InstallExtensionRequest,
   InstallExtensionResponse,
@@ -24,6 +25,11 @@ export type {
   ResourceRef,
   RestoreProjectInput,
   RestoreProjectResult,
+  SessionImportError,
+  SessionImportErrors,
+  SessionImportJob,
+  SessionImportPreview,
+  SessionImportSource,
   WorkspaceProviderDescriptor,
 } from "pstdio-api-contracts";
 // Lets clients check a view filter the way the views API does before they send it.

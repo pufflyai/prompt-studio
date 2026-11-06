@@ -1,10 +1,17 @@
 import { resourceKey, viewDataEvents } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
-import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
+import {
+  subscribeToExtensionEventFeed,
+  subscribeToExtensionEventReset,
+} from "@/shared/extensions/extension-webview-broadcast";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { toDashboardExtensionResource } from "./extension-kanban-adapter";
-import { resolutionFromResult, resourceResolutionRequest } from "./extension-resource-resolution";
+import {
+  resolutionFromResult,
+  resourceResolutionRequest,
+  sameResourceReference,
+} from "./extension-resource-resolution";
 
 interface PlacementResourceSyncInput {
   projectId: string;
@@ -34,8 +41,25 @@ export const refreshWorkbenchResource = (ctx: WorkbenchModuleContext, resource: 
   const placements = Object.values(ctx.layout.getLayout().regions)
     .flatMap((region) => region.widgets)
     .filter((placement) => placement.resource && referenceKey(placement.resource) === referenceKey(resource));
-  ctx.pages.refreshResource(resource);
+  const merged = (current: ResourceRef) => ({
+    ...current,
+    ...resource,
+    metadata: { ...current.metadata, ...resource.metadata },
+  });
+  const needsRefresh = (current: ResourceRef) =>
+    referenceKey(current) === referenceKey(resource) && !sameResourceReference(current, merged(current));
+  const state = ctx.pages.store.getState();
+  const retained = Object.values(state.pageStates).flatMap((page) =>
+    Object.values(page.resourceInstances).flatMap((instances) => instances.map((instance) => instance.resource)),
+  );
+  let location = state.location;
+  while (location) {
+    if (location.resource) retained.push(location.resource);
+    location = location.parent;
+  }
+  if (retained.some(needsRefresh)) ctx.pages.refreshResource(resource);
   for (const placement of placements) {
+    if (!needsRefresh(placement.resource!)) continue;
     const identity = placement.placementIdentity;
     const updated = {
       ...placement.resource,
@@ -66,6 +90,10 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
     return result.filter((resource) => referenceKey(resource) !== primaryKey);
   };
   const applyResource = (resource: ResourceRef, result: unknown) => {
+    if (result === null) {
+      ctx.resources.removed(resource);
+      return;
+    }
     const value = toDashboardExtensionResource(result, input.projectId, input.metadata.resourceKinds);
     if (!value) return;
     const updated = {
@@ -128,12 +156,17 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
       if (resource.extensionId && isResourceRefreshEvent(event.id, resource.extensionId)) void resolve(resource);
     }
   });
+  const unsubscribeReset = subscribeToExtensionEventReset(() => {
+    for (const resource of new Map(resources().map((resource) => [referenceKey(resource), resource])).values())
+      void resolve(resource);
+  });
   return {
     dispose() {
       unsubscribeLayout();
       unsubscribePages();
       primarySubscription.dispose();
       unsubscribeEvents();
+      unsubscribeReset();
       for (const request of pending.values()) request.abort();
     },
   };

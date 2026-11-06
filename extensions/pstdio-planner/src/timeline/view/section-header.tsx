@@ -2,8 +2,9 @@
 import { Box, Flex, Icon, IconButton, Text, useRecipe } from "@chakra-ui/react";
 import { psTheme, Tooltip } from "@pstdio/ui";
 import { CheckCircle2, ChevronsDownUp, ChevronsUpDown, MessageCircleWarning, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { isComplete } from "../model/filter";
+import { statusProgress } from "../model/status-progress";
 import { formatDay } from "./flags";
 import { InlineText } from "./inline-edit";
 import { MilestoneEta } from "./milestone-eta";
@@ -16,15 +17,20 @@ type Props = Pick<PlanViewProps, "onToggle" | "onDelete" | "onRenameDeadline" | 
 function Progress(props: { entry: ViewSection }) {
   const { entry } = props;
   const { done, total } = entry.section.counts;
+  const groups = statusProgress(entry.section.rows);
+  const summary = [`${done} of ${total} tickets done`, ...groups.map(({ name, count }) => `${name}: ${count}`)].join(
+    " · ",
+  );
   return (
-    <Tooltip content={`${done} of ${total} tickets done`}>
+    <Tooltip content={summary}>
       <Box
         role="progressbar"
         aria-label="Milestone progress"
         aria-valuemin={0}
         aria-valuemax={total || 1}
         aria-valuenow={done}
-        aria-valuetext={`${done} of ${total} tickets done`}
+        aria-valuetext={summary}
+        display="flex"
         tabIndex={0}
         w="64px"
         h="4px"
@@ -33,7 +39,16 @@ function Progress(props: { entry: ViewSection }) {
         overflow="hidden"
         flexShrink="0"
       >
-        <Box w={`${total ? (done / total) * 100 : 0}%`} h="full" bg="green.fg" borderRadius="0" />
+        {groups.map(({ id, name, color, count }) => (
+          <Box
+            key={id ?? "no-status"}
+            aria-hidden="true"
+            title={`${name}: ${count}`}
+            w={`${(count / total) * 100}%`}
+            h="full"
+            bg={color}
+          />
+        ))}
       </Box>
     </Tooltip>
   );
@@ -62,6 +77,7 @@ function DeleteButton(props: { deadlineId: string; label: string } & Pick<Props,
 
 export function SectionHeader(props: Props) {
   const { entry, onToggle, onDelete, onRenameDeadline, onReview } = props;
+  const toggle = useRef<HTMLButtonElement>(null);
   const { deadline, counts } = entry.section;
   const complete = isComplete(entry.section);
   const label = deadline ? (deadline.name ?? formatDay(deadline.date)) : "Unscheduled";
@@ -72,6 +88,7 @@ export function SectionHeader(props: Props) {
           size="2xs"
           variant="ghost"
           color="fg.subtle"
+          ref={toggle}
           aria-label={`${entry.collapsed ? "Expand" : "Collapse"} ${label}`}
           onClick={() => onToggle(deadline?.id ?? null)}
         >
@@ -91,17 +108,20 @@ export function SectionHeader(props: Props) {
           Unscheduled
         </Text>
       )}
-      {counts.humanNeeded > 0 ? (
-        <Tooltip content={`${counts.humanNeeded} tickets need attention · open them`}>
+      {counts.reviewNeeded > 0 ? (
+        <Tooltip content={`${counts.reviewNeeded} tickets need attention · open them`}>
           <IconButton
             size="2xs"
             variant="ghost"
             color="orange.fg"
-            aria-label={`Open ${counts.humanNeeded} tickets needing attention in ${label}`}
-            onClick={() => onReview(deadline?.id ?? null)}
+            aria-label={`Open ${counts.reviewNeeded} tickets needing attention in ${label}`}
+            onClick={(event) => {
+              event.currentTarget.focus({ preventScroll: true });
+              onReview(deadline?.id ?? null, event.currentTarget, toggle.current);
+            }}
           >
             <Icon as={MessageCircleWarning} />
-            <Text textStyle="label/XS/medium">{counts.humanNeeded}</Text>
+            <Text textStyle="label/XS/medium">{counts.reviewNeeded}</Text>
           </IconButton>
         </Tooltip>
       ) : null}

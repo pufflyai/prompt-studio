@@ -8,15 +8,15 @@ CLI and dashboard clients call the session API. Domain services coordinate datab
 
 ## Personal history across devices
 
-For a cloud project, each device publishes its workspace summaries, session records, and full harness-neutral conversations to the user's personal space. The index is one CRDT document. Each transcript is a separate document. These use the existing encrypted document protocol, latest-state repair, and quarantine handling, with the personal-space key from the account manager. The relay cannot read their content.
+For a cloud project, each device publishes its workspace summaries, session records, and full harness-neutral conversations to the user's personal space. Each device writes its own append-only encrypted index log. Completed conversations use append-only encrypted message logs over the existing document protocol. Large messages use encrypted blobs. Live snapshots use the unstored channel and are fragmented within its wire limit. The relay cannot read their content. See [ADR 0131](../../adrs/0131-personal-session-message-logs.md) and [ADR 0133](../../adrs/0133-sync-session-index-changes-by-device.md).
 
-The local CRDT store retains downloaded history. The session and workspace read APIs, extension read APIs, and dashboard sync snapshot include the user's other devices. A downloaded conversation stays readable after its source stops and after the reader restarts offline. Signing out hides cached personal records; another account uses a separate local namespace. Local publication records their first account owner so changing accounts does not republish already-owned local records to a different personal space.
+Local page files retain downloaded conversations and device indexes with their saved cursors. Local materialized index rows serve reads. The session and workspace read APIs, extension read APIs, and dashboard sync snapshot include the user's other devices. A downloaded conversation stays readable after its source stops and after the reader restarts offline. Signing out hides cached personal records; another account uses a separate local namespace. Local publication records their first account owner so changing accounts does not republish already-owned local records to a different personal space.
 
 Synced records include `device: { ownerId, id, name }`. They stay separate from local execution rows. The scheduler, startup recovery, workspace providers, and mutation endpoints only use local rows. Reading a foreign-device session never starts a local harness or resolves its source path on this device. The dashboard shows the device and a read-only composer. Remote commands are a separate feature.
 
 A project-key document holds shared workspace/session pointers. Each pointer contains only the resource type, opaque ID, owner ID, device ID, and device name. Shared resource anchors receive that device information without private labels, paths, or conversation content. Other project members cannot open the personal record or decrypt its transcript.
 
-Implementation: [personal history](../../../packages/pstdio-api/src/services/personal-history/service.ts), [publication](../../../packages/pstdio-api/src/services/relay/personal.ts), and [encrypted document sync](../../../packages/pstdio-sync/src/relay/document-sync.ts).
+Implementation: [personal history](../../../packages/pstdio-api/src/services/personal-history/service.ts), [publication](../../../packages/pstdio-api/src/services/relay/personal.ts), and [log receiver](../../../packages/pstdio-api/src/services/personal-history/log-receiver.ts).
 
 ## Core concepts
 
@@ -91,7 +91,11 @@ planner ticket ──┐
 
 ## Session management
 
-Saved sessions have shared Rename, Archive, and Delete commands on their breadcrumb and navigation rows. Commands use the explicit session ID or the row or tab context before the active session. Drafts have no saved-session actions.
+Saved sessions have shared Rename, Fork conversation, Archive, and Delete commands on their breadcrumb, tab, and navigation rows. Commands use the explicit session ID or the row or tab context before the active session. Drafts have no saved-session actions.
+
+`POST /v1/sessions/{id}/fork`, `client.sessions.fork(id)`, and `pst sessions fork --id <id>` copy a settled local conversation into the same workspace. The optional `messageId` query parameter, SDK option, and CLI `--message-id` choose an inclusive agent-reply boundary. The host copies that history into a separately owned file, keeps the agent, model and parameters, and records `original_session_id`. The optional harness `fork` method copies provider history and returns a different native ID without starting a turn. A selected reply bounds the copy and leaves later active, pending, and queued source work untouched. Without `messageId`, that work must settle first. Unsupported harnesses return 400; pending work on an unbounded fork or missing native history returns 409.
+
+`/v1/session-imports` restores session JSONL exports through the same API used by `pst sessions import`. Jobs, cursor checkpoints, paged failure journals, and current-row upload ledgers live under the host storage root's `session-imports/` directory. The worker builds a disposable SQLite metadata index in batches, checks the source table fingerprint, and processes one transcript at a time. Imported session insertion and its default-workspace link commit together. Stable derived session IDs make retries skip completed imports. Uploaded files are recorded before creation; recovery removes unfinished staging when no session committed and preserves bytes when the session exists. Lifecycle hooks and source queues/native ownership are excluded. Preview writes only its disposable index. See [import commands](../cli/0006-sessions.md#import-saved-conversations).
 
 Rename trims the name and uses `PATCH /v1/sessions/{id}/title`. Archive keeps the conversation, cancels queued work, and allows live work to continue. Both operations update the synced session row.
 
@@ -362,3 +366,5 @@ Optional [harness commands and modes](../extensions/0015-harness-commands.md) us
 Queued input owns its execution settings. Selecting another model for the normal draft does not change saved work. Editing a request saves its full prompt, model, parameters, and attachments without starting a run.
 
 Steering captures the running handle and uses its optional native live-input method. It keeps the current run and status, and waits for provider acceptance before promoting the request into persisted history. Completion waits for existing controls; cancellation aborts them. Unknown delivery remains recoverable and excluded from automatic queue dispatch. See [session queue ownership](0018-session-queue.md#saved-requests-and-explicit-live-input).
+
+Cloud session summaries use one append-only index log per device, with local materialized rows and saved cursors. Only the running device writes its rows and message-log heads. A small device directory and shared resource pointers remain CRDT documents. Preview topics exist per session; opening a remote session subscribes, and the publisher follows reader presence. Unread previews do not wake durable sync. See [ADR 0133](../../adrs/0133-sync-session-index-changes-by-device.md).

@@ -44,6 +44,14 @@ Workspaces get short names that you can pass to `pst` commands instead of their 
 
 Remote environments are covered in [Local and remote work](0004-local-and-remote.md).
 
+## Active workspace limits
+
+Each device can limit how many workspaces run sessions at once. The default is unlimited. The limit belongs to that device, applies across its projects, and never syncs to another device. Creating a workspace does not use a slot.
+
+A workspace is active while at least one session is running or waiting for your input. Several running sessions in the same workspace use one workspace slot. When the limit is full, a session in another workspace waits as **Queued**. It starts automatically in submission order when a slot opens. Raising or removing the limit also starts waiting sessions. Lowering it lets current work finish.
+
+On `main` after 0.46.0, tools can read the current device's live count and limit with `ctx.workspaces.getCapacity()` and set it with `ctx.workspaces.updateCapacity({ limit: 6 })`. Use `limit: null` for unlimited. The SDK client exposes the same methods. Counts cover the device serving the request; another device's last synced history is not a live capacity reading. The existing session concurrency setting also applies.
+
 ## Where Prompt Studio keeps data
 
 Prompt Studio keeps its own state in `~/.pstdio`. This includes the database, logs, extensions installed for your user, and Git worktree workspaces. Set the `PSTDIO_HOME` environment variable to use another folder.

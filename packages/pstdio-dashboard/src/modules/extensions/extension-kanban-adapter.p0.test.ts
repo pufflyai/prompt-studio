@@ -129,3 +129,36 @@ describe("dashboard Kanban adapter", () => {
     expect(rendered).toBe("mixed badges");
   });
 });
+
+test("honors explicit badge actions when every linked resource is a workspace", () => {
+  const adapter = createDashboardKanbanAdapter({
+    ctx: createWorkbench(),
+    executeCommand: async () => response,
+    metadata: metadata as ResolvedWorkbenchExtensionMetadata,
+    projectId: "project-1",
+  });
+  const attribute = {
+    id: "linked",
+    label: "Linked resources",
+    type: { kind: "string" },
+    display: { kind: "badge-list", itemsAttributeId: "linkedItems" },
+    render: () => "action badges",
+  } satisfies AttributeDescriptor;
+  const decorated = adapter.decorateAttribute?.({} as never, attribute);
+  expect(
+    decorated?.render?.("workspace-1", {
+      id: "ticket-1",
+      title: "Ticket",
+      attributes: {
+        linkedItems: [
+          {
+            id: "workspace-1",
+            label: "Workspace",
+            resource: { type: "workspace", id: "workspace-1" },
+            action: { kind: "page", page: { kind: "page", id: "workspace", extensionId: "pstdio" } },
+          },
+        ],
+      },
+    }),
+  ).toBe("action badges");
+});

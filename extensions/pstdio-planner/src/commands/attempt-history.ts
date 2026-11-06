@@ -15,7 +15,7 @@ import {
 import type { ReviewComment } from "../data/attempt-types";
 import { findTicket } from "../data/resolve";
 import { readReviewRequest } from "../data/review-request-storage";
-import { withWriteGuard } from "../data/write-guard";
+import { withQueuedWriteGuard, withWriteGuard } from "../data/write-guard";
 
 export const readAttemptHistoryCommand = defineCommand({
   id: "read-attempt-history",
@@ -204,42 +204,44 @@ export const selectAttemptCommand = defineCommand({
   params: {
     ticket: params.text({ required: true }),
     workspaceId: params.text({ required: true }),
-    humanRequestId: params.text(),
+    reviewRequestId: params.text(),
   },
   async run(ctx, commandParams) {
-    if (ctx.source === "schedule" || ctx.source === "automation" || ctx.source === "event") {
-      throw new Error("Automation cannot select an attempt.");
-    }
-    const ticket = await findTicket(ctx, commandParams.ticket);
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
-    if (!ticket || !attempt || attempt.ticketId !== ticket.id)
-      throw new Error("Workspace is not an attempt for this ticket.");
-    if (commandParams.humanRequestId) {
-      const request = await readReviewRequest(ctx.storage, commandParams.humanRequestId);
-      if (!request || request.ticketId !== ticket.id || request.state !== "open") {
-        throw new Error("The human request does not match this ticket.");
+    return withQueuedWriteGuard(ctx, "attempt-launch", async () => {
+      if (ctx.source === "schedule" || ctx.source === "automation" || ctx.source === "event") {
+        throw new Error("Automation cannot select an attempt.");
       }
-    }
-    const selection = {
-      ticketId: ticket.id,
-      workspaceId: attempt.workspaceId,
-      selectedBy: actorFromSource(ctx.source, ctx.invocationId),
-      humanRequestId: commandParams.humanRequestId ?? null,
-      selectedAt: new Date().toISOString(),
-    };
-    await attemptSelectionsCollection(ctx.storage).put(ticket.id, selection);
-    await appendAttemptEvent(ctx.storage, {
-      workspaceId: attempt.workspaceId,
-      revision: attempt.revisions.at(-1)?.revision ?? null,
-      type: "attempt_selected",
-      actor: selection.selectedBy,
-      sessionId: null,
-      reportId: null,
-      reviewId: null,
-      threadId: null,
-      commitSha: attempt.revisions.at(-1)?.headSha ?? null,
-      metadata: { humanRequestId: selection.humanRequestId },
+      const ticket = await findTicket(ctx, commandParams.ticket);
+      const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+      if (!ticket || !attempt || attempt.ticketId !== ticket.id)
+        throw new Error("Workspace is not an attempt for this ticket.");
+      if (commandParams.reviewRequestId) {
+        const request = await readReviewRequest(ctx.storage, commandParams.reviewRequestId);
+        if (!request || request.ticketId !== ticket.id || request.state !== "open") {
+          throw new Error("The review request does not match this ticket.");
+        }
+      }
+      const selection = {
+        ticketId: ticket.id,
+        workspaceId: attempt.workspaceId,
+        selectedBy: actorFromSource(ctx.source, ctx.invocationId),
+        reviewRequestId: commandParams.reviewRequestId ?? null,
+        selectedAt: new Date().toISOString(),
+      };
+      await attemptSelectionsCollection(ctx.storage).put(ticket.id, selection);
+      await appendAttemptEvent(ctx.storage, {
+        workspaceId: attempt.workspaceId,
+        revision: attempt.revisions.at(-1)?.revision ?? null,
+        type: "attempt_selected",
+        actor: selection.selectedBy,
+        sessionId: null,
+        reportId: null,
+        reviewId: null,
+        threadId: null,
+        commitSha: attempt.revisions.at(-1)?.headSha ?? null,
+        metadata: { reviewRequestId: selection.reviewRequestId },
+      });
+      return selection;
     });
-    return selection;
   },
 });

@@ -282,7 +282,7 @@ The [context types](../../../packages/pstdio-api-contracts/src/extension-kernel/
 
 ### Other context services
 
-These are in 0.43.x and `main`:
+The table includes established services and the unreleased workspace presentation methods noted below:
 
 | Method | What it does |
 | --- | --- |
@@ -290,6 +290,15 @@ These are in 0.43.x and `main`:
 | `ctx.sessions.addAnchors(sessionId, anchors)` | Links a session to resources. |
 | `ctx.sessions.removeAnchors(sessionId, refs)` | Removes those links. |
 | `ctx.workspaces.get(id)` | Returns a workspace in this project, or `null`. |
+| `ctx.workspaces.rename(id, { name })` | Renames a local workspace record in this project. Its ID, shorthand and path stay the same. Default workspace names cannot change. |
+| `ctx.workspaces.listFiles(id, { path?, query?, limit? })` | Lists direct children, or finds entries recursively when `query` is supplied. The default and maximum limit is 500; `truncated` reports more matches. |
+| `ctx.workspaces.readFile(id, path)` | Reads supported text or an image preview. `editable` reflects both the format and the provider's file permissions. |
+| `ctx.workspaces.createDirectory(id, path)` / `createFile(id, path, { content })` | Creates a folder or text file without replacing an existing entry. |
+| `ctx.workspaces.writeFile(id, path, { content })` | Saves an existing supported text file; missing files are not recreated. |
+| `ctx.workspaces.moveEntry(id, path, destinationPath)` / `deleteEntry(id, path)` | Moves, renames or deletes an entry inside the workspace. An already existing destination is rejected before the move. |
+| `ctx.workspaces.diffFiles(id, mode)` | Returns lightweight changed-file metadata and counts without file bodies. |
+| `ctx.workspaces.diffFile(id, mode, path)` | Loads one changed file body, or `null` when the file has no change in this comparison. |
+| `ctx.workspaces.diffSummary(id, mode)` | Returns additions, deletions and changed-file count. |
 | `ctx.workspaces.addAnchors(workspaceId, anchors)` | Links a workspace to resources. |
 | `ctx.workspaces.removeAnchors(workspaceId, refs)` | Removes those links. |
 | `ctx.workspaces.resolve(id)` | Returns the provider state, execution kind, execution target, capabilities, and any provider error. |
@@ -299,6 +308,22 @@ These are in 0.43.x and `main`:
 | `ctx.logger.info`, `ctx.logger.warn`, `ctx.logger.error` | Write `(message, metadata?)` to the runtime log with event `extension.log`. The default log level, `error`, drops `info` and `warn`. |
 | `ctx.settings.delete(key)` | Removes the stored value of a setting. |
 
+The workspace presentation methods in the table are **unreleased**, added after 0.46.0 on
+the API 0.3.1 line. Publish the supporting host and SDK before adopting them in a
+separately released extension. They use the command's project and cancellation
+scope. File operations require a ready local file target and enforce the provider's
+read/write capabilities, path containment and Git metadata restrictions. They do
+not forward operations to another device's private history. Use the existing
+project/workspace file mounts when resolving a native text source.
+
+Diff operations require a ready local provider with `diff` enabled. The mode is
+`"current"` for uncommitted changes against HEAD or `"fork_point"` for all changes
+since branch creation. Git comparisons use the provider's worktree root, including
+when execution starts in a subfolder. Invalid, missing or unavailable workspace
+targets reject; `diffFile` returns `null` only for an unchanged or missing diff
+entry. Moves use the existing host rename operation; a concurrent writer changing
+the destination is not an exclusive transaction. Working-tree symlink bodies show the target text without reading the target file.
+
 On `main`, `ctx.resources.allocate({ kind, idPrefix: "tk" })` opts into a compact,
 case-sensitive ID while keeping the human shorthand unchanged. This additive option
 ships in the release after 0.44.0. It shares the core generator with
@@ -306,6 +331,14 @@ ships in the release after 0.44.0. It shares the core generator with
 [Resource identities](../sdk/0002-resources.md#resource-identities).
 
 ### Cloud account and sync status
+
+On `main`, `ctx.account.status().loginAttempt` and the webview account client expose
+the native device owner's latest sign-in request ID and `pending`, `complete` or
+`failed` status. No URL or credential is included. Listen to `accountEvents.changed`
+for start, completion, cancellation and expiry. A new sign-in replaces and drains
+the previous pending callback; sign-out closes it too. Different projects and
+extension copies observe the same operation. Do not persist another sign-in request
+in extension settings. Production consumers need a compatible published host and SDK.
 
 On `main`, `ctx.account` reads this device's Cloud account, the account's devices, and each project's sync status. It is an additive part of extension API 0.2.1 and ships in the release after 0.44.0. The native host owns the device credential; extensions never see it. Methods that take a `projectId` use the current project when it is omitted.
 
@@ -420,6 +453,35 @@ Native-history harnesses must implement `recoverMessages(ctx, { knownMessages, n
 
 Every harness event sink now provides `getMessages()`. Full-snapshot providers must read it after asynchronous polling and compose any harness-generated metadata before synchronously publishing the replacement. Root replacements remain authoritative. When a snapshot cannot be composed safely, a provider must leave the readable messages unchanged.
 
+### Bounded tool results on main
+
+The host limits each tool result to 256 KiB of serialized UTF-8, including output,
+error details, returned metadata, and shortening metadata. Inputs, ordinary text,
+and reasoning are unchanged. Oversized results retain their start and end with an
+omitted-byte note. Structured results become text summaries. Saved and synced
+conversations retain this bounded view; the host does not archive the discarded middle.
+
+Use `normalizeToolResult` or `normalizeMessageResults` before retaining native
+results in a harness. `createToolOutputBuffer()` keeps bounded streaming text;
+call `append(delta)` and read `result()` for the current `output` and optional
+`resultSummary`. `appendJson(value)` retains the serialized view without allocating
+a complete second JSON string. Small values keep their original type when normalized.
+
+`ToolResultSummary` is versioned and carries original byte counts and fingerprints.
+Keep it with the result. Never infer shortening from the visible omission text.
+`toolOutputFingerprint(part)` compares the original output even after shortening;
+for results with `returnDisplay`, it compares that display view. The host applies
+`projectToolResultRecovery` to checkpoints and native history before calling recovery,
+preserving saved summaries across allowance changes and recovering native-only tails.
+
+`publishConversationChanges(sink, messages)` publishes indexed additions,
+replacements, and deletions from an authoritative normalized snapshot. Compose
+host metadata first and then call it synchronously. Unchanged messages are not
+republished. It does not remove a provider's full-history polling or normalization cost.
+
+These additive helpers and metadata share the planned extension API 0.3.1 release.
+Publish the SDK and matching host before extensions adopt them.
+
 Renderer read callbacks receive an AbortSignal. Forward it through command execution and all child I/O, and do not resolve a load before its children settle. Native renderers declare their refresh dependencies explicitly with extension events and the public `viewDataEvents` references. The host no longer reloads every extension view on unrelated sync changes.
 
 ### Changes in 1.0.0-alpha.14
@@ -498,6 +560,8 @@ The dashboard previews the change in navigation, tabs, and breadcrumbs while the
 | `ctx.sessions.readAttachment(fileId)` | Reads attachment bytes from this project. |
 | `ctx.sessions.deleteAttachment(fileId)` | Deletes an unsubmitted attachment; submitted or in-flight files are kept. |
 
+Conversation patches may replace all `/messages` or update an individual `/messages/<index>`. While a stream callback is busy, pending conversation changes are coalesced into a current `/messages` snapshot. Apply each patch to the conversation instead of waiting for a particular indexed patch.
+
 Streams and resource retention are released when the invoking command ends or is cancelled. Closing a stream or retention handle does not stop the agent session. A webview can forward stream events through a command declared with `streamOf`, using `await ctx.stream.write(event)` in the callback. See [command streams](#stream-command-output).
 
 `ctx.sessions.create` also accepts `operation` to start with a native command instead of a prompt, and returns its optional `operationResult`. `ctx.sessions.followup` accepts `harness` to select the next harness, model, or parameters, `questionResponse: { callId?, answers }` to answer a structured question, and `summaryFromSessionId`, `summaryFormat`, and `summaryRole` to include another project session's summary. Attachments remain references of the form `{ file_id }`. An answer to a question cannot include attachments. Existing `expectedRun` guards still reject continuation after execution changes.
@@ -547,3 +611,23 @@ Without a workspace filter, `workspace_id` is the earliest linked workspace, wit
 `get()` and `create()` also expose the typed harness ID as `agent`. Use `query()` or `query({ workspaceId })` to list sessions. Read every `nextCursor` page when a command needs the full history. Results are newest first and exclude archived sessions unless `includeArchived: true` is set.
 
 Views can refresh on `viewDataEvents.sessionsChanged` (`view.sessions.changed`). Query with `updatedFrom` and merge by session ID. Webviews read sessions through an extension command using `commands.execute`.
+
+### Workspace presentation and device capacity
+
+`ctx.workspaces.getCapacity()` reads this device's live count and limit. Pass `{ deviceId }` to read another online account device through the existing authenticated project-device channel. Offline or unavailable devices reject the read; do not present their last synced history as a live count. `updateCapacity({ limit })` always updates the current device only.
+
+Native file views can declare `saveMode: "manual"` to retain drafts until an explicit save. Declare `document: { metadataKey: "path" }` when a resource contains several documents; this keeps editor identity stable when unrelated metadata changes. Match the page's document declaration. Workspace text sources accept `{ kind: "workspace", workspaceId, path }` for a selected local workspace; omitting `workspaceId` keeps the default project-folder behavior. Source validation enforces the current project, local execution, readiness and file capabilities. Resolve and project such a source through `ctx.workspaces.readFile(workspaceId, path)` and `writeFile(workspaceId, path, { content })`; these APIs observe the source bytes and reject stale writes. `ctx.workspaceFiles` continues to address the invocation workspace.
+
+Native tree nodes support `rowVariant: "file"`, a `fileName` icon hint and `showContextMenuTrigger`. An action with a single text input can declare `inputPresentation: { kind: "inline", field: "name", placement: "child" }` to create under the row, or `placement: "replace"` to rename it. The host owns pending input, Escape, validation errors and command submission. `copyText` copies a declared string during the user gesture.
+
+Use `workbenchCommands.openWorkspaceTerminal` with a workspace resource to open the persistent platform terminal. `workbenchCommands.revealWorkspaceEntry` takes `{ path }`, relative to that resource's authorized local workspace, and appears only when desktop reveal is available. Extensions must not call desktop globals. Resource-list enum options can declare `noteAction` to open details from a group note independently of expanding the group or Add.
+
+## Project extension management (API 0.3.1 on main)
+
+`ctx.extensions.list()` returns the invoking project's installed instances, including disabled ones, and the configured catalog with resolved icons.
+
+`ctx.extensions.install(installNames)` accepts catalog extensions for the invoking project and returns once the selection is saved, without waiting for installation. It rejects the whole call if any name is not in the catalog. The host installs each source once, reuses an installed source, enables it only in this project, and provisions the project's workspaces when the extension needs it. Other projects keep their own choices.
+
+Installation continues in the background and survives a runtime restart. Selecting an extension again while it is pending has no effect. Selecting it again after it finished re-enables it in this project; after it failed, it runs again. Restarting the runtime does not replay finished work or retry failures on its own. Use `ctx.extensions.list()` to see which extensions the project has enabled.
+
+The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.

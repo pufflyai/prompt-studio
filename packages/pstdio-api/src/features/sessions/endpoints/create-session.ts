@@ -11,6 +11,7 @@ import { ProjectFolderMissingError } from "../../projects/project-folder-missing
 import type { SessionsRouteDeps } from "../deps";
 import { createSessionBodySchema } from "../dto";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
+import { remoteSessionCreation } from "../remote-session-creation";
 import { resolveSessionCwd } from "../resolve-session-cwd";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionHarnessOperation, HarnessOperationError } from "../session-harness-commands";
@@ -68,9 +69,17 @@ const creationFailure = (error: unknown) => {
   throw error;
 };
 
+const createdSessionResponse = (session: Parameters<typeof toSessionResponse>[0], workspaceId: string) => ({
+  ...session,
+  ...toSessionResponse(session, workspaceId),
+  ...("operation_result" in session ? { operationResult: session.operation_result } : {}),
+});
+
 export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof createSessionRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
+    const forwarded = await remoteSessionCreation(createSessionRoute, deps.accountService, input, c.req.raw.signal);
+    if (forwarded) return forwarded;
 
     const project = await deps.projectService.get(input.project_id);
     if (!project) {
@@ -140,14 +149,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
           onCreated,
           c.req.raw.signal,
         );
-        return c.json(
-          {
-            ...session,
-            ...toSessionResponse(session, resolvedWorkspaceId),
-            ...("operation_result" in session ? { operationResult: session.operation_result } : {}),
-          },
-          201,
-        );
+        return c.json(createdSessionResponse(session, resolvedWorkspaceId), 201);
       }
       const session = await withResolvedSubmittingSessionAttachments(
         deps,
@@ -156,6 +158,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
         async (attachments: HarnessAttachment[]) =>
           scheduler.createSession({
             projectId: input.project_id,
+            workspaceId: resolvedWorkspaceId,
             title: input.title,
             agentId,
             prompt,

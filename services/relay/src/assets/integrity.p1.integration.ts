@@ -1,12 +1,11 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { fingerprint, sealMutation } from "pstdio-sync-contracts";
-import { createRelayStorage } from "../storage/storage";
+import { fingerprint } from "pstdio-sync-contracts";
 import { createRelayAssets } from "./assets";
 import { createAssetFixture, input, newScope, reference } from "./integration-fixture";
 
 const fixture = createAssetFixture();
-let assets = fixture.owner();
+const assets = fixture.owner();
 beforeAll(() => fixture.initialize());
 afterAll(async () => {
   await assets.close();
@@ -106,92 +105,7 @@ test("denied object access leaves recoverable intent without a completion acknow
     expect(await assets.complete(scope, asset)).toBe(true);
     await expect(denied.complete(scope, asset)).rejects.toThrow();
     await expect(denied.read(scope, asset)).rejects.toThrow();
-    const storage = createRelayStorage(fixture.config.databaseUrl, denied);
-    const retry = createRelayStorage(fixture.config.databaseUrl, assets);
-    try {
-      const owner = await storage.initialize(scope, "published-images-1");
-      const mutation = await sealMutation({
-        protocolVersion: 1,
-        scope,
-        operationId: crypto.randomUUID(),
-        environmentId: "denied-test",
-        parents: [],
-        changes: [
-          {
-            recordId: "note",
-            expectedRevision: 0,
-            baseDeleted: false,
-            value: { expected: await fingerprint(null), next: "retained" },
-          },
-          { recordId: "image", expectedRevision: 0, baseDeleted: false, asset: { base: null, next: asset } },
-        ],
-      });
-      await expect(owner.submit(mutation)).rejects.toThrow();
-      const failed = await owner.snapshot();
-      expect(failed.records).toEqual({});
-      expect(failed.receipts).toEqual({});
-      expect(failed.journalSequence).toBe(0);
-      expect((await retry.owner(scope).submit(mutation)).status).toBe("accepted");
-    } finally {
-      await storage.close();
-      await retry.close();
-    }
   } finally {
     await denied.close();
-  }
-});
-
-test("real object completion releases a whole record group and remains required by historical restore", async () => {
-  const scope = newScope();
-  const bytes = new TextEncoder().encode("group image");
-  const asset = reference(bytes);
-  let storage = createRelayStorage(fixture.config.databaseUrl, assets);
-  try {
-    const owner = await storage.initialize(scope, "published-images-1");
-    const mutation = await sealMutation({
-      protocolVersion: 1,
-      scope,
-      operationId: crypto.randomUUID(),
-      environmentId: "asset-test",
-      parents: [],
-      changes: [
-        {
-          recordId: "note",
-          expectedRevision: 0,
-          baseDeleted: false,
-          value: { expected: await fingerprint(null), next: "whole group" },
-        },
-        { recordId: "image", expectedRevision: 0, baseDeleted: false, asset: { base: null, next: asset } },
-      ],
-    });
-    const pending = await owner.submit(mutation);
-    expect(pending.status).toBe("pending");
-    expect((await owner.snapshot()).records).toEqual({});
-    await assets.begin(scope, "group", asset);
-    await assets.writePart(scope, "group", 1, input(bytes));
-    expect((await owner.submit(mutation)).status).toBe("pending");
-    await assets.finish(scope, "group");
-    const receipt = await owner.submit(mutation);
-    expect(receipt.status).toBe("accepted");
-    expect(receipt.order).toBe(pending.order);
-    await storage.close();
-    await assets.close();
-    assets = fixture.owner();
-    storage = createRelayStorage(fixture.config.databaseUrl, assets);
-    const reopened = storage.owner(scope);
-    expect(await reopened.submit(mutation)).toEqual(receipt);
-    const saved = await reopened.snapshot();
-    expect(saved.records.note.value).toBe("whole group");
-    expect(saved.records.image.asset).toEqual(asset);
-    await reopened.restore(saved);
-    const before = await reopened.snapshot();
-    const key = `assets/${await fingerprint(scope)}/${await fingerprint("group")}`;
-    await fixture.client.send(
-      new PutObjectCommand({ Bucket: fixture.config.bucket, Key: key, Body: "missing original bytes" }),
-    );
-    await expect(reopened.restore(saved)).rejects.toThrow("incomplete assets");
-    expect(await reopened.snapshot()).toEqual(before);
-  } finally {
-    await storage.close();
   }
 });

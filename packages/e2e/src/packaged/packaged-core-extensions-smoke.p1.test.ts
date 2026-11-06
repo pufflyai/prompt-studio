@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
+import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT, withPackagedCoreExtensions } from "./packaged-core-extensions.fixture";
 import { expectCoreRecordIds } from "./packaged-core-record-ids-smoke";
@@ -23,7 +25,14 @@ const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Rec
     files: Array<{ path: string }>;
     name: string;
   }>;
-  for (const name of ["implement-ticket", "pstdio"]) {
+  for (const name of [
+    "create-ticket",
+    "create-proposal",
+    "refine-ticket",
+    "create-sub-tickets",
+    "implement-ticket",
+    "pstdio",
+  ]) {
     expect(skills).toContainEqual(
       expect.objectContaining({
         name,
@@ -73,16 +82,37 @@ test(
       const body = { extensions };
       expect(body.extensions).toEqual(
         expect.arrayContaining([
+          expect.objectContaining({ enabled: true, installName: "pstdio-onboarding" }),
           expect.objectContaining({ enabled: true, installName: "harness-claude-code" }),
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
           expect.objectContaining({ enabled: true, installName: "harness-open-code" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-base-themes" }),
+          expect.objectContaining({
+            enabled: true,
+            installName: "pstdio-home",
+            scope: "repo",
+            sourcePath: join(realpathSync(projectFolder), ".pstdio/extensions/pstdio-home"),
+          }),
           expect.objectContaining({ canUpgrade: false, enabled: true, installName: "pstdio-planner" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
         ]),
       );
 
+      expect(metadata.pages).toContainEqual(
+        expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),
+      );
+      expect(metadata.projectSetups).toContainEqual(
+        expect.objectContaining({ extensionId: "pstdio.pstdio-onboarding" }),
+      );
+      const setupView = metadata.views.find((view) => view.extensionId === "pstdio.pstdio-onboarding");
+      expect(setupView?.body.kind).toBe("webview");
+      if (setupView?.body.kind === "webview") {
+        const setupRuntime = await fetch(`${started.baseUrl}${setupView.body.webview.runtimeUrl}`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
+        expect(setupRuntime.status).toBe(200);
+      }
       const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
       expect(planner).toBeDefined();
       await expectPlannerIdentities({

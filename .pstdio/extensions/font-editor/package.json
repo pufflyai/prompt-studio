@@ -6,7 +6,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.0"
+    "pstdio": "^0.3.0 || ^0.4.0"
   },
   "private": true,
   "type": "module",
@@ -33,5 +33,6 @@
   },
   "pstdio": {
     "scope": "repo"
-  }
+  },
+  "icon": "Type"
 }

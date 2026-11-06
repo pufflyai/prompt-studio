@@ -1,16 +1,19 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
+import { contributionRefId, resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { createHomeModule } from "@/home-page.fixture";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { dashboardHomePage } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { createCommandPaletteModule } from "../command-palette/module";
+import { registerExtensionsPage } from "../extensions/extensions-page";
 import { createHeadersModule } from "../headers/module";
 import { createHelpModule } from "../help/module";
 import { createNotificationsModule } from "../notifications/module";
@@ -18,7 +21,6 @@ import { DesktopProjectTabsController } from "../projects/desktop-project-tabs-c
 import { createProjectsModule } from "../projects/module";
 import { createSessionsModule } from "../sessions/module";
 import { createSettingsModule } from "../settings/module";
-import { createStartModule } from "../start/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { seedSidenavStory } from "./dashboard-sidenav-story-data";
 import { createSidenavModule } from "./module";
@@ -96,7 +98,7 @@ const createTicketsNavigationModule = () => ({
       icon: ticketsView.icon,
       path: "ticket",
       modeId: "project",
-      parentId: workbenchPages.start.id,
+      parentId: contributionRefId(dashboardHomePage),
       resource: {
         kinds: [
           {
@@ -193,10 +195,17 @@ const linkSessionsToWorkspace = () => {
 const bootstrapWorkbench = (desktop = false) => {
   seedSidenavStory(PROJECT_ID);
   linkSessionsToWorkspace();
-  const workbench = createWorkbench();
+  const workbench = createWorkbench({ startPage: dashboardHomePage });
   for (const module of [
     createSidenavModule(),
     createCommandPaletteModule(),
+    {
+      id: "story.extensions",
+      activate(ctx: WorkbenchModuleContext) {
+        registerExtensionsPage(ctx);
+        return [];
+      },
+    },
     createWorkspacesModule(),
     createProjectsModule(),
     createHeadersModule(desktop ? new DesktopProjectTabsController([], async () => {}) : undefined),
@@ -204,7 +213,7 @@ const bootstrapWorkbench = (desktop = false) => {
     createNotificationsModule(),
     createSessionsModule(),
     createSettingsModule(),
-    createStartModule(),
+    createHomeModule(),
     createTicketsNavigationModule(),
   ]) {
     workbench.registerModule(module);
@@ -217,7 +226,7 @@ const openTicketPage = (workbench: WorkbenchCore) => {
   void workbench.navigation.openTarget({ kind: "page", page: STORY_TICKET_PAGE_REF, resource: ticketResource });
 };
 const openStartPage = (workbench: WorkbenchCore) =>
-  void workbench.navigation.openTarget({ kind: "page", page: workbenchPages.start });
+  void workbench.navigation.openTarget({ kind: "page", page: dashboardHomePage });
 const meta = {
   title: "Dashboard/Sidenav",
   fullscreen: true,

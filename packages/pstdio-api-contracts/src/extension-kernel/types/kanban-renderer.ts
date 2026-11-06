@@ -18,6 +18,11 @@ export interface KanbanRendererEnumOption {
   label: Localizable<string>;
   color?: string;
   icon?: string | null;
+  /** Resource-list group header metadata. */
+  note?: Localizable<string>;
+  /** Open details from the group note without expanding or creating a resource. */
+  noteAction?: NavigationTarget;
+  canCreate?: boolean;
 }
 
 export type KanbanRendererAttributeType =
@@ -61,6 +66,7 @@ export interface KanbanRendererSettings {
   columnGrouping: string;
   rowGrouping: string;
   displayProperties: string[];
+  showChildren?: boolean;
 }
 
 /** Display settings stored in a view. Order lives in the view's `sorts`. */
@@ -121,6 +127,8 @@ export interface KanbanRendererQueryResult {
 }
 
 export interface KanbanRendererCreateRowContribution<TParams extends ParamObjectSchema = ParamObjectSchema> {
+  /** Run the creation command directly when it owns its own form. Defaults to inline. */
+  presentation?: "inline" | "command";
   command: CommandRef<Struct, unknown>;
   title?: Localizable<string>;
   submitLabel?: Localizable<string>;

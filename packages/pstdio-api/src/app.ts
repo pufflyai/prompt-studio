@@ -1,13 +1,16 @@
+import { hostname } from "node:os";
+import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { createStoragePositions } from "pstdio-api-contracts";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
-import { createAppDatabaseServices, openAppDatabase } from "./app-database";
+import { createAppDatabaseServices, openAppDatabase, upgradeAppStorage } from "./app-database";
 import { createAppSettingsService, createCoreDomainServices } from "./app-domain-services";
 import { productionAppDependencies, wireAppExtensionServices } from "./app-extension-services";
 import { registerApi } from "./app-routing";
 import {
+  closeAppDatabase,
   createAppTerminalSupervisor,
   createRuntimeRouteDeps,
   startAppArtifactMountWatch,
@@ -21,19 +24,25 @@ import { createArtifactMountWriteLedger } from "./features/extensions/artifact-m
 import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
-import type { SessionHookDeps } from "./features/hooks/session-hooks";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
+import { createSessionImportService } from "./features/sessions/imports/service";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
-import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
+import { createNativeDocumentService } from "./services/native-documents/documents";
+import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/native-documents/file-source";
+import { resolveNativeTextAccess } from "./services/native-documents/source-access";
+import { initializeNativeSource } from "./services/native-documents/source-binding";
+import { createSessionLogFiles } from "./services/personal-history/log-files";
 import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
 import { createSkillService } from "./services/skill-service";
+import { createTextEditingService } from "./services/text-editing/service";
+import { createWorkspaceCapacityService } from "./services/workspace-capacity-service";
 import type { AppBindings } from "./types";
 
 const AUTOMATION_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -83,6 +92,38 @@ const registerAppRuntime = (
   });
 };
 
+const nativePresenceIdentity = async (account: ReturnType<typeof createAppAccount>["accountService"]) => {
+  const { login } = await account.status();
+  return { label: (login?.email ?? "Local editor").slice(0, 64), deviceName: hostname().slice(0, 64) };
+};
+
+const createAppNativeDocuments = (
+  deviceId: string,
+  account: ReturnType<typeof createAppAccount>["accountService"],
+  getDeps: () => RouteDeps,
+  storage: RouteDeps["extensionStorageService"],
+  catalog: RouteDeps["extensionRuntimeCatalog"],
+) => {
+  const nativeDocuments = createNativeDocumentService({
+    deviceId: deviceId,
+    presenceIdentity: () => nativePresenceIdentity(account),
+    catalog,
+    storage,
+    load: (input) => loadNativeMarkdownFile(getDeps(), input),
+    access: (input) => resolveNativeTextAccess(getDeps(), input),
+    initialize: (loaded) => initializeNativeSource(getDeps(), loaded),
+    save: (input) => saveNativeMarkdownFile(getDeps(), input),
+  });
+  return {
+    nativeDocuments,
+    textEditing: createTextEditingService({
+      documents: nativeDocuments,
+      access: (input) => resolveNativeTextAccess(getDeps(), input),
+      catalog,
+    }),
+  };
+};
+
 const buildApp = async (
   input: CreateAppInput,
   dependencies: AppDependencies,
@@ -101,7 +142,6 @@ const buildApp = async (
   const {
     activityEventsDBService,
     automationDBService,
-    extensionAutomationPreferencesDBService,
     extensionConnectionsDBService,
     extensionInstancesDBService,
     extensionSettingsDBService,
@@ -114,6 +154,7 @@ const buildApp = async (
     settingsDBService,
     skillsDBService,
   } = dbs;
+  await upgradeAppStorage(extensionStorageDBService);
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
@@ -121,31 +162,18 @@ const buildApp = async (
     sessionQueueEntriesDBService,
     sessionQueueChanged(sessionsDBService, eventBus),
   );
-  const extensionAutomationPreferencesService = createExtensionAutomationPreferencesService({
-    db: extensionAutomationPreferencesDBService,
-    eventBus,
-  });
-
-  const {
-    assetTransferService,
-    extensionFileService,
-    extensionSettingsService,
-    fileService,
-    notificationService,
-    projectService,
-    syncService,
-    workspaceSessionService,
-    workspaceService,
-  } = createCoreDomainServices({
+  const core = createCoreDomainServices({
     getCommandDeps: () => deps,
     db,
     dbs,
     eventBus,
     storageRoot,
   });
+  const { fileService, notificationService, projectService, workspaceSessionService, workspaceService } = core;
   let deps!: RouteDeps;
   const {
     extensionConnectionService,
+    extensionInstallations,
     extensionRuntime,
     extensionStartup,
     extensionRuntimeCatalog,
@@ -164,6 +192,7 @@ const buildApp = async (
     installedExtensionSourcesDBService,
     projectService,
     provisionWorkspacesUsingSource: (sourcePath) => provisionWorkspacesUsingSource(deps, sourcePath),
+    getProjectExtensionDeps: () => deps,
     workspaceService,
     storageRoot,
   });
@@ -182,8 +211,7 @@ const buildApp = async (
   });
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
-  const sessionHookDeps = (): SessionHookDeps => deps;
-  const sessionHooks = createSessionLifecycleCallbacks(sessionHookDeps);
+  const sessionHooks = createSessionLifecycleCallbacks(() => deps);
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
 
@@ -200,18 +228,33 @@ const buildApp = async (
     onCapacityAvailable: () => drainSessionQueue(),
   });
 
+  const workspaceCapacityService = createWorkspaceCapacityService({
+    path: join(storageRoot, "device-workspace-capacity.json"),
+    deviceId: environmentId,
+    activeWorkspaceIds: workspaceSessionService.activeWorkspaceIds,
+    onCapacityAvailable: () => drainSessionQueue(),
+  });
   const terminalSupervisor = createAppTerminalSupervisor();
   const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
 
+  const { nativeDocuments, textEditing } = createAppNativeDocuments(
+    environmentId,
+    account.accountService,
+    () => deps,
+    extensionStorageDBService,
+    extensionRuntimeCatalog,
+  );
+
   deps = {
+    ...core,
     personalHistoryService: createPersonalHistoryService({
       eventBus,
       documents: extensionStorageDBService.documents,
       account: account.accountService,
       projects: projectService,
+      logs: createSessionLogFiles(storageRoot),
     }),
     accountService: account.accountService,
-    assetTransferService,
     environmentService: dbs.environmentDBService,
     storagePositions,
     artifactMountWrites,
@@ -223,34 +266,34 @@ const buildApp = async (
     eventBus,
     automationService,
     harnessRegistry,
-    projectService,
     sessionQueueEntriesService,
     sessionQueueLifecycle,
     sessionService,
+    sessionImports: createSessionImportService(
+      { sessionService, fileService, projectService, workspaceService },
+      join(storageRoot, "session-imports"),
+    ),
     settingsService,
-    workspaceService,
-    workspaceSessionService,
+    workspaceCapacityService,
     skillService,
-    fileService,
     boardViewsService: boardViewsDBService,
-    notificationService,
+    nativeDocuments,
+    textEditing,
     installedExtensionSourcesService: installedExtensionSourcesDBService,
-    extensionAutomationPreferencesService,
     extensionConnectionService,
-    extensionFileService,
     extensionRuntimeCatalog,
     webviewPreferencesDBService: dbs.webviewPreferencesDBService,
     extensionSettingsDBService,
     extensionService,
     extensionUpgradeService,
-    extensionSettingsService,
+    extensionInstallations,
     extensionStorageService: extensionStorageDBService,
-    syncService,
     activityEventsService: activityEventsDBService,
     ensureExtensionWebviews: extensionRuntime.ensureWebviews,
     terminal: terminalSupervisor.api,
   };
 
+  await deps.nativeDocuments.recover();
   await automationService.recoverInterruptedRuns();
 
   const extensionScheduler = startAppExtensionScheduler(deps, projectService, storageRoot);
@@ -278,11 +321,8 @@ const buildApp = async (
     automationService,
     terminalSupervisor,
     closeDb: async () => {
-      try {
-        await deps.extensionResourceSequencesService.flush();
-      } finally {
-        await closeDb();
-      }
+      await deps.sessionImports.close();
+      await closeAppDatabase(deps, closeDb);
     },
   });
   return account.connectAccountRelay({ app, close, deps, eventBus });

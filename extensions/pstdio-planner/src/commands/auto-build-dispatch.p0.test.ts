@@ -8,14 +8,14 @@ import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";
 import { createTicketCommand } from "./create-ticket";
-import { requestHumanCommand } from "./review-requests";
+import { requestReviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionQuery } from "./session-query.fixture";
 
 const dispatch = (ctx: Awaited<ReturnType<typeof fixture>>["ctx"], ticket: string, revision = "test") =>
   autoBuildDispatchCommand.run(ctx, { ticket, revision });
 
-test("candidates include unattended In Progress and exclude ineligible statuses, drafts, gates, blockers, and human requests", async () => {
+test("candidates include unattended In Progress and exclude ineligible statuses, drafts, gates, and review requests", async () => {
   const { ctx, storage, ticket } = await fixture(10);
   await createTicketCommand.run(ctx, { title: "Backlog" });
   await createTicketCommand.run(ctx, { title: "Done", statusId: "done" });
@@ -26,7 +26,7 @@ test("candidates include unattended In Progress and exclude ineligible statuses,
   const gate = await ticket("Gate");
   await registerGate(ctx, gate.id);
   const human = await ticket("Question");
-  await requestHumanCommand.run(ctx, {
+  await requestReviewCommand.run(ctx, {
     ticket: human.id,
     title: "Confirm",
     instructions: "Choose scope",
@@ -35,7 +35,11 @@ test("candidates include unattended In Progress and exclude ineligible statuses,
   const orphan = await ticket("Unattended");
   await putTicket(storage, { ...orphan, statusId: "in-progress" });
   const ready = await ticket("Ready");
-  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([orphan.id, ready.id]);
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([
+    blocked.id,
+    orphan.id,
+    ready.id,
+  ]);
 });
 
 test("eligible ticket exclusions are enforced when reading and dispatching tickets", async () => {
@@ -123,10 +127,26 @@ test("empty advanced eligible groups include valid tickets", async () => {
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
 });
 
-test("a Blocked status prevents assignment without a written blocker", async () => {
+test("an explicit status filter excludes Blocked tickets", async () => {
   const { ctx, ticket } = await fixture();
   const blocked = await createTicketCommand.run(ctx, { title: "Blocked by status", statusId: "blocked" });
   const ready = await ticket("Ready");
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
   expect(await dispatch(ctx, blocked.id)).toMatchObject({ decision: "wait", reason: "ticket-not-ready" });
+});
+
+test.each(["status", "reason"])("Auto Build can dispatch eligible work blocked by %s", async (blocker) => {
+  const { ctx, storage, ticket } = await fixture();
+  const task = await ticket("Resolve the blocker");
+  await putTicket(storage, {
+    ...task,
+    ...(blocker === "status" ? { statusId: "blocked" } : { blockedReason: "Fix the local build environment." }),
+  });
+  const mode = await configureAutoBuildCommand.run(ctx, {
+    enabled: true,
+    eligible: { conjunction: "and", rules: [] },
+  });
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toMatchObject([{ id: task.id, action: "start" }]);
+  expect(await dispatch(ctx, task.id, mode.revision)).toMatchObject({ decision: "started" });
+  expect(await listAttempts(storage)).toHaveLength(1);
 });

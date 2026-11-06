@@ -1,4 +1,4 @@
-import { expect, type Page, request } from "@playwright/test";
+import { expect, type Page, request, test } from "@playwright/test";
 import { installShortcutReferenceExtension } from "../ui/helpers/shortcut-reference-extension";
 import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 
@@ -36,7 +36,38 @@ export const verifyPackagedShortcutReference = async (
     await expect(shortcut.locator("kbd").last()).toHaveText(key);
   }
   await dialog.getByRole("button", { name: "Close Keyboard shortcuts", exact: true }).click();
-  await expect(dialog).not.toBeVisible();
+  try {
+    await expect(dialog).not.toBeVisible();
+  } catch (error) {
+    try {
+      const presence = await dialog.evaluateAll((elements) =>
+        elements.map((element) => {
+          const style = getComputedStyle(element);
+          return {
+            state: element.getAttribute("data-state"),
+            hidden: element.hasAttribute("hidden"),
+            animationName: style.animationName,
+            animationDuration: style.animationDuration,
+            animationPlayState: style.animationPlayState,
+            opacity: style.opacity,
+            visibility: style.visibility,
+            animations: element.getAnimations().map((animation) => ({
+              playState: animation.playState,
+              currentTime: animation.currentTime,
+              timing: animation.effect?.getComputedTiming(),
+            })),
+          };
+        }),
+      );
+      await test.info().attach("shortcut-dialog-presence", {
+        body: JSON.stringify(presence, null, 2),
+        contentType: "application/json",
+      });
+    } catch {
+      // Preserve the assertion if the page closed before diagnostics completed.
+    }
+    throw error;
+  }
   await page.getByText("Search", { exact: true }).first().click();
   const palette = page.getByRole("dialog").last();
   for (const { label, key, layered } of shortcuts) {

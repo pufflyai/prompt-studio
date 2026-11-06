@@ -4,6 +4,9 @@ import * as archiveCommand from "./archive";
 import * as createCommand from "./create";
 import * as denyCommand from "./deny";
 import * as followUpCommand from "./follow-up";
+import * as forkCommand from "./fork";
+import * as importCommand from "./import";
+import * as importsCommand from "./imports";
 import * as listCommand from "./list";
 import * as queuedCommand from "./queued-follow-ups";
 import { combineQueuedCommand, updateQueuedCommand } from "./queued-follow-ups";
@@ -20,6 +23,9 @@ export const { command, describe, subcommands, builder, handler } = defineComman
   createCommand,
   denyCommand,
   followUpCommand,
+  forkCommand,
+  importCommand,
+  importsCommand,
   listCommand,
   queuedCommand,
   updateQueuedCommand,

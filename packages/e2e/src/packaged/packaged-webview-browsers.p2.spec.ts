@@ -7,6 +7,7 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyTreeGroups } from "../helpers/tree-groups";
+import { browserLaunchOptions } from "../scripts/browser-launch-options";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import {
@@ -63,6 +64,7 @@ test.beforeAll(() => {
 const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[number], behavior: string) => {
   const browserAvailable = existsSync(browserCase.type.executablePath());
   const defaultExtensions = e2eExtensions(
+    "pstdio-home",
     "workbench-fixture",
     ...(browserCase.name === "Chromium" ? ["pstdio-artifacts", "pstdio-notes"] : []),
   );
@@ -111,7 +113,9 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
     expect(labWebview?.webview.moduleUrl).toBeTruthy();
     phase("runtime ready");
 
-    browser = await browserCase.type.launch({ headless: true, ...browserCase.launchOptions });
+    browser = await browserCase.type.launch(
+      browserLaunchOptions(browserCase.type, tempRoot, { headless: true, ...browserCase.launchOptions }),
+    );
     const context = await browser.newContext();
     const page = await context.newPage();
     page.setDefaultTimeout(10_000);
@@ -153,7 +157,7 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
     }
     if (behavior === "documents, collections and preview") {
       phase("notes start");
-      await verifyPackagedNoteHeadings(page, started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
+      await verifyPackagedNoteHeadings(page, started.baseUrl, project.id, started.descriptor.token);
       phase("notes checked; preview selection start");
       await verifyPackagedPreviewSelection(page, project.id, started.descriptor);
       phase("preview checked; panel menus start");

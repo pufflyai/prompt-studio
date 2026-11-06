@@ -18,13 +18,15 @@ import type {
 import { createHostCapabilityGate } from "../contract";
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
-import { capabilityReply } from "./capability-reply";
+import { callFrameCapability, frameDimensionChanged } from "./frame-capability";
 import type { HostEventPublisher } from "./host-event-publisher";
 import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 import { useFrameTheme } from "./use-frame-theme";
 
 export interface ExtensionFrameProps {
+  /** Whether the owning presentation is visible. Hidden views retain their document. */
+  visible?: boolean;
   keyboardShortcuts?: readonly WebviewKeyboardShortcut[];
   onShortcut?: (request: WebviewKeyboardShortcutRequest) => void | Promise<void>;
   sizing?: "content-width" | "content-height";
@@ -46,6 +48,7 @@ export interface ExtensionFrameProps {
 }
 
 type GuestRemote = Pick<HostApi, "init" | "themeUpdate" | "propsUpdate"> & {
+  visibilityUpdate?: HostApi["visibilityUpdate"];
   hostEvent?: HostApi["hostEvent"];
   keyboardUpdate?: HostApi["keyboardUpdate"];
   restoreFocus?: HostApi["restoreFocus"];
@@ -70,6 +73,8 @@ const frameShellStyle: CSSProperties = {
 
 export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
 const NO_KEYBOARD_SHORTCUTS: WebviewKeyboardShortcut[] = [];
+// Initialization runs after host.connect resolves.
+const guestReady = () => {};
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const {
@@ -86,10 +91,13 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     onDiagnostics,
     title,
     sizing,
+    visible = true,
   } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const remoteRef = useRef<GuestRemote | null>(null);
   const initializedRef = useRef(false);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
   // The connection belongs to one browsing context. Navigation keeps the iframe's
   // WindowProxy, so a different contentWindow means the runtime document is gone.
   const connectedWindowRef = useRef<Window | null>(null);
@@ -123,10 +131,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   onErrorRef.current = onError;
   onDiagnosticsRef.current = onDiagnostics;
 
-  // Connect once per browsing context. React StrictMode dev double-mount and parent
-  // re-renders with unstable prop references (e.g. `webview.styles` rebuilt by `.map`)
-  // would otherwise tear down the live connection while the iframe keeps its state,
-  // leaving guest-to-host RPCs with no listener.
+  // Keep one connection per browsing context across StrictMode and unstable parent props.
   // biome-ignore lint/correctness/useExhaustiveDependencies: frameEpoch remounts the iframe this effect reads through iframeRef.
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -143,8 +148,9 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     iframe.addEventListener("load", onFrameLoad);
     const removeLoadListener = () => iframe.removeEventListener("load", onFrameLoad);
 
-    if (iframe.contentWindow === connectedWindowRef.current) return removeLoadListener;
-    connectedWindowRef.current = iframe.contentWindow;
+    const connectedWindow = iframe.contentWindow;
+    if (connectedWindow === connectedWindowRef.current) return removeLoadListener;
+    connectedWindowRef.current = connectedWindow;
 
     // Snapshot styles at connect time so subsequent parent re-renders that produce a
     // new array reference don't affect what we send in init.
@@ -193,25 +199,18 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           }),
         );
       },
-      contentHeightChanged: (height: number) => {
-        if (sizing === "content-height" && Number.isFinite(height) && height >= 0) setContentHeight(height);
-      },
-      contentWidthChanged: (width: number) => {
-        if (sizing === "content-width" && Number.isFinite(width) && width >= 0) setContentWidth(width);
-      },
+      contentHeightChanged: frameDimensionChanged(sizing === "content-height", setContentHeight),
+      contentWidthChanged: frameDimensionChanged(sizing === "content-width", setContentWidth),
       dispatchKeyboardEvent: async (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => {
         if (onKeyboardEventRef.current) return onKeyboardEventRef.current(event);
         document.dispatchEvent(new KeyboardEvent("keydown", { ...event, bubbles: true, cancelable: true }));
       },
-      ready: () => {
-        // no-op; init fires from host.connect().then() below.
-      },
+      ready: guestReady,
       runtimeError: (payload: { message: string; stack?: string }) => {
         onErrorRef.current?.(payload);
       },
-      call: async (request: HostCapabilityRequest) => {
-        return await capabilityReply(() => createCapabilityGate().call(request));
-      },
+      call: (request: HostCapabilityRequest) =>
+        callFrameCapability(iframe, iframeRef.current, connectedWindow, () => createCapabilityGate().call(request)),
     } satisfies GuestApi;
 
     const connect = () => {
@@ -231,18 +230,23 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           remoteRef.current = remote;
           hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
 
+          const initialProps = propsRef.current;
           await remote.init({
+            visible: visibleRef.current,
             keyboardShortcuts: keyboardRef.current.shortcuts,
             sizing,
             moduleUrl: moduleUrlAtConnect,
             styles: stylesAtConnect,
-            props: propsRef.current,
+            props: initialProps,
             theme: resolveActiveTheme(themeRef.current, themeRootRef.current?.()),
             themeVariables: collectChakraThemeVariables(themeRootRef.current?.()),
             extensionId: view.extensionId,
           });
           if (iframeRef.current !== iframe) return;
           initializedRef.current = true;
+          await remote.visibilityUpdate?.(visibleRef.current);
+          // Props can change while the guest imports or mounts asynchronously.
+          if (propsRef.current !== initialProps) await remote.propsUpdate({ props: propsRef.current });
           await remote.keyboardUpdate?.(keyboardRef.current.shortcuts);
           onReadyRef.current?.();
         })
@@ -288,6 +292,10 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     if (!initializedRef.current) return;
     remoteRef.current?.propsUpdate({ props: createWebviewHostProps(extensionProps) });
   }, [extensionProps]);
+
+  useEffect(() => {
+    void remoteRef.current?.visibilityUpdate?.(visible);
+  }, [visible]);
 
   useFrameTheme({ theme, themeRoot: themeRootRef, initialized: initializedRef, remote: remoteRef });
 

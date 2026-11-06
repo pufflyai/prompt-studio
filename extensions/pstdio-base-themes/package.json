@@ -1,7 +1,8 @@
 {
   "name": "pstdio-base-themes",
   "version": "0.45.1",
-  "displayName": "Prompt Studio Base Themes",
+  "displayName": "Themes",
+  "icon": "Palette",
   "description": "Bundled color themes (Monokai, Solarized, Dracula) and the Seti file icon theme.",
   "publisher": "pstdio",
   "main": "./extension.ts",
@@ -11,7 +12,7 @@
     "icons"
   ],
   "engines": {
-    "pstdio": "^0.1.0 || ^0.2.0 || ^0.3.0"
+    "pstdio": "^0.1.0 || ^0.2.0 || ^0.3.0 || ^0.4.0"
   },
   "private": true,
   "type": "module",

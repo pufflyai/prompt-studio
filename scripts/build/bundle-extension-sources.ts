@@ -5,12 +5,13 @@ import type { BundledExtensionSources } from "pstdio-extensions/distribution";
 
 export const bundleExtensionSources = async (root: string) => {
   const { packExtensionSource } = await import("pstdio-extensions/distribution");
+  const { readExtensionIcon, extensionIconAssetName } = await import("pstdio-extensions");
   const packageData = JSON.parse(await readFile(join(root, "packages/pstdio/package.json"), "utf8"));
   const repositoryData = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   const repository = typeof repositoryData.repository === "string" ? repositoryData.repository : repositoryData.repository.url;
   const normalizeUrl = (url: string) => url.replace(/^git\+/, "").replace(/\.git\/?$/, "").replace(/\/$/, "");
   const catalog = JSON.parse(await readFile(join(root, "packages/pstdio-api/files/extension-catalog.json"), "utf8")) as {
-    extensions: Array<{ installName: string; bundleSource?: boolean; origin: { url: string; path: string; ref: string } }>;
+    extensions: Array<{ installName: string; extensionId?: string; icon?: string; bundleSource?: boolean; origin: { url: string; path: string; ref: string } }>;
   };
   const destination = join(root, "packages/pstdio/files/extension-sources");
   await rm(destination, { recursive: true, force: true });
@@ -21,8 +22,13 @@ export const bundleExtensionSources = async (root: string) => {
     sources: [],
   };
   for (const entry of catalog.extensions) {
-    if (entry.bundleSource === false) continue;
     if (entry.origin.ref !== "{hostRelease}" || normalizeUrl(entry.origin.url) !== normalizeUrl(repository)) continue;
+    if (entry.icon?.startsWith("./")) {
+      const encoded = readExtensionIcon(join(root, entry.origin.path), entry.icon)!;
+      await mkdir(join(destination, "icons"), { recursive: true });
+      await writeFile(join(destination, "icons", extensionIconAssetName(entry)), Buffer.from(encoded.split(",")[1], "base64"));
+    }
+    if (entry.bundleSource === false) continue;
     const packed = await packExtensionSource(join(root, entry.origin.path));
     await writeFile(join(destination, `${encodeURIComponent(entry.installName)}.tgz`), packed.bytes);
     manifest.sources.push({

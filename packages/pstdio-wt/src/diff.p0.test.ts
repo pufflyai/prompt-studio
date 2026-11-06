@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getWorktreeDiff, getWorktreeDiffFile, getWorktreeDiffSummaryFiles, MAX_IMAGE_PREVIEW_BYTES } from "./diff";
 import { git } from "./git";
@@ -17,6 +19,22 @@ afterEach(async () => {
 });
 
 describe("getWorktreeDiff", () => {
+  test("symlink diffs describe the link instead of reading files outside the workspace", async () => {
+    const outside = await mkdtemp(join(tmpdir(), "diff-symlink-"));
+    try {
+      const target = join(outside, "secret.txt");
+      await writeFile(target, "private content\nsecond line\n");
+      await symlink(target, join(repo.dir, "external-link.txt"));
+      const options = { worktreePath: repo.dir, base: "HEAD" };
+      expect(await getWorktreeDiffFile({ ...options, filePath: "external-link.txt" })).toMatchObject({
+        newContent: target,
+        additions: 1,
+      });
+      expect((await getWorktreeDiffSummaryFiles(options)).totals.additions).toBe(1);
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
   test("summary files retain deletion stats when a tracked path becomes untracked", async () => {
     await git(repo.dir, ["rm", "--cached", "README.md"]);
     const options = { worktreePath: repo.dir, base: "HEAD" };

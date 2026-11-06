@@ -51,6 +51,7 @@ const createContext = () => {
   return {
     context: {
       req: {
+        raw: new Request("http://localhost/sessions", { method: "POST" }),
         valid: () => ({
           project_id: "project-1",
           title: "Session",
@@ -104,6 +105,7 @@ const createDeps = () => {
         createDispatchStarted: async () => ({ queue_position: 1 }),
         remove: async () => {},
       },
+      workspaceCapacityService: { hasCapacity: async () => true },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
       },

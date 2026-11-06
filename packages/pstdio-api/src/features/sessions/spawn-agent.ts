@@ -102,7 +102,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   trackHarnessSession(
     input.sessionId,
     session,
-    entry.eventStore.subscribe(),
+    entry.eventStore.subscribe({ activityOnly: true }),
     deps,
     {
       submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
@@ -180,7 +180,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
   trackHarnessSession(
     input.sessionId,
     session,
-    entry.eventStore.subscribe(),
+    entry.eventStore.subscribe({ activityOnly: true }),
     deps,
     {
       submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
@@ -282,7 +282,7 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
   trackHarnessSession(
     input.sessionId,
     session,
-    entry.eventStore.subscribe(),
+    entry.eventStore.subscribe({ activityOnly: true }),
     deps,
     {
       submittedAttachmentFileIds: input.submittedAttachmentFileIds ?? [],

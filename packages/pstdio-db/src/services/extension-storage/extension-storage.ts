@@ -1,16 +1,15 @@
-import {
-  type AssetStore,
-  createLegacyRecordStorage,
-  type StorageObserver,
-  type StorageOwner,
-  scopeRecordStorage,
-  storageRecordId,
-} from "pstdio-sync";
+import type { AssetStore, StorageObserver, StorageOwner } from "pstdio-sync";
+import { createLegacyRecordStorage, scopeRecordStorage, storageRecordId } from "pstdio-sync/records";
 import type { Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
+import { createArtifactFileProjectionsDBService } from "./artifact-file-projections";
 import { createStorageMigrations } from "./data-migrations";
 import { createDocumentStorageDBService } from "./document-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
+import { createNativeDocumentRoomsDBService } from "./native-document-rooms";
+import { createNativeFileProjectionsDBService } from "./native-file-projections";
+import { resolveNativeRecordAddress } from "./native-source-address";
+import { upgradeNativeSourceLifetimes } from "./native-source-upgrade";
 import { installRecordIndexes } from "./record-index-installation";
 import { createRecoveryPoints } from "./recovery-points";
 import { getExtensionStorageOwner } from "./storage-owner";
@@ -46,12 +45,21 @@ export const createExtensionStorageDBService = (
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
+    resolveNativeRecordAddress: (owner: StorageOwner, input: { recordId: string; documentKey: string }) =>
+      resolveNativeRecordAddress(db, owner, input),
+    upgradeNativeSources: (options: Parameters<typeof upgradeNativeSourceLifetimes>[1]) =>
+      upgradeNativeSourceLifetimes(db, options),
     installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
       installRecordIndexes(db, owners, validate),
     recovery: createRecoveryPoints(db, documents, options),
     watch: documents.watch,
+    flushStatistics: documents.flushStatistics,
     documents: documents.documents,
     openTextDocument: documents.openTextDocument,
+    openNativeTextDocument: documents.openNativeTextDocument,
+    nativeRooms: createNativeDocumentRoomsDBService(db),
+    nativeFileProjections: createNativeFileProjectionsDBService(db),
+    fileProjections: createArtifactFileProjectionsDBService(db),
     migrate: createStorageMigrations(db, documents),
     recordId: (scopeType: string, scopeId: string, key: string) => storageRecordId([scopeType, scopeId, "kv"], key),
     open: async (input: { owner: StorageOwner; assets?: AssetStore }) => {
@@ -74,6 +82,10 @@ export const createExtensionStorageDBService = (
     },
     deleteKv: async (scope: KvScope, key: string) => (await scopeFor(scope))?.kv.delete(key) ?? false,
     getCollectionItem,
+    readCollectionItem: async (scope: CollectionScope, itemId: string) => {
+      const item = await (await scopeFor(scope))?.collection(scope.collection).read(itemId);
+      return item ? { value_json: item.value, revision: item.revision } : undefined;
+    },
     listCollection: async (scope: CollectionScope) =>
       ((await (await scopeFor(scope))?.collection(scope.collection).list()) ?? []).map((item) => ({
         ...scope,
@@ -87,6 +99,8 @@ export const createExtensionStorageDBService = (
     },
     updateCollectionItem: async (input: SetCollectionItemInput) =>
       (await collectionFor(input)).update(input.item_id, input.value_json as Json),
+    updateCollectionItemIfUnchanged: async (input: SetCollectionItemInput & { revision: string }) =>
+      (await collectionFor(input)).updateIfUnchanged(input.item_id, input.revision, input.value_json as Json),
     createCollectionItemIfAbsent: async (input: SetCollectionItemInput) =>
       (await collectionFor(input)).createIfAbsent(input.item_id, input.value_json as Json, input.sort_order),
     deleteCollectionItem: async (scope: CollectionScope, itemId: string) => (await collectionFor(scope)).delete(itemId),

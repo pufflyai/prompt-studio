@@ -74,10 +74,10 @@ test("a missing Playwright install is a setup error with browser setup instructi
   }
 });
 
-test("the installed Playwright cache runs a packaged extension page outside the checkout", async () => {
+test("the installed Playwright cache runs an extension page without Home outside the checkout", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-browser-page-"));
   try {
-    const env = { ...process.env, PSTDIO_HOME: join(root, "home") };
+    const env = { ...process.env, PSTDIO_HOME: join(root, "home"), PSTDIO_DEFAULT_EXTENSIONS: "[]" };
     logTestPhase("install browser into consumer cache");
     const installed = await runTestCommand(PACKAGED_BINARY_PATH, ["extensions", "install-browser"], {
       cwd: root,

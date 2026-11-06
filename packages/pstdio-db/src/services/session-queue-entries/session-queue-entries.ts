@@ -26,6 +26,14 @@ class PendingSwapFailed extends Error {}
 const nowTimestamp = () => new Date().toISOString();
 
 export const createSessionQueueEntriesDBService = (db: DbClient) => {
+  const hasEntries = async (sessionId: string) => {
+    const entries = await db
+      .select({ position: session_queue_entries.queue_position })
+      .from(session_queue_entries)
+      .where(eq(session_queue_entries.session_id, sessionId))
+      .limit(1);
+    return entries.length > 0;
+  };
   const get = async (queuePosition: number) => {
     const [entry] = await db
       .select()
@@ -95,6 +103,14 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
       .select()
       .from(session_queue_entries)
       .where(and(eq(session_queue_entries.session_id, sessionId), isNull(session_queue_entries.dispatch_started_at)))
+      .orderBy(session_queue_entries.queue_position);
+
+  /** Every queued request not yet dispatched, in queue order. */
+  const listUndispatched = async () =>
+    db
+      .select()
+      .from(session_queue_entries)
+      .where(isNull(session_queue_entries.dispatch_started_at))
       .orderBy(session_queue_entries.queue_position);
 
   const listDispatchStarted = async () => {
@@ -200,6 +216,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
   };
 
   return {
+    hasEntries,
     get,
     movePending: (input: Parameters<typeof movePending>[1]) => movePending(db, input),
     ...createSteeringDeliveryOperations(db),
@@ -210,6 +227,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     listPending,
     listPendingBySession,
     listUndispatchedBySession,
+    listUndispatched,
     listDispatchStarted,
     markDispatchStarted,
     updatePending,

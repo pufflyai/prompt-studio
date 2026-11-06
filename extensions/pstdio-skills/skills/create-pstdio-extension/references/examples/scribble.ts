@@ -6,8 +6,8 @@ import {
   definePage,
   defineResourceKind,
   defineView,
+  l10n,
   workbenchModes,
-  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
 const note = defineResourceKind({ id: "scribble-note", label: "Note" });
@@ -33,12 +33,20 @@ const editor = defineView({
     },
   },
 });
+const rootPage = definePage({
+  id: "root",
+  title: l10n("scribble.title", "Scribble"),
+  path: "root",
+  mode: workbenchModes.project,
+  main: { kind: "panels" },
+  slots: [],
+});
 export const scribblePage = definePage({
+  parent: rootPage.ref,
   id: "scribble",
-  title: "Scribble",
+  title: l10n("scribble.title", "Scribble"),
   path: "scribble",
   mode: workbenchModes.project,
-  parent: workbenchPages.start,
   resource: { kinds: [note.ref] },
   main: { kind: "view", view: editor.ref, cardinality: "many" },
   slots: [],
@@ -73,7 +81,7 @@ export default defineExtension({
   artifactMounts: [noteFiles],
   resourceKinds: [note],
   views: [editor, files],
-  pages: [scribblePage],
+  pages: [rootPage, scribblePage],
   navigationItems: [
     defineNavigationItem({
       id: "scribble",

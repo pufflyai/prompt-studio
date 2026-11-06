@@ -29,7 +29,7 @@ When you delete a status, its tickets move to the default status.
 
 The implementation agent keeps its ticket's status current while it works, and you can change it at any time. Planner does not move tickets when attempts start, sessions stop, or reviews finish. See [Attempts](0002-attempts.md#who-sets-the-ticket-status).
 
-Planner does not find statuses by name. Choose which statuses count as completed, blocked, and active, and the status after merge, in Planner's workflow settings: open **Settings → Project → Extensions**, select **Project Planner**, and use its **Settings** tab. Selections use status IDs, so you can rename or reorder columns freely.
+Planner does not find statuses by name. Choose which statuses count as completed, blocked, and active, and the status after merge, in Planner's workflow settings: open **Settings → Project Planner → Workflow & automation**. Selections use status IDs, so you can rename or reorder columns freely.
 
 ## Tags
 

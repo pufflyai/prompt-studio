@@ -5,12 +5,16 @@ import type { ExtensionRecordsApi } from "./storage-records";
 
 /** @deprecated Use storage.records with stable record IDs and grouped commits. */
 export interface ExtensionStorageCollectionApi<TItem = unknown> {
+  /** Read the value and its observed revision together for a subsequent update. Prefer records for new data. */
+  read(id: string): Promise<{ value: TItem; revision: string } | undefined>;
   get(id: string): Promise<TItem | undefined>;
   list(): Promise<TItem[]>;
   /** @deprecated Use storage.records.commit. */
   put(id: string, value: TItem): Promise<void>;
   /** @deprecated Use storage.records.commit. Throws if the item was deleted. */
   update(id: string, value: TItem): Promise<void>;
+  /** Atomically update only if the value still has the revision returned by read. False for changed or deleted items. */
+  updateIfUnchanged(id: string, revision: string, value: TItem): Promise<boolean>;
   createIfAbsent(id: string, value: TItem): Promise<boolean>;
   deleteIfValue(id: string, value: TItem): Promise<boolean>;
   create(value: TItem): Promise<TItem & { id: string }>;
@@ -36,6 +40,8 @@ export interface ExtensionStoragePositionsApi {
 }
 
 export interface ExtensionStorageApi {
+  /** Whether this source may run data upgrades now; false when the synced extension owns migrations. */
+  canMigrate(): Promise<boolean>;
   /** Upgrade this storage scope once. Saves the version after success; failed work must be safe to retry. */
   migrate(
     version: number,
@@ -79,6 +85,8 @@ export interface ExtensionBlobInput {
 
 export interface ExtensionBlobsApi {
   put(input: ExtensionBlobInput): Promise<ExtensionBlobRef>;
+  /** Replace an existing file's bytes while retaining its identity and scope. */
+  update(id: string, input: ExtensionBlobInput): Promise<ExtensionBlobRef>;
   get(id: string): Promise<ExtensionBlobRef | undefined>;
   getBytes(id: string): Promise<Uint8Array>;
   list(): Promise<ExtensionBlobRef[]>;

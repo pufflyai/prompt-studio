@@ -12,6 +12,12 @@ import {
 import { createPortal } from "react-dom";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 import { workbenchPanelRegions } from "../../core";
+import {
+  isRetiredViewerHost,
+  releaseViewerHosts,
+  reopenViewerHost,
+  viewerHostKey,
+} from "../../core/controllers/resource-viewers/viewer-host-continuity";
 import { resolvePageContent } from "../../core/registries/pages/page-content";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useOpenPlacementIds } from "../shared/use-open-placement-ids";
@@ -71,7 +77,8 @@ const PanelViewPortal = (props: {
 }) => {
   const { workbench, placement, slot, region, active } = props;
   const view = placement.viewId ? workbench.views.getView(placement.viewId) : undefined;
-  const collection = view?.body.kind === "dataTable" || view?.body.kind === "kanban";
+  const collection =
+    view?.body.kind === "dataTable" || view?.body.kind === "kanban" || view?.body.kind === "resourceList";
   // The portal target is stable for the life of a view. Only its DOM parent moves.
   const [host] = useState(() => {
     const node = document.createElement("div");
@@ -135,9 +142,20 @@ const PageContentViewHosts = (props: {
 }) => {
   const { workbench, content, slot, open } = props;
   const retained = useRetainedViewPlacements(workbench, content ? [content] : [], open);
-  return retained.map((placement) => (
+  if (content) reopenViewerHost(workbench, content.widgetId);
+  const hosts = new Map(
+    retained
+      .filter((placement) => !isRetiredViewerHost(workbench, placement.widgetId))
+      .map((placement) => [viewerHostKey(workbench, placement.widgetId), placement]),
+  );
+  useEffect(
+    () => releaseViewerHosts(workbench, new Set(retained.map((placement) => placement.widgetId))),
+    [workbench, retained],
+  );
+  if (content) hosts.set(viewerHostKey(workbench, content.widgetId), content);
+  return [...hosts].map(([key, placement]) => (
     <PanelViewPortal
-      key={placement.widgetId}
+      key={key}
       workbench={workbench}
       placement={placement}
       region="main"

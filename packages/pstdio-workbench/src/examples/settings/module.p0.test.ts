@@ -124,3 +124,53 @@ describe("settings example module", () => {
     expect(activeOverlayResource(workbench)?.metadata?.panelId).toBe("conditional");
   });
 });
+
+test("opening a collection settings item uses its display name instead of its resource ID", async () => {
+  const workbench = setup();
+  workbench.views.registerView({
+    id: "template-editor",
+    title: "Template",
+    body: { kind: "react", render: () => null },
+  });
+  workbench.settings.registerPanel({
+    id: "templates",
+    title: "Templates",
+    kind: "collection",
+    viewId: "template-editor",
+    items: async () => [{ id: "pstdio.pstdio-planner.template-type.ticket:bug-fix", title: "Bug fix" }],
+    itemId: (item) => item.id,
+    itemLabel: (item) => item.title,
+  });
+  await workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, {
+    panelId: "templates",
+    itemId: "pstdio.pstdio-planner.template-type.ticket:bug-fix",
+  });
+  expect(activeOverlayResource(workbench)?.label).toBe("Bug fix");
+});
+
+test("a slow collection name lookup cannot replace a more recent settings page", async () => {
+  const workbench = setup();
+  const items = Promise.withResolvers<Array<{ id: string; title: string }>>();
+  workbench.views.registerView({
+    id: "template-editor",
+    title: "Template",
+    body: { kind: "react", render: () => null },
+  });
+  workbench.settings.registerPanel({
+    id: "templates",
+    title: "Templates",
+    kind: "collection",
+    viewId: "template-editor",
+    items: () => items.promise,
+    itemId: (item) => item.id,
+    itemLabel: (item) => item.title,
+  });
+  const earlier = workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, {
+    panelId: "templates",
+    itemId: "bug",
+  });
+  await workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "appearance" });
+  items.resolve([{ id: "bug", title: "Bug fix" }]);
+  await earlier;
+  expect(activeOverlayResource(workbench)?.label).toBe("Appearance");
+});

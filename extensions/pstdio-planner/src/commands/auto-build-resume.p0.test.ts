@@ -5,7 +5,7 @@ import { putTicket } from "../data/ticket-context.fixture";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
-import { requestHumanCommand } from "./review-requests";
+import { requestReviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 
 async function stoppedAttempt(status: string) {
@@ -50,9 +50,9 @@ test.each([
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
 });
 
-test("open human input keeps a cancelled implementation paused", async () => {
+test("open review input keeps a cancelled implementation paused", async () => {
   const { ctx, task, started, followups } = await stoppedAttempt("cancelled");
-  await requestHumanCommand.run(ctx, {
+  await requestReviewCommand.run(ctx, {
     ticket: task.id,
     workspaceId: started.workspace.id,
     sessionId: started.session.id,
@@ -79,7 +79,7 @@ test("resumption uses the selected attempt instead of an older stopped attempt",
     ticketId: task.id,
     workspaceId: selected.workspaceId,
     selectedBy: { type: "human", id: "user", displayName: "User" },
-    humanRequestId: null,
+    reviewRequestId: null,
     selectedAt: new Date().toISOString(),
   });
   expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
@@ -112,7 +112,7 @@ test("a selected attempt in review does not restart an older implementation", as
     ticketId: task.id,
     workspaceId: selected.workspaceId,
     selectedBy: { type: "human", id: "user", displayName: "User" },
-    humanRequestId: null,
+    reviewRequestId: null,
     selectedAt: new Date().toISOString(),
   });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
@@ -165,19 +165,20 @@ test.each(["missing metadata", "deleted folder"])("an explicit user stop stays s
 test.each([
   "blocked status",
   "blocked reason",
-])("unfinished work waits for its %s without answered input", async (blocker) => {
-  const { ctx, storage, task, followups } = await stoppedAttempt("completed");
+])("unfinished work can resume to resolve its %s without answered input", async (blocker) => {
+  const { ctx, storage, task, started, followups } = await stoppedAttempt("completed");
   await putTicket(storage, {
     ...task,
     ...(blocker === "blocked status"
       ? { statusId: "blocked" }
       : { blockedReason: "Wait until the customer supplies access." }),
   });
-  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toMatchObject([{ id: task.id, action: "resume" }]);
   expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
-    decision: "wait",
+    decision: "started",
+    sessionId: started.session.id,
   });
-  expect(followups).toEqual([]);
+  expect(followups).toEqual([started.session.id]);
 });
 
 test("a stopped turn is resumed once while a later stopped turn can resume again", async () => {

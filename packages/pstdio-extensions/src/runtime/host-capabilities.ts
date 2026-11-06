@@ -7,6 +7,7 @@ export const dashboardExtensionHostCapabilities = {
   host: "dashboard",
   hostVersion: "0.25.2",
   capabilities: {
+    "project-setup.v1": { version: 1, since: "0.3.1" },
     "command.v1": { version: 1, since: "0.1.0" },
     "menu.v1": { version: 1, since: "0.1.0" },
     "command-palette.v1": { version: 1, since: "0.1.0" },
@@ -16,6 +17,7 @@ export const dashboardExtensionHostCapabilities = {
     "view.tree.v1": { version: 1, since: "0.26.0" },
     "view.file.v1": { version: 1, since: "0.26.0" },
     "view.controls.v1": { version: 1, since: "0.26.0" },
+    "view.resourceList.v1": { version: 1, since: "0.46.0" },
     "view.kanban.v1": { version: 1, since: "0.26.0" },
     "view.data-table.v1": { version: 1, since: "0.26.0" },
     "placement.v1": { version: 1, since: "0.26.0" },
@@ -57,6 +59,11 @@ const requirement = (
 });
 
 const runtimeRequirements = (runtime: ExtensionRuntime) => [
+  ...runtime.extensions
+    .filter((extension) => extension.definition.projectSetup)
+    .map((extension) =>
+      requirement({ ...extension, extensionId: extension.id }, extension.id, "projectSetup", "project-setup.v1"),
+    ),
   ...runtime.commands.map((record) => requirement(record, record.id, "command", "command.v1")),
   ...runtime.commands.flatMap((record) => record.menus.map(() => requirement(record, record.id, "menu", "menu.v1"))),
   ...runtime.commands.flatMap((record) =>

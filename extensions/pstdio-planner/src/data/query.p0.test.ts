@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { runTicketsQuery } from "./query";
 import { seedDefaultStatuses } from "./seed";
@@ -17,31 +16,6 @@ const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   ...overrides,
-});
-
-const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }): ExtensionWorkspace => ({
-  name: "Workspace",
-  project_id: "proj-1",
-  workspace_shorthand: "T-1_A1",
-  branch: "workspace/T-1_A1",
-  root_path: "/worktrees/T-1_A1",
-  provider_id: "pstdio.worktree",
-  execution_kind: "local",
-  anchors_json: [
-    {
-      type: "ticket",
-      id: "ticket-1",
-      label: "T-1",
-      shorthand: "T-1",
-      metadata: {
-        resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
-      },
-    },
-  ],
-  created_at: "2026-01-01T00:00:00.000Z",
-  updated_at: "2026-01-01T00:00:00.000Z",
-  ...overrides,
-  id: overrides.id,
 });
 
 describe("runTicketsQuery", () => {
@@ -125,7 +99,7 @@ describe("runTicketsQuery", () => {
       created: "2026-01-01T00:00:00.000Z",
       id: "T-1",
       workspace: "",
-      workspaceItems: [],
+      linkedResourceItems: [],
       priority: "default-priority-high",
       type: "default-type-bug",
       reviewRequests: "",
@@ -136,186 +110,6 @@ describe("runTicketsQuery", () => {
       type: { kind: "enum" },
       editable: true,
     });
-  });
-});
-
-// Workspace badge payloads got long enough to need their own describe block.
-describe("runTicketsQuery workspace badges", () => {
-  test("exposes linked workspaces as a displayable workspace badge payload", async () => {
-    const storage = createMemoryStorage();
-    await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1", title: "Has workspaces" }));
-
-    const result = await runTicketsQuery({
-      ...ticketContext(storage),
-      projectId: "proj-1",
-      workspaces: [
-        makeWorkspace({
-          id: "workspace-1",
-          name: "First attempt",
-          workspace_shorthand: "T-1_A1",
-          root_path: "/worktrees/T-1_A1",
-          created_at: "2026-01-02T00:00:00.000Z",
-        }),
-        makeWorkspace({
-          id: "workspace-2",
-          name: "Latest attempt",
-          workspace_shorthand: "T-1_A2",
-          provider_id: "example.cloud",
-          execution_kind: "remote",
-          branch: null,
-          root_path: null,
-          created_at: "2026-01-03T00:00:00.000Z",
-        }),
-        makeWorkspace({
-          id: "workspace-other",
-          name: "Other ticket",
-          workspace_shorthand: "T-2_A1",
-          anchors_json: [
-            {
-              type: "ticket",
-              id: "ticket-2",
-              label: "T-2",
-              shorthand: "T-2",
-              metadata: {
-                resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
-              },
-            },
-          ],
-        }),
-      ],
-    });
-
-    expect(result.attributes?.find((attribute) => attribute.id === "workspace")).toMatchObject({
-      id: "workspace",
-      type: { kind: "string" },
-      displayable: true,
-      display: { kind: "badge-list", itemsAttributeId: "workspaceItems" },
-    });
-    expect(result.rows[0]?.attributes.workspace).toBe("workspace-2");
-    expect(result.rows[0]?.attributes.workspaceItems).toMatchObject([
-      {
-        id: "workspace-2",
-        label: "Latest attempt",
-        icon: "Cloud",
-        resource: {
-          type: "workspace",
-          id: "workspace-2",
-          label: "Latest attempt",
-        },
-        createdAt: "2026-01-03T00:00:00.000Z",
-        resourceParent: {
-          type: "ticket",
-          id: "ticket-1",
-          label: "T-1 Has workspaces",
-          shorthand: "T-1",
-          metadata: {
-            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
-          },
-        },
-      },
-      {
-        id: "workspace-1",
-        label: "First attempt",
-        icon: "GitBranch",
-        resource: {
-          type: "workspace",
-          id: "workspace-1",
-          label: "First attempt",
-        },
-        createdAt: "2026-01-02T00:00:00.000Z",
-        resourceParent: {
-          type: "ticket",
-          id: "ticket-1",
-          label: "T-1 Has workspaces",
-          shorthand: "T-1",
-          metadata: {
-            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
-          },
-        },
-      },
-    ]);
-  });
-
-  test("adds canonical ticket parent edges to linked workspace badge payloads", async () => {
-    const storage = createMemoryStorage();
-    const parent = makeTicket({ id: "ticket-parent", shorthand: "T-1", title: "Parent" });
-    const child = makeTicket({
-      id: "ticket-child",
-      shorthand: "T-2",
-      title: "Child",
-      parentId: parent.id,
-      sortOrder: 1,
-    });
-    await putTicket(storage, parent);
-    await putTicket(storage, child);
-
-    const result = await runTicketsQuery({
-      ...ticketContext(storage),
-      projectId: "proj-1",
-      workspaces: [
-        makeWorkspace({
-          id: "workspace-1",
-          name: "Child attempt",
-          workspace_shorthand: "T-2_A1",
-          anchors_json: [
-            { type: "ticket", id: child.id, label: child.shorthand, shorthand: child.shorthand, metadata: {} },
-          ],
-        }),
-      ],
-    });
-
-    const childRow = result.rows.find((row) => row.id === child.id);
-    expect(childRow?.attributes.workspaceItems).toEqual([
-      expect.objectContaining({
-        id: "workspace-1",
-        resourceParent: {
-          type: "ticket",
-          id: child.id,
-          label: "T-2 Child",
-          shorthand: "T-2",
-          metadata: {
-            resourceParent: {
-              type: "ticket",
-              id: parent.id,
-              label: "T-1 Parent",
-              shorthand: "T-1",
-              metadata: {
-                resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
-              },
-            },
-          },
-        },
-      }),
-    ]);
-  });
-
-  test("falls back workspace badge labels to shorthand and then id", async () => {
-    const storage = createMemoryStorage();
-    await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1" }));
-
-    const result = await runTicketsQuery({
-      ...ticketContext(storage),
-      projectId: "proj-1",
-      workspaces: [
-        makeWorkspace({ id: "workspace-1", name: undefined, workspace_shorthand: "T-1_A1" }),
-        makeWorkspace({
-          id: "workspace-2",
-          name: undefined,
-          workspace_shorthand: undefined,
-          created_at: "2026-01-04T00:00:00.000Z",
-        }),
-      ],
-    });
-
-    expect(
-      (result.rows[0]?.attributes.workspaceItems as Array<{ id: string; label: string }>).map(({ id, label }) => ({
-        id,
-        label,
-      })),
-    ).toEqual([
-      { id: "workspace-2", label: "workspace-2" },
-      { id: "workspace-1", label: "T-1_A1" },
-    ]);
   });
 });
 

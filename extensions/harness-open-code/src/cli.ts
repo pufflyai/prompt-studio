@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join, win32 } from "node:path";
 
 const installedPackage = (name: string) => {
-  const manifest = createRequire(import.meta.url).resolve("opencode-ai/package.json");
+  const manifest = createRequire(import.meta.url).resolve("@opencode/cli/package.json");
   return createRequire(manifest).resolve(`${name}/package.json`);
 };
 
@@ -31,7 +31,7 @@ export const resolveManagedOpencode = (
     const baseline = arch === "x64" ? "-baseline" : "";
     const suffix = platform === "linux" && musl ? "-musl" : "";
     // Native package paths are upstream implementation details. See ADR 0110.
-    const manifest = (input.resolvePackage ?? installedPackage)(`opencode-${os}-${arch}${baseline}${suffix}`);
+    const manifest = (input.resolvePackage ?? installedPackage)(`@opencode/cli-${os}-${arch}${baseline}${suffix}`);
     const command = join(dirname(manifest), "bin", platform === "win32" ? "opencode.exe" : "opencode");
     return (input.exists ?? existsSync)(command) ? command : null;
   } catch {
@@ -41,7 +41,7 @@ export const resolveManagedOpencode = (
 
 const isPrivateLauncher = (command: string) => {
   try {
-    return realpathSync(command) === createRequire(import.meta.url).resolve("opencode-ai/bin/opencode.exe");
+    return realpathSync(command) === createRequire(import.meta.url).resolve("@opencode/cli/bin/opencode.exe");
   } catch {
     return false;
   }
@@ -57,7 +57,7 @@ export const resolveOpencodeCommand = (
 ) => {
   const command = (input.which ?? (() => Bun.which("opencode", { PATH: process.env.PATH })))();
   if (command && (input.platform ?? process.platform) === "win32" && /\.(cmd|bat|ps1)$/i.test(command)) {
-    const native = win32.join(win32.dirname(command), "node_modules", "opencode-ai", "bin", "opencode.exe");
+    const native = win32.join(win32.dirname(command), "node_modules", "@opencode", "cli", "bin", "opencode.exe");
     if ((input.exists ?? existsSync)(native)) return native;
     return (input.managed ?? resolveManagedOpencode)() ?? command;
   }

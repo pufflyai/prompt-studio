@@ -1,4 +1,5 @@
 import { Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
+import { Plus } from "lucide-react";
 import type { DragEvent } from "react";
 import { HighlightedText } from "../collection-view/highlighted-text";
 import { ListRow } from "../list-row/list-row";
@@ -38,6 +39,11 @@ const KanbanRendererListLabel = (props: KanbanRendererListItemContentProps) => {
         <Text textStyle="label/XS" color="fg.muted" flexShrink={0}>
           {item.countBadge}
         </Text>
+        {item.note && !item.onNoteClick ? (
+          <Text textStyle="label/XS" color="fg.muted" truncate>
+            {item.note}
+          </Text>
+        ) : null}
       </HStack>
     );
   }
@@ -87,6 +93,26 @@ const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): L
       color={item.statusColor ?? (item.isGroup || item.statusColorPalette ? "colorPalette.solid" : "fg.muted")}
     />
   ) : undefined,
+  actions: [
+    ...(item.note && item.onNoteClick
+      ? [
+          {
+            id: "details",
+            label: `${item.title}: ${item.note}`,
+            icon: (
+              <Text textStyle="label/XS" whiteSpace="nowrap" px="xs">
+                {item.note}
+              </Text>
+            ),
+            onAction: item.onNoteClick,
+          },
+        ]
+      : []),
+    ...(item.onCreate
+      ? [{ id: "create", label: `Add to ${item.title}`, icon: <Plus />, onAction: item.onCreate }]
+      : []),
+  ],
+  actionsVisibility: "always",
   endContent: hasEndContent(item) ? <KanbanRendererListBadges item={item} /> : null,
   isContainer: hasChildren,
   contextMenuItems: item.contextMenuActions?.map((action) => ({
@@ -132,7 +158,7 @@ export const KanbanRendererListRow = (props: KanbanRendererListRowProps) => {
   const toggleExpanded = () => onExpandedChange(row.id, !isExpanded);
 
   const handleActivate = () => {
-    if (canExpand) {
+    if (canExpand && item.expandOnClick !== false) {
       toggleExpanded();
       return;
     }
@@ -204,6 +230,7 @@ export const KanbanRendererListRow = (props: KanbanRendererListRowProps) => {
         isExpanded={isExpanded}
         showExpandToggle={canExpand}
         showContextMenuTrigger={false}
+        expandOnClick={item.expandOnClick}
         onActivate={handleActivate}
         onToggleExpand={toggleExpanded}
       />

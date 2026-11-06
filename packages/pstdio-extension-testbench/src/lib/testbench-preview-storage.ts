@@ -20,14 +20,18 @@ export const createPreviewStorage = (): BenchStorageSeed => {
       {
         id: "ws-preview-1",
         workspace_shorthand: "WS-1",
-        anchors_json: [{ type: "ticket", id: "PS-16", label: "PS-16", shorthand: "PS-16" }],
+        anchors_json: [
+          { extensionId: "pstdio.pstdio-planner", type: "ticket", id: "PS-16", label: "PS-16", shorthand: "PS-16" },
+        ],
         branch: "feature/tree-renderer",
         root_path: "/tmp/ws-preview-1",
       },
       {
         id: "ws-preview-2",
         workspace_shorthand: "WS-2",
-        anchors_json: [{ type: "ticket", id: "PS-16", label: "PS-16", shorthand: "PS-16" }],
+        anchors_json: [
+          { extensionId: "pstdio.pstdio-planner", type: "ticket", id: "PS-16", label: "PS-16", shorthand: "PS-16" },
+        ],
         branch: "feature/tree-renderer-followup",
       },
     ],

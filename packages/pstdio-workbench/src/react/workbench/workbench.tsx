@@ -7,11 +7,10 @@ import {
   UiScopeProvider,
   UiScopeRoot,
 } from "@pstdio/ui";
-import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useLayoutEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
-import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
 import { WorkbenchKeyboardLayer } from "../keybindings/keyboard-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
@@ -95,8 +94,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   installWorkbenchControlsRenderer(workbench, { renderParamField });
   const [attachedSidePanelSlot, setAttachedSidePanelSlot] = useState<HTMLDivElement | null>(null);
   const [floatingSidePanelSlot, setFloatingSidePanelSlot] = useState<HTMLDivElement | null>(null);
-  const sidePanelHostRef = useRef<HTMLDivElement | null>(null);
-  if (!sidePanelHostRef.current) sidePanelHostRef.current = createSidePanelHost();
+  const [sidePanelHost] = useState(createSidePanelHost);
 
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
@@ -139,28 +137,18 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSideHeaderWidgets || hasSidePanelHeader ? (
       <WorkbenchSidePanelRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />
     ) : undefined;
-  let activeSidePanelSlot: HTMLElement | null = attachedSidePanelSlot;
-  if (presentedSideMode === "floating") activeSidePanelSlot = floatingSidePanelSlot;
-  else if (presentedSideMode === "closed")
-    activeSidePanelSlot = sidePanelHostRef.current?.parentElement ?? attachedSidePanelSlot;
-
+  // The host's current parent is read in the effect, not during render: React Compiler skips
+  // components that read refs or the DOM while rendering. A closed Side Panel leaves the host where it is.
   useLayoutEffect(() => {
-    const host = sidePanelHostRef.current;
-    if (!host) return;
-    movePanelHost(host, activeSidePanelSlot);
-  }, [activeSidePanelSlot]);
+    if (!sidePanelHost) return;
+    let slot: HTMLElement | null = attachedSidePanelSlot;
+    if (presentedSideMode === "floating") slot = floatingSidePanelSlot;
+    else if (presentedSideMode === "closed") slot = sidePanelHost.parentElement ?? attachedSidePanelSlot;
+    movePanelHost(sidePanelHost, slot);
+  }, [sidePanelHost, presentedSideMode, attachedSidePanelSlot, floatingSidePanelSlot]);
 
-  const contentWithHeader = (
-    <Flex direction="column" h="full" minH="0" minW="0" w="full">
-      <WorkbenchNavChrome
-        workbench={workbench}
-        hasNav={hasNavWidgets}
-        panelControls={panelControlsPlacement !== "host"}
-      />
-      <Flex flex="1" minH="0" minW="0" overflow="hidden">
-        <WorkbenchBody workbench={workbench} />
-      </Flex>
-    </Flex>
+  const contentWithMainPanel = (
+    <WorkbenchBody workbench={workbench} hasNav={hasNavWidgets} panelControls={panelControlsPlacement !== "host"} />
   );
 
   const contentWithSidenav = (
@@ -175,7 +163,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           <WorkbenchSidePanelBoundary
             workbench={workbench}
             showAttachedSidePanel={showAttachedSidePanel}
-            contentFrame={contentWithHeader}
+            contentFrame={contentWithMainPanel}
             sideHeader={sideHeader}
             contentMinSizePx={CONTENT_MIN_SIZE_PX}
             onAttachedSlotChange={setAttachedSidePanelSlot}
@@ -245,7 +233,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         <FullscreenKeyboard workbench={workbench} />
         <WorkbenchNotificationHost workbench={workbench} />
       </Flex>
-      <WorkbenchSidePanelRegionPortal workbench={workbench} sidePanelHost={sidePanelHostRef.current} />
+      <WorkbenchSidePanelRegionPortal workbench={workbench} sidePanelHost={sidePanelHost} />
     </WorkbenchThemeScope>
   );
 };

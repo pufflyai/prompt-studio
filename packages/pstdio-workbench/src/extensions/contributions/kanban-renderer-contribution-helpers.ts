@@ -1,4 +1,8 @@
-import type { CollectionPage, KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
+import type {
+  CollectionPage,
+  KanbanRendererBoardColumnConfig as WireBoardColumnConfig,
+  NavigationTarget as WireNavigationTarget,
+} from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import type { KanbanRendererCreateField, KanbanRendererCreateFieldType, ResourceRef } from "../../core";
 import type {
@@ -29,6 +33,7 @@ const localizeAttributes = (
   localize: Localizer,
   decorate: (record: WorkbenchExtensionKanbanRendererRecord, attribute: AttributeDescriptor) => AttributeDescriptor,
   reportUnknownDisplay?: UnknownDisplayReporter,
+  openNote?: (target: WireNavigationTarget) => void,
 ): AttributeDescriptor[] =>
   (attributes ?? []).map((attribute) => {
     const display = attribute.display;
@@ -43,7 +48,12 @@ const localizeAttributes = (
       return {
         ...type,
         options: Array.isArray(type.options)
-          ? type.options.map((option) => ({ ...option, label: localize(option.label, option.value) }))
+          ? type.options.map((option) => ({
+              ...option,
+              label: localize(option.label, option.value),
+              note: option.note ? localize(option.note) : undefined,
+              onNoteClick: option.noteAction && openNote ? () => openNote(option.noteAction!) : undefined,
+            }))
           : type.options,
       };
     };
@@ -61,8 +71,9 @@ export const createMutableAttributeSource = (
   localize: Localizer,
   decorate: (record: WorkbenchExtensionKanbanRendererRecord, attribute: AttributeDescriptor) => AttributeDescriptor,
   reportUnknownDisplay?: UnknownDisplayReporter,
+  openNote?: (target: WireNavigationTarget) => void,
 ): MutableAttributeSource => {
-  let snapshot = localizeAttributes(record, initial, localize, decorate, reportUnknownDisplay);
+  let snapshot = localizeAttributes(record, initial, localize, decorate, reportUnknownDisplay, openNote);
   const listeners = new Set<() => void>();
   let signature = JSON.stringify(initial);
   return {
@@ -77,7 +88,7 @@ export const createMutableAttributeSource = (
       const nextSignature = JSON.stringify(attributes);
       if (nextSignature === signature) return;
       signature = nextSignature;
-      snapshot = localizeAttributes(record, attributes, localize, decorate, reportUnknownDisplay);
+      snapshot = localizeAttributes(record, attributes, localize, decorate, reportUnknownDisplay, openNote);
       for (const listener of listeners) listener();
     },
   };

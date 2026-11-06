@@ -40,7 +40,7 @@ Before saving a new ticket that adds or changes UI, read `pst pstdio-planner ref
 6. Put priority and type in tags from `pst tags list`. Repeat `--tags` when needed.
 7. Check unfinished tickets with `pst tickets list`. Keep dependency waiting in `depends_on`; do not copy it into `blocked_reason` or change the ticket to Blocked for that reason alone. Planner derives readiness from the current prerequisites; see [Dependencies](https://prompt.studio/docs/extensions/planner/cli/#dependencies). Use `--blocked-reason "<why>"` only for an independent blocker, such as missing credentials. Clear that text with `pst tickets update --id <shorthand> --blocked-reason ''` when the independent blocker is resolved; keep the dependency links.
 8. Before saving, read the title alone. If it does not say what gets better, rewrite it.
-9. Save the ticket, then ask for review as described in [Review requests](#review-requests).
+9. Save the ticket. Create a review request only for a genuine unresolved decision, as described in [Review requests](#review-requests).
 10. Stop after saving the ticket unless the user also asked for implementation. In that case, follow the `implement-ticket` skill.
 
 ## Bug reports
@@ -58,68 +58,33 @@ A bug report is only useful when someone can see the bug happen. Reproduce it be
 When you cannot reproduce the bug:
 
 1. Set **Reproduced** to `No`. Under **Reproduction**, write what you tried and what happened. Leave Cause and Fix empty. Do not guess a fix.
-2. Set `blocked_reason: "Not reproduced"` in the frontmatter, then save. Auto-build does not start blocked tickets.
-3. Create a review request that asks for the missing details, as shown below.
+2. Set the configured Blocked status and a specific `blocked_reason` naming the missing reproduction details and what allows work to continue, then save.
+3. Record the missing details in the blocked reason. Do not create a review request just to obtain them.
 4. After the person answers, try again. When the bug reproduces, set `blocked_reason: ""`, complete the report, and save.
 
 ## Review requests
 
-Do not write open questions, assumptions, or risks in the ticket. Put them in one Planner review request, so the person answers them in a form. Skip the request when nothing needs an answer.
+Create a review request only for a genuine unresolved decision that the existing instructions and your authority cannot settle. Do not ask for routine assumptions, blanket risk acceptance, handoff acknowledgement, missing credentials, access, resources, reproduction details, or a non-decision action.
 
-Use one question per item:
+For an independent non-decision blocker, discover the configured Blocked status with `pst statuses list`, then use `pst tickets update --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
 
-- A choice only the person can make: a required single-choice question. Put your recommended option first and end its label with "(recommended)".
-- Missing information: a text question that names exactly what you need.
-- Always add one optional text question for other notes.
+Keep request text to at most 80 words, excluding document links. Identify the ticket in the title. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. State the decision, mark the recommended choice, and name the main cost of each option. Keep question and option labels short; do not repeat the summary in them. Use a required choice question; add optional notes only when useful. Do not add confirmation or risk checklists that contain no decision.
 
-The form shows every option as its own radio button or checkbox, so each option label must make sense alone. Keep each label to one short sentence. Write `--instructions` as a Markdown list with one item per line, and put any context the person needs there. Ask at most five questions.
+Use descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Include as many relevant links as needed. Reuse existing documents and link supporting evidence, background, and implementation detail instead of copying them into the request. Keep the choice and essential trade-offs visible without opening the links.
 
-For a bug you could not reproduce:
+This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
 
 ```bash
-pst pstdio-planner request-human --ticket PS-12 \
-  --title "Help reproduce the bug" \
-  --instructions "- I followed the reported steps on main (commit abc1234) in the desktop app on macOS.
-- The export finished without an error." \
-  --request '{"kind":"decision","questions":[
-    {"id":"steps","label":"What did you do right before the error?","required":true,"input":{"kind":"text"}},
-    {"id":"environment","label":"Which app version and operating system?","required":false,"input":{"kind":"text"}},
-    {"id":"proof","label":"Paste the error text or the log lines","required":false,"input":{"kind":"text"}},
-    {"id":"notes","label":"Other notes","required":false,"input":{"kind":"text"}}]}'
+pst pstdio-planner request-review --ticket PS-12 \
+  --title "PS-12 · Choose the first release audience" \
+  --instructions "**Problem:** The export is ready, but its first release audience is undecided.
+
+**Solution:** Release to the internal project first (recommended), or to everyone now.
+
+**Downside:** An internal release delays wider access; releasing to everyone exposes more people to faults.
+
+**Details:** [Release plan](files/release-plan.md)." \
+  --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
 ```
 
-For a bug fix that needs a trade-off decision:
-
-```bash
-pst pstdio-planner request-human --ticket PS-12 \
-  --title "Choose the fix" \
-  --instructions "- **A** removes the cause but changes the storage format.
-- **B** is a temporary workaround. See files/adr.md." \
-  --request '{"kind":"decision","questions":[
-    {"id":"fix","label":"Which fix should we build?","required":true,"input":{"kind":"single-choice","options":[
-      {"id":"a","label":"A. Fix the storage format (recommended)"},
-      {"id":"b","label":"B. Retry on failure (temporary)"}]}},
-    {"id":"notes","label":"Other notes","required":false,"input":{"kind":"text"}}]}'
-```
-
-When the person answers, read the answers with `pst pstdio-planner review-requests read --request-id <request-id>`. Update the ticket so it states what was decided. Do not copy the answers into the ticket; the request keeps them. Never answer your own request.
-
-## Example
-
-```bash
-pst tickets write --title "Finish uploads when the connection drops briefly"
-# Apply a template if needed, then edit its returned absolute path.
-pst tickets save --id PS-42
-```
-
-## Reference
-
-Use `depends_on` for real code prerequisites. If a ticket consumes a file or API another ticket introduces, link that ticket before launching work. Independent prerequisites can run in parallel; Planner combines their submitted revisions when a child needs both. Do not mark prerequisites Done or add dependency-only blocker text just to control launch order. With review blocking off, children can build on submitted revisions while the prerequisites remain in review.
-
-Pass a ticket shorthand such as `PS-42` to `--id`. The command resolves it to the stored ticket.
-
-See [how attempts use dependencies](https://prompt.studio/docs/extensions/planner/attempts/#dependencies) and the [Planner CLI](https://prompt.studio/docs/extensions/planner/cli/).
-
-## Critical UI verification
-
-Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard/focus behavior, preview isolation, or a critical regression. Use the smallest representative scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it. Routine copy, spacing, cosmetic, and documentation changes do not require browser runs or screenshots. Explicit user-requested visual verification still applies. Keep Canvas examples for exploration. A visual example does not require a matching automated test. Name the critical risk covered by any new browser check. Ordinary relevant unit, type, and build checks still apply.
+Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.

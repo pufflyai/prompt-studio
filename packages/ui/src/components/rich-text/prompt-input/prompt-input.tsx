@@ -29,7 +29,7 @@ export interface PromptEditorProps {
   isEditable?: boolean;
   /**
    * Focus the editor as soon as it is editable, then call `onFocusRequestComplete`. The caller clears the
-   * request there. Focus stays in a field or embedded view the person moved to while the editor was locked.
+   * request there. Focus stays in a field, embedded view, menu or navigation row chosen while the editor was locked.
    */
   focusRequested?: boolean;
   onFocusRequestComplete?: () => void;

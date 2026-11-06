@@ -19,8 +19,9 @@ export const createSessionBodySchema = z
     createSessionInputSchema.strict(),
     sessionCreateRequestSchema
       .strict()
-      .transform(({ projectId, workspaceId, originalSessionId, attachments, ...input }) => ({
+      .transform(({ projectId, deviceId, workspaceId, originalSessionId, attachments, ...input }) => ({
         ...input,
+        device_id: deviceId,
         attachments: attachments?.map(({ fileId }) => ({ file_id: fileId })),
         project_id: projectId,
         workspace_id: workspaceId,

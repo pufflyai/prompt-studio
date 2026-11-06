@@ -22,6 +22,8 @@ Codex reports a status dot with native state: active is green, paused/blocked/us
 
 The session composer shows the model menu only for harnesses that implement `listModels()`. An empty list still shows the menu, because model discovery can fail for a while. A harness without `listModels()`, such as a remote machine whose template picks the model, shows only the agent picker and runs without a model. When the agent cannot change either, as in an existing session, the composer shows neither.
 
+OpenCode model discovery uses `api GET /api/model --standalone`. Standalone discovery uses the runtime's environment and credentials without leaving a background service running. It preserves provider-qualified model IDs and native thinking choices. Models use their catalog ID, which can differ from the upstream provider's model ID. Disabled models are omitted. Failed discovery is logged without native output and can recover on the next request. Sessions, commands, questions, and account actions use OpenCode 2's native `/api` protocol and require OpenCode 2.2.5 or newer.
+
 `/v1/agents/info` returns each harness's `capabilities` and `supportsModels`. The `Attachments` capability marks a harness that accepts files. The host does not act on it yet; the composer and server will use it once the built-in harnesses declare it.
 
 ## Installation and sign-in
@@ -48,7 +50,7 @@ SDK/host support must ship before released extensions rely on `getAuthentication
 | --- | --- | --- |
 | Codex | 0.157.0 | Oldest release whose app-server protocol matches every request, notification, and item the harness uses. Older releases change thread, item, and tool output shapes. The comparison and live checks are recorded in [ADR 0064](../../adrs/0064-codex-app-server-runtime.md#supported-versions). |
 | Claude Code | 2.1.203 | First release that reports `background_tasks_changed` in stream JSON. Older releases end the run at the first result and kill the agent's background tasks. The flags, model discovery, and `AskUserQuestion` channel the harness uses work from 2.1.100. |
-| OpenCode | 1.0.175 | First release that serves `/global/health` and `/question`. The harness finds its server through the health check and asks the agent's questions through the question API. Every other endpoint it calls works from 1.0.0. |
+| OpenCode | 2.2.5 | Uses the OpenCode 2 `/api` protocol, asynchronous prompt admission, session forms, and integration-based sign-in. The private CLI is `@opencode/cli` 2.2.5. |
 
 No harness has a maximum. The CLIs ship every one to three days, and the harnesses ignore events and items they do not know. A maximum would report the newest CLI as not installed.
 

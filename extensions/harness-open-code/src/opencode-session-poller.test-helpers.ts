@@ -56,7 +56,7 @@ export const questionAssistant = (): OpencodeSessionMessage =>
         type: "tool",
         tool: "question",
         state: {
-          status: "completed",
+          status: "running",
           input: { questions: [{ id: "q1", question: "Which?", options: ["A", "B"] }] },
         },
       },

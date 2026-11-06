@@ -1,52 +1,46 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { TreeNode, TreeViewSection } from "../../../core";
+import { appendTreeMoveBatch, type TreeMoveBatch, treeMoveBatchPreview } from "./tree-move-batch";
 import { previewTreeMove, type TreeMoveIntent } from "./tree-move-preview";
 
-interface PendingMove {
-  token: symbol;
-  intent: TreeMoveIntent;
-  savedAfter?: TreeViewSection[];
-}
-
-// Keep only unconfirmed intent. The renderer owns persistence and every completed read replaces the preview.
+// Keep a queued batch on one snapshot until a completed read confirms its writes.
+// Reads are told apart by `revision`, not by `body`: a read that returns equal data keeps the same body.
 export const useTreeMovement = (input: {
   scope: string;
   body: TreeViewSection[];
+  revision?: symbol;
   childrenByNodeId: Record<string, TreeNode[]>;
   persist?: (sourceId: string, targetId?: string, position?: TreeMoveIntent["position"]) => Promise<boolean>;
   canMove(sourceId: string, targetId?: string): boolean;
   refresh(): void;
 }) => {
-  const { scope, body, childrenByNodeId, persist, canMove, refresh } = input;
-  const [pending, setPending] = useState<{ scope: string; moves: PendingMove[] }>({ scope, moves: [] });
-  const latestBody = useRef(body);
-  latestBody.current = body;
+  const { scope, body, revision, childrenByNodeId, persist, canMove, refresh } = input;
+  const [pending, setPending] = useState<TreeMoveBatch>({ scope, snapshot: { body, childrenByNodeId }, moves: [] });
+  const latestRevision = useRef(revision);
+  useLayoutEffect(() => {
+    latestRevision.current = revision;
+  }, [revision]);
   const queue = useRef(Promise.resolve());
+  const current = { scope, body, childrenByNodeId, revision };
+  const preview = treeMoveBatchPreview(pending, current);
   useEffect(() => {
-    // Even a no-op update can interrupt a pending transition before its rows commit.
-    if (
-      !pending.moves.some(
-        (move) => pending.scope !== scope || (move.savedAfter !== undefined && move.savedAfter !== body),
-      )
-    )
-      return;
+    if (!pending.moves.length || preview.active) return;
     setPending((current) => {
-      if (current.moves.length === 0) return current;
-      if (current.scope !== scope) return { scope, moves: [] };
-      const moves = current.moves.filter((move) => !move.savedAfter || move.savedAfter === body);
-      return moves.length === current.moves.length ? current : { scope, moves };
+      if (!current.moves.length) return current;
+      if (treeMoveBatchPreview(current, { scope, body, childrenByNodeId, revision }).active) return current;
+      return { scope, snapshot: { body, childrenByNodeId }, moves: [] };
     });
-  }, [scope, body, pending]);
-  const moves = pending.scope === scope ? pending.moves : [];
-  const preview = moves.reduce((sections, move) => previewTreeMove(sections, childrenByNodeId, move.intent), body);
+  }, [scope, body, childrenByNodeId, revision, pending, preview.active]);
   return {
-    body: preview,
-    // Preview parents contain their loaded children, so the adapter must not append the old children again.
-    childrenByNodeId: moves.length ? {} : childrenByNodeId,
+    body: preview.body,
+    childrenByNodeId: preview.childrenByNodeId,
     moveNode: persist
       ? (sourceId: string, targetId?: string, position: TreeMoveIntent["position"] = "inside") => {
           if (!canMove(sourceId, targetId)) return;
-          if (!targetId || previewTreeMove(preview, childrenByNodeId, { sourceId, targetId, position }) === preview) {
+          if (
+            !targetId ||
+            previewTreeMove(preview.body, preview.childrenByNodeId, { sourceId, targetId, position }) === preview.body
+          ) {
             queue.current = queue.current.then(async () => {
               await persist(sourceId, targetId, position);
               refresh();
@@ -55,10 +49,7 @@ export const useTreeMovement = (input: {
           }
           const intent = { sourceId, targetId, position };
           const token = Symbol("tree move");
-          setPending((current) => ({
-            scope,
-            moves: [...(current.scope === scope ? current.moves : []), { token, intent }],
-          }));
+          setPending((pending) => appendTreeMoveBatch(pending, current, { token, intent }));
           // Serial writes preserve the user's order when several drops happen before the first save finishes.
           queue.current = queue.current.then(async () => {
             const saved = await persist(sourceId, targetId, position);
@@ -66,10 +57,10 @@ export const useTreeMovement = (input: {
               current.scope !== scope
                 ? current
                 : {
-                    scope,
+                    ...current,
                     moves: saved
                       ? current.moves.map((move) =>
-                          move.token === token ? { ...move, savedAfter: latestBody.current } : move,
+                          move.token === token ? { ...move, saved: { after: latestRevision.current } } : move,
                         )
                       : current.moves.filter((move) => move.token !== token),
                   },

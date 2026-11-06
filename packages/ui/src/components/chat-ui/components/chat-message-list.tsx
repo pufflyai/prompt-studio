@@ -17,6 +17,8 @@ interface ChatMessageListProps {
   expandedStickyMessageIds: Set<string>;
   onToggleStickyMessage: (messageId: string) => void;
   onReady?: () => void;
+  onForkMessage?: (messageId: string) => void | Promise<void>;
+  forkDisabledReason?: string;
 }
 
 const ESTIMATED_MESSAGE_HEIGHT = 360;
@@ -32,17 +34,19 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     expandedStickyMessageIds,
     onToggleStickyMessage,
     onReady,
+    onForkMessage,
+    forkDisabledReason,
   } = props;
   const { scrollRef } = useStickToBottomContext();
   const rows = buildChatMessageRows(leadingResponses, groups);
-  const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.key));
+  const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.message.animationKey ?? row.key));
   const initialHeight = scrollRef.current?.clientHeight || 1;
   const gapCount = Math.max(leadingResponses.length + groups.length - 1, 0);
   const { virtualizer, virtualItems, totalSize, measurements } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: rows.length,
     getScrollElement: () => scrollRef.current as HTMLDivElement | null,
     estimateSize: (index) => ESTIMATED_MESSAGE_HEIGHT + (hasChatRowGap(rows, index) ? VIRTUAL_LIST_GAP : 0),
-    getItemKey: (index) => rows[index].key,
+    getItemKey: (index) => rows[index].message.animationKey ?? rows[index].key,
     overscan: VIRTUAL_LIST_OVERSCAN,
     initialRect: { width: 0, height: initialHeight },
     initialOffset: () =>
@@ -89,8 +93,8 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                 >
                   <StickyUserMessage
                     message={row.message}
-                    expanded={expandedStickyMessageIds.has(row.key)}
-                    animate={animatedKeys.has(row.key)}
+                    expanded={expandedStickyMessageIds.has(row.message.animationKey ?? row.key)}
+                    animatedKeys={animatedKeys}
                     onToggle={onToggleStickyMessage}
                   />
                 </Box>
@@ -114,8 +118,10 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
                 message={row.message}
                 streaming={streaming && row.isActiveTurn && row.showAssistantActions}
                 hideQuestionForms={!row.isActiveTurn || hideActiveQuestionForms}
-                animate={animatedKeys.has(row.key)}
+                animatedKeys={animatedKeys}
                 showAssistantActions={row.showAssistantActions}
+                onForkMessage={onForkMessage}
+                forkDisabledReason={forkDisabledReason}
               />
             </Box>
           );

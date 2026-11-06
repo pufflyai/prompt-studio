@@ -38,6 +38,7 @@ export type OpencodeSessionMessageInfo = {
     completed?: number;
   };
   finish?: string;
+  outcome?: "succeeded" | "failed" | "interrupted";
   error?: {
     name?: string;
     data?: { message?: string };

@@ -2,18 +2,13 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
 import { listAttempts } from "../../data/attempt-storage";
 import { readTicketSnapshot } from "../../data/collections";
-import {
-  buildTicketAttributes,
-  createTicketParentLookup,
-  createTicketRowMapper,
-  createTicketWorkspaceLookup,
-} from "../../data/mappers";
+import { buildTicketAttributes, createTicketParentLookup, createTicketRowMapper } from "../../data/mappers";
 import { migratePlannerStorage } from "../../data/migrate-storage";
-import { hasPendingInput } from "../../data/review-request-storage";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
-import { ticketActivationTarget } from "../../data/ticket-page-target";
+import { loadTicketLinkedResources } from "../../data/ticket-linked-resources";
+import { ticketPageTarget } from "../../data/ticket-page-target";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { sortedBySortOrder } from "../../utils/sort";
 import { buildPlan } from "../model/build-plan";
@@ -32,17 +27,15 @@ export const readPlanCommand = defineCommand({
   cli: { description: "Print the execution order, deadlines, blockers, and risk as JSON." },
   async run(ctx) {
     await migratePlannerStorage(ctx);
-    const [{ tickets, requests }, { statuses }, { tags }, stored, gates, attempts, workspaces, selections] =
-      await Promise.all([
-        readTicketSnapshot(ctx),
-        readTicketStatuses(ctx.storage),
-        readTicketTags(ctx.storage),
-        readStoredPlan(ctx.storage),
-        readGates(ctx),
-        listAttempts(ctx.storage),
-        ctx.workspaces.list(),
-        readWorkflowStatuses(ctx),
-      ]);
+    const [{ tickets, requests }, { statuses }, { tags }, stored, gates, attempts, selections] = await Promise.all([
+      readTicketSnapshot(ctx),
+      readTicketStatuses(ctx.storage),
+      readTicketTags(ctx.storage),
+      readStoredPlan(ctx.storage),
+      readGates(ctx),
+      listAttempts(ctx.storage),
+      readWorkflowStatuses(ctx),
+    ]);
     const workflow = usableWorkflowStatuses(selections);
     const active = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived));
     const plan = buildPlan({
@@ -59,11 +52,18 @@ export const readPlanCommand = defineCommand({
       today: localToday(),
     });
     const properties = timelineTicketProperties(plan);
-    // The timeline uses workspace identities, not the board's live session badges.
     const toRow = createTicketRowMapper(
       ctx.projectId,
       tags,
-      createTicketWorkspaceLookup(workspaces),
+      await loadTicketLinkedResources(
+        ctx.resources,
+        active.map((ticket) => ({
+          type: "ticket",
+          id: ticket.id,
+          extensionId: ctx.extensionId,
+          projectId: ctx.projectId,
+        })),
+      ),
       createTicketParentLookup(tickets),
     );
     const ticketRows = active.map((ticket) => {
@@ -83,10 +83,7 @@ export const readPlanCommand = defineCommand({
         rows: section.rows.map((row) => ({
           ...row,
           instructions: row.gate ? row.instructions : "",
-          target: ticketActivationTarget(
-            resources.get(row.id)!,
-            hasPendingInput({ requests: row.requests, errors: row.requestErrors }),
-          ),
+          target: ticketPageTarget(resources.get(row.id)!),
         })),
       })),
       projectId: ctx.projectId,

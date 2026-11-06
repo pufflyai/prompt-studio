@@ -14,6 +14,7 @@ import { plannerCommands } from "./src/commands";
 import { mergedPullRequestsSchedule } from "./src/commands/check-merged-pull-requests";
 import { implementationTargetsCommand } from "./src/commands/implementation-targets";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
+import { savePlannerSettings } from "./src/commands/save-planner-settings";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketsPageTarget } from "./src/data/ticket-page-target";
@@ -26,6 +27,7 @@ import { ticketRenumberedHook } from "./src/hooks/ticket-renumbered";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { plannerKeyboardCommands, plannerShortcuts } from "./src/keyboard";
 import { notifyBlocked } from "./src/planner-notifications";
+import { ticketText } from "./src/text-source";
 import { readStatusSettings, saveStatusSettings } from "./src/ticket-status-settings";
 import { commands as timelineCommands } from "./src/timeline/commands";
 import { gateCleanup } from "./src/timeline/commands/gate-cleanup";
@@ -42,6 +44,7 @@ const templateCommandRefs = {
 };
 
 export default defineExtension({
+  textSources: [ticketText],
   settings: {
     properties: {
       "workflow.statuses": {
@@ -51,7 +54,7 @@ export default defineExtension({
         title: l10n("settings.workflow.statuses.title", "Workflow status selections"),
         description: l10n(
           "settings.workflow.statuses.description",
-          "Choose workflow statuses in this extension's Settings tab. Labels do not define behavior.",
+          "Choose workflow statuses in Project Planner → Workflow & automation. Labels do not define behavior.",
         ),
       },
       "tickets.deleteLinkedWorkspaces": {
@@ -143,6 +146,7 @@ export default defineExtension({
     ...Object.values(timelineCommands),
     readStatusSettings,
     saveStatusSettings,
+    savePlannerSettings,
   ],
   views: [...plannerUi.views, timelineView],
   pages: [...plannerUi.pages, timelinePage],

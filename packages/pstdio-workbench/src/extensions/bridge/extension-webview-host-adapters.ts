@@ -58,6 +58,11 @@ export interface ExtensionWebviewFilesAdapter {
 }
 
 export interface ExtensionWebviewHostAdapters {
+  textEditing?: {
+    request<Request extends WebviewHostCapabilityParams["editing.text"]>(
+      input: Request,
+    ): Promise<import("pstdio-api-contracts/extension-kernel").TextEditingResult<Request>>;
+  };
   performance?: PerformanceDiagnosticsAdapter;
   harnesses?: {
     read(input: { harnessId?: string; model?: string }): MaybePromise<WebviewHostCapabilityResults["harnesses.read"]>;

@@ -13,17 +13,19 @@ Prompt Studio publishes these tools as extensions. They use the public extension
 | [Reports](../../../extensions/pstdio-reports/README.md) | Reports that agents hand to each other | `pstdio-reports` |
 | [Artifacts](../../../extensions/pstdio-artifacts/README.md) | Interactive HTML pages with saved revisions | `pstdio-artifacts` |
 
-New projects already have the agent harnesses, the base themes, and Prompt Studio Skills.
+New projects start with Home, Onboarding, base themes, Prompt Studio Skills, and performance monitoring. Onboarding offers agent harnesses and optional tools; you can choose them there or install them later through Extensions.
 
 ## Install from the dashboard
 
-1. Choose **Browse extensions** on the project's Start page. You can also open **Settings** and choose **Extensions** under **Project**.
+In 0.43.x, open **Settings → Extensions**. The footer entry and direct shortcut below apply to builds with the dedicated Extensions page.
+
+1. Choose **Browse extensions** on the project's Start page. You can also choose **Extensions** in the nav panel footer or press Alt+Shift+O (Option+Shift+O on macOS).
 2. Find the extension under **Available**.
 3. Choose **Install**.
 
 The extension is installed and turned on for this project. Its tools appear in the sidebar, in menus, or in the command palette.
 
-![Extensions settings filtered to Artifacts, showing an Available row with an Install button.](../../images/install-extension.png)
+![Extensions page filtered to Artifacts, showing an Available row with an Install button.](../../images/install-extension.png)
 
 Use the search field to find a tool by name. **Available** lists extensions you can install; **Installed** lists those installed for the project or your user. This example shows Artifacts before installation. The list changes as you add extensions.
 
@@ -53,11 +55,11 @@ The CLI sends the folder to the Prompt Studio runtime it is connected to. The ru
 
 ## Turn extensions on and off
 
-Each project has its own list in **Settings → Extensions**. Use the switch next to an extension to turn it on or off for that project. An extension installed for your user appears in every project. Other existing projects list it as off until you turn it on there. A project you create later starts with every installed extension turned on.
+Each project has its own list in **Extensions**. Use the switch next to an extension to turn it on or off for that project. An extension installed for your user appears in every project. Other existing projects list it as off until you turn it on there. New projects enable the defaults; optional extensions stay off until chosen for that project.
 
 Settings and saved data belong to each project, so two projects can use the same extension in different ways.
 
-![Extensions settings filtered to Notes, showing the installed extension with its project switch turned on.](../../images/extension-settings.png)
+![Extensions page filtered to Notes, showing the installed extension with its project switch turned on.](../../images/extension-settings.png)
 
 The switch controls whether this project uses Notes. Turning it off removes its tools from this project's workbench. It does not uninstall the extension from your user.
 
@@ -86,7 +88,7 @@ When asking an agent to build a tool, ask for **CLI-ready actions** too: command
 
 ## Keep extensions up to date
 
-When an installed first-party extension has a newer release for your Prompt Studio version, its row in **Settings → Extensions** shows **Upgrade**. From the terminal, run:
+When an installed first-party extension has a newer release for your Prompt Studio version, its row in **Extensions** shows **Upgrade**. From the terminal, run:
 
 ```sh
 pst extensions update

@@ -1,3 +1,4 @@
+import type { LiveConnection } from "pstdio-sync/relay";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
@@ -12,6 +13,7 @@ const maxRetryDelay = 60 * 60_000;
 
 /** The extension set syncs before any extension is installed on a new device. */
 export const startPublishedExtensions = (input: {
+  live?: LiveConnection;
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;
   signal: AbortSignal;
@@ -33,16 +35,26 @@ export const startPublishedExtensions = (input: {
       signal.removeEventListener("abort", abort);
     }
   };
-  const documents = createExtensionDocumentSync({ config, owner, deps, access, statusChanged: input.statusChanged });
+  const documents = createExtensionDocumentSync({
+    config,
+    owner,
+    deps,
+    access,
+    subscribe: (space, id) => connection.subscribe(space, id),
+    statusChanged: input.statusChanged,
+  });
   // A set that failed to activate is tried again after a growing delay, or at once when it changes.
   // Retrying on every reconnect would repeat package checks, installs and webview builds each time.
   let failed: { key: string; delay: number; waiting: boolean } | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
   const connection = createDocumentRelayConnection({
+    live: input.live,
     origin: config.relayOrigin,
     projectId: config.workbenchId,
     access,
     signal,
+    acceptsChange: documents.acceptsChange,
+    synchronizeChanged: documents.synchronizeChanged,
     synchronize: async (attemptSignal) => {
       await documents.synchronize(attemptSignal);
       const catalog = await openPublishedCatalog(deps, config.workbenchId, attemptSignal);
@@ -92,7 +104,7 @@ export const startPublishedExtensions = (input: {
     wake: connection.wake,
     done: connection.done.finally(() => {
       clearTimeout(retry);
-      documents.close();
+      return documents.close();
     }),
     status: async () => {
       const status = await documents.status();

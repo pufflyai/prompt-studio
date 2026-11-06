@@ -1,20 +1,15 @@
-import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
-import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { createWorkbenchEditingSessionAdapter } from "./webview-editing-session";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
 import { createWebviewResourceActions } from "./webview-resource-actions";
+import { createWorkbenchTextEditingAdapter, type WorkbenchTextEditingInput } from "./webview-text-editing";
 
-interface CreateWorkbenchWebviewHostAdaptersInput {
-  workbench: WorkbenchCore;
-  placement?: WorkbenchPanelInstance;
+interface CreateWorkbenchWebviewHostAdaptersInput extends WorkbenchTextEditingInput {
   extensionId?: string;
-  projectId?: string;
   ownedPreferences?: WebviewOwnedPreferences;
   warn?: (message: string) => void;
-  hostEvents?: HostEventPublisher;
 }
 
 export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebviewHostAdaptersInput) => {
@@ -25,6 +20,8 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       throw new Error("The calling view belongs to another project");
     if (invocation.isViewerCurrent?.() === false) throw new Error("The calling viewer is no longer open");
   };
+  const isOverlay = () =>
+    workbench.layout.getLayout().regions.overlay.widgets.some((widget) => widget.widgetId === placement?.instanceId);
   const resourceActions = createWebviewResourceActions(workbench, projectId, hostEvents, placement?.placementIdentity);
   return {
     resourceActions: async (request) => {
@@ -32,6 +29,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       return resourceActions(request);
     },
     hostEvents,
+    textEditing: createWorkbenchTextEditingAdapter(input),
     editing: createWorkbenchEditingSessionAdapter(input),
     executeCommand: async (request, signal) => {
       requireCurrentViewer();
@@ -50,14 +48,17 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
         },
       };
     },
-    placement: placement?.placementIdentity
-      ? {
-          close: () => {
-            requireCurrentViewer();
-            return workbench.closePlacement(placement.placementIdentity!);
-          },
-        }
-      : undefined,
+    placement:
+      placement && (placement.placementIdentity || isOverlay())
+        ? {
+            close: () => {
+              requireCurrentViewer();
+              if (placement.placementIdentity) return workbench.closePlacement(placement.placementIdentity);
+              if (!isOverlay()) throw new Error("The calling viewer is no longer open");
+              workbench.overlays.closeOverlay(placement.instanceId);
+            },
+          }
+        : undefined,
     pageParams: {
       update: (patch) => {
         requireCurrentViewer();

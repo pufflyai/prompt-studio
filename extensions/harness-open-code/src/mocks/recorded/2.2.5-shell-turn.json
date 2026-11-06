@@ -1,0 +1,122 @@
+{
+  "data": [
+    {
+      "id": "msg_1ac91ce64001uO9bjpWtoYa92P",
+      "time": {
+        "created": 1793896599264
+      },
+      "text": "Run the shell command `echo hi` with your bash tool, then reply with only the word done.",
+      "type": "user"
+    },
+    {
+      "id": "msg_1ac91ceea001C7783a8W0Wxgd0",
+      "time": {
+        "created": 1793896599276,
+        "streamed": 1793896600920,
+        "completed": 1793896600931
+      },
+      "type": "assistant",
+      "agent": "build",
+      "model": {
+        "id": "big-pickle",
+        "providerID": "opencode",
+        "variant": "default"
+      },
+      "content": [
+        {
+          "type": "reasoning",
+          "text": "The user wants me to run `echo hi` with the bash tool. I have a `shell` tool. There's no bash tool in my catalog. I should use shell. Then reply only \"done\".",
+          "native": {
+            "reasoningField": "reasoning_content"
+          },
+          "time": {
+            "created": 1793896600347,
+            "completed": 1793896600915
+          }
+        },
+        {
+          "type": "tool",
+          "id": "chatcmpl-tool-ac21a3c40fd6062a",
+          "name": "shell",
+          "executed": false,
+          "state": {
+            "status": "completed",
+            "input": {
+              "command": "echo hi"
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "hi\n"
+              }
+            ],
+            "metadata": {
+              "status": "completed",
+              "truncated": false,
+              "exit": 0
+            }
+          },
+          "time": {
+            "created": 1793896600789,
+            "ran": 1793896600918,
+            "completed": 1793896600930
+          }
+        }
+      ],
+      "finish": "tool-calls",
+      "rawFinish": "tool_calls",
+      "cost": 0,
+      "tokens": {
+        "input": 3584,
+        "output": 39,
+        "reasoning": 43,
+        "cache": {
+          "read": 3840,
+          "write": 0
+        }
+      }
+    },
+    {
+      "id": "msg_1ac91d566001uw4i0tLrNlF4Ko",
+      "time": {
+        "created": 1793896600935,
+        "streamed": 1793896602134,
+        "completed": 1793896602134
+      },
+      "type": "assistant",
+      "agent": "build",
+      "model": {
+        "id": "big-pickle",
+        "providerID": "opencode",
+        "variant": "default"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "done"
+        }
+      ],
+      "finish": "stop",
+      "rawFinish": "stop",
+      "cost": 0,
+      "tokens": {
+        "input": 95,
+        "output": 3,
+        "reasoning": 0,
+        "cache": {
+          "read": 7424,
+          "write": 0
+        }
+      }
+    },
+    {
+      "id": "msg_1ac91da17002DpcrGyMlhvNssC",
+      "time": {
+        "created": 1793896602135
+      },
+      "type": "idle",
+      "outcome": "succeeded"
+    }
+  ],
+  "cursor": {}
+}

@@ -1,5 +1,5 @@
-import { Button, HStack, Icon, Stack, Tag, Text } from "@chakra-ui/react";
-import { AlertMessage, ScopedPopover as Popover, Portal, ScrollArea } from "@pstdio/ui";
+import { Button, Icon, Stack, Tag, Text } from "@chakra-ui/react";
+import { AlertMessage, ScopedPopover as Popover, PopoverHeader, Portal, ScrollArea } from "@pstdio/ui";
 import { TriangleAlert } from "lucide-react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -43,23 +43,31 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
           >
             <Popover.Body display="flex" flexDirection="column" minH="0">
               {/* The header stays put while the list scrolls, with its scrollbar at the popover edge. */}
-              <HStack gap="xs" flexShrink="0" paddingX="sm" paddingY="xs">
-                <Icon as={TriangleAlert} boxSize="4" />
-                <Popover.Title>System errors</Popover.Title>
-                <Tag.Root size="sm" variant="subtle" colorPalette="red" aria-label={`${errors.length} system errors`}>
-                  <Tag.Label>{errors.length}</Tag.Label>
-                </Tag.Root>
-                <Button
-                  size="2xs"
-                  variant="ghost"
-                  marginLeft="auto"
-                  onClick={() => {
-                    for (const error of errors) workbench.notifications.dismiss(error.id);
-                  }}
-                >
-                  Clear all
-                </Button>
-              </HStack>
+              <PopoverHeader
+                icon={<TriangleAlert />}
+                title={<Popover.Title>System errors</Popover.Title>}
+                actions={
+                  <>
+                    <Tag.Root
+                      size="sm"
+                      variant="subtle"
+                      colorPalette="red"
+                      aria-label={`${errors.length} system errors`}
+                    >
+                      <Tag.Label>{errors.length}</Tag.Label>
+                    </Tag.Root>
+                    <Button
+                      size="2xs"
+                      variant="ghost"
+                      onClick={() => {
+                        for (const error of errors) workbench.notifications.dismiss(error.id);
+                      }}
+                    >
+                      Clear all
+                    </Button>
+                  </>
+                }
+              />
               <ScrollArea
                 minH="0"
                 contentProps={{ paddingX: "sm", paddingBottom: "xs" }}

@@ -9,7 +9,7 @@
     "./contracts": "./src/contracts.ts"
   },
   "engines": {
-    "pstdio": "^0.3.0"
+    "pstdio": "^0.3.0 || ^0.4.0"
   },
   "private": true,
   "type": "module",
@@ -34,5 +34,6 @@
     "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2",
     "@types/three": "^0.185.4"
-  }
+  },
+  "icon": "FlaskConical"
 }

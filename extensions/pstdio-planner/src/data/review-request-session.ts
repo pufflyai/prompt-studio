@@ -41,7 +41,7 @@ const canReuseSession = (
 
 const sessionPrompt = (shorthand: string, input: Pick<ReviewRequest, "title" | "instructions">, requestId: string) =>
   [
-    `Human input needed for ${shorthand}: ${input.title}`,
+    `Review requested for ${shorthand}: ${input.title}`,
     input.instructions,
     `Request: ${requestId}`,
     `Help the person complete this request. Read it, including question and choice IDs, with: pst pstdio-planner review-requests read --request-id ${requestId}`,
@@ -63,7 +63,7 @@ const startReviewRequestSession = async (ctx: CommandContext, requestId: string)
   if (!ticket) throw new Error("The ticket was removed.");
   const attempt = request.context.workspaceId ? await readAttempt(ctx.storage, request.context.workspaceId) : null;
   const requestAnchor: ResourceAnchor = {
-    type: "planner-human-request",
+    type: "planner-review-request",
     id: request.id,
     // The host only infers owners for older anchor kinds, so new kinds must name Planner.
     extensionId: ctx.extensionId,
@@ -82,7 +82,7 @@ const startReviewRequestSession = async (ctx: CommandContext, requestId: string)
   const session =
     reusable ??
     (await ctx.sessions.create({
-      title: `Human input needed: ${ticket.shorthand}`,
+      title: `Review requested: ${ticket.shorthand}`,
       prompt,
       anchors: [
         {

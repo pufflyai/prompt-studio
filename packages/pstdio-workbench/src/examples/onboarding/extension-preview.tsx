@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ExtensionDefinition, RendererCallback, ViewBody } from "@pstdio/sdk/extensions";
-import { normalizeKanbanViewDefaults } from "pstdio-api-contracts";
+import { normalizeKanbanViewDefaults, normalizeResourceListViewDefaults } from "pstdio-api-contracts";
 import { createWorkbench } from "../../core";
 import { emptyWorkbenchExtensionMetadata, registerWorkbenchExtensionContributions } from "../../extensions";
 import { previewNavigationTarget, previewPage } from "./extension-preview-composition";
@@ -50,20 +50,34 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
         initialPageSize: body.initialPageSize,
         pageSizeOptions: body.pageSizeOptions,
       };
-    } else if (body.kind === "kanban") {
+    } else if (body.kind === "kanban" || body.kind === "resourceList") {
       metadataBody = {
-        kind: "kanban",
-        attributes: body.attributes,
-        queryHandlerId: handler(id, "kanban", "query", body.query)!,
-        attributeChangeHandlerId: handler(id, "kanban", "onAttributeChange", body.onAttributeChange),
-        moveHandlerId: handler(id, "kanban", "onMove", body.onMove),
-        ...normalizeKanbanViewDefaults(body),
+        kind: body.kind,
+        attributes: body.attributes?.map((attribute) => ({
+          ...attribute,
+          type:
+            attribute.type.kind === "enum" || attribute.type.kind === "enum-multi"
+              ? {
+                  ...attribute.type,
+                  options: attribute.type.options.map((option) => ({
+                    ...option,
+                    noteAction: option.noteAction ? previewNavigationTarget(option.noteAction) : undefined,
+                  })),
+                }
+              : attribute.type,
+        })),
+        queryHandlerId: handler(id, body.kind, "query", body.query)!,
+        attributeChangeHandlerId: handler(id, body.kind, "onAttributeChange", body.onAttributeChange),
+        moveHandlerId: handler(id, body.kind, "onMove", "onMove" in body ? body.onMove : undefined),
+        ...(body.kind === "resourceList" ? normalizeResourceListViewDefaults(body) : normalizeKanbanViewDefaults(body)),
         defaultActiveViewId: body.defaultActiveViewId,
         hideToolbar: body.hideToolbar,
       };
     } else if (body.kind === "file") {
       metadataBody = {
         kind: "file",
+        saveMode: body.saveMode,
+        document: body.document,
         loadHandlerId: handler(id, "file", "load", body.load)!,
         saveHandlerId: handler(id, "file", "save", body.save),
       };

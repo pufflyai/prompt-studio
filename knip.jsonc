@@ -23,6 +23,13 @@
     "packages/pstdio-db/src/db/schemas.zod.ts": ["duplicates"]
   },
   "workspaces": {
+    "design": {
+      // The project Canvas builder discovers these source entries without importing a registry.
+      "entry": ["package.json", "**/*.canvas.tsx", "**/.canvas/**/*.{ts,tsx}", "**/*.test.ts"],
+      "project": ["**/*.{ts,tsx}"],
+      // Chakra and the Canvas frame runtime require these peer packages in the owning project.
+      "ignoreDependencies": ["@emotion/react", "react-dom"]
+    },
     ".": {
       "entry": ["package.json", "knip.jsonc"],
       "project": ["*.json", "*.jsonc"],
@@ -145,9 +152,10 @@
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts",
         // Extension manifests load this webview entry by packageAsset path.
-        "src/fixtures/editing-session/view.ts"
+        "src/fixtures/editing-session/view.ts",
+        "src/fixtures/public-text-editor/view.tsx"
       ],
-      "project": ["playwright*.config.ts", "src/**/*.ts"],
+      "project": ["playwright*.config.ts", "src/**/*.{ts,tsx}"],
       "ignore": ["playwright-report/**", "screenshots/**", "test-results/**"],
       // Extensions e2e installs at runtime by path, and the dashboard it builds and serves.
       // Declared so CI treats their changes as e2e changes.
@@ -162,6 +170,7 @@
         "pstdio-artifacts",
         "pstdio-base-themes",
         "pstdio-dashboard",
+        "pstdio-home",
         "pstdio-notes",
         "pstdio-performance",
         "pstdio-planner",
@@ -177,6 +186,8 @@
         "src/index.ts",
         "src/server.ts",
         "src/features/workspaces/worktree-cleanup.p3.bench.ts",
+        // The Cloud CPU coordinator launches this device process by path.
+        "src/services/personal-history/sync-cpu-worker.diagnostic.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner launches these by path.
         "src/**/*.integration.ts",
@@ -261,7 +272,7 @@
       "entry": [
         "package.json",
         "rolldown.*.config.ts",
-        "src/{api,client,extensions,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
+        "src/{api,client,extensions,extensions/keyboard,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
         "src/**/*.test.ts",
         "src/**/*.typecheck.ts"
       ],
@@ -304,7 +315,7 @@
         "src/theme/index.ts",
         // The Canvas build loads these themes by absolute path.
         "src/theme/custom/vscode-theme.canvas-fixture.ts",
-        "src/components/{canvas,dependency-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
+        "src/components/{canvas,charts,dependency-timeline,keyframe-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,command-form,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.canvas.tsx",
         "*.test.ts",
@@ -323,6 +334,8 @@
       "entry": [
         "extension.ts",
         "src/view/main.tsx",
+        // The packaged host compatibility test bundles this entry by path.
+        "src/legacy-layout.fixture.ts",
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "scripts/**/*.{ts,tsx}"
@@ -346,11 +359,27 @@
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"],
       // Harnesses resolve these native executables through package metadata rather than imports.
-      "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "opencode-ai"]
+      "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "@opencode/cli"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
+    "extensions/pstdio-onboarding": {
+      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-home": {
+      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/view.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
     "extensions/extension-lab": {
-      "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/views/*.tsx"],
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "*.test.ts",
+        "src/**/*.test.ts",
+        // The packaged host compatibility test bundles this entry by path.
+        "src/legacy-state.fixture.ts",
+        "src/views/*.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-artifacts": {

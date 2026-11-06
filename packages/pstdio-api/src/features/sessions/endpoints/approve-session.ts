@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { approveBodySchema, notFoundResponseSchema } from "../dto";
+import { remoteSessionAction } from "../remote-session-action";
 
 export const approveSessionRoute = createRoute({
   method: "post",
@@ -16,6 +17,10 @@ export const approveSessionRoute = createRoute({
     },
   },
   responses: {
+    400: {
+      description: "The remote device is unavailable.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
     200: {
       description: "Approval response sent.",
       content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
@@ -34,6 +39,14 @@ export const approveSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<
 
     const session = await deps.sessionService.get(id);
     if (!session) {
+      const forwarded = await remoteSessionAction(
+        approveSessionRoute,
+        deps,
+        id,
+        { type: "session.approve", id, input },
+        c.req.raw.signal,
+      );
+      if (forwarded) return forwarded;
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 

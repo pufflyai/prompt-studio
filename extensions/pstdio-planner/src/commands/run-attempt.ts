@@ -14,14 +14,15 @@ import type { AttemptRecord } from "../data/attempt-types";
 import { attemptWaitMessage } from "../data/attempt-wait-message";
 import { findTicket } from "../data/resolve";
 import { createReviewRequest, handoffRequest } from "../data/review-request-create";
-import type { HumanRequestReason } from "../data/review-request-types";
+import type { ReviewRequestReason } from "../data/review-request-types";
 import { renderOwnedTemplate } from "../data/template-store";
 import { withWriteGuard } from "../data/write-guard";
 import { ticketMenuSlots } from "../resource-kinds";
 import { loadAttemptReadiness, readImplementationCapacity } from "./attempt-readiness";
 import { adoptDraftWorkspace } from "./attempt-workspace";
-import { workspaceHead } from "./change-requests";
+import { WorkspaceUnavailableError, workspaceHead } from "./change-requests";
 import { prepareDependencyBase } from "./dependency-base";
+import { prepareManualRecovery } from "./manual-workspace-recovery";
 import { repairAttempt } from "./repair-attempt";
 import {
   createAnchoredWorkspace,
@@ -37,7 +38,7 @@ import {
   type WorkspaceRecovery,
 } from "./workspace-recovery";
 
-const humanReadinessReasons = new Set<HumanRequestReason>([
+const reviewReadinessReasons = new Set<ReviewRequestReason>([
   "ambiguous-dependency-attempt",
   "dependency-cycle",
   "dependency-missing",
@@ -57,7 +58,8 @@ const runAttemptParams = {
 const reuseAttempt = async (
   ctx: CommandContext,
   ticketIdentity: { id: string; shorthand: string },
-  beforeDispatch: (() => Promise<void>) | undefined,
+  commandParams: ParamsOf<typeof runAttemptParams>,
+  options: StartAttemptOptions,
 ) => {
   const [attempts, selections, retired] = await Promise.all([
     listAttempts(ctx.storage),
@@ -73,7 +75,25 @@ const reuseAttempt = async (
     throw new Error("Select the implementation variant to resume, or explicitly request a new variant.");
   const existing = chosen[0];
   if (existing) {
-    await beforeDispatch?.();
+    await options.beforeDispatch?.();
+    let headSha: string;
+    try {
+      headSha = await workspaceHead(ctx, existing.workspaceId);
+    } catch (error) {
+      if (!(error instanceof WorkspaceUnavailableError) || !options.manualResume) throw error;
+      const base = commandParams.workspace?.params?.base;
+      const recovery = await prepareManualRecovery(
+        ctx,
+        existing,
+        typeof base === "string" ? base : undefined,
+        options.beforeDispatch,
+      );
+      return launchAttempt(
+        ctx,
+        { ...commandParams, workspace: { providerId: "pstdio.worktree", params: { base: recovery.base } } },
+        recovery.options,
+      );
+    }
     const session = await ctx.sessions.get(existing.implementationSessionId);
     const capacity = await readImplementationCapacity(ctx);
     if (
@@ -84,7 +104,7 @@ const reuseAttempt = async (
       throw new Error("No implementation capacity is available to resume this owner.");
     await repairAttempt(ctx, {
       workspaceId: existing.workspaceId,
-      expectedHeadSha: await workspaceHead(ctx, existing.workspaceId),
+      expectedHeadSha: headSha,
       reason: `Continue implementation of ${existing.ticketShorthand} as requested. Reuse this workspace and conversation.`,
     });
     const workspace = (await ctx.workspaces.get(existing.workspaceId))!;
@@ -101,7 +121,9 @@ const reuseAttempt = async (
   return null;
 };
 interface StartAttemptOptions {
+  manualResume?: boolean;
   beforeDispatch?: (baseHeadSha?: string) => Promise<void>;
+  beforeSessionStart?: (workspaceId: string) => Promise<void>;
   requireMergedDependencies?: boolean;
   workspaceId?: string;
   recovery?: WorkspaceRecovery;
@@ -115,7 +137,7 @@ export async function startAttempt(
   // Corrections continue in the owned workspace and conversation. Recovery and draft adoption bring their own workspace.
   const startsFresh = commandParams.newVariant || options.workspaceId || options.recovery;
   const ticketIdentity = await resolveTicketIdentity(ctx, resolveTicket(ctx, commandParams));
-  const reused = startsFresh ? null : await reuseAttempt(ctx, ticketIdentity, options.beforeDispatch);
+  const reused = startsFresh ? null : await reuseAttempt(ctx, ticketIdentity, commandParams, options);
   return reused ?? launchAttempt(ctx, commandParams, options);
 }
 
@@ -136,19 +158,19 @@ async function launchAttempt(
   if (readiness.decision === "wait") {
     const message = attemptWaitMessage(ticketIdentity.shorthand, readiness, capacity);
     const storedTicket = await findTicket(ctx, ticketRef);
-    if (storedTicket?.statusId && humanReadinessReasons.has(readiness.reason as HumanRequestReason)) {
+    if (storedTicket?.statusId && reviewReadinessReasons.has(readiness.reason as ReviewRequestReason)) {
       // The readiness reason is what the person who started the attempt needs, so a
       // failed handoff must not replace it.
       await createReviewRequest(ctx, {
         ticket: storedTicket.id,
-        reason: readiness.reason as HumanRequestReason,
+        reason: readiness.reason as ReviewRequestReason,
         title: message,
         request: handoffRequest,
         instructions:
           "Repair the dependency graph or select the intended dependency attempt, then answer this request.",
         expectedTicketStatusId: storedTicket.statusId,
       }).catch((error: unknown) =>
-        ctx.logger.warn("Could not request human input for a ticket that cannot start", {
+        ctx.logger.warn("Could not request review input for a ticket that cannot start", {
           ticket: storedTicket.shorthand,
           error: error instanceof Error ? error.message : String(error),
         }),
@@ -177,7 +199,7 @@ async function launchAttempt(
       headSha: null,
     },
   };
-  const session = await ctx.sessions.create({
+  const sessionInput = {
     title: `Implement ticket: ${anchor.label}`,
     workspaceId: workspace.id,
     anchors: [anchor, attemptAnchor],
@@ -195,12 +217,14 @@ async function launchAttempt(
         : []),
       ...(!options.workspaceId && !options.recovery && readiness.mode === "stacked"
         ? [
-            `This workspace starts at base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch. Verify the submitted dependency commits are present and use update-stack if needed. If their automatic combination conflicts, reconcile the code in this workspace, commit, and retry update-stack. Do not request human review for Git conflicts; ask only if features, concepts, plans, requirements, or architecture conflict. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
+            `This workspace starts at base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch. Verify the submitted dependency commits are present and use update-stack if needed. If their automatic combination conflicts, reconcile the code in this workspace, commit, and retry update-stack. Do not request review for Git conflicts; ask only if features, concepts, plans, requirements, or architecture conflict. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
           ]
         : []),
     ].join("\n\n"),
     ...(await recoverySessionInput(ctx, options.recovery, beforeDispatch)),
-  });
+  };
+  await options.beforeSessionStart?.(workspace.id);
+  const session = await ctx.sessions.create(sessionInput);
   const timestamp = new Date().toISOString();
   const attempt: AttemptRecord = {
     schemaVersion: 2,
@@ -259,6 +283,7 @@ export const runAttemptCommand = defineCommand({
   ],
   params: runAttemptParams,
   async run(ctx, commandParams) {
-    return withWriteGuard(ctx, "attempt-launch", () => startAttempt(ctx, commandParams));
+    const manualResume = !["automation", "schedule", "event"].includes(ctx.source ?? "");
+    return withWriteGuard(ctx, "attempt-launch", () => startAttempt(ctx, commandParams, { manualResume }));
   },
 });

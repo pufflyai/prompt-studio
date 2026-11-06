@@ -1,5 +1,10 @@
-import type { Checkpoint } from "./state";
 import type { Asset, Json } from "./wire";
+
+/** @deprecated Relay checkpoints are replaced by save state. */
+export interface Checkpoint {
+  epoch: string;
+  sequence: number;
+}
 
 // Author inputs stay separate from wire envelopes and internal shared-document bytes.
 export type SharedEdit =

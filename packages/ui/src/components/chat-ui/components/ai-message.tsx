@@ -34,7 +34,7 @@ const recipe = defineSlotRecipe({
           px: "xs",
           py: "xs",
           width: "full",
-          borderRadius: "0",
+          borderRadius: "xs",
         },
       },
       assistant: {
@@ -74,9 +74,7 @@ const recipe = defineSlotRecipe({
       unsent: { content: { opacity: 0.6 } },
     },
     shape: {
-      rounded: {
-        content: { rounded: "0" },
-      },
+      rounded: {},
       pill: {
         content: { rounded: "0" },
       },

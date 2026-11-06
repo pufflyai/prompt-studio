@@ -3,6 +3,7 @@ import { dirname, relative, resolve } from "node:path";
 import { bunRunIdentity, junitCases, registeredUnselectedScope } from "./bun-test-evidence";
 import { assertStableQuarantineExclusions, verifyQuarantineReport } from "./quarantine-reports";
 import { priorityIgnorePatterns, readTestPriorities } from "./test-discovery";
+import { stopsAtFirstFailure } from "./test-policy";
 import { bunTestSelection, narrowStablePattern, quarantineDirectory } from "./test-quarantine";
 import cases from "./test-quarantine.json";
 
@@ -117,7 +118,7 @@ if (quarantine && !selection.files.length) {
     ...(quarantine ? [] : priorityIgnorePatterns(readTestPriorities())).map(
       (pattern) => `--path-ignore-patterns=${pattern}`,
     ),
-    ...(priority === "P1" ? ["--bail=1"] : []),
+    ...(stopsAtFirstFailure(priority) ? ["--bail=1"] : []),
     ...(quarantine ? selection.files.map((file) => `./${file}`) : []),
     ...(pattern ? ["--test-name-pattern", pattern] : []),
     "--reporter=junit",
@@ -169,7 +170,10 @@ if (quarantine && !selection.files.length) {
     reportError = String(error);
   }
   const complete =
-    !reportError && reported.length > 0 && !(priority === "P1" && exitCode !== 0) && child.signalCode === null;
+    !reportError &&
+    reported.length > 0 &&
+    !(stopsAtFirstFailure(priority) && exitCode !== 0) &&
+    child.signalCode === null;
   const unselectedReason =
     !quarantine && complete && exitCode === 0
       ? registeredUnselectedScope(root, cwd, evidenceArgs, cases, runner, reported)

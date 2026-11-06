@@ -3,9 +3,10 @@ import type { BoardView } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
 import { createTicketCommand } from "../../commands/create-ticket";
-import { requestHumanCommand, reviewCommand } from "../../commands/review-requests";
+import { requestReviewCommand, reviewCommand } from "../../commands/review-requests";
 import { putAttempt } from "../../data/attempt-storage";
 import { statusesCollection } from "../../data/collections";
+import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../../data/document-selection";
 import { migratePlannerStorage } from "../../data/migrate-storage";
 import { DEFAULT_STATUSES } from "../../data/seed";
 import { createTicketTag } from "../../data/tag-operations";
@@ -289,14 +290,14 @@ test("answering one request keeps another open request awaiting input", async ()
     kind: "decision",
     questions: [{ id: "result", label: "Result", required: true, input: { kind: "text" } }],
   };
-  await requestHumanCommand.run(ctx, {
+  await requestReviewCommand.run(ctx, {
     ticket: ticket.id,
     reason: "approved-revision",
     title: "Approve the revision",
     instructions: "Select or merge it.",
     request: handoff,
   } as never);
-  const task = await requestHumanCommand.run(ctx, {
+  const task = await requestReviewCommand.run(ctx, {
     ticket: ticket.id,
     title: "Check the preview",
     instructions: "Confirm its layout.",
@@ -306,10 +307,12 @@ test("answering one request keeps another open request awaiting input", async ()
 
   const plan = await readPlanCommand.run(ctx, {});
   const row = plan.sections.flatMap((section) => section.rows).find((entry) => entry.id === ticket.id);
-  expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
+  expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["review-needed"]) });
   expect(row?.requests.map((request) => request.state).sort()).toEqual(["answered", "open"]);
+  expect(row?.target.page.id).toBe("ticket");
+  expect(selectedDocumentFromResource(row?.target.resource)).toBe(TICKET_BODY_DOCUMENT);
   expect(await reviewState()).toBe("requested");
-  expect(plan.sections.find((section) => section.rows.includes(row!))?.counts.humanNeeded).toBe(1);
+  expect(plan.sections.find((section) => section.rows.includes(row!))?.counts.reviewNeeded).toBe(1);
 
   const handoffId = row?.requests.find((request) => request.state === "open")?.id as string;
   await reviewCommand.run(ctx, { requestId: handoffId, response: { answers: { result: "Merged A1." } } });

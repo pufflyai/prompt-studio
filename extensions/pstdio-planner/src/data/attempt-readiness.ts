@@ -28,7 +28,7 @@ export type AttemptReadinessResult =
         | "ambiguous-dependency-attempt"
         | "divergent-dependency-attempts"
         | "capacity-full"
-        | "human-input-needed";
+        | "review-needed";
       dependencyIds: string[];
     };
 
@@ -96,7 +96,7 @@ const selectDependencyAttempt = async (input: DependencyInput, dependency: Attem
     (await input.isAncestor(delivery.mergeSha, input.mainHeadSha))
   )
     return null;
-  // A completed human task may have no code artifact. Managed code must still reach this base.
+  // A completed manual task may have no code artifact. Managed code must still reach this base.
   if (done && attempts.length === 0 && !delivery) return null;
   const selected = candidates.filter(
     (attempt) => !delivery || (delivery.headSha !== null && latestHead(attempt) === delivery.headSha),
@@ -203,7 +203,7 @@ export const resolveAttemptDependencies = async (input: DependencyInput): Promis
   const unresolvedTickets = [...unresolved.values()];
   const pending = findPendingPrerequisites(target, byRef, input.requests, input.requireMergedDependencies);
   if (pending.length)
-    return { decision: "wait", reason: "human-input-needed", dependencyIds: pending.map((ticket) => ticket.shorthand) };
+    return { decision: "wait", reason: "review-needed", dependencyIds: pending.map((ticket) => ticket.shorthand) };
   const selectedAttempts = await selectDependencyAttempts(input, unresolvedTickets);
   if (!Array.isArray(selectedAttempts)) return selectedAttempts;
 

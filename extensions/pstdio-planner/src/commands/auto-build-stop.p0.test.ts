@@ -9,7 +9,7 @@ import { autoBuildCommand } from "./auto-build";
 import { pauseAutoBuildCommand } from "./auto-build-lifecycle";
 import { stopAutoBuildCommand } from "./auto-build-stop";
 import { supervisorFixture } from "./auto-build-supervisor.fixture";
-import { requestHumanCommand } from "./review-requests";
+import { requestReviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionRecord } from "./session-record.fixture";
 
@@ -95,7 +95,7 @@ test("stop includes supervisor-linked request chats before the first dispatch", 
   const task = await ticket("Choose the tool");
   await autoBuildCommand.run(ctx, {});
   const owner = (await readAutoBuildSupervisor(ctx)).sessionId!;
-  const request = await requestHumanCommand.run(ctx, {
+  const request = await requestReviewCommand.run(ctx, {
     ticket: task.id,
     title: "Choose scope",
     instructions: "Pick a tool",
@@ -146,7 +146,7 @@ test("opening a request waits until Stop finishes reading and cancelling that co
   const task = await ticket("Choose scope");
   await autoBuildCommand.run(ctx, {});
   const owner = (await readAutoBuildSupervisor(ctx)).sessionId!;
-  const request = await requestHumanCommand.run(ctx, {
+  const request = await requestReviewCommand.run(ctx, {
     ticket: task.id,
     title: "Choose scope",
     instructions: "Pick a tool",
@@ -195,7 +195,7 @@ test("Stop cancels a request conversation whose creation is still saving its own
   const task = await ticket("Choose scope");
   await autoBuildCommand.run(ctx, {});
   const owner = (await readAutoBuildSupervisor(ctx)).sessionId!;
-  const request = await requestHumanCommand.run(ctx, {
+  const request = await requestReviewCommand.run(ctx, {
     ticket: task.id,
     title: "Choose scope",
     instructions: "Pick a tool",

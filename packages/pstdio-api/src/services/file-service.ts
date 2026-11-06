@@ -6,7 +6,7 @@ export type FileServiceDeps = {
   filesDBService: ReturnType<typeof createFilesDBService>;
   filesStorageService: Pick<
     ReturnType<typeof createFilesStorageService>,
-    "writeStream" | "writeFileAtPath" | "deleteFile" | "computeHash"
+    "writeStream" | "writeFileAtPath" | "deleteFile" | "computeHash" | "discardUpload"
   >;
   eventBus: EventBus;
 };
@@ -24,6 +24,7 @@ export const createFileService = (deps: FileServiceDeps) => {
   const upload = async (
     input: {
       project_id: string;
+      id?: string;
       file_name: string;
       file_kind: string;
       data: Buffer | ReadableStream<Uint8Array>;
@@ -33,7 +34,7 @@ export const createFileService = (deps: FileServiceDeps) => {
     initialize?: (file: NonNullable<Awaited<ReturnType<typeof db.get>>>) => Promise<void>,
   ) => {
     // Widen to the persisted column type so upload's inferred row matches reads.
-    const id: string = crypto.randomUUID();
+    const id: string = input.id ?? crypto.randomUUID();
     const data =
       input.data instanceof ReadableStream
         ? input.data
@@ -136,6 +137,12 @@ export const createFileService = (deps: FileServiceDeps) => {
     upload,
     update,
     remove,
+    discardUpload: async (projectId: string, fileId: string) => {
+      const existing = await db.get(fileId);
+      if (existing && existing.project_id !== projectId) throw new Error("Staged upload belongs to another project.");
+      if (existing) await remove(fileId);
+      else storage.discardUpload(projectId, fileId);
+    },
     removeProjectStorage,
   };
 };

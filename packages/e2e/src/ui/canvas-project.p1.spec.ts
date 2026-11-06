@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -13,9 +13,13 @@ const writeProject = (root: string, label: string, color = "rgb(0, 128, 0)") => 
     "package.json": `{ "name": "canvas-project", "private": true }\n`,
     "src/button.css": `.button { color: ${color}; }\n`,
     "src/button.tsx": `import "./button.css";\nexport const Button = (props: { label: string }) => <button className="button">${label}: {props.label}</button>;\n`,
+    "src/default.json": '{"name":"Default","values":{"label":"Save"}}',
     "src/button.canvas.tsx": `import { Button } from "./button";
-export default { title: "Components/Button", component: Button };
-export const Primary = { args: { label: "Save" } };
+import config from "./default.json";
+export default { title: "Components/Button", component: Button, args: config.values,
+ controls: { label: { type: "select", label: "Label", options: [{ value: "Save", label: "Save" }, { value: "Archive", label: "Archive" }] } },
+ save: { file: "default.json", key: "values" } };
+export const Primary = {};
 `,
   };
   for (const [path, content] of Object.entries(files)) {
@@ -71,7 +75,7 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
 
     await expect(page.getByText("Components", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await page.goto((await list())[0]!.href);
-    const viewer = page.frameLocator('iframe[title="UI Canvas"]');
+    const viewer = page.frameLocator('iframe[title="UI Canvas"]:visible');
     const frame = viewer.frameLocator('iframe[data-frame-ready="true"]');
     await expect(frame.getByRole("button", { name: "Version 1: Save" })).toBeVisible({ timeout: 30_000 });
 
@@ -86,6 +90,112 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
       timeout: 30_000,
     });
     await expect(viewer.locator("[data-ui-canvas-error]")).toHaveCount(0);
+
+    // Critical: saving is explicit, durable, and failures retain the frame's edits for retry.
+    await viewer.locator("[data-canvas-select]").click();
+    const parameters = viewer.getByRole("complementary", { name: "Frame editor" });
+    await parameters.getByRole("button", { name: "Save", exact: true }).first().click();
+    await viewer.getByRole("menuitemradio", { name: "Archive", exact: true }).click();
+    await expect(frame.getByRole("button", { name: "Version 2: Archive" })).toBeVisible();
+    const readValues = (file: string) => JSON.parse(readFileSync(join(root, "src", file), "utf8")).values;
+    expect(readValues("default.json")).toEqual({ label: "Save" });
+    await parameters.getByRole("textbox", { name: "Version name" }).fill("Alternate");
+    await parameters.getByRole("button", { name: "Save as new version", exact: true }).click();
+    await expect(parameters.getByRole("textbox", { name: "Version name" })).toHaveValue("");
+    await expect(parameters.getByRole("alert")).toHaveCount(0);
+    await expect.poll(() => readValues("alternate.json")).toEqual({ label: "Archive" });
+    const selectVersion = async (file: string) => {
+      const response = await request.post(
+        `${baseURL}/v1/projects/${project.id}/extensions/commands/pstdio.canvas.command.parameters.select/execute`,
+        {
+          data: { source: "api", params: { canvas: "src/button.canvas.tsx", frame: "Primary", file } },
+        },
+      );
+      expect(response.ok()).toBe(true);
+    };
+    await selectVersion("default.json");
+    await expect(frame.getByRole("button", { name: "Version 2: Save" })).toBeVisible();
+    await selectVersion("alternate.json");
+    await expect(frame.getByRole("button", { name: "Version 2: Archive" })).toBeVisible();
+    await page.reload();
+    await expect(frame.getByRole("button", { name: "Version 2: Archive" })).toBeVisible();
+    await viewer.locator("[data-canvas-select]").click();
+    await parameters.getByRole("button", { name: "Archive", exact: true }).click();
+    await viewer.getByRole("menuitemradio", { name: "Save", exact: true }).click();
+    writeFileSync(join(root, "src/alternate.json"), "{}");
+    await parameters.getByRole("button", { name: "Save", exact: true }).last().click();
+    await expect(parameters.getByRole("alert")).toBeVisible();
+    await expect(frame.getByRole("button", { name: "Version 2: Save" })).toBeVisible();
+    writeFileSync(join(root, "src/alternate.json"), '{"name":"Alternate","values":{"label":"Archive"}}');
+    await parameters.getByRole("button", { name: "Save", exact: true }).last().click();
+    await expect.poll(() => readValues("alternate.json")).toEqual({ label: "Save" });
+    expect(readValues("default.json")).toEqual({ label: "Save" });
+  } finally {
+    await stopChildProcess(watcher);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// Critical: the Canvas entry must always show a design or setup guidance, including after a
+// remembered pinned design is removed while the person is on another page.
+test("UI Canvas opens the last design or the first available canvas without a blank page", async ({
+  page,
+  request,
+  baseURL,
+}) => {
+  const parent = process.env.E2E_FIXTURE_ROOT ?? tmpdir();
+  mkdirSync(parent, { recursive: true });
+  const root = mkdtempSync(join(parent, "canvas-startup-"));
+  let watcher: ChildProcess | undefined;
+  try {
+    writeProject(root, "Startup");
+    writeFileSync(
+      join(root, "src/secondary.canvas.tsx"),
+      `export default { title: "Components/Secondary" };
+export const Default = () => <button>Secondary canvas</button>;
+`,
+    );
+    mkdirSync(join(root, "node_modules"));
+    for (const name of ["react", "react-dom"])
+      symlinkSync(join(import.meta.dirname, "../../node_modules", name), join(root, "node_modules", name), "dir");
+    const created = await request.post(`${baseURL}/v1/projects`, {
+      data: folderProjectInput({ name: "Canvas startup" }, root),
+    });
+    expect(created.ok(), await created.text()).toBe(true);
+    const project = (await created.json()) as { id: string };
+    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.goto(`/projects/${project.id}/extensions/pstdio.canvas/canvases`);
+    const viewer = page.frameLocator('iframe[title="UI Canvas"]:visible');
+    await expect(viewer.locator("[data-ui-canvas-setup]")).toBeVisible();
+    watcher = spawn("bun", [join(repoRoot, "packages/canvas/bin/pstdio-canvas.ts"), "watch", "--root", root], {
+      stdio: "inherit",
+    });
+    await expect(page).toHaveURL(/canvases\/design/);
+    const frame = viewer.frameLocator('iframe[data-frame-ready="true"]');
+    await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
+    await page.getByText("Secondary", { exact: true }).first().click();
+    await expect(frame.getByRole("button", { name: "Secondary canvas", exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "Secondary", exact: true }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    await page.reload();
+    await page.getByText("UI Canvas", { exact: true }).first().click();
+    await expect(frame.getByRole("button", { name: "Secondary canvas", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    rmSync(join(root, "src/secondary.canvas.tsx"));
+    await expect
+      .poll(async () => {
+        const response = await request.post(
+          `${baseURL}/v1/projects/${project.id}/extensions/commands/pstdio.canvas.command.list/execute`,
+          { data: { source: "api", params: {} } },
+        );
+        const result = await response.json();
+        return result.outcome?.value?.canvases.map((canvas: { id: string }) => canvas.id);
+      })
+      .toEqual(["src/button.canvas.tsx"]);
+    await expect(page).not.toHaveURL(/canvases/);
+    await page.getByText("UI Canvas", { exact: true }).first().click();
+    await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
   } finally {
     await stopChildProcess(watcher);
     rmSync(root, { recursive: true, force: true });

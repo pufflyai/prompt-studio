@@ -1,6 +1,7 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Settings, UpdateSettingsInput } from "@pstdio/sdk/api";
-import { Switch } from "@pstdio/ui";
+import { SettingsContentSkeleton, Switch } from "@pstdio/ui";
+import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
 
@@ -18,33 +19,47 @@ export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
   const { settings, saving, error, onChange, onRetry } = props;
   const { t } = useTranslation("settings");
   const features = [
-    { key: "notifications_enabled", label: t("betaFeatures.notifications") },
-    { key: "machine_tokens_enabled", label: t("betaFeatures.machineTokens") },
+    {
+      key: "notifications_enabled",
+      label: t("betaFeatures.notifications"),
+      description: t("betaFeatures.notificationsDescription"),
+    },
+    {
+      key: "machine_tokens_enabled",
+      label: t("betaFeatures.machineTokens"),
+      description: t("betaFeatures.machineTokensDescription"),
+    },
   ] as const;
   return (
-    <Stack gap="md" padding="lg">
-      <Stack gap="2xs">
-        <Text textStyle="heading/S">{t("betaFeatures.title")}</Text>
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {t("betaFeatures.description")}
-        </Text>
-      </Stack>
-      {features.map((feature) => {
-        const checked = settings?.[feature.key] === true;
-        return (
-          <Switch
-            key={feature.key}
-            checked={checked}
-            // A failed save leaves `checked` unchanged, so the hidden input needs it too to flip back.
-            inputProps={{ checked }}
-            disabled={!settings || saving}
-            onCheckedChange={(details) => onChange({ [feature.key]: details.checked })}
-          >
-            {feature.label}
-          </Switch>
-        );
-      })}
-      {!settings && !error ? <Text color="fg.muted">{t("betaFeatures.loading")}</Text> : null}
+    <Stack gap="md">
+      {settings
+        ? features.map((feature) => {
+            const checked = settings[feature.key] === true;
+            return (
+              <Stack key={feature.key} gap="0">
+                <ParamEditorRow
+                  param={{
+                    id: feature.key,
+                    name: feature.label,
+                    type: "property",
+                    value: (
+                      <Switch
+                        checked={checked}
+                        inputProps={{ checked, "aria-label": feature.label }}
+                        disabled={saving}
+                        onCheckedChange={({ checked }) => onChange({ [feature.key]: checked })}
+                      />
+                    ),
+                  }}
+                />
+                <Text px="sm" color="fg.muted" textStyle="paragraph/S/regular">
+                  {feature.description}
+                </Text>
+              </Stack>
+            );
+          })
+        : null}
+      {!settings && !error ? <SettingsContentSkeleton /> : null}
       {error ? (
         <Stack gap="sm" role="alert">
           <Text color="fg.error">{error}</Text>

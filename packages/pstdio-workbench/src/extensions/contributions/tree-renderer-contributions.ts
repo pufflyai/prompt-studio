@@ -11,6 +11,7 @@ import type {
   TreeViewSection,
   WorkbenchModuleContext,
 } from "../../core";
+import { shareEqualValue } from "../../react/renderers/share-equal-value";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 
@@ -53,8 +54,11 @@ const toActionParams = (params: unknown, fallback: Record<string, unknown> | und
 };
 const toRecordParams = (params: object | undefined) =>
   params && !Array.isArray(params) ? (params as Record<string, unknown>) : undefined;
+const maxReusedTreeNodes = 5000;
 const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
-  const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
+  // Node previews clone with object spreads; keep callback ownership on those clones.
+  const originalNode = Symbol("extensionTreeNode");
+  const getOriginalNode = (node: TreeNode) => (node as TreeNode & { [originalNode]?: ExtensionTreeNode })[originalNode];
   const runnerCommandId = `workbench.extensionTreeRenderer.${record.id}.command`;
   const resolveResource: (resource: ExtensionTreeResource) => ResourceRef = (resource) => {
     const resolved = input.resolveNodeResource?.(resource);
@@ -114,6 +118,8 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       args: toRecordParams(action.params),
       params: localizeParamSchema(action.input, text, record.extensionId),
       submitLabel: action.submitLabel,
+      copyText: action.copyText,
+      inlineInput: action.inputPresentation ? { ...action.inputPresentation, nodeId: node?.id } : undefined,
       when: action.when,
       disabled: action.disabled,
       // Actions mutate tree data (create/delete/...), so refresh afterwards. Plain
@@ -133,13 +139,29 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
         : undefined,
     };
   };
+  // Each load maps fresh extension data, with new action functions. A node whose data equals its previous
+  // load keeps its previous mapping, so the tree shares it and does not render that row again. Mapped actions
+  // read only the node data, the bound resource, and the tree's own refresh.
+  // A new bound resource, including a new label or metadata, starts over. The map holds one entry per node id.
+  let previousMappings = {
+    resource: undefined as ResourceRef | undefined,
+    nodes: new Map<string, { node: ExtensionTreeNode; mapped: TreeNode }>(),
+  };
   const mapNode = (node: ExtensionTreeNode, ctx: TreeContext): TreeNode => {
+    const resource = shareEqualValue(previousMappings.resource, ctx.resource);
+    if (resource !== previousMappings.resource || previousMappings.nodes.size > maxReusedTreeNodes) {
+      previousMappings = { resource, nodes: new Map() };
+    }
+    const previous = previousMappings.nodes.get(node.id);
+    if (previous && shareEqualValue(previous.node, node) === previous.node) return previous.mapped;
     const mapped: TreeNode = {
       id: node.id,
       selected: node.selected,
       label: text(node.label),
       icon: node.icon,
       iconColor: node.iconColor,
+      fileName: node.fileName,
+      showContextMenuTrigger: node.showContextMenuTrigger,
       badge: node.badge,
       iconTooltip: node.iconTooltip,
       tooltip: node.tooltip,
@@ -158,7 +180,8 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       canDrag: node.canDrag,
       canDrop: node.canDrop,
     };
-    originalNodes.set(mapped, node);
+    Object.assign(mapped, { [originalNode]: node });
+    previousMappings.nodes.set(node.id, { node, mapped });
     return mapped;
   };
   const mapSections = (sections: ExtensionTreeSection[], ctx: TreeContext): TreeViewSection[] =>
@@ -174,7 +197,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     }));
   const mapNodes = (nodes: ExtensionTreeNode[], ctx: TreeContext): TreeNode[] =>
     nodes.map((node) => mapNode(node, ctx));
-  return { mapNodes, mapSections, originalNodes, runnerCommandId };
+  return { mapNodes, mapSections, getOriginalNode, runnerCommandId };
 };
 const isTreeSectionArray = (value: unknown): value is ExtensionTreeSection[] =>
   Array.isArray(value) && value.every((section) => section && typeof section === "object" && "nodes" in section);
@@ -204,6 +227,8 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     icon: record.icon,
     body: {
       kind: "tree",
+      // Callback results include document selection and other bound resource metadata.
+      getReadKey: (ctx) => JSON.stringify([ctx.resource, ctx.pageParams]),
       getStructure: record.structure ? (ctx) => extensionTreeStructure(record, ctx.resource) : undefined,
       searchable: record.searchable,
       searchPlaceholder: text(record.searchPlaceholder, "Search files"),
@@ -258,8 +283,8 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
       },
       moveNode: record.moveHandlerId
         ? async (source, target, ctx) => {
-            const originalSource = mapper.originalNodes.get(source);
-            const originalTarget = target ? mapper.originalNodes.get(target) : undefined;
+            const originalSource = mapper.getOriginalNode(source);
+            const originalTarget = target ? mapper.getOriginalNode(target) : undefined;
             if (!originalSource?.canDrag || (target && !originalTarget?.canDrop)) return;
             await executeCallback(input, record, record.moveHandlerId!, {
               ...createQueryParams(input, record, ctx),
@@ -272,7 +297,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
         : undefined,
       getChildren: async (node, ctx) => {
         if (!record.childrenHandlerId) return node.children ?? [];
-        const originalNode = mapper.originalNodes.get(node);
+        const originalNode = mapper.getOriginalNode(node);
         if (!originalNode) return node.children ?? [];
         const result = await executeCallback(
           input,

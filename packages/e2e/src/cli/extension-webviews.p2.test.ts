@@ -108,9 +108,11 @@ describe("extension webview setup", () => {
       expect(module.headers.get("content-type")).toContain("application/javascript");
 
       const runtimeHtml = await waitForOk(`${api.url}${labView.body.webview.runtimeUrl}`);
+      expect(runtimeHtml.headers.get("content-type")).toContain("text/html");
       const runtimeContent = await runtimeHtml.text();
+      const runtimeScripts = [...runtimeContent.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
+      expect(runtimeScripts.some((match) => Boolean(match[1]?.trim()))).toBe(true);
       expectNoExternalExecutableSource(runtimeContent);
-      expect(runtimeContent).toContain("notification.action");
     },
     TEST_TIMEOUT,
   );

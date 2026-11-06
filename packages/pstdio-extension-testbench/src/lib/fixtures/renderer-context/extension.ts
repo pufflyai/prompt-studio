@@ -1,11 +1,4 @@
-import {
-  defineExtension,
-  definePage,
-  defineResourceKind,
-  defineView,
-  workbenchModes,
-  workbenchPages,
-} from "@pstdio/sdk/extensions";
+import { defineExtension, definePage, defineResourceKind, defineView, workbenchModes } from "@pstdio/sdk/extensions";
 
 const fixtureItem = defineResourceKind({
   id: "fixture-item",
@@ -32,12 +25,20 @@ const items = defineView({
     }),
   },
 });
+const rootPage = definePage({
+  id: "root",
+  title: "Renderer context",
+  path: "root",
+  mode: workbenchModes.project,
+  main: { kind: "panels" },
+  slots: [],
+});
 const itemPage = definePage({
+  parent: rootPage.ref,
   id: "items",
   title: "Items",
   path: "items",
   mode: workbenchModes.project,
-  parent: workbenchPages.start,
   resource: {
     kinds: [fixtureItem.ref],
   },
@@ -51,5 +52,5 @@ const itemPage = definePage({
 export default defineExtension({
   resourceKinds: [fixtureItem],
   views: [items],
-  pages: [itemPage],
+  pages: [rootPage, itemPage],
 });

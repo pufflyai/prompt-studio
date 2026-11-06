@@ -1,4 +1,4 @@
-import type { ApprovalRequest, HarnessSession, QuestionService, SessionMessage } from "pstdio-api-contracts";
+import type { ApprovalRequest, HarnessSession, JsonPatch, QuestionService, SessionMessage } from "pstdio-api-contracts";
 import { createApprovalService, createEventStore, createQuestionService } from "pstdio-api-runtime-host";
 import { createSessionConversation, type SessionConversation } from "./session-conversation";
 
@@ -33,9 +33,9 @@ export const cancelSessionControls = (entry: ActiveSession | null | undefined) =
 // In-memory registry of active sessions (EventStore + channels + harness session per session)
 export const createSessionStore = () => {
   const sessions = new Map<string, ActiveSession>();
-  const listeners = new Set<(id: string) => void>();
-  const changed = (id: string) => {
-    for (const listener of listeners) listener(id);
+  const listeners = new Set<(id: string, patch?: JsonPatch) => void>();
+  const changed = (id: string, patch?: JsonPatch) => {
+    for (const listener of listeners) listener(id, patch);
   };
 
   const create = (
@@ -51,7 +51,12 @@ export const createSessionStore = () => {
     }
 
     const eventStore = createEventStore();
-    const approvalService = createApprovalService(hooks.onApprovalRequest);
+    const approvalService = createApprovalService(hooks.onApprovalRequest, {
+      onChange: () => {
+        eventStore.push({ op: "replace", path: "/approval_requests", value: approvalService.pendingRequests() });
+        changed(sessionId, { op: "replace", path: "/approval_requests", value: approvalService.pendingRequests() });
+      },
+    });
     const questionService = createQuestionService({ onAsk: hooks.onQuestionAsked, onAnswer: hooks.onQuestionAnswered });
     const ready = Promise.withResolvers<SessionConversation>();
 
@@ -66,7 +71,7 @@ export const createSessionStore = () => {
       controlInvocations: new Set(),
     };
     const initializeConversation = (messages: SessionMessage[]) => {
-      entry.conversation = createSessionConversation(eventStore, messages, () => changed(sessionId));
+      entry.conversation = createSessionConversation(eventStore, messages, (patch) => changed(sessionId, patch));
       ready.resolve(entry.conversation);
     };
     sessions.set(sessionId, entry);
@@ -140,7 +145,7 @@ export const createSessionStore = () => {
     setSession,
     markCancellationRequested,
     remove,
-    watch(listener: (id: string) => void) {
+    watch(listener: (id: string, patch?: JsonPatch) => void) {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);

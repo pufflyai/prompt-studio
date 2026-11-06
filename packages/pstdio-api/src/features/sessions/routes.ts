@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
+import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import type { SessionsRouteDeps } from "./deps";
 import { approveSessionHandler, approveSessionRoute } from "./endpoints/approve-session";
@@ -8,6 +9,7 @@ import { createSessionHandler, createSessionRoute } from "./endpoints/create-ses
 import { deleteSessionHandler, deleteSessionRoute } from "./endpoints/delete-session";
 import { draftHarnessCommandsHandler, draftHarnessCommandsRoute } from "./endpoints/draft-harness-commands";
 import { followUpSessionHandler, followUpSessionRoute } from "./endpoints/follow-up-session";
+import { forkSessionHandler, forkSessionRoute } from "./endpoints/fork-session";
 import { getConversationSourcesHandler, getConversationSourcesRoute } from "./endpoints/get-conversation-sources";
 import { getQueuedMessagesHandler, getQueuedMessagesRoute } from "./endpoints/get-queued-messages";
 import { getSessionHandler, getSessionRoute } from "./endpoints/get-session";
@@ -57,7 +59,7 @@ import { steerSessionHandler, steerSessionRoute } from "./endpoints/steer-sessio
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
 import { createSessionStreamConnections } from "./session-stream-connections";
 
-export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDeps) => {
+export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDeps & Pick<RouteDeps, "textEditing">) => {
   const routes = new OpenAPIHono<AppBindings>();
   routes.openapi(querySessionsRoute, querySessionsHandler(deps));
   const streamConnections = createSessionStreamConnections();
@@ -66,6 +68,7 @@ export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDep
   routes.openapi(getHarnessCommandsRoute, getHarnessCommandsHandler(deps));
   routes.openapi(invokeHarnessCommandRoute, invokeHarnessCommandHandler(deps));
   routes.openapi(createSessionRoute, createSessionHandler(deps));
+  routes.openapi(forkSessionRoute, forkSessionHandler(deps));
   routes.openapi(uploadSessionAttachmentRoute, uploadSessionAttachmentHandler(deps));
   routes.openapi(getSessionAttachmentContentRoute, getSessionAttachmentContentHandler(deps));
   routes.openapi(deleteSessionAttachmentRoute, deleteSessionAttachmentHandler(deps));

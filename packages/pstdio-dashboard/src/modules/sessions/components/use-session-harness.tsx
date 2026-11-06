@@ -1,7 +1,7 @@
-import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import type { HarnessCommandState } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
 import { useAgents } from "@/shared/agents/use-agents";
+import { openExtensionsPage } from "@/shared/workbench/page-navigation";
 import type { SessionViewContext } from "../chat/session-view-context";
 import { sessionHarnessAccess } from "../runtime/session-harness-access";
 import { canSubmitSessionMessage } from "../runtime/session-runtime-selection";
@@ -29,23 +29,22 @@ export const useSessionHarness = (props: SessionHarnessInput) => {
   const noHarnessAvailable = access === "missing";
   const needsLogin = access === "signed_out";
   const canSubmit =
-    !needsLogin &&
-    !account.checking &&
-    !account.progress &&
-    canSubmitSessionMessage({
-      agentOptions: agents.map((item) => ({ value: item.id, disabled: item.availability.type === "NOT_FOUND" })),
-      selectedAgent,
-      selectedModel,
-      requiresModel: agent?.supportsModels ?? true,
-    });
+    otherDevice ||
+    (!needsLogin &&
+      !account.checking &&
+      !account.progress &&
+      canSubmitSessionMessage({
+        agentOptions: agents.map((item) => ({ value: item.id, disabled: item.availability.type === "NOT_FOUND" })),
+        selectedAgent,
+        selectedModel,
+        requiresModel: agent?.supportsModels ?? true,
+      }));
   let setup: ReactNode;
   if (noHarnessAvailable)
     setup = (
       <SessionHarnessUnavailable
         onInterrupt={onInterrupt}
-        onReviewExtensions={() =>
-          void input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "extensions" })
-        }
+        onReviewExtensions={() => openExtensionsPage(input.workbench)}
       />
     );
   if (needsLogin && agent) setup = <SessionHarnessSignIn name={agent.name} onLogin={() => account.start("login")} />;

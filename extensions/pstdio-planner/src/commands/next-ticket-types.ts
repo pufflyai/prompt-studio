@@ -24,7 +24,6 @@ export interface WaitingTicket {
     | Extract<AttemptReadinessResult, { decision: "wait" }>["reason"]
     | "assigned"
     | "review-gate"
-    | "blocked"
     | "existing-attempt"
     | "workspace-unavailable";
   dependencyIds: string[];

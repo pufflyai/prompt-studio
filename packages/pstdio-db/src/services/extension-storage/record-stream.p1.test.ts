@@ -1,6 +1,24 @@
 import { afterEach, expect, test } from "bun:test";
-import { createSyncSpace, editResourceDocument, sealUpdate } from "pstdio-sync";
-import { createRecordStreamSync, encodeRecordFrame, type RecordStreamStore } from "pstdio-sync/relay";
+import { NativeSourceRecoveryError } from "pstdio-sync";
+import {
+  createSyncSpace,
+  openState,
+  openSummary,
+  openUpdate,
+  sealBlob,
+  sealState,
+  sealUpdate,
+} from "pstdio-sync/encryption";
+import { editResourceDocument, readDocumentRecord, recordTextBindingUpdate } from "pstdio-sync/records";
+import {
+  createRecordStreamSync,
+  decodeRecordFrame,
+  encodeRecordFrame,
+  type RecordStreamStore,
+  type SyncFailure,
+} from "pstdio-sync/relay";
+import type { UpdateEnvelope } from "pstdio-sync-contracts";
+import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
 import { projects, storage_record_sync } from "../../db/schemas.pg";
 import { dataMigrationContext } from "./data-migration-context";
@@ -46,8 +64,114 @@ const device = async (
   const records = service.open({ owner, assets: assets.store }).records;
   const value = async (recordId: string) => (await records.read(recordId)).value;
   // `restart` starts a new sync over the same database, as after an app restart or a reconnect.
-  return { db, records, sync: start(), restart: start, assets, failures, value };
+  return { db, records, service, sync: start(), restart: start, assets, failures, value };
 };
+
+test("quiet holders repair a same-through incomplete state before a reset device downloads it", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: { title: "Seeded" } }] });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  const earlier = fixture.latest()!;
+  await first.records.commit({
+    operationId: "later",
+    edits: [{ recordId: "later", replace: { title: "Retained quiet edit" } }],
+  });
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+  expect(await second.value("later")).toEqual({ title: "Retained quiet edit" });
+
+  // A peer publishes a complete manifest after both holders received the same tail.
+  const snapshot = await first.service.documents.recordStream(owner).snapshot();
+  const chunk = await sealBlob(space, encodeRecordFrame({ records: snapshot.records, assets: [] }));
+  await fixture.relay.blobs.put(chunk.blobId, chunk.bytes);
+  const current = await sealState(space, documentId, {
+    baseStateId: earlier.stateId,
+    through: fixture.updates().at(-1)!.sequence,
+    state: new TextEncoder().encode(
+      JSON.stringify({ version: 1, chunks: [{ blobId: chunk.blobId, byteLength: chunk.bytes.length }] }),
+    ),
+    summary: new TextEncoder().encode(JSON.stringify({ records: snapshot.records.length, bytes: chunk.bytes.length })),
+    blobIds: [chunk.blobId],
+  });
+  expect(await fixture.relay.replace(current)).toBe(true);
+  await first.sync.synchronize();
+  await second.sync.synchronize();
+
+  // The ciphertext authenticates these headers, but the old manifest omits an acknowledged record.
+  const incomplete = await sealState(space, documentId, {
+    baseStateId: current.stateId,
+    through: current.through,
+    state: await openState(space, documentId, earlier, Buffer.from(earlier.payload, "base64")),
+    summary: await openSummary(space, documentId, earlier),
+    blobIds: earlier.blobIds,
+  });
+  expect(await fixture.relay.replace(incomplete)).toBe(true);
+  fixture.trim();
+  for (const holder of [first, second]) {
+    await holder.sync.synchronize();
+    expect(await holder.value("later")).toEqual({ title: "Retained quiet edit" });
+    expect(holder.failures).toEqual([]);
+  }
+  const reset = await device(fixture.relay);
+  await reset.sync.synchronize();
+  expect(await reset.value("later")).toEqual({ title: "Retained quiet edit" });
+  expect(await reset.sync.status()).toEqual({ downloaded: true, pending: false, needsAttention: false });
+
+  const before = { ...fixture.requests };
+  for (const holder of [first, second, reset]) await holder.sync.synchronize();
+  expect(fixture.requests.updates).toBe(before.updates);
+  expect(fixture.requests.states).toBe(before.states);
+  expect(fixture.requests.blobs).toBe(before.blobs);
+});
+
+test("a saved pre-binding record keeps its outbox and a recoverable remote copy when adoption needs a decision", async () => {
+  const { relay } = createRelay();
+  const initial = await editResourceDocument(
+    [],
+    { recordId: "ticket", replace: { content: "Saved remotely before binding" } },
+    true,
+  );
+  const bytes = Y.mergeUpdates([
+    initial.checkpoint!,
+    recordTextBindingUpdate("ticket", "a".repeat(64), {
+      field: "/content",
+      original: "Saved remotely before binding",
+      lifetime: initial.record.recordLifetime!,
+    }),
+  ]);
+  await relay.update(
+    await sealUpdate(
+      space,
+      documentId,
+      encodeRecordFrame({ records: [{ recordId: "ticket", bytes }], assets: [] }),
+      [],
+    ),
+  );
+  const second = await device(relay);
+  const stream = second.service.documents.recordStream(owner);
+  await stream.open();
+  await second.records.commit({
+    operationId: "second",
+    edits: [{ recordId: "ticket", replace: { content: "Saved locally before binding" } }],
+  });
+  await expect(second.sync.synchronize()).rejects.toBeInstanceOf(NativeSourceRecoveryError);
+  expect(await second.value("ticket")).toEqual({ content: "Saved locally before binding" });
+  expect(await stream.pending()).toBe(true);
+  expect(await stream.open()).toMatchObject({ joined: false, after: 0 });
+  expect(await second.sync.status()).toMatchObject({ pending: true, needsAttention: true });
+  const failure = second.failures[0] as SyncFailure;
+  expect(JSON.stringify(failure)).not.toContain("Saved remotely before binding");
+  const frame = decodeRecordFrame(
+    await openUpdate(space, documentId, (failure.envelope as { update: UpdateEnvelope }).update),
+  );
+  const document = new Y.Doc();
+  for (const record of frame.records) if (record.recordId === "ticket") Y.applyUpdate(document, record.bytes);
+  expect((await readDocumentRecord(document, "ticket")).value).toEqual({ content: "Saved remotely before binding" });
+  document.destroy();
+});
 
 test("records saved offline on two devices reach both, and a multi-record save arrives whole", async () => {
   const { relay, updates } = createRelay();
@@ -294,7 +418,9 @@ test("a peer latest state preserves byte accounting for an already downloaded ne
   await second.sync.synchronize();
   expect(raced).toBe(true);
   expect(fixture.latest()!.through).toBe(1);
+  const uploaded = fixture.requests.updates;
   await first.sync.synchronize();
+  expect(fixture.requests.updates).toBe(uploaded);
   const [cursor] = await first.db.select().from(storage_record_sync);
   const actualTail = fixture
     .updates()
@@ -373,6 +499,53 @@ test("a frame with a record that cannot be merged is skipped whole", async () =>
   expect((await second.records.read("a")).exists).toBe(false);
   expect(second.failures).toContainEqual(expect.objectContaining({ id: update.updateId }));
   expect((await second.sync.status()).needsAttention).toBe(true);
+});
+
+test("repairing a changed latest state rejects an unmergeable tail save whole", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const receiver = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  await first.sync.synchronize();
+  await receiver.sync.synchronize();
+  const earlier = fixture.latest()!;
+  const replaced = await sealState(space, documentId, {
+    baseStateId: earlier.stateId,
+    through: earlier.through,
+    state: await openState(space, documentId, earlier, Buffer.from(earlier.payload, "base64")),
+    summary: await openSummary(space, documentId, earlier),
+    blobIds: earlier.blobIds,
+  });
+  expect(await fixture.relay.replace(replaced)).toBe(true);
+  const valid = await editResourceDocument([], { recordId: "half", replace: "must not appear" }, true);
+  const invalid = new Y.Doc();
+  try {
+    invalid.getMap("records").set("broken", "record");
+    invalid.getMap("record").set("value", { kind: "object", name: "loop" });
+    invalid.getMap("loop").set("self", { kind: "object", name: "loop" });
+    const bytes = Y.encodeStateAsUpdate(invalid);
+    expect(() => Y.decodeUpdate(bytes)).not.toThrow();
+    const update = await sealUpdate(
+      space,
+      documentId,
+      encodeRecordFrame({
+        records: [
+          { recordId: "half", bytes: valid.update! },
+          { recordId: "broken", bytes },
+        ],
+        assets: [],
+      }),
+      [],
+    );
+    await fixture.relay.update(update);
+    await receiver.sync.synchronize();
+    expect((await receiver.records.read("half")).exists).toBe(false);
+    expect((await receiver.records.read("broken")).exists).toBe(false);
+    expect(receiver.failures).toContainEqual(expect.objectContaining({ id: update.updateId }));
+    expect((await receiver.sync.status()).needsAttention).toBe(true);
+  } finally {
+    invalid.destroy();
+  }
 });
 
 test("a device that joins again with history it already shares merges instead of overwriting", async () => {

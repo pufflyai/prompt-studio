@@ -23,6 +23,7 @@ export type CreateSessionMutation = {
     model: string | undefined;
     params?: HarnessParamValues;
     workspaceId?: string;
+    deviceId?: string;
     attachments?: SessionAttachment[];
   }) => Promise<{ sessionId: string; status: string }>;
 };
@@ -77,6 +78,7 @@ const submitNewSessionMessage = (input: {
   model: string | undefined;
   params?: HarnessParamValues;
   workspaceId?: string;
+  deviceId?: string;
   text: string;
   attachments?: SessionAttachment[];
   messages: SessionMessage[];
@@ -93,6 +95,7 @@ const submitNewSessionMessage = (input: {
     pendingId: `pending-${nextPendingId++}`,
     attachments: input.attachments,
   });
+  pending.sourceConversationKey = input.conversationKey;
   updatePendingFollowUp(input.conversationKey, pending);
   input.onSubmitted?.();
 
@@ -104,15 +107,16 @@ const submitNewSessionMessage = (input: {
       model: input.model,
       params: input.params,
       workspaceId: input.workspaceId,
+      deviceId: input.deviceId,
       attachments: input.attachments,
     })
     .then(
       ({ sessionId, status }) => {
-        clearPendingFollowUp(input.conversationKey, pending);
         // The created session owns its first message until its conversation includes it. A queued
         // session shows the prompt in its queued list instead.
         if (status !== "queued") updatePendingFollowUp(sessionId, pending);
         input.onSessionCreated?.(sessionId);
+        clearPendingFollowUp(input.conversationKey, pending);
       },
       // The conversation keeps ownership of the failed message.
       (error: Error | undefined) => {
@@ -214,6 +218,7 @@ export const submitSessionMessage = (input: {
   model: string | undefined;
   params?: HarnessParamValues;
   workspaceId?: string;
+  deviceId?: string;
   text: string;
   attachments?: SessionAttachment[];
   questionResponse?: ChatInputQuestionResponse;

@@ -94,6 +94,7 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
     "commands.execute": capability("commands.execute", commandExecution(adapters)),
     "commands.stream": capability("commands.stream", commandStreaming(adapters)),
     "editing.session": capability("editing.session", editingSession(adapters)),
+    "editing.text": capability("editing.text", adapters.textEditing?.request.bind(adapters.textEditing)),
     "navigation.open": capability(
       "navigation.open",
       navigation && ((request) => after(navigation.open(request.target), () => undefined)),

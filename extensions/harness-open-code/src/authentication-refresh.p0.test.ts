@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createOpencodeHarness } from "./harness";
 import { ctx, harnessDefaults, serviceOverrides } from "./harness.test-helpers";
+import { emptyMessages } from "./native-api.test-helpers";
 import { createOpencodeHarnessService } from "./opencode-harness-service";
 
 test("account refresh uses a new provider snapshot without stopping active sessions", async () => {
@@ -28,13 +29,23 @@ test("account refresh uses a new provider snapshot without stopping active sessi
       const server = Bun.serve({
         port: 0,
         fetch: (req) => {
-          if (new URL(req.url).pathname === "/provider")
-            return Response.json({ all: [{ id: "openai", name: "OpenAI", source: "api", models: {} }], connected });
-          if (new URL(req.url).pathname === "/provider/auth") return Response.json({});
-          return Response.json([]);
+          if (new URL(req.url).pathname === "/api/provider")
+            return Response.json({ data: [{ id: "openai", name: "OpenAI", integrationID: "openai" }] });
+          if (new URL(req.url).pathname === "/api/integration")
+            return Response.json({
+              data: [
+                {
+                  id: "openai",
+                  methods: [{ type: "key" }],
+                  connections: connected.map(() => ({ type: "credential", id: "cred_one" })),
+                },
+              ],
+            });
+          return emptyMessages();
         },
       });
       return {
+        running: true,
         url: server.url.origin,
         dispose: async () => {
           await server.stop(true);
@@ -78,7 +89,7 @@ test("an owned server cleanup failure does not prevent reconnecting", async () =
   const context = { ...ctx, logger: { ...ctx.logger, error: (message: string) => errors.push(message) } };
   const services = createOpencodeHarnessService({
     ...serviceOverrides(),
-    fetcher: async () => Response.json([]),
+    fetcher: async () => emptyMessages(),
     isPortOpen: async () => false,
     serverStore: {
       read: async () => stored,
@@ -92,6 +103,7 @@ test("an owned server cleanup failure does not prevent reconnecting", async () =
     startServer: async () => {
       const generation = ++starts;
       return {
+        running: true,
         url: `http://localhost:${4095 + generation}`,
         dispose: async () => {
           if (generation === 1) throw new Error("transient cleanup failure");
@@ -120,16 +132,17 @@ test.each(["authentication", "history"])("cleanup preserves an in-flight %s read
     port: 0,
     fetch: async (req) => {
       const path = new URL(req.url).pathname;
-      if (path === "/provider/auth") return Response.json({});
+      if (path === "/api/integration") return Response.json({ data: [] });
       requested.resolve();
       await reply.promise;
-      return Response.json(path === "/provider" ? { all: [], connected: [] } : []);
+      return Response.json({ data: [], cursor: {} });
     },
   });
   const harness = createOpencodeHarness(harnessDefaults(), {
     ...serviceOverrides(),
     isPortOpen: async () => false,
     startServer: async () => ({
+      running: true,
       url: server.url.origin,
       dispose: async () => {
         stops++;

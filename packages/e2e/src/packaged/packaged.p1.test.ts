@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { cleanupDirs, createGitRepo } from "../cli/helpers";
 import { type ApiInstance, getFreePort, startApi } from "../cli/start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "../cli/timeouts";
-import { buildBinary, runPackaged, runPackagedSafe } from "./packaged-helpers";
+import { buildBinary, runPackagedAsync, runPackagedSafe } from "./packaged-helpers";
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -26,14 +26,15 @@ afterEach(() => {
   cleanupDirs(dirs);
 });
 
-const run = (args: string, cwd: string) => runPackaged(args, cwd, { PSTDIO_API_URL: api.url });
+// Keep the event loop available to drain the API pipes while it handles the CLI request.
+const run = (args: string[], cwd: string) => runPackagedAsync(args, cwd, { PSTDIO_API_URL: api.url });
 
 const runSafe = (args: string, cwd: string) => runPackagedSafe(args, cwd, { PSTDIO_API_URL: api.url });
 
-const createInitializedRepo = (name: string) => {
+const createInitializedRepo = async (name: string) => {
   const repo = createGitRepo();
   dirs.push(repo);
-  run(`projects create ${name}`, repo);
+  await run(["projects", "create", name], repo);
   return repo;
 };
 
@@ -41,9 +42,9 @@ describe("packaged pstdio — project lifecycle", () => {
   test(
     "creates a project and lists it",
     async () => {
-      const repo = createInitializedRepo("pkg-project");
+      const repo = await createInitializedRepo("pkg-project");
 
-      const list = run("projects list", repo);
+      const list = await run(["projects", "list"], repo);
       expect(list).toContain("pkg-project");
     },
     TEST_TIMEOUT,
@@ -51,11 +52,11 @@ describe("packaged pstdio — project lifecycle", () => {
 
   test(
     "shows version",
-    () => {
+    async () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
-      const output = run("--version", repo);
+      const output = await run(["--version"], repo);
       expect(output.trim()).toMatch(/\d+\.\d+\.\d+/);
     },
     TEST_TIMEOUT,
@@ -73,7 +74,7 @@ describe("packaged pstdio — auto-start", () => {
       dirs.push(repo, homePath);
 
       try {
-        const output = runPackaged("projects create packaged-autostart", repo, {
+        const output = await runPackagedAsync(["projects", "create", "packaged-autostart"], repo, {
           PSTDIO_API_PORT: String(port),
           PSTDIO_API_URL: url,
           PSTDIO_DB_PATH: ":memory:",
@@ -100,14 +101,14 @@ describe("packaged pstdio — auto-start", () => {
 describe("packaged pstdio — tickets", () => {
   test(
     "creates and lists a ticket",
-    () => {
-      const repo = createInitializedRepo("pkg-tickets");
+    async () => {
+      const repo = await createInitializedRepo("pkg-tickets");
 
-      const created = JSON.parse(run('tickets create --content "Packaged test ticket"', repo));
+      const created = JSON.parse(await run(["tickets", "create", "--content", "Packaged test ticket"], repo));
       expect(created.shorthand).toMatch(/^PT-\d+$/);
       expect(created.title).toBe("Packaged test ticket");
 
-      const tickets = JSON.parse(run("tickets list", repo));
+      const tickets = JSON.parse(await run(["tickets", "list"], repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).toContain("Packaged test ticket");
     },
     TEST_TIMEOUT,

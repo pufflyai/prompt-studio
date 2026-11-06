@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import { type AssetStore, editResourceDocument, type StorageObserver, type StorageOwner } from "pstdio-sync";
+import { type AssetStore, type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
+import { editResourceDocument } from "pstdio-sync/records";
 import {
   assertStorageLimits,
   fingerprint,
@@ -10,7 +11,9 @@ import {
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_document_operations } from "../../db/schemas.pg";
+import { bindNativeRecordSource } from "./bind-native-source";
 import { dataMigrationContext } from "./data-migration-context";
+import { prepareNativeRecordWrite } from "./native-record-write";
 import type { createProjectionStatistics } from "./projection-statistics";
 import { lockRecordOwner, saveRecordChanges } from "./record-changes";
 import { queueRecordUpload } from "./record-outbox";
@@ -29,6 +32,23 @@ const outcome = (operationId: string) => ({
   status: "saved-locally" as const,
 });
 
+// A row lock serializes separate transactions, but overlapping calls inside one transaction
+// also need to load the preceding save before continuing their writer's clock.
+const createCommitQueue = () => {
+  let previous = Promise.resolve();
+  const run = <T>(save: () => Promise<T>) => {
+    const result = previous.then(save);
+    // Preserve the caller's rejection while allowing a caught validation error to be followed
+    // by a valid commit in the same transaction.
+    previous = result.then(
+      () => {},
+      () => {},
+    );
+    return result;
+  };
+  return { run, settled: () => previous };
+};
+
 /** Records of one owner. Each record is its own Yjs document; reads use the SQL projection. */
 export const createResourceRecords = (
   db: DbClient,
@@ -38,12 +58,16 @@ export const createResourceRecords = (
     statistics: ReturnType<typeof createProjectionStatistics>;
     /** Notifies owner watchers after a commit. */
     changed: () => void;
+    nativeChanged?: (keys: string[]) => void;
     numbersChanged?: (events: NumberChange[]) => void;
     observer?: StorageObserver;
     assets?: AssetStore;
     diagnostics?: StorageDiagnostics;
   },
 ) => {
+  // Owner-locked transactions load the latest state, so this handle can continue its
+  // causal clock instead of adding a new Yjs writer to every record on every save.
+  const writer = crypto.getRandomValues(new Uint32Array(1))[0]!;
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: "records" };
   const queries = createRecordQueries(db, owner, deps.diagnostics);
   const receipt = (tx: Pick<DbClient, "select">, operationId: string) =>
@@ -58,14 +82,29 @@ export const createResourceRecords = (
           eq(storage_document_operations.operation_id, operationId),
         ),
       );
-  const commitIn = async (tx: Transaction, group: StorageGroup, identity: string) => {
+  const commitIn = async (
+    tx: Transaction,
+    group: StorageGroup,
+    identity: string,
+    ownRevisions?: Map<string, string>,
+    options: { content?: string } = {},
+  ) => {
     const revision = await lockRecordOwner(tx, owner);
     const ids = group.edits.map(({ recordId }) => recordId);
     const [previous] = await receipt(tx, group.operationId);
     if (previous) {
       if (previous.fingerprint !== identity) throw new Error("Operation identity reused with changed payload");
-      return { records: await readProjectedRecords(tx, owner, ids), projected: 0, events: [] as NumberChange[] };
+      // A retry acknowledges its original operation, never a newer writer’s state.
+      return { records: [], projected: 0, nativeKeys: [] as string[], events: [] as NumberChange[] };
     }
+    const expected = new Map(
+      ids.flatMap((id) => {
+        const revision = deps.observer?.expected?.(owner, id);
+        return revision === undefined ? [] : [[id, ownRevisions?.get(id) ?? revision] as const];
+      }),
+    );
+    for (const record of await readProjectedRecords(tx, owner, [...expected.keys()]))
+      if (expected.get(record.recordId) !== record.revision) throw new StorageRevisionChangedError();
     const { sources } = await loadResourceDocuments(tx, owner, ids.map(resourceDocumentId));
     const migration = dataMigrationContext.getStore();
     // Every edit is validated and prepared before anything is written; a failure aborts the whole group.
@@ -76,13 +115,15 @@ export const createResourceRecords = (
         const next = (saved?.revision ?? 0) + 1;
         const foldedRevision = saved?.folded_revision ?? 0;
         const checkpoint = !saved || next - foldedRevision >= resourceFoldEvery;
+        const native = await prepareNativeRecordWrite(tx, { owner, states: saved?.states ?? [], edit, ...options });
         const result = await editResourceDocument(
           saved?.states ?? [],
-          edit,
+          native.edit,
           checkpoint,
           migration && { ...migration, document: JSON.stringify([owner.workbenchId, owner.extensionId, id]) },
+          writer,
         );
-        return { id, revision: next, foldedRevision, ...result };
+        return { id, revision: next, foldedRevision, ...result, nativeKeys: native.changed };
       }),
     );
     const records = prepared.map((value) => value.record);
@@ -92,7 +133,21 @@ export const createResourceRecords = (
     await tx
       .insert(storage_document_operations)
       .values({ ...address, operation_id: group.operationId, fingerprint: identity });
-    return saved;
+    const bound = saved.records.filter((record) => "nativeSources" in record);
+    const materialized = new Map(
+      (
+        await readProjectedRecords(
+          tx,
+          owner,
+          bound.map((record) => record.recordId),
+        )
+      ).map((record) => [record.recordId, record]),
+    );
+    return {
+      ...saved,
+      records: saved.records.map((record) => materialized.get(record.recordId) ?? record),
+      nativeKeys: prepared.flatMap((record) => record.nativeKeys),
+    };
   };
   const prepare = async (group: StorageGroup) => {
     if (!group.operationId || !group.edits.length) throw new Error("Empty storage commit");
@@ -107,14 +162,20 @@ export const createResourceRecords = (
     return fingerprint(group.edits.map(({ expectedRevision: _revision, ...edit }) => edit));
   };
   const published = (
-    result: { records: { recordId: string; revision: string }[]; projected: number; events: NumberChange[] },
+    result: {
+      records: { recordId: string; revision: string }[];
+      projected: number;
+      nativeKeys: string[];
+      events: NumberChange[];
+    },
     operationId: string,
   ) => {
     if (result.projected) deps.statistics.record(result.projected);
     deps.changed();
+    deps.nativeChanged?.(result.nativeKeys);
     deps.numbersChanged?.(result.events);
     const saved = outcome(operationId);
-    deps.observer?.committed(owner, result.records, saved);
+    if (result.records.length) deps.observer?.committed(owner, result.records, saved);
     return saved;
   };
   const read = async (connection: Pick<DbClient, "select">, id: string) => {
@@ -124,9 +185,34 @@ export const createResourceRecords = (
   };
   return {
     ...queries,
-    readMany: async (ids: string[]) => {
-      return queries.readMany(ids);
+    async bindText(input: {
+      recordId: string;
+      field?: string;
+      documentKey: string;
+      sourceKey?: string;
+      content?: string;
+    }) {
+      const result = await bindNativeRecordSource(db, owner, input, deps.observer);
+      if (result.changed) {
+        deps.changed();
+        deps.nativeChanged?.([result.documentKey]);
+        deps.observer?.committed(owner, [result.record], { status: "saved-locally" });
+      }
+      return { documentKey: result.documentKey, lifetime: result.lifetime, changed: result.changed };
     },
+    async writeTextAsset(input: {
+      recordId: string;
+      content: string;
+      replace: StorageGroup["edits"][number]["replace"];
+    }) {
+      const identity = await fingerprint({ ...input, replace: input.replace ?? null });
+      const group = { operationId: crypto.randomUUID(), edits: [{ recordId: input.recordId, replace: input.replace }] };
+      return published(
+        await db.transaction((tx) => commitIn(tx, group, identity, undefined, { content: input.content })),
+        group.operationId,
+      );
+    },
+    readMany: queries.readMany,
     read: async (id: string, _branch?: { operationId: string }) => {
       return read(db, id);
     },
@@ -155,24 +241,33 @@ export const createResourceRecords = (
       ) => Promise<T>,
     ) => {
       const committed: { result: Awaited<ReturnType<typeof commitIn>>; operationId: string }[] = [];
+      const ownRevisions = new Map<string, string>();
+      const enqueueCommit = createCommitQueue();
       const value = await db.transaction(async (tx) => {
         await lockRecordOwner(tx, owner);
-        return run(
-          {
-            read: (id) => read(tx, id),
-            readMany: async (ids) => {
-              const records = await readProjectedRecords(tx, owner, ids);
-              for (const record of records) deps.observer?.read(owner, record);
-              return records;
+        try {
+          return await run(
+            {
+              read: (id) => read(tx, id),
+              readMany: async (ids) => {
+                const records = await readProjectedRecords(tx, owner, ids);
+                for (const record of records) deps.observer?.read(owner, record);
+                return records;
+              },
+              commit: (group) =>
+                enqueueCommit.run(async () => {
+                  const result = await commitIn(tx, group, await prepare(group), ownRevisions);
+                  for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
+                  committed.push({ result, operationId: group.operationId });
+                  return outcome(group.operationId);
+                }),
             },
-            commit: async (group) => {
-              const result = await commitIn(tx, group, await prepare(group));
-              committed.push({ result, operationId: group.operationId });
-              return outcome(group.operationId);
-            },
-          },
-          tx,
-        );
+            tx,
+          );
+        } finally {
+          // Promise.all can reject before another admitted save finishes. Drain before rollback.
+          await enqueueCommit.settled();
+        }
       });
       for (const { result, operationId } of committed) published(result, operationId);
       return value;

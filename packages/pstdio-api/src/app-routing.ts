@@ -12,6 +12,7 @@ import { createExtensionRoutes } from "./features/extensions/routes";
 import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createLinkIconRoutes } from "./features/link-icons/routes";
+import { createNativeDocumentRoutes } from "./features/native-documents/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createPerformanceRoutes } from "./features/performance/routes";
 import { createProjectRoutes } from "./features/projects/routes";
@@ -24,11 +25,13 @@ import {
   type RuntimeSecurity,
   runtimeOrigin,
 } from "./features/runtime/runtime-auth";
+import { createSessionImportRoutes } from "./features/sessions/imports/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSettingsRoutes } from "./features/settings/routes";
 import { createSkillRoutes } from "./features/skills/routes";
 import { createSyncRoutes } from "./features/sync/routes";
 import { createTerminalRoutes } from "./features/terminal/routes";
+import { createTextEditingRoutes } from "./features/text-editing/routes";
 import { createBoardViewsRoutes } from "./features/views/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
@@ -188,11 +191,14 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createAutomationRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createExtensionRoutes(deps));
+  app.route("/v1", createNativeDocumentRoutes(deps.nativeDocuments));
+  app.route("/v1", createTextEditingRoutes(deps.textEditing));
   app.route("/v1", createAgentRoutes(deps, { allowedOrigins: terminalOrigins }));
   app.route("/v1", createSkillRoutes(deps));
   app.route("/v1", createNotificationsRoutes(deps));
   app.route("/v1", createBoardViewsRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
+  app.route("/v1", createSessionImportRoutes(deps.sessionImports));
   app.route("/v1", createSettingsRoutes(deps));
   app.route("/v1", createLinkIconRoutes());
   app.route("/v1", createWorkspaceRoutes(deps));

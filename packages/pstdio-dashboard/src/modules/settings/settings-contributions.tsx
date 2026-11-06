@@ -7,7 +7,6 @@ import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
 import { AppearanceSettingsPanel } from "./components/appearance-settings-panel";
 import { BetaFeaturesPanel } from "./components/beta-features-panel";
-import { ExtensionsPanel } from "./components/extensions-panel";
 import { MachineTokensPanel } from "./components/machine-tokens-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
 import { ProjectFolderPanel } from "./components/project-folder-panel";
@@ -29,7 +28,6 @@ export const dashboardSettingsDefaultPanel = { id: "runtime", title: "Runtime", 
 const settingsViewIds = {
   runtime: "dashboard.settings.runtime",
   appearance: "dashboard.settings.appearance",
-  extensions: "dashboard.settings.extensions",
   projectFolder: "dashboard.settings.project-folder",
   skill: "dashboard.settings.skill",
   template: "dashboard.settings.template",
@@ -90,14 +88,6 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     body: { kind: "react", render: ({ workbench }) => <AppearanceSettingsPanel workbench={workbench} /> },
   });
   ctx.views.registerView({
-    id: settingsViewIds.extensions,
-    title: "Extensions",
-    body: {
-      kind: "react",
-      render: (input) => <ExtensionsPanel projectId={getDashboardSelectedProjectId(ctx)} settingsInput={input} />,
-    },
-  });
-  ctx.views.registerView({
     id: settingsViewIds.projectFolder,
     title: "Project folder",
     body: {
@@ -110,6 +100,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     title: "Skill",
     body: {
       kind: "react",
+      layout: "full-width",
       render: (input) => {
         const skill = settingsItem<ProjectSkill>(input, "skills");
         return skill ? (
@@ -125,6 +116,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     title: "Template",
     body: {
       kind: "react",
+      layout: "full-width",
       render: (input) => {
         const template = settingsItem<ProjectTemplateAsset>(input, "templates");
         return template ? (
@@ -181,17 +173,6 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     order: 20,
     icon: "Palette",
     viewId: settingsViewIds.appearance,
-  });
-
-  ctx.settings.registerPanel({
-    kind: "view",
-    id: "extensions",
-    title: "Extensions",
-    section: "project",
-    scope: "project",
-    order: 10,
-    icon: "Puzzle",
-    viewId: settingsViewIds.extensions,
   });
 
   ctx.settings.registerPanel({

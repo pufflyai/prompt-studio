@@ -64,5 +64,6 @@ export type {
   WorkbenchViewContribution,
   WorkbenchViewRegistry,
   WorkbenchViewRegistryStoreState,
+  WorkbenchWebviewBody,
 } from "../registries/views/view-registry";
 export { createViewRegistry, workbenchViewIdContextKey } from "../registries/views/view-registry";

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createLiveConnection } from "pstdio-sync/relay";
 import { createNativeAccount } from "../../../services/account/native-account";
 import { createNativeStore } from "../../../services/account/native-store";
 import { createExtensionDocumentSync } from "../../../services/relay/documents";
@@ -32,6 +33,13 @@ const config = {
   renewalGrant: "grant",
 };
 const access = async () => ({ token: "wire-access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+const projectRelay = (config: { relayOrigin: string; workbenchId: string }) =>
+  createLiveConnection({
+    origin: config.relayOrigin,
+    projectId: config.workbenchId,
+    access,
+    signal: controller.signal,
+  });
 const syncs: ReturnType<typeof createExtensionDocumentSync>[] = [];
 const publications: ReturnType<typeof startPublishedExtensions>[] = [];
 beforeAll(async () => {
@@ -58,7 +66,12 @@ beforeAll(async () => {
     // Discover real cloud membership while the test drives transport connections explicitly.
     app.deps.accountService.status = account.status;
     app.deps.accountService.projectSyncStatus = account.projectSyncStatus;
-    syncs[index] = createExtensionDocumentSync({ config, deps: app.deps, owner: publishedOwner(projectId), access });
+    syncs[index] = createExtensionDocumentSync({
+      config,
+      deps: app.deps,
+      owner: publishedOwner(projectId),
+      access,
+    });
   }
 });
 afterAll(async () => {
@@ -120,7 +133,13 @@ test("three devices discover encrypted packages, preserve private overrides and 
     const stop = apps[index]!.deps.eventBus.subscribe((event) => {
       if (event.table === "extension_instances") ready.resolve();
     });
-    const connection = startPublishedExtensions({ config, deps: apps[index]!.deps, access, signal: controller.signal });
+    const connection = startPublishedExtensions({
+      config,
+      deps: apps[index]!.deps,
+      access,
+      live: projectRelay(config),
+      signal: controller.signal,
+    });
     publications.push(connection);
     await ready.promise;
     stop();
@@ -181,8 +200,21 @@ test("three devices discover encrypted packages, preserve private overrides and 
   await expect(sync(1)).rejects.toThrow();
   expect((await sourceFor(1)).installedSource.id).toBe(previous);
   peer.missing(false);
-  peer.interrupt();
+  let remainingByteLength = 0;
+  peer.interrupt(async (blob) => {
+    const identity = JSON.stringify([blob.sha256, blob.byteLength, "application/octet-stream"]);
+    const operationId = `sync-receive:${new Bun.CryptoHasher("sha256").update(identity).digest("hex")}`;
+    const owner = publishedOwner(projectId);
+    const transfers = apps[1]!.deps.assetTransferService;
+    let partial = await transfers.get(owner, operationId);
+    while (partial?.status !== "staging" || partial.uploadedByteLength === 0) {
+      await Bun.sleep(0);
+      partial = await transfers.get(owner, operationId);
+    }
+    remainingByteLength = blob.byteLength - partial.uploadedByteLength;
+  });
   await expect(sync(1)).rejects.toThrow();
+  expect(remainingByteLength).toBeGreaterThan(0);
   await sync(1);
   expect(peer.offsets.at(-1)).toBeGreaterThan(0);
   await activate(1);
@@ -257,6 +289,7 @@ test("a synced set that fails to activate keeps the current set and waits until 
     config,
     deps: { ...c.deps, extensionService },
     access,
+    live: projectRelay(config),
     signal: controller.signal,
     statusChanged: () => passes++,
   });
@@ -322,10 +355,17 @@ test("retry keeps project files unavailable until the published extension activa
       asset,
       (await catalog.read("test.activation-retry")).revision,
     );
+    const projectConfig = {
+      ...config,
+      workbenchId: project.id,
+      managerOrigin: syncPeer.origin,
+      relayOrigin: syncPeer.origin,
+    };
     connection = startPublishedExtensions({
-      config: { ...config, workbenchId: project.id, managerOrigin: syncPeer.origin, relayOrigin: syncPeer.origin },
+      config: projectConfig,
       deps: app.deps,
       access,
+      live: projectRelay(projectConfig),
       signal: controller.signal,
       statusChanged: () => {
         void connection

@@ -6,19 +6,15 @@ import { join } from "node:path";
 import { expect as browserExpect, chromium } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { installBuiltSdk } from "../helpers/installed-sdk";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
+import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
 const writeExtension = (root: string) => {
   const source = join(root, "extensions", "resource-removal");
-  const sdk = join(source, "node_modules", "@pstdio", "sdk");
-  mkdirSync(sdk, { recursive: true });
-  cpSync(join(import.meta.dirname, "../../../sdk/dist"), join(sdk, "dist"), { recursive: true });
-  writeFileSync(
-    join(sdk, "package.json"),
-    JSON.stringify({ name: "@pstdio/sdk", type: "module", exports: { "./extensions": "./dist/extensions/index.js" } }),
-  );
+  mkdirSync(source, { recursive: true });
   writeFileSync(
     join(source, "package.json"),
     JSON.stringify({
@@ -31,6 +27,7 @@ const writeExtension = (root: string) => {
     }),
   );
   cpSync(join(import.meta.dirname, "../fixtures/resource-removal/extension.ts"), join(source, "extension.ts"));
+  installBuiltSdk(source);
 };
 
 setupPackagedSmokeTests();
@@ -51,6 +48,7 @@ test("packaged related loading cannot reopen a resource deleted during resolutio
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
+    await enablePackagedProjectExtension(runtime, project.id, "resource-removal");
     const page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, runtime.descriptor);

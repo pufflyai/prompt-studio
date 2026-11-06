@@ -31,3 +31,30 @@ pst tickets save --id PS-43
 ## Reference
 
 `pst tickets list --parent PS-12` lists a ticket's children. See the [Planner CLI](https://prompt.studio/docs/extensions/planner/cli/) and [how attempts use dependencies](https://prompt.studio/docs/extensions/planner/attempts/#dependencies).
+
+## Decision requests
+
+Create a review request only for a genuine unresolved decision that the existing instructions and your authority cannot settle. Do not ask for routine assumptions, blanket risk acceptance, handoff acknowledgement, missing credentials, access, resources, reproduction details, or a non-decision action.
+
+For an independent non-decision blocker, discover the configured Blocked status with `pst statuses list`, then use `pst tickets update --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
+
+Keep request text to at most 80 words, excluding document links. Identify the ticket in the title. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. State the decision, mark the recommended choice, and name the main cost of each option. Keep question and option labels short; do not repeat the summary in them. Use a required choice question; add optional notes only when useful. Do not add confirmation or risk checklists that contain no decision.
+
+Use descriptive Markdown links to relevant documents or exact sections, such as the proposal, ADR, design, or report. Include as many relevant links as needed. Reuse existing documents and link supporting evidence, background, and implementation detail instead of copying them into the request. Keep the choice and essential trade-offs visible without opening the links.
+
+This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
+
+```bash
+pst pstdio-planner request-review --ticket PS-12 \
+  --title "PS-12 · Choose the first release audience" \
+  --instructions "**Problem:** The export is ready, but its first release audience is undecided.
+
+**Solution:** Release to the internal project first (recommended), or to everyone now.
+
+**Downside:** An internal release delays wider access; releasing to everyone exposes more people to faults.
+
+**Details:** [Release plan](files/release-plan.md)." \
+  --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
+```
+
+Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.

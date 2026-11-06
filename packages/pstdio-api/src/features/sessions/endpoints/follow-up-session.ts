@@ -5,6 +5,7 @@ import type { SessionsRouteDeps } from "../deps";
 import { followUpBodySchema, followUpResponseSchema, notFoundResponseSchema } from "../dto";
 import { HarnessParamError } from "../harness-params";
 import { questionReplyRejection } from "../live-question-reply";
+import { remoteSessionAction } from "../remote-session-action";
 import { sendSessionFollowUp } from "../send-session-followup";
 import { SessionAttachmentError } from "../session-attachments";
 import { toSessionResponse } from "../session-response";
@@ -59,6 +60,26 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
 
     const session = await deps.sessionService.get(id);
     if (!session) {
+      const { question_response, summary_from_session_id, summary_format, summary_role, attachments, ...rest } = input;
+      const forwarded = await remoteSessionAction(
+        followUpSessionRoute,
+        deps,
+        id,
+        {
+          type: "session.followUp",
+          id,
+          input: {
+            ...rest,
+            questionResponse: question_response,
+            summaryFromSessionId: summary_from_session_id,
+            summaryFormat: summary_format,
+            summaryRole: summary_role,
+            attachments: attachments?.map(({ file_id }) => ({ fileId: file_id })),
+          },
+        },
+        c.req.raw.signal,
+      );
+      if (forwarded) return forwarded;
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
