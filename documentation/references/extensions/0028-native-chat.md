@@ -52,13 +52,15 @@ read-only selectors visible, including their owning device. Omit `create` to loc
 Use `null` to remove the binding. Existing `resources` actions remain available independently.
 
 ```ts
-workspace: {
+import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
+
+const workspace: ChatRendererSnapshot["workspace"] = {
   controlId: "workspace",
   deviceControlId: "device",
   create: { actionId: "create-workspace" },
-  openResourceId: workspaceId,
+  openResourceId: "workspace-id",
   status: "ready", additions: 12, deletions: 3,
-}
+};
 ```
 
 An existing workspace selection is a string ID. Selecting New workspace stages the typed

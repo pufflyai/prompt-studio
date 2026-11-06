@@ -37,7 +37,7 @@ test("workspace provider fields and extension harness icon remain usable in the 
   );
   await expect(preview.getByText("Base branch", { exact: true })).toBeVisible();
   await preview.getByRole("button", { name: "Select model", exact: true }).click();
-  const harness = preview.getByRole("menuitem", { name: "External harness", exact: true });
+  const harness = preview.getByRole("menuitem", { name: "Select harness", exact: true });
   await expect(harness.locator('img[src^="data:image/svg+xml;base64,"]')).toBeVisible();
   await preview.locator("body").press("Escape");
   await preview.getByRole("button", { name: "Create workspace", exact: true }).last().click();
