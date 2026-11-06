@@ -35,11 +35,15 @@ test.each(["start", "resume", "getMessages"] as const)("refuses vulnerable Pi du
 
 test("discovers authenticated Pi models", async () => {
   fixture = await piFixture();
-  const account = await fixture.harness.getAuthentication!(fixture.context, { model: "fixture/test" });
+  const [account, detection, models] = await Promise.all([
+    fixture.harness.getAuthentication!(fixture.context, { model: "fixture/test" }),
+    fixture.harness.detect!(fixture.context),
+    fixture.harness.listModels!(fixture.context),
+  ]);
   expect(account.status).toBe("signed_in");
   expect(account.providers.find((provider) => provider.id === "fixture")?.canLogout).toBe(false);
-  expect(await fixture.harness.detect!(fixture.context)).toMatchObject({ available: true, version: "0.79.0" });
-  expect(await fixture.harness.listModels!(fixture.context)).toContainEqual({
+  expect(detection).toMatchObject({ available: true, version: "0.79.0" });
+  expect(models).toContainEqual({
     id: "fixture/test",
     label: "Local fixture",
     paramOverrides: { thinking: null },
