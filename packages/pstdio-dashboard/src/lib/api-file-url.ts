@@ -48,17 +48,22 @@ const apiFileUrlsIn = (messages: SessionMessage[], allowed: (url: string) => boo
 /** Resolves API file parts to blob URLs, so the chat can show and open them. */
 export const useApiFileParts = (messages: SessionMessage[], allowed: (url: string) => boolean = () => true) => {
   const urls = apiFileUrlsIn(messages, allowed);
-  const resolved = useQueries({
-    queries: urls.map(apiFileUrlQuery),
-    combine: (results) => results.map((result) => result.data),
-  });
+  const blobUrls = useApiFileUrls(urls);
   if (urls.length === 0) return messages;
 
-  const blobUrls = new Map(urls.map((url, index) => [url, resolved[index] ?? ""]));
   return messages.map((message) => ({
     ...message,
     parts: message.parts.map((part) =>
       part.type === "file" && blobUrls.has(part.url) ? { ...part, url: blobUrls.get(part.url) ?? "" } : part,
     ),
   }));
+};
+
+/** Resolve an already scoped set of API file URLs with the existing authenticated cache. */
+export const useApiFileUrls = (urls: string[]) => {
+  const resolved = useQueries({
+    queries: urls.map(apiFileUrlQuery),
+    combine: (results) => results.map((result) => result.data),
+  });
+  return new Map(urls.map((url, index) => [url, resolved[index] ?? ""]));
 };

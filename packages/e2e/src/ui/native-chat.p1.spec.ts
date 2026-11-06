@@ -111,6 +111,28 @@ test("independent native chat paints and accepts input before history, then reta
       buffer: Buffer.from("Retained attachment"),
     });
     await expect(main.getByRole("button", { name: "Remove draft.txt" })).toBeVisible();
+    // Critical risk: protected provider images must preview without consuming/removing the draft file.
+    const imageChooser = page.waitForEvent("filechooser");
+    await main.getByRole("button", { name: "Attach files", exact: true }).click();
+    await (await imageChooser).setFiles({
+      name: "diagram.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    });
+    const thumbnail = main.getByRole("img", { name: "diagram.png preview thumbnail", exact: true });
+    await expect(thumbnail).toBeVisible();
+    await expect.poll(() => thumbnail.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1);
+    await main.getByText("diagram.png", { exact: true }).click();
+    const preview = page.getByRole("dialog", { name: "diagram.png", exact: true });
+    await expect(preview.getByRole("img", { name: "diagram.png preview", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(preview).toHaveCount(0);
+    await main.getByRole("button", { name: "Remove diagram.png", exact: true }).click();
+    await expect(main.getByText("diagram.png", { exact: true })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Remove draft.txt", exact: true })).toBeVisible();
     // Wait for the actual extension-owned save, rather than making reload race its durability.
     await expect
       .poll(async () => {
