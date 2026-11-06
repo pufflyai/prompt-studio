@@ -3,12 +3,14 @@ import { canonicalJson } from "pstdio-sync-contracts";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { AccountRequestError } from "../account/native-account";
+import { isRecoveryCatalogOwner } from "../project-recovery/catalog";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
 import type { RelayDeps } from "./deps";
 import { createDeviceCommandCaller } from "./device-command-call";
 import { startDeviceCommands } from "./device-commands";
 import { extensionOwnerContextKey, startRelayExtension } from "./extension-owner";
+import { startFolderRecovery } from "./folder-recovery";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
 import { startPublishedExtensions } from "./publications";
@@ -101,7 +103,8 @@ export const startRelayRuntime = async (input: {
   const coreDocuments = createWorkbenchConnections((config) => startCoreDocumentSync(core(config)));
   const coreOwners = [publications, automations, personal, coreDocuments];
   const commands = createWorkbenchConnections((config) => startDeviceCommands(core(config)));
-  const lifecycleOwners = [...coreOwners, commands];
+  const recovery = createWorkbenchConnections((config) => startFolderRecovery(core(config)));
+  const lifecycleOwners = [...coreOwners, commands, recovery];
   const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
     connection.close();
     await connection.done;
@@ -186,7 +189,7 @@ export const startRelayRuntime = async (input: {
   };
   const stopStorage = deps.extensionStorageService.watch((owner, origin) => {
     const documentId = owner.documentId;
-    if (!workbenches.has(owner.workbenchId)) return;
+    if (!workbenches.has(owner.workbenchId) || isRecoveryCatalogOwner(owner.extensionId)) return;
     if (owner.extensionId === publishedExtensionsId) {
       publications.get(owner.workbenchId)?.wake();
       statusChanged(owner.workbenchId);
@@ -215,6 +218,7 @@ export const startRelayRuntime = async (input: {
       publications.get(workbenchId)?.retry();
       automations.get(workbenchId)?.retry();
       coreDocuments.get(workbenchId)?.retry();
+      recovery.get(workbenchId)?.retry();
       for (const connection of connections.values())
         if (connection.owner.workbenchId === workbenchId) connection.retry();
     },
