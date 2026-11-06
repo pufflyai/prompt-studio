@@ -1,3 +1,4 @@
+import { classifyRuntimeFailure } from "../runtime/runtime-controller";
 import { DesktopSidecarError } from "../runtime/sidecar-artifact";
 import type { DesktopRecoveryError } from "./lifecycle-machine";
 
@@ -31,11 +32,15 @@ export const recoveryError = (error: unknown): DesktopRecoveryError => {
       actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
     };
   }
+  // Unexpected exits supply the bounded runtime log tail, not a display message.
+  // Classify it without sending startup output through the recovery renderer.
+  const classified = /^(?:port_bind_failure|pglite_ownership_conflict|pglite_recovery_failure|unexpected_exit): /.test(
+    detail,
+  );
   return {
-    code: recoveryCode(detail),
-    message: detail.includes(": ")
-      ? detail.slice(detail.indexOf(": ") + 2)
-      : "Prompt Studio could not start its runtime.",
+    ...(classified
+      ? { code: recoveryCode(detail), message: detail.slice(detail.indexOf(": ") + 2) }
+      : classifyRuntimeFailure(detail)),
     actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
   };
 };
