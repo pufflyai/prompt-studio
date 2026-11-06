@@ -87,7 +87,11 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     expect(disabled.ok()).toBe(true);
     await expect(page.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(0);
     await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveCount(0);
-    await expect.poll(() => [...watches, ...holds].every((id) => deleted.includes(id))).toBe(true);
+    await expect.poll(() => watches.every((id) => deleted.includes(id))).toBe(true);
+    // Core owns saved resource membership across inactive pages and provider disablement.
+    // Its one shared hold remains until those retained resources are explicitly removed.
+    expect(holds).toHaveLength(1);
+    expect(deleted).not.toContain(holds[0]!);
     expect(stops).toBe(0);
     expect(await readSession()).toMatchObject({
       id: sessionId,
@@ -116,7 +120,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     await expect(editor).toContainText("Unsent work survives provider disablement");
     await expect(main.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
     await expect.poll(() => watches.length).toBe(2);
-    await expect.poll(() => holds.length).toBe(2);
+    expect(holds).toHaveLength(1);
     expect(new Set(watches).size).toBe(2);
     expect(stops).toBe(0);
     expect(await readSession()).toMatchObject({
@@ -128,6 +132,12 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     writeFileSync(join(before.cwd, ".fake-hold-release"), "release");
     await expect.poll(async () => (await readSession()).status).toBe("completed");
     expect((await readSession()).agent_session_id).toBe(before.agent_session_id);
+    // Removing the project clears even inactive saved tabs and releases core interest.
+    const removed = await request.delete(`/v1/projects/${project.id}`);
+    expect(removed.ok()).toBe(true);
+    await expect.poll(() => [...watches, ...holds].every((id) => deleted.includes(id))).toBe(true);
+    expect(stops).toBe(0);
+    sessionId = undefined;
   } finally {
     if (sessionId) await request.patch(`/v1/sessions/${sessionId}/status`, { data: { status: "cancelled" } });
     await request.delete(`/v1/projects/${project.id}`);
