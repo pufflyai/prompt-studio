@@ -1,6 +1,19 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  documentNotice: {
+    value: {
+      position: "sticky",
+      bottom: "0",
+      minWidth: "0",
+      zIndex: "1",
+      bg: "bg.muted",
+      borderTopWidth: "1px",
+      borderColor: "border.muted",
+      paddingInline: "sm",
+      paddingBlock: "xs",
+    },
+  },
   chatContent: {
     value: {
       width: "full",

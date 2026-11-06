@@ -11,8 +11,8 @@ export const MarkdownCompositionRecovery = (props: MarkdownCompositionRecoveryPr
   const { binding } = props;
   const [discardError, setDiscardError] = useState(false);
   return (
-    <Stack gap="xs" bg="bg.muted" px="sm" py="xs">
-      <Flex gap="sm" align="center" justify="space-between">
+    <Stack gap="xs" flex="none" layerStyle="documentNotice">
+      <Flex gap="sm" align="center" justify="space-between" wrap="wrap">
         <Flex gap="xs" align="center">
           <Text color="fg.muted" textStyle="label/S/regular">
             Your draft is kept here.

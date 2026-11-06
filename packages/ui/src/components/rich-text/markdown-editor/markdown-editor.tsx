@@ -125,18 +125,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
               />
             ) : null}
             {autoFocus ? <AutoFocusPlugin /> : null}
-            {collaboration ? (
-              <MarkdownCollaborationPlugin
-                collaboration={collaboration}
-                source={sourceDocument}
-                editable={isEditable}
-                onChange={onChange}
-                bindingRef={collaborationRef}
-                onFinishingChange={setFinishing}
-              />
-            ) : (
-              <MarkdownHistoryPlugin />
-            )}
+            {!collaboration && <MarkdownHistoryPlugin />}
             <LinkPlugin />
             <ListPlugin />
             <ListMarkerWidthPlugin />
@@ -211,6 +200,16 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
               />
             )}
             {debug && <TreeViewPlugin />}
+            {collaboration && (
+              <MarkdownCollaborationPlugin
+                collaboration={collaboration}
+                source={sourceDocument}
+                editable={isEditable}
+                onChange={onChange}
+                bindingRef={collaborationRef}
+                onFinishingChange={setFinishing}
+              />
+            )}
           </LexicalComposer>
         </MarkdownDocumentContext.Provider>
       </MarkdownUrlProvider>

@@ -71,7 +71,6 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
   if (presentation.kind === "empty") {
     return (
       <Flex direction="column" h="full" minH="0" bg="bg">
-        {errorNotice}
         {positionNotice}
         <EmptyState
           flex="1"
@@ -79,6 +78,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
           title={content.emptyState?.title ?? "Select a file"}
           description={content.emptyState?.description}
         />
+        {errorNotice}
       </Flex>
     );
   }
@@ -93,11 +93,11 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     }
     return (
       <Flex direction="column" h="full" minH="0" bg="bg">
-        {errorNotice}
         {positionNotice}
         <Center ref={rendererRef} flex="1" minH="0" p="md" overflow="auto">
           <Image src={content.dataUrl} alt={content.fileName ?? title} maxW="100%" maxH="100%" objectFit="contain" />
         </Center>
+        {errorNotice}
       </Flex>
     );
   }
@@ -105,7 +105,6 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
   if (presentation.kind === "code") {
     return (
       <Flex direction="column" h="full" minH="0" bg="bg">
-        {errorNotice}
         {positionNotice}
         <Box flex="1" minH="0">
           <Suspense fallback={<FileRendererLoading />}>
@@ -121,6 +120,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
             />
           </Suspense>
         </Box>
+        {errorNotice}
       </Flex>
     );
   }
