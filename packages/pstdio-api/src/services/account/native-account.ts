@@ -8,6 +8,7 @@ import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { startFolderRecovery } from "../relay/folder-recovery";
 import type { RelayWorkbench } from "../relay/runtime";
+import { createAccountRefresh } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
 import { readManagerAccount } from "./manager-account";
@@ -138,7 +139,9 @@ export const createNativeAccount = (input: {
   const commands = createDeviceCommandSender();
   const missing = createMissingProjectRecovery({
     exists: async (id) => Boolean(await input.projects.get(id)),
-    recovered: () => void refresh(),
+    recovered: () => {
+      if (!closed) void refreshes.changed();
+    },
   });
   // Until the relay runtime starts, no sync owner has downloaded anything in this run.
   let projectStatus = async (_projectId: string): Promise<ProjectSyncStatus> => ({
@@ -146,8 +149,6 @@ export const createNativeAccount = (input: {
     offlineReady: false,
   });
   let retry: ReturnType<typeof setTimeout> | undefined;
-  let refreshing = Promise.resolve();
-  let queued: Promise<void> | undefined;
   let closed = false;
   const shutdown = new AbortController();
 
@@ -175,14 +176,19 @@ export const createNativeAccount = (input: {
 
   // Syncs every cloud project of the account that exists here, then recovers the missing ones.
   // One that cannot be recovered yet is tried again on the next refresh.
-  const publish = async (login: DeviceLogin | null) => {
+  const publish = async (login: DeviceLogin | null, recoverMissing = true) => {
     void presence.update(login);
     const local: string[] = [];
     const absent: string[] = [];
-    for (const id of login ? (projectsFor(login) ?? []) : [])
-      (!missing.recovering(id) && (await input.projects.get(id)) ? local : absent).push(id);
+    for (const id of login ? (projectsFor(login) ?? []) : []) {
+      const exists = await input.projects.get(id);
+      // Download durable data while extensions prepare; readiness remains fenced below.
+      if (exists) local.push(id);
+      // Keep the in-flight recovery in its account batch so refresh cannot cancel setup.
+      if (!exists || missing.recovering(id)) absent.push(id);
+    }
     await update(login ? local.map((id) => connectionFor(login, id)) : []);
-    missing.recover(login ? absent.map((id) => connectionFor(login, id)) : []);
+    if (recoverMissing) missing.recover(login ? absent.map((id) => connectionFor(login, id)) : []);
   };
   const load = async () => {
     clearTimeout(retry);
@@ -210,21 +216,19 @@ export const createNativeAccount = (input: {
     await publish(login);
     if (!closed) changes.notify();
   };
-  // Refreshes run one at a time. Calls that arrive while one waits to start share it.
-  const refresh = () => {
-    if (queued) return queued;
-    const next = refreshing
-      .then(() => {
-        queued = undefined;
-        return load();
-      })
-      .catch((error: unknown) => {
-        apiLogger.warn({ event: "account.refresh.failed", error }, "Cloud project sync update failed");
-      });
-    queued = next;
-    refreshing = next;
-    return next;
-  };
+  const refreshes = createAccountRefresh({
+    load,
+    publish: async () => {
+      if (closed) return;
+      // Setup notifications update owners without turning a failed attempt into an immediate retry.
+      await publish(await readLogin(), false);
+      if (!closed) changes.notify();
+    },
+    failed: (error) => {
+      apiLogger.warn({ event: "account.refresh.failed", error }, "Cloud project sync update failed");
+    },
+  });
+  const refresh = refreshes.refresh;
   // Logging out works offline and after removal. Removing the device at the manager is best effort.
   const logout = () =>
     logins.logout(async () => {
@@ -304,7 +308,13 @@ export const createNativeAccount = (input: {
       const projects = projectsFor(login);
       if (login && !projects) return { state: "offline" as const, offlineReady: false };
       if (!projects?.includes(projectId)) return { state: "local" as const, offlineReady: false };
-      return projectStatus(projectId);
+      const status = await projectStatus(projectId);
+      if (!missing.recovering(projectId)) return status;
+      return {
+        ...status,
+        state: status.state === "needs-attention" ? status.state : ("first-download-incomplete" as const),
+        offlineReady: false,
+      };
     },
     retryProjectSync: (projectId: string) => retryProjectSync(projectId, input.projects, refresh, retryProject),
     /** The project's folder capture, download and restore owner on this device. */
@@ -349,7 +359,7 @@ export const createNativeAccount = (input: {
       update = async () => {};
       changes.close();
       // Startup account reads can still use the database; its owner closes only after they drain.
-      await Promise.all([logins.close(), refreshing, missing.close()]);
+      await Promise.all([logins.close(), refreshes.done(), missing.close()]);
     },
   };
 };

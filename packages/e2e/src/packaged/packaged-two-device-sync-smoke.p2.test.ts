@@ -207,6 +207,10 @@ test(
       expect((await second.client.projects.folder(project.id)).path).toBeNull();
       await waitFor(() => peer.failedReads() > 0);
       await second.reach(project.id, "first-download-incomplete");
+      expect(await second.client.account.projectSyncStatus(project.id)).toMatchObject({
+        state: "first-download-incomplete",
+        offlineReady: false,
+      });
       phase("new device waiting for download");
       const prematureOpen = await fetch(`${second.host.baseUrl}/v1/projects/${project.id}/open`, {
         method: "POST",
@@ -247,6 +251,7 @@ test(
       await first.reach(project.id, "synced");
       await second.reach(project.id, "synced");
       await picker.ready();
+      expect((await second.client.account.projectSyncStatus(project.id)).offlineReady).toBe(true);
       phase("project folder prepared");
       expect((await second.command<Record<string, StorageRecord>>(project.id, "read")).note?.value).toBe(
         "written on the first device",
