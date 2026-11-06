@@ -332,7 +332,11 @@ KV keys correspond to `records.id(key)` in the same storage scope. Legacy `set` 
 the latest local value inside the owner transaction and replaces it. It has no
 caller-provided revision and does not protect an earlier read-modify-write.
 Collection `update`, `createIfAbsent`, and `deleteIfValue` keep their local atomic
-conditions. Their boolean result is not a distributed lease.
+conditions. Their boolean result is not a distributed lease. Locally accepted
+ordinary replacements merge their changed JSON paths in relay order, including
+when incidental timestamps overlap. They still require the observed record
+lifetime: a save from before deletion cannot modify a recreated record. Explicit
+`records.commit` conditions keep their written-path and lifetime checks.
 
 Legacy collections retain their own names and ordering. Continue their supported
 access while planning an explicit extension data migration to domain record IDs.

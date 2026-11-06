@@ -22,11 +22,13 @@ export interface OrderedRecord {
   stamps: Record<string, string>;
   texts?: Record<string, OrderedTextState>;
 }
-export interface OrderedObservation {
+export interface OrderedLifetime {
   version: 1;
   exists: boolean;
   deleted: boolean;
   lifetime: string | null;
+}
+export interface OrderedObservation extends OrderedLifetime {
   value: ObservedJson;
   stamps: Record<string, string>;
 }
@@ -39,6 +41,8 @@ export interface OrderedEdit {
   deleted?: boolean;
   /** Replacement baseline only; passing an observation does not make a save conditional. */
   observedRevision?: string;
+  /** Internal legacy saves merge fields while fencing the observed record lifetime. */
+  expectedLifetime?: string;
   /** Refuse the whole group when this observation's written paths or lifetime have changed. */
   expectedRevision?: string;
 }
@@ -51,7 +55,7 @@ export interface OrderedOperation {
     changes: JsonChange[];
     texts?: OrderedTextChange[];
     deleted?: boolean;
-    condition?: OrderedObservation;
+    condition?: OrderedObservation | OrderedLifetime;
   }[];
 }
 /** Delivery coordinates can change after true relay loss; authored conditions remain immutable. */
@@ -92,6 +96,11 @@ const preparedChanges = async (edit: OrderedEdit, current: OrderedRecord | undef
   return replacementChanges(before.exists && !before.deleted ? before.value : undefined, edit.replace);
 };
 
+const lifetimeObservation = (revision: string): OrderedLifetime => {
+  const { version, exists, deleted, lifetime } = readOrderedObservation(revision);
+  return { version, exists, deleted, lifetime };
+};
+
 /** Prepare once and persist this immutable envelope before opening transport. */
 export const prepareOrderedOperation = async (
   group: { operationId: string; edits: OrderedEdit[] },
@@ -110,6 +119,9 @@ export const prepareOrderedOperation = async (
       ...(edit.texts?.length ? { texts: structuredClone(edit.texts) } : {}),
       ...(edit.deleted === undefined ? {} : { deleted: edit.deleted }),
       ...(edit.expectedRevision === undefined ? {} : { condition: readOrderedObservation(edit.expectedRevision) }),
+      ...(edit.expectedRevision === undefined && edit.expectedLifetime !== undefined
+        ? { condition: lifetimeObservation(edit.expectedLifetime) }
+        : {}),
     });
   }
   const envelope = { version: 1 as const, operationId: group.operationId, edits };
@@ -155,6 +167,7 @@ const accepts = (
     observed.deleted !== (record?.deleted ?? false)
   )
     return false;
+  if (!("stamps" in observed)) return true;
   // Deletion writes the whole record, including paths added after its observation.
   const lifecycle = edit.deleted === true || (edit.deleted === false && observed.deleted);
   const paths = lifecycle
