@@ -51,12 +51,19 @@ test("Go destinations use shortcut mode while history chords and Shift slash rem
   await page.keyboard.press("s");
   await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  const composer = page.locator(
+    '[data-workbench-panel="main"] [data-testid="content-editable"][contenteditable="true"]',
+  );
+  await expect(composer).toBeFocused();
+  // Built-in history chords are available outside inputs; native Sessions focuses its composer.
+  await page.getByRole("button", { name: "Help", exact: true }).focus();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await page.keyboard.press("Alt+Shift+ArrowRight");
   await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await expect(composer).toBeFocused();
   // Shortcut help is available outside inputs; history restores the composer's focus.
   await page.getByRole("button", { name: "Help", exact: true }).focus();
   await page.keyboard.press("Shift+/");
