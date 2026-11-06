@@ -17,6 +17,14 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
   const [editor, setEditor] = useState<Rule | null>(null);
   const [removing, setRemoving] = useState<Rule | null>(null);
   const [form, setForm] = useState<FormMode | null>(null);
+  const routeForm = String(props.pageParams.form ?? "");
+  const ready = Boolean(data);
+  useEffect(() => {
+    if (!ready || !["rule", "chapter", "finding", "observation"].includes(routeForm)) return;
+    setForm(routeForm as FormMode);
+    setPromoteId(undefined);
+    void client.page.updateParams({ form: null }).catch((error) => book.setError(String(error)));
+  }, [client, routeForm, ready, book.setError]);
   const [promoteId, setPromoteId] = useState<string>();
   const [search, setSearch] = useState(false);
   const [source, setSource] = useState<{ path: string; content: string } | null>(null);

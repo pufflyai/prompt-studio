@@ -1,7 +1,6 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { SearchableMenu } from "@pstdio/ui";
 import { GitBranch, Search } from "lucide-react";
-import type { FormMode } from "./authoring-form";
 import type { BookClient } from "./client";
 import type { Section } from "./model";
 import type { BookData } from "./read";
@@ -11,15 +10,13 @@ interface Props {
   revision: "working" | "accepted";
   section: Section | null;
   heading: string;
-  busy: boolean;
   client: BookClient;
   run: (action: () => Promise<unknown>) => void;
   onRevision: (revision: "working" | "accepted") => void;
   onSearch: () => void;
-  onForm: (mode: FormMode) => void;
 }
 export function BookControls(props: Props) {
-  const { data, revision, section, heading, busy, client, run, onRevision, onSearch, onForm } = props;
+  const { data, revision, section, heading, client, run, onRevision, onSearch } = props;
   return (
     <HStack
       px="lg"
@@ -56,26 +53,6 @@ export function BookControls(props: Props) {
           >
             Mark all read
           </Button>
-        )}
-        {section === "Undocumented" && (
-          <Button size="xs" variant="outline" onClick={() => onForm("observation")}>
-            Record observation
-          </Button>
-        )}
-        {section === "Findings" && (
-          <>
-            <Button size="xs" variant="ghost" onClick={() => onForm("finding")}>
-              New finding
-            </Button>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={busy}
-              onClick={() => run(() => client.commands.check({ workspaceId: data.workspaceId }))}
-            >
-              {busy ? "Checking…" : "Run focused check"}
-            </Button>
-          </>
         )}
         <SearchableMenu
           trigger={
@@ -125,9 +102,6 @@ export function BookControls(props: Props) {
           searchPlaceholder="Find a workspace…"
           emptyState="No local workspaces"
         />
-        <Button size="xs" variant="ghost" onClick={() => onForm("chapter")}>
-          New chapter
-        </Button>
       </HStack>
     </HStack>
   );

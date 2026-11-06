@@ -12,6 +12,8 @@ pst pstdio.requirement-book open
 
 The dashboard provides chapter and rule browsing, search, rule authoring, amendment, movement and removal, exact suggestion comparisons, local review, reconciliation and application to a working branch. Findings and qualified observations have independent read states. Observations can map to multiple requirements or propose a new rule.
 
+Use the Requirement book ▾ menu to create a rule, chapter, finding, or observation. Categorical fields use single-select dropdowns. Focused checks have no manual dashboard action in this prototype.
+
 The sole requirement authority is `documentation/requirement-book/book.json` in Git. The accepted view reads the configured local target branch; the working view reads the selected workspace. The extension refuses writes to the default project folder or accepted branch. Applying never commits, creates a PR, merges, or accepts a proposal. Existing repository review remains the acceptance boundary.
 
 Small project records hold suggestions, authoring drafts, observations, findings, and read markers. They do not contain a second accepted book. New-rule forms retain drafts on field blur, Cancel, and Escape; the close button discards the draft. Failed actions remain visible. Pending applications retain a recovery journal; retry Apply after a failed final metadata save. `suggestions cancel-application` clears an unapplied attempt only when the file still matches its exact prior content.

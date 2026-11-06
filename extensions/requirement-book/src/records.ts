@@ -89,6 +89,7 @@ export const saveRecord = async <T extends { id: string }>(
       {
         recordId,
         expectedRevision: expectedRevision ?? current.revision,
+        deleted: false,
         replace: JSON.parse(JSON.stringify({ kind, value })),
       },
     ],

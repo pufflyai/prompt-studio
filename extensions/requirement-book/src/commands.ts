@@ -130,6 +130,7 @@ export const commands = {
         values: input.values,
       };
       await saveRecord(ctx.storage, "draft", draft);
+      await announce(ctx, workspace.id);
       return draft;
     },
   }),
@@ -142,6 +143,7 @@ export const commands = {
     async run(ctx, input) {
       const { workspace } = await resolveWorkspace(ctx, input.workspaceId);
       await deleteRecord(ctx.storage, "draft", `${workspace.id}-${input.chapter}`);
+      await announce(ctx, workspace.id);
       return { discarded: true };
     },
   }),

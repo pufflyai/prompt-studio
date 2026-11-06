@@ -10,6 +10,7 @@ import {
   params,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { bookMenu } from "./book-menu";
 import { readBook } from "./read";
 import { changed } from "./records";
 
@@ -34,8 +35,12 @@ export const page = definePage({
   icon: "book-open",
   path: "book",
   mode: workbenchModes.project,
-  params: { chapter: { type: "number", default: 1 }, review: { type: "string", default: "" } },
-  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
+  params: {
+    chapter: { type: "number", default: 1 },
+    review: { type: "string", default: "" },
+    form: { type: "string", default: "", values: ["", "rule", "chapter", "finding", "observation"] },
+  },
+  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page", tab: bookMenu },
   slots: [],
 });
 export const rulePage = definePage({
@@ -45,7 +50,7 @@ export const rulePage = definePage({
   mode: workbenchModes.project,
   parent: page.ref,
   resource: { kinds: [requirement.ref] },
-  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
+  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page", tab: bookMenu },
   slots: [],
 });
 export const ruleTarget = (ref: string, title: string, projectId: string) => ({

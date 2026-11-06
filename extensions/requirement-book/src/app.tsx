@@ -40,7 +40,6 @@ export function BookApp(props: Props) {
           revision={state.revision}
           heading={heading}
           section={section}
-          busy={state.busy}
           client={client}
           run={state.run}
           onRevision={(revision) => {
@@ -48,7 +47,6 @@ export function BookApp(props: Props) {
             state.setEditor(null);
           }}
           onSearch={() => state.setSearch(true)}
-          onForm={state.setForm}
         />
         {state.error && (
           <AlertMessage status="error" title="Could not update the book" onClose={() => state.setError("")}>
@@ -97,7 +95,6 @@ export function BookApp(props: Props) {
               state.setEditor(null);
             }}
             onOpen={state.open}
-            onCreate={() => state.setForm("rule")}
             onEdit={state.edit}
             onRemove={state.setRemoving}
             onSave={state.save}

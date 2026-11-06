@@ -2,6 +2,7 @@ import { Button, CloseButton, Dialog, Field, HStack, Input, Portal, Stack, Text,
 import { ScrollArea } from "@pstdio/ui";
 import type { KanbanRendererCreateRowConfig } from "@pstdio/ui/kanban-renderer";
 import { useRef, useState } from "react";
+import { BookSelect } from "./book-select";
 import type { Draft } from "./records";
 
 interface FormProps {
@@ -107,7 +108,18 @@ export function BookForm(props: FormProps) {
                   {fields.map((field) => (
                     <Field.Root key={field.id} required={field.required}>
                       <Field.Label>{field.label}</Field.Label>
-                      {field.type === "longtext" ? (
+                      {field.type === "select" && (
+                        <BookSelect
+                          field={field}
+                          value={values[field.id]}
+                          onChange={(value) => {
+                            const next = { ...values, [field.id]: value };
+                            setValues(next);
+                            void persist(next).catch((failure) => setError(String(failure)));
+                          }}
+                        />
+                      )}
+                      {field.type === "longtext" && (
                         <Textarea
                           value={String(values[field.id] ?? "")}
                           onChange={(event) => setValues({ ...values, [field.id]: event.target.value })}
@@ -115,7 +127,8 @@ export function BookForm(props: FormProps) {
                             void persist(values).catch((failure) => setError(String(failure)));
                           }}
                         />
-                      ) : (
+                      )}
+                      {field.type !== "select" && field.type !== "longtext" && (
                         <Input
                           autoFocus={field === fields[0]}
                           value={String(values[field.id] ?? "")}

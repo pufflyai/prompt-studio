@@ -16,7 +16,6 @@ interface BrowserProps {
   editor: Rule | null;
   onSelect: (ref: string) => void;
   onOpen: (ref: string) => void;
-  onCreate: () => void;
   onEdit: (rule: Rule) => void;
   onRemove: (rule: Rule) => void;
   onSave: (rule: Rule, reason: string) => void;
@@ -191,7 +190,6 @@ export function BookBrowser(props: BrowserProps) {
     onMapObservation,
     onSelect,
     onOpen,
-    onCreate,
     onEdit,
     onRemove,
     onSave,
@@ -211,9 +209,6 @@ export function BookBrowser(props: BrowserProps) {
         <Stack h="full" minH="0" gap="xs" py="xs" px="0">
           <HStack justify="space-between" px="sm">
             <Text textStyle="label/S/medium">Rules</Text>
-            <Button size="xs" variant="ghost" onClick={onCreate}>
-              New rule
-            </Button>
           </HStack>
           <ScrollArea flex="1" minH="0">
             <TreeList

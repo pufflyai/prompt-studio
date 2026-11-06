@@ -2,7 +2,14 @@ export const ruleFields = (title: string, test = "") => [
   { id: "title", label: "Title", type: "text" as const, required: true },
   { id: "statement", label: "Requirement", type: "longtext" as const, required: true },
   { id: "scope", label: "Scope", type: "text" as const, required: true, defaultValue: title },
-  { id: "level", label: "Level (0–3)", type: "text" as const, required: true, defaultValue: "2" },
+  {
+    id: "level",
+    label: "Level",
+    type: "select" as const,
+    required: true,
+    defaultValue: "2",
+    options: [0, 1, 2, 3].map((level) => ({ value: String(level), label: `L${level}` })),
+  },
   { id: "acceptance", label: "Acceptance", type: "longtext" as const, required: true },
   { id: "tests", label: "Test or result paths (one per line)", type: "longtext" as const, defaultValue: test },
   { id: "related", label: "Related requirements (comma-separated)", type: "text" as const },
@@ -13,8 +20,13 @@ export const observationFields = [
   { id: "claim", label: "What is known", type: "longtext" as const, required: true },
   {
     id: "kind",
-    label: "Evidence kind: source, assertion, or measurement",
-    type: "text" as const,
+    label: "Evidence kind",
+    type: "select" as const,
+    options: [
+      { value: "source", label: "Source" },
+      { value: "assertion", label: "Assertion" },
+      { value: "measurement", label: "Measurement" },
+    ],
     required: true,
     defaultValue: "assertion",
   },
@@ -26,8 +38,14 @@ export const findingFields = [
   { id: "title", label: "Title", type: "text" as const, required: true },
   {
     id: "kind",
-    label: "Type: violation, potential-conflict, missing-evidence, stale-evidence",
-    type: "text" as const,
+    label: "Finding type",
+    type: "select" as const,
+    options: [
+      { value: "violation", label: "Violation" },
+      { value: "potential-conflict", label: "Potential conflict" },
+      { value: "missing-evidence", label: "Missing evidence" },
+      { value: "stale-evidence", label: "Stale evidence" },
+    ],
     required: true,
     defaultValue: "potential-conflict",
   },
@@ -45,3 +63,18 @@ export const splitRefs = (value: unknown) =>
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+
+export const chapterFields = [
+  { id: "title", label: "Chapter title", type: "text" as const, required: true },
+  {
+    id: "group",
+    label: "Group",
+    type: "select" as const,
+    required: true,
+    defaultValue: "Core",
+    options: [
+      { value: "Core", label: "Core" },
+      { value: "Extensions", label: "Extensions" },
+    ],
+  },
+];

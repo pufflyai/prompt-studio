@@ -1,6 +1,6 @@
 import { BookForm } from "./book-form";
 import type { BookClient } from "./client";
-import { findingFields, observationFields, ruleFields, splitLines, splitRefs } from "./forms";
+import { chapterFields, findingFields, observationFields, ruleFields, splitLines, splitRefs } from "./forms";
 import { ruleSchema } from "./model";
 import type { BookData } from "./read";
 import type { Draft } from "./records";
@@ -22,10 +22,7 @@ export function AuthoringForm(props: Props) {
     rule: ruleFields(data.chapters.find((item) => item.id === chapter)?.title ?? "Project"),
     observation: observationFields,
     finding: findingFields,
-    chapter: [
-      { id: "title", label: "Chapter title", type: "text" as const, required: true },
-      { id: "group", label: "Group: Core or Extensions", type: "text" as const, required: true, defaultValue: "Core" },
-    ],
+    chapter: chapterFields,
   }[mode];
   const title = {
     rule: promoteId ? "Propose a rule from evidence" : "New rule",

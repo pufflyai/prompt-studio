@@ -3,6 +3,8 @@ import { Stack } from "@chakra-ui/react";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { useState } from "react";
 import { BookBrowser } from "./book-browser";
+import { BookForm } from "./book-form";
+import { observationFields } from "./forms";
 import type { Rule } from "./model";
 import { bookFixture } from "./model.fixture";
 
@@ -23,7 +25,6 @@ export function Documentation() {
           observations={[]}
           onSelect={setSelected}
           onOpen={setSelected}
-          onCreate={() => setEditor({ ...book.rules[0], title: "New rule" })}
           onEdit={setEditor}
           onMove={() => {}}
           onRemove={() => {}}
@@ -32,6 +33,22 @@ export function Documentation() {
           onMapObservation={() => {}}
         />
       </Stack>
+    </ChakraProvider>
+  );
+}
+
+export function EvidenceForm() {
+  return (
+    <ChakraProvider value={psTheme}>
+      <BookForm
+        title="Record observation"
+        fields={observationFields}
+        submitLabel="Create"
+        onSubmit={async () => {}}
+        onClose={() => {}}
+        onSaveDraft={async () => {}}
+        onDiscard={async () => {}}
+      />
     </ChakraProvider>
   );
 }
