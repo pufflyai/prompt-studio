@@ -17,25 +17,21 @@ export const preparedUiSourcesPath = (home: string) => join(home, "fixtures", "s
 // Runtime provisioning still performs its normal install for every changed production consumer.
 export const prepareUiFixtures = async (env: NodeJS.ProcessEnv, signal: AbortSignal) => {
   const installEnv = { ...env, HOME: env.E2E_HOME, BUN_INSTALL_CACHE_DIR: env.E2E_BUN_CACHE_DIR };
-  const preparations = await Promise.allSettled(
-    currentApiConsumers.map(async (installName) => {
-      const source = await preparePackagedExtensionSource(
-        join(env.E2E_HOME!, "fixtures", installName),
-        join(import.meta.dirname, "../../../../extensions", installName),
-        { env: installEnv, signal },
-      );
-      await promisify(execFile)(process.execPath, ["install", "--frozen-lockfile", "--ignore-scripts"], {
-        cwd: source,
-        env: installEnv,
-        signal,
-      });
-      return { installName, source };
-    }),
-  );
-  // Preparation owns child installers until every one settles, including on failure/abort.
-  // The caller removes the run folder immediately after this function returns.
-  const failures = preparations.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
-  if (failures.length) throw new AggregateError(failures, "UI fixture preparation failed.");
-  const sources = preparations.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
+  const sources: Array<{ installName: string; source: string }> = [];
+  // Each preparation mutates the shared Bun cache. Finish its normal fresh install
+  // before starting the next, and own every installer until completion or cancellation.
+  for (const installName of currentApiConsumers) {
+    const source = await preparePackagedExtensionSource(
+      join(env.E2E_HOME!, "fixtures", installName),
+      join(import.meta.dirname, "../../../../extensions", installName),
+      { env: installEnv, signal },
+    );
+    await promisify(execFile)(process.execPath, ["install", "--frozen-lockfile", "--ignore-scripts"], {
+      cwd: source,
+      env: installEnv,
+      signal,
+    });
+    sources.push({ installName, source });
+  }
   await writeFile(preparedUiSourcesPath(env.E2E_HOME!), JSON.stringify(sources));
 };
