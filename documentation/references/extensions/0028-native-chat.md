@@ -232,3 +232,10 @@ Resource removal commands use their existing `description` as confirmation detai
 name the selected resource, and keep failed saves in the confirmation dialog for retry.
 The button uses the command title. Preview rollback and canonical write serialization
 remain owned by the workbench.
+
+
+### Pending queued input
+
+The native owner retains an ordinary submitted input while its action is pending, including a sending queue row when the conversation is running. This presentation stays outside canonical transcript and queue indexes, survives placement changes, and hands off once to the matching saved request or canonical user message. Question replies do not create ordinary pending input or consume the message draft.
+
+A rejected queued input stays visible as unsent work. Dismiss restores its text, files and control settings while retaining newer work as a saved recovery. The host persists this recovery through the provider's existing `saveDraft` binding, so reloading can recover unsent work even after transient presentation has gone. No extra queue or execution service is needed.

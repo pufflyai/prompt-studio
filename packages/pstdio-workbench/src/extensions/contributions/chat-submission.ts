@@ -1,5 +1,5 @@
 import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
-import { recoverChatDraft } from "./chat-draft-recovery";
+import { chatDraftContentKey, hydrateChatDraft, recoverChatDraft } from "./chat-draft-recovery";
 import { type ChatPendingSubmission, createChatPendingSubmission } from "./chat-pending-submission";
 
 type Submit = Extract<ChatRendererAction, { type: "submit" }>;
@@ -15,13 +15,18 @@ export const createChatSubmissionRunner = (input: {
   markRecoverable(): void;
 }) => {
   let submission: Promise<void> | undefined;
+  let sequence = 0;
   return (action: Submit, handler: Handler) => {
     if (submission) return submission;
     const before = input.read();
-    const pending =
-      !action.questionResponse && !before.conversation.streaming
-        ? createChatPendingSubmission(action, before.conversation.messages ?? [])
-        : undefined;
+    const pending = !action.questionResponse
+      ? createChatPendingSubmission(
+          action,
+          before.conversation.messages ?? [],
+          before.conversation.streaming ? (before.conversation.queuedFollowUps ?? []) : undefined,
+          ++sequence,
+        )
+      : undefined;
     input.publish({ sending: true, pending: [...(before.pending ?? []), ...(pending ? [pending] : [])] });
     submission = input
       .execute(action, handler)
@@ -32,7 +37,7 @@ export const createChatSubmissionRunner = (input: {
         const terminal =
           result.snapshot &&
           ("sentTag" in result.snapshot ||
-            (result.snapshot.messages !== undefined && result.snapshot.streaming === false));
+            (!pending?.queue && result.snapshot.messages !== undefined && result.snapshot.streaming === false));
         input.publish({
           sending: false,
           pending: current.pending?.flatMap((item) => {
@@ -46,9 +51,30 @@ export const createChatSubmissionRunner = (input: {
         }
       })
       .catch((error) => {
-        if (!action.questionResponse) {
+        const current = input.read();
+        const queued = current.pending?.find((item) => item.message.id === pending?.message.id && item.queue);
+        if (queued && !queued.echoed) {
           const failed = { text: action.text, attachments: action.attachments, values: action.values };
-          const current = input.read();
+          const recoveryAdded = !current.draft.recovered?.some(
+            (draft) => chatDraftContentKey(draft) === chatDraftContentKey(failed),
+          );
+          input.changeDraft(hydrateChatDraft(current.draft, failed));
+          input.publish({
+            sending: false,
+            pending: current.pending?.map((item) =>
+              item === queued
+                ? {
+                    ...item,
+                    recoveryAdded,
+                    failure: error instanceof Error ? error.message : String(error),
+                  }
+                : item,
+            ),
+          });
+          throw error;
+        }
+        if (!action.questionResponse && !queued?.echoed) {
+          const failed = { text: action.text, attachments: action.attachments, values: action.values };
           input.changeDraft(recoverChatDraft(current.draft, failed, current.edits === before.edits));
         }
         input.publish({

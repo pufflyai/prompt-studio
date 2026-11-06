@@ -41,11 +41,8 @@ const PassthroughChatHost = ({ children }: NativeChatHostProps) => children({});
 
 export const NativeChatView = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
-  const { conversation, draft, messages, pending, loading, initializing, sending, error } = useSyncExternalStore(
-    session.subscribe,
-    session.getSnapshot,
-    session.getSnapshot,
-  );
+  const state = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
+  const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);
   const [selected, setSelected] = useState<ChatQueuedRequest | null>(null);
@@ -135,7 +132,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
           onChatInputChange={(text) => session.changeDraft({ text })}
           streaming={conversation.streaming}
           streamingStartedAt={conversation.streamingStartedAt}
-          inputDisabled={conversation.readOnly || uploading > 0 || Boolean(host.account?.progress)}
+          inputDisabled={sending || conversation.readOnly || uploading > 0 || Boolean(host.account?.progress)}
           submitDisabled={
             conversation.submitDisabled ||
             Boolean(selected && conversation.queueReadOnly) ||
@@ -189,9 +186,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
               changeValues={(next) => changeActive({ values: next })}
             />
           }
-          conversationNotices={
-            <NativeChatNotices host={host} notice={conversation.notice} error={error} draft={draft} session={session} />
-          }
+          conversationNotices={<NativeChatNotices host={host} state={state} session={session} />}
           onAttachFiles={(files) => {
             void upload(files).catch(() => undefined);
           }}
@@ -214,7 +209,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
               remove={removeAttachment}
             />
           }
-          queuedFollowUps={conversation.queuedFollowUps}
+          queuedFollowUps={queuedFollowUps}
           onQueuedFollowUpSelect={(item) => {
             setSelected(item);
             if (item)

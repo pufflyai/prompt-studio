@@ -1,18 +1,26 @@
 import type { ChatDraft } from "@pstdio/sdk/extensions";
 
-const content = (draft: ChatDraft) => ({ text: draft.text, attachments: draft.attachments, values: draft.values });
+const chatDraftContent = (draft: ChatDraft) => ({
+  text: draft.text,
+  attachments: draft.attachments,
+  values: draft.values,
+});
 const hasContent = (draft: ChatDraft) =>
   Boolean(draft.text || draft.attachments.length || Object.keys(draft.values).length);
 
+export const chatDraftContentKey = (draft: ChatDraft) => JSON.stringify(chatDraftContent(draft));
+
 /** Keep both drafts when someone starts typing before the extension's storage read completes. */
 export const hydrateChatDraft = (current: ChatDraft, saved: ChatDraft) => {
-  const key = (draft: ChatDraft) => JSON.stringify(content(draft));
+  const key = chatDraftContentKey;
   const seen = new Set([key(current)]);
-  const recovered = [...(current.recovered ?? []), content(saved), ...(saved.recovered ?? [])].filter((draft) => {
-    if (!hasContent(draft) || seen.has(key(draft))) return false;
-    seen.add(key(draft));
-    return true;
-  });
+  const recovered = [...(current.recovered ?? []), chatDraftContent(saved), ...(saved.recovered ?? [])].filter(
+    (draft) => {
+      if (!hasContent(draft) || seen.has(key(draft))) return false;
+      seen.add(key(draft));
+      return true;
+    },
+  );
   return { ...current, recovered };
 };
 

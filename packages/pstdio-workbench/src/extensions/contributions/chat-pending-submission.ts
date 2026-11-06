@@ -1,14 +1,25 @@
-import type { ChatRendererAction } from "@pstdio/sdk/extensions";
+import type { ChatQueuedRequest, ChatRendererAction } from "@pstdio/sdk/extensions";
 import { applySessionMessagePatch, type SessionMessage } from "@pstdio/ui/chat-ui";
+import { createPendingChatQueuePresentation } from "./chat-pending-queue";
+import { chatMessageIdentity, claimSubmittedChatMessages } from "./chat-submission-identity";
 
 export const createChatPendingSubmission = (
   action: Extract<ChatRendererAction, { type: "submit" }>,
   messages: SessionMessage[],
+  queued?: ChatQueuedRequest[],
+  sequence = 0,
 ) => ({
+  sequence,
+  queue: queued !== undefined,
+  failure: undefined as string | undefined,
+  recoveryAdded: false,
+  echoed: false,
+  values: action.values,
+  knownMessages: new Set(messages.flatMap((message) => [message.id, chatMessageIdentity(message)])),
   accepted: false,
   text: action.text,
   attachments: action.attachments,
-  known: new Set(messages.map((message) => message.id)),
+  known: new Set((queued ?? messages).map((item) => item.id)),
   message: {
     id: `pending-${crypto.randomUUID()}`,
     role: "user" as const,
@@ -30,39 +41,37 @@ export type ChatPendingSubmission = ReturnType<typeof createChatPendingSubmissio
 /** Presentation is separate from canonical indexes so live patches never address optimistic rows. */
 export const createChatSubmissionPresentation = () => {
   let previous: SessionMessage[] = [];
-  const claimed = new Set<string>();
-  return (messages: SessionMessage[], pending: ChatPendingSubmission[] = []) => {
+  const claimed = new Map<string, string>();
+  const queuePresentation = createPendingChatQueuePresentation(claimed);
+  return (messages: SessionMessage[], pending: ChatPendingSubmission[] = [], queued: ChatQueuedRequest[] = []) => {
     const canonical = applySessionMessagePatch(previous, { op: "replace", path: "/messages", value: messages });
     const retained = new Set(canonical.map((message) => message.animationKey));
-    for (const identity of claimed) if (!retained.has(identity)) claimed.delete(identity);
+    for (const identity of claimed.keys()) if (!retained.has(identity)) claimed.delete(identity);
+    const receipts = queuePresentation.transfer(queued, pending, canonical);
+    const issued = new Map([...receipts, ...pending].map((item) => [item.message.id, item]));
+    claimSubmittedChatMessages(
+      canonical,
+      [...issued.values()].sort((a, b) => a.sequence - b.sequence),
+      claimed,
+    );
+    const queue = queuePresentation.present(queued, pending, canonical);
     const present = [...canonical];
     const claimedNow = new Set<string>();
-    const waiting: ChatPendingSubmission[] = [];
-    for (const item of pending) {
-      const accepted = canonical.find((message) => {
-        const files = message.parts.filter((part) => part.type === "file");
-        return (
-          !item.known.has(message.id) &&
-          !claimedNow.has(message.id) &&
-          message.role === "user" &&
-          (!claimed.has(message.animationKey ?? "") || message.animationKey === item.message.id) &&
-          message.parts
-            .filter((part) => part.type === "text")
-            .map((part) => part.text)
-            .join("\n") === item.text &&
-          files.length === item.attachments.length &&
-          item.attachments.every((attachment) =>
-            files.some(
-              (file) => file.fileId === attachment.id || Boolean(attachment.url && file.url === attachment.url),
-            ),
-          )
-        );
-      });
+    const waiting: ChatPendingSubmission[] = [...queue.pending];
+    for (const item of [...pending.filter((item) => !item.queue), ...queue.pending.filter((item) => item.failure)]) {
+      if (item.failure) {
+        present.push({ ...item.message, delivery: "unsent" });
+        continue;
+      }
+      const accepted = canonical.find(
+        (message) => !claimedNow.has(message.id) && claimed.get(chatMessageIdentity(message)) === item.message.id,
+      );
       if (accepted) {
         claimedNow.add(accepted.id);
         const index = canonical.indexOf(accepted);
         present[index] = { ...accepted, animationKey: item.message.id };
-        claimed.add(item.message.id);
+        claimed.delete(chatMessageIdentity(accepted));
+        claimed.set(item.message.id, item.message.id);
         if (!item.accepted) waiting.push(item);
       } else {
         waiting.push(item);
@@ -74,7 +83,9 @@ export const createChatSubmissionPresentation = () => {
       }
     }
     previous = present;
-    return { messages: present, pending: waiting.length ? waiting : undefined };
+    const waitingById = new Map(waiting.map((item) => [item.message.id, item]));
+    const ordered = pending.flatMap((item) => waitingById.get(item.message.id) ?? []);
+    return { messages: present, queuedFollowUps: queue.items, pending: ordered.length ? ordered : undefined };
   };
 };
 
