@@ -122,6 +122,11 @@ During a running response, the composer keeps typed text and Stop available inst
 of offering another queue submission; pending question and decision replies stay usable.
 Remote queues support editing, reordering, combining and removal, but exclude live
 steering: display “Live steering is unavailable on another device.”
+Set `queueSteeringUnavailableReason` for a conversation that cannot accept live
+steering; native queue drag presentation hides Send now. Emit explicit `null` when
+that capability returns, so merged snapshots clear the previous reason. Individual
+`queuedFollowUps[].steeringUnavailableReason` values still disable a particular
+request without hiding the conversation's steering destination.
 `ctx.sessions.create({ deviceId, ... })` targets an account device; omission targets
 this host. Attachment forwarding, project checks and permissions stay in core.
 Readable personal-history sessions retain their linked `workspaceId` in both
