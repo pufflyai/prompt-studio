@@ -1,9 +1,9 @@
-import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { installBuiltSdk } from "../helpers/installed-sdk";
 
 // Critical risk: a delayed extension command must never gate the native composer or lose a typed draft.
 test("independent native chat paints and accepts input before history, then retains its draft across reload", async ({
@@ -13,13 +13,7 @@ test("independent native chat paints and accepts input before history, then reta
   const parent = resolve(import.meta.dirname, "../../../../__test-tmp__");
   mkdirSync(parent, { recursive: true });
   const sourcePath = mkdtempSync(join(parent, "native-chat-"));
-  execFileSync("bun", [
-    "build",
-    join(import.meta.dirname, "../fixtures/native-chat/extension.ts"),
-    "--target=bun",
-    "--outfile",
-    join(sourcePath, "extension.ts"),
-  ]);
+  copyFileSync(join(import.meta.dirname, "../fixtures/native-chat/extension.ts"), join(sourcePath, "extension.ts"));
   writeFileSync(
     join(sourcePath, "package.json"),
     JSON.stringify({
@@ -31,6 +25,7 @@ test("independent native chat paints and accepts input before history, then reta
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
+  installBuiltSdk(sourcePath);
   const projectPath = join(sourcePath, "project");
   mkdirSync(projectPath);
   let projectId: string | undefined;
@@ -48,7 +43,7 @@ test("independent native chat paints and accepts input before history, then reta
     const upload = new FormData();
     upload.append("kind", "upload");
     upload.append("folderName", "native-chat");
-    for (const name of ["package.json", "extension.ts"])
+    for (const name of ["package.json", "extension.ts", "sdk.tgz", "bun.lock"])
       upload.append("files", new File([readFileSync(join(sourcePath, name))], name));
     const installed = await request.post(`/v1/projects/${projectId}/extensions/install`, { multipart: upload });
     expect(installed.ok()).toBe(true);

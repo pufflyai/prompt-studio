@@ -8,8 +8,10 @@ export const verifySessionTools = async (page: Page) => {
   const landingUrl = page.url();
   const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
   await expect(breadcrumb).toContainText("Sessions");
-  await expect(breadcrumb.locator("svg.lucide-messages-circle")).toBeVisible();
-  await expect(breadcrumb.locator("svg.lucide-message-circle")).toBeVisible();
+  const sessionIcons = breadcrumb.locator("svg.lucide-message-circle");
+  await expect(sessionIcons).toHaveCount(2);
+  await expect(sessionIcons.nth(0)).toBeVisible();
+  await expect(sessionIcons.nth(1)).toBeVisible();
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
   await expect(main.getByRole("tab")).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Add panel", exact: true })).toHaveCount(0);
