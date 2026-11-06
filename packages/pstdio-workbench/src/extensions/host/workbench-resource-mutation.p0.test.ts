@@ -202,3 +202,38 @@ test("canonical and provider-owned commands serialize writes on the same resourc
   }
   expect(writes).toEqual(["first", "second"]);
 });
+
+test("removal confirmation names its resource and keeps failed saves available for retry", async () => {
+  const context = setup();
+  let writes = 0;
+  const description = "Saved files are kept.";
+  const pending = runResourceMutation(
+    context,
+    {
+      ...command,
+      title: "Archive note",
+      description,
+      resourceMutation: { kind: "remove", resourceType: "note", idParam: "noteId" },
+    },
+    { noteId: "one" },
+    { resource },
+    async () => {
+      writes++;
+      if (writes === 1) throw new Error("Save unavailable");
+      return "saved";
+    },
+  );
+  const confirmation = context.workbench.commandPalette.store.getState().confirmation!;
+  expect(confirmation.label).toContain(resource.label);
+  expect(confirmation.description).toBe(description);
+  expect(confirmation.buttonLabel).toBe("Archive note");
+  expect(confirmation.onConfirm).toBeFunction();
+  await expect(confirmation.onConfirm!()).rejects.toThrow("Save unavailable");
+  expect(context.workbench.commandPalette.store.getState().confirmation).toBe(confirmation);
+  expect(context.workbench.resources.preview.resolve(resource)).toEqual(resource);
+  await confirmation.onConfirm!();
+  confirmation.resolve(true);
+  expect(await pending).toBe("saved");
+  expect(writes).toBe(2);
+  await context.workbench.dispose();
+});

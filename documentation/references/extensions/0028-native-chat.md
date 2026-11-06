@@ -24,7 +24,8 @@ const conversation = defineView({
 
 Reference `conversation.ref` from an ordinary page Main, slot or resource binding.
 The [generic layout](0008-contextual-workbench-composition.md) owns selection and
-page/panel conversion. `initial` is serializable metadata available on the first
+page/panel conversion. Visible native conversations request composer focus on opening;
+hidden retained presentations do not request focus. `initial` is serializable metadata available on the first
 render; neither query, draft hydration nor connection establishment gates the
 text composer. Control fields stay read-only until the initial query and saved draft
 settle, so automatic field defaults cannot replace saved selections during hydration.
@@ -220,3 +221,14 @@ command. This explicit refresh remains usable in a read-only conversation (for
 example Check connection for offline history). Ordinary operations, submission
 and execution controls retain their read-only guards; `disabled` still disables
 a refresh button.
+
+
+The implementation-free `sessionBrowser.commands.open` and `.create` references
+accept an optional `panel` placement with `side: true`. A host compatibility bridge
+can select the existing Side placement of the active mode without moving Main.
+The provider validates the declared placement through ordinary navigation ownership.
+
+Resource removal commands use their existing `description` as confirmation details,
+name the selected resource, and keep failed saves in the confirmation dialog for retry.
+The button uses the command title. Preview rollback and canonical write serialization
+remain owned by the workbench.

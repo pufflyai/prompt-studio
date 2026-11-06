@@ -155,6 +155,7 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
                 action,
                 linkHandler,
                 conversationKey: key,
+                visible: render.visible,
                 extensionId: view.extensionId,
                 refreshKey: getWorkbenchRenderers(render.workbench).store.getState().refreshKeys[view.id],
                 emptyTitle: text(body.emptyTitle),

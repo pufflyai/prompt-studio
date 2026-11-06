@@ -51,9 +51,14 @@ test("native chat renders before commands and binds callbacks to their project, 
   const element = render(renderInput) as ReactElement<{
     session: ChatSession;
     action: (action: { type: "stop" }) => Promise<unknown>;
+    visible?: boolean;
   }>;
   expect(element.props.session.getSnapshot().draft.text).toBe("");
   expect(calls).toEqual([]);
+  const hidden = render({ ...renderInput, visible: false }) as typeof element;
+  expect(hidden.props.visible).toBe(false);
+  expect(hidden.props.session).toBe(element.props.session);
+  expect((render({ ...renderInput, visible: true }) as typeof element).props.visible).toBe(true);
   const release = element.props.session.retain();
   await element.props.session.run({ type: "stop" });
   expect(calls).toContainEqual(
