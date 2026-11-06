@@ -169,6 +169,7 @@
         "local-example",
         "pstdio-artifacts",
         "pstdio-base-themes",
+        "pstdio-cloud",
         "pstdio-dashboard",
         "pstdio-home",
         "pstdio-workspaces",
@@ -398,6 +399,10 @@
         "src/**/*.canvas.tsx",
         "src/{view,open-artifact}.tsx"
       ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-cloud": {
+      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/{status,details,settings}-view.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-performance": {

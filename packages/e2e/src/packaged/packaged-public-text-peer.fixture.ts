@@ -81,6 +81,7 @@ export const startPublicTextPeer = async (root: string, binaryPath = PACKAGED_BI
     });
   return {
     origin: ready!.origin,
+    setEarlyAccess: (enabled: boolean) => call("early-access", { enabled }),
     stop: () => call("stop"),
     restart: () => call("restart"),
     blockDevice: (deviceId: string, blocked: boolean) => call("block-device", { deviceId, blocked }),

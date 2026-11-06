@@ -38,6 +38,7 @@ describe("isolated development paths", () => {
 
     expect(config.defaultExtensions).toEqual(
       [
+        ["pstdio-cloud", "extensions/pstdio-cloud"],
         ["pstdio-home", "extensions/pstdio-home"],
         ["pstdio-workspaces", "extensions/pstdio-workspaces"],
         ["harness-claude-code", "extensions/harness-claude-code"],

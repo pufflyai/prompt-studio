@@ -1,12 +1,30 @@
 /** Controlled account credentials bind every relay request to its enrolled device and project. */
 export const createPackagedSyncIdentity = () => {
+  let earlyAccess = true;
   const devices = new Map<string, string>();
   const credentials = new Map<string, string>();
   const accessTokens = new Map<string, { deviceId: string; projectId: string }>();
   const token = (request: Request) => request.headers.get("authorization")?.replace(/^Bearer /, "") ?? "";
   const device = (request: Request) => credentials.get(token(request));
+  const updateDevice = async (request: Request, id: string, action: string) => {
+    if (action === "rename") {
+      const input = (await request.json()) as { name: string };
+      devices.set(id, input.name);
+    } else {
+      devices.delete(id);
+      for (const [credential, owner] of credentials) if (owner === id) credentials.delete(credential);
+    }
+    return Response.json({ ok: true });
+  };
   return {
+    setEarlyAccess(enabled: boolean) {
+      earlyAccess = enabled;
+    },
     async request(request: Request, path: string, origin: string) {
+      if (path === "/v1/native-login" && request.method === "GET")
+        return new Response("Controlled sign-in. Complete or cancel through the test.", {
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
       if (path === "/api/auth/one-time-token/verify")
         return Response.json({
           session: { token: "session", expiresAt: new Date(Date.now() + 60_000) },
@@ -41,7 +59,9 @@ export const createPackagedSyncIdentity = () => {
         accessTokens.set(token, { deviceId, projectId: String(body.workbenchId) });
         return Response.json({ token, expiresAt: new Date(Date.now() + 60_000).toISOString() });
       }
-      if (path === "/v1/account") return Response.json({ features: { relay: true } });
+      const deviceAction = /^\/v1\/devices\/([^/]+)\/(rename|remove)$/.exec(path);
+      if (deviceAction) return updateDevice(request, decodeURIComponent(deviceAction[1]!), deviceAction[2]!);
+      if (path === "/v1/account") return Response.json({ features: { relay: earlyAccess } });
       return null;
     },
     access(request: Request, projectId: string) {
