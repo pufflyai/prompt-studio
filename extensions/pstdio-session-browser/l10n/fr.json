@@ -17,5 +17,7 @@
   "actions.archive": "Archiver la conversation",
   "actions.delete": "Supprimer la conversation",
   "sessions.more": "Plus de conversations",
-  "sessions.empty": "Aucune conversation"
+  "sessions.empty": "Aucune conversation",
+  "actions.archiveExplanation": "La conversation enregistrée est conservée. Le travail actif continuera.",
+  "actions.deleteExplanation": "La conversation enregistrée est supprimée. Les fichiers de l’espace de travail et l’historique de l’agent externe sont conservés."
 }

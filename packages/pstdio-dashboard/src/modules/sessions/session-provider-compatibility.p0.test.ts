@@ -209,3 +209,41 @@ test("legacy saved panel and page use the installed provider's tab status and Ne
     module.dispose();
   }
 });
+
+test("legacy session opening keeps the active extension page and uses its Side placement", async () => {
+  const { registerSessionProvider } = await import("./session-provider.fixture");
+  const wb = createWorkbench();
+  wb.registerModule(createSessionsModule());
+  const provider = registerSessionProvider(wb, {
+    sessions: { get: async () => ({ id: "saved", title: "Saved", status: "completed" }) as never },
+  });
+  try {
+    wb.pageLocations.setProject("project-1");
+    wb.modes.registerMode({ id: "notes", panels: ["main", "side"], activate() {} });
+    wb.views.registerView({ id: "notes", title: "Notes", body: { kind: "react", render: () => null } });
+    const page = { kind: "page" as const, extensionId: "notes", id: "notes" };
+    wb.pages.registerPage({
+      id: "notes",
+      ref: page,
+      modeId: "notes",
+      path: "notes",
+      main: {
+        kind: "view",
+        view: { kind: "view", id: "notes" },
+        cardinality: "one",
+      },
+      slots: [],
+    });
+    await wb.navigation.openTarget({ kind: "page", page });
+    const main = wb.layout.getActivePanel("main");
+    await wb.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+      resource: { type: "session", extensionId: "pstdio", id: "saved", projectId: "project-1" },
+    });
+    expect(wb.modes.getActiveModeId()).toBe("notes");
+    expect(wb.layout.getActivePanel("main")).toEqual(main);
+    expect(wb.layout.listPanelInstances("side").map((panel) => panel.resource?.id)).toContain("saved");
+  } finally {
+    provider.dispose();
+    await wb.dispose();
+  }
+});

@@ -71,6 +71,7 @@ export const open = defineCommand({
   params: {
     sessionId: params.text({ required: true, resolvedFrom: "resource" }),
     side: params.boolean(),
+    panel: params.json<PlacementRef>(),
     replace: params.boolean(),
   },
   async run(ctx, input) {
@@ -89,7 +90,7 @@ export const open = defineCommand({
     }
     ctx.navigation.open(
       input.side
-        ? { kind: "panel", panel: sessionBrowser.panels.conversation, resource, open: "preview" }
+        ? { kind: "panel", panel: input.panel ?? sessionBrowser.panels.conversation, resource, open: "preview" }
         : sessionTarget(resource),
     );
   },
@@ -113,6 +114,7 @@ export const archive = defineCommand({
   id: "archive",
   menus: [{ slot: sessionSlots.headerOverflow, group: "session", icon: "archive" }],
   title: l10n("commands.archive", "Archive session"),
+  description: l10n("actions.archiveExplanation", "The saved conversation is kept. Active work will continue."),
   cli: true,
   params: { sessionId: params.text({ required: true, resolvedFrom: "resource" }) },
   resourceMutation: { kind: "remove", resourceType: "session", idParam: "sessionId" },
@@ -143,6 +145,10 @@ export const remove = defineCommand({
     }),
   ),
   title: l10n("commands.delete", "Delete session"),
+  description: l10n(
+    "actions.deleteExplanation",
+    "The saved conversation is removed. Workspace files and external agent history are kept.",
+  ),
   cli: true,
   params: { sessionId: params.text({ required: true, resolvedFrom: "resource" }) },
   resourceMutation: { kind: "remove", resourceType: "session", idParam: "sessionId" },

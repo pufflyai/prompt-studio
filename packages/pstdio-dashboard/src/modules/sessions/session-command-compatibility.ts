@@ -73,7 +73,13 @@ export const registerLegacySessionCommands = (ctx: WorkbenchModuleContext) => {
           const modeId = ctx.modes.getActiveModeId();
           // Saved non-Project modes retain their existing Side placement. The provider
           // owns draft creation; this bridge supplies only its legacy destination.
-          if (command === "new" && "side" in params && params.side && modeId && modeId !== "project")
+          if (
+            (command === "new" || command === "open") &&
+            "side" in params &&
+            params.side &&
+            modeId &&
+            modeId !== "project"
+          )
             Object.assign(params, { panel: { ...workbenchPanels.projectSession, id: `session.${modeId}` } });
           const record = ctx.commands.getCommand(commandId);
           if (!record) return ctx.commands.executeCommand(commandId, params, execution);
