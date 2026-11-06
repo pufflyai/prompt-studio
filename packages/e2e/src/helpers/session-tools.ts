@@ -5,7 +5,10 @@ export const verifySessionTools = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const editor = main.getByTestId("content-editable").filter({ visible: true });
   await expect(editor).toBeVisible();
-  const landingUrl = page.url();
+  const landingPath = new URL(page.url()).pathname.replace(
+    /\/sessions\/compose$/,
+    "/extensions/pstdio.pstdio-session-browser/conversations/compose",
+  );
   const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
   await expect(breadcrumb).toContainText("Sessions");
   const sessionIcons = breadcrumb.locator("svg.lucide-message-circle");
@@ -69,7 +72,7 @@ export const verifySessionTools = async (page: Page) => {
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
   await page.getByRole("option", { name: "Sessions", exact: true }).click();
-  await expect(page).toHaveURL(landingUrl);
+  await expect(page).toHaveURL((url) => url.pathname === landingPath);
   await expect(breadcrumb).toContainText("New session");
   await expect(side.getByRole("tab")).toHaveCount(2);
   await page.reload();

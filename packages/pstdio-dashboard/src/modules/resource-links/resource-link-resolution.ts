@@ -11,6 +11,10 @@ import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import type { ResourceLinkCandidate } from "@pstdio/workbench/react";
 import { extensionResourceRefSchema, qualifyNavigationTarget } from "pstdio-api-contracts";
 import { executeExtensionCommand } from "@/shared/extensions/api";
+import {
+  getDashboardExtensionsReadyProjectId,
+  subscribeDashboardExtensionsReadyProject,
+} from "@/shared/extensions/extension-readiness";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
@@ -64,8 +68,28 @@ const resolveCanonicalSessions = async (
   resources: ResourceRef[],
   signal?: AbortSignal,
 ) => {
+  signal?.throwIfAborted();
   const command = contributionRefId(sessionBrowser.commands.resolve);
-  if (!resources.length || !ctx.commands.getCommand(command)) return [];
+  if (!resources.length) return [];
+  // Core routes may boot before provider declarations; wait for that registration,
+  // then treat a missing or explicitly disabled provider as unavailable.
+  if (!ctx.commands.getCommand(command) && getDashboardExtensionsReadyProjectId(ctx) !== projectId) {
+    await new Promise<void>((resolve, reject) => {
+      const finish = (error?: unknown) => {
+        stop();
+        signal?.removeEventListener("abort", abort);
+        if (error) reject(error);
+        else resolve();
+      };
+      const abort = () => finish(signal?.reason);
+      const stop = subscribeDashboardExtensionsReadyProject(ctx, () => {
+        if (getDashboardExtensionsReadyProjectId(ctx) === projectId) finish();
+      });
+      signal?.addEventListener("abort", abort, { once: true });
+    });
+  }
+  signal?.throwIfAborted();
+  if (!ctx.commands.getCommand(command)) return [];
   return resolveOwnerBatch({
     resources,
     resolve: () => ctx.commands.executeCommand(command, { resources }, { projectId, signal }),
