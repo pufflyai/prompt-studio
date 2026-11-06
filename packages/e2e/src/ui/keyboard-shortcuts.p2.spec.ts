@@ -35,25 +35,30 @@ test("the fullscreen shortcut toggles from editing and completes shortcut mode",
   await expect(action.locator("kbd").last()).toHaveText("Z");
 });
 
-test("Go destinations use shortcut mode while history chords and Shift slash remain available", async ({
-  page,
-  request,
-}) => {
+test("Go destinations use shortcut mode while history chords respect editing focus", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Direct core shortcuts" }),
   });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.goto(`/projects/${project.id}`);
+  const home = new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`);
+  await expect(page).toHaveURL(home);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
   await page.keyboard.press("s");
   await expect(page).toHaveURL(/\/sessions\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  const help = page.getByRole("button", { name: "Help", exact: true });
+  await page.locator('[data-workbench-region="main"]').getByRole("textbox").last().focus();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
+  await expect(page).toHaveURL(/\/sessions\/compose$/);
+  await help.focus();
+  await page.keyboard.press("Alt+Shift+ArrowLeft");
+  await expect(page).toHaveURL(home);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
+  await help.focus();
   await page.keyboard.press("Alt+Shift+ArrowRight");
   await expect(page).toHaveURL(/\/sessions\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();

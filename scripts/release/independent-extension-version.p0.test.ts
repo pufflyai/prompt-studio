@@ -28,11 +28,14 @@ test("a Notes changeset creates only a Notes version and changelog entry", async
       await write(`packages/${dir}/package.json`, { name, version: "0.45.0", private: true });
     }
     await write(".changeset/notes.md", '---\n"pstdio-notes": patch\n---\n\nFix Notes.\n');
-    const child = Bun.spawn([process.execPath, Bun.resolveSync("@changesets/cli/bin.js", import.meta.dir), "version"], {
-      cwd: root,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    const child = Bun.spawn(
+      [process.execPath, "--no-install", Bun.resolveSync("@changesets/cli/bin.js", import.meta.dir), "version"],
+      {
+        cwd: root,
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
     const result = await child.exited;
     const stderr = await new Response(child.stderr).text();
     expect({ result, stderr }).toMatchObject({ result: 0 });

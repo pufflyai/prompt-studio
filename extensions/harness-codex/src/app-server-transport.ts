@@ -41,7 +41,6 @@ export const createAppServerTransport = (env: Record<string, string>, deps: Spaw
     for (const owner of owners) owner.disconnect();
     child.kill();
   };
-  child.onExit.then(disconnect);
   rpc.finished.then(disconnect, disconnect);
   const ready = rpc
     .request("initialize", {
