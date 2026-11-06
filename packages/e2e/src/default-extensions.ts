@@ -1,16 +1,31 @@
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { preparedUiSourcesPath } from "./scripts/prepare-ui-fixtures";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
+const sourcesPath = process.env.E2E_HOME ? preparedUiSourcesPath(process.env.E2E_HOME) : undefined;
+const preparedSources = new Map<string, string>(
+  sourcesPath && existsSync(sourcesPath)
+    ? (JSON.parse(readFileSync(sourcesPath, "utf8")) as Array<{ installName: string; source: string }>).map(
+        ({ installName, source }) => [installName, source],
+      )
+    : [],
+);
 
 const extensionSource = (name: string) => {
   if (name === "workbench-fixture") return "packages/workbench-fixture";
   return name.includes("/") ? name : `extensions/${name}`;
 };
-const e2eExtension = (name: string) => ({
-  source: resolve(repoRoot, extensionSource(name)),
-  installName: name.split("/").at(-1) as string,
-  skipInstall: !name.startsWith(".pstdio/extensions/"),
-});
+const e2eExtension = (name: string) => {
+  const installName = name.split("/").at(-1) as string;
+  const prepared = preparedSources.get(installName);
+  return {
+    source: prepared ?? resolve(repoRoot, extensionSource(name)),
+    installName,
+    // Prepared consumers install their own fresh public dependencies in the runtime.
+    ...(prepared ? {} : { skipInstall: !name.startsWith(".pstdio/extensions/") }),
+  };
+};
 
 // Each extension is also an e2e devDependency, so CI runs e2e for pull requests that change it.
 // pstdio-reports stays out so the Marketplace lifecycle spec can install it.
