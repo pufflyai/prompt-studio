@@ -146,6 +146,10 @@ image resolver. It preserves scoped relative/absolute paths, line positions,
 resource-owned paths, canonical project links, web icons and safe external tabs.
 Native file parts reuse authenticated blob URLs for the current project’s session
 attachments and the provider’s own stored files; arbitrary API paths are excluded.
+Draft and queued-edit image attachments use the same scoped authentication adapter
+for thumbnails and preview dialogs. Selecting an image opens its preview; the
+separate Remove control only removes that draft reference. Resolved blob URLs are
+presentation values, never replacements for the provider's persisted attachment URLs.
 Declared `resolveLink` and `resolveImage` callbacks keep priority, with host
 resolution as a fallback. Without opt-in the provider's handlers remain unchanged.
 

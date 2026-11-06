@@ -109,7 +109,13 @@ export const NativeChatView = (props: NativeChatViewProps) => {
   };
   const Host = props.Host ?? PassthroughChatHost;
   return (
-    <Host session={session} values={values} extensionId={props.extensionId} linkHandler={props.linkHandler}>
+    <Host
+      session={session}
+      values={values}
+      attachments={attachments}
+      extensionId={props.extensionId}
+      linkHandler={props.linkHandler}
+    >
       {(host) => (
         <ChatPanel
           conversationKey={conversationKey}
@@ -201,6 +207,7 @@ export const NativeChatView = (props: NativeChatViewProps) => {
           attachmentList={
             <NativeChatAttachmentList
               attachments={attachments}
+              resolvedAttachments={host.attachments}
               disabled={Boolean(conversation.readOnly)}
               remove={removeAttachment}
             />
