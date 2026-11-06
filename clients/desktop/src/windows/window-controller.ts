@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { BrowserWindow, type Session, session, shell, WebContentsView } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { createLogger } from "pstdio-logging";
 import { DESKTOP_CHANNELS, type DesktopStartupAppearance } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import type { OwnedFrame } from "../performance/process-attribution";
@@ -11,6 +12,7 @@ import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle
 import type { TitleBarAppearance } from "./title-bar-appearance";
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
+const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
 
 export class DesktopWindowController {
   #runtimeOrigin: string | null = null;
@@ -47,6 +49,12 @@ export class DesktopWindowController {
       // resources must not keep that screen behind a hidden native window.
       this.window.webContents.once("dom-ready", () => {
         this.window.show();
+        // Native visibility and content paint are separate startup evidence. Record
+        // the explicit show result here; renderer visibility also allows hidden windows.
+        logger.info(
+          { event: "desktop.window.ready", visible: this.window.isVisible() },
+          "Desktop startup window is ready",
+        );
         resolve();
       });
     });
