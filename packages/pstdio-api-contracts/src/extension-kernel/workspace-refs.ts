@@ -7,6 +7,7 @@ const view = (id: string): ViewRef => ({ kind: "view", extensionId, id });
 const command = (id: string): CommandRef => ({ kind: "command", extensionId, id });
 /** Public destinations owned by the bundled Workspaces provider. */
 export const workspacePages = {
+  create: page("create"),
   list: page("workspaces"),
   files: page("files"),
   workspace: page("workspace"),

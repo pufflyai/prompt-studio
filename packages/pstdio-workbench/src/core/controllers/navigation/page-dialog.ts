@@ -16,11 +16,9 @@ export const registerPageDialog = (page: WorkbenchPageContribution, overlays: Wo
     id: pageDialogId(page.id),
     viewId: contributionRefId(page.main.view),
     config: {
-      placement: "center",
-      contentWidth: "xl",
-      contentHeight: "xl",
-      contentMaxWidth: "calc(100vw - {spacing.lg})",
-      contentMaxHeight: "calc(100dvh - {spacing.lg})",
+      size: "lg",
+      scrollBehavior: "inside",
+      contentMaxHeight: "calc(100dvh - {spacing.lg} * 2)",
     },
   });
   const empty = page.resource && isSingleViewPage(page) && page.main.empty;

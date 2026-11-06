@@ -20,6 +20,7 @@ export interface EnumOption {
   note?: string;
   onNoteClick?: () => void;
   canCreate?: boolean;
+  contextMenuActions?: Array<{ id: string; label: string; disabled?: boolean; onAction: () => void }>;
 }
 
 /**

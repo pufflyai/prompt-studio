@@ -130,6 +130,10 @@ const toNativeViewBody = (
               options: attribute.type.options.map((option) => ({
                 ...option,
                 noteAction: option.noteAction ? normalizeTarget(option.noteAction, view.extensionId) : undefined,
+                contextMenuActions: option.contextMenuActions?.map((item) => ({
+                  ...item,
+                  action: normalizeTarget(item.action, view.extensionId),
+                })),
               })),
             }
           : attribute.type,

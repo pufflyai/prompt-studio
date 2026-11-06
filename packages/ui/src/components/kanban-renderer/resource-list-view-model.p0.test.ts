@@ -57,6 +57,33 @@ test("group headers show the declared device icon and retain the default for uns
   expect(items[1].statusIcon).toBe(Circle);
 });
 
+test("group context menus invoke the declared device action", async () => {
+  let opened = false;
+  const source = structuredClone(attributes);
+  if (source[0].type.kind !== "enum" || !Array.isArray(source[0].type.options)) throw new Error("Expected enum");
+  source[0].type.options[0].contextMenuActions = [
+    {
+      id: "details",
+      label: "This device",
+      onAction: () => {
+        opened = true;
+      },
+    },
+  ];
+  const items = buildResourceListItems({
+    rows,
+    attributes: source,
+    settings: resourceListSettings({ columnGrouping: "device" }),
+    filter: { conjunction: "and", rules: [] },
+    sorts: [],
+    search: "",
+  });
+  const details = items[0].contextMenuActions?.find((action) => action.key === "details");
+  expect(details?.label).toBe("This device");
+  await details?.onClick?.();
+  expect(opened).toBe(true);
+});
+
 test("children nest once and collapse independently from their group", () => {
   const items = build();
   expect(flattenKanbanRendererListItems(items, {}).map((row) => [row.item.title, row.depth])).toEqual([

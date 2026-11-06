@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { ControlsQueryResult, ControlValueMap } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { ScrollArea, SettingsContentSkeleton } from "@pstdio/ui";
@@ -26,6 +26,7 @@ import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { mergeControlDraft } from "./control-draft";
 import { createControlSaveQueue } from "./control-save-queue";
+import { ControlsFooter, type ControlsFooterProps } from "./controls-footer";
 import { HarnessControl } from "./harness-control";
 
 interface WorkbenchControlsViewProps {
@@ -55,6 +56,10 @@ const initialState: ControlsViewState = {
   readOnly: false,
   loading: true,
 };
+const controlsLayout = (dialog: boolean) => ({
+  height: dialog ? "auto" : "full",
+  contentProps: dialog ? { px: "sm", py: "md" } : undefined,
+});
 export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
   const { contribution, placement } = props;
   return <WorkbenchControlsForm key={JSON.stringify([contribution.id, resourceKey(placement.resource)])} {...props} />;
@@ -63,6 +68,11 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
   const { workbench, contribution, placement, renderParamField } = props;
   const resource = placement.resource;
   const settingsPage = useContext(SettingsPageContext);
+  const dialog = workbench.layout
+    .getLayout()
+    .regions.overlay.widgets.some((item) => item.widgetId === placement.instanceId);
+  const layout = controlsLayout(dialog);
+  const close = () => workbench.layout.closePanel(placement.instanceId);
   const pageParams = usePageParams(workbench, placement);
   const [state, setState] = useState<ControlsViewState>(initialState);
   const [pending, setPending] = useState(false);
@@ -191,7 +201,7 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
       </Stack>
     );
   return (
-    <Stack h="full" minH="0" gap="0" bg="bg" overflow="hidden">
+    <Stack h={layout.height} minH="0" gap="0" bg="bg" overflow="hidden">
       {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       {state.error ? (
         <Box p="sm">
@@ -200,7 +210,7 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
           </Text>
         </Box>
       ) : null}
-      <ScrollArea flex="1" minH="0" minW="0" w="full" size="xs">
+      <ScrollArea flex="1" minH="0" minW="0" w="full" size="xs" contentProps={layout.contentProps}>
         {read.value || read.loading ? (
           <ControlsContent
             state={read.value ? state : initialState}
@@ -211,7 +221,14 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
           />
         ) : null}
       </ScrollArea>
-      <ControlsFooter visible={showFooter} contribution={contribution} pending={pending} submit={submit} />
+      <ControlsFooter
+        visible={showFooter}
+        contribution={contribution}
+        pending={pending}
+        submit={submit}
+        dialog={dialog}
+        onClose={placement.closable ? close : undefined}
+      />
     </Stack>
   );
 };
@@ -229,43 +246,6 @@ const SettingsControlsReset = (props: Omit<ControlsFooterProps, "visible">) => {
       Reset to defaults
     </Button>
   );
-};
-
-interface ControlsFooterProps {
-  visible: boolean;
-  contribution: RegisteredControlsRendererContribution;
-  pending: boolean;
-  submit: (reset: boolean) => Promise<void>;
-}
-const ControlsFooter = (props: ControlsFooterProps) => {
-  return props.visible ? (
-    <Flex borderTopWidth="1px" borderColor="border.muted" pl="sm" pr="4xl" py="xs" gap="xs" justifyContent="flex-end">
-      {props.contribution.reset || props.contribution.apply ? (
-        <Button
-          size="xs"
-          variant="ghost"
-          disabled={props.pending}
-          onClick={() => {
-            void props.submit(true);
-          }}
-        >
-          Reset
-        </Button>
-      ) : null}
-      {props.contribution.apply ? (
-        <Button
-          size="xs"
-          variant="subtle"
-          disabled={props.pending}
-          onClick={() => {
-            void props.submit(false);
-          }}
-        >
-          Apply
-        </Button>
-      ) : null}
-    </Flex>
-  ) : null;
 };
 
 interface ControlsContentProps {

@@ -5,6 +5,7 @@ import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
 import type { Disposable, KanbanRendererCreateSubmission, ResourceRef } from "../../core";
 import { acceptRendererPage } from "../../core/registries/renderers/renderer-page";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
@@ -198,7 +199,9 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           extensionId: record.extensionId,
           projectId: context.projectId,
         });
-        void context.workbench.navigation.openTarget(mapped);
+        void runUserAction(context.workbench, "Open group action", () =>
+          context.workbench.navigation.openTarget(mapped, { projectId: context.projectId }),
+        );
       },
     );
     let wireAttributes = record.attributes;
