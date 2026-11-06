@@ -12,6 +12,7 @@ import { clearDeliveredChatRecoveries, restoreFailedChatSubmission } from "./cha
 import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./chat-pending-submission";
 import { createChatSnapshot } from "./chat-snapshot";
 import { createChatSubmissionRunner } from "./chat-submission";
+import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
 export interface ChatSessionInput {
   initial?: ChatRendererSnapshot;
@@ -22,8 +23,14 @@ export interface ChatSessionInput {
   saveDraft?(draft: ChatDraft): Promise<unknown>;
 }
 
-const executeChatAction = async (action: ChatRendererAction, handler: ChatSessionInput["action"]) =>
-  chatRendererActionResultSchema.parse((await handler(chatRendererActionSchema.parse(action))) ?? {});
+const executeChatAction = async (
+  action: ChatRendererAction,
+  handler: ChatSessionInput["action"],
+  conversation: ChatRendererSnapshot,
+) => {
+  assertChatActionAvailable(conversation, action);
+  return chatRendererActionResultSchema.parse((await handler(chatRendererActionSchema.parse(action))) ?? {});
+};
 
 const emptyChatDraft = (draft: ChatDraft) =>
   !draft.text && !draft.attachments.length && !draft.recovered?.length && !Object.keys(draft.values).length;
@@ -242,11 +249,10 @@ export const createChatSession = (input: ChatSessionInput) => {
     saveDraft();
   };
   const execute = async (action: ChatRendererAction, handler = input.action) => {
-    assertChatActionAvailable(state.conversation, action);
     const issued = ++clock;
     const changed = localEdits;
     const expectedValues = snapshots.values.capture();
-    const result = await executeChatAction(action, handler);
+    const result = await executeChatAction(action, handler, state.conversation);
     if (result.snapshot) merge(result.snapshot, issued, expectedValues, action);
     if (result.draft) changeDraft(localEdits === changed ? result.draft : hydrateChatDraft(state.draft, result.draft));
     return result;
@@ -273,6 +279,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     subscribe: (listener: () => void) => subscribeChatState(listeners, listener),
     accept,
     changeDraft,
+    ...createChatSubmissionHandoff(() => state.pending, publish),
     restoreSubmission(id: string) {
       const restored = restoreFailedChatSubmission(state.draft, state.pending, id);
       if (!restored) return;

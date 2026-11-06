@@ -11,6 +11,7 @@ for (const operation of ["switch", "replace"] as const) {
   for (const region of ["main", "side"] as const) {
     test(`command ${operation} applies its page hint only to captured Main (${region})`, async () => {
       const { w, openSide, side, other } = createResourceViewerFixture();
+      const replacements: string[] = [];
       other();
       if (region === "side") await openSide("draft", "draft");
       const viewer = region === "main" ? w.pages.getContent()! : side();
@@ -29,7 +30,7 @@ for (const operation of ["switch", "replace"] as const) {
           executeCommand: () => ({ outcome: { ok: true, status: "success", navigationRequests: [target] } }),
         },
         "create",
-        { placement: viewer.placementIdentity },
+        { placement: viewer.placementIdentity, onViewerReplace: (resource) => replacements.push(resource.id) },
       );
       if (region === "main") {
         expect(w.pages.store.getState().location?.page).toEqual(viewerPage("reader"));
@@ -39,6 +40,7 @@ for (const operation of ["switch", "replace"] as const) {
         expect(side().resource).toEqual(viewerResource("created"));
         expect(side().instanceId).toBe(originalSideId!);
       }
+      expect(replacements).toEqual(operation === "replace" ? ["created"] : []);
       expect(w.notifications.store.getState().notifications).toEqual({});
     });
   }
@@ -49,6 +51,7 @@ test("a late command result cannot change a Side viewer that already switched, o
   other();
   await openSide("draft", "draft");
   const viewer = side();
+  const replacements: string[] = [];
   let complete!: (value: unknown) => void;
   const pending = executeWorkbenchExtensionCommandResponse(
     {
@@ -60,7 +63,7 @@ test("a late command result cannot change a Side viewer that already switched, o
         }),
     },
     "create",
-    { placement: viewer.placementIdentity },
+    { placement: viewer.placementIdentity, onViewerReplace: (resource) => replacements.push(resource.id) },
   );
   w.viewers.change(viewer.placementIdentity!, {
     operation: "switch",
@@ -83,6 +86,7 @@ test("a late command result cannot change a Side viewer that already switched, o
     },
   });
   await pending;
+  expect(replacements).toEqual([]);
   expect(side().resource?.id).toBe("picked");
   expect(w.pages.store.getState().location?.page).toEqual(viewerPage("other"));
 });
@@ -92,6 +96,7 @@ test("a panel page hint cannot bypass its resource-kind binding or the expected 
   other();
   await openSide("draft", "draft");
   const viewer = side();
+  const replacements: string[] = [];
   for (const target of [
     { from: viewer.resource, resource: viewerResource("forbidden", "another-kind") },
     { from: viewerResource("wrong-source"), resource: viewerResource("created") },
@@ -116,8 +121,9 @@ test("a panel page hint cannot bypass its resource-kind binding or the expected 
         }),
       },
       "create",
-      { placement: viewer.placementIdentity },
+      { placement: viewer.placementIdentity, onViewerReplace: (resource) => replacements.push(resource.id) },
     );
+    expect(replacements).toEqual([]);
     expect(side().resource).toEqual(viewer.resource);
     expect(w.pages.store.getState().location?.page).toEqual(viewerPage("other"));
   }

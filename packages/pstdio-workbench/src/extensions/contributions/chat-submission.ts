@@ -19,6 +19,7 @@ export const createChatSubmissionRunner = (input: {
   return (action: Submit, handler: Handler) => {
     if (submission) return submission;
     const before = input.read();
+    sequence = Math.max(sequence, ...(before.pending ?? []).map((item) => item.sequence));
     const pending = !action.questionResponse
       ? createChatPendingSubmission(
           action,

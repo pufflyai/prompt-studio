@@ -24,6 +24,7 @@ export interface WorkbenchExtensionCommandContext {
   workbench: WorkbenchModuleContext;
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
+  onViewerReplace?(resource: ResourceRef): void;
   removalVersion?: number;
   isViewerCurrent?(): boolean;
   placement?: PlacementIdentity;
@@ -69,6 +70,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
   const captured = context.workbench.viewers.captureContext(input.placement);
   const invocation = {
     ...captured,
+    onViewerReplace: input.onViewerReplace,
     removalVersion: input.removalVersion ?? captured.removalVersion,
     isViewerCurrent: input.isViewerCurrent ?? captured.isViewerCurrent,
   };

@@ -97,6 +97,8 @@ export interface NavigationInvocationContext {
   isViewerCurrent?(): boolean;
   /** Captured by the host from the calling view, never accepted from extension payloads. */
   viewer?: PlacementIdentity;
+  /** Internal presentation handoff, called only after viewer replacement is authorized. */
+  onViewerReplace?(resource: NavigationTargetViewer["resource"]): void;
 }
 
 const byPriorityAndId = (left: { id: string; priority: number }, right: { id: string; priority: number }) =>
