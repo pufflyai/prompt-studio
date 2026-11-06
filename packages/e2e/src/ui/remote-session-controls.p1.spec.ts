@@ -133,6 +133,7 @@ test("remote workspace files and diff open on their owner; offline history stays
     (response) => response.url().includes(`/v1/workspaces/${fixture.workspaceId}/files`) && response.ok(),
   );
   await page.getByRole("button", { name: "Open workspace", exact: true }).click();
+  await page.getByRole("tab", { name: "Files", exact: true }).click();
   await filesRead;
   const file = page.getByRole("option").filter({ hasText: "target-note.md" }).first();
   await file.getByText("target-note.md", { exact: true }).click();
