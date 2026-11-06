@@ -61,8 +61,8 @@ const device = async () => {
       quarantine,
     }),
   };
-  const notified: StorageChange[] = [];
-  const stop = service.watch((changed) => notified.push(changed));
+  const notified: (StorageChange & { origin?: "relay" })[] = [];
+  const stop = service.watch((changed, origin) => notified.push(origin ? { ...changed, origin } : changed));
   cleanup.push(async () => stop());
   return {
     records: service.open({ owner, assets: assets.store }).records,
