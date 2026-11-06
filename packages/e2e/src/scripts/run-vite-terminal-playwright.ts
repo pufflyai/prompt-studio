@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { prepareUiFixtures } from "./prepare-ui-fixtures";
 import {
   buildPlaywrightEnv,
   createRunId,
@@ -52,12 +53,16 @@ const run = async () => {
   const runId = process.env.E2E_RUN_ID ?? createRunId();
   const forwardedArgs = sanitizeForwardedArgs(process.argv.slice(2));
   const command = getPlaywrightCommand(["-c", "playwright.vite-terminal.config.ts", ...forwardedArgs]);
-  const { exitCode } = await runPlaywright(command, {
-    ...buildPlaywrightEnv(process.env, { apiPort, dashboardPort: devPort }, runId),
-    E2E_VITE_DEV_PORT: String(devPort),
-    E2E_VITE_PREVIEW_PORT: String(previewPort),
-    E2E_RUN_ID: runId,
-  });
+  const { exitCode } = await runPlaywright(
+    command,
+    {
+      ...buildPlaywrightEnv(process.env, { apiPort, dashboardPort: devPort }, runId),
+      E2E_VITE_DEV_PORT: String(devPort),
+      E2E_VITE_PREVIEW_PORT: String(previewPort),
+      E2E_RUN_ID: runId,
+    },
+    { stdio: "inherit", prepare: prepareUiFixtures },
+  );
   process.exit(exitCode);
 };
 

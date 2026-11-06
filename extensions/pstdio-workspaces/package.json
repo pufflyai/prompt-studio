@@ -1,0 +1,36 @@
+{
+  "name": "pstdio-workspaces",
+  "version": "0.1.0",
+  "displayName": "Workspaces",
+  "publisher": "pstdio",
+  "description": "Browse project files and workspaces across devices.",
+  "icon": "folder-git-2",
+  "main": "./extension.ts",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "pstdio": "^0.3.1"
+  },
+  "pstdio": {
+    "scope": "repo"
+  },
+  "scripts": {
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "typecheck": "bun check"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^3.0.0",
+    "@emotion/react": "^11.0.0",
+    "@pstdio/sdk": "0.47.0-preview.sha-48303bf25a64f931be76c64d8db778226d382a7d",
+    "@pstdio/ui": "0.47.0-preview.sha-48303bf25a64f931be76c64d8db778226d382a7d",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "@tanstack/react-query": "^5.94.5"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "6.0.2"
+  }
+}

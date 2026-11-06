@@ -171,6 +171,7 @@
         "pstdio-base-themes",
         "pstdio-dashboard",
         "pstdio-home",
+        "pstdio-workspaces",
         "pstdio-notes",
         "pstdio-performance",
         "pstdio-planner",
@@ -364,6 +365,10 @@
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
     "extensions/pstdio-onboarding": {
       "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-workspaces": {
+      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/*-view.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-home": {

@@ -19,6 +19,19 @@ test("packaged CLI file selection executes each selected test once without unrel
     }
     await mkdir(join(owner, "src/scripts"), { recursive: true });
     await writeFile(join(owner, "src/scripts/bun-process-cleanup.ts"), "export {};");
+    for (const file of [
+      "scripts/prepare-ui-fixtures.ts",
+      "scripts/run-playwright.ts",
+      "packaged/packaged-extension-source.ts",
+      "local-workspace-registry.ts",
+    ]) {
+      await copyFile(resolve(import.meta.dir, "..", file), join(owner, "src", file));
+    }
+    for (const name of ["extension-lab", "pstdio-planner", "pstdio-workspaces"]) {
+      const extension = join(root, "extensions", name);
+      await mkdir(extension, { recursive: true });
+      await writeFile(join(extension, "package.json"), JSON.stringify({ name, version: "1.0.0" }));
+    }
     for (const name of ["selected", "unrelated"]) {
       await writeFile(
         join(directory, `${name}.p1.test.ts`),
@@ -50,7 +63,13 @@ test("packaged CLI file selection executes each selected test once without unrel
       await rm(join(owner, "executed.txt"), { force: true });
       const child = Bun.spawn([process.execPath, "src/packaged/run-packaged-cli-tests.ts", ...args], {
         cwd: owner,
-        env: { ...process.env, TEST_PRIORITIES: "P1", CI_SOURCE_COVERAGE: "0" },
+        env: {
+          ...process.env,
+          E2E_HOME: join(root, "child-home"),
+          E2E_BUN_CACHE_DIR: join(root, "child-cache"),
+          TEST_PRIORITIES: "P1",
+          CI_SOURCE_COVERAGE: "0",
+        },
         stdout: "pipe",
         stderr: "pipe",
       });

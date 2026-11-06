@@ -44,6 +44,16 @@ Workspaces get short names that you can pass to `pst` commands instead of their 
 
 Remote environments are covered in [Local and remote work](0004-local-and-remote.md).
 
+## Files and Workspaces in the sidebar
+
+The bundled Workspaces extension adds a **Project Workspaces** group. **Files** opens the project folder directly. It has no Changes tab. **Workspaces** groups workspace rows by device: this device first, online devices by name, then offline devices by last seen. Expand a workspace to see its sessions, or choose Compact to hide sessions.
+
+Each row shows its kind, short name, title, related ticket, type and creation date. Local workspaces offer Open, Open session, Rename and Delete when the provider supports them. Workspaces on another device open synced session history. Their files and execution actions remain on the owning device.
+
+Files uses the shared searchable tree and editor. Create files or folders from the tree, rename inline, drag entries between folders, and confirm deletion before removing them. Save text with the editor's Save action or shortcut. Copy paths and Reveal in Finder use the host's supported actions. Git worktrees also have a Changes panel, with current changes and changes since the fork point; file bodies load as you open them.
+
+Select a device's capacity count to open its details. Online counts come from that device. Offline details show last seen and the last observed limit, with capacity marked unavailable. Settings → Workspaces changes the serving device's limit; edit another device's limit on that device.
+
 ## Active workspace limits
 
 Each device can limit how many workspaces run sessions at once. The default is unlimited. The limit belongs to that device, applies across its projects, and never syncs to another device. Creating a workspace does not use a slot.

@@ -45,7 +45,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `bun run ../../packages/pstdio/src/index.ts serve --foreground --host ${apiUrl.hostname} --port ${apiUrl.port}`,
+      command: `bun run src/scripts/serve-ui.ts --host ${apiUrl.hostname} --port ${apiUrl.port}`,
       url: `${viteOrigins.api}/healthz`,
       reuseExistingServer: false,
       timeout: 15_000,

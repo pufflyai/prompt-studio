@@ -1,11 +1,15 @@
 import { expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workspacePages } from "@pstdio/sdk/extensions";
 import { parsePageUrl } from "pstdio-api-contracts";
 import { makeWorkspace } from "@/features/workspaces/workspace.test-fixture";
 import { createHandler } from "./file-link";
 
-test("generates a document URL by workspace identity without reading or writing files", async () => {
-  const workspace = makeWorkspace({ id: "workspace-id", project_id: "project" });
+test.each([
+  false,
+  true,
+])("generates a provider document URL without reading files (project folder: %s)", async (isDefault) => {
+  const workspace = makeWorkspace({ id: "workspace-id", project_id: "project", is_default: isDefault });
+  const page = isDefault ? workspacePages.files : workspacePages.workspace;
   const outputs: string[] = [];
   const handler = createHandler({
     cwd: () => "/repo",
@@ -23,19 +27,24 @@ test("generates a document URL by workspace identity without reading or writing 
         projectId: "project",
         pages: [
           {
-            id: "workspace",
-            ref: workbenchPages.workspace,
-            path: "workspace",
+            id: page.id,
+            ref: page,
+            path: page.id,
             document: { metadataKey: "workspaceFilePath" },
           },
         ],
       }),
     ).toEqual({
-      pageId: "workspace",
+      pageId: page.id,
       resource: { type: "workspace", id: workspace.id, metadata: { workspaceFilePath: "docs/文 My %#?.md" } },
       position: { line: 12, column: 4 },
     });
   }
   expect(outputs[0]).toBe(outputs[1]);
   await expect(handler({ workspace: workspace.id, path: "../secret" })).rejects.toThrow();
+  workspace.device = { ownerId: "account", id: "another-device", name: "Laptop" };
+  await expect(handler({ workspace: workspace.id, path: "docs/file.md" })).rejects.toThrow("Files are unavailable");
+  workspace.device = undefined;
+  workspace.execution_kind = "remote";
+  await expect(handler({ workspace: workspace.id, path: "docs/file.md" })).rejects.toThrow("Files are unavailable");
 });

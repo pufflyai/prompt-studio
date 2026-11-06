@@ -2,12 +2,12 @@ import { strict as assert } from "node:assert";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { checkExtensionSource } from "../features/extensions/extension-runtime";
 import { installExtensionSource } from "../features/extensions/install-extension-source";
 import { createTestApp } from "../test-utils/create-test-app";
+import { prepareSourceRefreshFixture } from "./source-refresh-source.fixture";
 
-const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 const waitFor = async (predicate: () => boolean) => {
   const deadline = Date.now() + 10_000;
   while (!predicate()) {
@@ -16,12 +16,11 @@ const waitFor = async (predicate: () => boolean) => {
   }
 };
 
-const assertExistingProjectSourceRefresh = async (tempRoot: string) => {
+const assertExistingProjectSourceRefresh = async (tempRoot: string, source: string) => {
   const root = join(tempRoot, "existing-project-source-refresh");
   const pstdioHome = join(root, "home");
   const databasePath = join(root, "database");
   const storageRoot = join(root, "storage");
-  const source = resolve(REPO_ROOT, "extensions/extension-lab");
   const installed = join(pstdioHome, "extensions/extension-lab");
 
   await installExtensionSource({
@@ -58,11 +57,11 @@ const tempRoot = mkdtempSync(join(tmpdir(), "startup-refresh-"));
 // Runtime validation reads the process home before the test app replaces it.
 process.env.PSTDIO_HOME = tempRoot;
 try {
+  const source = prepareSourceRefreshFixture(tempRoot);
   if (process.argv[2] === "existing") {
-    await assertExistingProjectSourceRefresh(tempRoot);
+    await assertExistingProjectSourceRefresh(tempRoot, source);
   } else {
     const pstdioHome = join(tempRoot, "home-source-refresh");
-    const source = resolve(REPO_ROOT, "extensions/extension-lab");
     const installed = join(pstdioHome, "extensions/extension-lab");
     await installExtensionSource({ source, env: { ...process.env, PSTDIO_HOME: pstdioHome }, skipInstall: true });
     writeFileSync(join(installed, "README.md"), "stale extension lab");

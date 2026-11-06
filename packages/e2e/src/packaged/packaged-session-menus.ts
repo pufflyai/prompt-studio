@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
+import { serializePageUrl, workspacePages } from "@pstdio/sdk/extensions";
 import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
@@ -81,8 +81,8 @@ export const verifyPackagedSessionMenus = async (
   if (await hideBottom.isVisible()) await hideBottom.click();
   const workspaceUrl = serializePageUrl({
     projectId,
-    page: { id: "workspace", ref: workbenchPages.workspace, path: "workspace" },
-    resource: { type: "workspace", id: workspace.id },
+    page: { id: "workspace", ref: workspacePages.workspace, path: "workspace" },
+    resource: { type: "workspace", id: workspace.id, extensionId: "pstdio", projectId },
   });
   await page.goto(new URL(workspaceUrl, baseUrl).href);
   const preview = page

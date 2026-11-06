@@ -1,13 +1,12 @@
-import { test } from "bun:test";
+import { afterAll, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, expect, type Page } from "@playwright/test";
-import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";
-import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
+import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
@@ -17,15 +16,16 @@ const verifyOrder = async (page: Page, projectId: string, boardId: string) => {
   const tabs = bar.getByRole("tab");
   const add = bar.getByRole("button", { name: "Add view", exact: true });
   await expect(add).toBeEnabled();
+  const initialCount = await tabs.count();
   await add.click();
-  await expect(tabs).toHaveCount(2);
+  await expect(tabs).toHaveCount(initialCount + 1);
   await expect(add).toBeEnabled();
   await add.click();
-  await expect(tabs).toHaveCount(3);
+  await expect(tabs).toHaveCount(initialCount + 2);
   await expect(add).toBeEnabled();
   const original = await tabs.allTextContents();
   phase("views created");
-  const selected = tabs.nth(2);
+  const selected = tabs.last();
   await expect(selected).toHaveAttribute("aria-selected", "true");
   const firstBounds = await tabs.first().boundingBox();
   const lastBounds = await tabs.last().boundingBox();
@@ -34,9 +34,9 @@ const verifyOrder = async (page: Page, projectId: string, boardId: string) => {
   await page.mouse.down();
   await page.mouse.move(lastBounds.x + lastBounds.width - 2, lastBounds.y + lastBounds.height / 2, { steps: 8 });
   await page.mouse.up();
-  const reordered = [original[1]!, original[2]!, original[0]!];
+  const reordered = [...original.slice(1), original[0]!];
   await expect(tabs).toHaveText(reordered);
-  await expect(bar.getByRole("tab", { name: original[2], exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(bar.getByRole("tab", { name: original.at(-1), exact: true })).toHaveAttribute("aria-selected", "true");
   const path = `${new URL(page.url()).origin}/v1/projects/${projectId}/boards/${encodeURIComponent(boardId)}/views`;
   const readTitles = async () => {
     const result = await (await page.request.get(path)).json();
@@ -49,7 +49,7 @@ const verifyOrder = async (page: Page, projectId: string, boardId: string) => {
   const moved = bar.getByRole("tab", { name: original[0], exact: true });
   await moved.focus();
   await page.keyboard.press("Alt+ArrowLeft");
-  const keyboardOrder = [original[1]!, original[0]!, original[2]!];
+  const keyboardOrder = [...reordered.slice(0, -2), reordered.at(-1)!, reordered.at(-2)!];
   await expect(tabs).toHaveText(keyboardOrder);
   await expect.poll(readTitles).toEqual(keyboardOrder);
   // A later agent/API reorder reaches the same tabs through live sync.
@@ -62,7 +62,27 @@ const verifyOrder = async (page: Page, projectId: string, boardId: string) => {
   phase("keyboard and API order saved");
 };
 
-setupPackagedSmokeTests();
+let sources: string;
+let defaults: string;
+setupPackagedSmokeTests(async () => {
+  sources = mkdtempSync(join(tmpdir(), "packaged-view-order-sources-"));
+  // This case measures view interactions; cold installation has separate packaged coverage.
+  const defaultExtensions = await Promise.all(
+    ["pstdio-planner", "pstdio-workspaces"].map(async (installName) => ({
+      installName,
+      skipInstall: true,
+      source: await preparePackagedExtensionSource(
+        join(sources, installName),
+        join(import.meta.dirname, "../../../../extensions", installName),
+        { install: true },
+      ),
+    })),
+  );
+  defaults = JSON.stringify({ defaultExtensions });
+});
+afterAll(() => {
+  if (sources) rmSync(sources, { recursive: true, force: true });
+});
 
 test("packaged Kanban and data table view tabs save pointer and keyboard order", async () => {
   const startedAt = Date.now();
@@ -71,7 +91,7 @@ test("packaged Kanban and data table view tabs save pointer and keyboard order",
   let child: ChildProcess | undefined;
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {
-    const runtime = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner") });
+    const runtime = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: defaults });
     child = runtime.child;
     phase("runtime ready");
     const folder = join(root, "project");
@@ -116,7 +136,7 @@ test("packaged Kanban and data table view tabs save pointer and keyboard order",
     phase("view saved beneath tooltip");
     await verifyOrder(page, id, "pstdio.pstdio-planner.view.tickets");
     await page.goto(`${runtime.baseUrl}/projects/${id}/workspaces`);
-    await verifyOrder(page, id, WORKSPACES_COLLECTION_ID);
+    await verifyOrder(page, id, "pstdio.pstdio-workspaces.view.workspaces");
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);

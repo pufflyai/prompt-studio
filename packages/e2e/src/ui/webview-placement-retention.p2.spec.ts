@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
+import { scrollSidenavToEnd } from "./helpers/sidenav-navigation";
 
 test("moving a webview between panels preserves its browsing context", async ({ page, request }) => {
   const response = await request.post(`${uiOrigin}/v1/projects`, {
@@ -13,6 +14,7 @@ test("moving a webview between panels preserves its browsing context", async ({ 
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
     await page.goto(`/projects/${project.id}/`);
+    await scrollSidenavToEnd(page);
     await page.getByRole("option", { name: "Lab mode", exact: true }).click();
     const tab = page.getByRole("tab", { name: "Overview", exact: true });
     await expect(tab).toBeVisible();
@@ -73,6 +75,7 @@ test("a webview connects when its frame is reattached while the runtime loads", 
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
     await page.goto(`/projects/${project.id}/`);
+    await scrollSidenavToEnd(page);
     await page.getByRole("option", { name: "Lab mode", exact: true }).click();
     await runtimeRequested.promise;
     // Reinserting an iframe gives it a new browsing context, as React StrictMode
