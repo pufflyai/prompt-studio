@@ -13,6 +13,7 @@ test("Files opens without Home and workspace creation stays in a keyboard-access
   page,
   request,
 }) => {
+  const capacity = await (await request.get(`${uiOrigin}/v1/workspaces/capacity`)).json();
   const root = createGitRepo("pstdio-workspace-modal-", "Workspace modal example");
   const response = await request.post(`${uiOrigin}/v1/projects`, {
     data: folderProjectInput({ name: "Workspace modal" }, root),
@@ -45,24 +46,28 @@ test("Files opens without Home and workspace creation stays in a keyboard-access
     await (await getSidenavEntry(page, "Workspaces")).click();
     await page.getByRole("tab", { name: "Compact", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Compact", exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByText("This device", { exact: true })).toBeHidden();
+    await expect(page.getByText(capacity.deviceName, { exact: true }).filter({ visible: true })).toHaveCount(0);
     await page.getByRole("tab", { name: "By device", exact: true }).click();
-    const add = page.getByRole("button", { name: /^Add to / });
+    const device = page.getByText(capacity.deviceName, { exact: true }).filter({ visible: true });
+    const openCreate = async () => {
+      await device.click({ button: "right" });
+      await page.getByRole("menuitem", { name: "Create workspace", exact: true }).click();
+    };
     const location = page.url();
     const form = page.frameLocator('iframe[title="Workspace action"]');
-    await add.click();
+    await openCreate();
     await expect(form.getByRole("button", { name: "Create workspace", exact: true })).toBeEnabled();
     await expect(page.getByRole("dialog")).toBeVisible();
     await form.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     expect(page.url()).toBe(location);
-    await expect(add).toBeFocused();
-    await add.click();
+    await expect(device.locator("xpath=ancestor::*[@role='option'][1]")).toBeFocused();
+    await openCreate();
     await form.getByRole("button", { name: "Cancel", exact: true }).press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     expect(page.url()).toBe(location);
-    await expect(add).toBeFocused();
-    await add.click();
+    await expect(device.locator("xpath=ancestor::*[@role='option'][1]")).toBeFocused();
+    await openCreate();
     await form.getByRole("button", { name: "Create workspace", exact: true }).click();
     await expect(page).toHaveURL(/extensions\/pstdio\.pstdio-workspaces\/workspace\?/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -72,7 +77,7 @@ test("Files opens without Home and workspace creation stays in a keyboard-access
   }
 });
 
-// Critical risk: an optional limit must remain editable after toggling/resetting and
+// Critical risk: an optional limit must remain editable after toggling/cancelling and
 // actually save the displayed number; unlimited must remain a supported capacity value.
 test("device details stages an optional workspace limit and preserves Main", async ({ page, request }) => {
   const capacityUrl = `${uiOrigin}/v1/workspaces/capacity`;
@@ -86,7 +91,11 @@ test("device details stages an optional workspace limit and preserves Main", asy
     expect((await request.patch(capacityUrl, { data: { limit: null } })).ok()).toBe(true);
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
-    await page.getByText("This device", { exact: true }).click();
+    const openDevice = async () => {
+      await page.getByText(previous.deviceName, { exact: true }).filter({ visible: true }).click({ button: "right" });
+      await page.getByRole("menuitem", { name: "This device", exact: true }).click();
+    };
+    await openDevice();
     const dialog = page.getByRole("dialog", { name: "Device details", exact: true });
     const limited = dialog.getByRole("checkbox", { name: "Limit workspaces", exact: true });
     const count = dialog.getByRole("spinbutton", { name: "Workspace limit", exact: true });
@@ -103,7 +112,9 @@ test("device details stages an optional workspace limit and preserves Main", asy
     await expect(count).toBeDisabled();
     await toggle.click();
     await expect(count).toHaveValue("7");
-    await dialog.getByRole("button", { name: "Reset", exact: true }).click();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await openDevice();
     await expect(limited).not.toBeChecked();
     await toggle.click();
     await dialog.getByRole("button", { name: "Apply", exact: true }).click();

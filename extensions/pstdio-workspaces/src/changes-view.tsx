@@ -1,5 +1,5 @@
 import "@pstdio/ui/style.css";
-import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
 import {
   createWebviewClient,
   defineExtensionView,
@@ -77,26 +77,6 @@ const Changes = ({ client, host }: { client: Client; host: WebviewHostProps }) =
     );
   return (
     <Flex direction="column" h="100dvh" minH="0" minW="0">
-      <HStack p="xs" flexShrink="0" gap="xs" aria-label="Compare changes">
-        <Button
-          size="xs"
-          variant={mode === "current" ? "subtle" : "ghost"}
-          onClick={() => {
-            void client.page.updateParams({ comparison: "current" });
-          }}
-        >
-          Current changes
-        </Button>
-        <Button
-          size="xs"
-          variant={mode === "fork_point" ? "subtle" : "ghost"}
-          onClick={() => {
-            void client.page.updateParams({ comparison: "fork_point" });
-          }}
-        >
-          Since fork point
-        </Button>
-      </HStack>
       {error && (
         <Text role="alert" p="sm" color="fg.error">
           {String(error)}

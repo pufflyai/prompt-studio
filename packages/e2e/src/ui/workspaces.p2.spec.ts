@@ -259,7 +259,8 @@ test("device details update this device's workspace limit", async ({ page, reque
     }, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
     const workspaceUrl = page.url();
-    await page.getByRole("button", { name: /: This device/ }).click();
+    await page.getByText(before.deviceName, { exact: true }).filter({ visible: true }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "This device", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Device details", exact: true });
     await expect(dialog).toBeVisible();
     await expect(page).toHaveURL(workspaceUrl);

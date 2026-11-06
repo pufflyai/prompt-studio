@@ -1,5 +1,5 @@
 import "@pstdio/ui/style.css";
-import { Button, type ButtonProps, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, type ButtonProps, Stack, Text } from "@chakra-ui/react";
 import {
   createWebviewClient,
   defineExtensionView,
@@ -142,11 +142,35 @@ const Action = ({
     if (!projectId) throw new Error("Project is unavailable.");
     return client.navigation.open(workspaceTarget(data.workspace, projectId, path ? { workspaceFilePath: path } : {}));
   };
+  if (operation === "create" && data?.providers.length)
+    return (
+      <Stack gap="0">
+        {host.presentation !== "dialog" ? (
+          <Text textStyle="heading/M" px="lg" pt="lg">
+            Create workspace
+          </Text>
+        ) : null}
+        {error ? (
+          <Box px="lg" pt="md">
+            <AlertMessage status="error" title="Workspace action failed">
+              {error}
+            </AlertMessage>
+          </Box>
+        ) : null}
+        <ProviderForm
+          providers={data.providers}
+          executeOptions={executeOptions}
+          busy={busy}
+          submit={create}
+          onCancel={() => void cancel().catch((error) => setError(String(error)))}
+        />
+      </Stack>
+    );
   let content = <Text>Loading workspace…</Text>;
   if (data)
     content =
       operation === "create" ? (
-        <ProviderForm providers={data.providers} executeOptions={executeOptions} busy={busy} submit={create} />
+        <Text>Attach a project folder or enable a workspace provider in settings.</Text>
       ) : (
         <MutationForm client={client} host={host} data={data} operation={operation} busy={busy} run={run} />
       );

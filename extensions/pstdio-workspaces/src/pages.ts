@@ -83,6 +83,16 @@ export const action = definePage({
   main: { kind: "view", view: actionView.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
+export const createPage = definePage({
+  id: "create",
+  title: l10n("page.create", "Create workspace"),
+  path: "create",
+  mode,
+  parent: workspaces.ref,
+  params: { anchors: { type: "string" }, shorthand: { type: "string" } },
+  main: { kind: "view", view: actionView.ref, cardinality: "one", presentation: "page" },
+  slots: [],
+});
 export const devicePage = definePage({
   id: "device",
   title: l10n("page.device", "Device details"),

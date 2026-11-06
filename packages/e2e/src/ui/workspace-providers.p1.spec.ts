@@ -73,7 +73,9 @@ test("the global workspace action uses declared cloud parameters without a repos
     });
     expect(enabled.ok(), await enabled.text()).toBe(true);
     await row.click();
-    await page.getByRole("button", { name: /^Add to / }).click();
+    const capacity = await (await request.get(`${uiOrigin}/v1/workspaces/capacity`)).json();
+    await page.getByText(capacity.deviceName, { exact: true }).filter({ visible: true }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Create workspace", exact: true }).click();
     const dialog = page.frameLocator('iframe[title="Workspace action"]');
     await dialog.getByRole("textbox", { name: "Environment image" }).fill("documents");
     await dialog.getByRole("button", { name: "Create workspace", exact: true }).click();

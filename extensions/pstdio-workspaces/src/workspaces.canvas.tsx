@@ -1,4 +1,4 @@
-import { Box, Button, Flex, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, CloseButton, Flex, HStack, Input, Stack, Tabs, Text } from "@chakra-ui/react";
 import { ScopedDialog as Dialog, Portal, Switch, TreeList } from "@pstdio/ui";
 import { CodeEditor, DiffViewer } from "@pstdio/ui/diff";
 import { ResourceListRenderer } from "@pstdio/ui/kanban-renderer";
@@ -75,9 +75,9 @@ const rows = [
     attributes: { id: "WS-4", device: "offline", type: "Git worktree", date: "2026-11-01" },
   },
 ];
-const WorkspacesPreview = (props: { compact?: boolean }) => {
+const WorkspacesPreview = (props: { compact?: boolean; initial?: "create" | "device" }) => {
   const [opened, setOpened] = useState("");
-  const [dialog, setDialog] = useState<"create" | "device" | undefined>();
+  const [dialog, setDialog] = useState<"create" | "device" | undefined>(props.initial);
   const listAttributes = attributes.map((attribute) => ({
     ...attribute,
     type:
@@ -86,7 +86,18 @@ const WorkspacesPreview = (props: { compact?: boolean }) => {
             ...attribute.type,
             options: attribute.type.options.map((option) => ({
               ...option,
-              onNoteClick: () => setDialog("device"),
+              note: undefined,
+              canCreate: false,
+              contextMenuActions: [
+                {
+                  id: "details",
+                  label: option.value === "local" ? "This device" : "Device details",
+                  onAction: () => setDialog("device"),
+                },
+                ...(option.value === "local"
+                  ? [{ id: "create", label: "Create workspace", onAction: () => setDialog("create") }]
+                  : []),
+              ],
             })),
           }
         : attribute.type,
@@ -112,24 +123,40 @@ const WorkspacesPreview = (props: { compact?: boolean }) => {
                 { key: "rename", label: "Rename", onClick: () => setOpened(`Rename ${row.title}`) },
               ]
         }
-        createRow={{
-          title: "New workspace",
-          submitLabel: "Create workspace",
-          fields: [],
-          labels: { cancel: "Cancel", properties: "Properties", submitError: "Could not create", removeFile: "Remove" },
-        }}
-        onCreateRow={() => setDialog("create")}
       />
-      <Dialog.Root open={Boolean(dialog)} onOpenChange={({ open }) => !open && setDialog(undefined)} placement="center">
+      <Dialog.Root
+        open={Boolean(dialog)}
+        size="lg"
+        scrollBehavior="inside"
+        onOpenChange={({ open }) => !open && setDialog(undefined)}
+      >
         <Portal>
           <Dialog.Backdrop />
           <Dialog.Positioner>
-            <Dialog.Content maxW="xl" p="lg">
-              <Dialog.Title>{dialog === "create" ? "Create workspace" : "This device"}</Dialog.Title>
-              {dialog === "create" ? <CreateWorkspaceForm /> : <DeviceLimit />}
-              <Button variant="ghost" onClick={() => setDialog(undefined)}>
-                Cancel
-              </Button>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>{dialog === "create" ? "Create workspace" : "This device"}</Dialog.Title>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton size="sm" />
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              <Dialog.Body>
+                {dialog === "create" ? (
+                  <CreateWorkspaceForm
+                    onCreate={(name) => {
+                      setOpened(`Created ${name}`);
+                      setDialog(undefined);
+                    }}
+                  />
+                ) : (
+                  <DeviceLimit />
+                )}
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button size="sm" variant="ghost" onClick={() => setDialog(undefined)}>
+                  Cancel
+                </Button>
+              </Dialog.Footer>
             </Dialog.Content>
           </Dialog.Positioner>
         </Portal>
@@ -247,7 +274,11 @@ export const DeviceLimit = () => {
           More sessions wait as Queued until a slot opens. Auto Build waits while this device is full.
         </Text>
         <HStack>
-          <Button variant="primary" onClick={() => setSaved(limit)}>
+          <Button
+            variant="primary"
+            disabled={limited && (!Number.isInteger(Number(limit)) || Number(limit) < 1)}
+            onClick={() => setSaved(limit)}
+          >
             Apply
           </Button>
           {limited && <Text aria-live="polite">2 of {saved} active</Text>}
@@ -262,7 +293,7 @@ export const DeviceLimit = () => {
   );
 };
 
-const CreateWorkspaceForm = () => {
+const CreateWorkspaceForm = (props: { onCreate: (name: string) => void }) => {
   const [name, setName] = useState("");
   return (
     <Stack gap="md" py="md">
@@ -273,11 +304,23 @@ const CreateWorkspaceForm = () => {
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
-      <Button variant="primary" disabled={!name}>
+      <Button variant="primary" disabled={!name.trim()} onClick={() => props.onCreate(name.trim())}>
         Create workspace
       </Button>
     </Stack>
   );
 };
-export const CreateWorkspaceModal = () => <WorkspacesPreview />;
-export const ThisDeviceModal = () => <WorkspacesPreview />;
+export const CreateWorkspaceModal = () => <WorkspacesPreview initial="create" />;
+export const ThisDeviceModal = () => <WorkspacesPreview initial="device" />;
+
+// The multi-resource list keeps the host tab surface so it can share Main with a session.
+export const WorkspacesWithTabs = () => (
+  <Tabs.Root defaultValue="workspaces" h="full" display="flex" flexDirection="column" minH="0" size="sm">
+    <Tabs.List>
+      <Tabs.Trigger value="workspaces">Workspaces</Tabs.Trigger>
+    </Tabs.List>
+    <Tabs.Content value="workspaces" flex="1" minH="0" p="0">
+      <WorkspacesPreview />
+    </Tabs.Content>
+  </Tabs.Root>
+);
