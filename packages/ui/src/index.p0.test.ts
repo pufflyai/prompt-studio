@@ -49,6 +49,7 @@ test("the UI entry point supports server rendering", () => {
 test.each([
   { entry: "chat-skeleton", exported: "ChatSkeleton" },
   { entry: "lazy-markdown-editor", exported: "LazyMarkdownEditor" },
+  { entry: "lazy-markdown-editor", exported: "preloadMarkdownEditor" },
 ])("$exported keeps editor dependencies out of its eager browser graph", async ({ entry, exported }) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-ui-startup-"));
   const consumer = join(root, "consumer.ts");

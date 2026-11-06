@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { LazyMarkdownEditor } from "@pstdio/ui/lazy-markdown-editor";
+import { LazyMarkdownEditor, preloadMarkdownEditor } from "@pstdio/ui/lazy-markdown-editor";
 import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type {
@@ -33,6 +33,9 @@ export const NativeMarkdownFileEditor = (props: NativeMarkdownFileEditorProps) =
   openRef.current = open;
   const [session, setSession] = useState<NativeDocumentSession | null>(null);
   const state = useSyncExternalStore(session?.subscribe ?? subscribeEmpty, session?.getSnapshot ?? getEmpty, getEmpty);
+  useEffect(() => {
+    if (open) void preloadMarkdownEditor().catch(() => {});
+  }, [open]);
   useEffect(() => {
     const next = connectRef.current();
     next.setOpen(openRef.current);
