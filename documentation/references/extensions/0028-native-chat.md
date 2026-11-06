@@ -304,3 +304,7 @@ awaits canonical history. This projection uses the same transient submission
 identities and order; it does not insert queue rows into the transcript or its
 patch indexes. `ChatPanel.historyMessages` supplies this recall-only projection;
 ordinary callers continue to recall from `messages` by default.
+
+Draft hydration consumes the journal captured when its owner opens. Edits staged
+by that same owner while provider storage loads already belong to the live draft;
+they are not replayed as saved control overrides over a newer query result.
