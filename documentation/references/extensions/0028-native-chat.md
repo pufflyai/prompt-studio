@@ -155,7 +155,10 @@ for thumbnails and preview dialogs. Selecting an image opens its preview; the
 separate Remove control only removes that draft reference. Resolved blob URLs are
 presentation values, never replacements for the provider's persisted attachment URLs.
 Declared `resolveLink` and `resolveImage` callbacks keep priority, with host
-resolution as a fallback. Without opt-in the provider's handlers remain unchanged.
+resolution as a fallback. With this opt-in, generic app-page URLs defer to the
+host's destination validation; an unavailable page remains an actionable error,
+not an unvalidated browser navigation. External web links remain available.
+Without opt-in the provider's handlers remain unchanged.
 
 A harness control accepts `harnessId: ""` while unselected. Execution still
 requires a real installed harness. Set `lockIdentity: true` on a saved-session
