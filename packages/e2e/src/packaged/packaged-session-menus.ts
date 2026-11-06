@@ -47,11 +47,11 @@ const verifyFloatingLauncher = async (page: Page) => {
   await floating.getByRole("button", { name: "Reattach Side Panel" }).click();
 };
 
-const revealThenCloseSessionViewer = async (page: Page, row: Locator, projectId: string) => {
+const revealThenCloseSessionViewer = async (page: Page, row: Locator) => {
+  const sourceUrl = page.url();
   await row.click();
-  await expect(page).toHaveURL(
-    new RegExp(`/projects/${projectId}/extensions/pstdio.pstdio-session-browser/conversations/compose$`),
-  );
+  // Revealing the existing Side viewer preserves its routed page, including legacy deep links.
+  await expect(page).toHaveURL(sourceUrl);
   const selected = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
     name: /Packaged session actions/,
   });
@@ -241,7 +241,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await revealThenCloseSessionViewer(page, row, projectId);
+  await revealThenCloseSessionViewer(page, row);
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
