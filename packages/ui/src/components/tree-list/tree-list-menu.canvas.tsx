@@ -36,7 +36,10 @@ const MenuTree = () => {
     </Box>
   );
 };
-const meta = { title: "Components/Tree List/Menu rows", component: MenuTree } satisfies CanvasMeta<typeof MenuTree>;
+const meta = {
+  title: "Design system/Components/Data display/Tree list/Menu rows",
+  component: MenuTree,
+} satisfies CanvasMeta<typeof MenuTree>;
 export default meta;
 export const MenuAndBranch: CanvasFrame<typeof meta> = {
   id: "components-tree-list-menu-rows--menu-and-branch",

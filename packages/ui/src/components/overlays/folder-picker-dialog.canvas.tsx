@@ -30,7 +30,7 @@ const InteractiveFolderPicker = (props: ComponentProps<typeof FolderPickerDialog
 };
 
 const meta = {
-  title: "Overlays/FolderPickerDialog",
+  title: "Design system/Components/Overlays/Folder picker/Overview",
   component: FolderPickerDialog,
   description:
     "Open a project in an existing folder or create a folder first. The host owns navigation and creation. Hidden folders start hidden; press Cmd/Ctrl+Shift+. to toggle them. Matches the folder picker states in Pencil node LmcML.",

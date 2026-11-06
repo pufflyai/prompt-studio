@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 
-export const openCanvasPreview = async (page: Page, id: string) => {
+export const openCanvasPreview = async (page: Page, id: string, example?: string) => {
   await page.goto(`/?frame=${encodeURIComponent(id)}`);
   const shell = page.frameLocator("[data-verification-host]");
   const panel = shell.locator(`[data-canvas-item="${id}"]`);
@@ -24,5 +24,10 @@ export const openCanvasPreview = async (page: Page, id: string) => {
     .evaluate(
       () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
     );
-  return panel.frameLocator("iframe");
+  const preview = panel.frameLocator("iframe");
+  if (example) {
+    await preview.getByRole("button", { name: "Choose example", exact: true }).click();
+    await preview.getByRole("menuitem", { name: example, exact: true }).click();
+  }
+  return preview;
 };

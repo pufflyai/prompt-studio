@@ -32,7 +32,7 @@ const items: ConversationBrowseItem[] = [
   { id: "7", message: "Ship it once validation passes." },
 ];
 const meta: CanvasMeta<typeof ConversationBrowse> = {
-  title: "Patterns/Chat/Conversation Browse",
+  title: "Design system/Patterns/Chat/Conversation browse",
   component: ConversationBrowse,
 };
 export default meta;

@@ -57,7 +57,7 @@ function QuestionForm(props: QuestionFormProps) {
   );
 }
 const meta: CanvasMeta<typeof QuestionForm> = {
-  title: "Patterns/Chat/Question form",
+  title: "Design system/Patterns/Chat/Question form",
   component: QuestionForm,
   decorators: [
     (Story) => (

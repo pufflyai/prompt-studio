@@ -9,7 +9,7 @@ import { Workbench } from "./workbench";
 import { WorkbenchPanelToggles } from "./workbench-panel-toggles";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Title bar",
+  title: "Product/Workbench/Title bar",
   component: Workbench,
   description:
     "The host can place title-bar content above every workbench region. The slot shares the active workbench theme and remains visible across modes.",

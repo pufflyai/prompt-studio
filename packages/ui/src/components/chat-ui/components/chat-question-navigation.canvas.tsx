@@ -4,7 +4,7 @@ import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
 
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Question navigation",
+  title: "Design system/Patterns/Chat/Question navigation",
   component: ChatPanel,
 };
 export default meta;

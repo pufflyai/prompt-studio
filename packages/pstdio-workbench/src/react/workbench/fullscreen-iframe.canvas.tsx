@@ -31,7 +31,7 @@ const { w } = createFullscreenWorkbench("attached", true, {
     ) : null,
 });
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Main fullscreen iframe",
+  title: "Product/Workbench/Main fullscreen iframe",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

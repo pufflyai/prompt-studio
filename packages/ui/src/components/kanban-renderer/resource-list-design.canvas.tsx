@@ -6,7 +6,7 @@ import { KanbanRendererToolbar } from "./kanban-renderer-toolbar";
 
 // Source: PR #1298, b32912e0b75897a05a303c64d23444aac7b0dfc5,
 // design/prompt-studio-design-system.pen, Resource List Renderer · Component.
-export default { title: "Patterns/Resource List/Design", fullscreen: true };
+export default { title: "Design system/Patterns/Resource list/Design", fullscreen: true };
 
 export const GroupedAndNested = () => (
   <Stack height="full" minH="0" gap="0">

@@ -88,7 +88,7 @@ const EmbeddedSettingsStory = () => {
   return <Workbench workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Embedded settings",
+  title: "Product/Workbench/Settings/Embedded settings",
   component: EmbeddedSettingsStory,
   decorators: [
     (Story) => (

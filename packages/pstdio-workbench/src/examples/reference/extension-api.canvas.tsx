@@ -4,7 +4,7 @@ import pageExtension, { guidePage } from "../onboarding/extensions/page-extensio
 import { OnboardingFrame } from "../onboarding/onboarding-frame";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Extension API",
+  title: "Product/Reference/Extension API/Overview",
 } satisfies CanvasMeta;
 export default meta;
 type Story = CanvasFrame<typeof meta>;

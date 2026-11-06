@@ -86,7 +86,7 @@ const WorkspaceParamPreview = (props: WorkspaceParamPreviewProps) => {
   );
 };
 const meta = {
-  title: "CommandParams/WorkspaceParamField",
+  title: "Product/Commands/Workspace parameters",
   component: WorkspaceParamPreview,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkspaceParamPreview>;

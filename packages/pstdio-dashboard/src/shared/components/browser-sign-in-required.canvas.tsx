@@ -3,7 +3,7 @@ import { ThemePreferenceProvider } from "@pstdio/ui";
 import { BrowserSignInRequired } from "./browser-sign-in-required";
 
 const meta = {
-  title: "App/Browser sign-in required",
+  title: "Product/Account/Browser sign-in required",
   component: BrowserSignInRequired,
   fullscreen: true,
 } satisfies CanvasMeta<typeof BrowserSignInRequired>;

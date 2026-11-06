@@ -1,5 +1,6 @@
 import { Container } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { ParamEditor } from "../param-editor";
 import type { ResourceParam } from "../param-editor.types";
 import { ParamEditorRow } from "../param-editor-row";
@@ -60,13 +61,16 @@ const reviewLinks: ResourceParam = {
   options: [{ id: "pr-42", name: "PR #42", icon: "code", href: "https://example.com/pr/42" }],
 };
 const meta = {
-  title: "Components/Inputs/Param Editor/Resource Input",
+  title: "Design system/Patterns/Parameter editor/Resource input",
   component: ParamEditor,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;
-export default meta;
+export default {
+  title: "Design system/Patterns/Parameter editor/Resource input",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const Demo: Story = {
+const Demo: Story = {
   id: "components-inputs-param-editor-resource-input--demo",
   render: (props) => (
     <Container padding="md" maxW="sm">
@@ -80,7 +84,7 @@ export const Demo: Story = {
     params: [id, status, tags, dependsOn, reviewLinks],
   },
 };
-export const ImmediateMultiSelectChanges: Story = {
+const ImmediateMultiSelectChanges: Story = {
   id: "components-inputs-param-editor-resource-input--immediate-multi-select-changes",
   ...Demo,
   args: {
@@ -90,7 +94,7 @@ export const ImmediateMultiSelectChanges: Story = {
 };
 
 // Fixed-size properties share a row; growing values own the next line.
-export const TicketProperties: Story = {
+const TicketProperties: Story = {
   description:
     "ID, timestamps and status stay inline. Dependencies, blocked reasons and populated review links stack. Empty review links are omitted.",
   render: () => (
@@ -123,7 +127,7 @@ export const TicketProperties: Story = {
     </Container>
   ),
 };
-export const LongMilestone: Story = {
+const LongMilestone: Story = {
   description: "The selected milestone and its dropdown stay bounded by the field, including an unbroken name.",
   render: () => (
     <Container padding="md" maxW="xs">
@@ -146,3 +150,13 @@ export const LongMilestone: Story = {
     </Container>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Demo,
+  ImmediateMultiSelectChanges,
+  TicketProperties,
+  LongMilestone,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Demo };

@@ -67,7 +67,7 @@ const NotesCards = () => {
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/New resource cards",
+  title: "Product/Workbench/Panels/New resource cards",
   component: NotesCards,
   fullscreen: true,
 } satisfies CanvasMeta<typeof NotesCards>;

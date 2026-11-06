@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ListRow } from "./list-row";
 
 const meta: CanvasMeta<typeof ListRow> = {
-  title: "Components/Data Display/List Row/Action Menus",
+  title: "Design system/Components/Data display/List row/Action menus",
   component: ListRow,
 };
 export default meta;

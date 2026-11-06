@@ -4,7 +4,10 @@ import { useState } from "react";
 import type { ChatInputQuestionResponse } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
 
-const meta: CanvasMeta<typeof ChatPanel> = { title: "Chat/ChatPanel/Question identity", component: ChatPanel };
+const meta: CanvasMeta<typeof ChatPanel> = {
+  title: "Design system/Patterns/Chat/Chat panel/Question identity",
+  component: ChatPanel,
+};
 export default meta;
 type Story = CanvasFrame<typeof ChatPanel>;
 function RepeatedQuestion() {

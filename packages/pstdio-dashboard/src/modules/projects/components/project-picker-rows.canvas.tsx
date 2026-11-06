@@ -21,7 +21,7 @@ const projects = [
 ];
 const signedOut: ProjectPickerRowsProps["cloudState"] = () => ({ signedIn: false, cloud: false });
 const meta = {
-  title: "Projects/Project picker rows",
+  title: "Product/Projects/Project picker rows",
   component: ProjectPickerRows,
   decorators: [
     (Story) => (

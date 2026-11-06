@@ -1,13 +1,17 @@
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { MissingResourceBadge, ResourceBadge } from "@/components/primitives/resource-badge";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 
 const meta: CanvasMeta<typeof ResourceBadge> = {
-  title: "Components/Data Display/Resource Badge",
+  title: "Design system/Components/Data display/Resource badge",
   component: ResourceBadge,
 };
-export default meta;
+export default {
+  title: "Design system/Components/Data display/Resource badge",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof ResourceBadge>;
-export const Default: Story = {
+const Default: Story = {
   id: "components-data-display-resource-badge--default",
   args: {
     fileName: "workspace/analysis/report.md",
@@ -15,11 +19,16 @@ export const Default: Story = {
     size: "md",
   },
 };
-export const Missing: Story = {
+const Missing: Story = {
   id: "components-data-display-resource-badge--missing",
   render: () => <MissingResourceBadge referenceId="missing/resource.md" />,
 };
-export const WithoutTooltip: Story = {
+const WithoutTooltip: Story = {
   id: "components-data-display-resource-badge--without-tooltip",
   args: { ...Default.args, tooltip: false },
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Default, Missing, WithoutTooltip });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

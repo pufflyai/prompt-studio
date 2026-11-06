@@ -4,7 +4,7 @@ import { type AttributeDescriptor, KanbanRenderer } from "@pstdio/ui/kanban-rend
 import { buildTicketAttributes } from "./data/mappers";
 
 const meta: CanvasMeta<typeof KanbanRenderer> = {
-  title: "Extensions/Planner/Ticket Archive Filter",
+  title: "Extensions/Planner/Tickets/Archive filter",
   component: KanbanRenderer,
   fullscreen: true,
 };

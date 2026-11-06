@@ -32,7 +32,7 @@ const MotionPanel = (props: { side?: ResizableSplitSide }) => {
   );
 };
 const meta = {
-  title: "Components/Layout/Resizable Split Layout/Motion",
+  title: "Design system/Components/Layout/Resizable split layout/Motion",
   component: MotionPanel,
   description: "Resize a divider, drag it closed, then reopen. The content should fill the restored panel.",
 } satisfies CanvasMeta<typeof MotionPanel>;

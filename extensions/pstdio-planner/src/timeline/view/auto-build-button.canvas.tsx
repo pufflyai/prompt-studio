@@ -21,7 +21,7 @@ const InteractiveAutoBuildButton = (props: ComponentProps<typeof AutoBuildButton
 };
 
 const meta: CanvasMeta<typeof AutoBuildButton> = {
-  title: "Extensions/Planner/Auto Build Status",
+  title: "Extensions/Planner/Auto Build/Status",
   description: "Click Auto Build to inspect its activity. Click the same button again to close it.",
   component: AutoBuildButton,
   args: {

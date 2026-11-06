@@ -3,7 +3,7 @@ import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
 
 const meta = {
-  title: "pstdio-workbench/File editor/Save status",
+  title: "Product/Workbench/File editor/Save status",
   component: FileRendererPathHeader,
   decorators: [
     (Story) => (

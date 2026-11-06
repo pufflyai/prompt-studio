@@ -1,37 +1,37 @@
 import * as Settings from "./cloud-settings-previews";
 import * as Status from "./cloud-status-previews";
 
-export default { title: "Extensions/Prompt Studio Cloud" };
+export default { title: "Extensions/Prompt Studio Cloud/Overview" };
 
 export const CloudStatusStates = {
-  name: "Cloud · Status bar · All states",
+  name: "Status bar states",
   render: Status.CloudStatusStates,
 };
 export const CloudPopoverSynced = {
-  name: "Cloud · Popover · Synced",
+  name: "Synced popover",
   render: Status.CloudPopoverSynced,
 };
 export const CloudPopoverOffline = {
-  name: "Cloud · Popover · Offline",
+  name: "Offline popover",
   render: Status.CloudPopoverOffline,
 };
 export const CloudPopoverComingSoon = {
-  name: "Cloud · Popover · Coming soon",
+  name: "Coming soon popover",
   render: Status.CloudPopoverComingSoon,
 };
 export const CloudSettingsConnected = {
-  name: "Cloud · Settings · Early access",
+  name: "Connected settings",
   render: Settings.CloudSettingsConnected,
 };
 export const CloudSettingsLocal = {
-  name: "Cloud · Settings · Local project",
+  name: "Local project settings",
   render: Settings.CloudSettingsLocal,
 };
 export const CloudSettingsComingSoon = {
-  name: "Cloud · Settings · Coming soon",
+  name: "Coming soon settings",
   render: Settings.CloudSettingsComingSoon,
 };
 export const CloudMakeLocalConfirmation = {
-  name: "Cloud · Make local · Confirmation",
+  name: "Make local confirmation",
   render: Settings.CloudMakeLocalConfirmation,
 };

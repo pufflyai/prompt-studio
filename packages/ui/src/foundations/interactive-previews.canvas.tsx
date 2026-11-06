@@ -5,7 +5,7 @@ import { Checkbox, ScrollArea, Switch } from "@/components/primitives";
 // This is the component viewport being demonstrated, not the surrounding documentation panel.
 const controlsScrollViewportHeight = 180;
 
-export default { title: "Design System/Interactive previews" };
+export default { title: "Extensions/UI Canvas/Interactive frames" };
 
 export const ProjectForm = () => {
   const [name, setName] = useState("My workspace");

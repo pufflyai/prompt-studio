@@ -27,7 +27,7 @@ const ComposerFallbackStory = (props: ChatPanelProps) => {
   );
 };
 const meta = {
-  title: "Patterns/Chat/Composer Fallback",
+  title: "Design system/Patterns/Chat/Composer fallback",
   component: ChatPanel,
   render: (args) => <ComposerFallbackStory {...args} />,
   args: {

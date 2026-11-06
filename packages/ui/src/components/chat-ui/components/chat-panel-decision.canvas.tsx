@@ -41,7 +41,7 @@ const PlanDecision = (props: ChatPanelProps) => {
   );
 };
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Composer Decision",
+  title: "Design system/Patterns/Chat/Composer decision",
   component: ChatPanel,
   render: (args) => <PlanDecision {...args} />,
   args: {

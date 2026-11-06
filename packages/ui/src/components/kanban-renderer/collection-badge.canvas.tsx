@@ -40,7 +40,7 @@ const LinkedBadgeList = () => {
   );
 };
 const meta = {
-  title: "Patterns/Kanban Renderer/Collection badge list",
+  title: "Design system/Patterns/Kanban renderer/Collection badge list",
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;

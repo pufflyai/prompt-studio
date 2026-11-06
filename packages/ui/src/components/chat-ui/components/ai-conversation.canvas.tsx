@@ -10,7 +10,7 @@ import { getMessageOrigin, mergeReasoningToolOnlyMessages } from "./message-type
 
 const conversationMessages = rawConversationMessages as unknown as SessionMessage[];
 const meta: CanvasMeta<typeof ChatPrimitives.Root> = {
-  title: "Patterns/Chat/AI Conversation",
+  title: "Design system/Patterns/Chat/AI conversation",
   component: ChatPrimitives.Root,
 };
 export default meta;

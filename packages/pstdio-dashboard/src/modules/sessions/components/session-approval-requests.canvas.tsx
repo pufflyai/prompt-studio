@@ -4,7 +4,7 @@ import { SessionApprovalRequests } from "./session-approval-requests";
 
 const requests = [{ id: "approval", toolName: "shell", toolInput: { command: "bun test" }, toolUseId: "shell-call" }];
 export default {
-  title: "Modules/Sessions/Approvals",
+  title: "Product/Sessions/Approvals",
   description: "Synthetic approval responses. Offline approvals remain readable with unavailable actions.",
 } satisfies CanvasMeta;
 

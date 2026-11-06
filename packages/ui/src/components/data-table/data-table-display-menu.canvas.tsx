@@ -2,16 +2,20 @@ import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DEFAULT_DATA_TABLE_SETTINGS } from "@pstdio/sdk/extensions";
 import { useState } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { DataTableDisplayMenu } from "./data-table-display-menu";
 import { reorderDataTableColumns, toggleHiddenDataTableColumn } from "./data-table-state";
 import type { DataTableSettings } from "./types";
 
 const meta: CanvasMeta<typeof DataTableDisplayMenu> = {
-  title: "Patterns/Data Table/Display Menu",
+  title: "Design system/Patterns/Data table/Display menu",
   component: DataTableDisplayMenu,
 };
-export default meta;
+export default {
+  title: "Design system/Patterns/Data table/Display menu",
+  fullscreen: true,
+};
 type Story = CanvasFrame;
 const columns: AttributeDescriptor[] = [
   { id: "ID", label: "ID", type: { kind: "string" } },
@@ -48,20 +52,30 @@ const Menu = (props: MenuProps) => {
     </Box>
   );
 };
-export const Defaults: Story = {
+const Defaults: Story = {
   id: "patterns-data-table-display-menu--defaults",
   render: () => <Menu />,
 };
-export const GroupedWithRowNumbersOff: Story = {
+const GroupedWithRowNumbersOff: Story = {
   id: "patterns-data-table-display-menu--grouped-with-row-numbers-off",
   render: () => <Menu settings={{ grouping: "Status", rowNumbers: false }} />,
 };
-export const HiddenColumn: Story = {
+const HiddenColumn: Story = {
   id: "patterns-data-table-display-menu--hidden-column",
   render: () => <Menu settings={{ hiddenColumns: ["Score"] }} />,
 };
 /** Statistics shows only when a column declares a stat. */
-export const NoStatisticsAvailable: Story = {
+const NoStatisticsAvailable: Story = {
   id: "patterns-data-table-display-menu--no-statistics-available",
   render: () => <Menu statsAvailable={false} />,
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Defaults,
+  GroupedWithRowNumbersOff,
+  HiddenColumn,
+  NoStatisticsAvailable,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Defaults };

@@ -33,7 +33,7 @@ function Preview(props: PreviewProps) {
   );
 }
 const meta: CanvasMeta = {
-  title: "Patterns/Chat/Collapsed User Message",
+  title: "Design system/Patterns/Chat/Collapsed user message",
 };
 export default meta;
 type Story = CanvasFrame;

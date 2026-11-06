@@ -112,7 +112,7 @@ const feedFrame = (width: string) => (args: ComponentProps<typeof ResourceActivi
   </ScrollArea>
 );
 const meta = {
-  title: "Components/Data Display/Resource Activity Feed",
+  title: "Design system/Components/Data display/Resource activity feed",
   component: ResourceActivityFeed,
   fullscreen: true,
   render: feedFrame("820px"),

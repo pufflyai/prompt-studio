@@ -5,7 +5,7 @@ import { WorkbenchResourceSearch } from "./resource-search";
 
 const workbench = createWorkbench();
 const meta = {
-  title: "pstdio-workbench/Components/Resource search",
+  title: "Product/Workbench/Commands/Resource search",
   component: WorkbenchResourceSearch,
   decorators: [
     (Story) => (

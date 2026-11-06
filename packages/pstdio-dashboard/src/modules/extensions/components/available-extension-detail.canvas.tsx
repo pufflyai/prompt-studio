@@ -65,7 +65,7 @@ const metadata = {
   diagnostics: [],
 } as never;
 const meta: CanvasMeta<typeof AvailableExtensionDetail> = {
-  title: "ProjectSettings/AvailableExtensionDetail",
+  title: "Product/Settings/Extensions/Available extension",
   component: AvailableExtensionDetail,
   fullscreen: true,
   args: {

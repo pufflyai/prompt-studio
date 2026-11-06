@@ -16,7 +16,7 @@ const loadingDiffs: Diff[] = [
   },
 ];
 const meta: CanvasMeta<typeof DiffDrawer> = {
-  title: "Patterns/Diff/Diff Panel/Loading",
+  title: "Design system/Patterns/Diff/Diff panel/Loading",
   component: DiffDrawer,
   fullscreen: true,
   decorators: [

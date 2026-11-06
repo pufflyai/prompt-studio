@@ -1,15 +1,19 @@
 import { Box, Button, Container, HStack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { ParamEditor } from "./param-editor";
 
 const meta = {
-  title: "Patterns/Param Editor/Inspector",
+  title: "Design system/Patterns/Parameter editor/Inspector",
   component: ParamEditor,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditor>;
-export default meta;
+export default {
+  title: "Design system/Patterns/Parameter editor/Inspector",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const GroupedInspector: Story = {
+const GroupedInspector: Story = {
   id: "patterns-param-editor-inspector--grouped-inspector",
   render: (props) => {
     return (
@@ -125,12 +129,12 @@ export const GroupedInspector: Story = {
     ],
   },
 };
-export const SmallInspector: Story = {
+const SmallInspector: Story = {
   id: "patterns-param-editor-inspector--small-inspector",
   ...GroupedInspector,
   args: { ...GroupedInspector.args, variant: "small" },
 };
-export const SerializableReadOnlyValues: Story = {
+const SerializableReadOnlyValues: Story = {
   id: "patterns-param-editor-inspector--serializable-read-only-values",
   render: (props) => (
     <Container padding="md">
@@ -162,3 +166,8 @@ export const SerializableReadOnlyValues: Story = {
     ],
   },
 };
+
+const Examples = createCanvasExampleNavigator(meta, { GroupedInspector, SmallInspector, SerializableReadOnlyValues });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as GroupedInspector };

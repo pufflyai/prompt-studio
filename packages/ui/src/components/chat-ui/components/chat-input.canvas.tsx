@@ -7,7 +7,7 @@ import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 
 const meta: CanvasMeta<typeof ChatInput> = {
-  title: "Patterns/Chat/Chat Input",
+  title: "Design system/Patterns/Chat/Chat input/Overview",
   component: ChatInput,
 };
 export default meta;

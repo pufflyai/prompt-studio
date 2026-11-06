@@ -3,7 +3,7 @@ import config from "./default.json";
 
 export default {
   ...shaderCanvas("dashed-outline", config),
-  title: "Shaders/Dashed outline",
+  title: "Design system/Components/Effects/Dashed outline",
   save: { file: "default.json", key: "values" },
 };
 export const Preview = {};

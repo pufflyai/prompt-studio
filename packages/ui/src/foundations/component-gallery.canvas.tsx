@@ -16,7 +16,7 @@ import { PanelsSection } from "./gallery/sections/panels-section";
 
 // Compare component families with each frame's theme or predefined variants.
 const meta = {
-  title: "Foundations/Component Gallery",
+  title: "Design system/Foundations/Component gallery",
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;

@@ -61,7 +61,7 @@ const Example = (props: { readOnly?: boolean; empty?: boolean; duration?: number
   );
 };
 const meta: CanvasMeta = {
-  title: "Components/Media/Keyframe Timeline",
+  title: "Design system/Components/Media/Keyframe timeline",
   component: Example,
   description:
     "One compact transport toolbar with a visible repeat toggle. Pinch or Ctrl-scroll over the time ruler to zoom around the pointer; minimum zoom fits the tracks without horizontal overflow, and ordinary scrolling stays native. Right-click a track to add a keyframe at that position; its menu names the track and time. Right-click a keyframe to delete it. Shift+F10 opens the same menus from a focused track label or key. The active track is highlighted across its row. Groups use the app's rotating chevrons and shared reveal motion, including reduced motion; collapsed rows stay mounted and leave keyboard navigation. Drag the playhead along its full height or scrub empty track space. Selecting a key or marker aligns the playhead with its exact authored time. Tracks retain diamond keys, markers, frame snapping, loop handles and keyboard or pointer timing edits. Selection adds no detail row; values and interpolation belong to the caller. Omit onTracksChange for read-only tracks. Arrow keys move a focused key by one frame; Shift moves ten. Delete removes it.",

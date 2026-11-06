@@ -4,7 +4,7 @@ import { Canvas } from "./canvas";
 import { FreeformCanvasExample } from "./canvas.examples";
 
 const meta: CanvasMeta<typeof Canvas> = {
-  title: "Components/Layout/Canvas Gestures",
+  title: "Design system/Components/Layout/Canvas gestures",
   component: Canvas,
   args: { zoom: 1, onPan: () => {}, onZoom: () => {}, onFit: () => {} },
 };

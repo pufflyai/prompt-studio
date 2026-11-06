@@ -45,7 +45,7 @@ const ManualMarkdownFile = () => {
 };
 
 const meta = {
-  title: "Renderers/Manual Markdown File Editor",
+  title: "Product/Workbench/File editor/Manual Markdown editor",
   component: ManualMarkdownFile,
 } satisfies CanvasMeta<typeof ManualMarkdownFile>;
 export default meta;

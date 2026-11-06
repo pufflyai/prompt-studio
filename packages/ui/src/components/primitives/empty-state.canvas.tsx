@@ -3,10 +3,11 @@ import type { CanvasMeta } from "@pstdio/canvas";
 import { FileText, Folder } from "lucide-react";
 import type { ReactNode } from "react";
 import { EmptyState, type EmptyStateProps } from "@/components/primitives/empty-state";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 
 type StoryFn = () => ReactNode;
 const meta: CanvasMeta<typeof EmptyState> = {
-  title: "Components/Feedback/Empty State",
+  title: "Design system/Components/Feedback/Empty state",
   component: EmptyState,
   decorators: [
     (Story: StoryFn) => (
@@ -20,8 +21,11 @@ const meta: CanvasMeta<typeof EmptyState> = {
     description: "Upload files to start building extractions.",
   },
 };
-export default meta;
-export const Default = {
+export default {
+  title: "Design system/Components/Feedback/Empty state",
+  fullscreen: true,
+};
+const Default = {
   id: "components-feedback-empty-state--default",
   render: (args: EmptyStateProps) => (
     <Box width="100%" maxWidth="420px">
@@ -29,7 +33,7 @@ export const Default = {
     </Box>
   ),
 };
-export const WithIconAndAction = {
+const WithIconAndAction = {
   id: "components-feedback-empty-state--with-icon-and-action",
   args: {
     title: "Nothing uploaded yet.",
@@ -46,7 +50,7 @@ export const WithIconAndAction = {
     </Box>
   ),
 };
-export const Compact = {
+const Compact = {
   id: "components-feedback-empty-state--compact",
   args: {
     title: "This folder is empty.",
@@ -61,3 +65,8 @@ export const Compact = {
     </Box>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Default, WithIconAndAction, Compact });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

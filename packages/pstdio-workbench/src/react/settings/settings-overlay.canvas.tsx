@@ -53,7 +53,7 @@ const SettingsOverlayStory = () => {
   return <Workbench workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Settings overlay",
+  title: "Product/Workbench/Settings/Settings overlay",
   component: SettingsOverlayStory,
   decorators: [
     (Story) => (

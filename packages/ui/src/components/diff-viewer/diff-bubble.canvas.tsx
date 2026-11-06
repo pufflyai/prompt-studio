@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DiffBubble } from "./diff-bubble";
 
 const meta: CanvasMeta<typeof DiffBubble> = {
-  title: "Patterns/Diff/Diff Bubble",
+  title: "Design system/Patterns/Diff/Diff bubble",
   component: DiffBubble,
   args: {
     fileName: "src/index.ts",

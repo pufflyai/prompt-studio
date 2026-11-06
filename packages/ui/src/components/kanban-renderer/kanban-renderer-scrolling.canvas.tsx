@@ -4,7 +4,7 @@ import { useState } from "react";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
 const meta: CanvasMeta = {
-  title: "Patterns/Kanban Renderer/Column Scrolling",
+  title: "Design system/Patterns/Kanban renderer/Column scrolling",
 };
 export default meta;
 const items = Array.from({ length: 40 }, (_, index) => ({

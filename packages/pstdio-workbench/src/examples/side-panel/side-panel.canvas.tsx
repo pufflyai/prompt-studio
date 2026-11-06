@@ -66,7 +66,7 @@ const SidePanelStory = (props: SidePanelStoryProps) => {
   return <WorkbenchStory workbench={workbench} sidePanelBubbleIcon={bubbleIcon} />;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Side Panel",
+  title: "Product/Reference/Core API/Side panel",
   fullscreen: true,
 } satisfies CanvasMeta;
 export default meta;

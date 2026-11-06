@@ -120,7 +120,7 @@ const DashboardParamFieldsPreview = () => {
   );
 };
 const meta = {
-  title: "CommandParams/DashboardParamFields",
+  title: "Product/Commands/Project parameters",
   component: DashboardParamFieldsPreview,
   fullscreen: true,
 } satisfies CanvasMeta<typeof DashboardParamFieldsPreview>;

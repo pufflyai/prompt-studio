@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChatPanel } from "./chat-panel";
 
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Chat Panel/Working Indicator",
+  title: "Design system/Patterns/Chat/Chat panel/Working indicator",
   component: ChatPanel,
   render: (args) => (
     <Box w="xl" h="xl">

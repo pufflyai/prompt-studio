@@ -64,7 +64,7 @@ const createEmptyWorkbench = (pageEntries = false) => {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Empty panel",
+  title: "Product/Workbench/Panels/Empty panel",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

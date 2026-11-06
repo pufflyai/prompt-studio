@@ -4,7 +4,7 @@ import { WorkbenchStory } from "../workbench-story";
 import { createGenericCollectionRendererModule } from "./module";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Extension adapter",
+  title: "Product/Reference/Core API/Extension adapter",
   description:
     "The host adapter turns checked extension metadata into native renderer registrations. Extension authors use @pstdio/sdk/extensions instead of this API.",
   fullscreen: true,

@@ -61,7 +61,8 @@ test("title bar controls fit the native window reservation", async ({ page }) =>
 test("long resource dropdowns stay inside their field and remain selectable", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
-    "packages/ui/src/components/param-editor/inputs/resource-input.canvas.tsx#LongMilestone",
+    "packages/ui/src/components/param-editor/inputs/resource-input.canvas.tsx#Demo",
+    "Long milestone",
   );
   const trigger = preview.getByRole("button", { name: /Launch milestone/ });
   await expect(trigger).toBeVisible();
@@ -73,7 +74,7 @@ test("long resource dropdowns stay inside their field and remain selectable", as
     }),
   ).toBe(true);
   await trigger.click();
-  const menu = preview.getByRole("menu");
+  const menu = preview.getByRole("menu", { name: /Launch milestone/ });
   await expect(menu).toBeVisible();
   expect(
     await menu.evaluate((element) => {

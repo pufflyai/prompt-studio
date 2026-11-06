@@ -4,12 +4,12 @@ Canvas examples are executable documentation and live design references. Keep th
 
 ## Useful variants
 
-Start with the default useful state, then common configurations and supported edge states: empty, loading, disabled, selected, long content, and errors. Group related states as variants of one component frame.
+Start with the default useful state, then make supported configurations and edge states reachable through its controls: empty, loading, disabled, selected, long content, and errors. Unless the user asks otherwise, create separate frames only for things that cannot be reached by navigating within a frame. Use real interactions or an in-frame variant selector rather than exporting another frame for each state.
 
 ## Source contents
 
 - Use realistic, synthetic data and deterministic local fixtures.
-- Preserve stable IDs and existing exports when updating examples.
+- Preserve canvas paths and retained frame exports. When consolidating frames, record retired exports and the retained frame and navigation choice that replace them. Keep saved data; do not create duplicate visible frames just to retain old exports.
 - Use Canvas-owned authoring types with an explicit stable variant ID. Keep props, providers, and deterministic setup beside the example. Critical behavioral assertions live in Playwright tests.
 - Avoid tests that assert generated wording or bundled copy.
 - Split growing fixtures into nearby source files.

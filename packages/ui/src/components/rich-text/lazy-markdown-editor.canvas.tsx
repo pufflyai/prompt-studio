@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { LazyMarkdownEditor } from "./lazy-markdown-editor";
 
 const meta: CanvasMeta<typeof LazyMarkdownEditor> = {
-  title: "Patterns/Editors/Lazy Markdown Editor",
+  title: "Design system/Patterns/Editors/Lazy Markdown editor",
   component: LazyMarkdownEditor,
   args: { defaultState: "# Ticket description\n\nThe editor loads when this view opens.", isEditable: true },
 };

@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ProjectSetupStatus } from "./project-setup-status";
 
 const meta = {
-  title: "Projects/Project setup status",
+  title: "Product/Projects/Project setup status",
   component: ProjectSetupStatus,
   args: {
     error:

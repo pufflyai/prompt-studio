@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { HarnessBrowserProgress } from "./harness-browser-progress";
 
 const meta: CanvasMeta<typeof HarnessBrowserProgress> = {
-  title: "Agents/Browser sign-in",
+  title: "Product/Account/Agent sign-in",
   component: HarnessBrowserProgress,
   args: { name: "Codex", action: "login", onCancel: () => {} },
 };

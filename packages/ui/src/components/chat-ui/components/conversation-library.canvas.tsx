@@ -4,7 +4,7 @@ import { type ConversationFixture, fixtures, fixturesById } from "../mocks/libra
 import { ChatPanel } from "./chat-panel";
 
 const meta: CanvasMeta<typeof FixtureRenderer> = {
-  title: "Patterns/Chat/Conversation Library",
+  title: "Design system/Patterns/Chat/Conversation library",
   component: FixtureRenderer,
   description:
     "Real conversation snippets curated from .pstdio-dev sessions. Pick a fixture to preview different tool-call shapes for each Harness.",

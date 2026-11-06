@@ -3,7 +3,7 @@ import { Cloud, Gauge, Play } from "lucide-react";
 import { CopyButton } from "../primitives/copy-button";
 import { PopoverHeader } from "./popover-header";
 
-export default { title: "Components/Overlays/Popover header" };
+export default { title: "Design system/Components/Overlays/Popover header" };
 
 export const TitledPopovers = () => (
   <Stack gap="md">

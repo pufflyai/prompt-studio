@@ -53,7 +53,7 @@ workbench.keybindings.registerKeybinding({
 workbench.keyboard.open();
 void workbench.keyboard.press("C").then(() => workbench.keyboard.press("T"));
 const meta = {
-  title: "pstdio-workbench/Reference/Command creation",
+  title: "Product/Workbench/Commands/Command creation",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

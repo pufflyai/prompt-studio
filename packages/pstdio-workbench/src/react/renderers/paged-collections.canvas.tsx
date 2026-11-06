@@ -145,7 +145,7 @@ const PagedCollections = (props: { initiallyHeld?: boolean; withOtherTable?: boo
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Paged collections",
+  title: "Product/Workbench/Views/Paged collections",
   component: PagedCollections,
   fullscreen: true,
 } satisfies CanvasMeta<typeof PagedCollections>;

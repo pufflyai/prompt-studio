@@ -3,7 +3,7 @@ import { createViewsWorkbench } from "../onboarding/core/views";
 import { OnboardingFrame } from "../onboarding/onboarding-frame";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API",
+  title: "Product/Reference/Core API/Overview",
 } satisfies CanvasMeta;
 export default meta;
 type Story = CanvasFrame<typeof meta>;

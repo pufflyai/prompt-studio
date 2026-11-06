@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ModelSwapSeparator } from "./model-swap-separator";
 
 const meta: CanvasMeta<typeof ModelSwapSeparator> = {
-  title: "Patterns/Chat/Model Swap Separator",
+  title: "Design system/Patterns/Chat/Model swap separator",
   component: ModelSwapSeparator,
 };
 export default meta;

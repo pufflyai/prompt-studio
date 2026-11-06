@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
-const meta: CanvasMeta = { title: "Patterns/Kanban Renderer/Card Stability" };
+const meta: CanvasMeta = { title: "Design system/Patterns/Kanban renderer/Card stability" };
 export default meta;
 const cardContent = () => ({ title: "Review ticket filters" });
 const cardActions = () => [{ key: "open", label: "Open ticket", onClick: () => undefined }];

@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Bar } from "./collection-view-bar-story";
 
 const meta: CanvasMeta = {
-  title: "Patterns/Collection View/Filter Bubble Selection",
+  title: "Design system/Patterns/Collection view/Filter bubble selection",
   fullscreen: true,
 };
 export default meta;

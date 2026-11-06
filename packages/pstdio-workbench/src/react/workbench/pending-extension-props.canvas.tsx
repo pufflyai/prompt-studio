@@ -44,7 +44,7 @@ const PendingExtensionProps = () => {
 };
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Pending extension props",
+  title: "Product/Workbench/Pending extension props",
   component: PendingExtensionProps,
   fullscreen: true,
 } satisfies CanvasMeta<typeof PendingExtensionProps>;

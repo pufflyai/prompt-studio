@@ -1,15 +1,19 @@
 import { Container } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { ParamEditorHorizontal } from "./param-editor-horizontal";
 
 const meta = {
-  title: "Patterns/Param Editor/Param Editor Horizontal",
+  title: "Design system/Patterns/Parameter editor/Horizontal layout",
   component: ParamEditorHorizontal,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditorHorizontal>;
-export default meta;
+export default {
+  title: "Design system/Patterns/Parameter editor/Horizontal layout",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const Demo: Story = {
+const Demo: Story = {
   id: "patterns-param-editor-param-editor-horizontal--demo",
   render: (props) => {
     return (
@@ -98,12 +102,12 @@ export const Demo: Story = {
     readOnly: false,
   },
 };
-export const Small: Story = {
+const Small: Story = {
   id: "patterns-param-editor-param-editor-horizontal--small",
   ...Demo,
   args: { ...Demo.args, variant: "small" },
 };
-export const ReadOnly: Story = {
+const ReadOnly: Story = {
   id: "patterns-param-editor-param-editor-horizontal--read-only",
   render: (props) => {
     return (
@@ -169,7 +173,7 @@ export const ReadOnly: Story = {
     readOnly: true,
   },
 };
-export const DateInputs: Story = {
+const DateInputs: Story = {
   id: "patterns-param-editor-param-editor-horizontal--date-inputs",
   render: (props) => {
     return (
@@ -226,7 +230,7 @@ export const DateInputs: Story = {
     readOnly: false,
   },
 };
-export const MultiSelectExample: Story = {
+const MultiSelectExample: Story = {
   id: "patterns-param-editor-param-editor-horizontal--multi-select-example",
   render: (props) => {
     return (
@@ -311,7 +315,7 @@ export const MultiSelectExample: Story = {
     readOnly: false,
   },
 };
-export const WithInputGroups: Story = {
+const WithInputGroups: Story = {
   id: "patterns-param-editor-param-editor-horizontal--with-input-groups",
   render: (props) => {
     return (
@@ -412,7 +416,7 @@ export const WithInputGroups: Story = {
     readOnly: false,
   },
 };
-export const MixedGroupsAndParams: Story = {
+const MixedGroupsAndParams: Story = {
   id: "patterns-param-editor-param-editor-horizontal--mixed-groups-and-params",
   render: (props) => {
     return (
@@ -471,7 +475,7 @@ export const MixedGroupsAndParams: Story = {
     readOnly: false,
   },
 };
-export const SelectionsWithIcons: Story = {
+const SelectionsWithIcons: Story = {
   id: "patterns-param-editor-param-editor-horizontal--selections-with-icons",
   render: (props) => {
     return (
@@ -549,7 +553,7 @@ export const SelectionsWithIcons: Story = {
     readOnly: false,
   },
 };
-export const FullWidthNoEffect: Story = {
+const FullWidthNoEffect: Story = {
   id: "patterns-param-editor-param-editor-horizontal--full-width-no-effect",
   render: (props) => {
     return (
@@ -608,3 +612,18 @@ export const FullWidthNoEffect: Story = {
     readOnly: false,
   },
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Demo,
+  Small,
+  ReadOnly,
+  DateInputs,
+  MultiSelectExample,
+  WithInputGroups,
+  MixedGroupsAndParams,
+  SelectionsWithIcons,
+  FullWidthNoEffect,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Demo };

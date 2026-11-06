@@ -5,7 +5,7 @@ import { createKeyboardWorkbench } from "./keyboard.fixture";
 import { WorkbenchKeyboardShortcutsPanel } from "./keyboard-shortcuts-panel";
 
 const meta = {
-  title: "pstdio-workbench/Reference/Keyboard",
+  title: "Product/Workbench/Keyboard/Keyboard",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

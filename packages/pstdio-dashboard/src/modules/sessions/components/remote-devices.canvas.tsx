@@ -128,7 +128,7 @@ const RemoteSession = (props: {
 };
 
 export default {
-  title: "Modules/Sessions/Remote devices",
+  title: "Product/Sessions/Remote devices",
   description:
     "Synthetic interactions only. Online sessions use the normal composer; existing sessions stay on their device. Offline sessions retain readable history and have no workspace link or command queue.",
 } satisfies CanvasMeta;

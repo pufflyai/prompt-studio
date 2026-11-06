@@ -53,7 +53,7 @@ const ResourceOptionsExample = () => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Command resource options",
+  title: "Product/Workbench/Commands/Command resource options",
   component: ResourceOptionsExample,
 } satisfies CanvasMeta<typeof ResourceOptionsExample>;
 export default meta;

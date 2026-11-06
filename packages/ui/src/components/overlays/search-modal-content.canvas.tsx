@@ -42,7 +42,7 @@ const ProjectListDialog = (props: { showSearch: boolean }) => {
   );
 };
 const meta = {
-  title: "Overlays/Search modal content",
+  title: "Design system/Components/Overlays/Search modal",
   component: ProjectListDialog,
   fullscreen: true,
   args: { showSearch: true },

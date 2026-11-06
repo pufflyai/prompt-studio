@@ -203,7 +203,7 @@ const MultipleWorkbenches = (props: { richText?: boolean; height?: "full" | "100
 };
 
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Multiple workbenches",
+  title: "Product/Workbench/Multiple workbenches",
   component: MultipleWorkbenches,
   fullscreen: true,
 } satisfies CanvasMeta<typeof MultipleWorkbenches>;
