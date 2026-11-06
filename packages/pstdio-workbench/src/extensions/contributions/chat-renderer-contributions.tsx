@@ -109,6 +109,8 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
     const linkHandler: ChatLinkHandler = {
       resolveHref: (candidate) => {
         const link = parseChatLink(candidate, typeof window === "undefined" ? undefined : window.location.origin);
+        // Generic page hrefs must not bypass the opted-in host's target validation.
+        if (link?.kind === "page" && session.getSnapshot().conversation.nativeLinks) return null;
         return link?.kind === "external" || link?.kind === "page" ? link.href : null;
       },
       resolveResource: body.resolveLinkHandlerId

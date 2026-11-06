@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ChatLinkHandler } from "@pstdio/ui/chat-ui";
 import type { ReactElement } from "react";
 import { createWorkbench, getWorkbenchRenderers, type WorkbenchPanelRenderInput } from "../../core";
 import { registerWorkbenchExtensionChatRenderers } from "./chat-renderer-contributions";
@@ -153,4 +154,66 @@ test("shared chat reads, watches and draft persistence follow the current placem
   release();
   registered.dispose();
   await workbench.dispose();
+});
+
+test("native host owns page validation while provider callbacks and external links remain available", async () => {
+  const previousWindow = globalThis.window;
+  const origin = "http://127.0.0.1:3200";
+  globalThis.window = { location: { origin } } as Window & typeof globalThis;
+  const workbench = createWorkbench();
+  const viewId = "acme.chat.view.links";
+  const registered = registerWorkbenchExtensionChatRenderers({
+    workbench,
+    projectId: "project-one",
+    metadata: {
+      ...emptyWorkbenchExtensionMetadata,
+      views: [
+        {
+          id: viewId,
+          localId: "links",
+          extensionId: "acme.chat",
+          title: "Chat",
+          body: {
+            kind: "chat",
+            draftKey: "compose",
+            initial: { messages: [], nativeLinks: true },
+            queryHandlerId: "chat.query",
+            actionHandlerId: "chat.action",
+            resolveLinkHandlerId: "chat.link",
+            resolveImageHandlerId: "chat.image",
+          },
+        },
+      ],
+    },
+    executeCommand: async (id) =>
+      id === "chat.link" ? { href: "custom:owned", label: "Owned" } : "data:image/png;base64,owned",
+  });
+  try {
+    const element = getWorkbenchRenderers(workbench)
+      .getRenderer(viewId)!
+      .render({
+        workbench,
+        instance: { instanceId: "main", panelId: viewId, closable: true },
+        panel: { id: viewId, title: "Chat", region: "main", rendererId: viewId },
+        refresh: () => undefined,
+      }) as ReactElement<{ session: ChatSession; linkHandler: ChatLinkHandler }>;
+    const { session, linkHandler } = element.props;
+    const page = { source: `${origin}/projects/project-one/unknown`, origin: "markdown" as const };
+    expect(linkHandler.resolveHref(page)).toBeNull();
+    expect(linkHandler.resolveHref({ ...page, source: "/projects/project-one/unknown" })).toBeNull();
+    expect(linkHandler.resolveHref({ ...page, source: "https://example.com/" })).toBe("https://example.com/");
+    expect(await linkHandler.resolveResource?.({ ...page, source: "custom:owned" })).toEqual({
+      href: "custom:owned",
+      label: "Owned",
+    });
+    expect(await linkHandler.resolveImageSource?.("custom:image")).toBe("data:image/png;base64,owned");
+    session.accept({ revision: 1, snapshot: { nativeLinks: false } });
+    expect(linkHandler.resolveHref(page)).toBe(page.source);
+    session.accept({ revision: 2, snapshot: { nativeLinks: true } });
+    expect(linkHandler.resolveHref(page)).toBeNull();
+  } finally {
+    registered.dispose();
+    await workbench.dispose();
+    globalThis.window = previousWindow;
+  }
 });
