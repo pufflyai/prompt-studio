@@ -141,7 +141,7 @@ test("archive keeps saved data, preserves a different page, and rolls back faile
   await breadcrumbMenu(page);
   await menuItem(page, "Archive session").click();
   await page.getByRole("button", { name: "Archive session", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/sessions/compose$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose$`));
   await expect(page.getByText("No sessions yet", { exact: true })).toBeVisible();
 });
 
@@ -175,7 +175,7 @@ test("delete confirms, keeps a failed session usable, closes only its views, and
   await page.getByRole("button", { name: "Delete session", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row(page, b.title)).toBeHidden();
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/sessions/compose$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose$`));
   await expect(kept).toBeVisible();
   expect((await request.get(`/v1/sessions/${b.id}`)).status()).toBe(404);
   await page.reload();
