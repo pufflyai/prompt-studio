@@ -55,6 +55,7 @@ export const expectPackagedQueuedEditRecovery = async (
     const view = page.locator("[data-workbench-instance]").filter({ has: editor });
     await expect(editor).toBeEditable();
     await expect(view).toHaveCount(1);
+    logQueuedPhase(scenario, "editor ready; preserve independent draft");
     if (scenario === "occupied") {
       await editor.fill("Independent draft");
       const chooser = page.waitForEvent("filechooser");
@@ -66,14 +67,18 @@ export const expectPackagedQueuedEditRecovery = async (
       });
       await expect(page.getByRole("button", { name: "Remove independent-draft.txt", exact: true })).toBeVisible();
     }
+    logQueuedPhase(scenario, "select saved request");
     await page.getByRole("button", { name: "Edit queued message: Recovery request", exact: true }).click();
     await editor.fill("Retained complete edit");
     const cancel = page.getByRole("button", { name: "Cancel", exact: true });
     expect(await cancel.evaluate((element) => element.nextElementSibling?.textContent)).toBe("Update");
+    logQueuedPhase(scenario, "change saved model and parameters");
+    await expect(page.getByRole("button", { name: "one", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "one", exact: true }).click();
-    await page.getByRole("menuitemradio", { name: "two", exact: true }).click();
+    await page.getByRole("menuitem", { name: "two", exact: true }).click();
     await page.getByRole("button", { name: "High", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "Low", exact: true }).click();
+    logQueuedPhase(scenario, "attach edited context");
     const editUpload = page.waitForResponse((response) => isSessionChatAction(response.request(), "upload"));
     const chooser = page.waitForEvent("filechooser");
     await view.getByRole("button", { name: "Attach files", exact: true }).click();
