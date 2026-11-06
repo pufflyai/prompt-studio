@@ -141,7 +141,7 @@ export function BookForm(props: FormProps) {
                 <Button variant="ghost" disabled={saving} onClick={() => void close()}>
                   Cancel
                 </Button>
-                <Button variant="primary" disabled={!valid || saving} onClick={() => void submit()}>
+                <Button variant="solid" disabled={!valid || saving} onClick={() => void submit()}>
                   {saving ? "Saving…" : submitLabel}
                 </Button>
               </HStack>

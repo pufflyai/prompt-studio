@@ -52,7 +52,6 @@ export interface Draft {
   chapter: number;
   values: Record<string, unknown>;
 }
-export const collection = <T>(storage: ExtensionStorageApi, name: string) => storage.collection<T>(name);
 export const digest = (value: unknown) => new Bun.CryptoHasher("sha256").update(contentJson(value)).digest("hex");
 export const suggestionDigest = (suggestion: Suggestion) =>
   digest({

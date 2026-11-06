@@ -63,7 +63,7 @@ export function RuleEditor(props: EditorProps) {
           <Button size="xs" variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
-          <Button size="xs" variant="primary" type="submit" disabled={!valid}>
+          <Button size="xs" variant="solid" type="submit" disabled={!valid}>
             Save suggestion
           </Button>
         </HStack>

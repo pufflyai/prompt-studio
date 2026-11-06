@@ -82,7 +82,8 @@ function RulePreview({
           <ActionIconButton
             aria-label="Remove rule"
             size="xs"
-            variant="destructive-ghost"
+            variant="ghost"
+            colorPalette="red"
             onClick={() => onRemove(rule)}
           >
             <Trash2 />

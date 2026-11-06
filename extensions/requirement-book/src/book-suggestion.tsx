@@ -119,7 +119,7 @@ export function BookSuggestion(props: SuggestionProps) {
                       </Button>
                       <Button
                         size="xs"
-                        variant="primary"
+                        variant="solid"
                         disabled={issues.length > 0}
                         onClick={() => onAction(suggestion.id, "apply")}
                       >
