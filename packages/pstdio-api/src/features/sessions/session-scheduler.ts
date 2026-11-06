@@ -79,6 +79,7 @@ const startScheduledSession = async (
     await deps.sessionService.cancel(session.id);
     input.signal.throwIfAborted();
   }
+  if (deps.sessionQueueLifecycle.isClosing()) return;
 
   const spawning = spawnAgentSession(
     {
@@ -97,8 +98,10 @@ const startScheduledSession = async (
     deps,
   );
   const owner = deps.sessionService.store.get(session.id);
-  const fail = (error: unknown) =>
-    logStartupFailure(deps, {
+  const fail = async (error: unknown) => {
+    // A host stopping before launch leaves the durable request for restart recovery.
+    if (deps.sessionQueueLifecycle.isClosing()) return;
+    await logStartupFailure(deps, {
       error,
       session,
       agentId: input.agentId,
@@ -107,32 +110,35 @@ const startScheduledSession = async (
       submittedQueuePosition,
       entry: owner,
     });
+  };
   // The session and its initial request are durable. Startup now belongs to the host,
   // just as it does for REST-created sessions, rather than the command that requested it.
-  void spawning
-    .then(
-      async () => {
-        if (submittedQueuePosition !== undefined && !input.attachmentRefs?.length) {
-          await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
-        }
-      },
-      async (error) => {
-        if (input.signal?.aborted && !(error instanceof SessionCancellationCleanupError)) {
-          if (submittedQueuePosition !== undefined)
+  void deps.sessionQueueLifecycle.run(() =>
+    spawning
+      .then(
+        async () => {
+          if (submittedQueuePosition !== undefined && !input.attachmentRefs?.length) {
             await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
-          await deps.sessionService.cancel(session.id);
-          return;
-        }
-        await fail(error);
-      },
-    )
-    // Startup has already succeeded or failed here. A queue bookkeeping error must not change that outcome.
-    .catch((err) =>
-      sessionLogger.error(
-        { err, event: "session.spawn.cleanup_failed", session_id: session.id, project_id: input.projectId },
-        "Agent session startup cleanup failed",
+          }
+        },
+        async (error) => {
+          if (input.signal?.aborted && !(error instanceof SessionCancellationCleanupError)) {
+            if (submittedQueuePosition !== undefined)
+              await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
+            await deps.sessionService.cancel(session.id);
+            return;
+          }
+          await fail(error);
+        },
+      )
+      // Startup has already succeeded or failed here. A queue bookkeeping error must not change that outcome.
+      .catch((err) =>
+        sessionLogger.error(
+          { err, event: "session.spawn.cleanup_failed", session_id: session.id, project_id: input.projectId },
+          "Agent session startup cleanup failed",
+        ),
       ),
-    );
+  );
 };
 
 const assertObservedRun = (input: StartExistingInput, fresh: ExistingSession) => {

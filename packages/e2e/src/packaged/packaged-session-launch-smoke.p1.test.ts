@@ -12,9 +12,9 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 setupPackagedSmokeTests();
 
-test(
-  "packaged extension commands return sessions before harness startup finishes",
-  async () => {
+test.each([false, true])(
+  "packaged extension commands return sessions before harness startup finishes (restart=%s)",
+  async (restart) => {
     const root = mkdtempSync(join(tmpdir(), "packaged-session-launch-"));
     let child: ChildProcess | undefined;
     try {
@@ -40,9 +40,9 @@ test(
             id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker",
             capabilities: () => [], listModels: () => [],
               resume() { throw new Error("Not used by the startup fixture"); },
-            async start() {
+            async start(_ctx, input) {
               await gate.promise;
-              return { agentSessionId: "accepted", done: new Promise(() => {}), stop() {} };
+              return { agentSessionId: "accepted:" + input.prompt, done: new Promise(() => {}), stop() {} };
             },
           }],
           commands: [{
@@ -55,9 +55,10 @@ test(
         };
       `,
       );
-      const started = await startPackagedServe(root, {
+      const env = {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "launch-smoke" }]),
-      });
+      };
+      let started = await startPackagedServe(root, env);
       child = started.child;
       const request = async (path: string, body?: unknown) => {
         const response = await fetch(`${started.baseUrl}/v1${path}`, {
@@ -89,6 +90,20 @@ test(
           status: "in_progress",
           agent_session_id: null,
         });
+        if (restart) {
+          // Stop while startup still belongs to the host, before releasing the fixture harness.
+          await stopProcess(child);
+          child = undefined;
+          started = await startPackagedServe(root, env);
+          child = started.child;
+          await command("release");
+          await expectEventually
+            .poll(() => request(`/sessions/${result.outcome.value.id}`))
+            .toMatchObject({
+              status: "in_progress",
+              agent_session_id: "accepted:Implement",
+            });
+        }
       } finally {
         await command("release");
         await launching;
