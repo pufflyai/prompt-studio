@@ -21,6 +21,9 @@ test("keeps its live process through a long startup step and retries without dup
     startedAt: new Date().toISOString(),
   };
   const signals: (NodeJS.Signals | number | undefined)[] = [];
+  const readiness = Promise.withResolvers<void>();
+  const probing = Promise.withResolvers<void>();
+  const prepared: RuntimeDescriptor[] = [];
   let probes = 0;
   let failNextProbe = false;
   let spawns = 0;
@@ -50,7 +53,12 @@ test("keeps its live process through a long startup step and retries without dup
         discoverRuntime(path, {
           ...options,
           fetch: async () => {
-            if (++probes <= 2 || failNextProbe) {
+            probes += 1;
+            if (probes === 1) {
+              probing.resolve();
+              await readiness.promise;
+            }
+            if (probes <= 2 || failNextProbe) {
               failNextProbe = false;
               throw new TypeError("Readiness socket closed during startup");
             }
@@ -66,7 +74,16 @@ test("keeps its live process through a long startup step and retries without dup
     },
   );
   try {
-    await expect(manager.start()).resolves.toEqual({ descriptor, external: false });
+    const startup = manager.start((runtime) => prepared.push(runtime));
+    await probing.promise;
+    try {
+      expect(prepared).toEqual([descriptor]);
+    } finally {
+      readiness.resolve();
+      await startup;
+    }
+    await expect(startup).resolves.toEqual({ descriptor, external: false });
+    expect(prepared).toEqual([descriptor]);
     expect(probes).toBe(3);
     expect(signals).toEqual([]);
     failNextProbe = true;
