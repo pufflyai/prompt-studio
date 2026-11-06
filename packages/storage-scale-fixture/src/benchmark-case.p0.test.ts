@@ -13,7 +13,7 @@ const expectStopped = (pid: number) => {
   expect(state === "" || /^[ZX]/.test(state) || state.includes("E")).toBe(true);
 };
 
-const run = async (mode: string, timeoutMs = 500) => {
+const run = async (mode: string, timeoutMs = 500, preparation = false) => {
   const root = mkdtempSync(join(tmpdir(), "bounded-benchmark-"));
   const output = join(root, "partial.jsonl");
   const fd = openSync(output, "a");
@@ -25,6 +25,7 @@ const run = async (mode: string, timeoutMs = 500) => {
       command: process.execPath,
       args: [join(import.meta.dirname, "benchmark-case.fixture.ts"), mode],
       timeoutMs,
+      preparation,
       stdout: fd,
       stderr,
       emit: (event) => events.push(event),
@@ -84,6 +85,12 @@ for (const mode of ["exit-with-descendants", "fail-with-descendants"])
 test("a tighter allowance is retained and the maximum cannot exceed sixty seconds", async () => {
   expect((await run("blocked", 80)).result).toMatchObject({ limitMs: 80, status: "timed-out" });
   expect((await run("success", 90_000)).result.limitMs).toBe(60_000);
+});
+
+test("fixture preparation is not held to the case cap", async () => {
+  const { result, events } = await run("slow", 80, true);
+  expect(result).toMatchObject({ status: "completed", limitMs: null });
+  expect(events[0]).toMatchObject({ boundary: "uncapped-fixture-preparation", limitMs: null });
 });
 
 test("setup that never reaches an operation is bounded too", async () => {
