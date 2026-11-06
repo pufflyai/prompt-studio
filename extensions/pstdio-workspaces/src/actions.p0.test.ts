@@ -13,7 +13,7 @@ test("folderless projects can choose an installed remote workspace provider", as
     navigation: { open: (target: NavigationTarget) => targets.push(target) },
   } as unknown as Parameters<typeof showCreate.run>[0];
   await showCreate.run(context, {});
-  expect(targets).toEqual([{ kind: "dialog", page: workspacePages.form, params: { operation: "create" } }]);
+  expect(targets).toEqual([{ kind: "dialog", page: workspacePages.create, params: {} }]);
 });
 
 test("deleting a workspace publishes removal without replacing another open resource", async () => {

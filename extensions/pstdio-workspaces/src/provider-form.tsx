@@ -1,5 +1,6 @@
-import { Button, type ButtonProps, Stack, Text } from "@chakra-ui/react";
+import { Button, type ButtonProps, HStack, Stack, Text } from "@chakra-ui/react";
 import type { ExtensionWorkspaceProvider } from "@pstdio/sdk/extensions";
+import { DialogFormFooter, handleDialogAcceptShortcut, ScrollArea } from "@pstdio/ui";
 import {
   buildCommandParamInitialValues,
   type CommandParamValue,
@@ -19,11 +20,13 @@ export const ProviderForm = ({
   executeOptions,
   submit,
   busy,
+  onCancel,
 }: {
   providers: ExtensionWorkspaceProvider[];
   executeOptions: ExecuteOptions;
   submit: (providerId: string, params: Record<string, unknown>) => Promise<void>;
   busy: boolean;
+  onCancel: () => void;
 }) => {
   const [selected, setSelected] = useState(providers[0]?.id);
   const provider = providers.find((item) => item.id === selected) ?? providers[0];
@@ -37,6 +40,7 @@ export const ProviderForm = ({
       executeOptions={executeOptions}
       submit={submit}
       busy={busy}
+      onCancel={onCancel}
     />
   );
 };
@@ -48,6 +52,7 @@ const ProviderParams = ({
   executeOptions,
   submit,
   busy,
+  onCancel,
 }: {
   providers: ExtensionWorkspaceProvider[];
   provider: ExtensionWorkspaceProvider;
@@ -55,6 +60,7 @@ const ProviderParams = ({
   executeOptions: ExecuteOptions;
   submit: (id: string, params: Record<string, unknown>) => Promise<void>;
   busy: boolean;
+  onCancel: () => void;
 }) => {
   const schema = workspaceProviderParamSchema(provider);
   const [values, setValues] = useState<Record<string, CommandParamValue>>(() => buildCommandParamInitialValues(schema));
@@ -68,36 +74,49 @@ const ProviderParams = ({
     } catch (error) {
       validation = String(error);
     }
+  const create = () =>
+    submit(provider.id, normalizeCommandParamValues(schema, values)).catch((error) => setError(String(error)));
   return (
-    <Stack gap="md">
-      <WorkspaceProviderFields
-        typeLabel="Workspace type"
-        providers={providers}
-        provider={provider}
-        values={values}
-        disabled={busy}
-        optionStates={options.states}
-        onRetryOptions={options.retry}
-        onProviderChange={onProviderChange}
-        onValueChange={setValue}
-      />
-      {error && (
-        <Text role="alert" color="fg.error">
-          {error}
-        </Text>
-      )}
-      <Button
-        variant={"primary" as ButtonProps["variant"]}
-        loading={busy}
-        disabled={Boolean(validation)}
-        onClick={() => {
-          void submit(provider.id, normalizeCommandParamValues(schema, values)).catch((error) =>
-            setError(String(error)),
-          );
-        }}
-      >
-        Create workspace
-      </Button>
+    <Stack
+      gap="0"
+      onKeyDownCapture={(event) => handleDialogAcceptShortcut(event, () => void create(), !busy && !validation)}
+    >
+      <ScrollArea flex="1" minH="0" contentProps={{ px: "sm", py: "md" }}>
+        <Stack gap="0">
+          <WorkspaceProviderFields
+            typeLabel="Workspace type"
+            providers={providers}
+            provider={provider}
+            values={values}
+            disabled={busy}
+            optionStates={options.states}
+            onRetryOptions={options.retry}
+            onProviderChange={onProviderChange}
+            onValueChange={setValue}
+          />
+          {error && (
+            <Text role="alert" color="fg.error">
+              {error}
+            </Text>
+          )}
+        </Stack>
+      </ScrollArea>
+      <DialogFormFooter>
+        <HStack gap="2">
+          <Button size="sm" variant="ghost" disabled={busy} onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant={"primary" as ButtonProps["variant"]}
+            loading={busy}
+            disabled={Boolean(validation)}
+            onClick={() => void create()}
+          >
+            Create workspace
+          </Button>
+        </HStack>
+      </DialogFormFooter>
     </Stack>
   );
 };

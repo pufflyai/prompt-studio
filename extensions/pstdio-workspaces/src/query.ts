@@ -96,25 +96,29 @@ export const queryWorkspaces = async (ctx: ExtensionContextBase, showChildren = 
       type: {
         kind: "enum",
         options: ordered.map((device) => {
-          const capacity = capacities.get(device.id);
-          const limit = capacity?.limit ?? cached[device.id];
-          let note = device.online
-            ? "Online · Capacity unavailable"
-            : `Offline · Last seen ${device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : "unknown"}`;
-          if (capacity) {
-            note = device.current ? "This device" : "Online";
-            if (capacity.limit !== null) note += ` · ${capacity.activeCount} / ${capacity.limit} active`;
-          } else if (typeof limit === "number") note += ` · Limit ${limit}`;
           return {
             value: device.id,
             label: device.name,
             icon: "monitor",
-            note,
-            canCreate: device.current,
-            noteAction: {
-              kind: "command",
-              target: { command: workspaceCommands.device, params: { deviceId: device.id } },
-            },
+            contextMenuActions: [
+              {
+                id: "details",
+                label: device.current ? "This device" : "Device details",
+                action: {
+                  kind: "command" as const,
+                  target: { command: workspaceCommands.device, params: { deviceId: device.id } },
+                },
+              },
+              ...(device.current
+                ? [
+                    {
+                      id: "create",
+                      label: "Create workspace",
+                      action: { kind: "command" as const, target: { command: workspaceCommands.create } },
+                    },
+                  ]
+                : []),
+            ],
           };
         }),
       },

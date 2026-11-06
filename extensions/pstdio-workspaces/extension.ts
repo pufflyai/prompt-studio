@@ -1,7 +1,7 @@
 import { defineExtension, defineKeybinding, defineViewMenu, packageAsset } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
 import { filesTree, fileView } from "./src/files";
-import { action, devicePage, files, history, overview, workspace, workspaces } from "./src/pages";
+import { action, createPage, devicePage, files, history, overview, workspace, workspaces } from "./src/pages";
 import { fileSearch } from "./src/search";
 import { capacitySettings, capacityView } from "./src/settings";
 import { sidebar, sidebarView } from "./src/sidebar";
@@ -24,7 +24,7 @@ export default defineExtension({
     capacityView,
     sidebarView,
   ],
-  pages: [workspaces, workspace, files, history, overview, action, devicePage],
+  pages: [workspaces, workspace, files, history, overview, action, createPage, devicePage],
   viewMenus: [defineViewMenu({ id: "file-tree", owner: fileView.ref, view: filesTree.ref, side: "left" })],
   settings: {
     properties: { deviceLimits: { type: "object", title: "Last known device limits", default: {}, scope: "device" } },

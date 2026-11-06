@@ -97,7 +97,8 @@ export const exerciseWorkspaceFileOperations = async (input: {
   await expect.poll(() => existsSync(join(worktreePath, "generated/zzz-folder/keep.txt"))).toBe(true);
   await generated.focus();
   await generated.press("ArrowRight");
-  const moved = filesTree.getByRole("option", { name: "zzz-folder", exact: true });
+  // The filesystem move can finish before the refreshed tree removes the old root row.
+  const moved = filesTree.locator('[data-tree-list-node-id="generated/zzz-folder"]');
   await moved.focus();
   await moved.press("ArrowRight");
   await filesTree.getByRole("option", { name: "keep.txt", exact: true }).click();

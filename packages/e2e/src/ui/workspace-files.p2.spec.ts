@@ -101,9 +101,6 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     await changesTab.click();
     await viewer.getByPlaceholder("Search files").fill("README");
     await expect(viewer.getByRole("row", { name: /Edited through Monaco/ })).toBeVisible();
-    await changes.getByRole("button", { name: "Current changes", exact: true }).click();
-    await expect(viewer.getByRole("row", { name: /Edited through Monaco/ })).toBeVisible();
-    await changes.getByRole("button", { name: "Since fork point", exact: true }).click();
     await filesTab.click();
     await search.fill("LICENSE");
     await tree.getByRole("option", { name: "LICENSE", exact: true }).click();

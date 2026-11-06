@@ -47,9 +47,8 @@ export const showCreate = defineCommand({
     }
     ctx.navigation.open({
       kind: "dialog",
-      page: workspacePages.form,
+      page: workspacePages.create,
       params: {
-        operation: "create",
         ...(args.anchors ? { anchors: JSON.stringify(args.anchors) } : {}),
         ...(args.shorthand_base ? { shorthand: args.shorthand_base } : {}),
       },
