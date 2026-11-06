@@ -141,6 +141,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
             conversationKey={conversationKey}
             linkHandler={host.linkHandler ?? props.linkHandler}
             messages={host.messages ?? messages}
+            historyMessages={state.historyMessages}
             onForkMessage={
               conversation.fork ? (messageId) => run({ type: "fork", messageId }).then(() => undefined) : undefined
             }

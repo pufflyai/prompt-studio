@@ -1,6 +1,7 @@
 import type { ChatQueuedRequest, ChatRendererAction } from "@pstdio/sdk/extensions";
 import { applySessionMessagePatch, type SessionMessage } from "@pstdio/ui/chat-ui";
 import { createPendingChatQueuePresentation } from "./chat-pending-queue";
+import { createChatSubmissionHistory } from "./chat-submission-history";
 import { chatMessageIdentity, claimSubmittedChatMessages } from "./chat-submission-identity";
 
 export const createChatPendingSubmission = (
@@ -42,6 +43,7 @@ export type ChatPendingSubmission = ReturnType<typeof createChatPendingSubmissio
 export const createChatSubmissionPresentation = () => {
   let previous: SessionMessage[] = [];
   let identities = new Map<string, { id: string; upstream: string; presentation: string }>();
+  const history = createChatSubmissionHistory();
   const claimed = new Map<string, string>();
   const queuePresentation = createPendingChatQueuePresentation(claimed);
   return (messages: SessionMessage[], pending: ChatPendingSubmission[] = [], queued: ChatQueuedRequest[] = []) => {
@@ -115,7 +117,12 @@ export const createChatSubmissionPresentation = () => {
     );
     const waitingById = new Map(waiting.map((item) => [item.message.id, item]));
     const ordered = pending.flatMap((item) => waitingById.get(item.message.id) ?? []);
-    return { messages: present, queuedFollowUps: queue.items, pending: ordered.length ? ordered : undefined };
+    return {
+      messages: present,
+      historyMessages: history(present, [...issued.values()], receipts, claimed),
+      queuedFollowUps: queue.items,
+      pending: ordered.length ? ordered : undefined,
+    };
   };
 };
 
