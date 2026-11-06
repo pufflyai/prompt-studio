@@ -57,6 +57,10 @@ test("drafts omit management actions and workspace session rows explain guarded 
   const [workspace] = await (await request.get(`/v1/workspaces?project_id=${project.id}`)).json();
   const resource = `pstdio://extension-resource/workspace/${workspace.id}`;
   await page.goto(`/projects/${project.id}/workspace?resource=${encodeURIComponent(resource)}`);
+  await page
+    .locator('[data-workbench-region="sidenav"]')
+    .getByRole("option", { name: "Sessions", exact: true })
+    .press("ArrowRight");
   await row(page, session.title).click({ button: "right" });
   await expect(menuItem(page, "Rename session")).toBeVisible();
   await expect(menuItem(page, "Archive session")).toBeVisible();
