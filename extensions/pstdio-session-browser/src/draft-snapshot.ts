@@ -30,7 +30,12 @@ export const draftSnapshot = async (
   const workspaces = allWorkspaces.filter((workspace) =>
     remote ? workspace.device?.id === deviceId : !workspace.device,
   );
-  const workspace = selectedWorkspace(values) ?? workspaces.find((workspace) => workspace.isDefault)?.id ?? "";
+  const selected = selectedWorkspace(values);
+  const workspace =
+    workspaces.find((workspace) => workspace.id === selected)?.id ??
+    workspaces.find((workspace) => workspace.isDefault)?.id ??
+    workspaces[0]?.id ??
+    "";
   values.workspace = workspace;
   const controls: NonNullable<ChatRendererSnapshot["controls"]> = [
     ...composerControls.map((control) => ({ ...control, readOnly: remote })),

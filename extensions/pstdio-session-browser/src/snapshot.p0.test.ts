@@ -185,3 +185,28 @@ test("offline remote history exposes safe host refresh and hides unavailable wor
   expect(snapshot.resources).toEqual([]);
   expect(snapshot.workspaceId).toBe("remote-workspace");
 });
+
+test("changing draft device selects an available workspace on that owner and preserves a valid saved choice", async () => {
+  const ctx = fixture(false, true);
+  ctx.account.devices = async () => [
+    { id: "laptop", name: "Laptop", current: false, online: true, platform: "test", createdAt: "", lastSeenAt: "" },
+  ];
+  ctx.workspaces.list = async () =>
+    [
+      { id: "local", isDefault: true },
+      { id: "remote-first", device: { id: "laptop", ownerId: "owner", name: "Laptop" } },
+      { id: "remote-second", device: { id: "laptop", ownerId: "owner", name: "Laptop" } },
+      { id: "other-device", isDefault: true, device: { id: "other", ownerId: "owner", name: "Other" } },
+    ] as never;
+  const changed = await readSnapshot(ctx, undefined, { device: "laptop", workspace: "" });
+  expect(changed.values?.workspace).toBe("remote-first");
+  expect(changed.nativeHarnessAccount?.remote).toBe(true);
+  const stale = await readSnapshot(ctx, undefined, { device: "laptop", workspace: "local" });
+  expect(stale.values?.workspace).toBe("remote-first");
+  const saved = await readSnapshot(ctx, undefined, { device: "laptop", workspace: "remote-second" });
+  expect(saved.values?.workspace).toBe("remote-second");
+  ctx.workspaces.list = async () => [];
+  const noFolder = await readSnapshot(ctx, undefined, { device: "laptop", workspace: "remote-second" });
+  expect(noFolder.values?.workspace).toBe("");
+  expect(noFolder.submitDisabled).toBe(false);
+});
