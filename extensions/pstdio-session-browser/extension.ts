@@ -42,7 +42,7 @@ const draftKind = { kind: "resource-kind" as const, extensionId: "pstdio", id: "
 const conversation = defineView({
   id: "conversation",
   title: l10n("conversation.title", "Session"),
-  icon: "message-circle",
+  icon: "messages-circle",
   body: {
     kind: "chat",
     draftKey: "draft",
@@ -84,7 +84,7 @@ const viewer = definePlacement({
 const compose = definePage({
   id: "compose",
   title: l10n("commands.new", "New session"),
-  icon: "message-circle",
+  icon: "messages-circle",
   path: "conversations/compose",
   mode: workbenchModes.project,
   parent: sessionBrowser.pages.sessions,
@@ -94,7 +94,7 @@ const compose = definePage({
 const sessions = definePage({
   id: "browse",
   title: l10n("sessions.title", "Sessions"),
-  icon: "message-circle",
+  icon: "messages-circle",
   path: "conversations",
   mode: workbenchModes.project,
   main: { kind: "group", default: compose.ref },
@@ -103,7 +103,7 @@ const sessions = definePage({
 const session = definePage({
   id: "conversation",
   title: l10n("conversation.title", "Session"),
-  icon: "message-circle",
+  icon: "messages-circle",
   path: "conversation",
   mode: workbenchModes.project,
   parent: sessions.ref,
@@ -115,7 +115,7 @@ const session = definePage({
 const draft = definePage({
   id: "draft",
   title: l10n("commands.new", "New session"),
-  icon: "message-circle",
+  icon: "messages-circle",
   path: "conversations/new",
   mode: workbenchModes.project,
   parent: sessions.ref,
@@ -127,7 +127,7 @@ const draft = definePage({
 const list = defineView({
   id: "list",
   title: l10n("sessions.title", "Sessions"),
-  icon: "message-circle",
+  icon: "messages-circle",
   body: {
     kind: "tree",
     searchable: true,
@@ -151,7 +151,7 @@ export default defineExtension({
       id: "sessions",
       owner: workbenchModes.project,
       label: l10n("sessions.title", "Sessions"),
-      icon: "message-circle",
+      icon: "messages-circle",
       action: { kind: "page", page: sessions.ref },
     }),
   ],

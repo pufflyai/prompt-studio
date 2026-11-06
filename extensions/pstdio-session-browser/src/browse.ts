@@ -156,7 +156,7 @@ export const search = defineCommandPaletteResource({
       items: sessions.map((session) => ({
         id: session.id,
         label: session.title,
-        icon: "message-circle",
+        icon: "messages-circle",
         indicator: { icon: icons[session.status] ?? "circle-dashed", label: `Session status: ${session.status}` },
         target: sessionTarget(sessionResource(session, ctx.projectId)),
       })),

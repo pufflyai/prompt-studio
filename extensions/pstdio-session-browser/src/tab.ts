@@ -28,7 +28,7 @@ export const conversationTab: PlacementTabPresentation = {
     const status = saved?.status;
     return {
       label: saved?.title ?? resource?.label ?? l10n("commands.new", "New session"),
-      icon: "message-circle",
+      icon: "messages-circle",
       ...(status
         ? {
             indicator: {
@@ -46,7 +46,7 @@ export const conversationTab: PlacementTabPresentation = {
             {
               id: "new-session",
               label: l10n("commands.new", "New session"),
-              icon: "message-square-plus",
+              icon: "messages-circle",
               action: {
                 kind: "command",
                 target: {

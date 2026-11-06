@@ -50,6 +50,7 @@ export const draftSnapshot = async (
       options: workspaces.map((workspace) => ({
         id: workspace.id,
         name: workspace.name ?? workspace.shorthand ?? workspace.id,
+        description: [workspace.shorthand, workspace.branch].filter(Boolean).join(" "),
         disabled: Boolean(workspace.setupError || workspace.initializing),
       })),
     },
@@ -59,7 +60,7 @@ export const draftSnapshot = async (
       type: "selection",
       defaultValue: "",
       options: [
-        { id: "", name: devices.find((device) => device.current)?.name ?? "This device" },
+        { id: "", name: "This device" },
         ...devices
           .filter((device) => !device.current)
           .map((device) => ({ id: device.id, name: device.name, disabled: !device.online })),

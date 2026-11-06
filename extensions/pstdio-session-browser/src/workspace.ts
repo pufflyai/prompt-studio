@@ -35,7 +35,11 @@ export const workspacePresentation = async (
     ...(selected?.initializing ? { status: "loading" } : {}),
     additions: summary?.additions ?? 0,
     deletions: summary?.deletions ?? 0,
-    ...(input.id && input.available !== false && !selected?.initializing && !selected?.setupError
+    ...(input.id &&
+    selected?.id === input.id &&
+    input.available !== false &&
+    !selected.initializing &&
+    !selected.setupError
       ? { openResourceId: input.id }
       : {}),
   };

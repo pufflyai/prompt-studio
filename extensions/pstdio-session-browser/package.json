@@ -2,7 +2,7 @@
   "name": "pstdio-session-browser",
   "version": "0.1.0",
   "displayName": "Sessions",
-  "icon": "message-circle",
+  "icon": "messages-circle",
   "description": "Browse conversations and compose with native chat in Main and Side.",
   "publisher": "pstdio",
   "main": "./extension.ts",

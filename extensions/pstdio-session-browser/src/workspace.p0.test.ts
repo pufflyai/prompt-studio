@@ -71,3 +71,10 @@ test("saved remote workspace hub keeps device identity while creation is locked"
   expect(binding.create).toBeUndefined();
   expect(binding.openResourceId).toBe("remote");
 });
+
+test("workspace opening requires the selected existing record, not an ID hint or unrelated metadata", async () => {
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
+  expect((await workspacePresentation(ctx, undefined, { id: "a" })).openResourceId).toBeUndefined();
+  expect((await workspacePresentation(ctx, { id: "other" }, { id: "a" })).openResourceId).toBeUndefined();
+  expect((await workspacePresentation(ctx, { id: "a" }, { id: "a" })).openResourceId).toBe("a");
+});
