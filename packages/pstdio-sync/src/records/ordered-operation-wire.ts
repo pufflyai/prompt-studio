@@ -1,6 +1,12 @@
 import { fingerprint, type Json, jsonSchema } from "pstdio-sync-contracts";
 import { type ObservedJson, parseJsonPointer, validateJsonChanges } from "./ordered-json";
-import type { OrderedAdmission, OrderedObservation, OrderedOperation, OrderedRecord } from "./ordered-operation";
+import type {
+  OrderedAdmission,
+  OrderedLifetime,
+  OrderedObservation,
+  OrderedOperation,
+  OrderedRecord,
+} from "./ordered-operation";
 import { validateOrderedTextChanges, validateOrderedTexts } from "./ordered-text";
 
 const shape = (value: unknown, fields?: string[]) => {
@@ -41,13 +47,18 @@ const observedValue = (input: unknown) => {
   }
   return input as ObservedJson;
 };
-const observation = (input: unknown) => {
-  const value = shape(input, ["version", "exists", "deleted", "lifetime", "value", "stamps"]);
+const lifetimeObservation = (input: unknown, fields = ["version", "exists", "deleted", "lifetime"]) => {
+  const value = shape(input, fields);
   if (value.version !== 1 || typeof value.exists !== "boolean" || typeof value.deleted !== "boolean")
     throw new Error("Invalid ordered observation");
   if (value.exists !== (value.lifetime !== null) || (!value.exists && value.deleted))
     throw new Error("Invalid observed lifetime");
   if (value.lifetime !== null && value.lifetime !== "initial") stamp(value.lifetime);
+  return input as OrderedLifetime;
+};
+const observation = (input: unknown) => {
+  lifetimeObservation(input, ["version", "exists", "deleted", "lifetime", "value", "stamps"]);
+  const value = shape(input);
   observedValue(value.value);
   for (const [pointer, write] of Object.entries(shape(value.stamps))) {
     parseJsonPointer(pointer);
@@ -90,7 +101,11 @@ export const verifyOrderedOperation = async (input: unknown) => {
     changes(edit.changes);
     if (edit.texts !== undefined) validateOrderedTextChanges(edit.texts);
     if (edit.deleted !== undefined && typeof edit.deleted !== "boolean") throw new Error("Invalid deletion");
-    if (edit.condition !== undefined) observation(edit.condition);
+    if (edit.condition !== undefined) {
+      const condition = shape(edit.condition);
+      if (Object.hasOwn(condition, "value") || Object.hasOwn(condition, "stamps")) observation(condition);
+      else lifetimeObservation(condition);
+    }
   }
   const { fingerprint: identity, ...body } = value;
   if ((await fingerprint(body as Json)) !== identity)

@@ -4,6 +4,7 @@ import type { OrderedOperation } from "./ordered-operation";
 const conditionStamps = (edit: OrderedOperation["edits"][number]) => {
   if (!edit.condition) return [];
   const condition = edit.condition;
+  if (!("stamps" in condition)) return [condition.lifetime];
   const lifecycle = edit.deleted === true || (edit.deleted === false && condition.deleted);
   const paths = [...edit.changes, ...(edit.texts ?? []).map((text) => ({ path: text.path, remove: true as const }))];
   const stamps = overlappingJsonStamps(condition.stamps, lifecycle ? [{ path: [], remove: true }] : paths);
