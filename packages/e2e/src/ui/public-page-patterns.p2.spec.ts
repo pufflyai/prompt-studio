@@ -68,7 +68,7 @@ const test = base.extend<{ projectId: string }>({
   },
 });
 
-test("Scribble saves edits and creates documents", async ({ page, projectId }) => {
+test("Scribble saves documents and opens its session composer", async ({ page, projectId }) => {
   await openExample(page, projectId, "scribble", "scribble.document/north-star");
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expect(sidenav.getByRole("option", { name: "North star", exact: true })).toBeVisible();
