@@ -26,7 +26,7 @@ export const prepareUiFixtures = async (env: NodeJS.ProcessEnv, signal: AbortSig
       join(import.meta.dirname, "../../../../extensions", installName),
       { env: installEnv, signal },
     );
-    await promisify(execFile)(process.execPath, ["install", "--frozen-lockfile", "--ignore-scripts"], {
+    await promisify(execFile)("bun", ["install", "--frozen-lockfile", "--ignore-scripts"], {
       cwd: source,
       env: installEnv,
       signal,

@@ -2,7 +2,9 @@ import type { ApprovalRequest, ChatDraft, SessionMessage } from "@pstdio/sdk/ext
 import {
   type ChatRendererEvent,
   type ChatRendererSnapshot,
+  type ChatRendererStreamEvent,
   type CommandContext,
+  chatRendererStreamFrames,
   defineCommand,
   type ExtensionSessionStreamEvent,
   type JsonObject,
@@ -18,6 +20,11 @@ import { readQueue } from "./queue-snapshot";
 import { sessionId } from "./resource";
 import { selectedHarness } from "./selection";
 import { readSessionSnapshot } from "./snapshot";
+
+type ChatWatchUpdate =
+  | { snapshot: ChatRendererSnapshot }
+  | { recoverDraft: ChatDraft }
+  | { patch: Extract<ChatRendererEvent, { patch: unknown }>["patch"] };
 
 export const approvalSnapshot = (approval?: ApprovalRequest): ChatRendererSnapshot["approval"] =>
   approval
@@ -72,18 +79,16 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   let stream = Promise.resolve();
   let writes = Promise.resolve();
   const emittedRecovery = new Set<string>();
-  const writeEvent = (
-    event:
-      | { snapshot: ChatRendererSnapshot }
-      | { recoverDraft: ChatDraft }
-      | { patch: Extract<ChatRendererEvent, { patch: unknown }>["patch"] },
-  ) => {
+  const writeEvent = (event: ChatWatchUpdate) => {
     writes = writes.then(async () => {
-      if (ctx.signal.aborted) return;
-      await ctx.stream.write(
-        JSON.parse(JSON.stringify({ revision: revision++, ...event } satisfies ChatRendererEvent)),
-      );
+      for (const frame of chatRendererStreamFrames({ revision: revision++, ...event })) {
+        if (ctx.signal.aborted) return;
+        await ctx.stream.write(JSON.parse(JSON.stringify(frame)));
+      }
     });
+    // Retain the rejection for the loop/finally, but own it immediately while
+    // another public stream callback or availability read is still pending.
+    void writes.catch(() => undefined);
     return writes;
   };
   const matchesCanonicalMessages = (displayed: SessionMessage[]) =>
@@ -136,8 +141,11 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     }
     queue = data.queue;
     queueMessages = data.messages;
+    const displayed = display();
+    if (canonicalDisplay && displayed.messages && matchesCanonicalMessages(displayed.messages))
+      delete displayed.messages;
     await write({
-      ...display(),
+      ...displayed,
       operations: conversationOperations(remote, Boolean(queue?.readOnly)),
     });
   };
@@ -173,6 +181,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
       .finally(() => {
         streamActive = false;
       });
+    void stream.catch(() => undefined);
   };
   try {
     while (!ctx.signal.aborted) {
@@ -220,7 +229,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
 export const watch = defineCommand({
   id: "watch",
   title: "Watch conversation",
-  stream: streamOf<ChatRendererEvent & JsonObject>(),
+  stream: streamOf<ChatRendererStreamEvent & JsonObject>(),
   params: { renderer: params.json<{ resource?: ResourceRef }>() },
   run: (ctx, input) => watchConversation(ctx, input.renderer?.resource ?? ctx.resource),
 });

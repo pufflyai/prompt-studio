@@ -139,7 +139,7 @@ test("a native watch hands off failed input through recovery events without cons
         },
       },
       sessions: {
-        get: async () => ({ ...session, status: "failed", lastRequestStarted: "new-run" }),
+        get: async () => ({ ...session, status: "failed", lastRequestStarted: "2026-11-06T00:00:00.000Z" }),
         getExecutionState: async () => ({ kind: "local", available: true }),
         getQueuedMessages: async () => ({
           messages: [],
@@ -174,7 +174,7 @@ test("a native watch hands off failed input through recovery events without cons
 
 test("live reply patches keep 67 unchanged 4KiB history messages in the native owner", async () => {
   const controller = new AbortController();
-  const frames: import("@pstdio/sdk/extensions").ChatRendererEvent[] = [];
+  const frames: import("@pstdio/sdk/extensions").ChatRendererStreamEvent[] = [];
   const messages: import("@pstdio/sdk/extensions").SessionMessage[] = Array.from({ length: 67 }, (_, i) => ({
     id: `history-${i}`,
     role: i % 2 ? "assistant" : "user",
@@ -193,6 +193,8 @@ test("live reply patches keep 67 unchanged 4KiB history messages in the native o
       signal: controller.signal,
       stream: {
         write: async (event) => {
+          if (new TextEncoder().encode(JSON.stringify(event)).byteLength > 64 * 1024)
+            throw new Error("Command stream chunk exceeds 64 KiB");
           frames.push(event as never);
         },
       },
@@ -215,16 +217,37 @@ test("live reply patches keep 67 unchanged 4KiB history messages in the native o
     },
   });
   await watchConversation(ctx, { type: "session", id: "s" });
-  const transcript = frames.filter((event) => "patch" in event || ("snapshot" in event && event.snapshot.messages));
-  expect(transcript).toHaveLength(2);
-  expect(transcript[0]).toMatchObject({ snapshot: { messages } });
+  // Test-only reconstruction verifies the public wire remains lossless; production
+  // uses the native host decoder and never reimplements framing in this extension.
+  const events: import("@pstdio/sdk/extensions").ChatRendererEvent[] = [];
+  let parts: Uint8Array[] = [];
+  for (const frame of frames) {
+    if (!("fragment" in frame)) {
+      events.push(frame);
+      continue;
+    }
+    parts.push(Uint8Array.from(atob(frame.fragment.data), (char) => char.charCodeAt(0)));
+    if (frame.fragment.index === frame.fragment.count - 1) {
+      events.push(JSON.parse(Buffer.concat(parts).toString("utf8")));
+      parts = [];
+    }
+  }
+  const transcript = events.filter((event) => "patch" in event || ("snapshot" in event && event.snapshot.messages));
+  let restored: import("@pstdio/sdk/extensions").SessionMessage[] = [];
+  const { applySessionMessagePatch } = await import("@pstdio/ui/chat-ui");
+  for (const event of transcript.slice(0, -1)) {
+    if ("snapshot" in event && event.snapshot.messages) restored = event.snapshot.messages;
+    else if ("patch" in event) restored = applySessionMessagePatch(restored, event.patch);
+  }
+  expect(restored).toEqual(messages);
   const last = transcript.at(-1)!;
   console.log(
     JSON.stringify({ inputPatchBytes: JSON.stringify(patch).length, outputUpdateBytes: JSON.stringify(last).length }),
   );
   expect(last).toMatchObject({ patch });
   expect(JSON.stringify(last)).not.toContain("history-0");
-  expect(frames.map((event) => event.revision)).toEqual(frames.map((_, index) => index));
+  expect(events.map((event) => event.revision)).toEqual(events.map((_, index) => index));
+  expect(frames.every((frame) => Buffer.byteLength(JSON.stringify(frame)) <= 64 * 1024)).toBe(true);
 });
 
 test("steering projection falls back for canonical acknowledgment and reorder, then resumes live patches", async () => {
@@ -278,12 +301,12 @@ test("steering projection falls back for canonical acknowledgment and reorder, t
           await onEvent({ event: "patch", data: { op: "add", path: "/messages/1", value: delivery } });
           await onEvent({
             event: "patch",
-            data: { op: "replace", path: "/messages/1", value: { ...delivery, createdAt: "ack" } },
+            data: { op: "replace", path: "/messages/1", value: { ...delivery, createdAt: 1793923200000 } },
           });
           await onEvent({ event: "patch", data: { op: "replace", path: "/messages", value: [delivery, answer] } });
           await onEvent({
             event: "patch",
-            data: { op: "replace", path: "/messages/0", value: { ...delivery, createdAt: "later" } },
+            data: { op: "replace", path: "/messages/0", value: { ...delivery, createdAt: 1793923201000 } },
           });
           controller.abort();
         },
@@ -295,10 +318,64 @@ test("steering projection falls back for canonical acknowledgment and reorder, t
   expect(updates).toHaveLength(6);
   expect(updates[1]).toMatchObject({ snapshot: { messages: [answer, delivery], queuedFollowUps: [] } });
   expect(updates[2]).toMatchObject({ snapshot: { messages: [answer, delivery] } });
-  expect(updates[3]).toMatchObject({ patch: { path: "/messages/1", value: { ...delivery, createdAt: "ack" } } });
+  expect(updates[3]).toMatchObject({
+    patch: { path: "/messages/1", value: { ...delivery, createdAt: 1793923200000 } },
+  });
   expect(updates[4]).toMatchObject({ snapshot: { messages: [delivery, answer] } });
-  expect(updates[5]).toMatchObject({ patch: { path: "/messages/0", value: { ...delivery, createdAt: "later" } } });
+  expect(updates[5]).toMatchObject({
+    patch: { path: "/messages/0", value: { ...delivery, createdAt: 1793923201000 } },
+  });
   expect(frames.map((event) => event.revision)).toEqual(frames.map((_, index) => index));
+});
+
+test("an empty queue checkpoint does not replay the accumulated live transcript", async () => {
+  const controller = new AbortController();
+  const frames: import("@pstdio/sdk/extensions").ChatRendererEvent[] = [];
+  const queue = { requests: [], activeRunStartedAt: null, steeringAvailable: false, steeringUnavailableReason: null };
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
+    params: {},
+    overrides: {
+      signal: controller.signal,
+      stream: {
+        write: async (event) => {
+          frames.push(event as never);
+        },
+      },
+      sessions: {
+        get: async () => session,
+        getQueuedMessages: async () => ({ messages: [], queue }),
+        getExecutionState: async () => ({ kind: "local", available: true }),
+        getForkState: async () => ({ supported: false, disabledReason: null }),
+        getHarnessCommands: async () => ({ harnessId: "agent", commands: [], modes: [], slashCommands: true }),
+        retainResources: async () => ({ close: () => {} }),
+        stream: async (_id, onEvent) => {
+          await onEvent({ event: "patch", data: { op: "replace", path: "/messages", value: [] } });
+          for (let index = 0; index < 30; index++) {
+            await onEvent({
+              event: "patch",
+              data: {
+                op: "add",
+                path: `/messages/${index}`,
+                value: {
+                  id: `reply-${index}`,
+                  role: "assistant",
+                  parts: [{ type: "text", text: "x".repeat(3072) }],
+                },
+              },
+            });
+          }
+          await onEvent({ event: "queued_messages", data: { queue, messages: [] } });
+          controller.abort();
+        },
+      },
+    },
+  });
+  await watchConversation(ctx, { type: "session", id: "s" });
+  const last = frames.at(-1)!;
+  expect(last).toMatchObject({ snapshot: { queuedFollowUps: [], queueReadOnly: false } });
+  expect(JSON.stringify(last)).not.toContain("reply-0");
+  expect(new TextEncoder().encode(JSON.stringify(last)).byteLength).toBeLessThan(64 * 1024);
 });
 
 test("cancelling while presence and queue reads are pending owns both rejections and closes the hold", async () => {
