@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Request, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { observeEventConnectionBudget } from "../helpers/event-connection-budget";
 import {
   createResourceActionsProject,
   openSessionSidePanel,
@@ -36,13 +37,9 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     const holds: string[] = [];
     const deleted: string[] = [];
     let stops = 0;
-    const activeStreams = new Set<Request>();
-    const finishStream = (sent: Request) => activeStreams.delete(sent);
-    page.on("requestfinished", finishStream);
-    page.on("requestfailed", finishStream);
+    const budget = await observeEventConnectionBudget(page);
     page.on("request", (sent) => {
       const path = new URL(sent.url()).pathname;
-      if (path === "/v1/session-stream" && sent.method() === "GET") activeStreams.add(sent);
       if (path.endsWith("/subscriptions") && sent.method() === "POST") {
         const body = sent.postDataJSON();
         if (
@@ -68,7 +65,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     ).toBeVisible();
     await expect.poll(() => watches.length).toBe(1);
     await expect.poll(() => holds.length).toBe(1);
-    expect(activeStreams.size).toBe(1);
+    expect(budget.state().active.some((url) => new URL(url).pathname === "/v1/session-stream")).toBe(true);
     const saved = page.waitForResponse(
       (response) =>
         response.url().endsWith("conversation.chat.saveDraft/execute") &&
@@ -166,8 +163,9 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     expect((await request.get(`/v1/sessions/${sessionId}`)).status()).toBe(404);
     // Server ends need no DELETE, and inactive cached views may still own interests.
     // Client disconnect is the terminal boundary that releases every remaining claim.
-    await page.close();
-    await expect.poll(() => activeStreams.size).toBe(0);
+    await page.goto("about:blank");
+    await expect.poll(() => budget.state().active.length).toBe(0);
+    budget.assert();
     expect(stops).toBe(0);
     sessionId = undefined;
   } finally {
