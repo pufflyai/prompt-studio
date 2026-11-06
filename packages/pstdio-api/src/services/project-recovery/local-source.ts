@@ -17,6 +17,8 @@ interface LocalWorkspace {
   id: string;
   root_path: string | null;
   execution_kind: string;
+  initializing: boolean;
+  provider_state: string;
 }
 type Transport = Awaited<ReturnType<ReturnType<typeof createDocumentRelay>["manifestBlobs"]>>;
 // Superseded local ciphertext stays this long, like the relay's grace copy.
@@ -41,7 +43,7 @@ export const createLocalRecoverySource = (input: {
   root: string;
   workspaces: {
     getDefault(projectId: string): Promise<LocalWorkspace | null | undefined>;
-    list(projectId: string): Promise<Omit<LocalWorkspace, "id">[]>;
+    list(projectId: string): Promise<Pick<LocalWorkspace, "root_path" | "execution_kind">[]>;
   };
   catalog: ReturnType<typeof createRecoveryCatalog>;
   chunks: () => RecoveryChunkStore | undefined;
@@ -56,6 +58,8 @@ export const createLocalRecoverySource = (input: {
   const source = async () => {
     const workspace = await input.workspaces.getDefault(input.workbenchId);
     if (!workspace?.root_path || workspace.execution_kind !== "local") return null;
+    // A folder still being provisioned is not the project's folder yet; never seed or read it.
+    if (workspace.initializing || workspace.provider_state !== "ready") return null;
     const digest = createHash("sha256").update(workspace.root_path).digest("hex").slice(0, 16);
     const id = `${workspace.id}:${digest}`;
     const journal = await openRecoveryJournal({

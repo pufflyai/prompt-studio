@@ -156,9 +156,11 @@ export const startFolderRecovery = (input: {
       await local.prune(store);
     },
   });
-  // A changed default workspace can move the folder: rescan and watch the current one.
+  // A changed or newly ready default workspace can move the folder: rescan and watch the current one.
   const stopWorkspaces = deps.eventBus.subscribe((event) => {
-    if (event.table === "workspaces") local.request("watcher-lost");
+    if (event.table !== "workspaces") return;
+    const workspace = event.data as { project_id?: unknown } | null;
+    if (event.op === "delete" || workspace?.project_id === config.workbenchId) local.request("watcher-lost");
   });
   const stopCatalog = deps.extensionStorageService.watch((owner, origin) => {
     if (owner.workbenchId !== config.workbenchId || owner.extensionId !== catalog.owner.extensionId) return;

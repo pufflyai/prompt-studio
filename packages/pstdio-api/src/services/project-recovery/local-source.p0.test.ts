@@ -42,7 +42,13 @@ const fixture = async () => {
       published.push(candidate);
     },
   } as unknown as ReturnType<typeof createRecoveryCatalog>;
-  const workspace = { id: "workspace", root_path: folder, execution_kind: "local" };
+  const workspace = {
+    id: "workspace",
+    root_path: folder,
+    execution_kind: "local",
+    initializing: false,
+    provider_state: "ready",
+  };
   const sourceId = `workspace:${createHash("sha256").update(folder).digest("hex").slice(0, 16)}`;
   const start = (journalRoot = join(root, "recovery")) => {
     let captured = 0;
@@ -65,7 +71,7 @@ const fixture = async () => {
   };
   const journal = (journalRoot = join(root, "recovery")) =>
     openRecoveryJournal({ root: journalRoot, source: ["project", "account", "laptop", sourceId] });
-  return { root, folder, store, entries, published, start, journal, sourceId };
+  return { root, folder, store, entries, published, start, journal, sourceId, workspace };
 };
 
 test("a candidate saved before a restart is published even when the folder did not change", async () => {
@@ -119,4 +125,19 @@ test("a source whose catalog copy deliberately had no policy is never seeded aft
   await until(async () => (await (await f.journal(fresh)).read()).enrolled);
   await owner.local.close();
   await expect(readFile(join(f.folder, ".pstignore"))).rejects.toThrow();
+});
+
+test("a folder whose workspace is still being set up is neither enrolled nor captured until it is ready", async () => {
+  const f = await fixture();
+  f.workspace.initializing = true;
+  const owner = f.start();
+  owner.local.request("startup");
+  await until(async () => !(await owner.local.status()).pending && !(await owner.local.status()).capturing);
+  expect((await (await f.journal()).read()).enrolled).toBe(false);
+  await expect(readFile(join(f.folder, ".pstignore"))).rejects.toThrow();
+  f.workspace.initializing = false;
+  owner.local.request("explicit");
+  await until(async () => !!(await (await f.journal()).read()).candidate);
+  expect(await readFile(join(f.folder, ".pstignore"), "utf8")).toBe("node_modules/\n");
+  await owner.local.close();
 });
