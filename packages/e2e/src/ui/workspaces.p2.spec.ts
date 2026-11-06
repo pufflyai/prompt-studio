@@ -235,6 +235,7 @@ test.describe("Grouped Workspaces", () => {
     await dialog.getByRole("textbox", { name: "Name" }).fill(nextName);
     await dialog.getByRole("button", { name: "Rename", exact: true }).click();
 
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await page.getByRole("option", { name: "Workspaces", exact: true }).click();
     await expect(
       page.getByRole("region", { name: "Main", exact: true }).getByRole("option").filter({ hasText: nextName }).first(),
