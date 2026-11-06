@@ -167,24 +167,30 @@ test(
     };
     await mkdir(join(root, "a"));
     await mkdir(join(root, "b"));
-    progress("start first runtime");
-    const a = await startPackagedServe(join(root, "a"), env);
-    let b: typeof a | undefined;
+    let a: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
+    let b: typeof a;
     let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
     try {
-      // Both cold starts remain inside the timed case; browser startup does not depend on device sync.
+      // Both runtimes and the browser start cold inside this case and own separate state.
+      const startingRuntimes = Promise.allSettled([
+        startPackagedServe(join(root, "a"), env).then((runtime) => (a = runtime)),
+        startPackagedServe(join(root, "b"), env).then((runtime) => (b = runtime)),
+      ]);
       const openingBrowser = chromium.launch(PACKAGED_DASHBOARD_BROWSER).then((opened) => {
         browser = opened;
         progress("browser launched");
         return opened;
       });
       const preparingDevices = (async () => {
-        progress("start second runtime");
-        b = await startPackagedServe(join(root, "b"), env);
+        progress("start both runtimes");
+        const [firstRuntime, secondRuntime] = await startingRuntimes;
+        if (firstRuntime.status === "rejected") throw firstRuntime.reason;
+        if (secondRuntime.status === "rejected") throw secondRuntime.reason;
+        progress("both runtimes ready");
         const projectId = crypto.randomUUID();
         const [first, second] = await Promise.all([
-          connectDevice(a, "a", projectId, peer.origin, progress),
-          connectDevice(b, "b", projectId, peer.origin, progress),
+          connectDevice(firstRuntime.value, "a", projectId, peer.origin, progress),
+          connectDevice(secondRuntime.value, "b", projectId, peer.origin, progress),
         ]);
         progress("set device limits");
         await first.command("command.set-limit", { limit: 4 });
@@ -238,7 +244,7 @@ test(
           (await second.command("command.read-changes", { workspaceId: resource.id, mode: "current" }, resource)).ok,
         ).toBe(false);
         expect((await second.command("command.create-file", { name: "Denied.txt" }, resource)).ok).toBe(false);
-        return { first, second, session, projectId, runtime: b };
+        return { first, second, session, projectId, runtime: secondRuntime.value };
       })();
       const [devices, opened] = await Promise.allSettled([preparingDevices, openingBrowser]);
       if (devices.status === "rejected") throw devices.reason;
@@ -270,7 +276,7 @@ test(
       await expectUI(page.getByText("Private workspace history", { exact: true })).toBeVisible();
       progress("private history visible");
       progress("stop first runtime");
-      await stopProcess(a.child);
+      if (a) await stopProcess(a.child);
       peer.setDeviceOnline(first.id, false);
       progress("query offline device and cached capacity");
       const offline = await second.query();
@@ -294,7 +300,7 @@ test(
       progress("cleanup");
       await browser?.close();
       progress("stop first runtime");
-      await stopProcess(a.child);
+      if (a) await stopProcess(a.child);
       progress("first runtime stopped");
       progress("stop second runtime");
       if (b) await stopProcess(b.child);
