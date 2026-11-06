@@ -17,6 +17,11 @@ Switch options follow public query cursors rather than truncate older history.
 
 Follow `extensions/AGENTS.md`: use CLI `extensions dev`, then production-like `extensions add --force`, without skipping installation. Local built SDK/UI packages can qualify this stacked implementation. An independent install must use fresh package-local Bun dependencies from built tarballs rather than symlinks or copied installed dependencies.
 
+The backend provider uses only the SDK at runtime. Its canonical patch reducer is
+shared through `@pstdio/sdk/extensions`; native rendering stays in the host. The
+SDK-only dependency removes the UI package's rendering/editor dependency tree from
+each project install without changing message identity or stream behavior.
+
 This provider has an independent version/changelog and its own changeset. It stays outside the host fixed group. `private: true` follows bundled/PSX core-extension conventions. Keep published dependency checks enabled; supporting native chat SDK/UI packages must actually publish before the draft consumer PR can leave `waiting-for-release`. Local qualification does not establish published compatibility.
 
 ## Current implementation checkpoint

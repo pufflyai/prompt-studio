@@ -2,4 +2,4 @@
 "pstdio-session-browser": patch
 ---
 
-Provide native session browsing and composition in pages and shared Side panels through an independently installed Sessions extension.
+Provide native session browsing and composition in pages and shared Side panels through an independently installed Sessions extension. Keep recent date groups and use the shared SDK message reducer without installing UI rendering dependencies in the backend provider.

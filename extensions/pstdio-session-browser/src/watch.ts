@@ -1,5 +1,6 @@
 import type { ApprovalRequest, ChatDraft, SessionMessage } from "@pstdio/sdk/extensions";
 import {
+  applySessionMessagePatch,
   type ChatRendererEvent,
   type ChatRendererSnapshot,
   type ChatRendererStreamEvent,
@@ -12,7 +13,6 @@ import {
   type ResourceRef,
   streamOf,
 } from "@pstdio/sdk/extensions";
-import { applySessionMessagePatch } from "@pstdio/ui/chat-ui";
 import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
 import { recoverNativeInputs } from "./native-recovery";

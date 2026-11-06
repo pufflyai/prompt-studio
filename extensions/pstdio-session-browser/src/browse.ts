@@ -21,6 +21,19 @@ const icons: Record<string, string> = {
   queued: "clock-alert",
   awaiting_input: "circle-dot",
 };
+const sessionDayLabel = (date: Date) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const savedDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const daysAgo = Math.round((today.getTime() - savedDay.getTime()) / 86_400_000);
+  if (daysAgo === 0) return l10n("sessions.today", "Today");
+  if (daysAgo === 1) return l10n("sessions.yesterday", "Yesterday");
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  });
+};
 const sessionNodes = (
   ctx: ExtensionContextBase,
   sessions: Awaited<ReturnType<typeof ctx.sessions.query>>["items"],
@@ -35,7 +48,11 @@ const sessionNodes = (
     });
     if (day !== date) {
       date = day;
-      nodes.push({ id: `date:${cursor ?? "root"}:${date}`, label: date, disabled: true });
+      nodes.push({
+        id: `date:${cursor ?? "root"}:${date}`,
+        label: sessionDayLabel(new Date(session.lastRequestStarted ?? session.updatedAt)),
+        disabled: true,
+      });
     }
     const resource = sessionResource(session, ctx.projectId);
     nodes.push({

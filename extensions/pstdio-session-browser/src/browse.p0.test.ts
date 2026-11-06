@@ -2,6 +2,44 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { browse, browseChildren, search } from "./browse";
 
+test("recent sessions retain Today and Yesterday groups alongside older calendar dates", async () => {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const earlier = new Date(today);
+  earlier.setDate(earlier.getDate() - 5);
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      sessions: {
+        query: async () => ({
+          items: [today, yesterday, earlier].map((date, index) => ({
+            id: `s${index}`,
+            title: `Saved ${index}`,
+            status: "completed",
+            updatedAt: date.toISOString(),
+          })) as never,
+          nextCursor: null,
+        }),
+      },
+    },
+  });
+  const sections = await browse(ctx, { renderer: { rendererId: "list" } });
+  const groups = sections[0]!.nodes.filter((node) => node.disabled);
+  expect(groups[0]?.label).toMatchObject({ default: "Today" });
+  expect(groups[1]?.label).toMatchObject({ default: "Yesterday" });
+  expect(groups[2]?.label).toBe(
+    earlier.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: earlier.getFullYear() === today.getFullYear() ? undefined : "numeric",
+    }),
+  );
+  expect(new Set(groups.map((node) => node.id)).size).toBe(3);
+});
+
 test("browsing and search use bounded public queries, workspace scope and lazy continuation", async () => {
   const queries: unknown[] = [];
   const ctx = makeCommandContext({

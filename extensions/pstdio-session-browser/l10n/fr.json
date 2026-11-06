@@ -2,6 +2,8 @@
   "conversation.title": "Conversation",
   "commands.new": "Nouvelle conversation",
   "sessions.title": "Conversations",
+  "sessions.today": "Aujourd’hui",
+  "sessions.yesterday": "Hier",
   "sessions.search": "Rechercher des conversations",
   "commands.switch": "Changer de conversation",
   "commands.open": "Ouvrir la conversation",
