@@ -4,7 +4,7 @@ import { type ComponentType, useEffect, useRef, useState, useSyncExternalStore }
 import { visibleChatDraftAttachments } from "../../../extensions/contributions/chat-pending-submission";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
-import { submitWithNativeChatAccount } from "./native-chat-account-submit";
+import { nativeChatInputHandler, submitWithNativeChatAccount } from "./native-chat-account-submit";
 import { runNativeChatAction } from "./native-chat-action";
 import { NativeChatAttachmentActions, NativeChatAttachmentList } from "./native-chat-attachments";
 import { NativeChatApproval, NativeChatControls, nativeChatCommands } from "./native-chat-controls";
@@ -141,11 +141,12 @@ export const NativeChatView = (props: NativeChatViewProps) => {
             accountBlocksSubmission(host.account, draft.text)
           }
           readOnlyQueue={conversation.readOnly || conversation.queueReadOnly}
-          onSubmitMessage={(text, _files, questionResponse) =>
-            submitWithNativeChatAccount(host.account, questionResponse ? undefined : text, () =>
-              run({ type: "submit", text, attachments: questionResponse ? [] : attachments, values, questionResponse }),
-            )
-          }
+          onSubmitMessage={nativeChatInputHandler({
+            account: host.account,
+            session,
+            run,
+            draft: { attachments, values },
+          })}
           onInterrupt={
             conversation.streaming && !conversation.readOnly
               ? () => {
