@@ -19,6 +19,7 @@ import { createHostCapabilityGate } from "../contract";
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { callFrameCapability, frameDimensionChanged } from "./frame-capability";
+import { createFrameConnectionLifetime } from "./frame-connection-lifetime";
 import type { HostEventPublisher } from "./host-event-publisher";
 import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
@@ -101,6 +102,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   // The connection belongs to one browsing context. Navigation keeps the iframe's
   // WindowProxy, so a different contentWindow means the runtime document is gone.
   const connectedWindowRef = useRef<Window | null>(null);
+  const connectionLifetimeRef = useRef<ReturnType<typeof createFrameConnectionLifetime> | null>(null);
   const propsRef = useRef(createWebviewHostProps(extensionProps));
   const themeRef = useRef(theme);
   const themeRootRef = useRef(props.themeRoot);
@@ -147,10 +149,19 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     };
     iframe.addEventListener("load", onFrameLoad);
     const removeLoadListener = () => iframe.removeEventListener("load", onFrameLoad);
+    const releaseFrame = () => {
+      removeLoadListener();
+      connectionLifetimeRef.current?.releaseIfDetached();
+    };
 
     const connectedWindow = iframe.contentWindow;
-    if (connectedWindow === connectedWindowRef.current) return removeLoadListener;
+    if (connectedWindow === connectedWindowRef.current) return releaseFrame;
+    connectionLifetimeRef.current?.dispose();
     connectedWindowRef.current = connectedWindow;
+    const lifetime = createFrameConnectionLifetime(
+      () => iframe.isConnected && iframeRef.current === iframe && iframe.contentWindow === connectedWindow,
+    );
+    connectionLifetimeRef.current = lifetime;
 
     // Snapshot styles at connect time so subsequent parent re-renders that produce a
     // new array reference don't affect what we send in init.
@@ -225,7 +236,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
 
       connection
         .then(async (conn) => {
-          if (iframeRef.current !== iframe) return;
+          if (!lifetime.attach(conn)) return;
           const remote = conn.remote as GuestRemote;
           remoteRef.current = remote;
           hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
@@ -258,10 +269,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
 
     connect();
 
-    // Intentionally no connection.close() in cleanup. The iframe runtime handshakes once
-    // at iframe load and binds to that connection ID. Closing during React StrictMode's
-    // dev-only cleanup would leave the live iframe with no host listener.
-    return removeLoadListener;
+    return releaseFrame;
   }, [frameEpoch, sizing, view.extensionId, view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
 
   useEffect(() => {
