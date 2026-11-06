@@ -167,7 +167,7 @@ test("fork copies the native session without submitting a prompt", async () => {
     },
   });
   const service = createOpencodeService({
-    startServer: async () => ({ url: server.url.origin, dispose: async () => {} }),
+    startServer: async () => ({ running: true, url: server.url.origin, dispose: async () => {} }),
     serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
   });
   try {
