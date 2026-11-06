@@ -213,6 +213,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
         >
           <Dialog.Content
             ref={contentRef}
+            aria-label={closeLabel}
             position="relative"
             overflow="hidden"
             borderWidth="1px"

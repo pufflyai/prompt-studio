@@ -12,6 +12,7 @@ export interface WorkbenchOverlayContribution extends Omit<WorkbenchPlacementPre
 }
 
 export interface OpenWorkbenchOverlayInput {
+  pageContext?: import("@pstdio/sdk/extensions").ViewLocation["pageContext"];
   resource?: ResourceRef;
   title?: string;
 }
@@ -22,6 +23,8 @@ export interface WorkbenchOverlayRegistry {
   listOverlays(): WorkbenchOverlayContribution[];
   openOverlay(id: string, input?: OpenWorkbenchOverlayInput): string;
   closeOverlay(instanceId: string): void;
+  /** Captures this opening, including singleton overlays that reuse a placement ID. */
+  captureInvocation(instanceId: string): (() => boolean) | undefined;
 }
 
 const overlayContributionId = (id: string) => `workbench.overlay.${encodeURIComponent(id)}`;
@@ -31,6 +34,7 @@ export const createWorkbenchOverlayRegistry = (input: {
   views: WorkbenchViewRegistry;
   viewMenus?: WorkbenchViewMenuRegistry;
 }): WorkbenchOverlayRegistry => {
+  const openings = new Map<string, { overlayId: string }>();
   const overlays = new Map<string, WorkbenchOverlayContribution>();
   const registrations = new Map<string, Disposable>();
 
@@ -58,6 +62,8 @@ export const createWorkbenchOverlayRegistry = (input: {
           if (overlays.get(record.id) !== record) return;
           overlays.delete(record.id);
           registrations.delete(record.id);
+          for (const [instanceId, opening] of openings)
+            if (opening.overlayId === record.id) openings.delete(instanceId);
           registration.dispose();
         },
       };
@@ -69,17 +75,28 @@ export const createWorkbenchOverlayRegistry = (input: {
 
     openOverlay(id, openInput = {}) {
       if (!overlays.has(id)) throw new Error(`Unknown overlay: ${id}`);
-      return input.layout.openPanel(overlayContributionId(id), {
+      const instanceId = input.layout.openPanel(overlayContributionId(id), {
         viewId: overlays.get(id)?.viewId,
-        resource: openInput.resource,
+        resource: openInput.resource ?? null,
+        pageContext: openInput.pageContext,
         title: openInput.title,
         closable: overlays.get(id)?.closable ?? true,
         strategy: { kind: "persistent" },
       }).instanceId;
+      openings.set(instanceId, { overlayId: id });
+      return instanceId;
     },
 
     closeOverlay(instanceId) {
+      openings.delete(instanceId);
       input.layout.removeWidgetPlacement(instanceId);
+    },
+    captureInvocation(instanceId) {
+      const opening = openings.get(instanceId);
+      if (!opening) return undefined;
+      return () =>
+        openings.get(instanceId) === opening &&
+        input.layout.getLayout().regions.overlay.widgets.some((widget) => widget.widgetId === instanceId);
     },
   };
 };

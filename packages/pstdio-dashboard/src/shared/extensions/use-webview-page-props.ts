@@ -1,8 +1,8 @@
-import type { WorkbenchCore } from "@pstdio/workbench";
-import { resolvePageParams } from "pstdio-api-contracts";
+import type { WorkbenchCore, WorkbenchPanelInstance } from "@pstdio/workbench";
+import { resolveWebviewPageProps } from "@pstdio/workbench/extensions";
 import { useEffect, useState } from "react";
 
-export const useWebviewPageProps = (workbench?: WorkbenchCore) => {
+export const useWebviewPageProps = (workbench?: WorkbenchCore, placement?: WorkbenchPanelInstance) => {
   const [state, setState] = useState(() => workbench?.pages.store.getState());
   useEffect(() => {
     const store = workbench?.pages.store;
@@ -10,9 +10,5 @@ export const useWebviewPageProps = (workbench?: WorkbenchCore) => {
     setState(store.getState());
     return store.subscribe((next) => setState(next));
   }, [workbench]);
-  const page = state?.activePageId && state.pages[state.activePageId];
-  return {
-    pageLocation: state?.location,
-    pageParams: resolvePageParams(page ? page.params : undefined, state?.location?.params),
-  };
+  return resolveWebviewPageProps(state, placement);
 };

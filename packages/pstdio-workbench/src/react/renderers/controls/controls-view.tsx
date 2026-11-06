@@ -1,9 +1,15 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
-import type { ControlValueMap } from "@pstdio/sdk/extensions";
+import type { ControlsQueryResult, ControlValueMap } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { ScrollArea, SettingsContentSkeleton } from "@pstdio/ui";
-import { type InputGroup, type Param, ParamEditor, type ParamValue } from "@pstdio/ui/param-editor";
-import { controlValueSchema } from "pstdio-api-contracts";
+import {
+  type InputGroup,
+  type Param,
+  ParamEditor,
+  type ParamValue,
+  resolveParamEditorValues,
+} from "@pstdio/ui/param-editor";
+import { controlValueSchema, controlValuesSchema } from "pstdio-api-contracts";
 import { useContext, useEffect, useRef, useState } from "react";
 import {
   getWorkbenchRenderers,
@@ -37,6 +43,10 @@ interface ControlsViewState {
   changed: Record<string, number>;
   error?: string;
 }
+const controlsValues = (defaults: ControlValueMap | undefined, result: ControlsQueryResult | undefined) =>
+  controlValuesSchema.parse(
+    resolveParamEditorValues(result?.params ?? [], result?.groups ?? [], { ...defaults, ...result?.values }),
+  );
 const initialState: ControlsViewState = {
   params: [],
   groups: [],
@@ -86,11 +96,7 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
       ...previous,
       params: result.params ?? [],
       groups: result.groups ?? [],
-      values: mergeControlDraft(
-        previous.values,
-        { ...(contribution.defaultValues ?? {}), ...(result.values ?? {}) },
-        previous.changed,
-      ),
+      values: mergeControlDraft(previous.values, controlsValues(contribution.defaultValues, result), previous.changed),
       readOnly: Boolean(result.readOnly),
       loading: false,
     }));
@@ -139,7 +145,7 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
       setState((previous) => ({
         ...previous,
         changed: {},
-        values: reset ? { ...contribution.defaultValues, ...read.value?.values } : previous.values,
+        values: reset ? controlsValues(contribution.defaultValues, read.value) : previous.values,
       }));
       await read.retry();
     } catch (error) {
@@ -160,7 +166,7 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
               ...previous,
               changed: {},
               error: undefined,
-              values: { ...contribution.defaultValues, ...read.value?.values },
+              values: controlsValues(contribution.defaultValues, read.value),
             })),
         }
       : undefined,

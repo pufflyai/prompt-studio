@@ -76,6 +76,7 @@ describe("createBridgeWebviewRenderer", () => {
 
   test("preserves viewer navigation context when a host supplies custom guest props", () => {
     const { workbench, widget, placement } = setupWebviewWidget();
+    placement.resource = { type: "workspace", id: "scoped" };
     placement.section = { anchors: [{ id: "installation", heading: "Installation" }] };
     placement.position = { line: 12, column: 3 };
     placement.pageContext = { page: { extensionId: "lab", kind: "page", id: "page" }, params: { filter: "active" } };
@@ -87,6 +88,7 @@ describe("createBridgeWebviewRenderer", () => {
 
     expect(element.props.props).toMatchObject({
       marker: "custom",
+      resource: placement.resource,
       viewLocation: {
         section: { anchors: [{ id: "installation", heading: "Installation" }] },
         position: { line: 12, column: 3 },
@@ -151,4 +153,15 @@ describe("createBridgeWebviewRenderer", () => {
     expect(hostEvents).toHaveLength(2);
     expect(hostEvents[1]).toBe(hostEvents[0]);
   });
+});
+
+test("custom bridge props can explicitly override the placement resource", () => {
+  const { workbench, widget, placement } = setupWebviewWidget();
+  placement.resource = { type: "workspace", id: "placement" };
+  const resource = { type: "workspace", id: "custom" };
+  const renderer = createBridgeWebviewRenderer({ createProps: () => ({ resource }) });
+  const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
+    props: { props: { resource: unknown } };
+  };
+  expect(element.props.props.resource).toEqual(resource);
 });

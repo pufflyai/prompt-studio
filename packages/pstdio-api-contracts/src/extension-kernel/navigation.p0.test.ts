@@ -92,3 +92,23 @@ test("viewer reference targets accept one valid source position or heading secti
     expect(navigationTargetSchema.safeParse({ ...base, ...reference }).success).toBe(false);
   }
 });
+
+test("dialog navigation qualifies its page and resource and rejects foreign placement addresses", () => {
+  const target = {
+    kind: "dialog" as const,
+    page: { kind: "page" as const, id: "create" },
+    params: { name: "Draft" },
+    resource: { type: "folder", id: "one" },
+  };
+  expect(isNavigationTarget(target)).toBe(true);
+  const qualified = qualifyNavigationTarget(target, "acme.tools", "project");
+  expect(qualified).toMatchObject({
+    kind: "dialog",
+    page: { extensionId: "acme.tools" },
+    resource: { extensionId: "acme.tools", projectId: "project" },
+    params: target.params,
+  });
+  expect(qualified).toEqual(navigationTargetSchema.parse(qualified));
+  expect(isNavigationTarget({ ...target, placementIdentity: {} })).toBe(false);
+  expect(navigationTargetSchema.safeParse({ ...qualified, placementIdentity: {} }).success).toBe(false);
+});

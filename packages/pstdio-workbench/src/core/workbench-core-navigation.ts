@@ -1,4 +1,5 @@
 import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
+import { openPageDialog } from "./controllers/navigation/page-dialog";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { replacedPageSlot } from "./registries/modes/placement-replacement";
 import { createNavigationRegistry, type NavigationTargetPanel } from "./registries/navigation/navigation-registry";
@@ -43,6 +44,7 @@ export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =
           if (!context?.viewer) throw new Error("Viewer navigation requires a calling viewer");
           return core.viewers.change(context.viewer, target, context);
         },
+        openDialogTarget: (target) => openPageDialog(core, target),
         openPageTarget: (target) => {
           const result = core.pageLocations.navigate(target);
           if (!result.ok) throw new Error(result.diagnostic.message);

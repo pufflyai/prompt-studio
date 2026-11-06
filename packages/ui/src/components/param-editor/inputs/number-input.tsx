@@ -16,6 +16,7 @@ interface NumberInputProps {
   description: string;
   changeDelay?: number;
   readOnly?: boolean;
+  disabled?: boolean;
   hideLabel?: boolean;
   hideSlider?: boolean;
   tooltipPlacement?: "top" | "right" | "bottom" | "left";
@@ -34,6 +35,7 @@ export const NumberInput = (props: NumberInputProps) => {
     onChange,
     description,
     readOnly,
+    disabled,
     hideLabel = false,
     hideSlider = false,
     fullWidth = false,
@@ -107,7 +109,7 @@ export const NumberInput = (props: NumberInputProps) => {
             </Box>
           )}
           <NumberInputRoot
-            disabled={readOnly}
+            disabled={disabled || readOnly}
             width="100%"
             size={size}
             value={`${value}`}
@@ -138,7 +140,7 @@ export const NumberInput = (props: NumberInputProps) => {
         <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
           {!hideLabel && <ParamEditorLabel name={name} description={description} />}
           <NumberInputRoot
-            disabled={readOnly}
+            disabled={disabled || readOnly}
             width="5rem"
             size={size}
             value={`${value}`}
@@ -168,7 +170,7 @@ export const NumberInput = (props: NumberInputProps) => {
       )}
       {showSlider && (
         <Slider
-          disabled={readOnly}
+          disabled={disabled || readOnly}
           value={[value]}
           step={step}
           min={min}

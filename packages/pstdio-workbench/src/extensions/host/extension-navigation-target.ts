@@ -50,7 +50,7 @@ export function toWorkbenchNavigationTarget(
   if (input.extensionId) target = qualifyNavigationTarget(target, input.extensionId, input.projectId);
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
-  if (target.kind === "page") return target;
+  if (target.kind === "page" || target.kind === "dialog") return target;
   if (target.kind === "viewer") return target;
   if (target.kind === "panel") return { ...target, ...(input.region ? { region: input.region } : {}) };
   return {
