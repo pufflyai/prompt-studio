@@ -57,6 +57,8 @@ test("new session tabs focus their composer and keep workspace selection availab
     await header.getByRole("button", { name: "Add panel", exact: true }).focus();
     await page.keyboard.press("Enter");
     await page.keyboard.press("ArrowDown");
+    // Extension-owned addable panels no longer put Sessions first. Use the menu’s keyboard search.
+    await page.keyboard.type("New session");
     await expect(page.getByRole("menuitem", { name: "New session", exact: true })).toHaveAttribute(
       "data-highlighted",
       "",
