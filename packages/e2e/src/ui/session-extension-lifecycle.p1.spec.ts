@@ -117,8 +117,9 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
         .locator("[data-workbench-tab]")
         .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workbench-tab"))),
     ).toEqual(tabs);
-    // Settings is an overlay; reopen the retained resource through its supported URL.
-    await page.goto(target);
+    // Restore Main through client-side navigation without replacing the shared transport.
+    await page.getByRole("option", { name: "Sessions", exact: true }).click();
+    await page.getByRole("option", { name: "Retained execution", exact: true }).click();
     await expect(editor).toContainText("Unsent work survives provider disablement");
     await expect(main.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
     await expect.poll(() => watches.length).toBe(2);
