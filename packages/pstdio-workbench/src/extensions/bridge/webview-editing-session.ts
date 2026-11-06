@@ -100,6 +100,8 @@ const cancel = (member: Member) => {
 };
 const refresh = (document: EditingDocument, input: Extract<WebviewEditingSessionParams, { operation: "refresh" }>) => {
   if (input.expectedVersion !== document.version || document.savedRevision !== document.revision) return;
+  if (!diffEditingState(document.value, input.value).length && !diffEditingState(document.saved, input.value).length)
+    return snapshot(document);
   const value = structuredClone(input.value);
   const rebased = rebaseEditingChanges(value, document.previews);
   document.value = value;
@@ -142,6 +144,7 @@ const createSessions = () => {
     clean(document);
   };
   const flush = (document: EditingDocument) => {
+    if (!document.writing && document.savedRevision === document.revision) return Promise.resolve();
     if (!document.writing) {
       document.writing = Promise.resolve()
         .then(async () => {
