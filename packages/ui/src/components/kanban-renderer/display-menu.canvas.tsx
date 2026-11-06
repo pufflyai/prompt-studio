@@ -33,7 +33,7 @@ const attributes: AttributeDescriptor[] = [
   },
 ];
 const meta: CanvasMeta = {
-  title: "Patterns/Kanban Renderer/Display Menu",
+  title: "Design system/Patterns/Kanban renderer/Display menu",
 };
 export default meta;
 type Story = CanvasFrame;

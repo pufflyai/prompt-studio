@@ -7,7 +7,7 @@ import { ChatInput } from "./chat-input";
 import { HarnessControls, type HarnessControlsProps } from "./harness-controls";
 
 const meta: CanvasMeta<typeof HarnessControls> = {
-  title: "Patterns/Chat/Harness Controls",
+  title: "Design system/Patterns/Chat/Harness controls",
   component: HarnessControls,
   args: {
     modes: [],

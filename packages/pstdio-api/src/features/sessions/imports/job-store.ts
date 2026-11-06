@@ -20,21 +20,34 @@ const writeJson = async (target: string, value: unknown) => {
 
 export const createSessionImportJobStore = (directory: string) => {
   const file = (id: string, extension: string) => join(directory, `${z.string().uuid().parse(id)}.${extension}`);
+  // Windows can refuse an atomic replacement while a status poll still holds the old file open.
+  // Finish each checkpoint read or write before admitting the next; retain atomic publication.
+  let pendingCheckpoint = Promise.resolve();
+  const checkpoint = <T>(action: () => Promise<T>) => {
+    const result = pendingCheckpoint.then(action);
+    pendingCheckpoint = result.then(
+      () => {},
+      () => {},
+    );
+    return result;
+  };
   return {
-    async read(id: string) {
-      try {
-        return sessionImportJobSchema.parse(JSON.parse(await readFile(file(id, "json"), "utf8")));
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new ImportError("Import not found.", 404);
-        throw error;
-      }
-    },
-    async write(job: SessionImportJob) {
-      await mkdir(directory, { recursive: true });
-      job.updatedAt = new Date().toISOString();
-      const target = file(job.id, "json");
-      await writeJson(target, job);
-    },
+    read: (id: string) =>
+      checkpoint(async () => {
+        try {
+          return sessionImportJobSchema.parse(JSON.parse(await readFile(file(id, "json"), "utf8")));
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new ImportError("Import not found.", 404);
+          throw error;
+        }
+      }),
+    write: (job: SessionImportJob) =>
+      checkpoint(async () => {
+        await mkdir(directory, { recursive: true });
+        job.updatedAt = new Date().toISOString();
+        const target = file(job.id, "json");
+        await writeJson(target, job);
+      }),
     writeStage: (id: string, staging: SessionImportStaging) => writeJson(file(id, "staging.json"), staging),
     clearStage: (id: string) => rm(file(id, "staging.json"), { force: true }),
     async readStage(id: string) {

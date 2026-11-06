@@ -9,6 +9,11 @@ export interface DocumentRelay {
   update(update: UpdateEnvelope): Promise<UpdateResult>;
   /** False means another device replaced the base state first. */
   replace(state: StateEnvelope): Promise<boolean>;
+  /** Negotiates existing immutable manifest graph support; no leaf-upload fallback preserves edges. */
+  manifestBlobs?(): Promise<{
+    put(blobId: string, bytes: Uint8Array, children: string[]): Promise<void>;
+    get(blobId: string, byteLength: number): Promise<Uint8Array>;
+  }>;
   blobs?: {
     put(blobId: string, bytes: Uint8Array): Promise<void>;
     get(blobId: string): Promise<Uint8Array>;

@@ -101,14 +101,18 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
 
     await openProjectHome(page, "Resource Actions");
     await workspacesNavigation.click();
-    const workspaceRow = page.getByRole("row").filter({ hasText: attempt.workspace.workspace_shorthand }).first();
+    const workspaceRow = page
+      .getByRole("region", { name: "Main", exact: true })
+      .getByRole("option")
+      .filter({ hasText: attempt.workspace.workspace_shorthand })
+      .first();
     await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
-    await workspaceRow.getByRole("button", { name: "Row actions" }).click();
+    await workspaceRow.click({ button: "right" });
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Delete workspace"]);
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("menu", { name: "Row actions", exact: true })).toBeHidden();
+    await expect(page.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeHidden();
 
-    await workspaceRow.getByRole("cell", { name: "Git worktree", exact: true }).click();
+    await workspaceRow.click();
     await expect(breadcrumbAction).toBeVisible();
     await breadcrumbAction.click();
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Delete workspace"]);

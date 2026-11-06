@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
+import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { ctx, harnessDefaults, serviceOverrides } from "./harness.test-helpers";
+import { acceptedPrompt, emptyMessages, nativeMessagesResponse } from "./native-api.test-helpers";
 import { recordingSink } from "./opencode-session-poller.test-helpers";
 
 // --- Helpers ---
@@ -13,7 +14,7 @@ const harness = (opts: { available?: boolean; modelsOutput?: string } = {}) =>
       getModelsOutput: async () => opts.modelsOutput ?? "",
     },
     {
-      startServer: async () => ({ url: "http://localhost:4096", dispose: async () => {} }),
+      startServer: async () => ({ running: true, url: "http://localhost:4096", dispose: async () => {} }),
       serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
       pingServer: async () => false,
       isPortOpen: async () => false,
@@ -84,12 +85,12 @@ describe("detect", () => {
         ...ctx.process,
         run: async ({ command }) =>
           command[1] === "--version"
-            ? { exitCode: 0, stdout: "1.18.35\n", stderr: "" }
+            ? { exitCode: 0, stdout: "2.2.5\n", stderr: "" }
             : { exitCode: 1, stdout: "", stderr: "" },
       },
     };
 
-    expect(await h.detect!(versionCtx)).toMatchObject({ available: true, version: "1.18.35" });
+    expect(await h.detect!(versionCtx)).toMatchObject({ available: true, version: "2.2.5" });
   });
 
   test("default detection reports unavailable on non-zero exit", async () => {
@@ -186,7 +187,7 @@ describe("listModels", () => {
         ...ctx.process,
         run: async ({ command }) => ({
           exitCode: 0,
-          stdout: command[1] === "models" ? "openai/gpt-4\n" : "1.18.35",
+          stdout: command[1] === "api" ? "openai/gpt-4\n" : "2.2.5",
           stderr: "",
         }),
       },
@@ -226,7 +227,7 @@ describe("getMessages", () => {
 
     const h = createOpencodeHarness(harnessDefaults(), {
       ...serviceOverrides(),
-      fetcher: async () => new Response(JSON.stringify(mockMessages)),
+      fetcher: async () => nativeMessagesResponse(mockMessages),
     });
 
     const messages = await h.getMessages!(ctx, { agentSessionId: "session-1" });
@@ -246,20 +247,21 @@ describe("timeoutStrategy", () => {
     const sessionMessages: Record<string, MockMessage[]> = {};
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      if (method === "POST" && url.includes("/session?")) {
+      if (method === "POST" && url.includes("/api/session?")) {
         const id = `oc-${crypto.randomUUID().slice(0, 8)}`;
         sessionMessages[id] = [];
-        return new Response(JSON.stringify({ id }));
+        return new Response(JSON.stringify({ data: { id } }));
       }
 
-      if (method === "POST" && url.match(/\/session\/[^/]+\/message/)) {
-        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      if (method === "POST" && url.match(/\/session\/[^/]+\/prompt/)) {
+        return acceptedPrompt();
       }
 
       if (method === "GET" && url.match(/\/session\/[^/]+\/message/)) {
-        return new Response(JSON.stringify([]));
+        return emptyMessages();
       }
 
       return new Response("{}", { status: 404 });
@@ -283,14 +285,15 @@ describe("timeoutStrategy", () => {
   test("resume returns a session with provider timeout strategy", async () => {
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      if (method === "POST" && url.includes("/message")) {
-        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      if (method === "POST" && url.includes("/prompt")) {
+        return acceptedPrompt();
       }
 
       if (method === "GET" && url.includes("/message")) {
-        return new Response(JSON.stringify([]));
+        return emptyMessages();
       }
 
       return new Response("{}", { status: 404 });
@@ -320,23 +323,24 @@ describe("cancellation", () => {
     let abortCalls = 0;
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      if (method === "POST" && url.includes("/session?")) {
-        return new Response(JSON.stringify({ id: "oc-1" }));
+      if (method === "POST" && url.includes("/api/session?")) {
+        return new Response(JSON.stringify({ data: { id: "oc-1" } }));
       }
 
-      if (method === "POST" && url.includes("/session/oc-1/message")) {
+      if (method === "POST" && url.includes("/api/session/oc-1/prompt")) {
         return new Promise<Response>(() => {});
       }
 
-      if (method === "POST" && url.includes("/session/oc-1/abort")) {
+      if (method === "POST" && url.includes("/api/session/oc-1/interrupt")) {
         abortCalls += 1;
         return new Response("true");
       }
 
-      if (method === "GET" && url.includes("/session/oc-1/message")) {
-        return new Response(JSON.stringify([]));
+      if (method === "GET" && url.includes("/api/session/oc-1/message")) {
+        return emptyMessages();
       }
 
       return new Response("{}", { status: 404 });
@@ -370,22 +374,23 @@ describe("cancellation", () => {
     try {
       const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
         const method = init?.method ?? "GET";
 
-        if (method === "POST" && url.includes("/session?")) {
-          return new Response(JSON.stringify({ id: "oc-1" }));
+        if (method === "POST" && url.includes("/api/session?")) {
+          return new Response(JSON.stringify({ data: { id: "oc-1" } }));
         }
 
-        if (method === "POST" && url.includes("/session/oc-1/message")) {
+        if (method === "POST" && url.includes("/api/session/oc-1/prompt")) {
           return new Promise<Response>(() => {});
         }
 
-        if (method === "POST" && url.includes("/session/oc-1/abort")) {
+        if (method === "POST" && url.includes("/api/session/oc-1/interrupt")) {
           throw abortError;
         }
 
-        if (method === "GET" && url.includes("/session/oc-1/message")) {
-          return new Response(JSON.stringify([]));
+        if (method === "GET" && url.includes("/api/session/oc-1/message")) {
+          return emptyMessages();
         }
 
         return new Response("{}", { status: 404 });
@@ -423,23 +428,24 @@ describe("resume", () => {
 
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      const postMatch = method === "POST" && url.match(/\/session\/([^/]+)\/message/);
+      const postMatch = method === "POST" && url.match(/\/session\/([^/]+)\/prompt/);
       if (postMatch) {
         const id = postMatch[1];
         const body = JSON.parse(init?.body as string);
         sessionMessages[id] = sessionMessages[id] ?? [];
         sessionMessages[id].push(
-          { role: "user", content: [{ type: "text", text: body.parts[0].text }] },
-          { role: "assistant", content: [{ type: "text", text: `Reply: ${body.parts[0].text}` }] },
+          { role: "user", content: [{ type: "text", text: body.text }] },
+          { role: "assistant", content: [{ type: "text", text: `Reply: ${body.text}` }] },
         );
-        return new Response(JSON.stringify({ info: {}, parts: [] }));
+        return acceptedPrompt();
       }
 
       const getMatch = method === "GET" && url.match(/\/session\/([^/]+)\/message/);
       if (getMatch) {
-        return new Response(JSON.stringify(sessionMessages[getMatch[1]] ?? []));
+        return nativeMessagesResponse(sessionMessages[getMatch[1]] ?? []);
       }
 
       return new Response("{}", { status: 404 });
@@ -458,10 +464,8 @@ describe("resume", () => {
 
     await session.done;
 
-    const messagePatches = patches.filter((p) => p.path === "/messages");
-    expect(messagePatches.length).toBeGreaterThan(0);
-
-    const lastMessages = messagePatches[messagePatches.length - 1].value as SessionMessage[];
+    expect(patches.some((patch) => patch.path.startsWith("/messages/"))).toBe(true);
+    const lastMessages = sink.getMessages();
     expect(lastMessages).toHaveLength(4);
     expect(lastMessages[2].parts[0]).toMatchObject({ type: "text", text: "follow-up" });
     expect(lastMessages[3].parts[0]).toMatchObject({ type: "text", text: "Reply: follow-up" });
@@ -470,21 +474,22 @@ describe("resume", () => {
   test("settles as failed when message POST fails", async () => {
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      if (method === "POST" && url.includes("/message")) {
+      if (method === "POST" && url.includes("/prompt")) {
         return new Response("Internal Server Error", { status: 500 });
       }
 
       if (method === "GET" && url.includes("/message")) {
-        return new Response(JSON.stringify([]));
+        return emptyMessages();
       }
 
       return new Response("{}", { status: 404 });
     };
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -497,21 +502,15 @@ describe("resume", () => {
     const exit = await session.done;
     expect(exit).toEqual({ status: "failed" });
 
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const hasConversationError = messagePatches.some((patch) => {
-      if (!Array.isArray(patch.value)) return false;
-
-      return patch.value.some((message) => {
-        const parts = (message as SessionMessage).parts ?? [];
-        return parts.some((part) => part.type === "error");
-      });
-    });
+    const hasConversationError = sink
+      .getMessages()
+      .some((message) => message.parts.some((part) => part.type === "error"));
 
     expect(hasConversationError).toBe(true);
   });
 
   test("POST timeout still completes when polling observes turn finished on server", async () => {
-    // Regression for the bug where treating the POST /message HTTP lifetime as
+    // Regression for the bug where treating the POST /prompt HTTP lifetime as
     // the source of turn liveness caused long-running turns to be marked as
     // disconnected. POST is only an enqueue step; turn completion must come
     // from polling the server's session state.
@@ -522,44 +521,41 @@ describe("resume", () => {
       // Calls 2+ = after POST timed out, the server still accepted the turn
       // and eventually marks the assistant message complete.
       if (getCalls === 1) {
-        return new Response(
-          JSON.stringify([
-            {
-              info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
-              parts: [{ type: "text", text: "prior" }],
-            },
-          ]),
-        );
-      }
-
-      const completed = getCalls >= 3;
-      return new Response(
-        JSON.stringify([
+        return nativeMessagesResponse([
           {
             info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
             parts: [{ type: "text", text: "prior" }],
           },
-          {
-            info: { id: "u1", role: "user", time: { created: 3, completed: 4 } },
-            parts: [{ type: "text", text: "will timeout" }],
+        ]);
+      }
+
+      const completed = getCalls >= 3;
+      return nativeMessagesResponse([
+        {
+          info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
+          parts: [{ type: "text", text: "prior" }],
+        },
+        {
+          info: { id: "u1", role: "user", time: { created: 3, completed: 4 } },
+          parts: [{ type: "text", text: "will timeout" }],
+        },
+        {
+          info: {
+            id: "a1",
+            role: "assistant",
+            time: completed ? { created: 5, completed: 6 } : { created: 5 },
           },
-          {
-            info: {
-              id: "a1",
-              role: "assistant",
-              time: completed ? { created: 5, completed: 6 } : { created: 5 },
-            },
-            parts: [{ type: "text", text: completed ? "done" : "working..." }],
-          },
-        ]),
-      );
+          parts: [{ type: "text", text: completed ? "done" : "working..." }],
+        },
+      ]);
     };
 
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      if (method === "POST" && url.includes("/message")) {
+      if (method === "POST" && url.includes("/prompt")) {
         throw new DOMException("The operation was aborted", "AbortError");
       }
 
@@ -587,8 +583,7 @@ describe("resume", () => {
     const statusPatches = patches.filter((p) => p.path === "/status");
     expect(statusPatches.at(-1)?.value).toBe("completed");
 
-    const messagePatches = patches.filter((p) => p.path === "/messages");
-    const last = messagePatches.at(-1)?.value as SessionMessage[];
+    const last = sink.getMessages();
     expect(last.at(-1)?.parts[0]).toMatchObject({ type: "text", text: "done" });
   });
 
@@ -597,46 +592,43 @@ describe("resume", () => {
     let getCalls = 0;
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      if (method === "POST" && url.includes("/message")) {
-        return new Response(JSON.stringify({ info: {}, parts: [] }));
+      if (method === "POST" && url.includes("/prompt")) {
+        return acceptedPrompt();
       }
 
       if (method === "GET" && url.match(/\/session\/[^/]+\/message/)) {
         getCalls += 1;
 
         if (getCalls === 1) {
-          return new Response(
-            JSON.stringify([
-              {
-                info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
-                parts: [{ type: "text", text: "prior" }],
-              },
-            ]),
-          );
-        }
-
-        return new Response(
-          JSON.stringify([
+          return nativeMessagesResponse([
             {
               info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
               parts: [{ type: "text", text: "prior" }],
             },
-            {
-              info: { id: "u1", role: "user", time: { created: 3, completed: 4 } },
-              parts: [{ type: "text", text: "run validate" }],
+          ]);
+        }
+
+        return nativeMessagesResponse([
+          {
+            info: { id: "u0", role: "user", time: { created: 1, completed: 2 } },
+            parts: [{ type: "text", text: "prior" }],
+          },
+          {
+            info: { id: "u1", role: "user", time: { created: 3, completed: 4 } },
+            parts: [{ type: "text", text: "run validate" }],
+          },
+          {
+            info: {
+              id: "a1",
+              role: "assistant",
+              time: { created: staleCreatedAt },
             },
-            {
-              info: {
-                id: "a1",
-                role: "assistant",
-                time: { created: staleCreatedAt },
-              },
-              parts: [{ type: "step-start", snapshot: "Running validate" }],
-            },
-          ]),
-        );
+            parts: [{ type: "step-start", snapshot: "Running validate" }],
+          },
+        ]);
       }
 
       return new Response("{}", { status: 404 });
@@ -663,21 +655,22 @@ describe("resume", () => {
   test("appends normalized error message when message POST fails", async () => {
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
-      if (method === "POST" && url.includes("/message")) {
+      if (method === "POST" && url.includes("/prompt")) {
         return new Response("permission denied", { status: 403 });
       }
 
       if (method === "GET" && url.includes("/message")) {
-        return new Response(JSON.stringify([]));
+        return emptyMessages();
       }
 
       return new Response("{}", { status: 404 });
     };
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -689,8 +682,7 @@ describe("resume", () => {
 
     await session.done;
 
-    const messagePatches = patches.filter((p) => p.path === "/messages");
-    const finalMessages = messagePatches[messagePatches.length - 1]?.value as SessionMessage[];
+    const finalMessages = sink.getMessages();
 
     expect(finalMessages.at(-1)?.parts).toContainEqual({
       type: "error",
@@ -707,6 +699,7 @@ describe("reattach", () => {
     let getCalls = 0;
     const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (/\/(?:wait|model)\b/.test(url)) return new Response(null, { status: 204 });
       const method = init?.method ?? "GET";
 
       if (method === "GET" && url.match(/\/session\/[^/]+\/message/)) {
@@ -728,7 +721,7 @@ describe("reattach", () => {
             parts: [{ type: "text", text: completed ? "done" : "working..." }],
           },
         ];
-        return new Response(JSON.stringify(messages));
+        return nativeMessagesResponse(messages);
       }
 
       return new Response("{}", { status: 404 });
@@ -751,13 +744,12 @@ describe("reattach", () => {
     const statusPatches = patches.filter((p) => p.path === "/status");
     expect(statusPatches.at(-1)?.value).toBe("completed");
 
-    const messagePatches = patches.filter((p) => p.path === "/messages");
-    const last = messagePatches.at(-1)?.value as SessionMessage[];
+    const last = sink.getMessages();
     expect(last.at(-1)?.parts[0]).toMatchObject({ type: "text", text: "done" });
   });
 
   test("exits immediately when no trailing assistant message", async () => {
-    const fetcher = async () => new Response(JSON.stringify([]));
+    const fetcher = async () => emptyMessages();
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
     const { patches, sink } = recordingSink();
 
@@ -777,22 +769,20 @@ describe("reattach", () => {
   test("disconnects stale in-flight sessions during reattach", async () => {
     const staleCreatedAt = Date.now() - 31 * 60 * 1000;
     const fetcher = async () =>
-      new Response(
-        JSON.stringify([
-          {
-            info: { id: "m-user", role: "user", time: { created: 1, completed: 2 } },
-            parts: [{ type: "text", text: "hi" }],
+      nativeMessagesResponse([
+        {
+          info: { id: "m-user", role: "user", time: { created: 1, completed: 2 } },
+          parts: [{ type: "text", text: "hi" }],
+        },
+        {
+          info: {
+            id: "m-asst",
+            role: "assistant",
+            time: { created: staleCreatedAt },
           },
-          {
-            info: {
-              id: "m-asst",
-              role: "assistant",
-              time: { created: staleCreatedAt },
-            },
-            parts: [{ type: "step-start", snapshot: "Still running" }],
-          },
-        ]),
-      );
+          parts: [{ type: "step-start", snapshot: "Still running" }],
+        },
+      ]);
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
     const { patches, sink } = recordingSink();

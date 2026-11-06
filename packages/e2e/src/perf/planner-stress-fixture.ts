@@ -9,6 +9,7 @@ export interface StressTicket {
   title: string;
   statusId: string;
   sortOrder: number;
+  position?: string;
 }
 
 export const executePlanner = async <T>(

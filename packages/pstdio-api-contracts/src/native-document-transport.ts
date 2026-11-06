@@ -2,6 +2,7 @@ import { z } from "zod";
 import { nativeDocumentTargetSchema, nativeFileContentSchema, textSourceTargetSchema } from "./native-document-schemas";
 
 const recovery = {
+  generation: z.string().min(1).optional(),
   sourceState: z.base64().optional(),
   pendingUpdate: z.base64().optional(),
 };
@@ -16,6 +17,7 @@ export const nativeDocumentSnapshotSchema = z.object({
   state: z.base64(),
   seedId: z.string(),
   sourceSeedId: z.string(),
+  generation: z.string().min(1).optional(),
   sourceState: z.base64().optional(),
 });
 export const nativeDocumentJoinedSchema = nativeDocumentSnapshotSchema.extend({

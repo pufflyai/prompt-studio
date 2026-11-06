@@ -18,7 +18,7 @@ import type { SidenavContextActionsChange } from "../../shared/sidenav-context-a
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
-import type { TreeActionParamsRequest } from "./tree-actions";
+import { useTreeActionInput } from "./tree-inline-input";
 import { findNodeInSections, toTreeListSection } from "./tree-list-adapter";
 import { TreeModeReturn } from "./tree-mode-return";
 import { TreeParamsDialog } from "./tree-params-dialog";
@@ -47,9 +47,9 @@ interface WorkbenchTreeViewProps {
 
 const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
 
-const treeCustomizationOptions = (body: TreeViewSection[], isSidenav: boolean) => ({
+const treeCustomizationOptions = (sections: TreeViewSection[], isSidenav: boolean) => ({
   suppressNodeContextMenus: isSidenav,
-  pinnedOnlyNodeIds: pinnedOnlyNodeIds(body),
+  pinnedOnlyNodeIds: pinnedOnlyNodeIds(sections),
   allowGroups: isSidenav,
 });
 
@@ -103,6 +103,11 @@ const navigateTreeNode = (
   }
 };
 
+// Share one handler across every list so unrelated list props do not replace row navigation callbacks.
+const createTreeNavigator =
+  (context: TreeNavigationContext) => (event: { nodeId: string; intent?: { id?: string; payload?: unknown } }) =>
+    navigateTreeNode(context, event.nodeId, event.intent);
+
 interface ToggleTreeNodeContext {
   workbench: WorkbenchCore;
   treeViewId: string;
@@ -124,7 +129,7 @@ const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string
 
   const expanded = context.expandedNodeIds.includes(nodeId);
   getWorkbenchRenderers(context.workbench).setNodeExpanded(context.treeViewId, nodeId, !expanded);
-  if (expanded || context.childrenByNodeId[nodeId] || node.children) return;
+  if (expanded) return;
 
   context.loadChildren(node);
 };
@@ -158,18 +163,19 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     onOpenResourceError,
     props.placement,
   );
-  const [paramsRequest, setParamsRequest] = useState<TreeActionParamsRequest | null>(null);
-
+  const actionInput = useTreeActionInput(`${treeViewId}:${projectId}:${resource?.id}`, treeState.expandedNodeIds);
   const shortcutHints = useWorkbenchStore(workbench.keyboard.store, (state) => state.active || state.preview);
   const adapterContext = {
     workbench,
     shortcutHints,
     onCommandError: onOpenResourceError,
-    onRequestParams: setParamsRequest,
+    onRequestParams: actionInput.setRequest,
   };
-  const rawSections = body.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext));
-  const rawHeaderSections = header.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext));
-  const rawFooterSections = footer.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext));
+  const adaptSections = (sections: TreeViewSection[]) =>
+    actionInput.sections(sections.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext)));
+  const rawSections = adaptSections(body);
+  const rawHeaderSections = adaptSections(header);
+  const rawFooterSections = adaptSections(footer);
   const {
     visibleHeaderSections,
     visibleSections,
@@ -191,7 +197,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
       resetIcon: <WorkbenchIcon name="rotate-ccw" size={14} />,
     },
-    treeCustomizationOptions(body, isSidenav),
+    treeCustomizationOptions([...header, ...body, ...footer], isSidenav),
   );
   useSidenavContextActions(
     props.placement?.instanceId ?? treeViewId,
@@ -231,11 +237,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
   const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds);
 
-  const navigationContext = { workbench, treeViewId, onOpenResourceError };
-  // One handler for every list: an inline one inside a list's JSX changes whenever that list's other props do,
-  // and every row of the list would render again.
-  const navigate = (event: { nodeId: string; intent?: { id?: string; payload?: unknown } }) =>
-    navigateTreeNode(navigationContext, event.nodeId, event.intent);
+  const navigate = createTreeNavigator({ workbench, treeViewId, onOpenResourceError });
 
   return (
     <TreeListDragProvider
@@ -258,7 +260,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             <TreeList
               sections={visibleHeaderSections}
               draggable={isSidenav}
-              expandedNodeIds={treeState.expandedNodeIds}
+              expandedNodeIds={actionInput.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
               activeNodeId={activeNodeSelection}
               rowVariant="compact"
@@ -306,7 +308,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               draggable={isSidenav}
               customizationAvailable={isSidenav}
               activeNodeId={activeNodeSelection}
-              expandedNodeIds={treeState.expandedNodeIds}
+              expandedNodeIds={actionInput.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
               scrollRef={scrollRef}
               onToggleSection={toggleSection}
@@ -324,7 +326,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
             <TreeList
               sections={visibleFooterSections}
               draggable={isSidenav}
-              expandedNodeIds={treeState.expandedNodeIds}
+              expandedNodeIds={actionInput.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
               activeNodeId={activeNodeSelection}
               rowVariant="compact"
@@ -340,10 +342,12 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           </Flex>
         ) : null}
         <TreeParamsDialog
-          request={paramsRequest}
+          request={actionInput.request}
+          sections={[...visibleHeaderSections, ...visibleSections, ...visibleFooterSections]}
+          expansion={{ ...treeState, expandedNodeIds: actionInput.expandedNodeIds }}
           renderParamField={renderParamField}
           workbench={workbench}
-          onClose={() => setParamsRequest((current) => (current === paramsRequest ? null : current))}
+          onClose={actionInput.close}
         />
       </Flex>
     </TreeListDragProvider>

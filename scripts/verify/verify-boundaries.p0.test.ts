@@ -36,6 +36,32 @@ const createWorkspace = (files: Record<string, unknown>) => {
 };
 
 describe("verifyBoundaries", () => {
+  test.each([
+    'import { readSseStream as read } from "./sse"; read(body, listener);',
+    "const source = new EventSource(url);",
+    "const source = new window.EventSource(url);",
+    'await fetch(url, { headers: { Accept: "text/event-stream" } });',
+    'await request(url, { response: "stream" });',
+    "const reader = response.body.getReader();",
+    'import { createSessionStreamTransport as create } from "./session-stream"; create(request, options);',
+    'const ES = window["EventSource"]; new ES(url);',
+    'import { createClient as create } from "./client"; create().nativeDocuments.watch(input);',
+  ])("rejects event transport creation in a resource adapter: %s", (source) => {
+    const root = createWorkspace({ "packages/sdk/src/client/new-resource.ts": source });
+    expect(verifyBoundaries(root)).toContainEqual(expect.stringContaining("use the shared client event transport"));
+  });
+
+  test("allows approved transport owners, finite asset downloads, and logical subscriptions", () => {
+    const root = createWorkspace({
+      "packages/sdk/src/client/session-stream.ts":
+        'import { readSseStream } from "./sse"; readSseStream(body, listener);',
+      "packages/sdk/src/client/sync.ts": 'import { readSseStream } from "./sse";',
+      "packages/sdk/src/client/assets.ts": 'await request(url, { response: "stream" });',
+      "packages/sdk/src/client/asset-source.ts": "source.stream().getReader();",
+      "packages/sdk/src/client/new-resource.ts": "transport.subscribe({ resource: address }, listener);",
+    });
+    expect(verifyBoundaries(root).filter((error) => error.includes("shared client event transport"))).toEqual([]);
+  });
   for (const [dependency, field] of [
     ["@pstdio/sdk", "dependencies"],
     ["@pstdio/ui", "dependencies"],
@@ -232,4 +258,22 @@ test("repository examples may use Canvas authoring types without a published run
   expect(errors).toContainEqual(
     expect.stringContaining('runtime.ts: imports undeclared workspace package "@pstdio/canvas"'),
   );
+});
+
+test("database SDK conformance dependency stays development-only", () => {
+  const root = createWorkspace({
+    "packages/db/package.json": { name: "pstdio-db", devDependencies: { "@pstdio/sdk": "workspace:*" } },
+    "packages/db/src/query.p1.test.ts": 'import { createMemoryStorage } from "@pstdio/sdk/testing";',
+  });
+  expect(
+    verifyBoundaries(root).filter((error) => error.startsWith("packages/db") && error.includes("@pstdio/sdk")),
+  ).toEqual([]);
+  write(root, "packages/db/src/runtime.ts", 'import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";');
+  expect(verifyBoundaries(root)).toContainEqual(expect.stringContaining("development-only package"));
+  write(root, "packages/db/package.json", {
+    name: "pstdio-db",
+    dependencies: { "@pstdio/sdk": "workspace:*" },
+    devDependencies: { "@pstdio/sdk": "workspace:*" },
+  });
+  expect(verifyBoundaries(root)).toContainEqual(expect.stringContaining("only in devDependencies"));
 });

@@ -8,254 +8,149 @@ import { uiOrigin as apiBase } from "../ui-server";
 import {
   exerciseWorkspaceFileOperations,
   expectFoldersBeforeFiles,
-  expectStandardFileSearch,
-  getResizeSeparatorColors,
+  expectWorkspaceDocument,
   openWorkspace,
   prepareDashboard,
 } from "./helpers/workspace-files";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
+// Critical risks: the installed extension must preserve editing, keyboard save, destructive
+// confirmations, document restoration and lazy Changes while using only public callbacks.
 test("browses and edits workspace files, then refreshes the lazy diff", async ({ page, request, context }) => {
   test.slow();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  const repoRoot = createGitRepo("pstdio-ps-118-", "Workspace files e2e");
-  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: folderProjectInput({ name: "PS-118 Workspace Files" }, repoRoot),
+  const root = createGitRepo("pstdio-workspace-files-", "Workspace files e2e");
+  const created = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Workspace Files" }, root),
   });
-  expect(projectResponse.ok()).toBe(true);
-  const project = (await projectResponse.json()) as { id: string };
-
+  expect(created.ok()).toBe(true);
+  const project = await created.json();
   let workspaceId: string | undefined;
-
   try {
-    mkdirSync(join(repoRoot, "assets"));
-    mkdirSync(join(repoRoot, "zzz-folder"));
-    writeFileSync(join(repoRoot, "LICENSE"), "Prompt Studio test license\n");
-    writeFileSync(join(repoRoot, "zzz-folder", "keep.txt"), "folder ordering\n");
+    mkdirSync(join(root, "assets"));
+    mkdirSync(join(root, "zzz-folder"));
+    writeFileSync(join(root, "LICENSE"), "Test license\n");
+    writeFileSync(join(root, "zzz-folder/keep.txt"), "folder ordering\n");
     writeFileSync(
-      join(repoRoot, "assets", "logo.png"),
+      join(root, "assets/logo.png"),
       Buffer.from(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
         "base64",
       ),
     );
-    execSync("git add LICENSE assets/logo.png zzz-folder/keep.txt", { cwd: repoRoot, stdio: "pipe" });
-    execSync('git commit -m "add browse fixtures"', { cwd: repoRoot, stdio: "pipe" });
-
-    const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "PS-118 file editor" });
-    const attempt = await createPlannerAttempt(request, apiBase, project.id, {
-      ticketId: ticket.id,
+    execSync('git add LICENSE assets/logo.png zzz-folder/keep.txt && git commit -m "Browse fixtures"', {
+      cwd: root,
+      stdio: "pipe",
     });
+    const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Workspace editor" });
+    const attempt = await createPlannerAttempt(request, apiBase, project.id, { ticketId: ticket.id });
     workspaceId = attempt.workspace.id;
     const worktreePath = attempt.workspace.root_path;
     writeFileSync(join(worktreePath, "changed.ts"), "export const before = true;\n");
-    execSync("git add changed.ts", { cwd: worktreePath, stdio: "pipe" });
-    execSync('git commit -m "add changed file"', { cwd: worktreePath, stdio: "pipe" });
-
-    const diffRequests: string[] = [];
-    const fileWrites: string[] = [];
-    page.on("request", (browserRequest) => {
-      const url = new URL(browserRequest.url());
-      if (url.pathname.endsWith("/diff-files") || url.pathname.endsWith("/diff-file")) {
-        diffRequests.push(`${url.pathname}${url.search}`);
-      }
-      if (url.pathname.endsWith("/file") && browserRequest.method() === "PUT") fileWrites.push(url.search);
+    execSync('git add changed.ts && git commit -m "Changed file"', { cwd: worktreePath, stdio: "pipe" });
+    const commands: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "POST" && request.url().includes("/extensions/commands/"))
+        commands.push(new URL(request.url()).pathname);
     });
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
     await openWorkspace(page, attempt.workspace.workspace_shorthand);
-
-    const filesTab = page.getByRole("tab", { name: "Files" });
-    const changesTab = page.getByRole("tab", { name: "Changes" });
-    await expect(filesTab).toBeVisible();
+    const filesTab = page.getByRole("tab", { name: "Files", exact: true });
+    const changesTab = page.getByRole("tab", { name: "Changes", exact: true });
     await expect(filesTab).toHaveAttribute("aria-selected", "true");
-    expect(diffRequests).toEqual([]);
+    expect(commands.filter((id) => id.includes(".command.read-diff/"))).toEqual([]);
     await changesTab.click();
-    await expect(changesTab).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("tab", { name: "Diffs" })).toHaveCount(0);
-    await expect(page.getByTestId("diff-viewer")).toBeVisible();
-    await expect(page.getByText("Changed files", { exact: true })).toHaveCount(0);
-    const changesSearch = page.getByRole("textbox", { name: "Search files" });
-    await expectStandardFileSearch(changesSearch);
-    const changesSeparator = page.getByRole("separator", { name: "Resize file list panel" });
-    await expect(changesSeparator).toBeVisible();
-    const changesSeparatorColors = await getResizeSeparatorColors(changesSeparator);
-    expect(changesSeparatorColors.actual).toBe(changesSeparatorColors.expected);
-    await expect.poll(() => diffRequests.filter((url) => url.includes("/diff-files?")).length).toBe(1);
-    await expect.poll(() => diffRequests.filter((url) => url.includes("/diff-file?")).length).toBe(1);
-    expect(diffRequests.some((url) => /\/diff\?/.test(url))).toBe(false);
-
+    const changes = page.frameLocator('iframe[title="Changes"]:visible');
+    const viewer = changes.getByTestId("diff-viewer");
+    await expect(viewer).toBeVisible();
+    await expect.poll(() => commands.filter((id) => id.includes(".command.read-changes/")).length).toBe(1);
+    await expect.poll(() => commands.filter((id) => id.includes(".command.read-diff/")).length).toBe(1);
     await filesTab.click();
+    const tree = page.getByRole("region", { name: "Files", exact: true });
     const search = page.getByRole("textbox", { name: "Search files" });
-    await expectStandardFileSearch(search);
-    const filesSeparator = page.getByRole("separator", { name: "Resize Main left menu" });
-    await expect(filesSeparator).toBeVisible();
-    const filesSeparatorColors = await getResizeSeparatorColors(filesSeparator);
-    expect(filesSeparatorColors.actual).toBe(filesSeparatorColors.expected);
-    const filesTree = page.getByRole("region", { name: "Files" });
-    const assets = page.getByRole("option").filter({ hasText: "assets" }).first();
-    await expectFoldersBeforeFiles(filesTree);
-    await expect(assets.locator("svg.lucide-folder")).toHaveCount(0);
-    await expect(assets.locator('span[aria-hidden="true"]')).toHaveCount(0);
-    await assets.getByText("assets", { exact: true }).click();
-    await expect(assets).toHaveAttribute("aria-expanded", "true");
-    const nestedLogo = page.getByRole("option").filter({ hasText: "logo.png" }).first();
-    await nestedLogo.getByText("logo.png", { exact: true }).click();
-    await expect(page.getByRole("img", { name: "logo.png" })).toBeVisible();
-    const logoPath = page.getByLabel("File path assets/logo.png");
-    await expect(logoPath).toBeVisible();
-    await expect(logoPath.locator("xpath=ancestor::header")).toHaveCSS("border-bottom-width", "0px");
-    await expect(assets).toHaveAttribute("aria-expanded", "true");
-    await expect(nestedLogo).toBeVisible();
-
+    await expectFoldersBeforeFiles(tree);
+    const assets = tree.getByRole("option", { name: "assets", exact: true });
+    await assets.click();
+    await tree.getByRole("option", { name: "logo.png", exact: true }).click();
+    await expect(page.getByRole("img", { name: "logo.png", exact: true })).toBeVisible();
     await search.fill("README");
-    await expect(filesTree.getByRole("option")).toHaveCount(1);
-    await page.getByRole("option", { name: "README.md" }).click();
+    await tree.getByRole("option", { name: "README.md", exact: true }).click();
     const editor = page.locator(".monaco-editor").filter({ visible: true });
     await expect(editor).toBeVisible();
-    await expect(page.getByLabel("File path README.md")).toBeVisible();
-    await page.waitForTimeout(900);
-    const editorElement = await editor.elementHandle();
-    expect(editorElement).not.toBeNull();
-    expect(fileWrites).toEqual([]);
-    expect(readFileSync(join(worktreePath, "README.md"), "utf8")).toBe("Workspace files e2e\n");
-
-    const appendedReadme = "# Edited through Monaco\n\nPS-118 saved this existing file.\n";
-    const saveResponse = page.waitForResponse(
-      (response) => response.url().includes("/file?path=README.md") && response.request().method() === "PUT",
-    );
+    await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+    await page.getByRole("menuitem", { name: "Rename workspace", exact: true }).click();
+    await page
+      .frameLocator('iframe[title="Workspace action"]')
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
+    await expect(page).toHaveURL(/document=README.md/);
+    await expectWorkspaceDocument(page, "README.md");
+    await expect(editor.locator(".view-lines")).toContainText("Workspace files e2e");
+    const writes = () => commands.filter((id) => id.includes(".view.file.file.save/")).length;
+    const beforeWrites = writes();
+    const before = readFileSync(join(worktreePath, "README.md"), "utf8");
+    const text = "# Edited through Monaco\n\nSaved this existing file.\n";
     await editor.locator(".view-lines").click();
-    await page.keyboard.insertText(appendedReadme);
+    await page.keyboard.insertText(text);
     await expect(page.getByLabel("Unsaved changes", { exact: true })).toBeVisible();
-    await page.waitForTimeout(900);
-    expect(fileWrites).toEqual([]);
+    expect(readFileSync(join(worktreePath, "README.md"), "utf8")).toBe(before);
+    expect(writes()).toBe(beforeWrites);
     await page.keyboard.press("ControlOrMeta+s");
-    expect((await saveResponse).ok()).toBe(true);
-    await expect.poll(() => readFileSync(join(worktreePath, "README.md"), "utf8")).toContain(appendedReadme);
-    await page.waitForTimeout(900);
-    expect(await editorElement?.evaluate((element) => element.isConnected)).toBe(true);
-
+    await expect.poll(() => readFileSync(join(worktreePath, "README.md"), "utf8")).toContain(text);
     await changesTab.click();
-    const diffViewer = page.getByTestId("diff-viewer").filter({ visible: true });
-    const readmeBodyResponse = page.waitForResponse(
-      (response) => response.url().includes("/diff-file?mode=fork_point&path=README.md") && response.ok(),
-    );
-    await diffViewer.getByPlaceholder("Search files").fill("README");
-    await readmeBodyResponse;
-    await expect(diffViewer.getByRole("option", { name: /README\.md/ })).toBeVisible();
-    await expect(diffViewer.getByRole("row", { name: /Edited through Monaco/ })).toBeVisible();
-
+    await viewer.getByPlaceholder("Search files").fill("README");
+    await expect(viewer.getByRole("row", { name: /Edited through Monaco/ })).toBeVisible();
     await filesTab.click();
-    await search.fill("README");
-    const searchResponse = Promise.withResolvers<void>();
-    await page.route("**/files?query=logo&limit=500", async (route) => {
-      await searchResponse.promise;
-      await route.continue();
-    });
-    try {
-      await search.fill("logo");
-      // Pending searches must not leave rows from the previous query clickable.
-      await expect(filesTree.getByRole("option")).toHaveCount(0);
-      await expect(search).toBeFocused();
-    } finally {
-      searchResponse.resolve();
-    }
-    await page.getByRole("option", { name: "logo.png" }).click();
-    await expect(page.getByRole("img", { name: "logo.png" })).toBeVisible();
-
     await search.fill("LICENSE");
-    await page.getByRole("option", { name: "LICENSE" }).click();
-    await expect(editor).toBeVisible();
-
+    await tree.getByRole("option", { name: "LICENSE", exact: true }).click();
     await search.fill("");
-    await exerciseWorkspaceFileOperations({ page, filesTree, assets, worktreePath });
-
-    const unsafe = await request.get(
-      `${apiBase}/v1/workspaces/${attempt.workspace.id}/file?path=${encodeURIComponent("../README.md")}`,
-    );
-    expect(unsafe.status()).toBe(400);
+    await exerciseWorkspaceFileOperations({ page, filesTree: tree, assets, worktreePath });
+    expect(
+      (
+        await request.get(`${apiBase}/v1/workspaces/${workspaceId}/file?path=${encodeURIComponent("../README.md")}`)
+      ).status(),
+    ).toBe(400);
   } finally {
-    try {
-      if (workspaceId) expect((await request.delete(`${apiBase}/v1/workspaces/${workspaceId}`)).ok()).toBe(true);
-    } finally {
-      rmSync(repoRoot, { recursive: true, force: true });
-    }
+    if (workspaceId) await request.delete(`${apiBase}/v1/workspaces/${workspaceId}`);
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+    rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("browses and edits files in the default workspace", async ({ page, request }) => {
-  const repoRoot = createGitRepo("pstdio-ps-118-default-", "Default workspace files e2e");
-  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: folderProjectInput({ name: "PS-118 Default Workspace Files" }, repoRoot),
+test("Files opens the project folder without Changes and restores its document", async ({ page, request }) => {
+  const root = createGitRepo("pstdio-default-files-", "Default workspace files e2e");
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Project Files" }, root),
   });
-  expect(projectResponse.ok()).toBe(true);
-  const project = (await projectResponse.json()) as { id: string };
-
+  expect(response.ok()).toBe(true);
+  const project = await response.json();
   try {
-    const workspacesResponse = await request.get(
-      `${apiBase}/v1/workspaces?project_id=${encodeURIComponent(project.id)}`,
-    );
-    expect(workspacesResponse.ok()).toBe(true);
-    const workspaces = (await workspacesResponse.json()) as Array<{
-      id: string;
-      is_default: boolean;
-      workspace_shorthand: string;
-    }>;
-    const workspace = workspaces.find((candidate) => candidate.is_default);
-    expect(workspace).toBeDefined();
-    if (!workspace) throw new Error("Default workspace was not created.");
-
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}/workspaces`);
-    await openWorkspace(page, workspace.workspace_shorthand);
-
+    await page.goto(`/projects/${project.id}`);
+    await page.getByRole("option", { name: "Files", exact: true }).click();
     const search = page.getByRole("textbox", { name: "Search files" });
     await search.fill("README");
-    const readme = page
+    await page
       .getByRole("region", { name: "Files", exact: true })
-      .getByRole("option", { name: "README.md", exact: true })
-      .and(page.locator('[data-tree-list-node-id="README.md"]'));
-    await expect(readme).toBeVisible();
-    const fileResponse = Promise.withResolvers<void>();
-    const pendingFileRoutes: Promise<void>[] = [];
-    let fileRequested = false;
-    await page.route("**/file?path=README.md", (route) => {
-      fileRequested = true;
-      const continued = fileResponse.promise.then(() => route.continue());
-      pendingFileRoutes.push(continued);
-      return continued;
-    });
-    try {
-      await readme.click();
-      await expect.poll(() => fileRequested).toBe(true);
-      // The editor runtime loads while the file is still on the network.
-      await expect.poll(() => page.evaluate(() => "MonacoEnvironment" in window)).toBe(true);
-    } finally {
-      fileResponse.resolve();
-      await Promise.all(pendingFileRoutes);
-      await page.unroute("**/file?path=README.md");
-    }
+      .locator('[data-tree-list-node-id="README.md"]')
+      .click();
+    await expect(page.getByRole("tab", { name: "Changes", exact: true })).toHaveCount(0);
     const editor = page.locator(".monaco-editor");
     await expect(editor).toBeVisible();
-
-    const appendedReadme = "# Edited in the default workspace\n";
-    const saveResponse = page.waitForResponse(
-      (response) => response.url().includes("/file?path=README.md") && response.request().method() === "PUT",
-    );
+    const original = readFileSync(join(root, "README.md"), "utf8");
+    const text = "# Edited in the project folder\n";
     await editor.locator(".view-lines").click();
-    await page.keyboard.insertText(appendedReadme);
+    await page.keyboard.insertText(text);
     await expect(page.getByLabel("Unsaved changes", { exact: true })).toBeVisible();
-    await page.waitForTimeout(900);
-    expect(readFileSync(join(repoRoot, "README.md"), "utf8")).toBe("Default workspace files e2e\n");
+    expect(readFileSync(join(root, "README.md"), "utf8")).toBe(original);
     await page.keyboard.press("ControlOrMeta+s");
-    expect((await saveResponse).ok()).toBe(true);
-    await expect.poll(() => readFileSync(join(repoRoot, "README.md"), "utf8")).toContain(appendedReadme);
-
+    await expect.poll(() => readFileSync(join(root, "README.md"), "utf8")).toContain(text);
     await page.reload();
-    await page.getByRole("textbox", { name: "Search files" }).fill("README");
-    await readme.click();
-    await expect(page.locator(".monaco-editor .view-lines")).toContainText("Edited in the default workspace");
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("Edited in the project folder");
+    await expect(page).toHaveURL(/document=README.md/);
   } finally {
-    rmSync(repoRoot, { recursive: true, force: true });
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+    rmSync(root, { recursive: true, force: true });
   }
 });

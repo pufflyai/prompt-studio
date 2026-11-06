@@ -54,7 +54,7 @@ const sampleDiffs: Diff[] = [
   },
 ];
 const meta: CanvasMeta<typeof DiffDrawer> = {
-  title: "Patterns/Diff/Diff Panel",
+  title: "Design system/Patterns/Diff/Diff panel/Overview",
   component: DiffDrawer,
   fullscreen: true,
   decorators: [

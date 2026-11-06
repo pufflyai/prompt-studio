@@ -65,17 +65,8 @@ export const NativeMarkdownFileEditor = (props: NativeMarkdownFileEditorProps) =
   });
   return (
     <Flex direction="column" h="full" minH="0" bg="bg">
-      {errorNotice}
-      {state.error && (
-        <FileRendererErrorNotice
-          message={state.error}
-          onRetry={() => {
-            void session?.retry().catch(() => {});
-          }}
-        />
-      )}
-      {state.document ? (
-        <Flex flex="1" minH="0">
+      <Flex flex="1" minH="0">
+        {state.document ? (
           <LazyMarkdownEditor
             key={state.document.guid}
             collaboration={{
@@ -91,9 +82,18 @@ export const NativeMarkdownFileEditor = (props: NativeMarkdownFileEditorProps) =
             onActiveSectionChange={onActiveSectionChange}
             isEditable
           />
-        </Flex>
-      ) : (
-        <FileRendererLoading />
+        ) : (
+          <FileRendererLoading />
+        )}
+      </Flex>
+      {errorNotice}
+      {state.error && (
+        <FileRendererErrorNotice
+          message={state.error}
+          onRetry={() => {
+            void session?.retry().catch(() => {});
+          }}
+        />
       )}
     </Flex>
   );

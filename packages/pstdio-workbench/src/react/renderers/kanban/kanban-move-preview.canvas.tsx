@@ -73,7 +73,7 @@ const DeferredMove = (props: { viewMode?: "board" | "list" }) => {
     </WorkbenchThemeProvider>
   );
 };
-const meta: CanvasMeta = { title: "Renderers/Kanban/Move Preview" };
+const meta: CanvasMeta = { title: "Product/Workbench/Views/Kanban/Move preview" };
 export default meta;
 export const MoveBeforeSave: CanvasFrame = {
   id: "renderers-kanban-move-preview--move-before-save",

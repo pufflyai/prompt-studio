@@ -84,7 +84,7 @@ const TriggerToggles = () => {
 };
 
 export default {
-  title: "Components/Overlays/Trigger Toggles",
+  title: "Design system/Components/Overlays/Trigger toggles",
   component: TriggerToggles,
   description: "Click a trigger to open its overlay. Click the same trigger again to close it.",
 } satisfies CanvasMeta<typeof TriggerToggles>;

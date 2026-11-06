@@ -5,7 +5,14 @@ import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint, type Json, type StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
-import { projects, storage_current_records, storage_record_projections } from "../../db/schemas.pg";
+import {
+  projects,
+  storage_current_records,
+  storage_ordered_owners,
+  storage_record_projections,
+} from "../../db/schemas.pg";
+import { orderedAssetRevision } from "./ordered-native-assets";
+import { orderedOwnerWhere } from "./ordered-sql";
 import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
 import { loadResourceDocuments } from "./resource-document-persistence";
 
@@ -68,6 +75,10 @@ export const projectNativeRecordText = async (tx: Transaction, owner: StorageOwn
 
 /** Only indexed bindings for this standalone text are refreshed; no record documents are loaded. */
 export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwner, key: string, content: string) => {
+  const [ordered] = await tx
+    .select({ id: storage_ordered_owners.workbench_id })
+    .from(storage_ordered_owners)
+    .where(orderedOwnerWhere(storage_ordered_owners, owner));
   const rows = await tx
     .select()
     .from(storage_current_records)
@@ -95,6 +106,10 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
       },
       new Map([[key, content]]),
     );
+    if (ordered) {
+      if (!("asset" in row.native_sources[key]!)) throw new Error("An ordered field must use its record text owner");
+      record.revision = await orderedAssetRevision(row.revision, record.nativeVersions ?? {});
+    }
     if (record.revision === row.revision) continue;
     await tx
       .update(storage_current_records)

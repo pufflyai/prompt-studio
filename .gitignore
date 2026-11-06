@@ -214,3 +214,7 @@ infra/terraform/**/*.tfplan
 infra/terraform/**/crash*.log
 
 # UI Canvas builds its preview catalog from source; it is never committed (AGENTS.md "Generated files").
+
+# The append-only sync module is source, not runtime log output.
+!packages/pstdio-sync/src/logs/
+!packages/pstdio-sync/src/logs/**

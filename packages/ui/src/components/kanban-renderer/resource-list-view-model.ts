@@ -1,5 +1,4 @@
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
-import { Circle } from "lucide-react";
 import type { CollectionPageControl } from "../collection-view/collection-page";
 import { withTitleField } from "../collection-view/collection-view-fields";
 import { sortRowsByView } from "../collection-view/collection-view-sort";
@@ -109,10 +108,17 @@ export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRen
       title: group.label,
       isGroup: true,
       countBadge: group.count ?? group.rows.length,
-      statusIcon: Circle,
+      statusIcon: getIconComponent(option?.icon),
       statusColorPalette: option?.color,
       note: option?.note,
+      onNoteClick: option?.onNoteClick,
       onCreate: option?.canCreate && onCreate ? () => onCreate(group.key) : undefined,
+      contextMenuActions: option?.contextMenuActions?.map((action) => ({
+        key: action.id,
+        label: action.label,
+        isDisabled: action.disabled,
+        onClick: action.onAction,
+      })),
       children: sorted(group.rows).map((row) => rowItem(row)),
     };
   });

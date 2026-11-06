@@ -3,6 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ChevronRight, FileText, Folder, Home, MessageCircle } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Breadcrumb, type BreadcrumbProps } from "@/components/primitives/breadcrumb";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 
 type StoryFn = () => ReactNode;
 const items = [
@@ -34,7 +35,7 @@ const items = [
   },
 ];
 const meta: CanvasMeta<typeof Breadcrumb> = {
-  title: "Components/Navigation/Breadcrumb",
+  title: "Design system/Components/Navigation/Breadcrumb",
   component: Breadcrumb,
   decorators: [
     (Story: StoryFn) => (
@@ -49,8 +50,11 @@ const meta: CanvasMeta<typeof Breadcrumb> = {
     separatorGap: "xs",
   },
 };
-export default meta;
-export const Default = {
+export default {
+  title: "Design system/Components/Navigation/Breadcrumb",
+  fullscreen: true,
+};
+const Default = {
   id: "components-navigation-breadcrumb--default",
 };
 const ResourceActionsExample = () => {
@@ -75,17 +79,17 @@ const ResourceActionsExample = () => {
     />
   );
 };
-export const ResourceActions: CanvasFrame<typeof Breadcrumb> = {
+const ResourceActions: CanvasFrame<typeof Breadcrumb> = {
   id: "components-navigation-breadcrumb--resource-actions",
   render: () => <ResourceActionsExample />,
 };
-export const IconSeparator = {
+const IconSeparator = {
   id: "components-navigation-breadcrumb--icon-separator",
   args: {
     separator: <Icon as={ChevronRight} boxSize="12px" color="fg.muted" />,
   },
 };
-export const Narrow = {
+const Narrow = {
   id: "components-navigation-breadcrumb--narrow",
   args: {
     items: [
@@ -116,7 +120,7 @@ export const Narrow = {
     ),
   ],
 };
-export const StaticAncestor = {
+const StaticAncestor = {
   id: "components-navigation-breadcrumb--static-ancestor",
   args: {
     items: [
@@ -141,7 +145,7 @@ export const StaticAncestor = {
 };
 // A breadcrumb that starts inside a Sidenav level leads with the project crumb, so the user can
 // leave the level. The crumb sits next to the breadcrumb, like the project button in the navbar.
-export const ProjectCrumb = {
+const ProjectCrumb = {
   id: "components-navigation-breadcrumb--project-crumb",
   args: {
     items: [
@@ -191,3 +195,15 @@ export const ProjectCrumb = {
     </HStack>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Default,
+  ResourceActions,
+  IconSeparator,
+  Narrow,
+  StaticAncestor,
+  ProjectCrumb,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

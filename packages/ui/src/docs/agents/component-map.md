@@ -24,17 +24,17 @@ Use this map to choose the first component to inspect in the live Canvas catalog
 - Canvas callers own their content, camera, and saved layout. Pass the current `zoom`, and update it from `onZoom`. Configure positive `minZoom` and `maxZoom` bounds (defaults 0.25 and 1); every zoom input uses them. Pass the same limits to `zoomCanvas` when applying anchored zoom to a camera. The percentage button resets to 100%, clamped to those bounds.
 - `onPan` receives content movement in screen pixels; native-scroll callers negate it. The forwarded ref points to the scroll viewport. Floating controls and the dot pattern stay fixed while content scrolls.
 - Mark interactive content or separate drag targets with `data-canvas-control`. This preserves native input while Space-drag and middle-drag still pan over those regions. Keep portals in their native roots.
-- Start from `Components/Layout/Canvas` canvas for both native scrolling with sticky headers and transformed live previews. Ordinary lists and documents still use `ScrollArea`.
-- Use `DependencyTimeline` from `@pstdio/ui/dependency-timeline` for dependency cards arranged in milestone sections and collapsible tracks. It uses `Canvas` and owns card measurement, dependency arrows, sticky headers, and windowed rendering. Supply `TimelineSection`, `TimelineTrack`, and `TimelineItem` data with your own card content, headers, editors, and action callbacks. Keep domain data and saved presentation in the caller. See `Components/Layout/Dependency Timeline`.
+- Start from `Design system/Components/Layout/Canvas` canvas for both native scrolling with sticky headers and transformed live previews. Ordinary lists and documents still use `ScrollArea`.
+- Use `DependencyTimeline` from `@pstdio/ui/dependency-timeline` for dependency cards arranged in milestone sections and collapsible tracks. It uses `Canvas` and owns card measurement, dependency arrows, sticky headers, and windowed rendering. Supply `TimelineSection`, `TimelineTrack`, and `TimelineItem` data with your own card content, headers, editors, and action callbacks. Keep domain data and saved presentation in the caller. See `Design system/Components/Layout/Dependency timeline`.
 
-- Use `KeyframeTimeline` from `@pstdio/ui/keyframe-timeline` for animation/video property tracks, keyframe editing, frame snapping, time rulers and playhead scrubbing. Callers own data, playback and persistence. Omit `onTracksChange` for review-only tracks; use `markers` for named moments. See `Components/Media/Keyframe Timeline`.
+- Use `KeyframeTimeline` from `@pstdio/ui/keyframe-timeline` for animation/video property tracks, keyframe editing, frame snapping, time rulers and playhead scrubbing. Callers own data, playback and persistence. Omit `onTracksChange` for review-only tracks; use `markers` for named moments. See `Design system/Components/Media/Keyframe timeline`.
 
 ## Data display
 
 - `DataTable` handles tabular data.
 - `KanbanRenderer` handles switchable board/list data views with filtering, grouping, and ordering.
 - `Avatar`, `KanbanRendererCard`, `KanbanRendererList`, `ResourceBadge`, `WorkspaceBadge`, `InfoCard`, and `Activity` cover common data surfaces.
-- Use `Foundations/Component Gallery / Composites` for advanced examples before composing `KanbanRenderer`, `ParamEditor`, or `Activity` from scratch.
+- Use `Design system/Foundations/Component gallery / Composites` for advanced examples before composing `KanbanRenderer`, `ParamEditor`, or `Activity` from scratch.
 
 ## Feedback and overlays
 

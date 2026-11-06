@@ -51,7 +51,7 @@ const OpenTabPresence = () => {
 };
 
 const meta = {
-  title: "pstdio-workbench/Guides/Header presence",
+  title: "Product/Workbench/Header/Header presence",
   component: OpenTabPresence,
   fullscreen: true,
 } satisfies CanvasMeta<typeof OpenTabPresence>;

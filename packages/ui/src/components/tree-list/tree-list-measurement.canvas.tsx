@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 import { TreeList } from "./tree-list";
 
 const meta: CanvasMeta<typeof TreeList> = {
-  title: "Components/Data Display/Tree List/Measurement",
+  title: "Design system/Components/Data display/Tree list/Measurement",
   component: TreeList,
 };
 export default meta;

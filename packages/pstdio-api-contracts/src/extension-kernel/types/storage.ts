@@ -1,16 +1,22 @@
+import type { SharedEdit, StorageSaveOutcome } from "pstdio-sync-contracts";
 import type { ExtensionAssetsApi } from "./assets";
 import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
+import type { ExtensionLogApi, ExtensionLogOptions } from "./storage-logs";
 import type { ExtensionRecordsApi } from "./storage-records";
 
 /** @deprecated Use storage.records with stable record IDs and grouped commits. */
 export interface ExtensionStorageCollectionApi<TItem = unknown> {
+  /** Read the value and its observed revision together for a subsequent update. Prefer records for new data. */
+  read(id: string): Promise<{ value: TItem; revision: string } | undefined>;
   get(id: string): Promise<TItem | undefined>;
   list(): Promise<TItem[]>;
   /** @deprecated Use storage.records.commit. */
   put(id: string, value: TItem): Promise<void>;
   /** @deprecated Use storage.records.commit. Throws if the item was deleted. */
   update(id: string, value: TItem): Promise<void>;
+  /** Atomically update only if the value still has the revision returned by read. False for changed or deleted items. */
+  updateIfUnchanged(id: string, revision: string, value: TItem): Promise<boolean>;
   createIfAbsent(id: string, value: TItem): Promise<boolean>;
   deleteIfValue(id: string, value: TItem): Promise<boolean>;
   create(value: TItem): Promise<TItem & { id: string }>;
@@ -35,7 +41,14 @@ export interface ExtensionStoragePositionsApi {
   between(before?: string, after?: string): string;
 }
 
+export interface ExtensionStorageTextApi {
+  /** Save these text insertions/deletions as one atomic record group. */
+  edit(edits: Extract<SharedEdit, { kind: "text.insert" | "text.delete" }>[]): Promise<StorageSaveOutcome>;
+}
+
 export interface ExtensionStorageApi {
+  /** Whether this source may run data upgrades now; false when the synced extension owns migrations. */
+  canMigrate(): Promise<boolean>;
   /** Upgrade this storage scope once. Saves the version after success; failed work must be safe to retry. */
   migrate(
     version: number,
@@ -47,6 +60,10 @@ export interface ExtensionStorageApi {
   /** Read retained records from a removed schema, restricted to this project and instance. */
   readLegacy(source: string): Promise<{ version: string; records: JsonObject[] } | undefined>;
   records: ExtensionRecordsApi;
+  /** Edit an explicitly declared text field, addressed by a JSON Pointer in the record value. */
+  text(recordId: string, field: string): ExtensionStorageTextApi;
+  /** Open a declared append-only log in this scope, or an explicit project/resource scope. */
+  log(name: string, options?: ExtensionLogOptions): ExtensionLogApi;
   assets: ExtensionAssetsApi;
   scope(scope: StorageScope): ExtensionStorageApi;
   files: ExtensionBlobsApi;

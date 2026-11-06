@@ -9,7 +9,7 @@ const SingleEditorExample = () => {
   return <MarkdownEditor defaultState="" collaboration={{ document }} placeholder="Start typing collaboratively…" />;
 };
 const meta = {
-  title: "Patterns/Editors/Collaborative Markdown Editor",
+  title: "Design system/Patterns/Editors/Collaborative Markdown editor",
   component: SingleEditorExample,
 } satisfies CanvasMeta<typeof SingleEditorExample>;
 export default meta;

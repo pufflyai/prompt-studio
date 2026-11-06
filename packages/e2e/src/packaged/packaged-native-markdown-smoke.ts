@@ -50,7 +50,17 @@ export const expectPackagedNativeMarkdown = async (input: {
   headers: Record<string, string>;
 }) => {
   const token = (input.headers.authorization ?? input.headers.Authorization)?.replace(/^Bearer\s+/i, "");
-  const client = createClient({ baseUrl: input.baseUrl, token });
+  const streams: string[] = [];
+  const client = createClient({
+    baseUrl: input.baseUrl,
+    token,
+    fetch: (async (url, init) => {
+      const response = await fetch(url, init);
+      if (response.headers.get("content-type")?.includes("text/event-stream"))
+        streams.push(new URL(String(url)).pathname);
+      return response;
+    }) as typeof fetch,
+  });
   const path = join(input.projectFolder, "native-shared.md");
   const frontmatter = "---\r\ncustom: keep  \r\n---\r\n\r\n";
   writeFileSync(path, `${frontmatter}Initial source`);
@@ -130,6 +140,23 @@ export const expectPackagedNativeMarkdown = async (input: {
       roomId: second.roomId,
     });
   }
+  const observed = await client.nativeDocuments.open({ projectId: input.projectId, target });
+  const observation = new AbortController();
+  let observedText = "";
+  const watching = client.nativeDocuments.watch({
+    projectId: input.projectId,
+    ...observed,
+    signal: observation.signal,
+    onSnapshot(snapshot) {
+      const document = new Y.Doc();
+      try {
+        Y.applyUpdate(document, snapshot.state);
+        observedText = document.getText("content").toString();
+      } finally {
+        document.destroy();
+      }
+    },
+  });
   const connection = await client.textEditing.connect({ projectId: input.projectId, scope: { kind: "agent", target } });
   const guest = connection.guest();
   const editing = createTextEditingClient(guest.host);
@@ -142,7 +169,19 @@ export const expectPackagedNativeMarkdown = async (input: {
     await session.project();
     expect(session.getSnapshot().text.toString()).toBe(`${frontmatter}PUBLIC LOCAL Outside edit OUTSIDE`);
     expect(readFileSync(path, "utf8")).toBe(session.getSnapshot().text.toString());
+    await expectEventually.poll(() => observedText).toBe(session.getSnapshot().text.toString());
+    expect(streams).toEqual(["/v1/session-stream"]);
+    observation.abort();
+    await watching;
+    session.transact((text) => text.insert(frontmatter.length, "AFTER CANCEL "));
+    await session.flush();
+    await session.project();
+    expect(readFileSync(path, "utf8")).toBe(session.getSnapshot().text.toString());
+    expect(streams).toEqual(["/v1/session-stream"]);
   } finally {
+    observation.abort();
+    await watching;
+    await client.nativeDocuments.close({ projectId: input.projectId, ...observed });
     await session.close();
     await guest.close();
   }

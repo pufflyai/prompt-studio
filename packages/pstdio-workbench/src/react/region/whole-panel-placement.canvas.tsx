@@ -55,7 +55,7 @@ const PlacementStory = (props: {
   return <WorkbenchStory workbench={workbench} initialThemePreference={props.dark ? "pstdio-dark" : "pstdio-light"} />;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Whole panel placement",
+  title: "Product/Workbench/Panels/Whole panel placement",
   component: PlacementStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof PlacementStory>;

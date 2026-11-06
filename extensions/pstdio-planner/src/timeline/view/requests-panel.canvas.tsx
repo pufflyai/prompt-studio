@@ -7,7 +7,7 @@ import { MilestoneNeedsAttentionPreview } from "./milestone-requests.story-fixtu
 import { RequestsPanel } from "./requests-panel";
 import { AutoBuildPreview, CardNeedsAttentionPreview } from "./requests-panel.story-fixture";
 
-const person = { type: "human" as const, id: "person", displayName: "Human" };
+const person = { type: "human" as const, id: "person", displayName: "User" };
 const agent = { type: "agent" as const, id: "agent", displayName: "Agent" };
 const context = { reason: null, workspaceId: null, attemptRevision: null, sessionId: null, relatedSessionId: null };
 const task: ReviewRequestView = {
@@ -135,7 +135,7 @@ const row: PlanRow = {
   dependsOn: [],
   blocks: [],
   laterDependencies: [],
-  flags: ["human-needed"],
+  flags: ["review-needed"],
   tagIds: [],
   requests: [],
   requestErrors: [],
@@ -218,19 +218,19 @@ export const UnreadableRequest: Story = {
 };
 
 export const AutoBuildPopover: Story = {
-  name: "Auto Build — open Needs attention",
+  name: "Auto Build requests",
   render: () => <AutoBuildPreview requests={[proposalReview, decision]} />,
 };
 export const AutoBuildSingleRequest: Story = {
-  name: "Auto Build — one pending request",
+  name: "Single request",
   render: () => <AutoBuildPreview requests={[proposalReview]} />,
 };
 export const AutoBuildSaveError: Story = {
-  name: "Auto Build — modal answer save error",
+  name: "Answer save error",
   render: () => <AutoBuildPreview requests={[proposalReview]} failSave />,
 };
 export const CardModal: Story = {
-  name: "Card — open Needs attention",
+  name: "Card requests",
   render: () => <CardNeedsAttentionPreview row={{ ...row, requests: [proposalReview, decision] }} />,
 };
 
@@ -240,15 +240,15 @@ export const ResolvedCard: Story = {
 };
 
 export const AutoBuildEmptySessions: Story = {
-  name: "Auto Build — no supervisor or agents",
+  name: "Empty sessions",
   render: () => <AutoBuildPreview requests={[proposalReview]} empty />,
 };
 export const AutoBuildWarning: Story = {
-  name: "Auto Build — warning above requests",
+  name: "Warning",
   render: () => <AutoBuildPreview requests={[proposalReview, decision]} warning />,
 };
 export const MilestoneModal: Story = {
-  name: "Milestone — open Needs attention",
+  name: "Milestone requests",
   render: () => (
     <MilestoneNeedsAttentionPreview
       rows={[

@@ -1,6 +1,6 @@
 import { Box, Flex, Grid, Stack, Text } from "@chakra-ui/react";
 
-export default { title: "Design System/Foundations" };
+export default { title: "Design system/Foundations/Tokens" };
 
 export const FoundationColors = () => (
   <Stack p="md" gap="lg">

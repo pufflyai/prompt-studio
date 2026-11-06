@@ -28,6 +28,7 @@ export const wireTextSnapshot = (
   state: Buffer.from(snapshot.state).toString("base64"),
   seedId: snapshot.seedId,
   sourceSeedId: snapshot.sourceSeedId,
+  generation: snapshot.generation,
   sourceState: snapshot.sourceState ? Buffer.from(snapshot.sourceState).toString("base64") : undefined,
   revision: snapshot.revision,
   editable: editable && member.grant!.editable && member.room?.content.editable !== false,

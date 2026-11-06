@@ -1,5 +1,5 @@
 import { IconButton } from "@chakra-ui/react";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workspacePages } from "@pstdio/sdk/extensions";
 import { ExampleIcon } from "../icon";
 import { useExampleView } from "../view-context";
 export const BackToProject = () => {
@@ -9,7 +9,7 @@ export const BackToProject = () => {
       aria-label="Back to project"
       size="xs"
       variant="ghost"
-      onClick={() => host.navigate({ kind: "page", page: workbenchPages.workspaces })}
+      onClick={() => host.navigate({ kind: "page", page: workspacePages.list })}
     >
       <ExampleIcon name="ArrowLeft" />
     </IconButton>

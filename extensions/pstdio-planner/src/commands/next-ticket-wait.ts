@@ -18,7 +18,7 @@ export function nextTicketWait(row: PlanRow, input: NextTicketWaitInput) {
   });
   if (input.pending.length)
     return wait(
-      "human-input-needed",
+      "review-needed",
       input.pending.map(({ shorthand }) => shorthand),
     );
   if (row.gate) return wait("review-gate");

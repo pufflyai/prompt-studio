@@ -20,7 +20,16 @@ export interface KanbanRendererEnumOption {
   icon?: string | null;
   /** Resource-list group header metadata. */
   note?: Localizable<string>;
+  /** Open details from the group note without expanding or creating a resource. */
+  noteAction?: NavigationTarget;
   canCreate?: boolean;
+  /** Actions offered by the resource-list group header's context menu. */
+  contextMenuActions?: Array<{
+    id: string;
+    label: Localizable<string>;
+    action: NavigationTarget;
+    disabled?: boolean;
+  }>;
 }
 
 export type KanbanRendererAttributeType =
@@ -125,6 +134,8 @@ export interface KanbanRendererQueryResult {
 }
 
 export interface KanbanRendererCreateRowContribution<TParams extends ParamObjectSchema = ParamObjectSchema> {
+  /** Run the creation command directly when it owns its own form. Defaults to inline. */
+  presentation?: "inline" | "command";
   command: CommandRef<Struct, unknown>;
   title?: Localizable<string>;
   submitLabel?: Localizable<string>;

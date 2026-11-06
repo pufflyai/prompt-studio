@@ -12,6 +12,11 @@ export interface RemoteSessionBrowserFixture {
 }
 
 export const startRemoteSessionBrowserFixture = () => {
+  const sources = JSON.parse(process.env.E2E_EXTENSION_SOURCES ?? "{}");
+  if (!sources["pstdio-workspaces"])
+    throw new Error(
+      "The remote browser fixture requires an installed Workspaces source. Start UI tests with the test:ui launcher.",
+    );
   const script = join(import.meta.dirname, "../../../pstdio-api/src/test-utils/remote-session-browser.fixture.ts");
   const child = spawn("bun", ["--conditions=source", script], {
     stdio: ["pipe", "pipe", "pipe"],

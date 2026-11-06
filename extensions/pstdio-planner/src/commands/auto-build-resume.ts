@@ -134,7 +134,7 @@ export async function resumeAutoBuildAttempt(
     sessionId: resumption.sessionId,
     expectedRun: resumption.expectedRun,
     prompt: [
-      "Continue the unfinished implementation in the same workspace and managed attempt. Read the current implement-ticket skill and attempt history. Verify the dependency files and saved human answers before editing. If code is missing or stale, run update-stack with the current HEAD and owner session; this does not approve work or merge the target branch. A confirmed answer alone does not repair Git. Address outstanding findings, keep the ticket status current, validate, and submit the exact resulting revision.",
+      "Continue the unfinished implementation in the same workspace and managed attempt. Read the current implement-ticket skill and attempt history. Verify the dependency files and saved review answers before editing. If code is missing or stale, run update-stack with the current HEAD and owner session; this does not approve work or merge the target branch. A confirmed answer alone does not repair Git. Address outstanding findings, keep the ticket status current, validate, and submit the exact resulting revision.",
       ...resumption.requests.map((request) => `${request.title}\n${request.instructions}\n${request.outcomeText}`),
     ].join("\n\n"),
   });
@@ -170,7 +170,7 @@ export async function resumeAutoBuildAttempt(
       reviewId: null,
       threadId: null,
       commitSha: null,
-      metadata: { humanRequestId: request.id },
+      metadata: { reviewRequestId: request.id },
     });
   }
   return { decision: "started" as const, workspaceId: resumption.workspaceId, sessionId: resumption.sessionId };

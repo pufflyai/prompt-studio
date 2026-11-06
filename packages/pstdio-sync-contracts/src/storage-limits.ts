@@ -42,11 +42,11 @@ const limitError = (message: string, data: StorageLimitError["data"]) =>
   Object.assign(new Error(message), { name: "StorageLimitError", code: "storage_limit_exceeded" as const, data });
 
 /** Refuses saved records over the record limit, and a commit whose records together are over the commit limit. */
-export const assertStorageLimits = (records: Pick<StorageRecord, "recordId" | "value" | "shared" | "deleted">[]) => {
+export const assertStorageRecordByteLimits = (records: { recordId: string; deleted: boolean; bytes: number }[]) => {
   let total = 0;
   for (const record of records) {
     if (record.deleted) continue;
-    const bytes = storageRecordBytes(record);
+    const { bytes } = record;
     if (bytes > storageLimits.recordBytes)
       throw limitError(
         `Storage record "${record.recordId}" is ${kib(bytes)}, over the ${kib(storageLimits.recordBytes)} limit for one record. ${instead}`,
@@ -60,3 +60,13 @@ export const assertStorageLimits = (records: Pick<StorageRecord, "recordId" | "v
       { limit: "commit", bytes: total, maxBytes: storageLimits.commitBytes },
     );
 };
+
+/** Uses the same policy for materialized records and compact speculative byte accounting. */
+export const assertStorageLimits = (records: Pick<StorageRecord, "recordId" | "value" | "shared" | "deleted">[]) =>
+  assertStorageRecordByteLimits(
+    records.map((record) => ({
+      recordId: record.recordId,
+      deleted: record.deleted,
+      bytes: record.deleted ? 0 : storageRecordBytes(record),
+    })),
+  );

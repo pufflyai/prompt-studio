@@ -4,7 +4,7 @@ import { SessionIndicator } from "../primitives/session-indicator";
 import { KanbanRendererCard } from "./kanban-renderer-card";
 
 const meta: CanvasMeta<typeof KanbanRendererCard> = {
-  title: "Patterns/Kanban Renderer/Card Gestures",
+  title: "Design system/Patterns/Kanban renderer/Card gestures",
   component: KanbanRendererCard,
 };
 export default meta;

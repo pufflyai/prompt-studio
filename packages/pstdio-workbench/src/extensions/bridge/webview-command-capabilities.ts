@@ -26,24 +26,28 @@ export const createWorkbenchExtensionWebviewAdapters =
   (input: CreateWorkbenchExtensionWebviewAdaptersInput): CreateBridgeWebviewHostAdapters =>
   (context) => {
     const extensionId = context.extensionId ?? input.extensionIdForWebview(context.webviewId);
+    const executeCommand: NonNullable<
+      import("./extension-webview-host-adapters").ExtensionWebviewHostAdapters["executeCommand"]
+    > = (request, signal, invocation) => {
+      const resource = request.resource ?? context.placement.resource;
+      return executeWorkbenchExtensionCommandResponse({ ...input, workbench: context.workbench }, request.commandId, {
+        params: request.params,
+        workspaceId: request.workspaceId,
+        metadata: request.metadata,
+        resource,
+        signal,
+        placement: context.placement.placementIdentity,
+        isViewerCurrent: invocation?.isViewerCurrent,
+        slot: createExtensionSlot({
+          id: context.webviewId,
+          kind: input.slotKind,
+          projectId: input.projectId,
+          context: { panelId: context.webviewId },
+        }),
+      });
+    };
     return {
-      ...createWorkbenchWebviewHostAdapters({ ...context, extensionId, projectId: input.projectId }),
-      executeCommand: (request, signal) => {
-        const resource = request.resource ?? context.placement.resource;
-        return executeWorkbenchExtensionCommandResponse({ ...input, workbench: context.workbench }, request.commandId, {
-          params: request.params,
-          workspaceId: request.workspaceId,
-          metadata: request.metadata,
-          resource,
-          signal,
-          slot: createExtensionSlot({
-            id: context.webviewId,
-            kind: input.slotKind,
-            projectId: input.projectId,
-            context: { panelId: context.webviewId },
-          }),
-        });
-      },
+      ...createWorkbenchWebviewHostAdapters({ ...context, extensionId, projectId: input.projectId, executeCommand }),
       files: input.files,
       artifacts: input.artifacts
         ? { read: (params) => input.artifacts!.read(params, { webviewId: context.webviewId }) }

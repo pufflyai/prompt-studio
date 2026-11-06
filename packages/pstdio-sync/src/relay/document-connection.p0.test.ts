@@ -241,3 +241,31 @@ test("an owned socket calls the owner readiness hook once per protocol ready", a
     await f.close();
   }
 });
+
+test.each(["owner", "document"] as const)("a failed %s synchronization reports its actual cause", async (scope) => {
+  const f = documentConnectionFixture();
+  const cause = new Error(`Failed ${scope} synchronization`);
+  const reported = Promise.withResolvers<unknown>();
+  const owner = createDocumentRelayConnection({
+    ...f,
+    projectId: "project",
+    signal: f.controller.signal,
+    synchronize: async () => {
+      if (scope === "owner") throw cause;
+    },
+    synchronizeDocument: async () => {
+      throw cause;
+    },
+    onReady: () => {
+      if (scope === "document") owner.wakeDocument("text");
+    },
+    onError: (error?: unknown) => reported.resolve(error),
+  });
+  try {
+    expect(await reported.promise).toBe(cause);
+  } finally {
+    f.controller.abort();
+    await owner.done;
+    await f.close();
+  }
+});

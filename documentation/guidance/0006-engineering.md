@@ -31,6 +31,7 @@
 4. Choose the simplest design that prevents recurrence.
 5. If an external limit forces a workaround, write an ADR before coding. Follow the [temporary-workaround rules](0008-planning.md#3-architecture-decisions).
 6. If stuck, follow the [troubleshooting guidance](0009-troubleshooting.md) before trying another approach.
+7. For live resource or transport changes, follow the [streaming contract](../references/architecture/0021-stream.md) and [resource ownership lesson](../lessons-learned/0020-resource-stream-ownership.md). Keep logical permissions separate from physical connections and run the required mixed-resource HTTP/1.1 connection-budget regression before completion.
 
 ## 4. Code style
 

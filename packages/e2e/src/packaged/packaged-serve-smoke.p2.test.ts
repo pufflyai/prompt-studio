@@ -31,9 +31,9 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./packaged-native-markdown-smoke";
-// The Markdown fixture resolves/projects a registered source and uses the public SDK session through authenticated agent admission, preserving front matter and one Yjs runtime.
+// The Markdown fixture resolves/projects a registered source and uses the public SDK session through authenticated agent admission, preserving front matter and one Yjs runtime. Native observations share that client event stream and cancel without stopping the editor.
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
-// packaged-canvas-install.p2.test.ts checks optional Canvas module assets, previews, themes, and skills without local build fingerprints.
+// packaged-canvas-install.p2.test.ts checks optional Canvas assets, previews, themes, and the current source skill without local build fingerprints.
 // Catalog IDs and extension icons remain available through the compiled host.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.
@@ -50,6 +50,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-scribble-pages.p2.spec.ts checks native Scribble pages, drafts, favorites and group operations.
 // performance-observer.p2.test.ts checks native CPU units and memory through the compiled observer's direct startup path.
 // packaged-core-extensions-smoke.p1.test.ts checks Onboarding's setup contribution and bundled webview.
+// packaged-core-extensions-smoke.p1.test.ts installs Workspaces, its native resource list and file document routes through packed SDK/UI/workbench.
 // packaged-core-extensions-smoke.p1.test.ts installs Home through packed public SDK/UI packages and checks its landing declaration.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
 // packaged-artifact-watch-limit.p2.test.ts checks watched mounts refresh when an initial tree exceeds the folder limit.
@@ -67,6 +68,10 @@ import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { expectPackagedProjectChoices, writePackagedChoiceSources } from "./packaged-project-setup-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import {
+  expectPackagedWorkspacePresentation,
+  writeWorkspacePresentationExtension,
+} from "./packaged-workspace-presentation-smoke";
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -150,6 +155,7 @@ test(
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
+          { source: writeWorkspacePresentationExtension(tempRoot), installName: "workspace-presentation" },
           { source: nativeActions, installName: "native-actions" },
           { source: writeNativeMarkdownExtension(tempRoot), installName: "native-markdown" },
           { source: otherNativeActions, installName: "other-native-actions" },
@@ -236,6 +242,11 @@ test(
       });
       await expectPackagedNativeMarkdown({
         projectFolder,
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      await expectPackagedWorkspacePresentation({
         baseUrl: started.baseUrl,
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),

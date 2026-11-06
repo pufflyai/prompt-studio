@@ -3,12 +3,13 @@ import { MoreHorizontal, PlayIcon, Settings, ShieldCheck, Sparkles } from "lucid
 import type { ComponentProps, ReactNode } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 import { InfoCard } from "@/components/primitives/info-card";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 
 type StoryFn = () => ReactNode;
 type InfoCardArgs = ComponentProps<typeof InfoCard>;
 const meta = {
-  title: "Components/Data Display/Info Card",
+  title: "Design system/Components/Data display/Info card",
   component: InfoCard,
   decorators: [
     (Story: StoryFn) => (
@@ -26,8 +27,11 @@ const meta = {
     ],
   },
 };
-export default meta;
-export const Default = {
+export default {
+  title: "Design system/Components/Data display/Info card",
+  fullscreen: true,
+};
+const Default = {
   id: "components-data-display-info-card--default",
   render: (args: InfoCardArgs) => (
     <Box maxWidth="520px">
@@ -35,7 +39,7 @@ export const Default = {
     </Box>
   ),
 };
-export const WithActions = {
+const WithActions = {
   id: "components-data-display-info-card--with-actions",
   render: (args: InfoCardArgs) => {
     const actions = [
@@ -92,7 +96,7 @@ export const WithActions = {
     );
   },
 };
-export const WithBadge = {
+const WithBadge = {
   id: "components-data-display-info-card--with-badge",
   args: {
     badge: (
@@ -107,7 +111,7 @@ export const WithBadge = {
     </Box>
   ),
 };
-export const LongCopy = {
+const LongCopy = {
   id: "components-data-display-info-card--long-copy",
   args: {
     title: "Northwind Traders Q4 validation",
@@ -124,3 +128,8 @@ export const LongCopy = {
     </Box>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Default, WithActions, WithBadge, LongCopy });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

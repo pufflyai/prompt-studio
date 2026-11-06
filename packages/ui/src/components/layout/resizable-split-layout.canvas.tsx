@@ -37,7 +37,7 @@ const PanelCard = (props: PanelCardProps) => {
   );
 };
 const meta = {
-  title: "Components/Layout/Resizable Split Layout",
+  title: "Design system/Components/Layout/Resizable split layout/Overview",
   component: ResizableSplitLayout,
   fullscreen: true,
   args: {

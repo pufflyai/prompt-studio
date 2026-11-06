@@ -257,7 +257,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
 
   const menuPositioner = (
     <Menu.Positioner>
-      <Menu.Content w={width} bg="bg" gap="0" p="0">
+      <Menu.Content w={width} minW="0" maxW="var(--available-width)" bg="bg" gap="0" p="0">
         {resolvedHeader}
         {searchInput}
         {shouldShowSeparator ? <Menu.Separator margin="0" /> : null}

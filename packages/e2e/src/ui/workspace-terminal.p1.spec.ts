@@ -15,19 +15,21 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
 
 const openWorkspaceTerminal = async (page: import("@playwright/test").Page, workspaceName: string) => {
   const workspaceRow = page
-    .getByRole("row")
-    .filter({ has: page.getByRole("cell", { name: workspaceName, exact: true }) })
+    .getByRole("region", { name: "Main", exact: true })
+    .getByRole("option")
+    .filter({ hasText: workspaceName })
     .first();
   await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
-  await workspaceRow.getByRole("button", { name: "Row actions" }).click();
+  await workspaceRow.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   await expect(page.getByRole("region", { name: "Secondary Panel" })).toBeVisible();
 };
 
 const openWorkspace = async (page: import("@playwright/test").Page, workspaceName: string) => {
   const workspaceRow = page
-    .getByRole("row")
-    .filter({ has: page.getByRole("cell", { name: workspaceName, exact: true }) })
+    .getByRole("region", { name: "Main", exact: true })
+    .getByRole("option")
+    .filter({ hasText: workspaceName })
     .first();
   await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
   await workspaceRow.click();
@@ -177,7 +179,13 @@ test("keeps a workspace terminal in its worktree and alive when the workspace is
     await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__ps296_set__kept__");
 
     await page.getByRole("button", { name: "Navigate back" }).click();
-    await expect(page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first()).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: "Main", exact: true })
+        .getByRole("option")
+        .filter({ hasText: workspace.workspace_shorthand })
+        .first(),
+    ).toBeVisible();
     await openWorkspace(page, workspace.workspace_shorthand);
     await showSecondaryPanel(page);
     await page.locator(".xterm:visible").click();

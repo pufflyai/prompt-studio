@@ -4,7 +4,7 @@ import { TICKETS_COLLECTION } from "../data/collections";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import { requestHumanCommand, reviewCommand } from "./review-requests";
+import { requestReviewCommand, reviewCommand } from "./review-requests";
 
 test("answering a request preserves ticket edits that race with its reads", async () => {
   const storage = createMemoryStorage();
@@ -18,7 +18,7 @@ test("answering a request preserves ticket edits that race with its reads", asyn
     },
   });
   const ticket = await createTicketCommand.run(ctx, { title: "Original" });
-  const request = await requestHumanCommand.run(ctx, {
+  const request = await requestReviewCommand.run(ctx, {
     ticket: ticket.id,
     title: "Check preview",
     instructions: "Confirm the preview.",

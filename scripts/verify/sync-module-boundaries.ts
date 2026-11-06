@@ -8,6 +8,7 @@ const dependencies: Record<string, readonly string[]> = {
   encryption: ["shared"],
   records: ["shared", "text"],
   relay: ["shared", "records", "text", "encryption"],
+  logs: ["shared", "records", "encryption", "relay"],
 };
 const external = new Set(["pstdio-sync-contracts", "yjs", "fast-diff"]);
 

@@ -182,7 +182,7 @@ const PaletteStory = (props: PaletteStoryProps) => {
   );
 };
 const meta: CanvasMeta<typeof PaletteStory> = {
-  title: "Components/Overlays/Palette",
+  title: "Design system/Components/Overlays/Palette/Overview",
   component: PaletteStory,
   fullscreen: true,
 };

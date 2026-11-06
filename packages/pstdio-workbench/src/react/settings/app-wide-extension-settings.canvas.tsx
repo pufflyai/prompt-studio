@@ -76,7 +76,7 @@ const AppWideSettings = (props: { projectId: string }) => {
   return <Workbench workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/App-wide extension settings",
+  title: "Product/Workbench/Settings/App-wide extension settings",
   component: AppWideSettings,
   args: { projectId: "first-project" },
   decorators: [

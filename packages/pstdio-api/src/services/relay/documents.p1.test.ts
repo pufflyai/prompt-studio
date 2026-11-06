@@ -1,7 +1,7 @@
 import { expect, spyOn, test } from "bun:test";
 import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
 import { createSyncSpace } from "pstdio-sync/encryption";
-import { syncRoute } from "pstdio-sync-contracts";
+import { syncBlobReferencesFeature, syncRoute } from "pstdio-sync-contracts";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createExtensionDocumentSync } from "./documents";
@@ -83,7 +83,7 @@ for (const { heldSource, cold } of [
     const name = JSON.stringify(["native-markdown", "known"]);
     const documentId = await space.documentId(JSON.stringify([owner.extensionId, name]));
     const ownerId = await space.documentId(JSON.stringify([owner.extensionId, "owner"]));
-    const streamId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream"]));
+    const streamId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream-v2"]));
     const heldId =
       heldSource === "owner"
         ? ownerId
@@ -127,6 +127,8 @@ for (const { heldSource, cold } of [
       async fetch(request) {
         const url = new URL(request.url);
         if (url.pathname.endsWith("/keys")) return Response.json({ project: keys, personal: keys });
+        if (url.pathname.endsWith("/capabilities"))
+          return Response.json({ protocolVersion: 1, features: [syncBlobReferencesFeature] });
         const route = syncRoute(url.pathname);
         if (!route || !("documentId" in route)) return new Response(null, { status: 404 });
         const target = relay.relay(route.documentId);
@@ -276,6 +278,8 @@ test("offline saves keep known pending counts and new documents invalidate disco
     hostname: "127.0.0.1",
     port: 0,
     fetch(request) {
+      if (new URL(request.url).pathname.endsWith("/capabilities"))
+        return Response.json({ protocolVersion: 1, features: [syncBlobReferencesFeature] });
       if (new URL(request.url).pathname.endsWith("/keys"))
         return Response.json({
           project: [{ generation: 1, secret: "A".repeat(43) }],
@@ -302,16 +306,16 @@ test("offline saves keep known pending counts and new documents invalidate disco
   const listing = spyOn(app.deps.extensionStorageService.documents, "list");
   try {
     await sync.synchronize(new AbortController().signal);
-    expect(await sync.status()).toMatchObject({ pendingItems: 0, download: { completed: 2, total: 2 } });
+    expect(await sync.status()).toMatchObject({ pendingItems: 0, download: { completed: 3, total: 3 } });
     const storage = await app.deps.extensionStorageService.open({ owner });
     await storage.records.commit({
       operationId: "offline-save",
       edits: [{ recordId: "note", replace: "Saved offline" }],
     });
     listing.mockClear();
-    expect(await sync.status()).toMatchObject({ pending: true, pendingItems: 1, download: { total: 2 } });
+    expect(await sync.status()).toMatchObject({ pending: true, pendingItems: 1, download: { total: 3 } });
     await storage.setDataVersion("project", 1);
-    expect(await sync.status()).toMatchObject({ pendingItems: 2, download: { total: 2 } });
+    expect(await sync.status()).toMatchObject({ pendingItems: 2, download: { total: 3 } });
     expect(listing).not.toHaveBeenCalled();
     await app.deps.extensionStorageService.documents
       .open(JSON.stringify(["text-file", "new.md"]))

@@ -108,7 +108,7 @@ const CommandParameterExample = (props: ComponentProps<typeof CommandParamsDialo
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Command parameters",
+  title: "Product/Workbench/Commands/Command parameters",
   component: CommandParamsDialog,
   description:
     "Command parameter schemas in @pstdio/sdk/extensions describe input fields. The host renders the form, validates it, and passes normalized values to the command.",

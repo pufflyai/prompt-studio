@@ -46,9 +46,10 @@ const StreamingComposer = (props: { fail?: boolean; slow?: boolean; question?: b
     </Box>
   );
 };
-const meta = { title: "Patterns/Chat/Follow-up submission", component: StreamingComposer } satisfies CanvasMeta<
-  typeof StreamingComposer
->;
+const meta = {
+  title: "Design system/Patterns/Chat/Follow-up submission",
+  component: StreamingComposer,
+} satisfies CanvasMeta<typeof StreamingComposer>;
 export default meta;
 export const QueueWhileRunning: CanvasFrame<typeof meta> = {
   id: "patterns-chat-follow-up-submission--queue-while-running",

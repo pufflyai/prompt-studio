@@ -189,7 +189,7 @@ test.describe("Workspace diff", () => {
   });
 });
 
-test.describe("Workspace table", () => {
+test.describe("Grouped Workspaces", () => {
   let projectId: string;
   const repoDirs: string[] = [];
 
@@ -221,23 +221,62 @@ test.describe("Workspace table", () => {
     }, projectId);
 
     await page.goto(`/projects/${projectId}/workspaces`);
-    const workspaceRow = page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first();
+    const workspaceRow = page
+      .getByRole("region", { name: "Main", exact: true })
+      .getByRole("option")
+      .filter({ hasText: workspace.workspace_shorthand })
+      .first();
     await expect(workspaceRow).toBeVisible();
-    await expect(workspaceRow).toContainText(/\+0\s*-0/);
 
-    await workspaceRow.getByRole("button", { name: "Row actions" }).click();
+    await workspaceRow.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename workspace" }).click();
 
-    const dialog = page.getByRole("dialog", { name: "Rename workspace" });
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole("textbox", { name: "Workspace name" }).fill(nextName);
-    await dialog.getByRole("button", { name: "Rename workspace", exact: true }).click();
+    const dialog = page.frameLocator('iframe[title="Workspace action"]');
+    await dialog.getByRole("textbox", { name: "Name" }).fill(nextName);
+    await dialog.getByRole("button", { name: "Rename", exact: true }).click();
 
-    await expect(page.getByRole("row").filter({ hasText: nextName }).first()).toBeVisible();
+    await page.getByRole("option", { name: "Workspaces", exact: true }).click();
+    await expect(
+      page.getByRole("region", { name: "Main", exact: true }).getByRole("option").filter({ hasText: nextName }).first(),
+    ).toBeVisible();
 
     const listRes = await request.get(`${apiBase}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
     expect(listRes.ok()).toBe(true);
     const workspaces = (await listRes.json()) as Array<Workspace & { name: string }>;
     expect(workspaces.find((item) => item.id === workspace.id)?.name).toBe(nextName);
   });
+});
+
+// Critical risk: the capacity count must open an editable local device setting rather than
+// silently changing another machine's limit or hiding the recovery control.
+test("device details update this device's workspace limit", async ({ page, request }) => {
+  const before = await (await request.get(`${apiBase}/v1/workspaces/capacity`)).json();
+  const project = await createProjectViaApi(request, "Workspace device details");
+  try {
+    await page.addInitScript((id) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("dashboard-wb2:selected-project:global", id);
+    }, project.id);
+    await page.goto(`/projects/${project.id}/workspaces`);
+    const workspaceUrl = page.url();
+    await page.getByText(before.deviceName, { exact: true }).filter({ visible: true }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "This device", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Device details", exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(workspaceUrl);
+    const limited = dialog.getByRole("checkbox", { name: "Limit workspaces", exact: true });
+    if (!(await limited.isChecked())) await limited.press("Space");
+    await expect(limited).toBeChecked();
+    await dialog.getByRole("spinbutton", { name: "Workspace limit", exact: true }).fill("3");
+    await dialog.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect
+      .poll(async () => (await (await request.get(`${apiBase}/v1/workspaces/capacity`)).json()).limit)
+      .toBe(3);
+    await limited.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(workspaceUrl);
+  } finally {
+    await request.patch(`${apiBase}/v1/workspaces/capacity`, { data: { limit: before.limit } });
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+  }
 });

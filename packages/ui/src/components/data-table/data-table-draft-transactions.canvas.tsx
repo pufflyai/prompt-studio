@@ -53,7 +53,7 @@ const DraftTransactionsScene = () => {
 };
 
 const meta = {
-  title: "Components/Data Display/DataTable/Draft Transactions",
+  title: "Design system/Components/Data display/Data table/Draft transactions",
   component: DataTable,
 } satisfies CanvasMeta<typeof DataTable>;
 export default meta;

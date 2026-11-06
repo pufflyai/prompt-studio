@@ -13,6 +13,7 @@ import { createExtensionAutomationPreferencesService } from "./services/extensio
 import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
+import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createProjectService } from "./services/project-service";
 import { createSettingsService } from "./services/settings-service";
 import { createSyncService } from "./services/sync-service";
@@ -116,3 +117,14 @@ export const createCoreDomainServices = (input: {
     }),
   };
 };
+
+export const createAppPersonalHistory = (
+  storage: RouteDeps["extensionStorageService"],
+  input: Omit<Parameters<typeof createPersonalHistoryService>[0], "documents" | "index" | "logStreams">,
+) =>
+  createPersonalHistoryService({
+    ...input,
+    documents: storage.documents,
+    index: storage.personalHistoryIndex,
+    logStreams: storage.logs,
+  });

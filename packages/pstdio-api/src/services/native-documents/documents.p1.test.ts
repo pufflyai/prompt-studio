@@ -3,12 +3,12 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
-import { Hono } from "hono";
 import { createDb, createExtensionStorageDBService, projects } from "pstdio-db";
 import { saveTextDocument, seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
 import { createWorkspaceContextFixture } from "../../features/extensions/workspace-context.test-fixture";
 import { createNativeDocumentRoutes } from "../../features/native-documents/routes";
+import { createTextStreamTestApp } from "../../features/text-editing/stream.test-utils";
 import { createNativeDocumentService } from "./documents";
 import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./file-source";
 import { resolveNativeTextAccess } from "./source-access";
@@ -82,14 +82,73 @@ const setup = () => {
     deps,
     service: createService({
       storage: deps.extensionStorageService,
+      access: (input) => resolveNativeTextAccess(deps, input),
       load: (input) => loadNativeMarkdownFile(deps, input),
       save: (input) => saveNativeMarkdownFile(deps, input),
     }),
   };
 };
-const target = { fileRendererId: "example.context.view.document", resource: undefined };
+const target = { fileRendererId: "example.context.view.document", resource: undefined, pageParams: undefined };
 const open = (service: ReturnType<typeof createNativeDocumentService>) =>
   service.open({ ...target, projectId: storage.projectAId });
+
+test.each([
+  "clean",
+  "acknowledged",
+  "received",
+  "unintegrated",
+])("closing a deleted record source releases only integrated room history: %s", async (state) => {
+  const { deps } = setup();
+  const owner = { workbenchId: storage.projectAId, extensionId: "example.context" };
+  const records = (await storage.svc.open({ owner })).records;
+  await records.commit({ operationId: "create-source", edits: [{ recordId: "source", replace: { body: "saved" } }] });
+  const source = { kind: "record" as const, recordId: "source", field: "/body" };
+  const service = createService({
+    storage: storage.svc,
+    load: async () => ({
+      ...(await resolveNativeLoadedSource(deps, { owner, source, content: "saved", versions: {} })),
+      owner,
+      content: { content: "saved", documentSource: source },
+      saveHandlerId: "record-save",
+      projectionTarget: target,
+    }),
+    save: async () => ({ fileStorageVersions: {} }),
+  });
+  const room = await service.open({ ...target, projectId: storage.projectAId });
+  const address = { projectId: storage.projectAId, roomId: room.roomId };
+  if (state === "received") {
+    await storage.svc.openNativeTextDocument({ owner, fileId: room.documentKey }).save("remote work");
+    await service.snapshot(address);
+  } else if (state !== "clean") {
+    const author = new Y.Doc();
+    try {
+      Y.applyUpdate(author, room.state);
+      const before = Y.encodeStateVector(author);
+      saveTextDocument(author, "editor work");
+      const update = Y.encodeStateAsUpdate(author, before);
+      if (state === "acknowledged") await service.submit({ ...address, update });
+      else await storage.svc.nativeRooms.apply({ owner, roomId: room.roomId, update });
+    } finally {
+      author.destroy();
+    }
+  }
+  await records.commit({ operationId: "remove-source", edits: [{ recordId: "source", deleted: true }] });
+  if (state === "unintegrated") {
+    await expect(service.release(address)).rejects.toMatchObject({ code: "native_source_retired" });
+    const retained = await storage.svc.nativeRooms.read({ owner, roomId: room.roomId });
+    try {
+      expect(retained.document.getText("content").toString()).toBe("editor work");
+    } finally {
+      retained.document.destroy();
+    }
+  } else {
+    await service.release(address);
+    await expect(storage.svc.nativeRooms.read({ owner, roomId: room.roomId })).rejects.toMatchObject({
+      code: "not_found",
+    });
+  }
+  expect((await records.read("source")).deleted).toBe(true);
+});
 
 test("restart retains a deleted record's pending text and continues recovering a healthy source", async () => {
   const { deps } = setup();
@@ -123,24 +182,43 @@ test("restart retains a deleted record's pending text and continues recovering a
     fileRendererId: "cached-record",
     resource: undefined,
   });
-  await service.close({ projectId: storage.projectAId, roomId: retired.roomId });
+  const author = new Y.Doc();
+  try {
+    Y.applyUpdate(author, retired.state);
+    const before = Y.encodeStateVector(author);
+    saveTextDocument(author, "retained late text");
+    await storage.svc.nativeRooms.apply({
+      owner,
+      roomId: retired.roomId,
+      update: Y.encodeStateAsUpdate(author, before),
+    });
+  } finally {
+    author.destroy();
+  }
   const healthy = await open(service);
   await service.close({ projectId: storage.projectAId, roomId: healthy.roomId });
   await service.dispose();
   await records.commit({ operationId: "delete-source", edits: [{ recordId: "retired", deleted: true }] });
-  await storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).save("retained late text");
+  await expect(
+    storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).save("cannot revive"),
+  ).rejects.toMatchObject({ code: "native_source_retired" });
   await storage.svc.openNativeTextDocument({ owner, fileId: healthy.documentKey }).save("healthy pending text");
   // This fresh service resolves the same cached declaration; deletion is a known source error.
   const reopened = createService({ storage: storage.svc, load, save });
   await reopened.recover();
   expect((await records.read("retired")).deleted).toBe(true);
-  expect(await storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).read()).toBe(
-    "retained late text",
+  await expect(storage.svc.openNativeTextDocument({ owner, fileId: retired.documentKey }).read()).rejects.toMatchObject(
+    { code: "native_source_retired" },
   );
-  expect(await Array.fromAsync(storage.svc.nativeFileProjections.pending())).toContainEqual({
-    owner,
-    documentKey: retired.documentKey,
-  });
+  const retained = await storage.svc.nativeRooms.read({ owner, roomId: retired.roomId });
+  try {
+    expect(retained.document.getText("content").toString()).toBe("retained late text");
+  } finally {
+    retained.document.destroy();
+  }
+  expect(await Array.fromAsync(storage.svc.nativeRooms.pending())).toContainEqual(
+    expect.objectContaining({ owner, id: retired.roomId }),
+  );
   expect(await readFile(join(extension.root, "notes.txt"), "utf8")).toBe("healthy pending text");
 });
 
@@ -1098,7 +1176,7 @@ test("reconnect acknowledges pending raw editor frames from their received basel
 
 test("the browser client receives live participants and stream cancellation removes its connection", async () => {
   const { service } = setup();
-  const routes = new Hono().route("/v1", createNativeDocumentRoutes(service));
+  const routes = createTextStreamTestApp(undefined, service);
   const client = createClient({
     baseUrl: "http://localhost",
     fetch: ((url, init) => routes.fetch(new Request(String(url), init))) as typeof fetch,
@@ -1164,7 +1242,7 @@ test("the browser client receives live participants and stream cancellation remo
 
 test("the browser client uses the local API for binary edits and document streams", async () => {
   const { service } = setup();
-  const routes = new Hono().route("/v1", createNativeDocumentRoutes(service));
+  const routes = createTextStreamTestApp(undefined, service);
   const client = createClient({
     baseUrl: "http://localhost",
     fetch: ((url, init) => routes.fetch(new Request(String(url), init))) as typeof fetch,
@@ -1208,5 +1286,62 @@ test("the browser client uses the local API for binary edits and document stream
     await watching;
     await client.close({ projectId: storage.projectAId, documentKey: room.documentKey, roomId: room.roomId });
     author.destroy();
+  }
+});
+
+test("a record field editor materializes its ordered owner without a second native relay or provider save", async () => {
+  const owner = { workbenchId: storage.projectAId, extensionId: "example.context" };
+  const records = (await storage.svc.open({ owner })).records;
+  await records.commit({
+    operationId: "field-owner",
+    edits: [{ recordId: "body-field", replace: { content: "canonical" } }],
+  });
+  const source = { kind: "record" as const, recordId: "body-field", field: "/content" };
+  const load = async () => {
+    const content = ((await records.read(source.recordId)).value as { content: string }).content;
+    const binding = await resolveNativeLoadedSource(
+      { ...extension.deps, extensionStorageService: storage.svc },
+      {
+        owner,
+        source,
+        content,
+        versions: {},
+      },
+    );
+    return {
+      ...binding,
+      owner,
+      content: { content, documentSource: source },
+      fileStorageVersions: binding.fileStorageVersions,
+      saveHandlerId: "field-provider",
+      projectionTarget: target,
+    };
+  };
+  let saves = 0;
+  const service = createService({
+    storage: storage.svc,
+    load,
+    save: async () => {
+      saves++;
+      throw new Error("A record field already belongs to the ordered owner");
+    },
+  });
+  const opened = await open(service);
+  const document = new Y.Doc();
+  try {
+    Y.applyUpdate(document, opened.state);
+    const before = Y.encodeStateVector(document);
+    document.getText("content").insert(document.getText("content").length, " typed");
+    const request = { projectId: storage.projectAId, roomId: opened.roomId, documentKey: opened.documentKey };
+    const submitted = await service.submit({ ...request, update: Y.encodeStateAsUpdate(document, before) });
+    await service.project({ ...request, revision: submitted.revision });
+    await service.flush(request);
+    expect((await records.read(source.recordId)).value).toEqual({ content: "canonical typed" });
+    expect(service.sources.current(owner)).toEqual([]);
+    expect(saves).toBe(0);
+    expect(submitted.seedId).toBe(opened.seedId);
+    await service.close(request);
+  } finally {
+    document.destroy();
   }
 });

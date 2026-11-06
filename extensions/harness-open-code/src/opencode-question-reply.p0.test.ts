@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from "bun:test";
-import type { HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
+import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
+import { acceptedPrompt, nativeMessagesResponse } from "./native-api.test-helpers";
 import { recordingSink } from "./opencode-session-poller.test-helpers";
 import type { OpencodeSessionMessage } from "./opencode-types";
 
@@ -26,7 +27,7 @@ const ctx: HarnessContext = {
 };
 
 const serviceOverrides = () => ({
-  startServer: async () => ({ url: "http://localhost:4096", dispose: async () => {} }),
+  startServer: async () => ({ running: true, url: "http://localhost:4096", dispose: async () => {} }),
   serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
   pingServer: async () => true,
   isPortOpen: async () => true,
@@ -89,26 +90,27 @@ const parseFetchRequest = (input: RequestInfo | URL, init?: RequestInit) => ({
 
 const parseJsonBody = (init: RequestInit | undefined) => JSON.parse(init?.body as string);
 
-const createQuestionListResponse = () =>
-  new Response(
-    JSON.stringify([
-      {
-        id: "que-weather",
-        sessionID: "oc-1",
-        questions: [
-          {
-            question: "What's the weather like where you are today?",
-            header: "Weather",
-            options: [{ label: "Hot" }, { label: "Nice" }],
-          },
-        ],
-        tool: { messageID: "msg-question", callID: "call-question" },
-      },
-    ]),
-  );
+const questionForm = {
+  id: "frm_weather",
+  sessionID: "oc-1",
+  title: "Weather",
+  metadata: { kind: "question", tool: { messageID: "msg-question", id: "call-question" } },
+  fields: [
+    {
+      type: "string",
+      key: "weather",
+      title: "Weather",
+      options: [
+        { value: "hot", label: "Hot" },
+        { value: "nice", label: "Nice" },
+      ],
+    },
+  ],
+};
+const createQuestionListResponse = () => Response.json({ data: [questionForm] });
 
 const getSessionMessageId = (request: FetchRequestContext) => {
-  const messageMatch = request.url.pathname.match(/^\/session\/([^/]+)\/message$/);
+  const messageMatch = request.url.pathname.match(/^\/api\/session\/([^/]+)\/message$/);
   return messageMatch?.[1] ?? null;
 };
 
@@ -135,26 +137,28 @@ const createQuestionReplyFetcher = (handlers: QuestionReplyFetcherInput) => {
   return async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = parseFetchRequest(input, init);
 
-    if (request.method === "GET" && request.url.pathname === "/question") {
+    if (request.method === "GET" && request.url.pathname === "/api/session/oc-1/form") {
       return createQuestionListResponse();
     }
 
-    if (request.method === "POST" && request.url.pathname === "/question/que-weather/reply") {
-      const body = parseJsonBody(request.init) as QuestionReplyBody;
+    if (request.method === "POST" && request.url.pathname === "/api/session/oc-1/form/frm_weather/reply") {
+      const native = parseJsonBody(request.init) as { answer: { weather: string } };
+      const body = { answers: [[native.answer.weather === "nice" ? "Nice" : "Hot"]] };
       handlers.onReply?.(body);
       return new Response("true");
     }
 
+    if (request.url.pathname === "/api/session/oc-1/form/frm_weather") return Response.json({ data: questionForm });
     const sessionId = getSessionMessageId(request);
     if (request.method === "GET" && sessionId) {
       // Each poll stands for one production poll interval, so idle grace periods still span the same number of polls.
       if (advanceClock) setSystemTime(Date.now() + 1_000);
-      return new Response(JSON.stringify(handlers.getSessionMessages(sessionId)));
+      return nativeMessagesResponse(handlers.getSessionMessages(sessionId));
     }
 
     if (request.method === "POST" && sessionId) {
       handlers.onFollowUp?.(parseJsonBody(request.init));
-      return new Response(JSON.stringify({ info: {}, parts: [] }));
+      return acceptedPrompt();
     }
 
     return new Response("{}", { status: 404 });
@@ -177,7 +181,21 @@ describe("OpenCode question replies", () => {
   test("answers the pending question request instead of sending a follow-up message", async () => {
     const questionMessage = createRunningQuestionMessage();
     const sessionMessages: Record<string, OpencodeSessionMessage[]> = {
-      "oc-1": [{ role: "user", content: [{ type: "text", text: "Ask me about the weather" }] }, questionMessage],
+      "oc-1": [
+        {
+          info: { id: "msg_earlier", role: "assistant", time: { created: 1, completed: 2 } },
+          parts: [
+            {
+              type: "tool",
+              tool: "question",
+              callID: "call_earlier",
+              state: { status: "completed", input: {}, output: "answered earlier" },
+            },
+          ],
+        },
+        { role: "user", content: [{ type: "text", text: "Ask me about the weather" }] },
+        questionMessage,
+      ],
     };
     const replyBodies: unknown[] = [];
     const normalFollowUps: unknown[] = [];
@@ -192,7 +210,7 @@ describe("OpenCode question replies", () => {
     });
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -204,8 +222,7 @@ describe("OpenCode question replies", () => {
     });
 
     const exit = await session.done;
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const lastMessages = messagePatches.at(-1)?.value as SessionMessage[];
+    const lastMessages = sink.getMessages();
 
     expect(exit).toEqual({ status: "completed" });
     expect(normalFollowUps).toEqual([]);
@@ -239,7 +256,7 @@ describe("OpenCode question replies", () => {
     });
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -251,8 +268,7 @@ describe("OpenCode question replies", () => {
     });
 
     const exit = await session.done;
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const lastMessages = messagePatches.at(-1)?.value as SessionMessage[];
+    const lastMessages = sink.getMessages();
 
     expect(exit).toEqual({ status: "completed" });
     expect(replyBodies).toEqual([{ answers: [["Nice"]] }]);
@@ -292,7 +308,7 @@ describe("OpenCode question replies", () => {
     });
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -304,8 +320,7 @@ describe("OpenCode question replies", () => {
     });
 
     const exit = await session.done;
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const lastMessages = messagePatches.at(-1)?.value as SessionMessage[];
+    const lastMessages = sink.getMessages();
 
     expect(exit).toEqual({ status: "completed" });
     expect(lastMessages.at(-1)?.parts[0]).toEqual({ type: "text", text: "Thanks, TypeScript works." });

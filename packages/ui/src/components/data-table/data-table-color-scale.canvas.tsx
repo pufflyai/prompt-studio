@@ -1,4 +1,5 @@
 import { Box } from "@chakra-ui/react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { DataTable, type DataTableProps, type RowData } from ".";
 
 const scoreRows: RowData[] = [
@@ -17,17 +18,20 @@ const statusRows: RowData[] = [
   { Project: "Partner rollout", Owner: "Mia", Status: "On track" },
 ];
 const meta = {
-  title: "Components/Data Display/Data Table",
+  title: "Design system/Components/Data display/Data table/Color scales",
   component: DataTable,
 };
-export default meta;
+export default {
+  title: "Design system/Components/Data display/Data table/Color scales",
+  fullscreen: true,
+};
 const themedColor = (light: string, dark: string) => ({ light, dark });
 const StoryFrame = (args: DataTableProps) => (
   <Box width="100%" maxWidth="880px" height="440px" marginX="auto" padding="sm" background="bg">
     <DataTable {...args} />
   </Box>
 );
-export const ColorScales = {
+const ColorScales = {
   id: "components-data-display-data-table--color-scales",
   args: {
     data: scoreRows,
@@ -62,7 +66,7 @@ export const ColorScales = {
   },
   render: StoryFrame,
 };
-export const CategoricalColors = {
+const CategoricalColors = {
   id: "components-data-display-data-table--categorical-colors",
   args: {
     data: statusRows,
@@ -83,3 +87,8 @@ export const CategoricalColors = {
   },
   render: StoryFrame,
 };
+
+const Examples = createCanvasExampleNavigator(meta, { ColorScales, CategoricalColors });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as ColorScales };

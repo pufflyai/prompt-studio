@@ -5,6 +5,7 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionBubbleModule } from "./module";
 
@@ -56,6 +57,7 @@ describe("createSessionBubbleModule workspace resolution", () => {
       },
     ]);
     selectDashboardProject(workbench, { id: "project-default-workspace", name: "Prompt Studio" });
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionBubbleModule());
     try {
@@ -107,6 +109,7 @@ describe("createSessionBubbleModule workspace resolution", () => {
     ]);
     selectDashboardProject(workbench, { id: "project-workspace-resource", name: "Prompt Studio" });
     workbench.registerModule(createSessionBubbleModule());
+    registerWorkspaceProviderViews(workbench);
     workbench.registerModule(createWorkspacesModule());
     try {
       const activeWorkspace = workbench.resources

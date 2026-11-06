@@ -5,9 +5,9 @@ import { findTicket } from "../data/resolve";
 import { type CreateReviewRequestInput, createReviewRequest } from "../data/review-request-create";
 import { answerReviewRequest, cancelReviewRequest, openReviewRequestSession } from "../data/review-request-service";
 import { listTicketReviewRequests, readReviewRequest } from "../data/review-request-storage";
-import type { HumanRequestReason, ReviewRequestBody, ReviewResponse } from "../data/review-request-types";
+import type { ReviewRequestBody, ReviewRequestReason, ReviewResponse } from "../data/review-request-types";
 
-const humanRequestReasons: HumanRequestReason[] = [
+const reviewRequestReasons: ReviewRequestReason[] = [
   "approved-revision",
   "ambiguous-dependency-attempt",
   "divergent-dependency-attempts",
@@ -28,10 +28,15 @@ const attemptStates: AttemptState[] = [
   "abandoned",
 ];
 
-export const requestHumanCommand = defineCommand({
-  id: "request-human",
-  title: "Request human input",
-  cli: { description: "Ask a person for a task confirmation or a decision and mark the ticket as needing attention." },
+export const requestReviewCommand = defineCommand({
+  id: "request-review",
+  title: l10n("commands.requestReview.title", "Request review"),
+  cli: {
+    description: l10n(
+      "commands.requestReview.description",
+      "Create a review request and mark the ticket as needing attention.",
+    ),
+  },
   mutating: true,
   params: {
     ticket: params.text({ required: true }),
@@ -44,7 +49,7 @@ export const requestHumanCommand = defineCommand({
         { label: "Merge", value: "merge" },
       ],
     }),
-    reason: params.select({ options: humanRequestReasons.map((reason) => ({ label: reason, value: reason })) }),
+    reason: params.select({ options: reviewRequestReasons.map((reason) => ({ label: reason, value: reason })) }),
     workspaceId: params.text(),
     revision: params.number(),
     sessionId: params.text(),

@@ -202,7 +202,13 @@ test("keeps the Secondary Panel closed from Workspaces until requested", async (
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
 
   await page.goto(`/projects/${project.id}/workspaces`);
-  await expect(page.getByRole("row").filter({ hasText: "Project folder" }).first()).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Main", exact: true })
+      .getByRole("option")
+      .filter({ hasText: "Project folder" })
+      .first(),
+  ).toBeVisible();
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
   await showSecondary.click();
 

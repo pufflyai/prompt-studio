@@ -11,6 +11,7 @@ import {
 } from "@pstdio/sdk/extensions";
 
 import { cloudAcceptanceCommands } from "./cloud-acceptance-commands";
+import { collectionObservation } from "./collection-observation-command";
 
 const read = defineCommand({
   id: "read",
@@ -164,6 +165,7 @@ const queryRecords = defineCommand({
   },
 });
 export default defineExtension({
+  storage: { records: { text: [{ prefix: "shape", fields: ["/body"] }] } },
   artifactMounts: [documents],
   storageIndexes: [
     {
@@ -175,6 +177,7 @@ export default defineExtension({
   ],
   resourceKinds: [defineResourceKind({ id: "note", prefix: "NR" })],
   commands: [
+    collectionObservation,
     ...cloudAcceptanceCommands,
     read,
     writeFile,

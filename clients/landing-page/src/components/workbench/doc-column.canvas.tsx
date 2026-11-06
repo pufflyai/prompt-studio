@@ -24,7 +24,7 @@ const TERMS_HTML = `
 <p>A short paragraph of placeholder text.</p>
 `;
 const meta = {
-  title: "Landing/DocColumn",
+  title: "Website/Docs/Document column",
   component: DocColumn,
   decorators: [
     (Story) => (

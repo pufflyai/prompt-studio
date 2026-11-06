@@ -107,6 +107,9 @@ export const createBenchEnvironment = async (
   const queuedRequestsRequireHost = async () => {
     throw new Error("Queued requests require the host runtime.");
   };
+  const workspaceOperationsRequireHost = async () => {
+    throw new Error("Workspace file and change operations require the host runtime.");
+  };
   const environment: CommandRunnerEnvironment = {
     project: { id: projectId, name: "Bench Project", shorthand: "BP" },
     storage: createStorage(seed),
@@ -186,6 +189,17 @@ export const createBenchEnvironment = async (
       steerQueuedFollowUp: queuedRequestsRequireHost,
     },
     workspaces: {
+      rename: workspaceOperationsRequireHost,
+      listFiles: workspaceOperationsRequireHost,
+      readFile: workspaceOperationsRequireHost,
+      createDirectory: workspaceOperationsRequireHost,
+      createFile: workspaceOperationsRequireHost,
+      writeFile: workspaceOperationsRequireHost,
+      moveEntry: workspaceOperationsRequireHost,
+      deleteEntry: workspaceOperationsRequireHost,
+      diffFiles: workspaceOperationsRequireHost,
+      diffFile: workspaceOperationsRequireHost,
+      diffSummary: workspaceOperationsRequireHost,
       getCapacity: async () => ({ deviceId: "bench", deviceName: "Preview", activeCount: 0, limit: null }),
       updateCapacity: async () => {
         throw new Error("Changing device workspace capacity requires the host runtime.");

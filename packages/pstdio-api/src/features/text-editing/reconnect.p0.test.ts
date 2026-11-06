@@ -113,16 +113,23 @@ test("a public session reacquires its source after service restart and recovers 
 
 test("restart recovery refuses a different source before admitting the retained edits", async () => {
   const f = await setup();
+  const disconnected = Promise.withResolvers<void>();
+  const stop = f.session.subscribe(() => {
+    if (!f.session.getSnapshot().connected) disconnected.resolve();
+  });
   try {
     await writeFile(join(f.root, "alternate-source"), "");
     await writeFile(join(f.root, "replacement.txt"), "Replacement source");
     await f.restart();
+    // Retire the old socket before testing renewed admission's source identity.
+    await disconnected.promise;
     f.session.transact((text) => text.insert(0, "keep old recovery "));
     await expect(f.session.flush()).rejects.toMatchObject({ code: "source_retired" });
     expect(f.session.getSnapshot().pending).toBe(true);
     expect(f.session.getSnapshot().text.toString()).toBe("keep old recovery selected folder");
     expect(await readFile(join(f.root, "replacement.txt"), "utf8")).toBe("Replacement source");
   } finally {
+    stop();
     await f.guest.close().catch(() => {});
   }
 });

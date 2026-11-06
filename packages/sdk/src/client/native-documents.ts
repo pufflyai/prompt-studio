@@ -8,8 +8,9 @@ import {
   nativePresenceSnapshotSchema,
   type NativeDocumentSnapshot as SnapshotWire,
 } from "pstdio-api-contracts";
+import { watchNativeDocument } from "./native-document-stream";
 import type { RequestFn } from "./request";
-import { readSseStream } from "./sse";
+import type { createSessionStreamTransport } from "./session-stream";
 
 export type NativeDocumentSnapshot = Omit<SnapshotWire, "state" | "sourceState"> & {
   state: Uint8Array;
@@ -44,18 +45,27 @@ const base = (projectId: string) => `/v1/projects/${encodeURIComponent(projectId
 const roomPath = (input: RoomRequest) =>
   `${base(input.projectId)}/${encodeURIComponent(input.documentKey)}?roomId=${encodeURIComponent(input.roomId)}`;
 
-export const createNativeDocumentsClient = (request: RequestFn) => ({
+export const createNativeDocumentsClient = (
+  request: RequestFn,
+  transport: ReturnType<typeof createSessionStreamTransport>,
+) => ({
   async open(input: {
     projectId: string;
     target: NativeTextTarget;
     sourceState?: Uint8Array;
+    generation?: string;
     pendingUpdate?: Uint8Array;
     signal?: AbortSignal;
   }) {
     const result = await request<unknown>(base(input.projectId), {
       method: "POST",
       signal: input.signal,
-      body: { ...input.target, sourceState: encode(input.sourceState), pendingUpdate: encode(input.pendingUpdate) },
+      body: {
+        ...input.target,
+        generation: input.generation,
+        sourceState: encode(input.sourceState),
+        pendingUpdate: encode(input.pendingUpdate),
+      },
     });
     return decode(nativeDocumentJoinedSchema.parse(result));
   },
@@ -78,19 +88,10 @@ export const createNativeDocumentsClient = (request: RequestFn) => ({
       onPresence?: (snapshot: NativePresenceSnapshot) => void;
     },
   ) {
-    const body = await request<ReadableStream<Uint8Array>>(
-      `${base(input.projectId)}/${encodeURIComponent(input.documentKey)}/stream?roomId=${encodeURIComponent(input.roomId)}`,
-      { signal: input.signal, response: "stream" },
-    );
-    await readSseStream(
-      body,
-      (event) => {
-        if (event.event === "document")
-          input.onSnapshot(decode(nativeDocumentSnapshotSchema.parse(JSON.parse(event.data))));
-        if (event.event === "presence") input.onPresence?.(nativePresenceSnapshotSchema.parse(JSON.parse(event.data)));
-      },
-      { signal: input.signal },
-    );
+    await watchNativeDocument(transport, input, (event, data) => {
+      if (event === "document") input.onSnapshot(decode(nativeDocumentSnapshotSchema.parse(data)));
+      if (event === "presence") input.onPresence?.(nativePresenceSnapshotSchema.parse(data));
+    });
   },
   presence: (input: RoomRequest & { participantId: string; seedId: string; selection: NativeDocumentSelection }) =>
     request<{ updated: true }>(`${base(input.projectId)}/${encodeURIComponent(input.documentKey)}/presence`, {

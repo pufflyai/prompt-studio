@@ -92,7 +92,7 @@ const EditableLinkMessage = () => {
   );
 };
 const meta = {
-  title: "Chat/ChatPanel/Links",
+  title: "Design system/Patterns/Chat/Chat panel/Links",
   component: LinkConversation,
   fullscreen: true,
   decorators: [

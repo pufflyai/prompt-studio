@@ -1,5 +1,4 @@
 import { PstdioApiError } from "@pstdio/sdk/client";
-import { workbenchPages } from "@pstdio/sdk/extensions";
 import { type ChatLinkCandidate, type ChatLinkHandler, isGuessedChatLink, parseChatLink } from "@pstdio/ui/chat-ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
@@ -10,6 +9,7 @@ import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { openProjectPageUrl } from "@/shared/workbench/open-project-page-url";
+import { workspacePageForResource } from "@/shared/workbench/page-navigation";
 import { workspaceFileQueryOptions, workspaceFolderQueryOptions } from "@/shared/workspaces/workspace-file-query";
 import { workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
 import { workspaceLinkPath } from "@/shared/workspaces/workspace-link-path";
@@ -44,7 +44,12 @@ const resolveWorkspaceFile = (
   const workspace = sessionWorkspace(input);
   const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
   const resource = workspaceFileResource(createDashboardWorkspaceOptionResource(workspace, input.projectId), path);
-  const target = { kind: "page" as const, page: workbenchPages.workspace, resource, position: parsed.position };
+  const target = {
+    kind: "page" as const,
+    page: workspacePageForResource(resource),
+    resource,
+    position: parsed.position,
+  };
   return {
     kind: "page" as const,
     target,

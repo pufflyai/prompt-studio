@@ -1,6 +1,6 @@
-import type { createTextReplica } from "pstdio-sync/text";
 import type { GuestHost } from "./guest-host";
-import { decodeTextSnapshot, encodeTextBytes } from "./text-editing-codec";
+import { assertTextGeneration, decodeTextSnapshot, encodeTextBytes } from "./text-editing-codec";
+import type { createTextEditingReplica } from "./text-editing-replica";
 /** Each fence covers the authored prefix captured by its caller, including submitted drafts. */
 export const createTextEditingFences = (initialRevision: number) => {
   let authored = 0;
@@ -44,7 +44,8 @@ export const createTextEditingFences = (initialRevision: number) => {
 export const submitTextBatch = async (input: {
   host: GuestHost;
   handle: string;
-  replica: ReturnType<typeof createTextReplica>;
+  generation?: string;
+  replica: ReturnType<typeof createTextEditingReplica>;
   fences: ReturnType<typeof createTextEditingFences>;
   tickets: number[];
   batch: { sequence: number; count: number; update: Uint8Array };
@@ -56,6 +57,7 @@ export const submitTextBatch = async (input: {
     sequence: batch.sequence,
     update: encodeTextBytes(batch.update),
   });
+  assertTextGeneration(snapshot.generation, input.generation);
   replica.acknowledge(batch.count, decodeTextSnapshot(snapshot));
   for (const ticket of tickets.splice(0, batch.count)) fences.complete(ticket, snapshot.revision);
   return snapshot;

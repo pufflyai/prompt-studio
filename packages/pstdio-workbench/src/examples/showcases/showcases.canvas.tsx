@@ -9,7 +9,7 @@ import { boomboxTheme, kilnTheme, pigeonTheme, scribbleTheme, ziplineTheme } fro
 import { createZiplineWorkbench } from "./zipline";
 
 const meta = {
-  title: "pstdio-workbench/Showcases",
+  title: "Product/Workbench/Showcases",
   description:
     "These host examples use direct Workbench registries and React bodies. For complete public extension versions of all five showcases, see extensions/extension-lab/src/examples. Their dashboard journeys are covered by public-page-patterns.p2.spec.ts.",
   fullscreen: true,

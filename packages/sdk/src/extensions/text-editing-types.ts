@@ -28,14 +28,20 @@ export interface TextEditingDraft {
   /** True only when tentative text was discarded. In-flight, uncertain and already acknowledged edits return false. */
   cancel(): boolean;
 }
+export interface TextEditingReceiveContext {
+  /** Includes CRDT replacements and deletions, even when visible characters are equal. */
+  readonly textChanged: boolean;
+  readonly historyChanged: boolean;
+  readonly editableChanged: boolean;
+}
 export interface TextEditingSession {
   readonly origin: object;
   getSnapshot(): TextEditingSnapshot;
   subscribe(listener: () => void): () => void;
   transact(change: (text: Y.Text) => void): void;
   createDraft(): TextEditingDraft;
-  /** Synchronously drain queued renderer edits before receiving text. Never await or author a new edit per notification. */
-  beforeReceive(handler: () => void): () => void;
+  /** Every ingress invokes the handler. Proven unchanged receipts may keep buffered text; absent context requires a drain. */
+  beforeReceive(handler: (context?: TextEditingReceiveContext) => void): () => void;
   beforeClose(handler: () => void | Promise<void>): () => void;
   flush(): Promise<void>;
   project(): Promise<void>;

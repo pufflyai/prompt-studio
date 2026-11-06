@@ -4,7 +4,7 @@ import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { SessionPersonalDevice } from "./session-personal-device";
 
 const meta = {
-  title: "Modules/Sessions/Personal Device",
+  title: "Product/Sessions/Personal device",
   component: SessionPersonalDevice,
   args: { name: "Laptop", onReconnect: () => {} },
   render: (args) => (

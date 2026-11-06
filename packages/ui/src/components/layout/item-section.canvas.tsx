@@ -7,7 +7,7 @@ import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 
 type StoryFn = () => ReactNode;
 const meta = {
-  title: "Components/Layout/Item Section",
+  title: "Design system/Components/Layout/Item section",
   component: ItemSection,
   decorators: [
     (Story: StoryFn) => (

@@ -4,26 +4,26 @@ import { NativeSourceRecoveryError, type StorageOwner } from "pstdio-sync";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { type loadNativeMarkdownFile, NativeDocumentSourceError } from "./file-source";
 import { validateReplaySource } from "./replay-source";
-import type { resolveNativeTextAccess } from "./source-access";
+import type { NativeSourceAccess, resolveNativeTextAccess } from "./source-access";
 import { checkpointInitialState } from "./text-checkpoint";
 import { validateNativeSourceAuthority } from "./validate-writable-source";
 
 type Loaded = Awaited<ReturnType<typeof loadNativeMarkdownFile>>;
-type Access = Awaited<ReturnType<typeof resolveNativeTextAccess>>;
-type RoomSource = Pick<Access, "owner" | "documentKey" | "lifetime" | "content" | "projectionTarget">;
+type RoomSource = NativeSourceAccess;
 export type NativeRoomOpenInput = NativeTextTarget & {
   projectId: string;
   signal?: AbortSignal;
   sourceState?: Uint8Array;
+  generation?: string;
   pendingUpdate?: Uint8Array;
-  expectedSource?: { owner: StorageOwner; documentKey: string };
+  expectedSource?: { owner: StorageOwner; documentKey: string; generation?: string };
   validateLoaded?: (loaded: RoomSource) => void;
   access?: "read" | "write";
 };
 interface SourceDeps {
   load: (input: Parameters<typeof loadNativeMarkdownFile>[1]) => ReturnType<typeof loadNativeMarkdownFile>;
   initialize: (loaded: Loaded) => Promise<void>;
-  access: (input: Parameters<typeof resolveNativeTextAccess>[1]) => Promise<Access>;
+  access: (input: Parameters<typeof resolveNativeTextAccess>[1]) => Promise<RoomSource>;
   storage: ExtensionsRouteDeps["extensionStorageService"];
 }
 export const loadNativeRoomSource = async (deps: Pick<SourceDeps, "load">, input: NativeRoomOpenInput) => {
@@ -40,7 +40,7 @@ const validateRoomSource = (input: NativeRoomOpenInput, loaded: RoomSource) => {
     throw new NativeDocumentRoomError("invalid_frame", "Pending editor frames need their original history");
   if (input.sourceState && !editable)
     throw new NativeDocumentSourceError(403, "source_read_only", "A read-only session cannot supply recovery history");
-  validateReplaySource(input.sourceState, loaded.documentKey, loaded.lifetime);
+  validateReplaySource(input.sourceState, loaded.documentKey, loaded.lifetime, loaded.generation, input.generation);
   return editable;
 };
 export const initializeNativeRoomSource = async (deps: SourceDeps, input: NativeRoomOpenInput) => {

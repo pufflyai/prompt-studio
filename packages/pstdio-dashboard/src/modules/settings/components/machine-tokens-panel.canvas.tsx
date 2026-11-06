@@ -2,7 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { MachineTokensPanelView } from "./machine-tokens-panel";
 
 const meta: CanvasMeta<typeof MachineTokensPanelView> = {
-  title: "ProjectSettings/MachineTokensPanel",
+  title: "Product/Settings/Machine tokens",
   component: MachineTokensPanelView,
 };
 export default meta;

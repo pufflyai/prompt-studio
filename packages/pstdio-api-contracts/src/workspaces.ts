@@ -150,6 +150,9 @@ export const removeWorktreeResponseSchema = z.object({
   removed: z.boolean(),
 });
 
+export const workspaceResolvedEntrySchema = z.object({ absolutePath: z.string(), type: z.enum(["file", "directory"]) });
+export type WorkspaceResolvedEntry = z.infer<typeof workspaceResolvedEntrySchema>;
+
 export const workspaceFileEntrySchema = z.object({
   path: z.string(),
   name: z.string(),

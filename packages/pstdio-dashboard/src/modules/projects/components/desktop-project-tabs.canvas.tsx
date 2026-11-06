@@ -15,7 +15,7 @@ const ProjectTabsStory = () => {
   return <DesktopProjectTabs workbench={workbench} controller={controller} platform="darwin" />;
 };
 const meta = {
-  title: "Dashboard/Project tabs",
+  title: "Product/Projects/Tabs",
   component: ProjectTabsStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ProjectTabsStory>;

@@ -1,3 +1,4 @@
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { DataTable, type DataTableProps, type RowData } from ".";
 import { columnDescriptions } from "./data-table.story-descriptions";
 import { columnManagementRows, generateTableRows, tableRows, thousandTableRows } from "./data-table.story-fixtures";
@@ -19,7 +20,7 @@ import {
 } from "./edit-mode-story";
 
 const meta = {
-  title: "Components/Data Display/Data Table",
+  title: "Design system/Components/Data display/Data table/Overview",
   component: DataTable,
   args: {
     data: tableRows,
@@ -28,15 +29,18 @@ const meta = {
     toolbarStorageKey: "preview-data-table-default",
   },
 };
-export default meta;
-export const Default = {
+export default {
+  title: "Design system/Components/Data display/Data table/Overview",
+  fullscreen: true,
+};
+const Default = {
   id: "components-data-display-data-table--default",
   decorators: [storyPage()],
   render: (args: DataTableProps) => {
     return <DataTableStoryContainer args={args} maxWidth="960px" height="420px" marginX="auto" />;
   },
 };
-export const ColumnStats = {
+const ColumnStats = {
   id: "components-data-display-data-table--column-stats",
   decorators: [storyPage()],
   args: {
@@ -54,7 +58,7 @@ export const ColumnStats = {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
   },
 };
-export const SingleValueStats = {
+const SingleValueStats = {
   id: "components-data-display-data-table--single-value-stats",
   decorators: [storyPage()],
   args: {
@@ -70,7 +74,7 @@ export const SingleValueStats = {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
 };
-export const ColumnDescriptions = {
+const ColumnDescriptions = {
   id: "components-data-display-data-table--column-descriptions",
   decorators: [storyPage()],
   args: {
@@ -82,7 +86,7 @@ export const ColumnDescriptions = {
     <DataTableStoryContainer args={args} maxWidth="1080px" height="480px" marginX="auto" />
   ),
 };
-export const FullHeight = {
+const FullHeight = {
   id: "components-data-display-data-table--full-height",
   decorators: [storyPage(0, "100vh")],
   args: {
@@ -93,7 +97,7 @@ export const FullHeight = {
     return <DataTableStoryContainer args={args} height="100%" />;
   },
 };
-export const Paginated = {
+const Paginated = {
   id: "components-data-display-data-table--paginated",
   decorators: [storyPage()],
   args: {
@@ -107,7 +111,7 @@ export const Paginated = {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
 };
-export const SelectableRows = {
+const SelectableRows = {
   id: "components-data-display-data-table--selectable-rows",
   decorators: [storyPage()],
   args: {
@@ -122,7 +126,7 @@ export const SelectableRows = {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
 };
-export const RowActions = {
+const RowActions = {
   id: "components-data-display-data-table--row-actions",
   decorators: [storyPage()],
   args: {
@@ -136,7 +140,7 @@ export const RowActions = {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
 };
-export const DynamicRowActions = {
+const DynamicRowActions = {
   id: "components-data-display-data-table--dynamic-row-actions",
   decorators: [storyPage()],
   args: {
@@ -152,7 +156,7 @@ export const DynamicRowActions = {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
 };
-export const RowActivation = {
+const RowActivation = {
   id: "components-data-display-data-table--row-activation",
   decorators: [storyPage()],
   args: {
@@ -166,32 +170,32 @@ export const RowActivation = {
     return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
   },
 };
-export const EditMode = {
+const EditMode = {
   id: "components-data-display-data-table--edit-mode",
   decorators: [storyPage()],
   render: () => <EditModeStory />,
 };
-export const RichTextEditMode = {
+const RichTextEditMode = {
   id: "components-data-display-data-table--rich-text-edit-mode",
   decorators: [storyPage()],
   render: () => <RichTextEditModeStory />,
 };
-export const ModeToggle = {
+const ModeToggle = {
   id: "components-data-display-data-table--mode-toggle",
   decorators: [storyPage()],
   render: () => <ModeToggleStory />,
 };
-export const EditableSelectableRows = {
+const EditableSelectableRows = {
   id: "components-data-display-data-table--editable-selectable-rows",
   decorators: [storyPage()],
   render: () => <EditableSelectableRowsStory />,
 };
-export const EditableWithViews = {
+const EditableWithViews = {
   id: "components-data-display-data-table--editable-with-views",
   decorators: [storyPage()],
   render: () => <EditableWithViewsStory />,
 };
-export const TagRichRows = {
+const TagRichRows = {
   id: "components-data-display-data-table--tag-rich-rows",
   decorators: [storyPage()],
   args: {
@@ -208,7 +212,7 @@ export const TagRichRows = {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
   },
 };
-export const ColumnManagement = {
+const ColumnManagement = {
   id: "components-data-display-data-table--column-management",
   decorators: [storyPage()],
   args: {
@@ -225,3 +229,26 @@ export const ColumnManagement = {
     return <DataTableStoryContainer args={args} maxWidth="1180px" height="560px" marginX="auto" />;
   },
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Default,
+  ColumnStats,
+  SingleValueStats,
+  ColumnDescriptions,
+  FullHeight,
+  Paginated,
+  SelectableRows,
+  RowActions,
+  DynamicRowActions,
+  RowActivation,
+  EditMode,
+  RichTextEditMode,
+  ModeToggle,
+  EditableSelectableRows,
+  EditableWithViews,
+  TagRichRows,
+  ColumnManagement,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

@@ -48,7 +48,7 @@ const EditableGroup = (props: { editing?: boolean }) => {
   );
 };
 const meta = {
-  title: "Components/Tree List/Groups",
+  title: "Design system/Components/Data display/Tree list/Groups",
   component: EditableGroup,
   description:
     "Named sections support inline renaming and shared context actions. Hosts own group persistence and membership.",

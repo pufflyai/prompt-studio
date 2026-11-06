@@ -2,16 +2,20 @@ import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { DEFAULT_DATA_TABLE_SETTINGS } from "@pstdio/sdk/extensions";
 import { useState } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { DataTable } from "./data-table";
 import type { DataTableProps, DataTableSavedView, DataTableViewsSource, RowData } from "./types";
 import { useDataTableViewStore } from "./use-data-table-view";
 
 const meta: CanvasMeta<typeof DataTable> = {
-  title: "Patterns/Data Table/View Controls",
+  title: "Design system/Patterns/Data table/View controls",
   component: DataTable,
   fullscreen: true,
 };
-export default meta;
+export default {
+  title: "Design system/Patterns/Data table/View controls",
+  fullscreen: true,
+};
 type Story = CanvasFrame;
 const statuses = ["In review", "In progress", "Todo", "Backlog"];
 const priorities = ["Urgent", "High", "Medium"];
@@ -55,11 +59,11 @@ const Table = (props: TableProps) => {
   );
 };
 /** The header menu replaces the view's sorts with one column and shows its direction. */
-export const HeaderSort: Story = {
+const HeaderSort: Story = {
   id: "patterns-data-table-view-controls--header-sort",
   render: () => <Table storageKey="preview-data-table-header-sort" />,
 };
-export const SearchHighlights: Story = {
+const SearchHighlights: Story = {
   id: "patterns-data-table-view-controls--search-highlights",
   render: () => <Table storageKey="preview-data-table-search" />,
 };
@@ -102,12 +106,12 @@ const SavedViewsTable = () => {
   return <Table storageKey="preview-data-table-saved-views" viewsSource={viewsSource} />;
 };
 /** Filters, sorts, and display settings belong to the saved view. */
-export const SavedViews: Story = {
+const SavedViews: Story = {
   id: "patterns-data-table-view-controls--saved-views",
   render: () => <SavedViewsTable />,
 };
 /** Rows group by value in option order; empty values form the last group, and collapsing is screen state. */
-export const GroupedByStatus: Story = {
+const GroupedByStatus: Story = {
   id: "patterns-data-table-view-controls--grouped-by-status",
   render: () => (
     <Table
@@ -117,16 +121,16 @@ export const GroupedByStatus: Story = {
     />
   ),
 };
-export const RowNumbersHidden: Story = {
+const RowNumbersHidden: Story = {
   id: "patterns-data-table-view-controls--row-numbers-hidden",
   render: () => <Table storageKey="preview-data-table-no-row-numbers" defaultSettings={{ rowNumbers: false }} />,
 };
 /** A new sort, filter, grouping, or search starts again on the first page. */
-export const PageResetsOnViewChange: Story = {
+const PageResetsOnViewChange: Story = {
   id: "patterns-data-table-view-controls--page-resets-on-view-change",
   render: () => <Table storageKey="preview-data-table-page-reset" initialPageSize={3} pageSizeOptions={[3, 10]} />,
 };
-export const EmptyFilteredGroups: Story = {
+const EmptyFilteredGroups: Story = {
   id: "patterns-data-table-view-controls--empty-filtered-groups",
   render: () => (
     <Table
@@ -136,3 +140,16 @@ export const EmptyFilteredGroups: Story = {
     />
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  HeaderSort,
+  SearchHighlights,
+  SavedViews,
+  GroupedByStatus,
+  RowNumbersHidden,
+  PageResetsOnViewChange,
+  EmptyFilteredGroups,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as HeaderSort };

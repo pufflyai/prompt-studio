@@ -1,12 +1,12 @@
 # Workspace Diff Presentation
 
-How Prompt Studio presents workspace diffs to users in the dashboard.
+The Workspaces extension composes the shared native file renderer and public diff viewer. Core retains workspace identity, lifecycle, scoped file/Git services, permissions, terminal execution and sync.
 
 ## Scope
 
 Covers the workspace screen and diff summary badges:
 
-- Page: the generic workspace page declared by the workspaces module; ticket navigation supplies context without owning its route.
+- Page: the resource page declared by the ordinary `pstdio.pstdio-workspaces` extension; ticket navigation supplies context without owning its route.
 - Diff source: `GET /v1/workspaces/:id/diff-files` plus on-demand `GET /v1/workspaces/:id/diff-file`; both accept `mode=current|fork_point`
 - File source: workspace file, directory, and entry endpoints under `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
 - Renderers: workspace-owned `Files` and `Changes` Main sub-panels
@@ -21,7 +21,7 @@ Each ticket card resolves its latest attempt and shows addition/deletion totals 
 
 Shows attempt count and latest diff totals. Clicking opens the latest workspace when attempts exist.
 
-### 3) Workspace Main Panel (`Files` + `Diffs`)
+### 3) Workspace Main Panel (`Files` + `Changes`)
 
 The workspace stays the selected resource. The Main Panel has two resource-owned sub-panels:
 
@@ -30,19 +30,19 @@ route and the other panel open. Closing both shows an empty state with Add panel
 reopen either view. The workspace page declares its routed resource separately and uses `main: { kind: "panels", empty }`. Closing all Main panels shows the empty view while retaining the workspace route.
 
 - `Files` — a searchable file tree in the left Panel menu and a shared file renderer in the body
-- `Diffs` — changed-file metadata and an on-demand diff body
+- `Changes` — changed-file metadata and an on-demand diff body
 
 Native tree views size to the host viewport and own their scrolling. Their virtual list spacer must not expand the outer region; only rows near the visible viewport mount, including when a large folder is expanded.
 
-Opening a workspace text file starts Monaco's shared runtime loader alongside the file request. The file read does not wait for editor initialization. Known image and binary paths keep their lightweight previews without starting Monaco.
+The native file renderer uses the scoped workspace read and shared Monaco editor for text. Known image and binary paths keep their lightweight previews. The selected document is declared by `workspaceFilePath`; it stays separate from workspace resource identity.
 
 `Files` is active on the first visit. Opening Files does not calculate diffs or Git badges. `Changes` calculates diffs when selected. Resource-owned layout state restores the last valid sub-panel and Files menu state on later visits. File selection uses `workspaceView: "files"` and `workspaceFilePath` metadata on the same workspace resource URI.
 
-### 4) Workspaces list (summary only)
+### 4) Workspaces list
 
-The list shows Name, Type, Location, Created at, and Diff by default. Statistics and diagnostic columns stay available from the display menu. The Diff column asks for a summary only when the workspace provider declares the `diff` capability. A workspace without it shows "Not supported"; a supported workspace with no changes shows `+0 -0`.
+The extension's native resource list groups workspaces by device and nests session rows beneath them. Compact hides sessions. Related ticket chips use scoped, paginated resource links. Browsing this list does not calculate Git diffs. Device headers show live authenticated capacity when available, and last seen with a cached limit when offline.
 
-Workspace resources take their icon from their kind: a folder for the project folder, a Git branch for a Git worktree, and a cloud for a remote workspace. Breadcrumbs show that icon on every route, including after a reload.
+Workspace resources keep their host-owned kind and provider capabilities. The project folder opens the separate Files page, without Changes. Foreign workspaces open session history. New callers use `workspacePages` and `workspaceCommands`; deprecated `workbenchPages.workspace` and `workbenchPages.workspaces` remain compatibility declarations using provider-owned views, available only while that provider is installed.
 
 ## End-to-End Flow
 

@@ -24,6 +24,8 @@ export interface ExtensionTreeAction {
   command?: CommandRef<Struct, unknown>;
   params?: Struct;
   input?: ParamObjectSchema;
+  inputPresentation?: import("@pstdio/sdk/extensions").TreeAction["inputPresentation"];
+  copyText?: string;
   submitLabel?: string;
   when?: string;
   disabled?: boolean;
@@ -35,13 +37,15 @@ export interface ExtensionTreeSectionEmptyState {
   icon?: string;
 }
 
-export type ExtensionTreeNodeRowVariant = "empty-state";
+export type ExtensionTreeNodeRowVariant = "empty-state" | "file";
 
 export interface ExtensionTreeNode {
   id: string;
   label: Localizable<string>;
   icon?: string;
   iconColor?: string;
+  fileName?: string;
+  showContextMenuTrigger?: boolean;
   badge?: import("@pstdio/sdk/extensions").TreeNode["badge"];
   iconTooltip?: string;
   tooltip?: string;

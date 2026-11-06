@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TreeList } from "./tree-list";
 
 const meta = {
-  title: "Components/Data Display/Tree List/Footer",
+  title: "Design system/Components/Data display/Tree list/Footer",
   component: TreeList,
 } satisfies CanvasMeta<typeof TreeList>;
 export default meta;

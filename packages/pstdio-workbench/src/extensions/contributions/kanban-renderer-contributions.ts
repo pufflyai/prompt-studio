@@ -5,8 +5,10 @@ import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
 import type { Disposable, KanbanRendererCreateSubmission, ResourceRef } from "../../core";
 import { acceptRendererPage } from "../../core/registries/renderers/renderer-page";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
+import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { collectionBadgeTarget } from "./collection-badge-navigation";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
@@ -35,6 +37,7 @@ const toCreateRowConfig = (record: WorkbenchExtensionKanbanRendererRecord, local
   if (!record.createRow) return undefined;
   return {
     title: localize(record.createRow.title, "Create row"),
+    presentation: record.createRow.presentation,
     submitLabel: localize(record.createRow.submitLabel, "Create"),
     fields: toCreateFields(record, localize),
     labels: {
@@ -191,6 +194,15 @@ export const registerWorkbenchExtensionKanbanRenderers = (
       localize,
       decorate,
       reportUnknownDisplay,
+      (target) => {
+        const mapped = toWorkbenchNavigationTarget(target, {
+          extensionId: record.extensionId,
+          projectId: context.projectId,
+        });
+        void runUserAction(context.workbench, "Open group action", () =>
+          context.workbench.navigation.openTarget(mapped, { projectId: context.projectId }),
+        );
+      },
     );
     let wireAttributes = record.attributes;
     const builtIns = kanbanBuiltInViews(record);

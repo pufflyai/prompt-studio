@@ -18,6 +18,7 @@ export interface SessionStreamListener {
 }
 
 export type ClientStreamSubscription =
+  | { native_document: { project_id: string; document_key: string; room_id: string } }
   | { text_editing: { project_id: string; token: string } }
   | { retain_session_id: string }
   | { session_id: string }

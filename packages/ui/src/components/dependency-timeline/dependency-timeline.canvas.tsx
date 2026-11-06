@@ -4,7 +4,7 @@ import { DependencyTimeline } from "./dependency-timeline";
 import { DependencyTimelineExample } from "./dependency-timeline.examples";
 
 const meta: CanvasMeta<typeof DependencyTimeline> = {
-  title: "Components/Layout/Dependency Timeline",
+  title: "Design system/Components/Layout/Dependency timeline",
   component: DependencyTimeline,
   render: (args) => (
     <DependencyTimelineExample

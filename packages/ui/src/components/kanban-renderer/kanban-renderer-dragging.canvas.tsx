@@ -5,7 +5,7 @@ import { KanbanRenderer } from "./kanban-renderer";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
 const meta: CanvasMeta = {
-  title: "Patterns/Kanban Renderer/Dragging",
+  title: "Design system/Patterns/Kanban renderer/Dragging",
   fullscreen: true,
 };
 export default meta;

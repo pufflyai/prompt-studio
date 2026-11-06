@@ -7,7 +7,7 @@ import { TreeList } from "./tree-list";
 import type { TreeListNode } from "./tree-list.types";
 
 const meta: CanvasMeta<typeof TreeList> = {
-  title: "Components/Data Display/Tree List/Outliner",
+  title: "Design system/Components/Data display/Tree list/Outliner",
   component: TreeList,
   description:
     "Compose authoring rows with controlled selection, expansion, order, extension previews, and persistent toggle actions. " +

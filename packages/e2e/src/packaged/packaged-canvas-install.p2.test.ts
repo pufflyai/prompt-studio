@@ -168,6 +168,14 @@ test(
           files: expect.arrayContaining([expect.objectContaining({ path: "SKILL.md" })]),
         }),
       );
+      const skillResponse = await fetch(`${url}/skills/canvas`, { headers });
+      expect(skillResponse.status).toBe(200);
+      const skill = await skillResponse.json();
+      expect(skill.files).toContainEqual({
+        path: "SKILL.md",
+        content: readFileSync(join(catalogRoot!, "canvas/skills/canvas/SKILL.md"), "utf8"),
+        encoding: "utf8",
+      });
       // Critical: the build must also reach an opaque preview through the real webview command bridge.
       const button = listed.find((canvas: { id: string }) => canvas.id === "src/button.canvas.tsx");
       expect(button).toBeDefined();

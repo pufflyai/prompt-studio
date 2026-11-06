@@ -1,16 +1,17 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { putTicket, ticketsCollection } from "../data/collections";
+import { putTicket } from "../data/collections";
 import {
   requireTicketDraftFiles,
   ticketMarkdownPath,
   ticketToMarkdown,
   writeTicketMarkdown,
 } from "../data/draft-storage";
+import { readMigratedTickets } from "../data/read-migrated-tickets";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
-import { withTicketOrder } from "../data/ticket-order";
+import { appendTicketPosition, withTicketOrder } from "../data/ticket-order";
 
 // `pst tickets write`: create a draft ticket in extension storage and lay down its
 // local `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md` via the host file primitive. The
@@ -48,8 +49,8 @@ export const writeTicketCommand = defineCommand({
     const parentId = commandParams.parent !== undefined ? await resolveTicketId(ctx, commandParams.parent) : null;
 
     const ticket = await withTicketOrder(ctx, async () => {
-      const existing = await ticketsCollection(ctx).list();
-      const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
+      const existing = await readMigratedTickets(ctx);
+      const position = appendTicketPosition(ctx.storage, existing);
       return putTicket(ctx, {
         id,
         title: commandParams.title,
@@ -63,7 +64,7 @@ export const writeTicketCommand = defineCommand({
         userPrompt: commandParams.userPrompt ?? null,
         draft: true,
         archived: false,
-        sortOrder,
+        position,
         createdAt: now,
         updatedAt: now,
       });

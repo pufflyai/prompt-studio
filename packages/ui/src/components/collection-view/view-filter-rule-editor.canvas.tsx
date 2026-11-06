@@ -7,7 +7,7 @@ import { storyFields, storyOptions } from "./collection-view-story-fixtures";
 import { ViewFilterRuleEditor } from "./view-filter-rule-editor";
 
 const meta: CanvasMeta<typeof ViewFilterRuleEditor> = {
-  title: "Patterns/Collection View/View Filter Rule Editor",
+  title: "Design system/Patterns/Collection view/View filter rule editor",
   component: ViewFilterRuleEditor,
 };
 export default meta;

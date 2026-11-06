@@ -13,7 +13,7 @@ Error response from daemon: invalid volume specification:
 invalid mount config for type "bind": invalid mount path: '.'
 mount path must be absolute`;
 const meta = {
-  title: "Components/Feedback/Toaster",
+  title: "Design system/Components/Feedback/Toaster",
   component: Toaster,
   decorators: [
     (Story: StoryFn) => (

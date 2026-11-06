@@ -254,7 +254,7 @@ const SidenavShell = (props: SidenavShellProps) => {
   );
 };
 const meta: CanvasMeta<typeof Sidenav> = {
-  title: "Components/Navigation/Sidenav",
+  title: "Design system/Components/Navigation/Sidebar",
   component: Sidenav,
   fullscreen: true,
 };

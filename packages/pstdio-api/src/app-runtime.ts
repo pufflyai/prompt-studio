@@ -236,6 +236,12 @@ export const startAppLifecycle = async (input: {
   input.deps.extensionInstallations.start();
   return createAppCloser({
     ...input,
+    // Imports stop while their session and file dependencies are still available.
+    closeSessionHooks: async () => {
+      const stopped = await Promise.allSettled([input.closeSessionHooks(), input.deps.sessionImports.close()]);
+      const failures = stopped.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (failures.length) throw new AggregateError(failures, "Could not stop all session services");
+    },
     unsubscribeExtensionEvents: () => {
       unsubscribeProjectActivation();
       input.unsubscribeExtensionEvents();

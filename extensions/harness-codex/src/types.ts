@@ -1,3 +1,4 @@
+import type { ToolResultSummary } from "@pstdio/sdk/extensions";
 export type CodexUsage = {
   input_tokens?: number;
   cached_input_tokens?: number;
@@ -24,4 +25,5 @@ export type CodexThreadItem = {
   path?: string;
   output?: unknown;
   metadata?: Record<string, unknown>;
+  resultSummary?: ToolResultSummary;
 };

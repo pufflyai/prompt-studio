@@ -56,7 +56,7 @@ const SessionChatDraftStory = (props: { initiallyClosed?: boolean; showMain?: bo
   );
 };
 const meta = {
-  title: "Modules/Sessions/Session Chat Draft",
+  title: "Product/Sessions/Chat draft",
   component: SessionChatDraftStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof SessionChatDraftStory>;

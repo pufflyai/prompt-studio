@@ -2,7 +2,7 @@
 
 Patterns are composed UI surfaces. Prefer these when building product workflows instead of assembling primitives from scratch.
 
-Use `Foundations/Component Gallery / Composites` as the quickest visual reference for advanced components before building a new workflow surface.
+Use `Design system/Foundations/Component gallery / Composites` as the quickest visual reference for advanced components before building a new workflow surface.
 
 ## Chat
 
@@ -41,3 +41,8 @@ option can still be selected. Clearable single selections and multi-selections c
 Action menus keep an enabled selected action available so it can run again.
 Declare icons on options and workspace providers; iconless choices stay iconless. Use `git-commit-horizontal` for
 branches, `git-branch` for Git worktrees, and `level-low`, `level-mid`, `level-high`, `level-xhigh` for effort levels.
+
+Parameter editors keep fixed-format values (ID, timestamps, status, single choices) inline with their label.
+Growing values (dependencies, blocked reasons, review links and multi-value fields) use a label above a wrapping value area.
+Dropdown triggers stay inside their parent and menus stay within the viewport; truncate long values without overflowing.
+Omit empty Review links rows. Document persistence never displays saving progress; keep failures and recovery available.

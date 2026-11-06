@@ -5,7 +5,7 @@ import { useState } from "react";
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
 const meta: CanvasMeta = {
-  title: "Patterns/Kanban Renderer/Board",
+  title: "Design system/Patterns/Kanban renderer/Board",
 };
 export default meta;
 type Story = CanvasFrame;

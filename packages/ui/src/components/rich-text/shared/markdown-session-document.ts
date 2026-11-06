@@ -86,7 +86,10 @@ export const createMarkdownSessionDocument = (session: TextEditingSession, befor
     changed();
     return finishing;
   };
-  const stopReceive = session.beforeReceive(() => beforeReceive?.());
+  const stopReceive = session.beforeReceive((context) => {
+    if (context?.textChanged === false && context.historyChanged === false && context.editableChanged === false) return;
+    beforeReceive?.();
+  });
   const stopClose = session.beforeClose(() => {
     beforeReceive?.();
     if (draft && !preview)
@@ -112,9 +115,9 @@ export const createMarkdownSessionDocument = (session: TextEditingSession, befor
     get text() {
       return preview?.getText("content") ?? draft?.text ?? binding.text;
     },
-    write(source: string) {
+    write(source: string, group?: object) {
       if (preview) throw new Error("This composition is still waiting to be saved");
-      if (!draft) return binding.write(source);
+      if (!draft) return binding.write(source, group);
       const text = draft.text;
       text.doc!.transact(() => {
         let index = 0;

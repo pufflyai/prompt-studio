@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { KanbanRendererSkeleton } from "./kanban-renderer-skeleton";
 
 const meta: CanvasMeta<typeof KanbanRendererSkeleton> = {
-  title: "Patterns/Kanban Renderer/Loading",
+  title: "Design system/Patterns/Kanban renderer/Loading",
   component: KanbanRendererSkeleton,
   fullscreen: true,
   args: { viewMode: "board" },

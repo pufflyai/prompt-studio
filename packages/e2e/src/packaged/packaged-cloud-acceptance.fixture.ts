@@ -35,7 +35,11 @@ export const createCloudAcceptanceFixture = async (root: string, children: Set<C
   );
   const source = join(root, "unrelated-extension");
   mkdirSync(source);
-  for (const name of ["grouped-storage-extension.ts", "cloud-acceptance-commands.ts"])
+  for (const name of [
+    "grouped-storage-extension.ts",
+    "cloud-acceptance-commands.ts",
+    "collection-observation-command.ts",
+  ])
     cpSync(join(import.meta.dirname, "fixtures", name), join(source, name));
   writeFileSync(
     join(source, "package.json"),
@@ -64,6 +68,7 @@ export const createCloudAcceptanceFixture = async (root: string, children: Set<C
       NODE_EXTRA_CA_CERTS: cert,
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults),
       PSTDIO_LOG_PATH: logPath,
+      PSTDIO_LOG_LEVEL: "debug",
       PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
     });
     children.add(host.child);

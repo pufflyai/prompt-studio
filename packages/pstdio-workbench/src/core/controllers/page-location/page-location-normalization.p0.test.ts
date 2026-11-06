@@ -159,3 +159,22 @@ describe("page location normalization", () => {
     });
   });
 });
+
+test("page locations retain an isolated device pointer when navigating and restoring", () => {
+  const device = { id: "other-device", ownerId: "owner", name: "Other device" };
+  const location = normalizeWorkbenchPageTarget({
+    target: { kind: "page", page: pages[2]!.ref, resource: { type: "workspace", id: "one", device } },
+    pages,
+    resources,
+  }).location;
+  expect(location.resource?.device).toEqual(device);
+  expect(Object.isFrozen(location.resource?.device)).toBe(true);
+  device.name = "Changed outside navigation";
+  expect(location.resource?.device?.name).toBe("Other device");
+  const restored = normalizeWorkbenchPageLocation({
+    location: JSON.parse(JSON.stringify(location)),
+    pages,
+    resources,
+  }).location;
+  expect(restored.resource?.device).toEqual(location.resource?.device);
+});

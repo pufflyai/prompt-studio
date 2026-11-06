@@ -56,7 +56,7 @@ const createTreeWorkbench = (menu: boolean) => {
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/File tree/Viewport",
+  title: "Product/Workbench/Navigation/Tree viewport",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

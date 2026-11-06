@@ -43,7 +43,7 @@ const ThemeControls = () => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Host terminal themes",
+  title: "Product/Reference/Host terminal themes",
   fullscreen: true,
   render: () => (
     <WorkbenchThemeProvider

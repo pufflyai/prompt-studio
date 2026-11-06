@@ -4,6 +4,7 @@ import type { ExtensionsRouteDeps } from "../deps";
 import { createPublicationStorageAccess, guardPublicationStorage } from "../publication/storage-access";
 import { createExtensionAssetsApi } from "./assets";
 import { createExtensionBlobsApi } from "./blobs";
+import { createExtensionLogApi } from "./logs";
 import { createExtensionRecordsApi } from "./records";
 
 type StorageApiInput = {
@@ -42,6 +43,7 @@ export const createStorageApi = (
   };
 
   const api: CommandRunnerEnvironment["storage"] = {
+    canMigrate: async () => true,
     migrate: (version, run) =>
       deps.extensionStorageService.migrate(scope, version, async (previous) => {
         input.signal?.throwIfAborted();
@@ -55,6 +57,12 @@ export const createStorageApi = (
     positions: deps.storagePositions,
     readLegacy: async () => undefined,
     records: createExtensionRecordsApi(deps, { ...input, scopeType: scope.scope_type, scopeId: scope.scope_id }),
+    text: (recordId, field) => ({
+      edit: (edits) =>
+        api.records.commit({ operationId: createStorageId(), edits: [{ recordId, text: { [field]: edits } }] }),
+    }),
+    log: (name, options) =>
+      createExtensionLogApi(deps, { ...input, scopeType: scope.scope_type, scopeId: scope.scope_id }, name, options),
     assets: createExtensionAssetsApi(deps, input),
     files: createExtensionBlobsApi(deps, {
       extensionInstanceId: input.extensionInstanceId,
@@ -79,6 +87,12 @@ export const createStorageApi = (
     },
     collection(name) {
       return {
+        async read(id) {
+          const row = await read(() =>
+            deps.extensionStorageService.readCollectionItem({ ...scope, collection: name }, id),
+          );
+          return row ? { value: row.value_json as never, revision: row.revision } : undefined;
+        },
         async get(id) {
           const row = await read(() =>
             deps.extensionStorageService.getCollectionItem({ ...scope, collection: name }, id),
@@ -106,6 +120,15 @@ export const createStorageApi = (
             value_json: value,
           });
           if (!updated) throw new Error(`Item not found: ${id}`);
+        },
+        updateIfUnchanged(id, revision, value) {
+          return deps.extensionStorageService.updateCollectionItemIfUnchanged({
+            ...scope,
+            collection: name,
+            item_id: id,
+            value_json: value,
+            revision,
+          });
         },
         async createIfAbsent(id, value) {
           return deps.extensionStorageService.createCollectionItemIfAbsent({

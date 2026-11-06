@@ -1,16 +1,17 @@
 import type { ExtensionContextBase, ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { migratePlannerStorage } from "../data/migrate-storage";
 import { runTicketsQuery } from "../data/query";
+import { readMigratedTickets } from "../data/read-migrated-tickets";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 
 export const queryTickets = async (
   ctx: Pick<ExtensionContextBase, "files" | "projectId" | "storage" | "settings" | "resources">,
   input: { filter?: ViewFilterGroup },
 ) => {
-  await migratePlannerStorage(ctx);
+  const tickets = await readMigratedTickets(ctx);
 
   return runTicketsQuery({
+    tickets,
     storage: ctx.storage,
     resources: ctx.resources,
     projectId: ctx.projectId,

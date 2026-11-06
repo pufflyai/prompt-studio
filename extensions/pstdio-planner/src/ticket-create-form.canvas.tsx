@@ -3,7 +3,7 @@ import { KanbanRendererCreateDialog } from "@pstdio/ui/kanban-renderer";
 import { createTicketFormConfig } from "./ticket-create-form";
 
 const meta: CanvasMeta<typeof KanbanRendererCreateDialog> = {
-  title: "Extensions/Planner/Shared Ticket Form",
+  title: "Extensions/Planner/Tickets/Create form",
   component: KanbanRendererCreateDialog,
 };
 export default meta;

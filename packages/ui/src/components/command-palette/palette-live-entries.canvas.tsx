@@ -21,7 +21,7 @@ const LiveEntriesPalette = () => {
   );
 };
 const meta: CanvasMeta<typeof LiveEntriesPalette> = {
-  title: "Components/Overlays/Palette/Live entries",
+  title: "Design system/Components/Overlays/Palette/Live entries",
   component: LiveEntriesPalette,
   fullscreen: true,
 };

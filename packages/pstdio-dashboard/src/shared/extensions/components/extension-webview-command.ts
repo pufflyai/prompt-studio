@@ -12,6 +12,7 @@ interface ExtensionCommandInput {
 }
 interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
   placement?: PlacementIdentity;
+  isViewerCurrent?(): boolean;
   executeExtensionCommand: (input: ExtensionCommandInput) => Promise<unknown>;
   signal?: AbortSignal;
   workbench?: WorkbenchCore;
@@ -19,6 +20,7 @@ interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
 }
 export const executeWebviewCommand = async (input: ExecuteWebviewCommandInput) => {
   const { commandId, executeExtensionCommand, metadata, params, workspaceId, resource, slot, workbench } = input;
+  if (input.isViewerCurrent?.() === false) throw new Error("The calling viewer is no longer open");
   const isExtensionCommand = commandId.includes(".command.");
   if (!isExtensionCommand && workbench?.commands.getCommand(commandId)) {
     const value = await workbench.commands.executeCommand(commandId, params, {
@@ -26,6 +28,7 @@ export const executeWebviewCommand = async (input: ExecuteWebviewCommandInput) =
       signal: input.signal,
       placement: input.placement,
       projectId: input.projectId,
+      isViewerCurrent: input.isViewerCurrent,
     });
     return { commandId, extensionId: "pstdio", eventIds: [], outcome: { ok: true, status: "success", value } };
   }
@@ -35,7 +38,7 @@ export const executeWebviewCommand = async (input: ExecuteWebviewCommandInput) =
     return executeWorkbenchExtensionCommandResponse(
       { projectId: input.projectId, workbench, executeCommand: execute },
       commandId,
-      { placement: input.placement, signal: input.signal },
+      { placement: input.placement, signal: input.signal, isViewerCurrent: input.isViewerCurrent },
     );
   }
   return execute();

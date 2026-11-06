@@ -57,6 +57,12 @@ test(
       const created = await post("/projects", folderProjectInput({ name: "Shared notes" }, root));
       expect(created.status).toBe(201);
       const project = (await created.json()) as { id: string };
+      expect(await command(project.id, "collection-observation")).toEqual({
+        stale: false,
+        saved: true,
+        migrationAllowed: true,
+        value: { title: "Newer title", position: "position" },
+      });
       const initial = await read(project.id);
       await command(project.id, "seed-query-records");
       const expectSelected = async () => {
@@ -71,7 +77,7 @@ test(
         expect(selected.next.records.map((row) => row.fields.rank)).toEqual([3]);
         expect(selected.next.cursor).toBeNull();
         expect(selected.rows.map((row) => row.value)).toEqual([
-          { state: "ready", rank: 1, body: "full � value" },
+          { state: "ready", rank: 1, body: "full \ud800 value" },
           { state: "ready", rank: 2, body: "full\u0000value" },
         ]);
         expect(selected.count.count).toBe(3);
@@ -142,20 +148,20 @@ test(
           ],
         },
       });
-      expect(stale).toMatchObject({ status: "saved-locally", state: "saved-locally" });
-      expect((await read(project.id)).caption.value).toBe("Second caption");
+      expect(stale).toMatchObject({ status: "saved-locally", state: "refused" });
+      expect((await read(project.id)).caption.value).toBe("First caption");
       await stopProcess(host.child);
       host = await startPackagedServe(root, env);
       await expectSelected();
       expect((await command<StorageSaveOutcome>(project.id, "outcome", { operationId: "second-caller" })).state).toBe(
-        "saved-locally",
+        "refused",
       );
       expect(await command(project.id, "identity", { id: allocated.id })).toEqual(identity);
       expect(await command(project.id, "find-number", { shorthand: allocated.shorthand })).toEqual([identity]);
       const final = await read(project.id);
-      expect(final.caption.value).toBe("Second caption");
-      expect(final.note.asset).toEqual(replacement);
-      expect(final.note.shared?.kind).toBe("text");
+      expect(final.caption.value).toBe("First caption");
+      expect(final.note.asset).toEqual(image);
+      expect(final.note.shared).toEqual({ kind: "text", value: "First" });
       await stopProcess(host.child);
       host = await startPackagedServe(root, env);
       expect(await read(project.id)).toEqual(final);

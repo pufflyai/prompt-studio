@@ -58,9 +58,10 @@ const ResearchAgent = (props: { readOnly?: boolean }) => {
     </Box>
   );
 };
-const meta = { title: "pstdio-workbench/Controls/Research agent", component: ResearchAgent } satisfies CanvasMeta<
-  typeof ResearchAgent
->;
+const meta = {
+  title: "Product/Workbench/Views/Controls/Research agent",
+  component: ResearchAgent,
+} satisfies CanvasMeta<typeof ResearchAgent>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const Editable: Story = {

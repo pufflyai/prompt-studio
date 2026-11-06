@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ProjectFolderChoice } from "./project-folder-choice";
 
 const meta = {
-  title: "Projects/Project folder",
+  title: "Product/Projects/Project folder",
   component: ProjectFolderChoice,
   decorators: [
     (Story) => (

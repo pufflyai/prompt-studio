@@ -37,6 +37,8 @@ const stops: string[] = [];
 const answers: unknown[] = [];
 const approvals: unknown[] = [];
 let online = true;
+let queueUnavailable = false;
+let failedQueueReads = 0;
 let closing = false;
 let mirror: (fail?: boolean) => Promise<void> = async () => {};
 const record = () =>
@@ -134,6 +136,8 @@ const history = createPersonalHistoryStore({
   ...login,
   projectId: project.id,
   documents: source.deps.extensionStorageService.documents,
+  index: source.deps.extensionStorageService.personalHistoryIndex,
+  logs: source.deps.extensionStorageService.logs,
   files: source.deps.personalHistoryService.logs,
 });
 const references = createHistoryReferences(
@@ -195,6 +199,10 @@ source.deps.accountService.start(
   async (projectId, deviceId, command, signal) => {
     if (projectId !== project.id || deviceId !== targetId || !online)
       throw new AccountRequestError("Laptop is offline");
+    if (command.type === "session.queuedMessages" && queueUnavailable) {
+      failedQueueReads++;
+      throw new AccountRequestError("Queue access is renewing");
+    }
     const result = await withDeviceCommandAttachments(source.deps, projectId, command, (value) =>
       execute(jsonSchema.parse(JSON.parse(JSON.stringify(value))), { signal }),
     );
@@ -220,11 +228,36 @@ const createSession = async (title: string) => {
 const session = await createSession("Remote conversation");
 const unrelated = await createSession("Other running session");
 await mirror();
+const workspacesSource = JSON.parse(process.env.E2E_EXTENSION_SOURCES ?? "{}")["pstdio-workspaces"];
+// API cleanup tests need only the server fixture; browser callers supply the installed tool source.
+if (workspacesSource) {
+  const workspacesManifest = await Bun.file(join(workspacesSource, "package.json")).json();
+  const installedWorkspaces = await source.app.request(
+    `/v1/projects/${project.id}/extensions/installed/pstdio-workspaces/enable`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        displayName: "Workspaces",
+        extensionId: "pstdio.pstdio-workspaces",
+        manifest: { id: "pstdio.pstdio-workspaces", name: "pstdio-workspaces" },
+        name: "pstdio-workspaces",
+        sourceHash: crypto.randomUUID(),
+        sourceKind: "local_path",
+        sourcePath: workspacesSource,
+        sourceRef: null,
+        version: workspacesManifest.version,
+      }),
+    },
+  );
+  if (!installedWorkspaces.ok) throw new Error(await installedWorkspaces.text());
+}
 const snapshot = async () => ({
   stops,
   answers,
   approvals,
   online,
+  failedQueueReads,
   sourceSessions: await source.deps.sessionService.list(project.id),
   targetSessions: await target.deps.sessionService.list(project.id),
   queue: await target.deps.sessionQueueEntriesService.listPendingBySession(session.id),
@@ -247,6 +280,8 @@ const admin = async (request: Request) => {
       throw new Error("Injected source close failure");
     };
   }
+  if (input.action === "queue-unavailable") queueUnavailable = true;
+  if (input.action === "queue-available") queueUnavailable = false;
   if (input.action === "offline") online = false;
   if (input.action === "online") online = true;
   if (input.action === "question") {

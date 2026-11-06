@@ -39,7 +39,7 @@ const KanbanRendererListLabel = (props: KanbanRendererListItemContentProps) => {
         <Text textStyle="label/XS" color="fg.muted" flexShrink={0}>
           {item.countBadge}
         </Text>
-        {item.note ? (
+        {item.note && !item.onNoteClick ? (
           <Text textStyle="label/XS" color="fg.muted" truncate>
             {item.note}
           </Text>
@@ -93,9 +93,25 @@ const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): L
       color={item.statusColor ?? (item.isGroup || item.statusColorPalette ? "colorPalette.solid" : "fg.muted")}
     />
   ) : undefined,
-  actions: item.onCreate
-    ? [{ id: "create", label: `Add to ${item.title}`, icon: <Plus />, onAction: item.onCreate }]
-    : undefined,
+  actions: [
+    ...(item.note && item.onNoteClick
+      ? [
+          {
+            id: "details",
+            label: `${item.title}: ${item.note}`,
+            icon: (
+              <Text textStyle="label/XS" whiteSpace="nowrap" px="xs">
+                {item.note}
+              </Text>
+            ),
+            onAction: item.onNoteClick,
+          },
+        ]
+      : []),
+    ...(item.onCreate
+      ? [{ id: "create", label: `Add to ${item.title}`, icon: <Plus />, onAction: item.onCreate }]
+      : []),
+  ],
   actionsVisibility: "always",
   endContent: hasEndContent(item) ? <KanbanRendererListBadges item={item} /> : null,
   isContainer: hasChildren,

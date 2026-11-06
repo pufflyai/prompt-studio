@@ -56,7 +56,7 @@ const PageMenuHeaderStory = (props: PageMenuHeaderStoryProps) => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Page menu header",
+  title: "Product/Workbench/Panels/Page menu header",
   component: PageMenuHeaderStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof PageMenuHeaderStory>;

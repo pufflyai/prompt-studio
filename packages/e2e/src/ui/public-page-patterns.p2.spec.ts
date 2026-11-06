@@ -68,7 +68,7 @@ const test = base.extend<{ projectId: string }>({
   },
 });
 
-test("Scribble saves edits and creates documents", async ({ page, projectId }) => {
+test("Scribble saves documents and opens its session composer", async ({ page, projectId }) => {
   await openExample(page, projectId, "scribble", "scribble.document/north-star");
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expect(sidenav.getByRole("option", { name: "North star", exact: true })).toBeVisible();
@@ -203,7 +203,7 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page, project
   await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
 });
 
-test("Kiln docks the inspector and persists object changes", async ({ page, projectId }) => {
+test("Kiln keeps animation controls responsive and persists object changes", async ({ page, projectId }) => {
   await openExample(page, projectId, "kiln");
   const inspector = view(page, "Scene and properties");
   const gridToggle = view(page, "3D viewport").getByRole("button", { name: "Toggle viewport grid", exact: true });
@@ -255,7 +255,7 @@ test("leaving a tool restores project mode and its theme even when Home is disab
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-light");
     await view(page, "Pigeon").getByRole("button", { name: "Back to project", exact: true }).click();
-    await expect(page).toHaveURL(`/projects/${id}/workspaces`);
+    await expect(page).toHaveURL(`/projects/${id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-dark");
     expect(await page.evaluate(() => localStorage.getItem("theme-preference"))).toBe("pstdio-dark");
   } finally {

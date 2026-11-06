@@ -19,12 +19,14 @@ import { flattenDiagnosticMessageText, getParsedCommandLineOfConfigFile, sys } f
 import {
   ALLOWED_WORKSPACE_DEPS,
   DEFAULT_PRIVATE_EXPORT_LIMIT,
+  DEVELOPMENT_ONLY_WORKSPACE_DEPS,
   EXTENSION_ALLOWED_DEPS,
   FORBIDDEN_FOLDER_SPECIFIERS,
   FORBIDDEN_SPECIFIERS,
   PRIVATE_EXPORT_LIMITS,
   RELATIVE_ESCAPE_ALLOWLIST,
 } from "./boundary-rules";
+import { clientEventTransportViolations } from "./client-event-transport";
 import { checkExtensionRegistryResolution, type ExtensionPackageDependencies } from "./extension-registry-resolution";
 import { sourceImports } from "./source-imports";
 import { syncModuleViolation } from "./sync-module-boundaries";
@@ -33,6 +35,7 @@ const SKIP_DIRS = new Set(["node_modules", "dist", ".cache", "__test-tmp__", "_r
 
 interface WorkspacePackage extends ExtensionPackageDependencies {
   declared: Set<string>;
+  runtimeDeclared: Set<string>;
   privateExports?: number;
 }
 
@@ -73,6 +76,10 @@ const discoverPackages = (root: string) => {
       name: manifest.name,
       dir,
       declared,
+      runtimeDeclared: new Set([
+        ...Object.keys(dependencies),
+        ...Object.keys((manifest.peerDependencies as Record<string, string>) ?? {}),
+      ]),
       dependencies,
       devDependencies: (manifest.devDependencies as Record<string, string>) ?? {},
       isExtension: Boolean((manifest.engines as { pstdio?: unknown } | undefined)?.pstdio),
@@ -143,6 +150,11 @@ const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, e
       errors.push(`${pkg.dir}: layer map allows "${dep}" but the package does not declare it; remove the allowance`);
     }
   }
+  for (const developmentOnly of DEVELOPMENT_ONLY_WORKSPACE_DEPS[pkg.name] ?? []) {
+    if (pkg.runtimeDeclared.has(developmentOnly) || !(developmentOnly in pkg.devDependencies)) {
+      errors.push(`${pkg.dir}: declare "${developmentOnly}" only in devDependencies`);
+    }
+  }
   for (const forbidden of FORBIDDEN_SPECIFIERS[pkg.name] ?? []) {
     if (pkg.declared.has(forbidden)) {
       errors.push(`${pkg.dir}: declares forbidden dependency "${forbidden}"`);
@@ -194,6 +206,12 @@ const checkSpecifier = (specifier: string, context: FileContext, errors: string[
   if (matchesPackage(specifier, FORBIDDEN_SPECIFIERS[pkg.name] ?? [])) {
     errors.push(`${relativeFile}: forbidden import "${specifier}"`);
   }
+  if (
+    matchesPackage(specifier, DEVELOPMENT_ONLY_WORKSPACE_DEPS[pkg.name] ?? []) &&
+    !/\.(?:p\d\.(?:test|spec)|fixture)\.[tj]sx?$/.test(relativeFile)
+  ) {
+    errors.push(`${relativeFile}: runtime source must not import development-only package "${specifier}"`);
+  }
   const folderRule = FORBIDDEN_FOLDER_SPECIFIERS[pkg.name];
   if (
     folderRule &&
@@ -224,6 +242,7 @@ const checkSourceImports = (pkg: WorkspacePackage, workspace: Workspace, errors:
   for (const file of collectFiles(pkgRoot, /\.(ts|tsx)$/)) {
     const relativeFile = path.relative(workspace.root, file).replaceAll("\\", "/");
     const source = readFileSync(file, "utf8");
+    errors.push(...clientEventTransportViolations(relativeFile, source));
     if (
       (/^packages\/e2e\/src\/(?:ui|vite-terminal)\//.test(relativeFile) ||
         /^packages\/e2e\/playwright(?:\.vite-terminal)?\.config\.ts$/.test(relativeFile)) &&

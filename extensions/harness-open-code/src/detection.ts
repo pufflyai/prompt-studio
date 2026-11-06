@@ -1,10 +1,8 @@
 import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { resolveOpencodeCommand } from "./cli";
 
-// 1.0.175 is the first release that serves `/global/health` and `/question`. The harness finds its
-// server through the health check and asks the agent's questions through the question API. There
-// is no upper bound because OpenCode ships several times a week.
-export const MINIMUM_VERSION = "1.0.175";
+// The harness uses the OpenCode 2 API and integration-based authentication, verified from 2.2.5.
+export const MINIMUM_VERSION = "2.2.5";
 
 const unavailable = (ctx: HarnessContext, reason: string, version?: string) => {
   ctx.logger.warn(reason);

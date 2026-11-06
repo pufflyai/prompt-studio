@@ -2,14 +2,14 @@ import { expect, test } from "bun:test";
 import { fixture } from "./auto-build.fixture";
 import { pauseAutoBuildCommand } from "./auto-build-lifecycle";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
-import { requestHumanCommand, reviewCommand } from "./review-requests";
+import { requestReviewCommand, reviewCommand } from "./review-requests";
 
 test("Auto Build exposes pending requests in its work scope above its session activity", async () => {
   const { ctx, ticket } = await fixture();
   const included = await ticket("Tool builder release");
   const excluded = await ticket("Unrelated expenses");
   const request = async (id: string) =>
-    requestHumanCommand.run(ctx, {
+    requestReviewCommand.run(ctx, {
       ticket: id,
       title: "Choose the release",
       instructions: "Review the options",
@@ -40,7 +40,7 @@ test("supervisor-linked input stays visible after an unstarted ticket leaves eli
   const task = await ticket("Choose a tool");
   await autoBuildCommand.run(ctx, {});
   const owner = (await readAutoBuildSupervisor(ctx)).sessionId!;
-  const request = await requestHumanCommand.run(ctx, {
+  const request = await requestReviewCommand.run(ctx, {
     ticket: task.id,
     title: "Choose scope",
     instructions: "Pick a tool",

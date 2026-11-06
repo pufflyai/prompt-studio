@@ -13,7 +13,7 @@ export const parseJsonValue = (value: string) => {
 
 export const buildRequestUrl = (baseUrl: string, path: string, directory: string) => {
   const url = new URL(path, baseUrl);
-  url.searchParams.set("directory", directory);
+  url.searchParams.set("location[directory]", directory);
   return url.toString();
 };
 
@@ -51,10 +51,17 @@ export const requestJson = async <T>(
 ) => {
   options.signal?.throwIfAborted();
   const timeoutMs = options.method === "GET" ? GET_TIMEOUT_MS : POST_TIMEOUT_MS;
+  const endpoint = new URL(url);
+  const headers = { ...options.headers };
+  if (endpoint.password) {
+    headers.authorization = `Basic ${Buffer.from(`${decodeURIComponent(endpoint.username)}:${decodeURIComponent(endpoint.password)}`).toString("base64")}`;
+    endpoint.username = "";
+    endpoint.password = "";
+  }
 
-  const response = await fetcher(url, {
+  const response = await fetcher(endpoint.href, {
     method: options.method,
-    headers: options.headers,
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
     signal: options.signal
       ? AbortSignal.any([options.signal, AbortSignal.timeout(timeoutMs)])
@@ -72,26 +79,4 @@ export const requireResponseOk = (response: Response, text: string, message: str
 
   const suffix = text.trim() ? ` ${text.trim()}` : "";
   throw new Error(`${message}: HTTP ${response.status}${suffix}`);
-};
-
-export const parsePromptResponse = (text: string) => {
-  const trimmed = text.trim();
-  if (!trimmed) return;
-
-  const parsed = parseJsonValue(trimmed);
-  if (!parsed || typeof parsed !== "object") {
-    throw new Error(`OpenCode session.prompt returned unexpected response: ${trimmed}`);
-  }
-
-  const record = parsed as Record<string, unknown>;
-
-  if (record.info && record.parts) return;
-
-  if (typeof record.name === "string") {
-    const data = record.data as { message?: string } | undefined;
-    const message = data?.message ?? trimmed;
-    throw new Error(`OpenCode session.prompt failed: ${record.name}: ${message}`);
-  }
-
-  throw new Error(`OpenCode session.prompt returned unexpected response: ${trimmed}`);
 };

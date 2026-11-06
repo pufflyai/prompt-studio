@@ -51,7 +51,7 @@ const createStorySession = (offline = false): NativeDocumentSession => {
   };
 };
 const meta = {
-  title: "Renderers/Native Markdown File Editor",
+  title: "Product/Workbench/File editor/Native Markdown editor",
   component: NativeMarkdownFileEditor,
   args: { presence: createWorkbenchPresence(), open: true },
   decorators: [

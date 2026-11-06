@@ -1,10 +1,15 @@
+import type { TreeListSection } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../../core";
 import { runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { CommandParamsDialog } from "../../command-palette/command-params-dialog";
 import type { TreeActionParamsRequest } from "./tree-actions";
 
+import { treeActionParamsFallback } from "./tree-inline-input";
+
 interface TreeParamsDialogProps {
+  sections?: TreeListSection[];
+  expansion?: { expandedNodeIds: string[]; expandedSectionIds: string[] };
   request: TreeActionParamsRequest | null;
   renderParamField?: CommandParamFieldRenderer;
   workbench: WorkbenchCore;
@@ -12,7 +17,8 @@ interface TreeParamsDialogProps {
 }
 
 export const TreeParamsDialog = (props: TreeParamsDialogProps) => {
-  const { request, renderParamField, workbench, onClose } = props;
+  const { renderParamField, workbench, onClose } = props;
+  const request = treeActionParamsFallback(props.sections ?? [], props.request, props.expansion);
   return (
     <CommandParamsDialog
       request={request?.request ?? null}

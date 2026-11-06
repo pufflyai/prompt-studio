@@ -4,6 +4,7 @@ import {
   resolveActiveOverlayPlacement,
   resolveOverlayDialogConfig,
   resolveOverlayDialogRenderState,
+  resolvePageDialogLayout,
 } from "./overlay-layer";
 
 describe("resolveOverlayDialogConfig", () => {
@@ -135,4 +136,20 @@ test("orphan overlays stay hidden without masking live dialogs or blocking late 
   expect(resolveActiveOverlayPlacement([orphan, ordinary], orphan.widgetId, { settings: {}, "old-setup": {} })).toBe(
     orphan,
   );
+});
+
+test("native fill pages have a bounded dialog viewport while forms stay compact", () => {
+  for (const kind of ["dataTable", "kanban", "resourceList", "tree", "file"])
+    expect(resolvePageDialogLayout(true, kind)).toEqual({ fill: true, contentHeight: "70dvh", sizing: undefined });
+  for (const kind of ["controls", "webview", "react"])
+    expect(resolvePageDialogLayout(true, kind)).toEqual({
+      fill: false,
+      contentHeight: undefined,
+      sizing: "content-height",
+    });
+  expect(resolvePageDialogLayout(false, "dataTable")).toEqual({
+    fill: false,
+    contentHeight: undefined,
+    sizing: undefined,
+  });
 });

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createHostCapabilityGate } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
-import { createWorkbench } from "../../core";
+import { createWorkbench, type WorkbenchPanelInstance } from "../../core";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
 const deferred = () => {
@@ -30,11 +30,17 @@ const createEditor = (failFirst = false) => {
       },
     },
   );
-  const frame = (projectId = "project-1", extensionId = "pstdio.lab") => {
+  const frame = (projectId = "project-1", extensionId = "pstdio.lab", placement?: WorkbenchPanelInstance) => {
     const events: unknown[] = [];
     const hostEvents = createHostEventPublisher();
     hostEvents.bind((event) => events.push(event.payload));
-    const capabilities = createWorkbenchWebviewHostCapabilities({ workbench, projectId, extensionId, hostEvents });
+    const capabilities = createWorkbenchWebviewHostCapabilities({
+      workbench,
+      projectId,
+      extensionId,
+      hostEvents,
+      placement,
+    });
     const gate = createHostCapabilityGate({ capabilities, declaredCapabilities: ["editing.session"] });
     return {
       call: (input: object) => gate.call({ method: "editing.session", params: input }),
@@ -42,7 +48,7 @@ const createEditor = (failFirst = false) => {
       hostEvents,
     };
   };
-  return { frame, writes, writing, release };
+  return { frame, writes, writing, release, workbench };
 };
 const initial = { title: "Original", position: { x: 0, y: 0 } };
 const open = (sessionId: string, key = "document-1") => ({
@@ -57,6 +63,50 @@ const change = (sessionId: string, value: string) => ({
   sessionId,
   sequence: 1,
   changes: [{ path: ["title"], value }],
+});
+
+test("unchanged refreshes and clean saves preserve every concurrent reader's version", async () => {
+  const editor = createEditor();
+  const frames = [editor.frame(), editor.frame(), editor.frame()];
+  for (const [index, frame] of frames.entries()) await frame.call(open(String(index)));
+  await Promise.all(frames.map((frame, index) => frame.call({ operation: "save", sessionId: String(index) })));
+  const snapshots = await Promise.all(
+    frames.map((frame, index) =>
+      frame.call({ operation: "refresh", sessionId: String(index), expectedVersion: 0, value: initial }),
+    ),
+  );
+  expect(snapshots).toEqual(frames.map(() => ({ value: initial, version: 0, revision: 0, savedRevision: 0 })));
+  expect(frames.flatMap((frame) => frame.events)).toEqual([]);
+  expect(editor.writes).toEqual([]);
+});
+
+test("equal authoritative refreshes retain active previews and changed values still notify every view", async () => {
+  const editor = createEditor();
+  const first = editor.frame();
+  const second = editor.frame();
+  await first.call(open("first"));
+  await second.call(open("second"));
+  await first.call({
+    operation: "preview",
+    sessionId: "first",
+    sequence: 1,
+    changes: [{ path: ["title"], value: "Draft" }],
+  });
+  expect(
+    await second.call({ operation: "refresh", sessionId: "second", expectedVersion: 1, value: initial }),
+  ).toMatchObject({ value: { title: "Draft" }, version: 1, revision: 0, savedRevision: 0 });
+  expect(second.events).toHaveLength(1);
+  expect(
+    await second.call({
+      operation: "refresh",
+      sessionId: "second",
+      expectedVersion: 1,
+      value: { ...initial, position: { x: 10, y: 20 } },
+    }),
+  ).toMatchObject({ value: { title: "Draft", position: { x: 10, y: 20 } }, version: 2 });
+  expect(second.events).toHaveLength(2);
+  expect(first.events).toHaveLength(2);
+  expect(editor.writes).toEqual([]);
 });
 
 test("publishes an edit to every view while its save is held", async () => {
@@ -337,4 +387,33 @@ test("settings navigation saves or discards extension previews and keeps failed 
   await guard.leave(false);
   expect(await leaving).toBe(true);
   expect(await call({ operation: "cancel", sessionId: "settings" })).toMatchObject({ value: { title: "Edited" } });
+});
+
+test("an equal authoritative refresh reconciles the saved baseline after reset reuses a revision", async () => {
+  const { settingsLeaveGuard } = await import("../../react/settings/settings-leave-guard");
+  const editor = createEditor();
+  const frame = editor.frame("project-1", "pstdio.lab", {
+    instanceId: "settings",
+    panelId: "settings",
+    closable: true,
+    resource: { type: "workbench-settings", id: "test" },
+  });
+  await frame.call(open("settings"));
+  const pending = frame.call(change("settings", "Held"));
+  await editor.writing.promise;
+  const guard = settingsLeaveGuard(editor.workbench);
+  await guard.getActions()!.reset();
+  const newer = frame.call(change("settings", "Latest"));
+  editor.release.resolve();
+  await Promise.all([pending, newer]);
+  const current = (await frame.call({ operation: "save", sessionId: "settings" })) as { version: number };
+  await frame.call({
+    operation: "refresh",
+    sessionId: "settings",
+    expectedVersion: current.version,
+    value: { ...initial, title: "Latest" },
+  });
+  expect(guard.isDirty()).toBe(false);
+  await guard.getActions()!.reset();
+  expect(await frame.call({ operation: "save", sessionId: "settings" })).toMatchObject({ value: { title: "Latest" } });
 });

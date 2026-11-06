@@ -7,7 +7,7 @@ import { EMPTY_VIEW_FILTER } from "./collection-view-types";
 import { FilterMenu } from "./filter-menu";
 
 const meta: CanvasMeta<typeof FilterMenu> = {
-  title: "Patterns/Collection View/Filter Menu",
+  title: "Design system/Patterns/Collection view/Filter menu",
   component: FilterMenu,
 };
 export default meta;

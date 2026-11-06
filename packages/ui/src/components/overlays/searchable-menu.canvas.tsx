@@ -28,7 +28,7 @@ const repositoryItems: SearchableMenuItem[] = Array.from({ length: 12 }, (_, ind
   };
 });
 const meta: CanvasMeta<typeof SearchableMenu> = {
-  title: "Components/Navigation/Searchable Menu",
+  title: "Design system/Components/Navigation/Searchable menu",
   component: SearchableMenu,
   description:
     "Searchable selection menu for switching between local option sets. RULE: Menu item subtitles must add distinct context and never contain the same information as the title.",

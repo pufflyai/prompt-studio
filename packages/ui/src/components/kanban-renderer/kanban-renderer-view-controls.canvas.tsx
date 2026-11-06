@@ -7,7 +7,7 @@ import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
 const meta: CanvasMeta<typeof KanbanRenderer> = {
-  title: "Patterns/Kanban Renderer/View Controls",
+  title: "Design system/Patterns/Kanban renderer/View controls",
   component: KanbanRenderer,
   fullscreen: true,
 };

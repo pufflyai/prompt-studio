@@ -204,7 +204,7 @@ export const selectAttemptCommand = defineCommand({
   params: {
     ticket: params.text({ required: true }),
     workspaceId: params.text({ required: true }),
-    humanRequestId: params.text(),
+    reviewRequestId: params.text(),
   },
   async run(ctx, commandParams) {
     return withQueuedWriteGuard(ctx, "attempt-launch", async () => {
@@ -215,17 +215,17 @@ export const selectAttemptCommand = defineCommand({
       const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
       if (!ticket || !attempt || attempt.ticketId !== ticket.id)
         throw new Error("Workspace is not an attempt for this ticket.");
-      if (commandParams.humanRequestId) {
-        const request = await readReviewRequest(ctx.storage, commandParams.humanRequestId);
+      if (commandParams.reviewRequestId) {
+        const request = await readReviewRequest(ctx.storage, commandParams.reviewRequestId);
         if (!request || request.ticketId !== ticket.id || request.state !== "open") {
-          throw new Error("The human request does not match this ticket.");
+          throw new Error("The review request does not match this ticket.");
         }
       }
       const selection = {
         ticketId: ticket.id,
         workspaceId: attempt.workspaceId,
         selectedBy: actorFromSource(ctx.source, ctx.invocationId),
-        humanRequestId: commandParams.humanRequestId ?? null,
+        reviewRequestId: commandParams.reviewRequestId ?? null,
         selectedAt: new Date().toISOString(),
       };
       await attemptSelectionsCollection(ctx.storage).put(ticket.id, selection);
@@ -239,7 +239,7 @@ export const selectAttemptCommand = defineCommand({
         reviewId: null,
         threadId: null,
         commitSha: attempt.revisions.at(-1)?.headSha ?? null,
-        metadata: { humanRequestId: selection.humanRequestId },
+        metadata: { reviewRequestId: selection.reviewRequestId },
       });
       return selection;
     });

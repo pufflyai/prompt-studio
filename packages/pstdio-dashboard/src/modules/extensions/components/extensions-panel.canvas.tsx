@@ -138,7 +138,7 @@ const marketplace = [
 const noop = () => {};
 const failedExtension = installedExtensions[1]!;
 const meta: CanvasMeta<typeof ExtensionsPanelView> = {
-  title: "ProjectSettings/ExtensionsPanel",
+  title: "Product/Settings/Extensions/Manage extensions",
   component: ExtensionsPanelView,
   fullscreen: true,
   args: { onUpgrade: noop, onDropFolder: noop },

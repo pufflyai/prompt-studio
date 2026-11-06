@@ -4,7 +4,7 @@ import type { ProjectSkillDetails } from "../data/skills-api";
 import { SkillViewerContent } from "./skill-viewer";
 
 const meta: CanvasMeta<typeof SkillViewerContent> = {
-  title: "ProjectSettings/SkillViewer",
+  title: "Product/Settings/Skills",
   component: SkillViewerContent,
   fullscreen: true,
   description:

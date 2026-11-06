@@ -50,7 +50,7 @@ const WorkspaceSelection = () => {
   );
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Workspace selection",
+  title: "Product/Workbench/Navigation/Tree/Workspace selection",
   component: WorkspaceSelection,
   decorators: [
     (Story) => (

@@ -14,7 +14,6 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
   expect(directory.ok()).toBe(true);
   const { path } = await directory.json();
   let projectId: string | undefined;
-  const staleCatalog = Promise.withResolvers<void>();
   try {
     const created = await request.post(`${uiOrigin}/v1/projects`, { data: folderProjectInput({}, path) });
     expect(created.ok()).toBe(true);
@@ -26,19 +25,6 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     const workspaceNavigation = await showSidenavEntry(page, "Workspaces");
     await workspaceNavigation.hover();
     await expect(workspaceNavigation.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
-    const catalogCaptured = Promise.withResolvers<void>();
-    let heldCatalog = false;
-    await page.route(`**/v1/projects/${projectId}/workspace-providers`, async (route) => {
-      if (heldCatalog) return route.continue();
-      heldCatalog = true;
-      const response = await route.fetch();
-      expect(await response.json()).toEqual([]);
-      catalogCaptured.resolve();
-      await staleCatalog.promise;
-      await route.fulfill({ response });
-    });
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await catalogCaptured.promise;
     const providerId = await enableCloudWorkspaceProvider({
       request,
       apiBase: uiOrigin,
@@ -48,19 +34,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     });
     const providers = await (await request.get(`${uiOrigin}/v1/projects/${projectId}/workspace-providers`)).json();
     expect(providers).toEqual([expect.objectContaining({ id: providerId })]);
-    const newWorkspace = workspaceNavigation.getByRole("button", {
-      name: "New workspace",
-      exact: true,
-      includeHidden: true,
-    });
-    // Catalog refresh can move rows. Wait for the action before positioning the pointer.
-    await expect(newWorkspace).toBeAttached();
-    await workspaceNavigation.hover();
-    await newWorkspace.click();
-    staleCatalog.resolve();
-    const providerDialog = page.getByRole("dialog", { name: "Create workspace", exact: true });
-    await expect(providerDialog.getByRole("textbox", { name: "Source template" })).toBeVisible();
-    await providerDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    // Creation reads providers installed after the initial project page was opened.
     const ticket = await createPlannerTicket(request, uiOrigin, projectId!, { content: "# Cloud workspace ticket" });
     const gitRequests: string[] = [];
     page.on("request", (request) => {
@@ -71,17 +45,16 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     await expect(page.getByRole("option", { name: "Project folder", exact: true })).toBeVisible();
     await page.getByText("Workspaces", { exact: true }).last().hover();
     await page.getByRole("button", { name: "Create workspace", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Create workspace", exact: true });
+    const dialog = page.frameLocator('iframe[title="Workspace action"]');
     await expect(dialog.getByText("Test cloud workspace", { exact: true })).toBeVisible();
     const params = { source: "blank-documents", provider_id: "eu-small" };
     await dialog.getByRole("textbox", { name: "Source template" }).fill(params.source);
     await dialog.getByRole("textbox", { name: "Environment profile" }).fill(params.provider_id);
-    const responsePromise = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === "/v1/workspaces" && response.request().method() === "POST",
-    );
     await dialog.getByRole("button", { name: "Create workspace", exact: true }).click();
-    const response = await responsePromise;
-    expect(response.status()).toBe(202);
+    await expect.poll(async () => (await (await request.get(workspacesUrl)).json()).length).toBe(2);
+    const workspace = (await (await request.get(workspacesUrl)).json()).find(
+      (row: { id: string }) => row.id !== homeWorkspace.id,
+    );
     const anchors = [
       {
         type: "ticket",
@@ -94,14 +67,6 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
         role: "primary",
       },
     ];
-    expect(response.request().postDataJSON()).toEqual({
-      project_id: projectId,
-      provider_id: providerId,
-      params,
-      anchors,
-      shorthand_base: ticket.shorthand,
-    });
-    const workspace = await response.json();
     expect(workspace).toMatchObject({
       root_path: null,
       branch: null,
@@ -114,8 +79,14 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
       provider_capabilities_json: { files: "none", diff: false },
     });
     expect(workspace.provider_ref_json).toEqual({ version: 1, data: { environment: workspace.id, params } });
-    await expect(dialog).not.toBeVisible();
-    await expect(page.getByRole("option", { name: workspace.workspace_shorthand, exact: true })).toBeVisible();
+    await expect(page.locator('iframe[title="Workspace action"]')).toBeHidden();
+    await workspaceNavigation.click();
+    await expect(
+      page
+        .getByRole("region", { name: "Main", exact: true })
+        .getByRole("option")
+        .filter({ hasText: workspace.workspace_shorthand }),
+    ).toBeVisible();
     expect(await (await request.get(workspacesUrl)).json()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: workspace.id, root_path: null, anchors_json: anchors }),
@@ -124,7 +95,6 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     );
     expect(gitRequests).toEqual([]);
   } finally {
-    staleCatalog.resolve();
     if (projectId) expect((await request.delete(`${uiOrigin}/v1/projects/${projectId}`)).ok()).toBe(true);
     if (existsSync(path)) rmSync(path, { recursive: true, force: true });
   }

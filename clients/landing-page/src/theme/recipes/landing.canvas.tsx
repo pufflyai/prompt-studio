@@ -4,7 +4,7 @@ import { WorkbenchLanding } from "../../components/workbench/workbench-landing";
 import { LANDING_PAGES } from "../../content/landing-pages";
 
 const meta = {
-  title: "Theme/Landing Pages",
+  title: "Website/Landing/Pages",
   component: WorkbenchLanding,
   fullscreen: true,
   args: { initialPath: "/", pages: LANDING_PAGES, initialDocument: undefined },

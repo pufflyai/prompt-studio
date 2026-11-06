@@ -137,3 +137,76 @@ test("refreshes query-owned enum choices and column rules without a status provi
   });
   dispose();
 });
+
+test("group notes dispatch local public command refs in their owning extension", async () => {
+  const workbench = createWorkbench();
+  workbench.pageLocations.setProject("project");
+  let opened = false;
+  workbench.commands.registerCommand(
+    { id: "example.devices.command.details", label: "Device details" },
+    {
+      execute: () => {
+        opened = true;
+      },
+    },
+  );
+  const record = {
+    id: "devices",
+    extensionId: "example.devices",
+    title: "Devices",
+    queryHandlerId: "query",
+    attributes: [],
+  } satisfies WorkbenchExtensionKanbanRendererRecord;
+  registerWorkbenchExtensionKanbanRenderers(
+    {
+      projectId: "project",
+      workbench,
+      executeCommand: async () => ({
+        rows: [],
+        attributes: [
+          {
+            id: "device",
+            label: "Device",
+            type: {
+              kind: "enum",
+              options: [
+                {
+                  value: "local",
+                  label: "This device",
+                  note: "2 / 6",
+                  noteAction: { kind: "command", target: { command: { kind: "command", id: "details" } } },
+                  contextMenuActions: [
+                    {
+                      id: "details",
+                      label: "This device",
+                      action: { kind: "command", target: { command: { kind: "command", id: "details" } } },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    },
+    [record],
+  );
+  const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("devices")!;
+  await renderer.executeQuery(queryState, new AbortController().signal);
+  if (!("getSnapshot" in renderer.attributes)) throw new Error("Expected live attributes");
+  const type = renderer.attributes.getSnapshot()[0]!.type;
+  if (type.kind !== "enum" || !Array.isArray(type.options)) throw new Error("Expected enum");
+  type.options[0]!.onNoteClick?.();
+  await Promise.resolve();
+  expect(opened).toBe(true);
+  opened = false;
+  expect(type.options[0]!.contextMenuActions?.[0]?.label).toBe("This device");
+  type.options[0]!.contextMenuActions?.[0]?.onAction();
+  await Promise.resolve();
+  expect(opened).toBe(true);
+  opened = false;
+  workbench.pageLocations.setProject("another-project");
+  type.options[0]!.contextMenuActions?.[0]?.onAction();
+  await Promise.resolve();
+  expect(opened).toBe(false);
+});

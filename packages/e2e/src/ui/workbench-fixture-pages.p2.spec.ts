@@ -3,6 +3,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { homePage } from "../helpers/home-loading";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
+import { showSidenavEntry } from "./helpers/sidenav-navigation";
 
 test.use({ notificationsEnabled: true });
 
@@ -50,9 +51,10 @@ test("an extension page navigates through the public API and browser history", a
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expect(sidenav).toHaveCount(1);
   await expect(sidenav.getByRole("option", { name: `${project.name} Switch project`, exact: true })).toHaveCount(0);
-  await expect(sidenav.getByRole("option", { name: "Workspaces", exact: true })).toHaveCount(0);
-  await expect(sidenav.getByRole("option")).toContainText(["Search", "Notifications", "Sessions", "Tickets", "Lab"]);
-  await sidenav.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
+  await expect(sidenav.getByRole("option", { name: "Workspaces", exact: true })).toBeVisible();
+  for (const label of ["Search", "Notifications", "Sessions", "Tickets"])
+    await expect(sidenav.getByRole("option", { name: label, exact: true })).toBeVisible();
+  await (await showSidenavEntry(page, "Lab")).click({ timeout: 30_000 });
 
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
   const labFrame = page.frameLocator('iframe[title="Lab"]');
@@ -121,7 +123,7 @@ test("Lab replaces an active session page in main", async ({ page, request }) =>
   await sidenav.getByRole("option", { name: sessionTitle, exact: true }).click();
   await expect(page.getByText(`Fake Agent: completed "${sessionTitle}"`).first()).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: new RegExp(`${project.name}$`) }).click();
-  await sidenav.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
+  await (await showSidenavEntry(page, "Lab")).click({ timeout: 30_000 });
 
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
   await expect(page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" })).toBeVisible({

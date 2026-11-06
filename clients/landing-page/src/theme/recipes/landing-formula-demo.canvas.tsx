@@ -40,7 +40,7 @@ const FormulaDemo = () => {
   );
 };
 const meta = {
-  title: "Theme/Landing Formula Demo",
+  title: "Website/Landing/Formula demo",
   component: FormulaDemo,
   fullscreen: true,
 } satisfies CanvasMeta<typeof FormulaDemo>;

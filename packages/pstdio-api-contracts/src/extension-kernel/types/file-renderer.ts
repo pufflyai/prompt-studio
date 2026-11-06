@@ -33,6 +33,8 @@ export interface FileRendererLoadResult extends TextFilePresentation {
   /** @deprecated Use textDocument and defineTextSource for presentation-independent source ownership. */
   documentSource?: NativeDocumentSource;
   fileName?: string;
+  /** Workspace-relative path shown above the file preview. */
+  filePath?: string;
   mimeType?: string;
   content?: string;
   dataUrl?: string;
@@ -55,6 +57,10 @@ export interface FileRendererSaveParams {
 }
 
 export interface FileRendererContribution extends RendererContributionBase {
+  /** Manual files write only on an explicit save. Defaults to autosave. */
+  saveMode?: "auto" | "manual";
+  /** Stable selected-document identity, independent of unrelated resource metadata. */
+  document?: { metadataKey: string };
   load: RendererCallback<FileRendererLoadParams, FileRendererLoadResult>;
   // Omit to make the renderer read-only. Images are always read-only regardless.
   save?: RendererCallback<FileRendererSaveParams, unknown>;

@@ -124,7 +124,7 @@ const RowTargetNavigation = (props: { panel?: boolean }) => {
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Row target navigation",
+  title: "Product/Workbench/Views/Kanban/Row target navigation",
   component: RowTargetNavigation,
   fullscreen: true,
 } satisfies CanvasMeta<typeof RowTargetNavigation>;

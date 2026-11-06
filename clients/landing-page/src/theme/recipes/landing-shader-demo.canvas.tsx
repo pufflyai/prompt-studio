@@ -131,7 +131,7 @@ const ShaderDemo = (props: { withControls: boolean; connected: boolean }) => {
   );
 };
 const meta = {
-  title: "Theme/Landing Shader Demo",
+  title: "Website/Landing/Shader demo",
   component: ShaderDemo,
   args: { withControls: false, connected: true },
   fullscreen: true,

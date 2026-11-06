@@ -121,7 +121,7 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     const status = async () => (await execute("get-ticket", { id: ticket.id })).statusId;
     // Planner leaves progress to the agent: starting, requesting input, and answering keep the chosen status.
     expect(await status()).toBe("ready");
-    const human = await execute("request-human", {
+    const human = await execute("request-review", {
       ticket: ticket.id,
       workspaceId: attempt.workspaceId,
       sessionId: attempt.implementationSessionId,

@@ -5,7 +5,7 @@ import { createMemoryStorageDevices } from "./index";
 const save = (storage: Awaited<ReturnType<typeof createMemoryStorageDevices>>["devices"][number], value: JsonValue) =>
   storage.records.commit({ operationId: crypto.randomUUID(), edits: [{ recordId: "note", replace: value }] });
 
-test("offline devices keep different fields, nested keys, list items and multiline edits without replacements", async () => {
+test("offline devices retain sibling fields while arrays and multiline strings follow relay order", async () => {
   const pair = await createMemoryStorageDevices();
   const [first, second] = pair.devices;
   const base = {
@@ -34,17 +34,22 @@ test("offline devices keep different fields, nested keys, list items and multili
     items: [base.items[0], { id: "b", title: "Edited B" }],
     body: "first\nLAST",
   });
-  expect(await pair.merge()).toEqual([]);
+  expect(await pair.merge()).toEqual([
+    { recordId: "note", path: ["value", "body"], kept: "first\nLAST", replaced: "FIRST\nlast" },
+    {
+      recordId: "note",
+      path: ["value", "items"],
+      kept: [base.items[0], { id: "b", title: "Edited B" }],
+      replaced: [{ id: "a", title: "Edited A" }, base.items[1]],
+    },
+  ]);
   for (const storage of pair.devices)
     expect((await storage.records.read("note")).value).toEqual({
       title: "After",
       status: "done",
       nested: { left: 2, right: 2 },
-      items: [
-        { id: "a", title: "Edited A" },
-        { id: "b", title: "Edited B" },
-      ],
-      body: "FIRST\nLAST",
+      items: [base.items[0], { id: "b", title: "Edited B" }],
+      body: "first\nLAST",
     });
 });
 
@@ -160,40 +165,32 @@ test("deletion replaces a concurrent edit and null remains distinct from a remov
   ]);
 });
 
-test("list diagnostics match items by identity across moves and report competing fields", async () => {
+test("concurrent arrays report the whole value that relay order replaced", async () => {
   const pair = await createMemoryStorageDevices();
   const [first, second] = pair.devices;
-  const a = { id: "a", title: "A" };
-  const b = { id: "b", title: "B" };
-  await save(first, [a, b]);
+  const base = [
+    { id: "a", title: "A" },
+    { id: "b", title: "B" },
+  ];
+  await save(first, base);
   await pair.merge();
-  await save(first, [b, { ...a, title: "Left" }, { id: "c", title: "C" }]);
-  await save(second, [{ ...a, title: "Right" }, b, { id: "d", title: "D" }]);
-  const report = await pair.merge();
-  const values = (await first.records.read("note")).value as { id: string; title: string }[];
-  const index = values.findIndex((item) => item.id === "a");
-  expect(report).toEqual([
-    {
-      recordId: "note",
-      path: ["value", index, "title"],
-      kept: values[index].title,
-      replaced: values[index].title === "Left" ? "Right" : "Left",
-    },
-  ]);
-  expect(new Set(values.map((item) => item.id))).toEqual(new Set(["a", "b", "c", "d"]));
-  expect((await second.records.read("note")).value).toEqual(values);
+  const left = [base[1], { ...base[0], title: "Left" }, { id: "c", title: "C" }];
+  const right = [{ ...base[0], title: "Right" }, base[1], { id: "d", title: "D" }];
+  await save(first, left);
+  await save(second, right);
+  expect(await pair.merge()).toEqual([{ recordId: "note", path: ["value"], kept: right, replaced: left }]);
+  for (const storage of pair.devices) expect((await storage.records.read("note")).value).toEqual(right);
 });
 
-test("removing an identified list item reports the concurrent edit it hid", async () => {
+test("a later whole-array edit replaces a concurrent removal", async () => {
   const pair = await createMemoryStorageDevices();
   const [first, second] = pair.devices;
   await save(first, [{ id: "a", title: "A" }]);
   await pair.merge();
   await save(first, []);
-  await save(second, [{ id: "a", title: "Edited" }]);
-  expect(await pair.merge()).toEqual([
-    { recordId: "note", path: ["value", 0], kept: undefined, replaced: { id: "a", title: "Edited" } },
-  ]);
+  const edited = [{ id: "a", title: "Edited" }];
+  await save(second, edited);
+  expect(await pair.merge()).toEqual([{ recordId: "note", path: ["value"], kept: edited, replaced: [] }]);
 });
 
 test("collection fixtures are forked once and offline migrations agree", async () => {

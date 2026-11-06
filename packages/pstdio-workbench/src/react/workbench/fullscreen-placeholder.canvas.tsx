@@ -29,7 +29,7 @@ const PageWorkbench = () => {
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Main fullscreen/Page placeholder",
+  title: "Product/Workbench/Fullscreen/Page placeholder",
   component: PageWorkbench,
   fullscreen: true,
 } satisfies CanvasMeta<typeof PageWorkbench>;

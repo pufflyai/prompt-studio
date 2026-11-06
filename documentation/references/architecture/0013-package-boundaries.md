@@ -34,12 +34,15 @@ API. The workbench package itself does not depend on the API host.
    and UI importer. UI bundles its implementation and public types; it is not
    a published SDK contract.
    `pstdio-db` also consumes synchronization contracts for durable document state,
-   current-record projections and encrypted record-stream persistence.
+   current-record projections and encrypted record-stream persistence. Its development-only
+   SDK dependency lets query conformance tests compare real SQL behavior with the
+   public in-memory storage helper. Runtime DB source never imports the SDK; the
+   boundary checker restricts this edge to test and fixture source.
    The private `pstdio-sync` package owns the production, runtime-neutral record
    and text engines. Its root entry owns shared storage ports; records, text,
-   transient presence, encryption and relay have separate entry points. Module
+   transient presence, encryption, relay and append-only logs have separate entry points. Module
    dependency checks keep text and presence independent of host and editor code.
-   The six exports are module contracts, not individual internal file exports.
+   The seven exports are module contracts, not individual internal file exports.
    It accepts storage adapters; `pstdio-db` supplies the durable local adapter.
    [Sync modules](0026-synchronization-contracts.md#sync-modules) defines each owner.
 
@@ -103,7 +106,10 @@ API. The workbench package itself does not depend on the API host.
 
 5. **Primitive UI**
    `@pstdio/ui` owns reusable React primitives, visual components, theme tokens,
-   editor widgets, and terminal-specific React UI through its `./terminal`
+   editor widgets, and command form fields, value normalization and dynamic option loading
+   through `./command-form`. Workbench supplies contextual resource defaults and custom
+   host selectors; extensions resolve their own localized labels and command references.
+   UI owns terminal-specific React UI through its `./terminal`
    subpath. UI packages consume public terminal contracts through `@pstdio/sdk`
    and bundle shared table field helpers from `pstdio-api-contracts` rather than
    depending on deprecated SDK host helpers. Its private `/collections` entry groups pure
@@ -231,8 +237,11 @@ access check must preserve that authority boundary. See the
 - Every layer-map allowance matches a declared dependency. Remove an allowance
   when the package stops declaring it.
 - Private packages have at most two `exports` entries. `pstdio-api`,
-  `pstdio-api-contracts`, and `pstdio-extensions` have frozen higher limits. The
-  check fails when a limit is above the current count, so a limit only goes down.
+  `pstdio-api-contracts`, and `pstdio-extensions` have frozen higher limits.
+  `pstdio-sync` has exactly seven owned module exports, including the approved
+  append-only logs API. New module contracts require an explicit architecture
+  change; internal files do not receive separate exports. The check fails when
+  a limit is above the current count.
 - `@pstdio/workbench` `src/core` imports no `@pstdio/ui` specifier, including
   subpaths and type-only imports.
 - Every workspace package import must be declared in the importer's

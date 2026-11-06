@@ -1,7 +1,7 @@
 import { Box, Button, Input, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 
-export default { title: "Design System/Documentation" };
+export default { title: "Extensions/UI Canvas/Documentation frame" };
 
 export const LongDocumentation = () => {
   const [expanded, setExpanded] = useState(false);

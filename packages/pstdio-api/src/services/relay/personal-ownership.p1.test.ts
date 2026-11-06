@@ -25,6 +25,7 @@ test("rebinding to Bob does not send Alice-owned local previews into Bob's priva
   let stop: (() => void) | undefined;
   try {
     const project = await source.deps.projectService.create({ name: "Live preview ownership" });
+    const sourceId = (await source.deps.environmentService.get()).environmentId;
     source.deps.accountService.devices = async () => [];
     const makeSession = (title: string) =>
       source.deps.sessionService.create({ project_id: project.id, title, status: "in_progress", agent: "unavailable" });
@@ -35,12 +36,13 @@ test("rebinding to Bob does not send Alice-owned local previews into Bob's priva
         accountId,
         managerOrigin: peer.origin,
         documents: source.deps.extensionStorageService.documents,
-        files: source.deps.personalHistoryService.logs,
+        index: source.deps.extensionStorageService.personalHistoryIndex,
+        logs: source.deps.extensionStorageService.logs,
       });
     const aliceHistory = history("alice");
     await capturePersonalHistory({
       projectId: project.id,
-      device: { ownerId: "alice", id: "alice-device", name: "Before rebinding" },
+      device: { ownerId: "alice", id: sourceId, name: "Before rebinding" },
       history: aliceHistory,
       references: createHistoryReferences(
         source.deps.extensionStorageService.documents.open(historyReferenceName),
@@ -84,18 +86,18 @@ test("rebinding to Bob does not send Alice-owned local previews into Bob's priva
       config: {
         accountId: "bob",
         workbenchId: project.id,
-        environmentId: "bob-source",
+        environmentId: sourceId,
         managerOrigin: peer.origin,
         relayOrigin: peer.origin,
         renewalGrant: "grant",
       },
       signal: controller.signal,
-      access: async () => ({ token: "bob-source", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+      access: async () => ({ token: sourceId, expiresAt: new Date(Date.now() + 60_000).toISOString() }),
     });
     await until(
       async () =>
         !(await sync!.status()).busy &&
-        peer.subscriptions().some((entry) => entry.deviceId === "bob-source" && entry.topics.length === 3),
+        peer.subscriptions().some((entry) => entry.deviceId === sourceId && entry.topics.length === 3),
     );
     const bobIndexed = await history("bob").readRecords("sessions");
     expect(bobIndexed.map((row) => row.id)).toEqual([bobSession.id]);

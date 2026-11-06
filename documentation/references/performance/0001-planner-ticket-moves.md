@@ -178,3 +178,12 @@ SDK/host and Planner changes ship in separate PRs under the extension repository
 - Run `bun run --cwd packages/e2e src/perf/planner-moves.validation.ts` after the full workload for supplemental checks.
 - Targeted behavior tests, package type checks, scoped Biome checks, packaged smoke, and `bun run --cwd scripts verify:packages` passed locally. Independent review RP-642 found no remaining issues.
 - Change request reports RP-645 and RP-649 contain samples, profiles, screenshots, and command logs.
+
+## Core position adoption
+
+The subsequent Cloud ordering change replaces Planner's numeric midpoint and
+rebalance algorithm with `storage.positions.between`. Migration 4 imports sorted
+numeric ranks with `migration.position(rank, recordId)` before removing the old
+field. The measurements above describe the earlier implementation; no new timing
+claim follows from this adoption. The maintained diagnostics now check persisted
+`position` values with ordinary string comparison.

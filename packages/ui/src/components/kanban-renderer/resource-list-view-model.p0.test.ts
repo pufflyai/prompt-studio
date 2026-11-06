@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { Circle, Monitor } from "lucide-react";
 import { flattenKanbanRendererListItems } from "./kanban-renderer-list";
 import { buildResourceListItems, countResourceListRows, resourceListSettings } from "./resource-list-view-model";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
@@ -10,7 +11,7 @@ const attributes: AttributeDescriptor[] = [
     type: {
       kind: "enum",
       options: [
-        { value: "local", label: "This device", color: "green", note: "Online", canCreate: true },
+        { value: "local", label: "This device", icon: "monitor", color: "green", note: "Online", canCreate: true },
         { value: "remote", label: "Build box", color: "gray", note: "Offline" },
       ],
     },
@@ -48,6 +49,39 @@ test("group labels, counts, notes, colors and optional creation come from extens
     ["Build box", 1, "Offline", "gray", false],
   ]);
   expect(items.every((item) => !item.onDropRow)).toBe(true);
+});
+
+test("group headers show the declared device icon and retain the default for unspecified icons", () => {
+  const items = build();
+  expect(items[0].statusIcon).toBe(Monitor);
+  expect(items[1].statusIcon).toBe(Circle);
+});
+
+test("group context menus invoke the declared device action", async () => {
+  let opened = false;
+  const source = structuredClone(attributes);
+  if (source[0].type.kind !== "enum" || !Array.isArray(source[0].type.options)) throw new Error("Expected enum");
+  source[0].type.options[0].contextMenuActions = [
+    {
+      id: "details",
+      label: "This device",
+      onAction: () => {
+        opened = true;
+      },
+    },
+  ];
+  const items = buildResourceListItems({
+    rows,
+    attributes: source,
+    settings: resourceListSettings({ columnGrouping: "device" }),
+    filter: { conjunction: "and", rules: [] },
+    sorts: [],
+    search: "",
+  });
+  const details = items[0].contextMenuActions?.find((action) => action.key === "details");
+  expect(details?.label).toBe("This device");
+  await details?.onClick?.();
+  expect(opened).toBe(true);
 });
 
 test("children nest once and collapse independently from their group", () => {
@@ -177,4 +211,24 @@ test("resource IDs that resemble generated groups collapse independently and ret
   parent.onBadgeChange?.("device", "remote");
   expect(opened).toEqual(["group::local"]);
   expect(changed).toEqual(["group::local"]);
+});
+
+test("group note actions remain independent from creation and expansion", () => {
+  let opened = false;
+  const source = structuredClone(attributes);
+  if (source[0].type.kind !== "enum" || !Array.isArray(source[0].type.options)) throw new Error("Expected enum");
+  source[0].type.options[0].onNoteClick = () => {
+    opened = true;
+  };
+  const items = buildResourceListItems({
+    rows,
+    attributes: source,
+    settings: resourceListSettings({ columnGrouping: "device" }),
+    filter: { conjunction: "and", rules: [] },
+    sorts: [],
+    search: "",
+  });
+  items[0].onNoteClick?.();
+  expect(opened).toBe(true);
+  expect(items[0].onCreate).toBeUndefined();
 });

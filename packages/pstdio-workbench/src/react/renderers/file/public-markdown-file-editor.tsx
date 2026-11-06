@@ -1,4 +1,4 @@
-import { Flex, Spinner, Text } from "@chakra-ui/react";
+import { Flex, Text } from "@chakra-ui/react";
 import type { TextEditingSession } from "@pstdio/sdk/extensions";
 import { LazyMarkdownEditor, type MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -62,32 +62,8 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
       : [];
   return (
     <Flex direction="column" h="full" minH="0" bg="bg">
-      {errorNotice}
-      {error && (
-        <FileRendererErrorNotice
-          message={error}
-          onRetry={() => {
-            void retryRef.current();
-          }}
-        />
-      )}
-      {state?.pending && !error && (
-        <Flex gap="xs" align="center" bg="bg.muted" px="sm" py="xs">
-          <Spinner size="xs" color="fg.muted" aria-label={state.connected ? "Saving" : "Reconnecting"} />
-          <Text color="fg.muted" textStyle="label/S/regular">
-            {state.connected ? "Saving changes…" : "Changes are waiting to be saved."}
-          </Text>
-        </Flex>
-      )}
-      {state && !state.editable && !error && (
-        <Flex bg="bg.muted" px="sm" py="xs">
-          <Text color="fg.muted" textStyle="label/S/regular">
-            This document is read only.
-          </Text>
-        </Flex>
-      )}
-      {session && state ? (
-        <Flex flex="1" minH="0">
+      <Flex flex="1" minH="0">
+        {session && state ? (
           <LazyMarkdownEditor
             collaboration={{
               session,
@@ -101,9 +77,25 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
             onActiveSectionChange={onActiveSectionChange}
             isEditable={open && presentation.owns(session) && state.editable && !state.closing}
           />
+        ) : (
+          !error && <FileRendererLoading />
+        )}
+      </Flex>
+      {errorNotice}
+      {error && (
+        <FileRendererErrorNotice
+          message={error}
+          onRetry={() => {
+            void retryRef.current();
+          }}
+        />
+      )}
+      {state && !state.editable && !error && (
+        <Flex flex="none" layerStyle="documentNotice">
+          <Text color="fg.muted" textStyle="label/S/regular">
+            This document is read only.
+          </Text>
         </Flex>
-      ) : (
-        !error && <FileRendererLoading />
       )}
     </Flex>
   );

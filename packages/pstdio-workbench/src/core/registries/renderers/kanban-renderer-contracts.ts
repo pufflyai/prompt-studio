@@ -18,7 +18,9 @@ export interface EnumOption {
   color?: string;
   icon?: string | null;
   note?: string;
+  onNoteClick?: () => void;
   canCreate?: boolean;
+  contextMenuActions?: Array<{ id: string; label: string; disabled?: boolean; onAction: () => void }>;
 }
 
 /**
@@ -138,6 +140,8 @@ export interface KanbanRendererCreateLabels {
 }
 
 export interface KanbanRendererCreateRowConfig {
+  /** Run the creation command directly when it owns its own form. Defaults to inline. */
+  presentation?: "inline" | "command";
   title: string;
   submitLabel: string;
   fields: KanbanRendererCreateField[];

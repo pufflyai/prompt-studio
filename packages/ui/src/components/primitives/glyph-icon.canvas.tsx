@@ -1,5 +1,6 @@
 import { Box, Button, Grid, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { getIconComponent } from "./icon-options";
 
 type StoryFn = () => ReactNode;
@@ -13,7 +14,7 @@ type StoryFn = () => ReactNode;
  * truth for codepoints. `@pstdio/ui` declares the `@font-face` itself with woff2 only.
  */
 const meta = {
-  title: "Foundations/Icons/Prompt Studio Glyphs",
+  title: "Design system/Foundations/Icons/Prompt Studio glyphs",
   decorators: [
     (Story: StoryFn) => (
       <Box padding="lg" background="bg">
@@ -22,7 +23,10 @@ const meta = {
     ),
   ],
 };
-export default meta;
+export default {
+  title: "Design system/Foundations/Icons/Prompt Studio glyphs",
+  fullscreen: true,
+};
 const STATUS_GLYPHS = [
   { name: "status-backlog", use: "Backlog — dashed ring" },
   { name: "status-todo", use: "Todo — open ring" },
@@ -58,7 +62,7 @@ const GlyphTable = (props: {
   </Stack>
 );
 /** Ring marks for the ticket lifecycle, matching `cmp/StatusRing` in the design system. */
-export const StatusRings = {
+const StatusRings = {
   id: "foundations-icons-prompt-studio-glyphs--status-rings",
   render: () => <GlyphTable entries={STATUS_GLYPHS} />,
 };
@@ -67,12 +71,12 @@ export const StatusRings = {
  * bars are outlined rather than tinted, and the marks are trimmed to 82% because a solid
  * square reads heavier than a round glyph at the same ink size.
  */
-export const LevelBars = {
+const LevelBars = {
   id: "foundations-icons-prompt-studio-glyphs--level-bars",
   render: () => <GlyphTable entries={LEVEL_GLYPHS} />,
 };
 /** Glyphs scale with `boxSize` and inherit `color`, exactly like a lucide icon. */
-export const SizesAndColor = {
+const SizesAndColor = {
   id: "foundations-icons-prompt-studio-glyphs--sizes-and-color",
   render: () => (
     <Stack gap="md">
@@ -94,7 +98,7 @@ export const SizesAndColor = {
  * re-centres it and matches lucide's optical size. These rows are the regression check:
  * glyphs must sit on the same centre line as the lucide icons beside them.
  */
-export const InlineAlignment = {
+const InlineAlignment = {
   id: "foundations-icons-prompt-studio-glyphs--inline-alignment",
   render: () => {
     const marks = ["status-todo", "status-done", "level-low", "level-xhigh", "flame", "bug", "tag"];
@@ -128,7 +132,7 @@ export const InlineAlignment = {
   },
 };
 /** The full font, so a new glyph shows up here as soon as it is added. */
-export const AllGlyphs = {
+const AllGlyphs = {
   id: "foundations-icons-prompt-studio-glyphs--all-glyphs",
   render: () => (
     <Grid templateColumns="repeat(auto-fill, minmax(9rem, 1fr))" gap="sm">
@@ -143,3 +147,14 @@ export const AllGlyphs = {
     </Grid>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  StatusRings,
+  LevelBars,
+  SizesAndColor,
+  InlineAlignment,
+  AllGlyphs,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as StatusRings };

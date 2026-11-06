@@ -23,7 +23,7 @@ const workspaceHub = (
   />
 );
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Composer Surfaces",
+  title: "Design system/Patterns/Chat/Composer surfaces",
   component: ChatPanel,
   args: {
     messages: [],

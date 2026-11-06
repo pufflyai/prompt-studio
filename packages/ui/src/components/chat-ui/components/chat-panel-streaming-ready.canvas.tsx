@@ -48,7 +48,7 @@ function StreamingOnOpen() {
   );
 }
 const meta = {
-  title: "Patterns/Chat/Chat Panel Streaming Ready",
+  title: "Design system/Patterns/Chat/Chat panel streaming ready",
   component: StreamingOnOpen,
   fullscreen: true,
 } satisfies CanvasMeta<typeof StreamingOnOpen>;

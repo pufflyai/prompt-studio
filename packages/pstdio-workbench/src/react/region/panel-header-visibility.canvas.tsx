@@ -77,7 +77,7 @@ const createPanelWorkbench = (
   return workbench;
 };
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Panel header visibility",
+  title: "Product/Workbench/Panels/Panel header visibility",
   component: WorkbenchStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStory>;

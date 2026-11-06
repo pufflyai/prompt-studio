@@ -3,7 +3,7 @@ import config from "./default.json";
 
 export default {
   ...shaderCanvas("dots-to-grid", config),
-  title: "Shaders/Dots to grid",
+  title: "Design system/Components/Effects/Dots to grid",
   save: { file: "default.json", key: "values" },
 };
 export const Preview = {};

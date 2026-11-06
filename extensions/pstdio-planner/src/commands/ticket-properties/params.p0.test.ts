@@ -117,6 +117,20 @@ describe("buildTicketPropertiesControls", () => {
     expect(parent.options[0].ref).toEqual({ type: "ticket", id: "p1" });
   });
 
+  test("omits review links until a ticket has links to open", async () => {
+    const { statuses, tags } = await seed();
+    for (const reviewLinks of [undefined, []]) {
+      const { params } = buildTicketPropertiesControls({
+        ticket: baseTicket({ reviewLinks }),
+        statuses,
+        tags,
+        dependencies: [],
+        parent: null,
+      });
+      expect(params.some((param) => param.id === "review-links")).toBe(false);
+    }
+  });
+
   test("maps review links to external href chips", async () => {
     const { statuses, tags } = await seed();
     const ticket = baseTicket({

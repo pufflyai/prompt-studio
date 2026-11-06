@@ -342,10 +342,10 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("w");
-  const workspaceForm = page.getByRole("dialog").last();
-  await expect(workspaceForm.getByRole("heading", { name: "Create workspace", exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(workspaceForm).not.toBeVisible();
+  const workspaceForm = page.frameLocator('iframe[title="Workspace action"]');
+  await expect(workspaceForm.getByText("Create workspace", { exact: true }).first()).toBeVisible();
+  await workspaceForm.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.locator('iframe[title="Workspace action"]')).not.toBeVisible();
   await page.getByRole("button", { name: "Help", exact: true }).click();
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
   const reference = page.getByRole("dialog").last();

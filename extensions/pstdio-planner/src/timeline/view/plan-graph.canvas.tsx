@@ -93,7 +93,7 @@ function TimelineGraphStory(props: {
   );
 }
 const meta: CanvasMeta<typeof TimelineGraphStory> = {
-  title: "Extensions/Planner/Timeline graph",
+  title: "Extensions/Planner/Timeline graph/Overview",
   component: TimelineGraphStory,
   decorators: [
     (Story) => (

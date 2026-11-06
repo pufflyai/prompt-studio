@@ -10,6 +10,7 @@ export const createDeviceCommandPeer = (tls?: { key: Bun.BunFile; cert: Bun.BunF
   const accessTokens = new Map<string, { deviceId: string; accountId: string; projectId: string; expiresAt: string }>();
   const hub = createLiveHub(defaultRelayLimits, () => true);
   const frames: string[] = [];
+  const offlineDevices = new Set<string>();
   const signingKeyRequest = async (request: Request, path: string, deviceId?: string) => {
     if (path === "/v1/devices/signing-key") {
       const device = deviceId && devices.get(deviceId);
@@ -61,7 +62,7 @@ export const createDeviceCommandPeer = (tls?: { key: Bun.BunFile; cert: Bun.BunF
           platform: "fixture",
           createdAt: new Date().toISOString(),
           lastSeenAt: new Date().toISOString(),
-          online: true,
+          online: !offlineDevices.has(id),
         })),
       });
     if (/^\/v1\/devices\/[^/]+\/remove$/.test(url.pathname)) return Response.json({ ok: true });
@@ -130,6 +131,10 @@ export const createDeviceCommandPeer = (tls?: { key: Bun.BunFile; cert: Bun.BunF
   return {
     origin: server.url.origin,
     frames,
+    setDeviceOnline(id: string, online: boolean) {
+      if (online) offlineDevices.delete(id);
+      else offlineDevices.add(id);
+    },
     async close() {
       await server.stop(true);
       await durable.stop();

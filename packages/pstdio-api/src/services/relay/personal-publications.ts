@@ -9,13 +9,24 @@ export const createPersonalPublications = (input: {
 }) => {
   const heads = new Map<string, number>();
   const completed = new Map<string, SessionLogPublication>();
+  const formats = new Map<string, "append-log-v1">();
   let writtenAt = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const settle = (
+    writingHeads: Map<string, number>,
+    writingCompleted: Map<string, SessionLogPublication>,
+    writingFormats: Map<string, "append-log-v1">,
+  ) => {
+    for (const [id, head] of writingHeads) if (heads.get(id) === head) heads.delete(id);
+    for (const [id, proof] of writingCompleted) if (completed.get(id) === proof) completed.delete(id);
+    for (const id of writingFormats.keys()) if (!heads.has(id) && !completed.has(id)) formats.delete(id);
+  };
   return {
     pending: () => heads.size > 0 || completed.size > 0,
-    published(sessionId: string, head: number, version?: string) {
+    published(sessionId: string, head: number, version?: string, format?: "append-log-v1") {
       if (head) heads.set(sessionId, head);
-      if (version) completed.set(sessionId, { head, version });
+      if (format) formats.set(sessionId, format);
+      if (version) completed.set(sessionId, { head, version, ...(format ? { format } : {}) });
       input.published(sessionId);
       if (version) input.wake();
       timer ??= setTimeout(() => {
@@ -28,9 +39,9 @@ export const createPersonalPublications = (input: {
       if (!completed.size && !ordinary) return false;
       const writingHeads = new Map(heads);
       const writingCompleted = new Map(completed);
-      await input.history.writeHeads(writingHeads, writingCompleted);
-      for (const [id, head] of writingHeads) if (heads.get(id) === head) heads.delete(id);
-      for (const [id, proof] of writingCompleted) if (completed.get(id) === proof) completed.delete(id);
+      const writingFormats = new Map(formats);
+      await input.history.writeHeads(writingHeads, writingCompleted, writingFormats);
+      settle(writingHeads, writingCompleted, writingFormats);
       writtenAt = Date.now();
       if (!heads.size && !completed.size) {
         clearTimeout(timer);

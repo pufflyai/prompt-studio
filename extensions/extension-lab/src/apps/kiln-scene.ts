@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { type ExampleHost, pageSelection } from "../view-context";
+import { createFrameRenderer } from "./frame-renderer";
 import { kilnTracks, sampleKilnTrack } from "./kiln-animation";
 import { kilnObjects } from "./kiln-data";
 import { kilnStore } from "./kiln-state";
@@ -104,9 +105,17 @@ export const createKilnScene = (canvas: HTMLCanvasElement, host: ExampleHost) =>
 
   const selection = new THREE.BoxHelper(objects.get(kilnObjects[0].id)!, color("border.accent"));
   scene.add(selection);
-  const render = () => renderer.render(scene, camera);
+  // Editing snapshots, selection and resize can arrive together. Draw their latest state once per paint.
+  const frameRenderer = createFrameRenderer(() => renderer.render(scene, camera));
+  const render = frameRenderer.render;
+  let visualState: string | undefined;
   const sync = () => {
     const state = kilnStore.getState();
+    const selectedId = pageSelection(host) ?? kilnObjects[0].id;
+    const nextVisualState = JSON.stringify([state.frame, state.objectStates, selectedId]);
+    // Editing snapshots and page notifications also report changes that do not affect the scene.
+    if (nextVisualState === visualState) return;
+    visualState = nextVisualState;
     for (const [id, object] of objects) {
       const value = state.objectStates[id];
       object.position.fromArray(value.position);
@@ -120,7 +129,6 @@ export const createKilnScene = (canvas: HTMLCanvasElement, host: ExampleHost) =>
       const value = sampleKilnTrack(track.keys, state.frame);
       object[track.property].z += track.property === "rotation" ? THREE.MathUtils.degToRad(value) : value;
     }
-    const selectedId = pageSelection(host) ?? kilnObjects[0].id;
     const selected = objects.get(selectedId);
     for (const [id, outline] of outlines) outline.visible = id === selectedId;
     selection.visible = Boolean(selected?.visible) && !outlines.has(selectedId);
@@ -130,6 +138,8 @@ export const createKilnScene = (canvas: HTMLCanvasElement, host: ExampleHost) =>
   const resize = () => {
     const { width, height } = canvas.getBoundingClientRect();
     if (!width || !height) return;
+    const size = renderer.getSize(new THREE.Vector2());
+    if (size.x === width && size.y === height && camera.aspect === width / height) return;
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -175,6 +185,7 @@ export const createKilnScene = (canvas: HTMLCanvasElement, host: ExampleHost) =>
       render();
     },
     dispose: () => {
+      frameRenderer.dispose();
       observer.disconnect();
       unsubscribe();
       resourceListener();

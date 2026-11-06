@@ -20,7 +20,7 @@ const LongGroupingMenu = () => {
     </Box>
   );
 };
-const meta: CanvasMeta = { title: "Patterns/Collection View/Display Select" };
+const meta: CanvasMeta = { title: "Design system/Patterns/Collection view/Display select" };
 export default meta;
 type Story = CanvasFrame;
 export const LongOptions: Story = {

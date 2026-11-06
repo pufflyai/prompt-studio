@@ -3,6 +3,7 @@ import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { setDashboardExtensionsReadyProject } from "@/shared/extensions/extension-readiness";
+import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { registerHomePage as registerHome } from "./home-page.test-support";
 import { createDashboardWorkbench } from "./workbench";
 
@@ -24,6 +25,7 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 };
 const createProject = () => {
   const workbench = createDashboardWorkbench({ pageLocationBrowser: browserAt("/projects/project-1") });
+  registerWorkspaceProviderViews(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   return workbench;
 };

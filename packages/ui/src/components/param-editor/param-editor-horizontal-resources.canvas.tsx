@@ -84,7 +84,7 @@ const groups: InputGroup[] = [
   },
 ];
 const meta = {
-  title: "Patterns/Param Editor/Param Editor Horizontal",
+  title: "Design system/Patterns/Parameter editor/Horizontal resources",
   component: ParamEditorHorizontal,
   fullscreen: true,
 } satisfies CanvasMeta<typeof ParamEditorHorizontal>;

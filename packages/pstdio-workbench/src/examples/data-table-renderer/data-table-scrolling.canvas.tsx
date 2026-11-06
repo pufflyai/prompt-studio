@@ -33,7 +33,7 @@ workbench.registerModule({
   },
 });
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Native data table scrolling",
+  title: "Product/Reference/Core API/Native data table scrolling",
   component: WorkbenchStory,
   args: { workbench },
   fullscreen: true,

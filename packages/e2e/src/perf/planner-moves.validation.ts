@@ -108,7 +108,7 @@ try {
       assert(response.ok(), await response.text());
     }
     for (const ticket of tickets.slice(2, 6))
-      await executePlanner(api, project.id, "request-human", {
+      await executePlanner(api, project.id, "request-review", {
         ticket: ticket.id,
         title: "Synthetic review",
         instructions: "Confirm this synthetic task.",
@@ -198,7 +198,8 @@ try {
   const savedBefore = await executePlanner<StressTicket>(api, project.id, "get-ticket", {
     id: tickets.find(({ title }) => title === beforeTitle)!.id,
   });
-  assert(saved.value.sortOrder < savedBefore.value.sortOrder);
+  assert(saved.value.position && savedBefore.value.position);
+  assert(saved.value.position < savedBefore.value.position);
   await page.screenshot({ path: resolve(output, "variable-height-failure-recovery.png") });
   const second = await openPage();
   await revealCard(second, destination.id, title);

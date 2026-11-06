@@ -20,11 +20,9 @@ const modes = [
 ] as const;
 type Mode = (typeof modes)[number];
 const messages: Partial<Record<Mode, string>> = {
-  Saving: "Saving changes…",
-  Reconnecting: "Changes are waiting to be saved.",
   "Restoring editing": "Finishing your text…",
   "Draft recovery": "Your draft is kept here.",
-  "Draft waiting": "Your draft is waiting to be saved.",
+  "Draft waiting": "Your draft is kept here.",
   "Read only": "This document is read only.",
   "Close blocked": "Finish or cancel your text draft before closing.",
   "Retired source": "This source was removed. Your unsaved text is still available here.",
@@ -129,6 +127,9 @@ export const SharedTextEditors = () => {
             <Text textStyle="label/S/regular" color="fg.muted">
               Markdown
             </Text>
+            <Box h="lg" bg="bg">
+              <LazyMarkdownEditor defaultState="" collaboration={{ document: preview }} isEditable={editable} />
+            </Box>
             {message && (
               <EditorNotice
                 key={mode}
@@ -138,23 +139,11 @@ export const SharedTextEditors = () => {
                 discard={() => setMode("Read only")}
               />
             )}
-            <Box h="lg" bg="bg">
-              <LazyMarkdownEditor defaultState="" collaboration={{ document: preview }} isEditable={editable} />
-            </Box>
           </Stack>
           <Stack flex="1" minW="0" gap="xs">
             <Text textStyle="label/S/regular" color="fg.muted">
               Installed text editor
             </Text>
-            {message && (
-              <EditorNotice
-                key={mode}
-                mode={mode}
-                message={message}
-                retry={retry}
-                discard={() => setMode("Read only")}
-              />
-            )}
             <Textarea
               aria-label="Installed editor source"
               value={recovering ? draft.getText("content").toString() : content}
@@ -169,6 +158,15 @@ export const SharedTextEditors = () => {
               textStyle="mono/M"
               h="lg"
             />
+            {message && (
+              <EditorNotice
+                key={mode}
+                mode={mode}
+                message={message}
+                retry={retry}
+                discard={() => setMode("Read only")}
+              />
+            )}
           </Stack>
         </Flex>
       )}
@@ -180,13 +178,10 @@ const EditorNotice = (props: { mode: Mode; message: string; retry: () => void; d
   const [discardError, setDiscardError] = useState(false);
   const recovering = mode === "Draft recovery" || mode === "Draft waiting";
   return (
-    <Stack gap="xs" bg="bg.muted" px="sm" py="xs">
+    <Stack gap="xs" layerStyle="documentNotice">
       <Flex gap="sm" align="center" justify="space-between">
         <Flex align="center" gap="xs">
-          {(mode === "Saving" ||
-            mode === "Reconnecting" ||
-            mode === "Restoring editing" ||
-            mode === "Draft waiting") && <Spinner size="xs" color="fg.muted" aria-label={mode} />}
+          {mode === "Restoring editing" && <Spinner size="xs" color="fg.muted" aria-label={mode} />}
           <Text color="fg.muted" textStyle="label/S/regular">
             {message}
           </Text>
@@ -226,11 +221,11 @@ const EditorNotice = (props: { mode: Mode; message: string; retry: () => void; d
 };
 
 const meta = {
-  title: "pstdio-workbench/File editor/Public text sessions",
+  title: "Product/Workbench/File editor/Public text sessions",
   component: SharedTextEditors,
   fullscreen: true,
   description:
-    "Native and installed text presentations share admission, close guards, local save status and friendly presence. Synthetic design state only; no host or project data is changed.",
+    "Native and installed text presentations share admission, close guards, silent persistence and friendly presence. Synthetic design state only; no host or project data is changed.",
 } satisfies CanvasMeta<typeof SharedTextEditors>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;

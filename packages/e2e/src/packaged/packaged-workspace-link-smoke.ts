@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workspacePages } from "@pstdio/sdk/extensions";
 import { parsePageUrl } from "pstdio-api-contracts";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
@@ -44,9 +44,9 @@ export const expectPackagedWorkspaceFileLink = async (input: {
       projectId: input.projectId,
       pages: [
         {
-          id: "workspace",
-          ref: workbenchPages.workspace,
-          path: "workspace",
+          id: "files",
+          ref: workspacePages.files,
+          path: "files",
           document: { metadataKey: "workspaceFilePath" },
         },
       ],

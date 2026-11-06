@@ -6,7 +6,7 @@ import { ChatPanel } from "./chat-panel";
 import type { SessionMessage, ToolPart } from "./message-types";
 
 const meta: CanvasMeta<typeof ChatPanel> = {
-  title: "Patterns/Chat/Chat Panel/Question Stream",
+  title: "Design system/Patterns/Chat/Chat panel/Question stream",
   component: ChatPanel,
 };
 export default meta;

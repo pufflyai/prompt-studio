@@ -14,15 +14,11 @@ import { type loadNativeMarkdownFile, NativeDocumentSourceError, type saveNative
 import { createNativeProjectionQueue } from "./projection-queue";
 import { watchNativeProjections } from "./projection-watch";
 import { integrateNativeRoom } from "./room-integration";
+import { createNativeRoomOpener } from "./room-opening";
 import { createNativeRoomSnapshot, type Room, type RoomRequest } from "./room-snapshot";
-import {
-  initializeNativeRoomSource,
-  joinNativeRoomSource,
-  loadNativeRoomSource,
-  type NativeRoomOpenInput,
-} from "./room-source";
+import { loadNativeRoomSource, type NativeRoomOpenInput } from "./room-source";
 import { createNativeSessionPresence } from "./session-presence";
-import { nativeAdmissionTarget, validateWritableSource } from "./validate-writable-source";
+import { validateNativeSourceAuthority, validateWritableSource } from "./validate-writable-source";
 
 const recoverSource = async (documentKey: string, action: () => Promise<unknown>) => {
   try {
@@ -84,8 +80,23 @@ export const createNativeDocumentService = (deps: {
   const stopProjectionWatch = watchNativeProjections(storage, files.request, track, deps.catalog);
   const canonical = (room: Pick<Room, "owner" | "documentKey">) =>
     storage.openNativeTextDocument({ owner: room.owner, fileId: room.documentKey });
-  const integrate = (owner: StorageOwner, roomId: string) => integrateNativeRoom(storage, owner, roomId);
+  const integrate = async (owner: StorageOwner, roomId: string) => {
+    const room = rooms.get(roomId);
+    const revision = await integrateNativeRoom(storage, owner, roomId, room?.integratedRevision);
+    if (room) room.integratedRevision = revision;
+    return revision;
+  };
   const snapshot = createNativeRoomSnapshot(storage, files);
+  const openRoom = createNativeRoomOpener({
+    source: deps,
+    projection,
+    snapshot,
+    integrate,
+    opened(room, roomId) {
+      rooms.set(roomId, room);
+      if (room.syncDocument) for (const listener of sourceListeners) listener(room.owner, room.syncDocument);
+    },
+  });
   const roomFor = (request: RoomRequest) => {
     const room = rooms.get(request.roomId);
     if (
@@ -118,7 +129,7 @@ export const createNativeDocumentService = (deps: {
               .filter(
                 (room) => room.owner.workbenchId === owner.workbenchId && room.owner.extensionId === owner.extensionId,
               )
-              .map((room) => JSON.stringify(["native-markdown", room.documentKey])),
+              .flatMap((room) => (room.syncDocument ? [room.syncDocument] : [])),
           ),
         ];
       },
@@ -149,52 +160,7 @@ export const createNativeDocumentService = (deps: {
     },
     open(input: NativeRoomOpenInput) {
       return track(async () => {
-        // Legacy callers supply only the presentation target. Resolve its authority
-        // before admitting them to the same source queue used by public sessions.
-        const source = input.expectedSource ?? (await deps.access(input));
-        const request = { ...input, expectedSource: { owner: source.owner, documentKey: source.documentKey } };
-        const initialize = () => initializeNativeRoomSource(deps, request);
-        // Public admission already validated the full source. Legacy presentations
-        // must still prove their complete bytes inside the projection queue.
-        const joined = input.expectedSource ? await joinNativeRoomSource(deps, request) : undefined;
-        const {
-          loaded,
-          editable,
-          initial: initialized,
-        } = joined ?? (await projection.read(request.expectedSource, initialize));
-        const text = canonical(loaded);
-        const { id: roomId } = await storage.nativeRooms.create({
-          owner: loaded.owner,
-          documentKey: loaded.documentKey,
-          target: loaded.projectionTarget,
-          writable: editable,
-          state: input.sourceState ?? (await text.exportUpdate()),
-        });
-        const room: Room = {
-          target: nativeAdmissionTarget(input),
-          editable,
-          owner: loaded.owner,
-          documentKey: loaded.documentKey,
-          queue: Promise.resolve(),
-          closeWatchers: new Set(),
-        };
-        if (room.editable && initialized) await projection.initialize(room, initialized);
-        if (input.pendingUpdate)
-          await storage.nativeRooms.apply({ owner: room.owner, roomId, update: input.pendingUpdate });
-        // A reconnect can carry edits from a retired source history. Preserve that history
-        // first; recovery can finish integration if the process stops here.
-        await integrate(room.owner, roomId);
-        const initial = await snapshot(room, roomId);
-        rooms.set(roomId, room);
-        for (const listener of sourceListeners)
-          listener(room.owner, JSON.stringify(["native-markdown", room.documentKey]));
-        return {
-          roomId,
-          owner: room.owner,
-          documentKey: room.documentKey,
-          content: { ...loaded.content, editable },
-          ...initial,
-        };
+        return openRoom(input);
       });
     },
     submit(input: RoomRequest & { update: Uint8Array }) {
@@ -216,9 +182,13 @@ export const createNativeDocumentService = (deps: {
       return run(input, async (room) => {
         await validateWritableSource(deps.access, room);
         const current = await canonical(room).snapshot();
+        validateNativeSourceAuthority({ ...room, generation: current.generation }, room);
         if (input.revision > current.revision)
           throw new NativeDocumentRoomError("invalid_frame", "Projection exceeds the durable revision");
-        if (((await storage.nativeFileProjections.read(room))?.completedRevision ?? 0) < input.revision)
+        if (
+          !room.recordField &&
+          ((await storage.nativeFileProjections.read(room))?.completedRevision ?? 0) < input.revision
+        )
           await files.through(room, input.revision);
         return { revision: input.revision };
       });
@@ -230,7 +200,12 @@ export const createNativeDocumentService = (deps: {
       });
     },
     flush(input: RoomRequest) {
-      return run(input, (room) => files.request(room));
+      return run(input, async (room) => {
+        if (!room.recordField) return files.request(room);
+        await validateWritableSource(deps.access, room);
+        const current = await canonical(room).snapshot();
+        validateNativeSourceAuthority({ ...room, generation: current.generation }, room);
+      });
     },
     watch(input: RoomRequest, changed: () => void, onClose?: () => void) {
       return run(input, async (room) => {
@@ -250,7 +225,7 @@ export const createNativeDocumentService = (deps: {
     close(input: RoomRequest) {
       return run(input, async (room) => {
         await integrate(room.owner, input.roomId);
-        if (room.editable) await files.request(room);
+        if (room.editable && !room.recordField) await files.request(room);
         await release(room, input.roomId);
       });
     },

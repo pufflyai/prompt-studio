@@ -3,7 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { OSLogo, platformIcon } from "./os-logo";
 
 const meta = {
-  title: "Landing/OS logos",
+  title: "Website/Brand/OS logos",
   component: OSLogo,
   args: { platform: "macOS" },
 } satisfies CanvasMeta<typeof OSLogo>;

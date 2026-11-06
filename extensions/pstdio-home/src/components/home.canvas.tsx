@@ -66,7 +66,7 @@ const StartPagePreview = (props: StartPagePreviewProps) => {
   );
 };
 const meta: CanvasMeta<typeof StartPagePreview> = {
-  title: "Home/Project home",
+  title: "Extensions/Home/Project home",
   component: StartPagePreview,
 };
 export default meta;

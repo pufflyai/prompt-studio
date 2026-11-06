@@ -31,7 +31,7 @@ registerItem({ id: "planner.branch", label: "main", order: 20, slot: "leading" }
 registerItem({ id: "sync.connection", label: "Connected", order: 10, slot: "leading" });
 registerItem({ id: "tasks.progress", label: "3 tasks", order: 10, slot: "trailing" });
 const meta = {
-  title: "pstdio-workbench/Reference/Core API/Status bar",
+  title: "Product/Workbench/Status bar",
   component: WorkbenchStatusBar,
   description:
     "The host status-bar registry places registered views on its leading or trailing side and centers each item vertically. Extensions reach it through defineStatusBarItem.",

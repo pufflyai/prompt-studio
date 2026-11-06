@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { contributionRefId, resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
+import { contributionRefId, resourceKey, workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -166,7 +166,7 @@ const createTicketsNavigationModule = () => ({
                     resource: linkedWorkspaceResource,
                     target: {
                       kind: "page",
-                      page: workbenchPages.workspace,
+                      page: workspacePages.workspace,
                       resource: {
                         type: linkedWorkspaceResource.type,
                         id: linkedWorkspaceResource.id,
@@ -228,7 +228,7 @@ const openTicketPage = (workbench: WorkbenchCore) => {
 const openStartPage = (workbench: WorkbenchCore) =>
   void workbench.navigation.openTarget({ kind: "page", page: dashboardHomePage });
 const meta = {
-  title: "Dashboard/Sidenav",
+  title: "Product/Workbench/Navigation/Sidebar",
   fullscreen: true,
   decorators: [
     (Story) => (

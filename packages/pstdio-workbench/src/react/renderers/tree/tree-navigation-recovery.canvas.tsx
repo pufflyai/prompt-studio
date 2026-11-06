@@ -64,7 +64,7 @@ const NavigationRecovery = (props: { initialFailure: boolean }) => {
   return <WorkbenchStory workbench={workbench} />;
 };
 const meta = {
-  title: "pstdio-workbench/Guides/Navigation recovery",
+  title: "Product/Workbench/Navigation/Tree/Navigation recovery",
   component: NavigationRecovery,
   args: { initialFailure: false },
   fullscreen: true,
