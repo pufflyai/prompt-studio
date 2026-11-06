@@ -1,3 +1,4 @@
+import type { ToolResultSummary } from "@pstdio/sdk/extensions";
 export type OpencodeSessionMessagePart = {
   type: string;
   text?: string;
@@ -8,7 +9,9 @@ export type OpencodeSessionMessagePart = {
     input?: unknown;
     output?: unknown;
     errorText?: string;
+    error?: string;
     metadata?: unknown;
+    resultSummary?: ToolResultSummary;
   };
   reason?: string;
   snapshot?: string;

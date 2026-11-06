@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, test } from "bun:test";
-import type { HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
+import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { acceptedPrompt, nativeMessagesResponse } from "./native-api.test-helpers";
 import { recordingSink } from "./opencode-session-poller.test-helpers";
@@ -210,7 +210,7 @@ describe("OpenCode question replies", () => {
     });
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -222,8 +222,7 @@ describe("OpenCode question replies", () => {
     });
 
     const exit = await session.done;
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const lastMessages = messagePatches.at(-1)?.value as SessionMessage[];
+    const lastMessages = sink.getMessages();
 
     expect(exit).toEqual({ status: "completed" });
     expect(normalFollowUps).toEqual([]);
@@ -257,7 +256,7 @@ describe("OpenCode question replies", () => {
     });
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -269,8 +268,7 @@ describe("OpenCode question replies", () => {
     });
 
     const exit = await session.done;
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const lastMessages = messagePatches.at(-1)?.value as SessionMessage[];
+    const lastMessages = sink.getMessages();
 
     expect(exit).toEqual({ status: "completed" });
     expect(replyBodies).toEqual([{ answers: [["Nice"]] }]);
@@ -310,7 +308,7 @@ describe("OpenCode question replies", () => {
     });
 
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
-    const { patches, sink } = recordingSink();
+    const { sink } = recordingSink();
 
     const session = await h.resume(ctx, {
       agentSessionId: "oc-1",
@@ -322,8 +320,7 @@ describe("OpenCode question replies", () => {
     });
 
     const exit = await session.done;
-    const messagePatches = patches.filter((patch) => patch.path === "/messages");
-    const lastMessages = messagePatches.at(-1)?.value as SessionMessage[];
+    const lastMessages = sink.getMessages();
 
     expect(exit).toEqual({ status: "completed" });
     expect(lastMessages.at(-1)?.parts[0]).toEqual({ type: "text", text: "Thanks, TypeScript works." });

@@ -102,8 +102,9 @@ const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | n
               status: part.state.status,
               input: part.state.input,
               output: part.state.output,
-              errorText: part.state.errorText,
+              errorText: part.state.errorText ?? part.state.error,
               metadata: part.state.metadata,
+              resultSummary: part.state.resultSummary,
             }
           : undefined,
       };
