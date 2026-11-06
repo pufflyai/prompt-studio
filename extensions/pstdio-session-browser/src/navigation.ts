@@ -114,7 +114,10 @@ export const archive = defineCommand({
   id: "archive",
   menus: [{ slot: sessionSlots.headerOverflow, group: "session", icon: "archive" }],
   title: l10n("commands.archive", "Archive session"),
-  description: l10n("actions.archiveExplanation", "The saved conversation is kept. Active work will continue."),
+  description: l10n(
+    "actions.archiveExplanation",
+    "The saved conversation is kept. Queued work will be cancelled. Running work or work awaiting input will continue.",
+  ),
   cli: true,
   params: { sessionId: params.text({ required: true, resolvedFrom: "resource" }) },
   resourceMutation: { kind: "remove", resourceType: "session", idParam: "sessionId" },
