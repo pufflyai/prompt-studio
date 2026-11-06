@@ -1,5 +1,6 @@
 import { Flex } from "@chakra-ui/react";
-import { LazyMarkdownEditor, type MarkdownEditorProps } from "@pstdio/ui/rich-text";
+import { LazyMarkdownEditor } from "@pstdio/ui/lazy-markdown-editor";
+import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type {
   NativeDocumentSession,

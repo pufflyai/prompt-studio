@@ -1,6 +1,7 @@
 import { Flex, Text } from "@chakra-ui/react";
 import type { TextEditingSession } from "@pstdio/sdk/extensions";
-import { LazyMarkdownEditor, type MarkdownEditorProps } from "@pstdio/ui/rich-text";
+import { LazyMarkdownEditor } from "@pstdio/ui/lazy-markdown-editor";
+import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { NativeTextPresentation } from "../../../extensions/bridge/native-text-presentation";
 import { createRetainedTextPresentation } from "../../../extensions/bridge/retained-text-presentation";
