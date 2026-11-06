@@ -69,7 +69,8 @@ export const act = async (
       };
     case "submit":
       await submitMessage(ctx, id, resource, action);
-      return {};
+      // The new resource owns its transcript; this draft has no canonical echo to await.
+      return id ? {} : { snapshot: { messages: [], streaming: false } };
     case "fork": {
       const fork = await ctx.sessions.fork(requireSession(id), action.messageId);
       ctx.navigation.open({

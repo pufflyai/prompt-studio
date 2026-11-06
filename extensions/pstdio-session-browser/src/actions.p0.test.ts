@@ -71,3 +71,36 @@ test("slow creation does not overwrite newer durable files and settings when the
   expect(await readDraft(ctx, "draft")).toEqual(newer);
   expect(sends).toBe(1);
 });
+
+test("new-session handoff retires the source draft receipt while follow-ups await their own canonical echo", async () => {
+  const opened: unknown[] = [];
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      sessions: { create: async () => created, followup: async () => ({}) },
+      navigation: {
+        open: (target) => {
+          opened.push(target);
+        },
+      },
+    },
+  });
+  const action = {
+    type: "submit" as const,
+    text: "First",
+    attachments: [],
+    values: { harness: { harnessId: "agent" } },
+  };
+  expect(await act(ctx, { renderer: { rendererId: "sessions" }, draftKey: "draft", action })).toEqual({
+    snapshot: { messages: [], streaming: false },
+  });
+  expect(opened).toHaveLength(1);
+  expect(
+    await act(ctx, {
+      renderer: { rendererId: "sessions", resource: { type: "session", id: "existing" } },
+      draftKey: "existing",
+      action,
+    }),
+  ).toEqual({});
+});
