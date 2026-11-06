@@ -87,7 +87,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       return;
     }
     store.setState({ selection: undefined, selectedId: tab.id, selectedRegion: tab.region, restoreFocus: false });
-    core.layout.activateWidget(tab.id);
+    core.layout.activatePanel(tab.id);
     choices = [];
     stack.length = 0;
     if (!store.getState().active) {
