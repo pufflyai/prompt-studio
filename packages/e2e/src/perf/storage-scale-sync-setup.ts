@@ -50,7 +50,7 @@ export const prepareScaleSyncDevices = async (
       });
       for (const owner of owners(workload(fixture.kind))) {
         const name = owner.index === 9 ? "pstdio-planner" : `scale-owner-${owner.index}`;
-        const source = join(home, "sources", owner.index === 9 ? "planner-source" : name);
+        const source = join(home, "sources", owner.index === 9 ? "extension-source" : name);
         const relative = `.pstdio/extensions/${name}`;
         cpSync(source, join(folder, relative), {
           recursive: true,
