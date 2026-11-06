@@ -20,7 +20,7 @@ function RuleVersion(props: VersionProps) {
         <>
           <Text textStyle="label/M/medium">{rule.title}</Text>
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
-            L{rule.level} · RB{rule.chapter}
+            L{rule.level} · {rule.ref}
           </Text>
           <MarkdownPreview key={rule.statement} defaultState={rule.statement} isEditable={false} fullWidth />
           <Text textStyle="paragraph/XS/regular">

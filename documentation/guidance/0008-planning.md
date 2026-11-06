@@ -42,7 +42,7 @@
 
 ## 5. Rule references
 
-1. Reference product requirements by stable `RB chapter.section.id` identities. Guidance procedure references keep `NNN.S.R`: document, section and rule number. Historical guidance references map to the canonical book through its migration ledger.
+1. Reference product requirements by stable `RB chapter.section.id` (Core) or `RBE chapter.section.id` (Extensions) identities. Guidance procedure references keep `NNN.S.R`: document, section and rule number. Historical guidance references map to the canonical book through its migration ledger.
 2. Start rule numbering at 1 in each section.
 
 ## 6. Lessons learned

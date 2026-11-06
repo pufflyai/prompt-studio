@@ -105,7 +105,7 @@ export function BookApp(props: Props) {
         <Palette
           open={state.search}
           label="Search requirements"
-          placeholder="Find an RB reference, title, or statement…"
+          placeholder="Find an RB / RBE reference, title, or statement…"
           onClose={() => state.setSearch(false)}
           entries={data.rules.map((rule) => ({
             id: rule.ref,

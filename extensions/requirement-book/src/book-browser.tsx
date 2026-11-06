@@ -3,7 +3,7 @@ import { ResizableSplitLayout, ScrollArea, SearchableMenu, TreeList } from "@pst
 import { MarkdownPreview } from "@pstdio/ui/rich-text";
 import { Pencil, Trash2 } from "lucide-react";
 import { RuleEditor } from "./book-editor";
-import { type Chapter, findRule, type Rule } from "./book-model";
+import { type Chapter, chapterReference, findRule, type Rule } from "./book-model";
 import { RuleIdTag, RuleTag, TestTag } from "./book-resource-tag";
 import type { Observation } from "./records";
 
@@ -57,10 +57,13 @@ function RulePreview(props: PreviewProps) {
               </Button>
             }
             items={chapters
-              .filter((item) => item.id !== rule.chapter)
+              .filter(
+                (item) =>
+                  item.id !== rule.chapter && item.group === chapters.find((entry) => entry.id === rule.chapter)?.group,
+              )
               .map((item) => ({
                 id: String(item.id),
-                label: `RB${item.id} ${item.title}`,
+                label: `${chapterReference(item)} ${item.title}`,
                 onSelect: () => onMove(rule, item.id),
               }))}
             searchPlaceholder="Choose chapter…"

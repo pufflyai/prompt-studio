@@ -1,4 +1,4 @@
-import type { Chapter, Rule, Section } from "./model";
+import { type Chapter, chapterReference, type Rule, type Section } from "./model";
 
 export const resourceSpecs = [
   { id: "requirement", label: "Rule", plural: "Rules", icon: "list-checks", section: null },
@@ -31,7 +31,7 @@ export const resourceEntries = (data: ResourceData, type: BookResourceType) => {
   if (type === "chapter")
     return data.chapters.map((chapter) => ({
       id: String(chapter.id),
-      label: `RB${chapter.id} ${chapter.title}`,
+      label: `${chapterReference(chapter)} ${chapter.title}`,
       text: chapter.group,
       chapter: chapter.id,
     }));

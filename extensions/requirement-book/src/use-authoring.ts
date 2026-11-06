@@ -2,7 +2,7 @@ import type { WebviewHostProps } from "@pstdio/sdk/extensions";
 import { useEffect, useState } from "react";
 import type { FormMode } from "./authoring-form";
 import type { BookClient } from "./client";
-import { findRule, type Rule, removalOperations } from "./model";
+import { chapterReference, findRule, type Rule, removalOperations } from "./model";
 import { resourceSelection } from "./resource-catalog";
 import { useBook } from "./use-book";
 export function useAuthoring(client: BookClient, props: WebviewHostProps) {
@@ -86,7 +86,7 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
       await client.commands.suggest({
         workspaceId: data!.workspaceId,
         title: `Move ${rule.title}`,
-        reason: `Move to chapter RB${chapter}; preserve requirement identity and intent.`,
+        reason: `Move to chapter ${chapterReference(data!.chapters.find((item) => item.id === chapter)!)}; preserve requirement identity and intent.`,
         operations: [{ type: "MOVE", before: current.rule, after: { ...current.rule, chapter } }],
       });
       await navigateReview();

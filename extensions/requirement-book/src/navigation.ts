@@ -9,6 +9,7 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { bookMenu } from "./book-menu";
+import { chapterReference } from "./model";
 import { readBook } from "./read";
 import { changed } from "./records";
 import { resourceTarget, ruleTarget } from "./resources";
@@ -82,7 +83,7 @@ export const navigationView = defineView({
             .filter((chapter) => chapter.group === group)
             .map((chapter) => ({
               id: `chapter-${chapter.id}`,
-              label: `RB${chapter.id} ${chapter.title}`,
+              label: `${chapterReference(chapter)} ${chapter.title}`,
               icon: "library",
               target: resourceTarget("chapter", String(chapter.id), chapter.title, ctx.projectId),
             })),

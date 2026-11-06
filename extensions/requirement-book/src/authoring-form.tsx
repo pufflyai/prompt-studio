@@ -1,7 +1,7 @@
 import { BookForm } from "./book-form";
 import type { BookClient } from "./client";
 import { chapterFields, findingFields, observationFields, ruleFields, splitLines, splitRefs } from "./forms";
-import { ruleSchema } from "./model";
+import { createRuleReference, ruleSchema } from "./model";
 import type { BookData } from "./read";
 import type { Draft } from "./records";
 export type FormMode = "rule" | "observation" | "finding" | "chapter";
@@ -32,8 +32,10 @@ export function AuthoringForm(props: Props) {
   }[mode];
   const submit = async (values: Record<string, unknown>) => {
     if (mode === "rule") {
+      const targetChapter = data.chapters.find((item) => item.id === chapter);
+      if (!targetChapter) throw new Error("Choose an existing chapter.");
       const rule = ruleSchema.parse({
-        ref: `RB ${chapter}.A.${crypto.randomUUID().replaceAll("-", "")}`,
+        ref: createRuleReference(targetChapter),
         chapter,
         level: Number(values.level),
         scope: String(values.scope),

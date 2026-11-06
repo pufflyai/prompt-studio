@@ -1,1 +1,1 @@
-export { type Chapter, findRule, type Rule, type Section } from "./model";
+export { type Chapter, chapterReference, findRule, type Rule, type Section } from "./model";

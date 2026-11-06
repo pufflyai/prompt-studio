@@ -126,7 +126,7 @@ When a public API changes, update these together in the same pull request:
 2. The walkthrough or example that uses the API.
 3. The skill that routes agents to it, including its links and offline essentials. See [maintaining skills](development/0009-maintaining-skills.md).
 
-When an authoring contract changes, such as the manifest, a context API, or an extension CLI command, also run a fresh-agent trial with the packaged skill before the release. Use an agent with no earlier context, as described in [0013 · RB 24.A.1](../requirement-book/book.json).
+When an authoring contract changes, such as the manifest, a context API, or an extension CLI command, also run a fresh-agent trial with the packaged skill before the release. Use an agent with no earlier context, as described in [0013 · RBE 24.A.1](../requirement-book/book.json).
 
 ## Screenshots and GIFs
 

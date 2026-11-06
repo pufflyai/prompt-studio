@@ -50,7 +50,12 @@ export const findingFields = [
     defaultValue: "potential-conflict",
   },
   { id: "explanation", label: "Explanation and uncertainty", type: "longtext" as const, required: true },
-  { id: "requirements", label: "Affected RB references (comma-separated)", type: "text" as const, required: true },
+  {
+    id: "requirements",
+    label: "Affected RB / RBE references (comma-separated)",
+    type: "text" as const,
+    required: true,
+  },
   { id: "evidence", label: "Inspectable evidence", type: "longtext" as const, required: true },
 ];
 export const splitLines = (value: unknown) =>

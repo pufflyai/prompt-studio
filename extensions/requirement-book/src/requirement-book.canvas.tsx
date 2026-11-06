@@ -6,7 +6,7 @@ import { BookBrowser } from "./book-browser";
 import { BookFinding } from "./book-findings";
 import { BookForm } from "./book-form";
 import { observationFields } from "./forms";
-import type { Rule } from "./model";
+import { type Chapter, chapterReference, type Rule } from "./model";
 import { bookFixture } from "./model.fixture";
 import { resourceSpecs } from "./resource-catalog";
 
@@ -56,9 +56,20 @@ export function EvidenceForm() {
 }
 
 export function Resources() {
+  const chapters: Chapter[] = [
+    { id: 1, title: "Workspaces", group: "Core" },
+    { id: 16, title: "Planner", group: "Extensions" },
+  ];
   return (
     <ChakraProvider value={psTheme}>
       <Stack p="lg" gap="md">
+        {chapters.map((chapter) => (
+          <ResourceBadge
+            key={chapter.id}
+            fileName={`${chapterReference(chapter)} ${chapter.title}`}
+            icon={<Icon as={resolveIconComponent("library")} />}
+          />
+        ))}
         {resourceSpecs.map((spec) => (
           <ResourceBadge key={spec.id} fileName={spec.label} icon={<Icon as={resolveIconComponent(spec.icon)} />} />
         ))}

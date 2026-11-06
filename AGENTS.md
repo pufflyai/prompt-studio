@@ -17,5 +17,5 @@ Read and follow this document before starting work:
 
 ## Rule references
 
-- Cite product intent by its stable RB identity. Guidance procedure references use `document.section.rule`.
+- Cite product intent by its stable RB (Core) or RBE (Extensions) identity. Guidance procedure references use `document.section.rule`.
 - Follow the [numbering format](documentation/guidance/0008-planning.md#5-rule-references).

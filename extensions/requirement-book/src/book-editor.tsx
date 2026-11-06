@@ -121,7 +121,7 @@ export function RuleEditor(props: EditorProps) {
             <Field.Label>Related requirements</Field.Label>
             <Input
               value={related}
-              placeholder="RB 1.A.1, RB 2.A.1"
+              placeholder="RB 1.A.1, RBE 16.A.1"
               onChange={(event) => setRelated(event.target.value)}
             />
             {unknown.length > 0 && (

@@ -694,7 +694,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 26.A.1",
+      "ref": "RBE 26.A.1",
       "chapter": 26,
       "title": "Goal and product boundary",
       "level": 2,
@@ -708,7 +708,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 26.A.2",
+      "ref": "RBE 26.A.2",
       "chapter": 26,
       "title": "Ownership",
       "level": 2,
@@ -722,7 +722,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 26.A.3",
+      "ref": "RBE 26.A.3",
       "chapter": 26,
       "title": "Reusable UI contract",
       "level": 2,
@@ -736,7 +736,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 26.A.4",
+      "ref": "RBE 26.A.4",
       "chapter": 26,
       "title": "Native extension view contract",
       "level": 2,
@@ -750,7 +750,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 26.A.5",
+      "ref": "RBE 26.A.5",
       "chapter": 26,
       "title": "Interaction and performance requirements",
       "level": 2,
@@ -764,7 +764,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 26.A.6",
+      "ref": "RBE 26.A.6",
       "chapter": 26,
       "title": "Validation and acceptance",
       "level": 2,
@@ -778,7 +778,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 26.A.7",
+      "ref": "RBE 26.A.7",
       "chapter": 26,
       "title": "Out of scope",
       "level": 2,
@@ -1786,7 +1786,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 24.A.1",
+      "ref": "RBE 24.A.1",
       "chapter": 24,
       "title": "W1: Reconcile requirements with current behavior",
       "level": 2,
@@ -1800,7 +1800,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 24.A.2",
+      "ref": "RBE 24.A.2",
       "chapter": 24,
       "title": "W2: Finish the verified documentation and skill corrections",
       "level": 2,
@@ -1814,7 +1814,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 24.A.3",
+      "ref": "RBE 24.A.3",
       "chapter": 24,
       "title": "W3: Make guidance canonical and release-aware",
       "level": 2,
@@ -1828,7 +1828,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 24.A.4",
+      "ref": "RBE 24.A.4",
       "chapter": 24,
       "title": "W4: Repair failures exposed by the workflows",
       "level": 2,
@@ -1842,7 +1842,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 24.A.5",
+      "ref": "RBE 24.A.5",
       "chapter": 24,
       "title": "W5: Make the validation environment repeatable",
       "level": 2,
@@ -1856,7 +1856,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 24.A.6",
+      "ref": "RBE 24.A.6",
       "chapter": 24,
       "title": "W6: Close acceptance and usability gaps",
       "level": 2,
@@ -1870,7 +1870,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 24.A.7",
+      "ref": "RBE 24.A.7",
       "chapter": 24,
       "title": "W7: Prevent documentation and skill drift",
       "level": 2,
@@ -1884,7 +1884,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 24.A.8",
+      "ref": "RBE 24.A.8",
       "chapter": 24,
       "title": "W8: Final fresh-agent and release gate",
       "level": 2,
@@ -3218,7 +3218,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 16.A.1",
+      "ref": "RBE 16.A.1",
       "chapter": 16,
       "title": "Planner owns planning data",
       "level": 2,
@@ -3232,7 +3232,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 16.A.2",
+      "ref": "RBE 16.A.2",
       "chapter": 16,
       "title": "Preserve attempts and assigned workspaces",
       "level": 2,
@@ -3246,7 +3246,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 16.A.3",
+      "ref": "RBE 16.A.3",
       "chapter": 16,
       "title": "Automations honor project workflow",
       "level": 2,
@@ -3260,7 +3260,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 17.A.1",
+      "ref": "RBE 17.A.1",
       "chapter": 17,
       "title": "Reports hand off inspectable results",
       "level": 2,
@@ -3274,7 +3274,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 18.A.1",
+      "ref": "RBE 18.A.1",
       "chapter": 18,
       "title": "Notes retain file identity through organization",
       "level": 2,
@@ -3288,7 +3288,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 19.A.1",
+      "ref": "RBE 19.A.1",
       "chapter": 19,
       "title": "Artifacts retain published revisions",
       "level": 2,
@@ -3302,7 +3302,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 20.A.1",
+      "ref": "RBE 20.A.1",
       "chapter": 20,
       "title": "Canvas isolates example state",
       "level": 2,
@@ -3316,7 +3316,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 20.A.2",
+      "ref": "RBE 20.A.2",
       "chapter": 20,
       "title": "Canvas preserves independent frame controls",
       "level": 2,
@@ -3330,7 +3330,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 21.A.1",
+      "ref": "RBE 21.A.1",
       "chapter": 21,
       "title": "Harnesses declare provider capabilities",
       "level": 2,
@@ -3344,7 +3344,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 22.A.1",
+      "ref": "RBE 22.A.1",
       "chapter": 22,
       "title": "Workspace and Cloud tools use public contracts",
       "level": 2,
@@ -3358,7 +3358,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 23.A.1",
+      "ref": "RBE 23.A.1",
       "chapter": 23,
       "title": "One canonical requirement book",
       "level": 2,
@@ -3372,7 +3372,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 23.A.2",
+      "ref": "RBE 23.A.2",
       "chapter": 23,
       "title": "Review branch changes before acceptance",
       "level": 2,
@@ -3394,7 +3394,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 23.A.3",
+      "ref": "RBE 23.A.3",
       "chapter": 23,
       "title": "Keep evidence qualified",
       "level": 2,
@@ -3413,7 +3413,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 23.A.4",
+      "ref": "RBE 23.A.4",
       "chapter": 23,
       "title": "Register book resources",
       "level": 2,
@@ -3432,7 +3432,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 23.A.5",
+      "ref": "RBE 23.A.5",
       "chapter": 23,
       "title": "Retain authoring drafts",
       "level": 2,
@@ -3451,7 +3451,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.1",
+      "ref": "RBE 25.A.1",
       "chapter": 25,
       "title": "1. Outcome",
       "level": 2,
@@ -3465,7 +3465,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.2",
+      "ref": "RBE 25.A.2",
       "chapter": 25,
       "title": "Goals",
       "level": 2,
@@ -3479,7 +3479,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.3",
+      "ref": "RBE 25.A.3",
       "chapter": 25,
       "title": "Initial delivery",
       "level": 2,
@@ -3493,7 +3493,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.4",
+      "ref": "RBE 25.A.4",
       "chapter": 25,
       "title": "Deferred work",
       "level": 2,
@@ -3507,7 +3507,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.5",
+      "ref": "RBE 25.A.5",
       "chapter": 25,
       "title": "4. Product ownership and mission fit",
       "level": 2,
@@ -3521,7 +3521,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.6",
+      "ref": "RBE 25.A.6",
       "chapter": 25,
       "title": "Scenario: Open an application beside a conversation",
       "level": 2,
@@ -3535,7 +3535,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.7",
+      "ref": "RBE 25.A.7",
       "chapter": 25,
       "title": "Scenario: Keep working while changing the layout",
       "level": 2,
@@ -3549,7 +3549,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.8",
+      "ref": "RBE 25.A.8",
       "chapter": 25,
       "title": "Scenario: Show an agent a specific element",
       "level": 2,
@@ -3563,7 +3563,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.9",
+      "ref": "RBE 25.A.9",
       "chapter": 25,
       "title": "Scenario: Select an element in UI Canvas",
       "level": 2,
@@ -3577,7 +3577,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.10",
+      "ref": "RBE 25.A.10",
       "chapter": 25,
       "title": "Scenario: Reuse the result outside chat",
       "level": 2,
@@ -3591,7 +3591,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.11",
+      "ref": "RBE 25.A.11",
       "chapter": 25,
       "title": "Scenario: Agent and person inspect the same live page",
       "level": 2,
@@ -3605,7 +3605,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.12",
+      "ref": "RBE 25.A.12",
       "chapter": 25,
       "title": "Scenario: Recover from navigation, a rebuild, or capture failure",
       "level": 2,
@@ -3619,7 +3619,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.13",
+      "ref": "RBE 25.A.13",
       "chapter": 25,
       "title": "Browser panel",
       "level": 2,
@@ -3633,7 +3633,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.14",
+      "ref": "RBE 25.A.14",
       "chapter": 25,
       "title": "Element selection",
       "level": 2,
@@ -3647,7 +3647,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.15",
+      "ref": "RBE 25.A.15",
       "chapter": 25,
       "title": "Context attachment",
       "level": 2,
@@ -3661,7 +3661,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.16",
+      "ref": "RBE 25.A.16",
       "chapter": 25,
       "title": "9. Canvas integration",
       "level": 2,
@@ -3675,7 +3675,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.17",
+      "ref": "RBE 25.A.17",
       "chapter": 25,
       "title": "10. Public API and agent behavior",
       "level": 2,
@@ -3689,7 +3689,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.18",
+      "ref": "RBE 25.A.18",
       "chapter": 25,
       "title": "11. Lifecycle, storage, and synchronization",
       "level": 2,
@@ -3703,7 +3703,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.19",
+      "ref": "RBE 25.A.19",
       "chapter": 25,
       "title": "12. Capture and attachment details",
       "level": 2,
@@ -3717,7 +3717,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.20",
+      "ref": "RBE 25.A.20",
       "chapter": 25,
       "title": "13. Security and privacy requirements",
       "level": 2,
@@ -3731,7 +3731,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.21",
+      "ref": "RBE 25.A.21",
       "chapter": 25,
       "title": "14. Performance and accessibility",
       "level": 2,
@@ -3745,7 +3745,7 @@
       "governing": ["RB 1.A.3"]
     },
     {
-      "ref": "RB 25.A.22",
+      "ref": "RBE 25.A.22",
       "chapter": 25,
       "title": "Critical acceptance checks",
       "level": 2,
@@ -3885,5 +3885,58 @@
       "governing": ["RB 1.A.3"]
     }
   ],
-  "retired": []
+  "retired": [
+    "RB 26.A.1",
+    "RB 26.A.2",
+    "RB 26.A.3",
+    "RB 26.A.4",
+    "RB 26.A.5",
+    "RB 26.A.6",
+    "RB 26.A.7",
+    "RB 24.A.1",
+    "RB 24.A.2",
+    "RB 24.A.3",
+    "RB 24.A.4",
+    "RB 24.A.5",
+    "RB 24.A.6",
+    "RB 24.A.7",
+    "RB 24.A.8",
+    "RB 16.A.1",
+    "RB 16.A.2",
+    "RB 16.A.3",
+    "RB 17.A.1",
+    "RB 18.A.1",
+    "RB 19.A.1",
+    "RB 20.A.1",
+    "RB 20.A.2",
+    "RB 21.A.1",
+    "RB 22.A.1",
+    "RB 23.A.1",
+    "RB 23.A.2",
+    "RB 23.A.3",
+    "RB 23.A.4",
+    "RB 23.A.5",
+    "RB 25.A.1",
+    "RB 25.A.2",
+    "RB 25.A.3",
+    "RB 25.A.4",
+    "RB 25.A.5",
+    "RB 25.A.6",
+    "RB 25.A.7",
+    "RB 25.A.8",
+    "RB 25.A.9",
+    "RB 25.A.10",
+    "RB 25.A.11",
+    "RB 25.A.12",
+    "RB 25.A.13",
+    "RB 25.A.14",
+    "RB 25.A.15",
+    "RB 25.A.16",
+    "RB 25.A.17",
+    "RB 25.A.18",
+    "RB 25.A.19",
+    "RB 25.A.20",
+    "RB 25.A.21",
+    "RB 25.A.22"
+  ]
 }

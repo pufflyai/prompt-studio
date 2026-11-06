@@ -36,3 +36,5 @@ pst extensions test /absolute/path/to/extensions/requirement-book
 Registered resources: rules (`list-checks`), chapters (`library`), findings (`triangle-alert`), observations (`microscope`), and suggestions (`git-pull-request`). Each kind has global search, resolution and its own page. Resolved findings and mapped observations stay directly accessible.
 
 `book.validate --path imports/book.json` checks a complete authored import stored in extension files. `book.import --path imports/book.json --workspace-id <id> --expected-digest <digest>` guards the target revision, preserves retirement history, and refuses surviving legacy requirement authorities. See [the repository book](../../documentation/requirement-book/README.md) for reading and editing.
+
+Core chapters and rules use `RB` (for example, `RB1` and `RB 1.A.1`). Extension chapters and rules use `RBE` (for example, `RBE16` and `RBE 16.A.1`). Chapter numbers remain unchanged. Rule identities survive moves within their group; moving intent between Core and Extensions requires an explicit removal and addition with updated references. Former prototype extension references are retired.

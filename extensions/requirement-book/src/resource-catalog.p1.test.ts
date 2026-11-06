@@ -34,3 +34,18 @@ test("book resources have distinct identities and navigate to their own content"
   }
   expect(resourceEntries(data, "finding")[0].label).toBe("Review gap");
 });
+
+test("extension chapter and rule resources expose the RBE namespace", () => {
+  const book = bookFixture();
+  const data = {
+    ...book,
+    chapters: [{ id: 3, title: "Planner", group: "Extensions" as const }],
+    rules: [{ ...book.rules[0], chapter: 3, ref: "RBE 3.A.1" }],
+    findings: [],
+    observations: [],
+    suggestions: [],
+  };
+  expect(resourceEntries(data, "chapter")[0].label).toBe("RBE3 Planner");
+  expect(resourceEntries(data, "requirement")[0].id).toBe("RBE 3.A.1");
+  expect(resourceSelection(data, { type: "requirement", id: "RBE 3.A.1" }, {}).chapter).toBe(3);
+});

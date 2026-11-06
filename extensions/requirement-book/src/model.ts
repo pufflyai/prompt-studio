@@ -7,7 +7,7 @@ export const chapterSchema = z
   .strict();
 export const ruleSchema = z
   .object({
-    ref: z.string().regex(/^RB \d+\.[A-Z]+\.[a-zA-Z0-9]+$/),
+    ref: z.string().regex(/^RBE? \d+\.[A-Z]+\.[a-zA-Z0-9]+$/),
     chapter: z.number().int().positive(),
     title: z.string().trim().min(1),
     level: z.number().int().min(0).max(3),
@@ -32,6 +32,10 @@ export const bookSchema = z
 export type Rule = z.infer<typeof ruleSchema>;
 export type Book = z.infer<typeof bookSchema>;
 export type Chapter = z.infer<typeof chapterSchema>;
+export const chapterPrefix = (chapter: Chapter) => (chapter.group === "Extensions" ? "RBE" : "RB");
+export const chapterReference = (chapter: Chapter) => `${chapterPrefix(chapter)}${chapter.id}`;
+export const createRuleReference = (chapter: Chapter) =>
+  `${chapterPrefix(chapter)} ${chapter.id}.A.${crypto.randomUUID().replaceAll("-", "")}`;
 export type Section = "Findings" | "Undocumented" | "Suggestions";
 export const operationSchema = z
   .object({
@@ -60,7 +64,12 @@ export const bookIssues = (book: Book) => {
     if (refs.has(rule.ref) || book.retired.includes(rule.ref))
       issues.push(`${rule.ref}: duplicate or retired identity.`);
     refs.add(rule.ref);
-    if (!chapters.has(rule.chapter)) issues.push(`${rule.ref}: unknown chapter.`);
+    const chapter = book.chapters.find((item) => item.id === rule.chapter);
+    if (!chapter) issues.push(`${rule.ref}: unknown chapter.`);
+    else if (!rule.ref.startsWith(`${chapterPrefix(chapter)} `))
+      issues.push(
+        `${rule.ref}: ${chapter.group} chapters require the ${chapterPrefix(chapter)} prefix; move within the same group to preserve identity.`,
+      );
     for (const ref of [...rule.related, ...rule.governing])
       if (ref === rule.ref || !findRule(book.rules, ref)) issues.push(`${rule.ref}: unresolved reference ${ref}.`);
   }

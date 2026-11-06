@@ -104,13 +104,13 @@ Not carried as independent requirements: Problem; Delivery record.
 
 Normative sections consolidated; old delivery observations and procedural rollout details are historical Git evidence, not a second requirement source.
 
-- RB 26.A.1 ← Goal and product boundary
-- RB 26.A.2 ← Ownership
-- RB 26.A.3 ← Reusable UI contract
-- RB 26.A.4 ← Native extension view contract
-- RB 26.A.5 ← Interaction and performance requirements
-- RB 26.A.6 ← Validation and acceptance
-- RB 26.A.7 ← Out of scope
+- RBE 26.A.1 ← Goal and product boundary
+- RBE 26.A.2 ← Ownership
+- RBE 26.A.3 ← Reusable UI contract
+- RBE 26.A.4 ← Native extension view contract
+- RBE 26.A.5 ← Interaction and performance requirements
+- RBE 26.A.6 ← Validation and acceptance
+- RBE 26.A.7 ← Out of scope
 
 Not carried as independent requirements: PRD: Shared timeline renderer; Problem; Delivery sequence.
 
@@ -266,14 +266,14 @@ Not carried as independent requirements: PRD: Align extension API shapes; Purpos
 
 Normative sections consolidated; old delivery observations and procedural rollout details are historical Git evidence, not a second requirement source.
 
-- RB 24.A.1 ← W1: Reconcile requirements with current behavior
-- RB 24.A.2 ← W2: Finish the verified documentation and skill corrections
-- RB 24.A.3 ← W3: Make guidance canonical and release-aware
-- RB 24.A.4 ← W4: Repair failures exposed by the workflows
-- RB 24.A.5 ← W5: Make the validation environment repeatable
-- RB 24.A.6 ← W6: Close acceptance and usability gaps
-- RB 24.A.7 ← W7: Prevent documentation and skill drift
-- RB 24.A.8 ← W8: Final fresh-agent and release gate
+- RBE 24.A.1 ← W1: Reconcile requirements with current behavior
+- RBE 24.A.2 ← W2: Finish the verified documentation and skill corrections
+- RBE 24.A.3 ← W3: Make guidance canonical and release-aware
+- RBE 24.A.4 ← W4: Repair failures exposed by the workflows
+- RBE 24.A.5 ← W5: Make the validation environment repeatable
+- RBE 24.A.6 ← W6: Close acceptance and usability gaps
+- RBE 24.A.7 ← W7: Prevent documentation and skill drift
+- RBE 24.A.8 ← W8: Final fresh-agent and release gate
 
 Not carried as independent requirements: PRD: Reliable documentation and extension authoring; Goal and scope; Evidence baseline and limits; Delivery record; Findings register; Delivery order and ownership; Reproduction starting points; Implementation handoff checklist.
 
@@ -409,28 +409,28 @@ Product policy moves to the canonical book; procedural guidance remains in its e
 
 Imported as proposed from a local untracked source; the user original is preserved outside this working branch.
 
-- RB 25.A.1 ← 1. Outcome
-- RB 25.A.2 ← Goals
-- RB 25.A.3 ← Initial delivery
-- RB 25.A.4 ← Deferred work
-- RB 25.A.5 ← 4. Product ownership and mission fit
-- RB 25.A.6 ← Scenario: Open an application beside a conversation
-- RB 25.A.7 ← Scenario: Keep working while changing the layout
-- RB 25.A.8 ← Scenario: Show an agent a specific element
-- RB 25.A.9 ← Scenario: Select an element in UI Canvas
-- RB 25.A.10 ← Scenario: Reuse the result outside chat
-- RB 25.A.11 ← Scenario: Agent and person inspect the same live page
-- RB 25.A.12 ← Scenario: Recover from navigation, a rebuild, or capture failure
-- RB 25.A.13 ← Browser panel
-- RB 25.A.14 ← Element selection
-- RB 25.A.15 ← Context attachment
-- RB 25.A.16 ← 9. Canvas integration
-- RB 25.A.17 ← 10. Public API and agent behavior
-- RB 25.A.18 ← 11. Lifecycle, storage, and synchronization
-- RB 25.A.19 ← 12. Capture and attachment details
-- RB 25.A.20 ← 13. Security and privacy requirements
-- RB 25.A.21 ← 14. Performance and accessibility
-- RB 25.A.22 ← Critical acceptance checks
+- RBE 25.A.1 ← 1. Outcome
+- RBE 25.A.2 ← Goals
+- RBE 25.A.3 ← Initial delivery
+- RBE 25.A.4 ← Deferred work
+- RBE 25.A.5 ← 4. Product ownership and mission fit
+- RBE 25.A.6 ← Scenario: Open an application beside a conversation
+- RBE 25.A.7 ← Scenario: Keep working while changing the layout
+- RBE 25.A.8 ← Scenario: Show an agent a specific element
+- RBE 25.A.9 ← Scenario: Select an element in UI Canvas
+- RBE 25.A.10 ← Scenario: Reuse the result outside chat
+- RBE 25.A.11 ← Scenario: Agent and person inspect the same live page
+- RBE 25.A.12 ← Scenario: Recover from navigation, a rebuild, or capture failure
+- RBE 25.A.13 ← Browser panel
+- RBE 25.A.14 ← Element selection
+- RBE 25.A.15 ← Context attachment
+- RBE 25.A.16 ← 9. Canvas integration
+- RBE 25.A.17 ← 10. Public API and agent behavior
+- RBE 25.A.18 ← 11. Lifecycle, storage, and synchronization
+- RBE 25.A.19 ← 12. Capture and attachment details
+- RBE 25.A.20 ← 13. Security and privacy requirements
+- RBE 25.A.21 ← 14. Performance and accessibility
+- RBE 25.A.22 ← Critical acceptance checks
 
 Not carried as independent requirements: Illustrative architecture, external comparison and unvalidated design previews.
 
