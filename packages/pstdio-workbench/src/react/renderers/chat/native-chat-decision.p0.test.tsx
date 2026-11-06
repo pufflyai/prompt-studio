@@ -11,6 +11,7 @@ test("a native decision keeps harness details and current settings available wit
   const actions: unknown[] = [];
   const session = createChatSession({
     initial: {
+      controls: [{ id: "provider", name: "Harness", type: "harness", defaultValue: { harnessId: "native-modes" } }],
       harness: {
         commands: [],
         slashCommands: true,
@@ -41,13 +42,22 @@ test("a native decision keeps harness details and current settings available wit
   };
   renderToStaticMarkup(
     <WorkbenchThemeProvider>
-      <NativeChatView session={session} action={undefined} conversationKey="decision" Host={Host} />
+      <NativeChatView
+        session={session}
+        action={undefined}
+        conversationKey="decision"
+        Host={Host}
+        renderParamField={() => <button type="button">saved-model</button>}
+      />
     </WorkbenchThemeProvider>,
   );
   const decision = panel.props.composerDecision!;
   const markup = renderToStaticMarkup(<WorkbenchThemeProvider>{decision.controls}</WorkbenchThemeProvider>);
   expect(markup).toContain('aria-label="Harness controls"');
   expect(markup).toContain('aria-label="Plan details"');
+  expect(markup.includes(">saved-model<")).toBe(false);
+  const ordinary = renderToStaticMarkup(<WorkbenchThemeProvider>{panel.props.actions}</WorkbenchThemeProvider>);
+  expect(ordinary.includes(">saved-model<")).toBe(true);
   await decision.onAction("continue");
   expect(actions).toMatchObject([
     { type: "decision", id: "plan-revision", actionId: "continue", values: { provider: { model: "saved-model" } } },
