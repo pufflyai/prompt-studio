@@ -334,3 +334,59 @@ test("cancelling while presence and queue reads are pending owns both rejections
   await Bun.sleep(0);
   expect(closed).toBe(1);
 });
+
+test("a saved read-only queue checkpoint yields to the next editable online owner read", async () => {
+  const controller = new AbortController();
+  const events: Array<{ snapshot?: { queueReadOnly?: boolean } }> = [];
+  const queue = { requests: [], activeRunStartedAt: null, steeringAvailable: false, steeringUnavailableReason: null };
+  let reads = 0;
+  let checkpoint = false;
+  let closed = 0;
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
+    params: {},
+    overrides: {
+      signal: controller.signal,
+      stream: {
+        write: async (value) => {
+          const event = value as { snapshot?: { queueReadOnly?: boolean } };
+          events.push(event);
+          if (event.snapshot?.queueReadOnly === true) checkpoint = true;
+          if (checkpoint && event.snapshot?.queueReadOnly === false) controller.abort();
+        },
+      },
+      sessions: {
+        get: async () => ({ ...session, status: "in_progress" }),
+        getExecutionState: async () => ({
+          kind: "remote",
+          available: true,
+          device: { id: "owner", name: "Laptop", ownerId: "account" },
+        }),
+        getQueuedMessages: async () => {
+          reads++;
+          return { messages: [], queue };
+        },
+        retainResources: async () => ({
+          close: () => {
+            closed++;
+          },
+        }),
+        stream: async (_id, onEvent) => {
+          await onEvent({ event: "queued_messages", data: { messages: [], queue: { ...queue, readOnly: true } } });
+          await new Promise<void>((resolve) => {
+            if (controller.signal.aborted) resolve();
+            else controller.signal.addEventListener("abort", () => resolve(), { once: true });
+          });
+        },
+      },
+    },
+  });
+  await watchConversation(ctx, { type: "session", id: "s" });
+  expect(
+    events.flatMap((event) =>
+      typeof event.snapshot?.queueReadOnly === "boolean" ? [event.snapshot.queueReadOnly] : [],
+    ),
+  ).toEqual([false, true, false]);
+  expect(reads).toBe(2);
+  expect(closed).toBe(1);
+});

@@ -43,7 +43,9 @@ test("remote primary controls keep commands, queues, questions and approvals on 
   await expect(editor).toHaveAttribute("contenteditable", "true");
   await expect(page.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await editor.fill("Queued from the browser");
-  await send.click();
+  // The initial stream can carry a saved read-only queue before the owner read recovers.
+  // Select the actual queue action, not the same toolbar button while it still means Stop.
+  await page.getByRole("button", { name: "Queue message", exact: true }).click();
   const queued = page.getByRole("button", { name: "Edit queued message: Queued from the browser", exact: true });
   await expect(queued).toBeVisible();
   await queued.click();
