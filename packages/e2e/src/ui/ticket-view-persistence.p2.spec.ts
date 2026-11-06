@@ -23,8 +23,19 @@ test("shares saved ticket views while keeping active views local", async ({
   const second = await secondContext.newPage();
   const boardPath = `/v1/projects/${project.id}/boards/pstdio.pstdio-planner.view.tickets/views`;
   try {
-    await page.goto(path);
-    await second.goto(path);
+    await test.step("load both clients' initial board data", async () => {
+      await Promise.all(
+        [page, second].map(async (client) => {
+          const initialViews = client.waitForResponse(
+            (response) => new URL(response.url()).pathname === boardPath && response.request().method() === "GET",
+          );
+          const [response] = await Promise.all([initialViews, client.goto(path)]);
+          expect(await response.finished()).toBeNull();
+          expect(response.ok()).toBe(true);
+          await expect(client.getByRole("tab", { name: "All", exact: true })).toBeVisible();
+        }),
+      );
+    });
     await expect(second.getByRole("tab", { name: "All", exact: true })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("button", { name: "Add view", exact: true }).click();
     const created = page.getByRole("tab", { name: "View 2", exact: true });
