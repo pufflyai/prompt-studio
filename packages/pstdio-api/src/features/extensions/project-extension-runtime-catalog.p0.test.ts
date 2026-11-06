@@ -165,6 +165,39 @@ describe("project extension runtime catalog", () => {
     expect(await harness.catalog.get("p1")).toBe(snapshot);
   });
 
+  test("a webview build during a load keeps the in-flight result for readers already waiting", async () => {
+    const dir = makeSourceDir();
+    const gate = Promise.withResolvers<void>();
+    const entered = Promise.withResolvers<void>();
+    let gated = false;
+    const harness = createHarness({
+      sourcesByProject: () => [sourceRow(dir)],
+      loadGate: () => {
+        if (gated) return Promise.resolve();
+        gated = true;
+        entered.resolve();
+        return gate.promise;
+      },
+    });
+
+    const waiting = harness.catalog.get("p1");
+    await entered.promise;
+    // Builds finish one after another while default extensions install. None of them changes
+    // what an extension contributes, so the load a reader already waits for stays valid.
+    harness.catalog.invalidate({ sourcePath: dir, reason: "webviews_built" });
+    const later = harness.catalog.get("p1");
+    gate.resolve();
+
+    const first = await waiting;
+    expect(first.generation).toBe(1);
+    expect(harness.discards).toEqual([]);
+    // A read that started after the build still sees it.
+    const second = await later;
+    expect(second.generation).toBe(2);
+    expect(harness.loadStarts).toHaveLength(2);
+    expect(await harness.catalog.get("p1")).toBe(second);
+  });
+
   test("work holding an old snapshot still reads its values after invalidation", async () => {
     const dir = makeSourceDir();
     const harness = createHarness({ sourcesByProject: () => [sourceRow(dir)] });
