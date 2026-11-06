@@ -22,8 +22,8 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
   const [source, setSource] = useState<{ path: string; content: string } | null>(null);
   useEffect(() => {
     setSelected(resource);
-    setEditor(null);
-  }, [resource]);
+    setEditor((current) => (current?.chapter === routeChapter && !review && resource === current.ref ? current : null));
+  }, [resource, routeChapter, review]);
   const chapter = findRule(data?.rules ?? [], selected)?.chapter ?? routeChapter;
   const effectiveSelected = selected || data?.rules.find((rule) => rule.chapter === chapter)?.ref || "";
   const navigateReview = async () =>
