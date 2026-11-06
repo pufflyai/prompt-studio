@@ -1,10 +1,12 @@
 import type { ChildProcess } from "node:child_process";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { test as base, expect } from "../scripts/playwright-test";
+import { waitForProcessReady } from "../scripts/process-readiness";
+import { fixtureServerReady } from "../scripts/server-readiness";
 import { restorePackagedBrowserViewport } from "./packaged-browser-viewport";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { createCloudAcceptanceFixture, signInCloudAcceptanceDevice } from "./packaged-cloud-acceptance.fixture";
@@ -132,16 +134,41 @@ test("Cloud settings respect early access and manage devices and project sync th
   await settings.getByRole("button", { name: "Sync with Cloud", exact: true }).click();
   await expect(status).toHaveText("Synced");
 
-  const second = await fixture.start("second");
+  const second = await test.step("Start the cold second app and register its default tools", async () => {
+    const device = await fixture.start("second");
+    await waitForProcessReady(device.host.child, "Second app readiness", async () =>
+      fixtureServerReady.test(readFileSync(device.logPath, "utf8")) ? true : undefined,
+    );
+    return device;
+  });
   await signInCloudAcceptanceDevice(second, fixture.peer.origin);
   await expect
     .poll(async () => (await second.client.projects.query()).items.map((item) => item.id))
     .toContain(project.id);
   await second.client.projects.chooseFolder(project.id, { path: second.folder, clone: false });
-  // Keep sampling through the existing deadline while the last downloaded owner becomes idle.
-  await expect
-    .poll(async () => (await second.client.account.projectSyncStatus(project.id)).state, { intervals: [100] })
-    .toBe("synced");
+  await test.step("Finish local project setup before checking sync", async () => {
+    await waitForProcessReady(second.host.child, "Second project readiness", async () => {
+      const completed = readFileSync(second.logPath, "utf8")
+        .split("\n")
+        .some((line) => {
+          if (!line.startsWith("{")) return false;
+          const phase = JSON.parse(line);
+          return (
+            phase.event === "runtime.setup.phase" &&
+            phase.phase === "project.extension_enable" &&
+            phase.project_id === project.id &&
+            phase.state === "completed"
+          );
+        });
+      return completed ? true : undefined;
+    });
+  });
+  // App installation and project setup have separate steps; retain the five-second sync assertion.
+  await test.step("Synchronize the ready second app", async () => {
+    await expect
+      .poll(async () => (await second.client.account.projectSyncStatus(project.id)).state, { intervals: [100] })
+      .toBe("synced");
+  });
   // Reopening reads the current device presence; idle frames never poll device lists.
   await closeSettings();
   await openSettings();
