@@ -1,8 +1,9 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { readTicketsWithReviewState, statusesCollection, tagsCollection } from "../data/collections";
+import { readMigratedTickets } from "../data/read-migrated-tickets";
 import { requireTickets, resolveStatusId, resolveTagOptionIds } from "../data/resolve";
 import { ticketTagIds } from "../data/ticket-tags";
-import { sortedBySortOrder } from "../utils/sort";
+import { sortedByTicketOrder } from "../utils/sort";
 
 // Backs `pst tickets list`. Status/tag/parent filters accept display names
 // (Decision 3); the result is curated display rows so the router renders a tidy
@@ -22,8 +23,9 @@ export const listTicketsCommand = defineCommand({
     parent: params.text(),
   },
   async run(ctx, commandParams) {
+    const migrated = await readMigratedTickets(ctx);
     const [tickets, statuses, tags] = await Promise.all([
-      readTicketsWithReviewState(ctx),
+      readTicketsWithReviewState(ctx, migrated),
       statusesCollection(ctx.storage).list(),
       tagsCollection(ctx.storage).list(),
     ]);
@@ -42,7 +44,7 @@ export const listTicketsCommand = defineCommand({
     const archivedFilter = commandParams.archived ?? false;
     const draftFilter = commandParams.draft ?? false;
 
-    return sortedBySortOrder(
+    return sortedByTicketOrder(
       tickets.filter((ticket) => {
         if (statusId !== undefined && ticket.statusId !== statusId) return false;
         if (tagIds && !tagIds.every((id) => ticketTagIds(ticket).includes(id))) return false;
