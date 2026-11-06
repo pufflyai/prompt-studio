@@ -1,5 +1,6 @@
 import { commandRef } from "./refs";
 import type { PlacementRef } from "./types/contribution-identity";
+import type { ResourceRef, ResourceResolution } from "./types/resources";
 
 export const sessionBrowserId = "pstdio.pstdio-session-browser";
 const ref = <K extends "page" | "placement" | "view">(kind: K, id: string) => ({
@@ -21,6 +22,10 @@ export const sessionBrowser = {
   panels: { conversation: ref("placement", "conversation") },
   views: { conversation: ref("view", "conversation"), list: ref("view", "list") },
   commands: {
+    resolve: commandRef<{ resources: ResourceRef[] }, ResourceResolution[]>({
+      extensionId: sessionBrowserId,
+      id: "resolve",
+    }),
     create: commandRef<
       {
         workspaceId?: string;

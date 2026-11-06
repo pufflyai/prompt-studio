@@ -11,6 +11,11 @@ test("Sessions provider targets are qualified without importing its implementati
     id: "conversation",
   });
   expect(sessionBrowser.commands.open).toMatchObject({ kind: "command", extensionId: sessionBrowserId, id: "open" });
+  expect(sessionBrowser.commands.resolve).toMatchObject({
+    kind: "command",
+    extensionId: sessionBrowserId,
+    id: "resolve",
+  });
   expect(sessionBrowser.commands.create).toMatchObject({ kind: "command", extensionId: sessionBrowserId, id: "new" });
 });
 test("deprecated host refs retain their published identity", () => {
