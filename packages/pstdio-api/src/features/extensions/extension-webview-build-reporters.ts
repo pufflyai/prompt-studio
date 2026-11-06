@@ -9,6 +9,8 @@ export type WebviewBuildReport = "reported" | "source-changed" | "obsolete";
 export type CreateExtensionWebviewBuildManagerInput = {
   buildWebview?: ExtensionWebviewBuilder;
   listInstalledSources: () => Promise<InstalledSourceWithManifest[]>;
+  /** Reads one installed source. Without it, each lookup scans the list. */
+  getInstalledSource?: (installedExtensionId: string) => Promise<InstalledSourceWithManifest | null>;
   loadSource?: (sourcePath: string) => Promise<LoadedExtension>;
   onError?: (error: unknown) => void;
   reportBuildFailure: (

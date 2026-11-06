@@ -99,6 +99,10 @@ export const createInstalledExtensionRuntime = (input: {
   } = input.webviewBuilds
     ? createWebviewBuildManager({
         listInstalledSources: listExistingInstalledSources,
+        getInstalledSource: async (installedExtensionId) => {
+          const row = await input.installedExtensionSourcesService.get(installedExtensionId);
+          return row ? (selectExistingSources([row])[0] ?? null) : null;
+        },
         reportBuildFailure: async (installedExtensionId, webviewId, error, expectedSource) => {
           // A snapshot serves each webview's built module URL, so a finished build — for
           // better or worse — changes what the snapshot must say.
