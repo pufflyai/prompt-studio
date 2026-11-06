@@ -170,6 +170,7 @@ test("a Side Panel requested while the project loads opens its session once the 
 
 test("reopens the provider session after resource navigation clears an instance view override", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
@@ -201,6 +202,7 @@ test("reopens the provider session after resource navigation clears an instance 
 
 test("an explicit reader override does not reuse its registered session renderer", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
