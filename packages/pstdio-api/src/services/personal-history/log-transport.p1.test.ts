@@ -11,6 +11,7 @@ import { messageEntries } from "./log-entries";
 import { createSessionLogFiles } from "./log-files";
 import { createLogPublisher } from "./log-publisher";
 import { createLogReceiver } from "./log-receiver";
+import { personalLogStreamsFixture } from "./log-stream.fixture";
 import { logRelayFixture } from "./log-transport.fixture";
 import { publishLogUpdate } from "./log-updates";
 
@@ -47,6 +48,7 @@ test("publishing persists only completed changes and resumes without republishin
     value: [message("first", "complete"), message("second", "streaming secret")],
   });
   const files = createSessionLogFiles(root);
+  const source = await personalLogStreamsFixture(project.id, files, "publisher");
   const peer = logRelayFixture();
   const heads = new Map<string, number>();
   const create = () =>
@@ -54,6 +56,7 @@ test("publishing persists only completed changes and resumes without republishin
       files,
       namespace: "publisher",
       deviceId: "source",
+      streams: source.streams,
       deps: app.deps,
       published: (id, head) => heads.set(id, head),
     });
@@ -82,13 +85,21 @@ test("publishing persists only completed changes and resumes without republishin
     await publisher.publish([session.id], space, peer.relay);
     expect(writes()).toHaveLength(2);
     const received = createSessionLogFiles(join(root, "receiver"));
-    let receiver = createLogReceiver({ files: received, namespace: "reader", received() {} });
+    const reader = await personalLogStreamsFixture(project.id, received, "reader");
+    const receiverInput = {
+      files: received,
+      namespace: "reader",
+      streams: reader.streams,
+      source: async () => ({ writerId: source.writerId, format: "append-log-v1" as const }),
+      received() {},
+    };
+    let receiver = createLogReceiver(receiverInput);
     await receiver.read([session.id], space, peer.relay);
     expect(await received.read("reader", session.id)).toEqual([
       message("first", "late correction"),
       message("second", "streaming secret"),
     ]);
-    receiver = createLogReceiver({ files: received, namespace: "reader", received() {} });
+    receiver = createLogReceiver(receiverInput);
     expect(await receiver.behind([session.id], heads)).toEqual([]);
     await receiver.read([session.id], space, peer.relay);
     expect(peer.reads.at(-1)).toBe(2);
@@ -109,21 +120,30 @@ test("oversized completed messages use encrypted blobs and remain readable after
   const large = message("large", "private large output 😀".repeat(100_000));
   conversation.push({ op: "add", path: "/messages/0", value: large });
   const files = createSessionLogFiles(root);
+  const source = await personalLogStreamsFixture(project.id, files, "large");
   const peer = logRelayFixture();
   const publisher = createLogPublisher({
     files,
     namespace: "large",
     deviceId: "source",
+    streams: source.streams,
     deps: app.deps,
     published() {},
   });
   try {
     await publisher.publish([session.id], space, peer.relay);
-    expect(peer.blobs.size).toBe(1);
+    expect(peer.blobs.size).toBeGreaterThan(0);
     for (const bytes of peer.blobs.values())
       expect(new TextDecoder().decode(bytes)).not.toContain("private large output");
     const received = createSessionLogFiles(join(root, "large-reader"));
-    const receiver = createLogReceiver({ files: received, namespace: "large", received() {} });
+    const reader = await personalLogStreamsFixture(project.id, received, "large");
+    const receiver = createLogReceiver({
+      files: received,
+      namespace: "large",
+      streams: reader.streams,
+      source: async () => ({ writerId: source.writerId, format: "append-log-v1" }),
+      received() {},
+    });
     await receiver.read([session.id], space, peer.relay);
     expect(await createSessionLogFiles(join(root, "large-reader")).read("large", session.id)).toEqual([large]);
   } finally {

@@ -37,6 +37,7 @@ export const textEditingRequestSchema = z.union([
     memberId: z.uuid(),
     input: textOpenInputSchema,
     sourceState: z.base64().optional(),
+    generation: z.string().min(1).optional(),
     pendingUpdate: z.base64().optional(),
     sourceIdentity: z
       .string()

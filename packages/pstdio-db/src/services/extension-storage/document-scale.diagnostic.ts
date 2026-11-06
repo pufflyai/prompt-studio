@@ -12,7 +12,6 @@ import {
 import { createDb } from "../../db/connection.pglite";
 import { runDatabaseScaleEntrypoint } from "./database-scale-entrypoint";
 import { createDocumentStorageDBService } from "./document-storage";
-import { resourceDocumentId } from "./resource-document-persistence";
 
 const projectId = "00000000-0000-4000-8000-000000000903";
 const address = { workbenchId: projectId, extensionId: "scale.owner" };
@@ -49,7 +48,7 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
       ...first,
       durable: first.value.status === "saved-locally",
       fullOwnerLoads: 0,
-      note: "Loads only the written record's document",
+      note: "Loads touched canonical records and indexed pending group membership",
     });
     assert.equal(
       (await storage.records.read(row.id)).value &&
@@ -92,40 +91,37 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
       rows: Array.from({ length: 100 }, (_, index) => createRow(kind, 0, index, 3)),
       deleted: [],
     });
-    // Cross the record's persisted folding boundary and retain every individual duration.
-    // A record's head is its newest update tail; its document row keeps the checkpoint revision.
+    // Retain the original 129-write workload; ordered saves keep immutable journal
+    // entries rather than creating or folding per-record Yjs documents.
     const history = async () =>
       (
-        await db.execute<{ revision: string; folded_revision: string }>(sql`
-          select greatest(saved.revision, (select max(tails.revision) from storage_document_updates tails
-            where tails.workbench_id = saved.workbench_id and tails.extension_id = saved.extension_id
-              and tails.document_id = saved.document_id)) as revision, saved.folded_revision
-          from storage_documents saved
-          where saved.workbench_id = ${address.workbenchId} and saved.extension_id = ${address.extensionId}
-            and saved.document_id = ${resourceDocumentId(row.id)}`)
-      ).rows;
+        await db.execute<{ count: string }>(sql`
+        SELECT count(*) FROM storage_ordered_operations
+        WHERE workbench_id = ${address.workbenchId} AND extension_id = ${address.extensionId}
+      `)
+      ).rows[0]!.count;
     const before = await history();
     for (let sample = 0; sample < 129; sample++) {
-      const fold = await measure(() =>
+      const retained = await measure(() =>
         storage.records.commit({
-          operationId: `fold-${crypto.randomUUID()}`,
-          edits: [{ recordId: row.id, replace: { ...row, title: `Fold ${sample}` } }],
+          operationId: `history-${crypto.randomUUID()}`,
+          edits: [{ recordId: row.id, replace: { ...row, title: `History ${sample}` } }],
         }),
       );
-      emit("folding-writes", { ...fold, sample });
+      emit("history-writes", { ...retained, sample });
     }
     const after = await history();
-    emit("fold-boundary", { before, after });
-    assert(Number(after[0].folded_revision) > Number(before[0].folded_revision));
+    emit("retained-journal-history", { before, after });
+    assert.equal(Number(after) - Number(before), 129);
     emit("disk", {
       tables: (
         await db.execute(
-          sql`select relname, pg_total_relation_size(oid) as bytes from pg_class where relname like 'storage_document%'`,
+          sql`select relname, pg_total_relation_size(oid) as bytes from pg_class where relname like 'storage_ordered%' OR relname like 'storage_current_record%'`,
         )
       ).rows,
     });
     emit("gaps", {
-      indexMaintenance: "not implemented",
+      indexMaintenance: "Maintained during each atomic commit",
       lockWaitMs: null,
       queueDepth: null,
       notificationMs: null,

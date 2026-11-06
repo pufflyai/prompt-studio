@@ -160,6 +160,8 @@ const history = createPersonalHistoryStore({
   ...login,
   projectId: project.id,
   documents: source.deps.extensionStorageService.documents,
+  index: source.deps.extensionStorageService.personalHistoryIndex,
+  logs: source.deps.extensionStorageService.logs,
   files: source.deps.personalHistoryService.logs,
 });
 const references = createHistoryReferences(

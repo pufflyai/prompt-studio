@@ -5,7 +5,7 @@ import { createRecordAssets } from "./record-assets";
 import { encodeRecordFrame, type RecordFrame, recordFrameCost } from "./record-frames";
 import { checkRecordStreamPage, createRecordStreamDownload } from "./record-stream-download";
 import { createRecordStreamReader } from "./record-stream-reader";
-import type { RecordBytes, RecordStreamCursor, RecordStreamInput } from "./record-stream-types";
+import type { RecordBytes, RecordStreamCursor, RecordStreamInput, RecordStreamStore } from "./record-stream-types";
 import { retainRecordSourceFrames, retainRecordSourceMap, withSourceRecovery } from "./source-recovery";
 
 // Room for the frame header and encryption under the relay's 1 MiB update limit.
@@ -33,20 +33,55 @@ const addFrames = (remote: Map<string, Uint8Array[]>, frames: (RecordFrame | nul
   return remote;
 };
 
+const checkpointDescription = (
+  snapshot: Awaited<ReturnType<RecordStreamInput["store"]["snapshot"]>>,
+  format: RecordStreamInput["store"]["recordFormat"],
+  chunks: { blobId: string; byteLength: number }[],
+) => {
+  const encoder = new TextEncoder();
+  const bytes = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+  return {
+    bytes,
+    payload: {
+      state: encoder.encode(JSON.stringify({ version: 1, ...(format && { format }), chunks })),
+      summary: encoder.encode(
+        JSON.stringify({
+          records: snapshot.records.length,
+          bytes,
+          ...(format && { format, receiptRoot: snapshot.receiptRoot ?? null }),
+        }),
+      ),
+    },
+  };
+};
+// A founding state can hold records that no update carries; every device loads it once. Yjs states
+// cannot prove which edits they cover, so every changed one is loaded and compared. An ordered
+// compaction proves coverage with its receipt root instead; replacing canonical state from it
+// would drop accepted saves it omits.
+const loadsState = (cursor: RecordStreamCursor, state: StateInfo | null, format: RecordStreamStore["recordFormat"]) =>
+  !!state && state.stateId !== cursor.stateId && (state.baseStateId === null || !format);
+
 const withState = async (
   reader: ReturnType<typeof createRecordStreamReader>,
   cursor: RecordStreamCursor,
   state: StateInfo | null,
-) =>
-  state && state.stateId !== cursor.stateId
-    ? {
-        ...cursor,
-        stateId: state.stateId,
-        through: state.through,
-        pendingBytes: 0,
-        stateBytes: (await reader.summary(state)).bytes,
-      }
-    : cursor;
+) => {
+  if (
+    !state ||
+    (state.stateId === cursor.stateId &&
+      (cursor.receiptStateId === undefined || cursor.receiptStateId === state.stateId))
+  )
+    return cursor;
+  const summary = await reader.summary(state);
+  return {
+    ...cursor,
+    stateId: state.stateId,
+    through: state.through,
+    pendingBytes: 0,
+    stateBytes: summary.bytes,
+    ...(summary.receiptRoot === undefined ? {} : { receiptRoot: summary.receiptRoot, receiptStateId: state.stateId }),
+  };
+};
 const updateBytes = (cursor: RecordStreamCursor, updates: StoredUpdate[], byteLengths: number[]) =>
   updates.reduce((sum, update, index) => (update.sequence > cursor.through ? sum + byteLengths[index]! : sum), 0);
 
@@ -57,6 +92,7 @@ const updateBytes = (cursor: RecordStreamCursor, updates: StoredUpdate[], byteLe
  */
 export const createRecordStreamSync = (input: RecordStreamInput) => {
   const { space, documentId, relay, store } = input;
+  const format = store.recordFormat;
   const limits = input.limits ?? latestStateLimits;
   const files = createRecordAssets({ space, assets: input.assets, blobs: relay.blobs, references: store.references });
   let incomplete = false;
@@ -68,7 +104,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     await input.quarantine(failure);
     rejected.add(failure.id);
   };
-  const reader = createRecordStreamReader({ space, documentId, relay, files, quarantine });
+  const reader = createRecordStreamReader({ ...input, files, quarantine, recordFormat: format });
   const download = createRecordStreamDownload(reader, relay);
   const skippedRecords = async (recordIds: string[]) => {
     for (const recordId of recordIds)
@@ -127,16 +163,32 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     (!result.state && result.lastSequence === 0 && !!cursor.stateId) ||
     (result.status === "state-required" && !result.state);
 
+  /** Founding and replaced states are loaded; so is an ordered state covering decisions this device lacks. */
+  const mustLoad = async (cursor: RecordStreamCursor, result: Extract<ReadResult, { status: "updates" }>) => {
+    if (loadsState(cursor, result.state, format)) return true;
+    const state = result.state;
+    if (!state || state.stateId === cursor.stateId || state.through > cursor.after || !store.coversReceipts)
+      return false;
+    // Records adopted from an incomplete state lack saves a later complete state covers.
+    return !(await store.coversReceipts((await reader.summary(state)).receiptRoot ?? null));
+  };
+
   /** Applies everything the relay holds after the cursor, a page per transaction. Null when the relay lost the stream. */
   const read = async (start: RecordStreamCursor): Promise<RecordStreamCursor | null> => {
     let cursor = start;
     while (true) {
       const result = await relay.read(cursor.after);
       if (lost(cursor, result)) return null;
-      if (result.status === "state-required" || (result.state && result.state.stateId !== cursor.stateId)) {
+      if (result.status === "state-required" || (await mustLoad(cursor, result))) {
         const loaded = await load(cursor, result.state!);
         if (!loaded) return cursor;
         cursor = loaded;
+        continue;
+      }
+      if (result.state && result.state.stateId !== cursor.stateId && result.state.through < cursor.after) {
+        // A peer compacted only part of our known tail. Replay the remaining updates to rebuild
+        // their byte count from the new base; their exact receipts make the replay idempotent.
+        cursor = { ...(await withState(reader, cursor, result.state)), after: result.state.through };
         continue;
       }
       cursor = await applyPage(cursor, result);
@@ -149,7 +201,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
    * compaction state needs every local save on the relay first. Null when it was not replaced.
    */
   const publish = async (cursor: RecordStreamCursor, found: boolean) => {
-    const snapshot = await store.snapshot();
+    const snapshot = await store.snapshot({ found, relayEmpty: found });
     if (!found && snapshot.outbox) return null;
     const chunks = [];
     const assetBlobs = new Set<string>();
@@ -158,19 +210,17 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       // A compaction only lists files that earlier updates already uploaded.
       const assets = await files.upload(current, !found);
       for (const reference of assets) assetBlobs.add(reference.blobId);
-      const sealed = await sealBlob(space, encodeRecordFrame({ records, assets }));
+      const sealed = await sealBlob(space, encodeRecordFrame({ records, assets, format }));
       await relay.blobs!.put(sealed.blobId, sealed.bytes);
       chunks.push({ blobId: sealed.blobId, byteLength: sealed.bytes.length });
     }
-    const encoder = new TextEncoder();
     const through = found ? 0 : cursor.after;
-    const bytes = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
+    const { bytes, payload } = checkpointDescription(snapshot, format, chunks);
     const state = await sealState(space, documentId, {
       baseStateId: found ? null : cursor.stateId,
       through,
-      state: encoder.encode(JSON.stringify({ version: 1, chunks })),
-      summary: encoder.encode(JSON.stringify({ records: snapshot.records.length, bytes })),
-      blobIds: [...chunks.map((chunk) => chunk.blobId), ...assetBlobs],
+      ...payload,
+      blobIds: [...new Set([...chunks.map((chunk) => chunk.blobId), ...assetBlobs, ...(snapshot.blobIds ?? [])])],
     });
     if (!(await relay.replace(state))) return null;
     const next = {
@@ -183,8 +233,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       skipped: false,
     };
     // Every device loads a founding state, so the saves it includes need no separate upload.
-    await store.published(next, found ? snapshot.outbox : 0);
-    return next;
+    return (await store.published(next, found ? snapshot.outbox : 0)) ?? next;
   };
 
   /** Sends the oldest saved local changes as one update. False when nothing was waiting. */
@@ -193,7 +242,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     if (!entries.length) return false;
     const records = entries.flatMap((entry) => entry.records);
     const assets = await files.upload(entries.flatMap((entry) => entry.assets));
-    let frame = encodeRecordFrame({ records, assets });
+    let frame = encodeRecordFrame({ records, assets, format });
     const blobIds = assets.map((reference) => reference.blobId);
     // One save larger than an update travels as a blob, so it still arrives as one unit (R4). The
     // blob keeps the file references too: thousands of them would not fit in the update either.
@@ -201,11 +250,14 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       const sealed = await sealBlob(space, frame);
       await relay.blobs!.put(sealed.blobId, sealed.bytes);
       const pointer = { blobId: sealed.blobId, byteLength: sealed.bytes.length };
-      frame = encodeRecordFrame({ records: [], assets: [], blob: pointer });
+      frame = encodeRecordFrame({ records: [], assets: [], blob: pointer, format });
       blobIds.push(sealed.blobId);
     }
     await relay.update(await sealUpdate(space, documentId, frame, blobIds));
-    await store.sent(entries.at(-1)!.sequence);
+    await store.sent(
+      entries.at(-1)!.sequence,
+      entries.map((entry) => entry.sequence),
+    );
     return true;
   };
 
@@ -222,7 +274,10 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     }
     const downloaded = await download();
     if (!downloaded) return null;
-    const { remote, after, state, skipped, pendingBytes } = downloaded;
+    const { remote, snapshot, frames, updates, after, state, skipped, pendingBytes } = downloaded;
+    // An older-format stream without an authenticated founding state cannot supply this
+    // client's order identity. Keep local work pending and the unreadable frames retained.
+    if (format && !state && skipped) return null;
     const joined = {
       ...(await withState(reader, cursor, state)),
       joined: true,
@@ -230,11 +285,18 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       pendingBytes,
       skipped: cursor.skipped || skipped,
     };
-    const { rejected, cursor: saved } = await withSourceRecovery(
-      () => store.merge(remote, "adopt", joined),
+    // The tail stays separate from the state's records, so each save is checked whole (R4).
+    const {
+      rejected,
+      rejectedFrames,
+      cursor: saved,
+    } = await withSourceRecovery(
+      () => store.merge(snapshot, "adopt", joined, frames),
       (error) => retainRecordSourceMap(input, remote, error, quarantine),
     );
     await skippedRecords(rejected);
+    for (const index of rejectedFrames)
+      await quarantine({ kind: "update", id: updates[index]!.updateId, envelope: updates[index] });
     return saved;
   };
 
@@ -253,12 +315,15 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     // The relay lost this stream. Any device with a full copy uploads it again (R3).
     if (!cursor) return (await publish(previous, true)) ?? previous;
     if (await push()) return cursor;
-    if (!due(cursor)) return null;
+    // A device that set data aside never claims to cover it, even to republish its receipts.
+    if (incomplete || cursor.skipped) return null;
+    if (!due(cursor) && !(await store.checkpointPending?.())) return null;
     return publish(cursor, false);
   };
 
   return {
     async synchronize() {
+      await store.connect?.(space, relay);
       let cursor: RecordStreamCursor | null = await store.open();
       if (cursor.skipped) incomplete = true;
       if (!cursor.joined) cursor = await join(cursor);

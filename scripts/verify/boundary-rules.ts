@@ -28,6 +28,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-paths": [],
   "pstdio-logging": ["pstdio-paths"],
   "pstdio-db": [
+    "@pstdio/sdk",
     "pstdio-api-contracts",
     "pstdio-paths",
     "pstdio-sync",
@@ -188,13 +189,19 @@ export const FORBIDDEN_FOLDER_SPECIFIERS: Record<string, { folder: string; speci
 };
 
 // Private packages expose their internals through export entries. Each entry is a way
-// around the package's own API, so the count may only go down; the checker asks for a
-// lower limit as soon as an entry is removed. The API exposes only its app and runtime.
+// around the package's own API. Keep each limit exact; adding an owned module needs
+// an explicit architecture change, and removing an entry lowers its limit.
 export const DEFAULT_PRIVATE_EXPORT_LIMIT = 2;
 export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
   // These are ownership boundaries, not file-level escape hatches.
-  "pstdio-sync": 6,
+  // Root, records, text, relay, encryption, presence and append-only logs.
+  "pstdio-sync": 7,
   "pstdio-api": 2,
   "pstdio-api-contracts": 7,
   "pstdio-extensions": 12,
+};
+
+// These edges support conformance tests, never packaged runtime imports.
+export const DEVELOPMENT_ONLY_WORKSPACE_DEPS: Record<string, string[]> = {
+  "pstdio-db": ["@pstdio/sdk"],
 };

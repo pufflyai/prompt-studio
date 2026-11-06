@@ -4,16 +4,27 @@ import { storage_current_records } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { upgradeNativeSourceLifetimes } from "./native-source-upgrade";
+import { createProjectionStatistics } from "./projection-statistics";
 import { resourceDocumentId } from "./resource-document-persistence";
+import { createResourceRecords } from "./resource-records";
+
+// The upgrade reads records saved before ordered storage, so seed them with the legacy writer.
+const legacyRecords = (
+  f: Awaited<ReturnType<typeof createExtensionStorageFixture>>,
+  owner: { workbenchId: string; extensionId: string },
+) => createResourceRecords(f.db, owner, { statistics: createProjectionStatistics(f.db), changed: () => {} });
 
 test("startup derives old record lifetimes without changing source data or creating native text", async () => {
   const f = await createExtensionStorageFixture();
   try {
     const owner = { workbenchId: f.projectAId, extensionId: "example.notes" };
+    await legacyRecords(f, owner).commit({
+      operationId: "create",
+      edits: [{ recordId: "note", replace: { content: "kept" } }],
+    });
     const storage = createDocumentStorageDBService(f.db);
     const records = storage.open({ owner }).records;
-    await records.commit({ operationId: "create", edits: [{ recordId: "note", replace: { content: "kept" } }] });
-    const original = await records.read("note");
+    const original = await legacyRecords(f, owner).read("note");
     await f.db
       .update(storage_current_records)
       .set({ record_lifetime: "" })
@@ -23,7 +34,7 @@ test("startup derives old record lifetimes without changing source data or creat
         throw error;
       },
     });
-    expect(await records.read("note")).toEqual(original);
+    expect(await legacyRecords(f, owner).read("note")).toEqual(original);
     await records.bindText({ recordId: "note", field: "/content", documentKey: "a".repeat(64) });
     expect(await storage.openNativeTextDocument({ owner, fileId: "a".repeat(64) }).read()).toBe("kept");
   } finally {
@@ -31,13 +42,11 @@ test("startup derives old record lifetimes without changing source data or creat
   }
 });
 
-test("a damaged old record stays pending while startup derives healthy records", async () => {
+test("a damaged old record is reported while startup derives healthy records", async () => {
   const f = await createExtensionStorageFixture();
   try {
     const owner = { workbenchId: f.projectAId, extensionId: "example.notes" };
-    const service = createDocumentStorageDBService(f.db);
-    const records = service.open({ owner }).records;
-    await records.commit({
+    await legacyRecords(f, owner).commit({
       operationId: "create",
       edits: [
         { recordId: "bad", replace: { content: "retained" } },
@@ -49,10 +58,13 @@ test("a damaged old record stays pending while startup derives healthy records",
     const failures: string[] = [];
     await upgradeNativeSourceLifetimes(f.db, { failed: (_error, row) => failures.push(row?.recordId ?? "batch") });
     expect(failures).toEqual(["bad"]);
+    const service = createDocumentStorageDBService(f.db);
+    const records = service.open({ owner }).records;
     expect((await records.read("bad")).value).toEqual({ content: "retained" });
-    await expect(
-      records.bindText({ recordId: "bad", field: "/content", documentKey: "b".repeat(64) }),
-    ).rejects.toMatchObject({ code: "native_source_pending" });
+    // Ordered conversion keeps plain legacy values without their Yjs history, so the damaged
+    // record no longer blocks binding once its owner is opened.
+    await records.bindText({ recordId: "bad", field: "/content", documentKey: "b".repeat(64) });
+    expect(await service.openNativeTextDocument({ owner, fileId: "b".repeat(64) }).read()).toBe("retained");
     await records.bindText({ recordId: "good", field: "/content", documentKey: "c".repeat(64) });
     expect(await service.openNativeTextDocument({ owner, fileId: "c".repeat(64) }).read()).toBe("healthy");
   } finally {

@@ -9,7 +9,9 @@ const command = (id: string) => {
 };
 
 test("acceptance fixture drives offline shape edits, deterministic migration and concurrent card moves through public storage", async () => {
-  const pair = await createMemoryStorageDevices();
+  const pair = await createMemoryStorageDevices({
+    textFields: extension.storage?.records?.text.map(({ prefix, fields }) => ({ prefix, fields: [...fields] })),
+  });
   const contexts = pair.devices.map((storage) => makeCommandContext({ storage, params: {} }));
   const run = (index: number, id: string, params = {}) => command(id).run(contexts[index]!, params as never);
   await run(0, "seed-acceptance");
@@ -23,6 +25,7 @@ test("acceptance fixture drives offline shape edits, deterministic migration and
   expect((await pair.merge()).map(({ recordId, path }) => ({ recordId, path }))).toEqual([
     { recordId: "card-a", path: ["value", "position"] },
     { recordId: "card-c", path: ["value", "position"] },
+    { recordId: "shape", path: ["value", "items"] },
   ]);
   const rows = await Promise.all([run(0, "read-acceptance"), run(1, "read-acceptance")]);
   expect(rows[0]).toEqual(rows[1]);
@@ -36,7 +39,7 @@ test("acceptance fixture drives offline shape edits, deterministic migration and
     status: "right",
     nested: { left: 2, right: 2 },
     items: [
-      { id: "a", title: "Edited A" },
+      { id: "a", title: "A" },
       { id: "b", title: "Edited B" },
     ],
     body: "FIRST\nLAST",

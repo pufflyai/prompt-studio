@@ -1,10 +1,11 @@
 import { type AssetReference, recordFrameHeaderSchema } from "pstdio-sync-contracts";
 
 /**
- * One record's Yjs bytes. In an update frame they are that record's changes; in a latest-state
- * chunk they are its full state. A frame is applied whole, so a multi-record save stays one unit.
+ * Encoded entries in the client's declared record format. Legacy entries hold Yjs updates;
+ * ordered entries hold admissions or canonical state. A frame is applied whole.
  */
 export interface RecordFrame {
+  format?: "ordered";
   records: { recordId: string; bytes: Uint8Array }[];
   assets: AssetReference[];
   blob?: { blobId: string; byteLength: number };
@@ -14,6 +15,7 @@ export const encodeRecordFrame = (frame: RecordFrame) => {
   const header = new TextEncoder().encode(
     JSON.stringify({
       version: 1,
+      ...(frame.format && { format: frame.format }),
       records: frame.records.map((record) => ({ recordId: record.recordId, byteLength: record.bytes.length })),
       assets: frame.assets,
       ...(frame.blob && { blob: frame.blob }),
@@ -45,7 +47,12 @@ export const decodeRecordFrame = (bytes: Uint8Array): RecordFrame => {
     return record;
   });
   if (offset !== bytes.length) throw new Error("Record frame length does not match its header");
-  return { records, assets: header.assets, ...(header.blob && { blob: header.blob }) };
+  return {
+    records,
+    assets: header.assets,
+    ...(header.format && { format: header.format }),
+    ...(header.blob && { blob: header.blob }),
+  };
 };
 
 /** Bytes a frame adds for one record, so callers can split work under the relay's size limits. */

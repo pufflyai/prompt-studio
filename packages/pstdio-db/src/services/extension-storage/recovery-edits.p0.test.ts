@@ -19,7 +19,7 @@ test("restore edits bring back deleted records, remove later records, and replac
   expect(recoveryEdits(current, saved)).toEqual({
     edits: [
       { recordId: "added", deleted: true },
-      { recordId: "changed", replace: "before" },
+      { recordId: "changed", replace: "before", observedRevision: "r" },
       { recordId: "deleted", deleted: false, replace: "gone", asset: null },
     ],
     revived: true,
@@ -79,4 +79,29 @@ test("restore edits never split an emoji in shared text", () => {
       ],
     },
   ]);
+});
+
+test("a queued ordinary recovery replacement retains its original observation when a sibling changes", async () => {
+  const { compileOrderedGroup, applyOrderedOperation, orderedProjection } = await import("pstdio-sync/records");
+  const initial = await compileOrderedGroup(
+    { operationId: "seed", edits: [{ recordId: "note", replace: { title: "Before", sibling: "old" } }] },
+    new Map(),
+  );
+  const first = applyOrderedOperation(new Map(), initial, "epoch").records[0]!;
+  const observed = await orderedProjection(first);
+  const { edits } = recoveryEdits(
+    [observed],
+    [{ recordId: "note", value: { title: "Restored", sibling: "old" }, asset: null, shared: null }],
+  );
+  const views = new Map([[first.recordId, first]]);
+  const incoming = await compileOrderedGroup(
+    { operationId: "peer", edits: [{ recordId: "note", set: { "/sibling": "new" } }] },
+    views,
+  );
+  for (const record of applyOrderedOperation(views, incoming, "epoch").records) views.set(record.recordId, record);
+  const restore = await compileOrderedGroup({ operationId: "restore", edits }, views);
+  expect((await orderedProjection(applyOrderedOperation(views, restore, "epoch").records[0]!)).value).toEqual({
+    title: "Restored",
+    sibling: "new",
+  });
 });

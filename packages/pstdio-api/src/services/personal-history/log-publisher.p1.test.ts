@@ -9,6 +9,7 @@ import { createSessionLogFiles } from "./log-files";
 import { sessionLogVersion } from "./log-publication";
 import { createLogPublisher } from "./log-publisher";
 import { createLogReceiver } from "./log-receiver";
+import { personalLogStreamsFixture } from "./log-stream.fixture";
 import { logRelayFixture } from "./log-transport.fixture";
 
 const app = await createTestApp();
@@ -37,6 +38,7 @@ for (const cache of ["memory", "restart", "legacy"] as const) {
     const final = { id: "last", role: "assistant" as const, parts: [{ type: "text" as const, text: "complete" }] };
     conversation.push({ op: "add", path: "/messages/0", value: final });
     const files = createSessionLogFiles(join(root, cache));
+    const source = await personalLogStreamsFixture(project.id, files, "source");
     const peer = logRelayFixture();
     const proofs: Array<{ head: number; version?: string }> = [];
     const create = () =>
@@ -44,6 +46,7 @@ for (const cache of ["memory", "restart", "legacy"] as const) {
         files,
         namespace: "source",
         deviceId: "source",
+        streams: source.streams,
         deps: app.deps,
         published: (_id, head, version) => proofs.push({ head, version }),
       });
@@ -74,11 +77,14 @@ for (const cache of ["memory", "restart", "legacy"] as const) {
       expect(completed?.updated_at).toBe(session.updated_at);
       await publisher.publish([session.id], space, peer.relay, { skipUnchanged: true });
       const received = createSessionLogFiles(join(root, cache, "receiver"));
-      await createLogReceiver({ files: received, namespace: "reader", received() {} }).read(
-        [session.id],
-        space,
-        peer.relay,
-      );
+      const reader = await personalLogStreamsFixture(project.id, received, "reader");
+      await createLogReceiver({
+        files: received,
+        namespace: "reader",
+        streams: reader.streams,
+        source: async () => ({ writerId: source.writerId, format: "append-log-v1" }),
+        received() {},
+      }).read([session.id], space, peer.relay);
       expect(await received.read("reader", session.id)).toEqual([final]);
       expect(proofs.at(-1)).toEqual({ head: 1, version: sessionLogVersion(completed!) });
       await publisher.publish([session.id], space, peer.relay, { skipUnchanged: true });

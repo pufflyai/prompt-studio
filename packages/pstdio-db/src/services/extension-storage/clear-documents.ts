@@ -1,4 +1,4 @@
-import { and, eq, like, not, sql } from "drizzle-orm";
+import { and, eq, like, not, or, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import {
@@ -7,9 +7,12 @@ import {
   storage_document_operations,
   storage_document_updates,
   storage_documents,
+  storage_log_streams,
+  storage_ordered_owners,
   storage_record_projections,
   storage_record_sync,
 } from "../../db/schemas.pg";
+import { orderedOwnerWhere } from "./ordered-sql";
 import { resourceDocumentId } from "./resource-document-persistence";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -23,8 +26,12 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
       | typeof storage_current_records
       | typeof storage_record_projections,
   ) => and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
-  // Record documents are removed outright; their update tails cascade with them.
-  const recordDocuments = like(storage_documents.document_id, `${resourceDocumentId("").slice(0, -2)}%`);
+  // Record documents and ordered markers/caches are removed outright; update tails cascade with them.
+  // An emptied marker would no longer decode, and a cleared owner founds or joins its stream again.
+  const recordDocuments = or(
+    like(storage_documents.document_id, `${resourceDocumentId("").slice(0, -2)}%`),
+    like(storage_documents.document_id, '["ordered-%'),
+  )!;
   await tx.delete(storage_documents).where(and(ownerWhere(storage_documents), recordDocuments));
   const documents = await tx
     .select({ id: storage_documents.document_id, revision: storage_documents.revision })
@@ -64,6 +71,10 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
         eq(storage_record_sync.extension_id, owner.extensionId),
       ),
     );
+  // Canonical records, pending saves, retained receipts and logs cascade from their owner rows,
+  // so a cleared owner founds or joins again and may reuse its operation IDs.
+  await tx.delete(storage_ordered_owners).where(orderedOwnerWhere(storage_ordered_owners, owner));
+  await tx.delete(storage_log_streams).where(orderedOwnerWhere(storage_log_streams, owner));
   // Advancing the owner revision rejects cursors issued before the purge.
   await tx
     .update(storage_record_projections)
