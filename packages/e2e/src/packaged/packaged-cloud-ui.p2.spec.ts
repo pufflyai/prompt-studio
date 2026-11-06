@@ -18,7 +18,7 @@ interface Resources {
 }
 const test = base.extend<{ resources: Resources }>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright reads fixture dependency patterns.
-  resources: async ({}, use) => {
+  resources: async ({}, use, testInfo) => {
     const resources: Resources = {
       root: realpathSync(mkdtempSync(join(tmpdir(), "pstdio-cloud-ui-"))),
       children: new Set(),
@@ -28,6 +28,12 @@ const test = base.extend<{ resources: Resources }>({
       await use(resources);
     } catch (cause) {
       failures.push(cause);
+    }
+    if (testInfo.status !== testInfo.expectedStatus && resources.fixture) {
+      await testInfo.attach("cloud-runtime-diagnostics", {
+        body: JSON.stringify(await resources.fixture.diagnostics(), null, 2),
+        contentType: "application/json",
+      });
     }
     await stopPendingTestProcesses().catch((cause) => failures.push(cause));
     const stopped = await Promise.allSettled([
@@ -132,7 +138,10 @@ test("Cloud settings respect early access and manage devices and project sync th
     .poll(async () => (await second.client.projects.query()).items.map((item) => item.id))
     .toContain(project.id);
   await second.client.projects.chooseFolder(project.id, { path: second.folder, clone: false });
-  await expect.poll(async () => (await second.client.account.projectSyncStatus(project.id)).state).toBe("synced");
+  // Keep sampling through the existing deadline while the last downloaded owner becomes idle.
+  await expect
+    .poll(async () => (await second.client.account.projectSyncStatus(project.id)).state, { intervals: [100] })
+    .toBe("synced");
   // Reopening reads the current device presence; idle frames never poll device lists.
   await closeSettings();
   await openSettings();
@@ -148,6 +157,9 @@ test("Cloud settings respect early access and manage devices and project sync th
   await confirmation.getByRole("button", { name: "Make local", exact: true }).click();
   await expect(status).toHaveText("Local");
   await expect(settings.getByRole("button", { name: "Sync with Cloud", exact: true })).toBeVisible();
+  // Account membership is discovered on refresh; issued access remains valid until renewal.
+  // Exercise the public explicit refresh here; native-account tests cover the idle scheduled refresh.
+  await second.client.account.retryProjectSync(project.id);
   await expect.poll(async () => (await second.client.account.projectSyncStatus(project.id)).state).toBe("local");
   expect((await first.client.projects.get(project.id))?.id).toBe(project.id);
   expect((await second.client.projects.get(project.id))?.id).toBe(project.id);

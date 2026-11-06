@@ -184,3 +184,92 @@ test("a different account manager cannot retain devices from the previous accoun
     unsubscribe();
   }
 });
+
+test("sync event bursts coalesce pending reads and still publish the latest state", async () => {
+  let changed = () => {};
+  let reads = 0;
+  const pending = Promise.withResolvers<AccountStatus>();
+  let sync: ProjectSyncStatus = { state: "synced", offlineReady: true };
+  const store = createCloudStore(
+    {
+      events: {
+        subscribe(event, listener) {
+          if ((typeof event === "string" ? event : event.id) === accountEvents.projectSyncChanged.id)
+            changed = listener;
+          return () => {};
+        },
+      },
+      account: {
+        status: async () => (++reads === 1 ? pending.promise : account),
+        projectSyncStatus: async () => sync,
+        devices: async () => [],
+      },
+    },
+    "project",
+    false,
+  );
+  const unsubscribe = store.subscribe(() => {});
+  try {
+    sync = { state: "offline", offlineReady: true };
+    for (let index = 0; index < 50; index++) changed();
+    expect(reads).toBe(1);
+    pending.resolve(account);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(reads).toBe(2);
+    expect(store.get().data?.sync.state).toBe("offline");
+  } finally {
+    pending.resolve(account);
+    unsubscribe();
+  }
+});
+
+test("queued account changes cannot publish an obsolete account with another account's devices", async () => {
+  let changed = () => {};
+  let accountReads = 0;
+  let deviceReads = 0;
+  const stale = Promise.withResolvers<AccountStatus>();
+  const current = Promise.withResolvers<AccountStatus>();
+  const nextAccount = { ...account, login: { ...account.login!, accountId: "b" } };
+  const store = createCloudStore(
+    {
+      events: {
+        subscribe(event, listener) {
+          if ((typeof event === "string" ? event : event.id) === accountEvents.changed.id) changed = listener;
+          return () => {};
+        },
+      },
+      account: {
+        status: async () => {
+          accountReads++;
+          if (accountReads === 2) return stale.promise;
+          if (accountReads === 3) return current.promise;
+          return account;
+        },
+        projectSyncStatus: async () => ({ state: "synced", offlineReady: true }),
+        devices: async () => [{ ...device, name: ++deviceReads === 1 ? "Account A device" : "Account B device" }],
+      },
+    },
+    "project",
+    true,
+  );
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  const unsubscribe = store.subscribe(() => {});
+  try {
+    await tick();
+    store.refresh();
+    changed();
+    stale.resolve(account);
+    await tick();
+    expect(accountReads).toBe(3);
+    expect(deviceReads).toBe(1);
+    expect(store.get().data?.devices[0]?.name).toBe("Account A device");
+    current.resolve(nextAccount);
+    await tick();
+    expect(store.get().data?.account.login?.accountId).toBe("b");
+    expect(store.get().data?.devices[0]?.name).toBe("Account B device");
+  } finally {
+    stale.resolve(account);
+    current.resolve(nextAccount);
+    unsubscribe();
+  }
+});

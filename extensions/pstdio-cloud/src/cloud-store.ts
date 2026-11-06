@@ -37,6 +37,8 @@ const readAccount = async (client: CloudReader, projectId?: string) => {
 export const createCloudStore = (client: CloudReader, projectId: string | undefined, includeDevices: boolean) => {
   let snapshot: CloudSnapshot = {};
   let generation = 0;
+  let reading: Promise<void> | undefined;
+  let dirty = false;
   let deviceGeneration = 0;
   let devicesDirty = true;
   let subscriptions: (() => void)[] = [];
@@ -66,7 +68,7 @@ export const createCloudStore = (client: CloudReader, projectId: string | undefi
       if (current()) publish({ ...snapshot, error: String(cause) });
     }
   };
-  const read = async () => {
+  const readSnapshot = async () => {
     const request = ++generation;
     const current = () => listeners.size > 0 && request === generation;
     try {
@@ -85,6 +87,22 @@ export const createCloudStore = (client: CloudReader, projectId: string | undefi
     } catch (cause) {
       if (current()) publish({ ...snapshot, error: String(cause) });
     }
+  };
+  const read = () => {
+    generation++;
+    dirty = true;
+    if (reading) return reading;
+    const run = async () => {
+      while (dirty && listeners.size) {
+        dirty = false;
+        await readSnapshot();
+      }
+    };
+    reading = run().finally(() => {
+      reading = undefined;
+      if (dirty && listeners.size) void read();
+    });
+    return reading;
   };
   const refresh = () => {
     devicesDirty = true;

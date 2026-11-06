@@ -21,7 +21,7 @@ The status describes this project's current state:
 | Downloading | The first download is in progress. A percentage appears when known. |
 | Syncing | Changes are waiting to sync. |
 | Synced | This device has finished its current sync work. |
-| Needs attention | Open the status item for the problem and recovery action. |
+| Needs attention | Open Cloud settings to check the account and project state. |
 
 Cloud synchronizes project data used by your tools. It does not provide a complete backup of your local project folder. See [restore project data](0006-restore-project-data.md) for local recovery points.
 
@@ -31,6 +31,6 @@ Cloud settings lists your devices when early access is enabled. Choose **Rename*
 
 ## Make a project local
 
-In Cloud settings, choose **Make local** and confirm. Syncing stops on every device, and each device keeps its copy.
+In Cloud settings, choose **Make local** and confirm. Syncing stops on this device immediately. Other devices discover the change when they refresh account membership; an idle device may take up to a minute. Each device keeps its copy.
 
 Choose **Sync with Cloud** to enable syncing again. The copies merge. Where both copies changed the same thing, one change is kept.
