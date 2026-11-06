@@ -1,5 +1,5 @@
-import { Box, Button, CloseButton, Flex, HStack, Input, Stack, Tabs, Text } from "@chakra-ui/react";
-import { ScopedDialog as Dialog, Portal, Switch, TreeList } from "@pstdio/ui";
+import { Box, Button, CloseButton, Flex, Input, Stack, Tabs, Text } from "@chakra-ui/react";
+import { Breadcrumb, ScopedDialog as Dialog, getIconComponent, Portal, TreeList } from "@pstdio/ui";
 import { CodeEditor, DiffViewer } from "@pstdio/ui/diff";
 import { ResourceListRenderer } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
@@ -11,6 +11,8 @@ export default {
     "The ordinary Workspaces extension owns presentation; native editors, trees and diff rendering stay shared.",
 };
 
+const Plus = getIconComponent("plus");
+
 const attributes = [
   {
     id: "device",
@@ -20,15 +22,9 @@ const attributes = [
     type: {
       kind: "enum" as const,
       options: [
-        { value: "local", label: "MacBook Pro", icon: "monitor", note: "This device · 2 / 6 active", canCreate: true },
-        { value: "online", label: "Studio iMac", icon: "monitor", note: "Online · 1 / 4 active", canCreate: false },
-        {
-          value: "offline",
-          label: "Build box",
-          icon: "monitor",
-          note: "Last seen 2 days ago · Limit 2",
-          canCreate: false,
-        },
+        { value: "local", label: "MacBook Pro", icon: "monitor" },
+        { value: "online", label: "Studio iMac", icon: "monitor" },
+        { value: "offline", label: "Build box", icon: "monitor" },
       ],
     },
   },
@@ -47,20 +43,6 @@ const rows = [
     title: "Extract workspace presentation",
     icon: "git-branch",
     attributes: { id: "PS-61_A1", device: "local", type: "Git worktree", date: "2026-11-04" },
-    children: [
-      {
-        id: "running",
-        title: "Implement the Workspaces extension",
-        icon: "loader-circle",
-        attributes: { harness: "Codex", date: "2026-11-04" },
-      },
-      {
-        id: "waiting",
-        title: "Check file actions",
-        icon: "circle-help",
-        attributes: { harness: "Claude Code", date: "2026-11-04" },
-      },
-    ],
   },
   {
     id: "remote",
@@ -75,9 +57,9 @@ const rows = [
     attributes: { id: "WS-4", device: "offline", type: "Git worktree", date: "2026-11-01" },
   },
 ];
-const WorkspacesPreview = (props: { compact?: boolean; initial?: "create" | "device" }) => {
+const WorkspacesPreview = (props: { compact?: boolean; initial?: "create" }) => {
   const [opened, setOpened] = useState("");
-  const [dialog, setDialog] = useState<"create" | "device" | undefined>(props.initial);
+  const [dialog, setDialog] = useState<"create" | undefined>(props.initial);
   const listAttributes = attributes.map((attribute) => ({
     ...attribute,
     type:
@@ -86,14 +68,7 @@ const WorkspacesPreview = (props: { compact?: boolean; initial?: "create" | "dev
             ...attribute.type,
             options: attribute.type.options.map((option) => ({
               ...option,
-              note: undefined,
-              canCreate: false,
               contextMenuActions: [
-                {
-                  id: "details",
-                  label: option.value === "local" ? "This device" : "Device details",
-                  onAction: () => setDialog("device"),
-                },
                 ...(option.value === "local"
                   ? [{ id: "create", label: "Create workspace", onAction: () => setDialog("create") }]
                   : []),
@@ -104,14 +79,29 @@ const WorkspacesPreview = (props: { compact?: boolean; initial?: "create" | "dev
   }));
   return (
     <Stack h="full" gap="0" minH="0">
+      <Breadcrumb
+        items={[
+          {
+            title: "Workspaces",
+            contextMenuActions: [
+              {
+                key: "create",
+                label: "Create workspace",
+                icon: <Plus size={14} />,
+                onClick: () => setDialog("create"),
+              },
+            ],
+          },
+        ]}
+      />
       <ResourceListRenderer
-        storageKey={props.compact ? "ps61-proposal-compact" : "ps61-proposal-nested"}
+        storageKey={props.compact ? "ps61-proposal-compact" : "workspaces-grouped-flat"}
         attributes={listAttributes}
         rows={rows}
         defaultSettings={{
           viewMode: "list",
           columnGrouping: props.compact ? "none" : "device",
-          showChildren: !props.compact,
+          showChildren: false,
           displayProperties: ["type", "date"],
         }}
         onRowClick={(row) => setOpened(row.title)}
@@ -135,22 +125,18 @@ const WorkspacesPreview = (props: { compact?: boolean; initial?: "create" | "dev
           <Dialog.Positioner>
             <Dialog.Content>
               <Dialog.Header>
-                <Dialog.Title>{dialog === "create" ? "Create workspace" : "This device"}</Dialog.Title>
+                <Dialog.Title>Create workspace</Dialog.Title>
                 <Dialog.CloseTrigger asChild>
                   <CloseButton size="sm" />
                 </Dialog.CloseTrigger>
               </Dialog.Header>
               <Dialog.Body>
-                {dialog === "create" ? (
-                  <CreateWorkspaceForm
-                    onCreate={(name) => {
-                      setOpened(`Created ${name}`);
-                      setDialog(undefined);
-                    }}
-                  />
-                ) : (
-                  <DeviceLimit />
-                )}
+                <CreateWorkspaceForm
+                  onCreate={(name) => {
+                    setOpened(`Created ${name}`);
+                    setDialog(undefined);
+                  }}
+                />
               </Dialog.Body>
               <Dialog.Footer>
                 <Button size="sm" variant="ghost" onClick={() => setDialog(undefined)}>
@@ -169,7 +155,7 @@ const WorkspacesPreview = (props: { compact?: boolean; initial?: "create" | "dev
     </Stack>
   );
 };
-export const GroupedAndNested = () => <WorkspacesPreview />;
+export const GroupedByDevice = () => <WorkspacesPreview />;
 export const Compact = () => <WorkspacesPreview compact />;
 
 export const ProjectFiles = () => {
@@ -247,52 +233,6 @@ export const WorktreeChanges = () => (
   </Box>
 );
 
-export const DeviceLimit = () => {
-  const [limit, setLimit] = useState("6");
-  const [limited, setLimited] = useState(false);
-  const [saved, setSaved] = useState("6");
-  return (
-    <Stack maxW="xl" p="lg" gap="lg">
-      <Stack gap="xs">
-        <Text textStyle="heading/M">Workspaces</Text>
-        <Text color="fg.muted">Limits for this device. Other devices choose their own limits.</Text>
-      </Stack>
-      <Stack gap="sm">
-        <Switch checked={limited} onCheckedChange={({ checked }) => setLimited(checked)}>
-          Limit workspaces
-        </Switch>
-        <Text>Workspace limit</Text>
-        <Input
-          aria-label="Workspace limit"
-          disabled={!limited}
-          type="number"
-          min="1"
-          value={limit}
-          onChange={(event) => setLimit(event.target.value)}
-        />
-        <Text color="fg.muted">
-          More sessions wait as Queued until a slot opens. Auto Build waits while this device is full.
-        </Text>
-        <HStack>
-          <Button
-            variant="primary"
-            disabled={limited && (!Number.isInteger(Number(limit)) || Number(limit) < 1)}
-            onClick={() => setSaved(limit)}
-          >
-            Apply
-          </Button>
-          {limited && <Text aria-live="polite">2 of {saved} active</Text>}
-        </HStack>
-      </Stack>
-      <Stack gap="xs">
-        <Text>Other devices</Text>
-        <Text color="fg.muted">Studio iMac · Online · 1 of 4 active</Text>
-        <Text color="fg.muted">Build box · Offline · Limit 2</Text>
-      </Stack>
-    </Stack>
-  );
-};
-
 const CreateWorkspaceForm = (props: { onCreate: (name: string) => void }) => {
   const [name, setName] = useState("");
   return (
@@ -305,13 +245,12 @@ const CreateWorkspaceForm = (props: { onCreate: (name: string) => void }) => {
         onChange={(event) => setName(event.target.value)}
       />
       <Button variant="primary" disabled={!name.trim()} onClick={() => props.onCreate(name.trim())}>
-        Create workspace
+        <Plus size={14} /> Create workspace
       </Button>
     </Stack>
   );
 };
 export const CreateWorkspaceModal = () => <WorkspacesPreview initial="create" />;
-export const ThisDeviceModal = () => <WorkspacesPreview initial="device" />;
 
 // The multi-resource list keeps the host tab surface so it can share Main with a session.
 export const WorkspacesWithTabs = () => (
