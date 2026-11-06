@@ -118,156 +118,161 @@ const NativeChatContent = (props: NativeChatViewProps) => {
       extensionId={props.extensionId}
       linkHandler={props.linkHandler}
     >
-      {(host) => (
-        <ChatPanel
-          conversationKey={conversationKey}
-          linkHandler={host.linkHandler ?? props.linkHandler}
-          messages={host.messages ?? messages}
-          onForkMessage={
-            conversation.fork ? (messageId) => run({ type: "fork", messageId }).then(() => undefined) : undefined
-          }
-          forkDisabledReason={
-            conversation.fork?.disabledReason ?? (conversation.readOnly ? "This conversation is read only." : undefined)
-          }
-          loading={loading}
-          emptyStateTitle={props.emptyTitle ?? "No messages yet"}
-          emptyStateDescription={props.emptyDescription ?? "Send a message to start this session."}
-          chatInputPlaceholder="Reply to the agent..."
-          chatInputAutoFocus={props.visible !== false}
-          chatInputDefaultValue={draft.text}
-          onChatInputChange={(text) => session.changeDraft({ text })}
-          streaming={conversation.streaming}
-          streamingStartedAt={conversation.streamingStartedAt}
-          inputDisabled={sending || conversation.readOnly || uploading > 0 || Boolean(host.account?.progress)}
-          submitDisabled={
-            conversation.submitDisabled ||
-            Boolean(selected && conversation.queueReadOnly) ||
-            sending ||
-            uploading > 0 ||
-            accountBlocksSubmission(host.account, draft.text)
-          }
-          readOnlyQueue={conversation.readOnly || conversation.queueReadOnly}
-          queueSteeringUnavailableReason={conversation.queueSteeringUnavailableReason}
-          onSubmitMessage={nativeChatInputHandler({
-            account: host.account,
-            session,
-            run,
-            draft: { attachments, values },
-          })}
-          onInterrupt={
-            conversation.streaming && !conversation.readOnly
-              ? () => {
-                  void run({ type: "stop" }).catch(() => undefined);
-                }
-              : undefined
-          }
-          approvalPrompt={<NativeChatApproval run={run} conversation={conversation} />}
-          chatInputCommands={nativeChatCommands(conversation, host.account, run, values)}
-          composerDecision={
-            conversation.decision
-              ? {
-                  ...conversation.decision,
-                  pending: sending,
-                  onAction: async (actionId) => {
-                    await run({
-                      type: "decision",
-                      id: conversation.decision!.id,
-                      actionId,
-                      values,
-                      modeSnapshot: conversation.decision!.modeSnapshot,
-                    });
-                  },
-                }
-              : undefined
-          }
-          workspaceHub={<NativeChatResources resources={conversation.resources} run={run} />}
-          actions={
-            <NativeChatControls
-              run={run}
-              reconnect={session.reconnect}
-              conversation={conversation}
-              draft={activeDraft}
-              editingQueuedRequest={Boolean(selected)}
-              unavailable={host.account?.blocked}
-              initializing={initializing}
-              renderParamField={renderParamField}
-              changeValues={(next) => changeActive({ values: next })}
-            />
-          }
-          conversationNotices={<NativeChatNotices host={host} state={state} session={session} />}
-          onAttachFiles={(files) => {
-            void upload(files).catch(() => undefined);
-          }}
-          onAttachText={(text) => {
-            void upload([new File([text], "pasted-text.txt", { type: "text/plain" })]).catch(() => undefined);
-          }}
-          attachmentActions={
-            <NativeChatAttachmentActions
-              disabled={Boolean(conversation.readOnly) || uploading > 0}
-              upload={(files) => {
-                void upload(files).catch(() => undefined);
-              }}
-            />
-          }
-          attachmentList={
-            <NativeChatAttachmentList
-              attachments={attachments}
-              resolvedAttachments={host.attachments}
-              disabled={Boolean(conversation.readOnly)}
-              remove={(id) =>
-                // A shared file may still belong to a queue edit; remove only its draft reference.
-                changeActive({ attachments: attachments.filter((attachment) => attachment.id !== id) })
-              }
-            />
-          }
-          queuedFollowUps={queuedFollowUps}
-          onQueuedFollowUpSelect={(item) => {
-            setSelected(item);
-            if (item)
-              setEdits((current) =>
-                current[item.id]
-                  ? current
-                  : {
-                      ...current,
-                      [item.id]: queuedChatDraft(draft, item),
+      {(host) => {
+        const controls = (
+          <NativeChatControls
+            run={run}
+            reconnect={session.reconnect}
+            conversation={conversation}
+            draft={activeDraft}
+            editingQueuedRequest={Boolean(selected)}
+            unavailable={host.account?.blocked}
+            initializing={initializing}
+            renderParamField={renderParamField}
+            changeValues={(next) => changeActive({ values: next })}
+          />
+        );
+        return (
+          <ChatPanel
+            conversationKey={conversationKey}
+            linkHandler={host.linkHandler ?? props.linkHandler}
+            messages={host.messages ?? messages}
+            onForkMessage={
+              conversation.fork ? (messageId) => run({ type: "fork", messageId }).then(() => undefined) : undefined
+            }
+            forkDisabledReason={
+              conversation.fork?.disabledReason ??
+              (conversation.readOnly ? "This conversation is read only." : undefined)
+            }
+            loading={loading}
+            emptyStateTitle={props.emptyTitle ?? "No messages yet"}
+            emptyStateDescription={props.emptyDescription ?? "Send a message to start this session."}
+            chatInputPlaceholder="Reply to the agent..."
+            chatInputAutoFocus={props.visible !== false}
+            chatInputDefaultValue={draft.text}
+            onChatInputChange={(text) => session.changeDraft({ text })}
+            streaming={conversation.streaming}
+            streamingStartedAt={conversation.streamingStartedAt}
+            inputDisabled={sending || conversation.readOnly || uploading > 0 || Boolean(host.account?.progress)}
+            submitDisabled={
+              conversation.submitDisabled ||
+              Boolean(selected && conversation.queueReadOnly) ||
+              sending ||
+              uploading > 0 ||
+              accountBlocksSubmission(host.account, draft.text)
+            }
+            readOnlyQueue={conversation.readOnly || conversation.queueReadOnly}
+            queueSteeringUnavailableReason={conversation.queueSteeringUnavailableReason}
+            onSubmitMessage={nativeChatInputHandler({
+              account: host.account,
+              session,
+              run,
+              draft: { attachments, values },
+            })}
+            onInterrupt={
+              conversation.streaming && !conversation.readOnly
+                ? () => {
+                    void run({ type: "stop" }).catch(() => undefined);
+                  }
+                : undefined
+            }
+            approvalPrompt={<NativeChatApproval run={run} conversation={conversation} />}
+            chatInputCommands={nativeChatCommands(conversation, host.account, run, values)}
+            composerDecision={
+              conversation.decision
+                ? {
+                    ...conversation.decision,
+                    controls,
+                    pending: sending,
+                    onAction: async (actionId) => {
+                      await run({
+                        type: "decision",
+                        id: conversation.decision!.id,
+                        actionId,
+                        values,
+                        modeSnapshot: conversation.decision!.modeSnapshot,
+                      });
                     },
-              );
-          }}
-          onQueuedFollowUpDiscard={(id) => {
-            setEdits((current) => {
-              const { [id]: _discarded, ...rest } = current;
-              return rest;
-            });
-          }}
-          onQueuedFollowUpUpdate={(id, prompt) =>
-            submitWithNativeChatAccount(host.account, prompt, () =>
-              queue("update", selected?.id === id ? selected : find(id), { prompt }),
-            )
-          }
-          onQueuedFollowUpCreate={(id, prompt) =>
-            submitWithNativeChatAccount(host.account, prompt, () =>
-              queue("create", selected?.id === id ? selected : find(id), { prompt }),
-            )
-          }
-          canRestoreQueuedEditToDraft={!draft.attachments.length && !uploading}
-          onQueuedFollowUpRestoreDraft={(id) => {
-            const saved = edits[id];
-            if (saved) session.changeDraft(saved);
-          }}
-          onQueuedFollowUpRemove={(id) =>
-            void Promise.resolve()
-              .then(() => queue("remove", find(id)))
-              .catch(session.reportError)
-          }
-          onQueuedFollowUpMove={(id, direction, steps, selection) =>
-            void Promise.resolve()
-              .then(() => queue("move", selection?.source ?? find(id), { direction, steps }))
-              .catch(session.reportError)
-          }
-          onQueuedFollowUpCombine={(source, target) => queue("combine", source, { target })}
-          onQueuedFollowUpSteer={(item) => queue("steer", item)}
-        />
-      )}
+                  }
+                : undefined
+            }
+            workspaceHub={<NativeChatResources resources={conversation.resources} run={run} />}
+            actions={controls}
+            conversationNotices={<NativeChatNotices host={host} state={state} session={session} />}
+            onAttachFiles={(files) => {
+              void upload(files).catch(() => undefined);
+            }}
+            onAttachText={(text) => {
+              void upload([new File([text], "pasted-text.txt", { type: "text/plain" })]).catch(() => undefined);
+            }}
+            attachmentActions={
+              <NativeChatAttachmentActions
+                disabled={Boolean(conversation.readOnly) || uploading > 0}
+                upload={(files) => {
+                  void upload(files).catch(() => undefined);
+                }}
+              />
+            }
+            attachmentList={
+              <NativeChatAttachmentList
+                attachments={attachments}
+                resolvedAttachments={host.attachments}
+                disabled={Boolean(conversation.readOnly)}
+                remove={(id) =>
+                  // A shared file may still belong to a queue edit; remove only its draft reference.
+                  changeActive({ attachments: attachments.filter((attachment) => attachment.id !== id) })
+                }
+              />
+            }
+            queuedFollowUps={queuedFollowUps}
+            onQueuedFollowUpSelect={(item) => {
+              setSelected(item);
+              if (item)
+                setEdits((current) =>
+                  current[item.id]
+                    ? current
+                    : {
+                        ...current,
+                        [item.id]: queuedChatDraft(draft, item),
+                      },
+                );
+            }}
+            onQueuedFollowUpDiscard={(id) => {
+              setEdits((current) => {
+                const { [id]: _discarded, ...rest } = current;
+                return rest;
+              });
+            }}
+            onQueuedFollowUpUpdate={(id, prompt) =>
+              submitWithNativeChatAccount(host.account, prompt, () =>
+                queue("update", selected?.id === id ? selected : find(id), { prompt }),
+              )
+            }
+            onQueuedFollowUpCreate={(id, prompt) =>
+              submitWithNativeChatAccount(host.account, prompt, () =>
+                queue("create", selected?.id === id ? selected : find(id), { prompt }),
+              )
+            }
+            canRestoreQueuedEditToDraft={!draft.attachments.length && !uploading}
+            onQueuedFollowUpRestoreDraft={(id) => {
+              const saved = edits[id];
+              if (saved) session.changeDraft(saved);
+            }}
+            onQueuedFollowUpRemove={(id) =>
+              void Promise.resolve()
+                .then(() => queue("remove", find(id)))
+                .catch(session.reportError)
+            }
+            onQueuedFollowUpMove={(id, direction, steps, selection) =>
+              void Promise.resolve()
+                .then(() => queue("move", selection?.source ?? find(id), { direction, steps }))
+                .catch(session.reportError)
+            }
+            onQueuedFollowUpCombine={(source, target) => queue("combine", source, { target })}
+            onQueuedFollowUpSteer={(item) => queue("steer", item)}
+          />
+        );
+      }}
     </Host>
   );
 };
