@@ -31,6 +31,7 @@ const child = Bun.spawn(
     env: {
       ...process.env,
       NPM_CONFIG_USERCONFIG: npmConfigPath,
+      BUN_INSTALL_CACHE_DIR: process.env.E2E_BUN_CACHE_DIR ?? process.env.BUN_INSTALL_CACHE_DIR,
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults),
       // Keep provisioning/harness failures after the launcher removes its isolated home.
       PSTDIO_LOG_PATH: join(repoRoot, "packages/e2e/test-results", process.env.E2E_RUN_ID!, "runtime.jsonl"),
