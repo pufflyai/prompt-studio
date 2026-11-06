@@ -8,7 +8,7 @@ import { startCoreDocumentSync } from "./core-documents";
 import type { RelayDeps } from "./deps";
 import { createDeviceCommandCaller } from "./device-command-call";
 import { startDeviceCommands } from "./device-commands";
-import { startRelayExtension } from "./extension-owner";
+import { extensionOwnerContextKey, startRelayExtension } from "./extension-owner";
 import { startRelayPersonalHistory } from "./personal";
 import { projectSyncStatus } from "./project-status";
 import { startPublishedExtensions } from "./publications";
@@ -122,17 +122,16 @@ export const startRelayRuntime = async (input: {
     const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
     if (controller.signal.aborted || workbenches.get(workbenchId) !== config) return;
     const workspace = await deps.workspaceService.getDefault(workbenchId);
-    const contextKey = JSON.stringify([
-      snapshot.generation,
-      workspace?.id,
-      workspace?.root_path,
-      workspace?.provider_capabilities_json,
-    ]);
-    const desired = new Set(snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id));
+    const desired = new Map(
+      snapshot.enabledSources.map((source) => [
+        source.installedSource.extension_id,
+        extensionOwnerContextKey({ source, snapshot, workspace }),
+      ]),
+    );
     const obsolete = [...connections].filter(
       ([, connection]) =>
         connection.owner.workbenchId === workbenchId &&
-        (!desired.has(connection.owner.extensionId) || connection.contextKey !== contextKey),
+        connection.contextKey !== desired.get(connection.owner.extensionId),
     );
     await Promise.all(obsolete.map(([key, connection]) => stopConnection(key, connection)));
     for (const source of snapshot.enabledSources) {
@@ -143,7 +142,7 @@ export const startRelayRuntime = async (input: {
         config,
         source,
         snapshot,
-        contextKey,
+        contextKey: desired.get(source.installedSource.extension_id)!,
         access: access.get(workbenchId)!,
         live: live.get(workbenchId)!,
         deps,
