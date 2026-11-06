@@ -1,6 +1,6 @@
 # Canvas coverage
 
-Canvas owns UI designs, component state examples, and prop usage. Put source examples beside their components in `*.canvas.tsx` files. Keep existing scenario IDs and exports stable. A canvas file's default export holds `title`, `component`, `args`, `description`, and `decorators`; each named export is one frame and can set `name`, `args`, `render`, `description`, `fullscreen`, and `defaultTheme`. Storybook fields such as `parameters`, `argTypes`, `tags`, and `play` are not supported. Each canvas file is one canvas.
+Canvas owns UI designs, component state examples, and prop usage. Put source examples beside their components in `*.canvas.tsx` files. Keep retained scenario IDs and exports stable. A canvas file's default export holds `title`, `component`, `args`, `description`, and `decorators`; each named export is one frame and can set `name`, `args`, `render`, `description`, `fullscreen`, and `defaultTheme`. Storybook fields such as `parameters`, `argTypes`, `tags`, and `play` are not supported. Each canvas file is one canvas.
 
 ## Catalog organization
 
@@ -20,14 +20,14 @@ Give each canvas a unique full title. For a subject with several canvases, put i
 
 Compare actual behavior before retiring a duplicate. Similar titles alone do not prove duplication. The Data table JSON, color scale, loading, and value-renderer examples, and the horizontal Parameter editor resource example, cover distinct scenarios and keep their own named entries. Galleries and cross-component state comparisons also have a distinct purpose.
 
-Changing a title or frame's display `name` preserves saved work because canvas identity is its relative source path and frame identity is its export name. Keep both stable during naming cleanup. Do not move sources or exports for cosmetic consistency. Retiring a true duplicate requires preserving links and saved arrangements before removing its identity; a title change is not a migration.
+Changing a title or frame's display `name` preserves saved work because canvas identity is its relative source path and frame identity is its export name. Keep both stable during naming cleanup. Do not move sources or exports for cosmetic consistency. When the user requests consolidation, retain the primary frame export and its saved arrangement, and record each retired export with the retained frame and navigation choice that replace it. Leave stored layout entries intact. Retired frames no longer have separate visible positions or themes; all their states share the retained frame's arrangement. A title change alone is not consolidation.
 
 Put new alternatives in `proposals/<ticket>/` under their owning package, titled `Proposals/<ticket> <feature>`. Keep shipped examples in their normal home. Apply accepted changes to production and remove the proposal folder in the same change. The retained frame-editor workflow study demonstrates local parameter and playback behavior under `Extensions/UI Canvas/Frame editor workflow`; it is no longer an active alternative.
 
 ## Choosing examples
 
 1. Start with the normal useful state.
-2. Include supported loading, empty, disabled, error, and long-content states.
+2. Make supported loading, empty, disabled, error, and long-content states reachable in the same frame. Unless the user asks otherwise, create separate frames only for things that cannot be reached by navigating within a frame. Prefer real navigation and state controls; use a variant selector for component examples.
 3. Keep examples interactive for exploration. Add tests only for critical user outcomes.
 4. In critical tests, assert roles and visible outcomes; identify the risk. Avoid cosmetic and repeated prop assertions.
 5. Keep shared component behavior in shared examples; product flows belong in browser journeys.

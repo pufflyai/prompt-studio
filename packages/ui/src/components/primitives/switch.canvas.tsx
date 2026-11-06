@@ -2,6 +2,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { Switch } from "@/components/primitives/switch";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 
 // The switch track uses borderRadius "md" — this is the design-system look and
 // must never be changed to "full" (a fully-round pill breaks the look). The
@@ -18,18 +19,21 @@ const meta = {
     ),
   ],
 } satisfies CanvasMeta<typeof Switch>;
-export default meta;
+export default {
+  title: "Design system/Components/Forms/Switch",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const Default: Story = {
+const Default: Story = {
   id: "components-inputs-switch--default",
 };
-export const DefaultChecked: Story = {
+const DefaultChecked: Story = {
   id: "components-inputs-switch--default-checked",
   args: {
     defaultChecked: true,
   },
 };
-export const CompactParameterToggle: Story = {
+const CompactParameterToggle: Story = {
   id: "components-inputs-switch--compact-parameter-toggle",
   args: {
     size: "xs",
@@ -37,20 +41,20 @@ export const CompactParameterToggle: Story = {
     children: "Preserve context",
   },
 };
-export const WithLabel: Story = {
+const WithLabel: Story = {
   id: "components-inputs-switch--with-label",
   args: {
     children: "Enable notifications",
   },
 };
-export const Disabled: Story = {
+const Disabled: Story = {
   id: "components-inputs-switch--disabled",
   args: {
     disabled: true,
     children: "Unavailable",
   },
 };
-export const DisabledChecked: Story = {
+const DisabledChecked: Story = {
   id: "components-inputs-switch--disabled-checked",
   args: {
     disabled: true,
@@ -58,7 +62,7 @@ export const DisabledChecked: Story = {
     children: "Locked on",
   },
 };
-export const Sizes: Story = {
+const Sizes: Story = {
   id: "components-inputs-switch--sizes",
   render: () => (
     <Stack gap="md">
@@ -68,10 +72,24 @@ export const Sizes: Story = {
     </Stack>
   ),
 };
-export const WithTrackLabel: Story = {
+const WithTrackLabel: Story = {
   id: "components-inputs-switch--with-track-label",
   args: {
     trackLabel: { on: <Text fontSize="2xs">ON</Text>, off: <Text fontSize="2xs">OFF</Text> },
     size: "lg",
   },
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Default,
+  DefaultChecked,
+  CompactParameterToggle,
+  WithLabel,
+  Disabled,
+  DisabledChecked,
+  Sizes,
+  WithTrackLabel,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

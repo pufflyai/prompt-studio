@@ -10,4 +10,4 @@
 "pstdio-planner": patch
 ---
 
-Organize the Canvas catalog by purpose with consistent names while preserving saved links and frame arrangements.
+Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.

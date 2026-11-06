@@ -1,5 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { DataTable } from "./data-table";
 
 const LiveRowActions = () => {
@@ -24,8 +25,15 @@ const LiveRowActions = () => {
     </Box>
   );
 };
-export default { title: "Design system/Components/Data display/Data table/Live updates", component: LiveRowActions };
-export const RowActionsDuringRefresh = {
+const exampleMeta = {
+  title: "Design system/Components/Data display/Data table/Live updates",
+  component: LiveRowActions,
+};
+export default {
+  title: "Design system/Components/Data display/Data table/Live updates",
+  fullscreen: true,
+};
+const RowActionsDuringRefresh = {
   id: "components-data-display-data-table-live-updates--row-actions-during-refresh",
   render: () => <LiveRowActions />,
 };
@@ -44,7 +52,12 @@ const StatisticsRowActivation = () => {
     </Box>
   );
 };
-export const RowActivationWithStatistics = {
+const RowActivationWithStatistics = {
   id: "components-data-display-data-table-live-updates--row-activation-with-statistics",
   render: () => <StatisticsRowActivation />,
 };
+
+const Examples = createCanvasExampleNavigator(exampleMeta, { RowActionsDuringRefresh, RowActivationWithStatistics });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as RowActionsDuringRefresh };

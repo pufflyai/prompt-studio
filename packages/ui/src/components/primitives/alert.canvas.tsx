@@ -1,6 +1,7 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { AlertMessage } from "./alert";
 import { ScrollArea } from "./scroll-area";
 
@@ -10,7 +11,12 @@ const meta = {
   description:
     "Titles and descriptions wrap and scroll within the alert. Alerts use at most half the viewport, capped at 24rem, and shrink inside constrained flex layouts. Error alerts include Copy error message, which copies the complete title and message. Extension webviews need clipboard.write. Place recovery controls in endElement for a wrapping bottom-right footer outside the scrolling content. Dismiss buttons stay at the top right, aligned with the icon and the first title line. Both use compact ghost buttons with hover, focus, and pressed backgrounds tinted by the alert's semantic color.",
 } satisfies CanvasMeta<typeof AlertMessage>;
-export default meta;
+export default {
+  title: "Design system/Components/Feedback/Alert",
+  description:
+    "Titles and descriptions wrap and scroll within the alert. Alerts use at most half the viewport, capped at 24rem, and shrink inside constrained flex layouts. Error alerts include Copy error message, which copies the complete title and message. Extension webviews need clipboard.write. Place recovery controls in endElement for a wrapping bottom-right footer outside the scrolling content. Dismiss buttons stay at the top right, aligned with the icon and the first title line. Both use compact ghost buttons with hover, focus, and pressed backgrounds tinted by the alert's semantic color.",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof AlertMessage>;
 const examples = [
   {
@@ -77,11 +83,11 @@ const AlertActionsPreview = () => {
     </Stack>
   );
 };
-export const Actions: Story = {
+const Actions: Story = {
   id: "primitives-alertmessage--actions",
   render: () => <AlertActionsPreview />,
 };
-export const Statuses: Story = {
+const Statuses: Story = {
   id: "primitives-alertmessage--statuses",
   render: () => (
     <Stack gap="sm">
@@ -94,7 +100,7 @@ export const Statuses: Story = {
     </Stack>
   ),
 };
-export const NarrowActions: Story = {
+const NarrowActions: Story = {
   id: "primitives-alertmessage--narrow-actions",
   render: () => (
     <Box width="2xs" maxW="full">
@@ -115,7 +121,7 @@ export const NarrowActions: Story = {
     </Box>
   ),
 };
-export const WarningActions: Story = {
+const WarningActions: Story = {
   id: "primitives-alertmessage--warning-actions",
   render: () => (
     <AlertMessage status="warning" title="No connection available">
@@ -130,7 +136,7 @@ export const WarningActions: Story = {
   ),
 };
 // A problem the user can act on can be closed; only a temporary failure offers Retry.
-export const Recoverable: Story = {
+const Recoverable: Story = {
   id: "primitives-alertmessage--recoverable",
   render: () => (
     <Stack gap="sm">
@@ -148,7 +154,7 @@ export const Recoverable: Story = {
     </Stack>
   ),
 };
-export const LongContent: Story = {
+const LongContent: Story = {
   id: "primitives-alertmessage--long-content",
   render: () => (
     <Box width="sm" maxW="full">
@@ -204,24 +210,20 @@ const VariableContentPreview = (props: { titleOnly?: boolean; constrained?: bool
     </Stack>
   );
 };
-export const VariableContent: Story = {
+const VariableContent: Story = {
   id: "primitives-alertmessage--variable-content",
   render: () => <VariableContentPreview />,
 };
-export const VariableTitle: Story = {
+const VariableTitle: Story = {
   id: "primitives-alertmessage--variable-title",
   render: () => <VariableContentPreview titleOnly />,
 };
-export const ConstrainedContent: Story = {
+const ConstrainedContent: Story = {
   id: "primitives-alertmessage--constrained-content",
   render: () => <VariableContentPreview constrained />,
 };
-export const CopyMessage: Story = {
-  id: "primitives-alertmessage--copy-message",
-  render: () => <VariableContentPreview />,
-};
 
-export const PageScrolling: Story = {
+const PageScrolling: Story = {
   id: "primitives-alertmessage--page-scrolling",
   render: () => (
     <Box height="96" width="lg" maxW="full">
@@ -241,3 +243,19 @@ export const PageScrolling: Story = {
     </Box>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Actions,
+  Statuses,
+  NarrowActions,
+  WarningActions,
+  Recoverable,
+  LongContent,
+  VariableContent,
+  VariableTitle,
+  ConstrainedContent,
+  PageScrolling,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Actions };

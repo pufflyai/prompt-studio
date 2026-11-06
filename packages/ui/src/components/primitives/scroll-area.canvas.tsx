@@ -2,6 +2,7 @@ import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 
 const items = Array.from({ length: 24 }, (_, index) => `Scrollable row ${index + 1}`);
 const layeredItems = Array.from({ length: 16 }, (_, index) => `Layered row ${index + 1}`);
@@ -27,9 +28,13 @@ const meta: CanvasMeta<typeof ScrollArea> = {
     },
   },
 };
-export default meta;
+export default {
+  title: "Design system/Components/Layout/Scroll area",
+  description: "Shared scrolling surface. The default xs size uses a 2px thumb with an 8px pointer target.",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof ScrollArea>;
-export const Vertical: Story = {
+const Vertical: Story = {
   id: "components-layout-scroll-area--vertical",
   render: (args) => (
     <ScrollArea {...args}>
@@ -41,11 +46,11 @@ export const Vertical: Story = {
     </ScrollArea>
   ),
 };
-export const Focused: Story = {
+const Focused: Story = {
   id: "components-layout-scroll-area--focused",
   ...Vertical,
 };
-export const BothDirections: Story = {
+const BothDirections: Story = {
   id: "components-layout-scroll-area--both-directions",
   args: {
     showHorizontalScrollbar: true,
@@ -67,7 +72,7 @@ export const BothDirections: Story = {
     </ScrollArea>
   ),
 };
-export const LayeredRows: Story = {
+const LayeredRows: Story = {
   id: "components-layout-scroll-area--layered-rows",
   args: {
     showHorizontalScrollbar: true,
@@ -127,7 +132,12 @@ const GrowingNestedScrollAreas = () => {
     </Stack>
   );
 };
-export const GrowingNested: Story = {
+const GrowingNested: Story = {
   id: "components-layout-scroll-area--growing-nested",
   render: () => <GrowingNestedScrollAreas />,
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Vertical, Focused, BothDirections, LayeredRows, GrowingNested });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Vertical };

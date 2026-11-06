@@ -1,6 +1,7 @@
 import { Box, VStack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 
 const meta: CanvasMeta<typeof WorkspaceBadge> = {
   title: "Design system/Components/Data display/Workspace badge",
@@ -16,9 +17,12 @@ const meta: CanvasMeta<typeof WorkspaceBadge> = {
     ),
   ],
 };
-export default meta;
+export default {
+  title: "Design system/Components/Data display/Workspace badge",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof WorkspaceBadge>;
-export const ProjectFolder: Story = {
+const ProjectFolder: Story = {
   id: "components-data-display-workspace-badge--project-folder",
   args: {
     workspaceType: "folder",
@@ -26,7 +30,7 @@ export const ProjectFolder: Story = {
     sessionStatus: "in_progress",
   },
 };
-export const GitWorktree: Story = {
+const GitWorktree: Story = {
   id: "components-data-display-workspace-badge--git-worktree",
   args: {
     workspaceType: "worktree",
@@ -35,7 +39,7 @@ export const GitWorktree: Story = {
     diffDeletions: 4,
   },
 };
-export const RemoteWorkspace: Story = {
+const RemoteWorkspace: Story = {
   id: "components-data-display-workspace-badge--remote-workspace",
   args: {
     workspaceType: "remote",
@@ -43,14 +47,14 @@ export const RemoteWorkspace: Story = {
     sessionStatus: "completed",
   },
 };
-export const Initializing: Story = {
+const Initializing: Story = {
   id: "components-data-display-workspace-badge--initializing",
   args: {
     initializing: true,
     shorthand: "A1",
   },
 };
-export const SingleWorkspaceNoShorthand: Story = {
+const SingleWorkspaceNoShorthand: Story = {
   id: "components-data-display-workspace-badge--single-workspace-no-shorthand",
   args: {
     workspaceType: "folder",
@@ -58,7 +62,7 @@ export const SingleWorkspaceNoShorthand: Story = {
     hasMultipleWorkspaces: false,
   },
 };
-export const MultiWorkspaceWithShorthandAndDropdown: Story = {
+const MultiWorkspaceWithShorthandAndDropdown: Story = {
   id: "components-data-display-workspace-badge--multi-workspace-with-shorthand-and-dropdown",
   args: {
     shorthand: "A2",
@@ -70,7 +74,7 @@ export const MultiWorkspaceWithShorthandAndDropdown: Story = {
     },
   },
 };
-export const WithDiffs: Story = {
+const WithDiffs: Story = {
   id: "components-data-display-workspace-badge--with-diffs",
   args: {
     shorthand: "A3",
@@ -79,7 +83,7 @@ export const WithDiffs: Story = {
     sessionStatus: "completed",
   },
 };
-export const WithNameAndDiffs: Story = {
+const WithNameAndDiffs: Story = {
   id: "components-data-display-workspace-badge--with-name-and-diffs",
   args: {
     label: "Latest implementation attempt",
@@ -89,7 +93,7 @@ export const WithNameAndDiffs: Story = {
     showLeadingSessionIndicator: false,
   },
 };
-export const LongWorkspaceName: Story = {
+const LongWorkspaceName: Story = {
   id: "components-data-display-workspace-badge--long-workspace-name",
   args: {
     label: "Refactor workspace badge rendering for long ticket board names",
@@ -99,7 +103,7 @@ export const LongWorkspaceName: Story = {
     showLeadingSessionIndicator: false,
   },
 };
-export const NamedMultipleWorkspaces: Story = {
+const NamedMultipleWorkspaces: Story = {
   id: "components-data-display-workspace-badge--named-multiple-workspaces",
   args: {
     label: "Remote review pass",
@@ -109,14 +113,14 @@ export const NamedMultipleWorkspaces: Story = {
     showLeadingSessionIndicator: false,
   },
 };
-export const WithoutDiffs: Story = {
+const WithoutDiffs: Story = {
   id: "components-data-display-workspace-badge--without-diffs",
   args: {
     shorthand: "A3",
     sessionStatus: "completed",
   },
 };
-export const WithAttemptStatus: Story = {
+const WithAttemptStatus: Story = {
   id: "components-data-display-workspace-badge--with-attempt-status",
   args: {
     shorthand: "A4",
@@ -128,7 +132,7 @@ export const WithAttemptStatus: Story = {
     sessionStatus: "in_progress",
   },
 };
-export const FallbackSessionStatus: Story = {
+const FallbackSessionStatus: Story = {
   id: "components-data-display-workspace-badge--fallback-session-status",
   args: {
     shorthand: "A4",
@@ -136,7 +140,7 @@ export const FallbackSessionStatus: Story = {
     attemptStatus: undefined,
   },
 };
-export const StateMatrix: Story = {
+const StateMatrix: Story = {
   id: "components-data-display-workspace-badge--state-matrix",
   render: () => (
     <VStack align="start" gap="sm">
@@ -155,3 +159,23 @@ export const StateMatrix: Story = {
     </VStack>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  ProjectFolder,
+  GitWorktree,
+  RemoteWorkspace,
+  Initializing,
+  SingleWorkspaceNoShorthand,
+  MultiWorkspaceWithShorthandAndDropdown,
+  WithDiffs,
+  WithNameAndDiffs,
+  LongWorkspaceName,
+  NamedMultipleWorkspaces,
+  WithoutDiffs,
+  WithAttemptStatus,
+  FallbackSessionStatus,
+  StateMatrix,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as ProjectFolder };

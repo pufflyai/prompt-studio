@@ -1,5 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { DataTable } from "./data-table";
 
 const data = Array.from({ length: 24 }, (_, index) => ({ Name: `Item ${index + 1}`, Amount: index + 1 }));
@@ -15,10 +16,13 @@ const meta: CanvasMeta<typeof DataTable> = {
   ],
   args: { data, initialPageSize: 10 },
 };
-export default meta;
+export default {
+  title: "Design system/Components/Data display/Data table/Display settings",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof DataTable>;
 /** Statistics charts load when enabled, including after an initial render without them. */
-export const EnableStatistics: Story = {
+const EnableStatistics: Story = {
   id: "components-data-display-data-table-display--enable-statistics",
   args: {
     toolbarStorageKey: "preview-enable-table-statistics",
@@ -27,10 +31,15 @@ export const EnableStatistics: Story = {
   },
 };
 /** Pagination remains available when the filtered result spans several pages. */
-export const FilteredPagination: Story = {
+const FilteredPagination: Story = {
   id: "components-data-display-data-table-display--filtered-pagination",
   args: {
     toolbarStorageKey: "preview-filtered-table-pagination",
     defaultFilter: { conjunction: "and", rules: [{ attributeId: "Amount", condition: "gt", value: 3 }] },
   },
 };
+
+const Examples = createCanvasExampleNavigator(meta, { EnableStatistics, FilteredPagination });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as EnableStatistics };

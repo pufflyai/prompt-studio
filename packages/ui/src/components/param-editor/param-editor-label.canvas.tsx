@@ -1,5 +1,6 @@
 import { CloseButton } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { ParamEditorLabel } from "./param-editor-label";
 
@@ -12,20 +13,23 @@ const meta = {
       "Create an isolated branch. Git review and merge cover the entire repository, including paths outside the project folder.",
   },
 } satisfies CanvasMeta<typeof ParamEditorLabel>;
-export default meta;
+export default {
+  title: "Design system/Patterns/Parameter editor/Label",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const WithInformation: Story = {
+const WithInformation: Story = {
   id: "patterns-param-editor-label--with-information",
 };
-export const Compact: Story = {
+const Compact: Story = {
   id: "patterns-param-editor-label--compact",
   args: { compact: true },
 };
-export const WithoutInformation: Story = {
+const WithoutInformation: Story = {
   id: "patterns-param-editor-label--without-information",
   args: { description: undefined },
 };
-export const InformationInDialog: Story = {
+const InformationInDialog: Story = {
   id: "patterns-param-editor-label--information-in-dialog",
   decorators: [
     (Story) => (
@@ -53,3 +57,13 @@ export const InformationInDialog: Story = {
     ),
   ],
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  WithInformation,
+  Compact,
+  WithoutInformation,
+  InformationInDialog,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as WithInformation };

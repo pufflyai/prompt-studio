@@ -3,6 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Check, Copy, EllipsisVertical, FileText, Folder, Plus, Search, Settings, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { TreeList } from "./tree-list";
 import type { TreeListNavigateEvent, TreeListNode, TreeListSection } from "./tree-list.types";
 import { TreeListInlineCreationStory } from "./tree-list-inline-creation-story";
@@ -14,7 +15,10 @@ const meta: CanvasMeta<typeof TreeList> = {
   title: "Design system/Components/Data display/Tree list/Overview",
   component: TreeList,
 };
-export default meta;
+export default {
+  title: "Design system/Components/Data display/Tree list/Overview",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof TreeList>;
 const toggleId = (ids: string[], id: string) => (ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]);
 const actionMenuItems = Array.from({ length: 10 }, (_, index) => ({
@@ -328,27 +332,27 @@ const VisibilityStory = () => {
     </Stack>
   );
 };
-export const SectionedNavigation: Story = {
+const SectionedNavigation: Story = {
   id: "components-data-display-tree-list--sectioned-navigation",
   render: () => <SectionedNavigationStory />,
 };
-export const FileTree: Story = {
+const FileTree: Story = {
   id: "components-data-display-tree-list--file-tree",
   render: () => <FileTreeStory />,
 };
-export const InlineFileCreation: Story = {
+const InlineFileCreation: Story = {
   id: "components-data-display-tree-list--inline-file-creation",
   render: () => <TreeListInlineCreationStory />,
 };
-export const InlineFolderCreation: Story = {
+const InlineFolderCreation: Story = {
   id: "components-data-display-tree-list--inline-folder-creation",
   render: () => <TreeListInlineCreationStory type="folder" />,
 };
-export const ActionShortcuts: Story = {
+const ActionShortcuts: Story = {
   id: "components-data-display-tree-list--action-shortcuts",
   render: () => <ShortcutTreeStory />,
 };
-export const Reorderable: Story = {
+const Reorderable: Story = {
   id: "components-data-display-tree-list--reorderable",
   render: () => <ReorderableStory />,
 };
@@ -382,11 +386,11 @@ const EmptiedSectionStory = () => {
     </Stack>
   );
 };
-export const EmptiedSectionAcceptsRows: Story = {
+const EmptiedSectionAcceptsRows: Story = {
   id: "components-data-display-tree-list--emptied-section-accepts-rows",
   render: () => <EmptiedSectionStory />,
 };
-export const Visibility: Story = {
+const Visibility: Story = {
   id: "components-data-display-tree-list--visibility",
   render: () => <VisibilityStory />,
 };
@@ -456,7 +460,7 @@ const BackgroundContextMenuStory = () => {
     </Stack>
   );
 };
-export const BackgroundContextMenu: Story = {
+const BackgroundContextMenu: Story = {
   id: "components-data-display-tree-list--background-context-menu",
   render: () => <BackgroundContextMenuStory />,
 };
@@ -505,7 +509,23 @@ const BackgroundContextMenuInScrollAreaStory = () => {
     </Flex>
   );
 };
-export const BackgroundContextMenuInScrollArea: Story = {
+const BackgroundContextMenuInScrollArea: Story = {
   id: "components-data-display-tree-list--background-context-menu-in-scroll-area",
   render: () => <BackgroundContextMenuInScrollAreaStory />,
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  SectionedNavigation,
+  FileTree,
+  InlineFileCreation,
+  InlineFolderCreation,
+  ActionShortcuts,
+  Reorderable,
+  EmptiedSectionAcceptsRows,
+  Visibility,
+  BackgroundContextMenu,
+  BackgroundContextMenuInScrollArea,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as SectionedNavigation };

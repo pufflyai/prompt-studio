@@ -1,5 +1,6 @@
 import { Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { CopyButton } from "./copy-button";
 
 const meta: CanvasMeta<typeof CopyButton> = {
@@ -9,12 +10,17 @@ const meta: CanvasMeta<typeof CopyButton> = {
   description:
     "Copies exact text and briefly shows Copied or a retry message. Pass a function as text to read changing content at click time. Extension webviews must declare clipboard.write.",
 };
-export default meta;
+export default {
+  title: "Design system/Components/Forms/Copy button",
+  description:
+    "Copies exact text and briefly shows Copied or a retry message. Pass a function as text to read changing content at click time. Extension webviews must declare clipboard.write.",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof CopyButton>;
-export const Default: Story = {
+const Default: Story = {
   id: "components-inputs-copybutton--default",
 };
-export const Draft: Story = {
+const Draft: Story = {
   id: "components-inputs-copybutton--draft",
   args: {
     label: "Copy draft",
@@ -29,11 +35,16 @@ export const Draft: Story = {
     </Stack>
   ),
 };
-export const Disabled: Story = {
+const Disabled: Story = {
   id: "components-inputs-copybutton--disabled",
   args: { disabled: true },
 };
-export const Empty: Story = {
+const Empty: Story = {
   id: "components-inputs-copybutton--empty",
   args: { text: "" },
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Default, Draft, Disabled, Empty });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

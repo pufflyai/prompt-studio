@@ -19,14 +19,23 @@ Builds go to `.pstdio/extension-storage/pstdio.canvas/build/`, which carries its
 
 Put `<name>.canvas.tsx` next to the component. One file is one canvas; each named export is one frame.
 
+Unless the user asks otherwise, create separate frames only for things that cannot be reached by navigating within a frame. Use the real interface's links, menus, tabs, forms, and actions to explore its states. For component examples, add in-frame state controls or a variant selector. Loading, disabled, empty, error, size, and other prop variations belong in that frame when its controls can reach them. A different starting state alone is not a reason for another frame.
+
 ```tsx
+import { useState } from "react";
 import { Button } from "./button";
 
 export default { title: "Components/Button", component: Button, description: "Primary actions." };
 
-export const Primary = { args: { children: "Save" } };
-export const Loading = () => <Button loading>Save</Button>;
-export const Small = { name: "Small size", args: { children: "Save", size: "sm" } };
+export const Example = () => {
+  const [loading, setLoading] = useState(false);
+  return (
+    <>
+      <button onClick={() => setLoading((value) => !value)}>Toggle loading</button>
+      <Button loading={loading}>Save</Button>
+    </>
+  );
+};
 ```
 
 - Default export (optional): `title` ("Group/Name"), `component`, `args`, `description`, `decorators`, `fullscreen`, `defaultTheme`.

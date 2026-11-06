@@ -2,6 +2,7 @@ import { Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ReactNode } from "react";
 import { Radio, RadioGroup } from "@/components/primitives/radio";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 
 const meta = {
   title: "Design system/Components/Forms/Radio",
@@ -16,16 +17,19 @@ const meta = {
     ),
   ],
 } satisfies CanvasMeta<typeof Radio>;
-export default meta;
+export default {
+  title: "Design system/Components/Forms/Radio",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const WithLabel: Story = {
+const WithLabel: Story = {
   id: "components-inputs-radio--with-label",
   args: {
     value: "selected",
     children: "Use project template",
   },
 };
-export const Disabled: Story = {
+const Disabled: Story = {
   id: "components-inputs-radio--disabled",
   args: {
     value: "disabled",
@@ -33,7 +37,7 @@ export const Disabled: Story = {
     children: "Unavailable",
   },
 };
-export const Options: Story = {
+const Options: Story = {
   id: "components-inputs-radio--options",
   args: {
     value: "selected",
@@ -46,3 +50,8 @@ export const Options: Story = {
     </Stack>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, { WithLabel, Disabled, Options });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as WithLabel };

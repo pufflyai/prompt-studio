@@ -1,6 +1,7 @@
 import { Box, Grid, Icon, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { IconColorPicker } from "./icon-color-picker";
 import { optionIcons } from "./icon-options";
 import { TagSwatch } from "./tag-swatch";
@@ -17,8 +18,11 @@ const meta = {
     ),
   ],
 };
-export default meta;
-export const Default = {
+export default {
+  title: "Design system/Components/Forms/Icon color picker",
+  fullscreen: true,
+};
+const Default = {
   id: "components-inputs-icon-color-picker--default",
   render: () => {
     const [color, setColor] = useState("red");
@@ -34,14 +38,14 @@ export const Default = {
   },
 };
 /** Colour-only mode used by the ticket status editor. */
-export const ColorOnly = {
+const ColorOnly = {
   id: "components-inputs-icon-color-picker--color-only",
   render: () => {
     const [color, setColor] = useState("green");
     return <IconColorPicker color={color} showIcons={false} onColorChange={setColor} />;
   },
 };
-export const PopoverOpen = {
+const PopoverOpen = {
   id: "components-inputs-icon-color-picker--popover-open",
   render: () => {
     const [color, setColor] = useState("blue");
@@ -49,7 +53,7 @@ export const PopoverOpen = {
     return <IconColorPicker color={color} icon={icon} onColorChange={setColor} onIconChange={setIcon} />;
   },
 };
-export const NoIconSentinel = {
+const NoIconSentinel = {
   id: "components-inputs-icon-color-picker--no-icon-sentinel",
   render: () => {
     const [color, setColor] = useState("gray");
@@ -58,7 +62,7 @@ export const NoIconSentinel = {
   },
 };
 /** Every registry entry, including the status ring and level bar font glyphs. */
-export const IconRegistry = {
+const IconRegistry = {
   id: "components-inputs-icon-color-picker--icon-registry",
   render: () => (
     <Grid templateColumns="repeat(8, 1fr)" gap="sm" justifyItems="center" maxWidth="480px">
@@ -73,7 +77,7 @@ export const IconRegistry = {
     </Grid>
   ),
 };
-export const Swatches = {
+const Swatches = {
   id: "components-inputs-icon-color-picker--swatches",
   render: () => (
     <Grid templateColumns="repeat(6, auto)" gap="sm" justifyItems="center" width="fit-content">
@@ -86,3 +90,15 @@ export const Swatches = {
     </Grid>
   ),
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  Default,
+  ColorOnly,
+  PopoverOpen,
+  NoIconSentinel,
+  IconRegistry,
+  Swatches,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

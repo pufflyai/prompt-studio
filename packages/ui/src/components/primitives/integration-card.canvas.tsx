@@ -2,6 +2,7 @@ import { Box } from "@chakra-ui/react";
 import { Figma, Github, Slack } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { IntegrationCard } from "@/components/primitives/integration-card";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 
 type StoryFn = () => ReactNode;
 type IntegrationCardArgs = ComponentProps<typeof IntegrationCard>;
@@ -24,12 +25,15 @@ const meta = {
     active: false,
   },
 };
-export default meta;
-export const Default = {
+export default {
+  title: "Design system/Components/Data display/Integration card",
+  fullscreen: true,
+};
+const Default = {
   id: "components-data-display-integration-card--default",
   render: (args: IntegrationCardArgs) => <IntegrationCard {...args} />,
 };
-export const Active = {
+const Active = {
   id: "components-data-display-integration-card--active",
   args: {
     icon: <Slack />,
@@ -40,7 +44,7 @@ export const Active = {
   },
   render: (args: IntegrationCardArgs) => <IntegrationCard {...args} />,
 };
-export const Paid = {
+const Paid = {
   id: "components-data-display-integration-card--paid",
   args: {
     icon: <Figma />,
@@ -51,3 +55,8 @@ export const Paid = {
   },
   render: (args: IntegrationCardArgs) => <IntegrationCard {...args} />,
 };
+
+const Examples = createCanvasExampleNavigator(meta, { Default, Active, Paid });
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as Default };

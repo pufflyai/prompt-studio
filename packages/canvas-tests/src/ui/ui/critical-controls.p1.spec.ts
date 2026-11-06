@@ -46,7 +46,11 @@ test("menu selection and keyboard dismissal keep its dialog usable", async ({ pa
 
 // Critical: saving an edited value must update the visible table.
 test("a table cell edit can be saved", async ({ page }) => {
-  const preview = await openCanvasPreview(page, "packages/ui/src/components/data-table/data-table.canvas.tsx#EditMode");
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/data-table/data-table.canvas.tsx#Default",
+    "Edit mode",
+  );
   const cell = preview.locator("tbody tr[data-document-row]").first().locator("td[data-column-id='name']");
   await cell.click();
   await preview.getByRole("textbox", { name: "Edit cell", exact: true }).fill("Updated name");

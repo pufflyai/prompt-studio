@@ -1,4 +1,5 @@
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { createCanvasExampleNavigator } from "@/docs/canvas-example-navigator";
 import { ActionInput } from "./action-input";
 
 const run = { id: "run", name: "Run" };
@@ -14,20 +15,33 @@ const meta = {
     onChange: () => {},
   },
 } satisfies CanvasMeta<typeof ActionInput>;
-export default meta;
+export default {
+  title: "Design system/Patterns/Parameter editor/Actions",
+  fullscreen: true,
+};
 type Story = CanvasFrame<typeof meta>;
-export const RepeatSelectedAction: Story = {
+const RepeatSelectedAction: Story = {
   id: "patterns-param-editor-actions--repeat-selected-action",
 };
-export const OnlyActiveActionEnabled: Story = {
+const OnlyActiveActionEnabled: Story = {
   id: "patterns-param-editor-actions--only-active-action-enabled",
   args: { options: [run, { id: "stop", name: "Stop", disabled: true }] },
 };
-export const ReadOnly: Story = {
+const ReadOnly: Story = {
   id: "patterns-param-editor-actions--read-only",
   args: { readOnly: true },
 };
-export const NoEnabledActions: Story = {
+const NoEnabledActions: Story = {
   id: "patterns-param-editor-actions--no-enabled-actions",
   args: { options: [{ ...run, disabled: true }] },
 };
+
+const Examples = createCanvasExampleNavigator(meta, {
+  RepeatSelectedAction,
+  OnlyActiveActionEnabled,
+  ReadOnly,
+  NoEnabledActions,
+});
+const ExamplePage = { name: "Explore", render: () => <Examples /> };
+
+export { ExamplePage as RepeatSelectedAction };
