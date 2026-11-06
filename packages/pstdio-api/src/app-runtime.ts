@@ -11,7 +11,7 @@ import { watchSessionQueueReadiness } from "./features/sessions/session-queue-re
 import { prepareQueuedSessionRecovery } from "./features/sessions/session-queue-recovery";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { prepareOrphanedSessionRecovery } from "./features/sessions/startup";
-import { apiLogger } from "./lib/logger";
+import { apiLogger, shutdownLogger } from "./lib/logger";
 import type { createNotificationService } from "./services/notification-service";
 import type { createProjectService } from "./services/project-service";
 import type { createSessionService } from "./services/session-service";
@@ -109,11 +109,11 @@ export const startAppArtifactMountWatch = (deps: RouteDeps, projectService: Retu
 const traceShutdownPhase = async <T>(phase: string, close: () => Promise<T>) => {
   const startedAt = performance.now();
   const fields = { event: "runtime.shutdown.phase", phase };
-  apiLogger.info({ ...fields, state: "started" }, "Runtime shutdown step started");
+  shutdownLogger.info({ ...fields, state: "started" }, "Runtime shutdown step started");
   try {
     return await close();
   } finally {
-    apiLogger.info(
+    shutdownLogger.info(
       { ...fields, state: "settled", duration_ms: Math.round(performance.now() - startedAt) },
       "Runtime shutdown step settled",
     );
