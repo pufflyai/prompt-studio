@@ -99,7 +99,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
       agent_session_id: before.agent_session_id,
     });
     expect((await request.get(`/v1/sessions/${sessionId}/conversation`)).ok()).toBe(true);
-    expect((await request.get(`/v1/workspaces/${before.workspace_id}`)).ok()).toBe(true);
+    expect((await request.get(`/v1/workspaces/${before.workspace_id}/files`)).ok()).toBe(true);
     await page.getByRole("option", { name: "Settings", exact: true }).click();
     await expect(page.getByText("Appearance", { exact: true }).first()).toBeVisible();
     const enabled = await request.patch(`/v1/projects/${project.id}/extensions/${provider.id}`, {
@@ -121,6 +121,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     await expect(main.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
     await expect.poll(() => watches.length).toBe(2);
     expect(holds).toHaveLength(1);
+    expect(deleted).not.toContain(holds[0]!);
     expect(new Set(watches).size).toBe(2);
     expect(stops).toBe(0);
     expect(await readSession()).toMatchObject({
