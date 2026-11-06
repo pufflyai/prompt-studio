@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createMemoryDocumentStore } from "pstdio-sync";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { EventBus } from "../../features/sync/event-bus";
-import { personalIndexState } from "../personal-history/index-state";
+import { memoryPersonalIndexFixture } from "../personal-history/index.fixture";
 import { createSessionLogFiles } from "../personal-history/log-files";
 import { createPersonalHistoryService } from "../personal-history/service";
 import { createPersonalHistoryStore } from "../personal-history/store";
@@ -18,7 +18,8 @@ test("head-only synchronization skips visible history scans; edits, removal, ide
     const documents = { open: () => createMemoryDocumentStore() };
     const identity = { projectId: "project", accountId: "alice", managerOrigin: "https://manager.example" };
     const device = { ownerId: "alice", id: "source", name: "Laptop" };
-    const store = createPersonalHistoryStore({ ...identity, files, documents });
+    const index = memoryPersonalIndexFixture();
+    const store = createPersonalHistoryStore({ ...identity, files, documents, ...index });
     const links = Array.from({ length: 2003 }, (_, i) => ({
       id: `link-${i}`,
       workspace_id: "workspace",
@@ -31,6 +32,8 @@ test("head-only synchronization skips visible history scans; edits, removal, ide
     const service = createPersonalHistoryService({
       documents,
       logs: files,
+      index: index.index,
+      logStreams: index.logs,
       eventBus,
       account: {
         status: async () => ({
@@ -56,11 +59,7 @@ test("head-only synchronization skips visible history scans; edits, removal, ide
     await announcements.announce();
     expect(scans).toBe(1);
     expect(eventBus.seq).toBe(2003);
-    const state = personalIndexState({ ...identity, files });
-    await state.save(device.id, 1, [
-      { kind: "heads", id: "session-0", value: { sequence: 1 } },
-      { kind: "publications", id: "session-0", value: { head: 1, version: "complete" } },
-    ]);
+    await store.writeHeads(new Map([["session-0", 1]]), new Map([["session-0", { head: 1, version: "complete" }]]));
     await announcements.announce();
     expect(scans).toBe(1);
     expect(eventBus.seq).toBe(2003);

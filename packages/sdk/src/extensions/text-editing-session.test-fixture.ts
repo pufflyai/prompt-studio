@@ -5,7 +5,7 @@ import type { GuestHost } from "./guest-host";
 import { createTextEditingClient } from "./text-editing-client";
 import { decodeTextBytes, encodeTextBytes } from "./text-editing-codec";
 
-export const textEditingSessionFixture = async (editable = true) => {
+export const textEditingSessionFixture = async (editable = true, generation?: string) => {
   let document = new Y.Doc();
   await seedTextDocument(document, "source");
   const listeners = new Set<(value: unknown) => void>();
@@ -17,6 +17,7 @@ export const textEditingSessionFixture = async (editable = true) => {
     sourceSeedId: (await readTextDocumentSeed(document)).id,
     revision,
     editable,
+    generation,
   });
   const frames: string[] = [];
   const sequences: number[] = [];
@@ -27,6 +28,8 @@ export const textEditingSessionFixture = async (editable = true) => {
   let memberId = "";
   const open = async (input: Extract<TextEditingRequest, { operation: "open" }>) => {
     memberId = input.memberId;
+    if (input.sourceState && generation !== input.generation)
+      throw Object.assign(new Error("Replica retired"), { code: "source_retired", retryable: false });
     if (input.sourceState && !editable)
       throw Object.assign(new Error("Readonly recovery"), { code: "source_read_only", retryable: false });
     if (input.pendingUpdate && retireDraft)
@@ -80,6 +83,9 @@ export const textEditingSessionFixture = async (editable = true) => {
       revision++;
     },
     snapshot,
+    setGeneration(value: string) {
+      generation = value;
+    },
     beforeAck: (handler: () => void) => {
       beforeAck = handler;
     },

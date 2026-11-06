@@ -21,7 +21,7 @@ test("retains packaged recovery sources for existing Remote Workspaces installat
     });
     write("extensions/remote-workspaces/package.json", {
       publisher: "pstdio", name: "remote-workspaces", version: "1.0.0", main: "extension.ts",
-      files: ["extension.ts"], engines: { pstdio: "^0.3.0" },
+      files: ["extension.ts"], engines: { pstdio: "^0.4.0" },
     });
     write("extensions/remote-workspaces/extension.ts", "export default {};");
     for (const args of [["init", "-q"], ["add", "."], ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "Source"]]) {
@@ -49,7 +49,7 @@ test.each(["1.0.0", "0.46.0-nightly.20261028030226"])("bundles host catalog sour
       { installName: "external", origin: { url: "https://example.com/third-party", path: "not-shipped", ref: "main" } },
       { installName: "download", bundleSource: false, origin: { url: "https://example.com/repository", path: "not-shipped", ref: "{hostRelease}" } },
     ] }));
-    write("extensions/demo/package.json", JSON.stringify({ publisher: "test", name: "demo", version, main: "extension.ts", files: ["extension.ts"], engines: { pstdio: "^0.3.0" } }));
+    write("extensions/demo/package.json", JSON.stringify({ publisher: "test", name: "demo", version, main: "extension.ts", files: ["extension.ts"], engines: { pstdio: "^0.4.0" } }));
     write("extensions/demo/extension.ts", "export default {};");
     write("extensions/demo/assets/logo.svg", '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h1v1z"/></svg>');
     write("extensions/demo/bun.lock", "locked dependency inputs");

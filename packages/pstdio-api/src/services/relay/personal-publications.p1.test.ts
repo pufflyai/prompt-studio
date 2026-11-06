@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMemoryDocumentStore } from "pstdio-sync";
+import { memoryPersonalIndexFixture } from "../personal-history/index.fixture";
 import { createSessionLogFiles } from "../personal-history/log-files";
 import { createPersonalHistoryStore } from "../personal-history/store";
 import { createPersonalPublications } from "./personal-publications";
@@ -15,6 +16,7 @@ test("a newer head and terminal proof arriving during a flush remain pending unt
     managerOrigin: "http://manager.example",
     files: createSessionLogFiles(root),
     documents: { open: () => createMemoryDocumentStore() },
+    ...memoryPersonalIndexFixture(),
   });
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();

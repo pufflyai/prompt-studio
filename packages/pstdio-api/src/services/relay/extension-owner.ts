@@ -130,9 +130,9 @@ export const startRelayExtension = async (input: {
         await documents.synchronize(attemptSignal);
         await refreshFiles();
       },
-      onError: () =>
+      onError: (error) =>
         apiLogger.warn(
-          { event: "relay.reconnecting", workbenchId: owner.workbenchId, extensionId },
+          { err: error, event: "relay.reconnecting", workbenchId: owner.workbenchId, extensionId },
           "Relay connection will retry",
         ),
       onStatusChange: input.statusChanged,

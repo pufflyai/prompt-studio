@@ -51,6 +51,7 @@ export const grantTextSource = async (
     token: crypto.randomUUID(),
     target,
     documentKey: loaded.documentKey,
+    generation: loaded.generation,
     ownerId: loaded.owner.extensionId,
     editable: loaded.content.editable !== false,
   };
@@ -67,7 +68,11 @@ export const validateTextGrant = async (
   if (connection.grants.get(grant.token) !== grant)
     throw textFailure("grant_invalid", "This source grant belongs to another placement");
   const loaded = await deps.access({ ...grant.target, projectId: connection.projectId });
-  if (loaded.documentKey !== grant.documentKey || loaded.owner.extensionId !== grant.ownerId)
+  if (
+    loaded.documentKey !== grant.documentKey ||
+    loaded.owner.extensionId !== grant.ownerId ||
+    loaded.generation !== grant.generation
+  )
     throw textFailure("source_retired", "This source lifetime has been retired");
   validateTextSelection(connection, grant.target, loaded);
   if (writable && (!grant.editable || loaded.content.editable === false))
@@ -77,5 +82,12 @@ export const validateTextGrant = async (
 
 export const textSourceIdentity = (connection: TextConnection, grant: TextGrant) =>
   createHash("sha256")
-    .update(JSON.stringify([connection.projectId, grant.ownerId, grant.documentKey]))
+    .update(
+      JSON.stringify([
+        connection.projectId,
+        grant.ownerId,
+        grant.documentKey,
+        ...(grant.generation === undefined ? [] : [grant.generation]),
+      ]),
+    )
     .digest("hex");

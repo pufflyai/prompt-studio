@@ -53,13 +53,19 @@ export const createNativeDocumentsClient = (
     projectId: string;
     target: NativeTextTarget;
     sourceState?: Uint8Array;
+    generation?: string;
     pendingUpdate?: Uint8Array;
     signal?: AbortSignal;
   }) {
     const result = await request<unknown>(base(input.projectId), {
       method: "POST",
       signal: input.signal,
-      body: { ...input.target, sourceState: encode(input.sourceState), pendingUpdate: encode(input.pendingUpdate) },
+      body: {
+        ...input.target,
+        generation: input.generation,
+        sourceState: encode(input.sourceState),
+        pendingUpdate: encode(input.pendingUpdate),
+      },
     });
     return decode(nativeDocumentJoinedSchema.parse(result));
   },

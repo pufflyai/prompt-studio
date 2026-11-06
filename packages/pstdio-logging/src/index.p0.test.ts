@@ -41,6 +41,31 @@ describe("resolveDefaultLogPath", () => {
 });
 
 describe("createLogger", () => {
+  test("forwards enabled debug and child trace entries to stdout and the file", () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-logging-level-test-"));
+    const logPath = join(tempRoot, "logs.jsonl");
+    const writes: string[] = [];
+    const originalWrite = process.stdout.write;
+    try {
+      (process.stdout as { write: typeof process.stdout.write }).write = ((chunk: string | Uint8Array) => {
+        writes.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
+        return true;
+      }) as typeof process.stdout.write;
+      const logger = createLogger({ level: "debug", logPath, service: "pstdio-test", sync: true, env: {} });
+      logger.trace({ event: "filtered" });
+      logger.debug({ event: "debug" });
+      logger.child({}, { level: "trace" }).trace({ event: "child-trace" });
+      expect(readJsonLines(logPath).map((entry) => entry.event)).toEqual(["debug", "child-trace"]);
+      expect(writes.flatMap((line) => line.trim().split("\n")).map((line) => JSON.parse(line).event)).toEqual([
+        "debug",
+        "child-trace",
+      ]);
+    } finally {
+      process.stdout.write = originalWrite;
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   const originalLogPath = process.env.PSTDIO_LOG_PATH;
   const originalLogTargets = process.env.PSTDIO_LOG_TARGETS;
   const originalLogLevel = process.env.PSTDIO_LOG_LEVEL;

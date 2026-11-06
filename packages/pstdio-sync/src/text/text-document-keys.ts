@@ -5,4 +5,6 @@ export const textDocumentKeys = {
   ownDeletes: "text-own-deletes",
   authors: "text-edit-authors",
   imports: "text-source-imports",
+  genesisContext: "text-genesis-context",
+  orderedFrontier: "ordered-text-frontier",
 } as const;

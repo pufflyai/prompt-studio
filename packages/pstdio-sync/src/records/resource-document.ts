@@ -1,3 +1,4 @@
+import type { StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { type DocumentHistory, deterministicAuthors, documentHistory } from "../shared";
 import { migrationAuthor } from "./document-author";
@@ -118,6 +119,22 @@ export const retainedResourceValue = (recordId: string, states: Uint8Array[]) =>
   const document = loadResourceDocument(states);
   try {
     return readValue(document.getMap(recordTypeName(recordId)).get("value"), document);
+  } finally {
+    document.destroy();
+  }
+};
+
+/** One-time new-format conversion also needs retained asset/shared channels behind a tombstone. */
+export const retainedResourceBody = (recordId: string, states: Uint8Array[]) => {
+  const document = loadResourceDocument(states);
+  try {
+    const record = document.getMap(recordTypeName(recordId));
+    const kind = record.get("sharedKind") as "map" | "list" | "text" | undefined;
+    return {
+      value: readValue(record.get("value"), document),
+      asset: structuredClone((record.get("asset") ?? null) as StorageRecord["asset"]),
+      shared: kind ? ({ kind, value: readValue(record.get("shared"), document) } as StorageRecord["shared"]) : null,
+    };
   } finally {
     document.destroy();
   }

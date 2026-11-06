@@ -42,6 +42,7 @@ export const findDocumentReplacements = (
   first: DocumentSnapshot,
   second: DocumentSnapshot,
   merged: DocumentSnapshot,
+  options: { wholeArrays?: boolean } = {},
 ) => {
   const replacements: DocumentReplacement[] = [];
   const report = (
@@ -74,7 +75,7 @@ export const findDocumentReplacements = (
         visit(recordId, [...path, key], original?.[key], leftObject[key], rightObject[key], keptObject[key]);
       return;
     }
-    if (Array.isArray(left) && Array.isArray(right) && Array.isArray(kept)) {
+    if (!options.wholeArrays && Array.isArray(left) && Array.isArray(right) && Array.isArray(kept)) {
       const original = Array.isArray(before) ? before : [];
       const indexed = (values: Json[]) => new Map(listKeys(values).map((key, index) => [key, values[index]]));
       const originalItems = indexed(original);
