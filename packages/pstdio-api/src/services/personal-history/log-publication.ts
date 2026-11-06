@@ -3,6 +3,7 @@ import { z } from "zod";
 export const sessionLogPublicationSchema = z.object({
   version: z.string(),
   head: z.number().int().nonnegative(),
+  format: z.literal("append-log-v1").optional(),
 });
 
 export type SessionLogPublication = z.infer<typeof sessionLogPublicationSchema>;

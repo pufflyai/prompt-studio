@@ -1,8 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomBytes } from "node:crypto";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { sql } from "drizzle-orm";
-import { createMemoryDocumentStore } from "pstdio-sync";
-import { createDocumentStorage } from "pstdio-sync/records";
 import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -23,7 +22,7 @@ const fixture = async () => {
 
 test("direct indexed page jumps match memory ordering and reject changed revisions", async () => {
   const f = await fixture();
-  const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
   const index: StorageRecordIndex = {
     name: "pages",
     fields: { rank: { path: ["rank"], type: "number" } },
@@ -54,7 +53,7 @@ test("direct indexed page jumps match memory ordering and reject changed revisio
 
 test("case-insensitive equality and negation preserve selected-page and aggregate semantics", async () => {
   const f = await fixture();
-  const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
   const values = ["Alpha", "alpha", "ALPHA beta", "ÉİẞΣ", "A\u0000B", null, undefined, "", 7, "A😀", "𐐀"];
   const cases: [StoragePredicate, string[]][] = [
     [{ field: "title", op: "equalsIgnoreCase", value: "ALPHA" }, ["0", "1"]],
@@ -136,7 +135,7 @@ test("selecting or equality-indexing a long string does not prevent durable save
 
 test("database and memory queries share Unicode order and reject unsupported typed operators", async () => {
   const f = await fixture();
-  const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
   const index: StorageRecordIndex = {
     name: "values",
     fields: {
@@ -310,7 +309,7 @@ test("selective in-list pages probe the declared equality index after ordinary w
 
 test("database and memory agree on null groups and object-only field paths", async () => {
   const f = await fixture();
-  const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
   const outputs = [];
   for (const records of [f.records, memory]) {
     await records.defineIndexes([
@@ -356,16 +355,16 @@ test("projection preserves strings and object keys outside PostgreSQL text", asy
   ).toHaveLength(1);
 });
 
-test("indexed values and revisions match the authoritative document after a cold reopen", async () => {
+test("ordered SQL and public SDK queries preserve UTF-16 values and opaque revisions after a cold reopen", async () => {
   const f = await fixture();
-  const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
   const index: StorageRecordIndex = {
     name: "text",
     fields: { body: { path: ["body"], type: "string" } },
     equality: ["body"],
   };
   const group = {
-    operationId: "normalize-text",
+    operationId: "preserve-text",
     edits: [{ recordId: "note", replace: { body: "x\ud800y", "\udc00key": ["\u0000", "😀", "\ud800"] } }],
   };
   for (const records of [f.records, memory]) {
@@ -377,19 +376,34 @@ test("indexed values and revisions match the authoritative document after a cold
   expect(await f.records.readMany(["note"])).toEqual(authoritative);
   expect(await reopened.readMany(["note"])).toEqual(authoritative);
   const [memoryRecord] = await memory.readMany(["note"]);
-  // Independently authored histories have different lifetimes but the same values and revisions.
+  // Lifetimes and revisions are opaque observations; equality/difference is not a Yjs author identity contract.
   expect(authoritative[0].recordLifetime).toEqual(expect.any(String));
-  const expectedMemoryRecord = { ...authoritative[0], recordLifetime: expect.any(String) };
-  expect(memoryRecord).toEqual(expectedMemoryRecord);
-  expect(memoryRecord).not.toEqual(authoritative[0]);
-  expect(authoritative[0].value).toEqual({ body: "x�y", "�key": ["\u0000", "😀", "�"] });
-  const page = await reopened.query({ index: "text", where: { field: "body", op: "eq", value: "x�y" } });
+  expect(memoryRecord).toMatchObject({
+    recordId: "note",
+    exists: true,
+    deleted: false,
+    value: group.edits[0].replace,
+    asset: null,
+    shared: null,
+  });
+  expect(memoryRecord.revision).toEqual(expect.any(String));
+  expect((await memory.read("note")).revision).toBe(memoryRecord.revision);
+  expect(authoritative[0].value).toEqual(group.edits[0].replace);
+  const page = await reopened.query({
+    index: "text",
+    where: { field: "body", op: "eq", value: group.edits[0].replace.body },
+  });
+  const memoryPage = await memory.query({
+    index: "text",
+    where: { field: "body", op: "eq", value: group.edits[0].replace.body },
+  });
   expect(page.records[0].revision).toBe(authoritative[0].revision);
+  expect(memoryPage.records[0].revision).toBe(memoryRecord.revision);
 });
 
 test("Unicode predicates, wrapped arrays and reserved object keys match memory", async () => {
   const f = await fixture();
-  const memory = createDocumentStorage({ owner: f.owner, store: createMemoryDocumentStore() }).records;
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
   const values = ["ÉİẞΣ", "😀", "\ud800", "a\u0000b", "slash\\123", "ascii", "\uE000", "\u0001s"];
   const outputs = [];
   for (const records of [f.records, memory]) {
@@ -422,11 +436,16 @@ test("Unicode predicates, wrapped arrays and reserved object keys match memory",
     const tag = await records.query({ index: "text", where: { field: "tags", op: "contains", value: "😀" } });
     const groups = await records.aggregate({ index: "text", groupBy: "tags" });
     const batch = await records.readMany(values.map((_, index) => String(index)));
+    const comparable = (rows: typeof page.records) =>
+      rows.map(({ revision, ...row }) => {
+        expect(revision).toBe(batch.find((record) => record.recordId === row.recordId)!.revision);
+        return row;
+      });
     outputs.push({
       filters,
-      page: page.records,
-      next: next.records,
-      tag: tag.records,
+      page: comparable(page.records),
+      next: comparable(next.records),
+      tag: comparable(tag.records),
       groups: groups.groups,
       values: batch.map((record) => record.value),
     });

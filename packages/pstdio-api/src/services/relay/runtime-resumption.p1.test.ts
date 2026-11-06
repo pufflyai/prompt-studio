@@ -95,6 +95,8 @@ test("resuming Cloud after local edits replaces every owner of the retired proje
         { recordId: "file", replace: "file", asset },
       ],
     });
+    const native = { recordId: "file", documentKey: "a".repeat(64), content: "Shared artifact" };
+    await stores[0]!.records.bindText(native);
     await Promise.all(runtimes.map((runtime, index) => runtime.update([configs[index]!])));
     await reachSynced();
     await Promise.all(runtimes.map((runtime) => runtime.update([])));
@@ -106,6 +108,12 @@ test("resuming Cloud after local edits replaces every owner of the retired proje
       operationId: "second-offline",
       edits: [{ recordId: "caption", replace: "second offline" }],
     });
+    await apps[0]!.deps.extensionStorageService
+      .openNativeTextDocument({ owner, fileId: native.documentKey })
+      .save("First Shared artifact");
+    await apps[1]!.deps.extensionStorageService
+      .openNativeTextDocument({ owner, fileId: native.documentKey })
+      .save("Shared artifact Last");
     await runtimes[0]!.update([configs[0]!]);
     await runtimes[1]!.update([configs[1]!]);
     await reachSynced();
@@ -113,6 +121,10 @@ test("resuming Cloud after local edits replaces every owner of the retired proje
       expect((await store.records.read("note")).value).toBe("first offline");
       expect((await store.records.read("caption")).value).toBe("second offline");
     }
+    for (const app of apps)
+      expect(
+        await app.deps.extensionStorageService.openNativeTextDocument({ owner, fileId: native.documentKey }).read(),
+      ).toBe("First Shared artifact Last");
   } finally {
     await Promise.all(runtimes.map((runtime) => runtime.close()));
     await Promise.all(apps.map((app) => app.close()));

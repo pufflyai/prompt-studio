@@ -15,7 +15,8 @@ const group: StorageGroup = { operationId: "save", edits: [{ recordId: note.reco
 const saved: StorageSaveOutcome = await storage.records.commit(group);
 if (saved.status !== "saved-locally") throw new Error("Local save invented relay acceptance");
 const other = await storage.records.commit({ operationId: "other", edits: [{ recordId: note.recordId, expectedRevision: note.revision, replace: "second" }] });
-if (other.state !== "saved-locally") throw new Error("An earlier revision prevented a save");
+if (other.state !== "refused" || await storage.get("note") !== "first") throw new Error("A stale conditional save was not refused atomically");
+await storage.set("note", "second");
 if (await storage.get("note") !== "second") throw new Error("Public records lost legacy interoperability");
 await storage.records.commit(group);
 if (await storage.get("note") !== "second") throw new Error("Retrying an earlier operation overwrote a later save");

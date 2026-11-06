@@ -1,6 +1,7 @@
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import type { SessionLogFiles } from "../personal-history/log-files";
 import { createLogPublisher } from "../personal-history/log-publisher";
+import type { PersonalLogStreams } from "../personal-history/log-stream";
 import type { PersonalHistoryStore } from "../personal-history/store";
 import type { createPersonalDocuments } from "./personal-documents";
 import { createPersonalPublications } from "./personal-publications";
@@ -10,6 +11,7 @@ export const createPersonalPublication = (input: {
   files: SessionLogFiles;
   namespace: string;
   deviceId: string;
+  streams: PersonalLogStreams;
   deps: ExtensionsRouteDeps;
   interested: (id: string) => boolean;
   published: (id: string) => void;

@@ -7,6 +7,12 @@ import type { DbClient } from "../../db/connection.pglite";
 import { native_document_room_updates, native_document_rooms, native_document_sources } from "../../db/schemas.pg";
 import { createDocumentCache } from "./document-cache";
 import { NativeDocumentRoomError } from "./native-document-errors";
+import {
+  orderedRoomMarkerId,
+  removeRoomGeneration,
+  roomGeneration,
+  saveOrderedMarker,
+} from "./ordered-native-metadata";
 
 interface RoomAddress {
   owner: StorageOwner;
@@ -101,7 +107,13 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
           document.off("update", capture);
         }
         const revision = await append(tx, input, row, document, updates);
-        return { value, document, revision, documentKey: row.document_key };
+        return {
+          value,
+          document,
+          revision,
+          documentKey: row.document_key,
+          generation: await roomGeneration(tx, input.owner, input.roomId),
+        };
       });
       cache.publish(key, result);
       return result;
@@ -133,6 +145,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
       target: NativeTextTarget;
       state: Uint8Array;
       writable?: boolean;
+      generation?: string;
     }) {
       const parsed = nativeTextTargetSchema.parse(input.target);
       const normalized = "fileRendererId" in parsed ? { ...parsed, resource: parsed.resource } : parsed;
@@ -173,6 +186,8 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
             document_key: input.documentKey,
             state: Y.encodeStateAsUpdate(document),
           });
+          if (input.generation !== undefined)
+            await saveOrderedMarker(tx, input.owner, orderedRoomMarkerId(id), { generation: input.generation });
         });
         cache.publish(JSON.stringify([input.owner, id]), { document, revision: 0 });
         return { id };
@@ -183,15 +198,24 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
     },
     async read(input: RoomAddress) {
       const result = await access(input, async (document) => copy(document));
-      return { document: result.value, revision: result.revision, documentKey: result.documentKey };
+      return {
+        document: result.value,
+        revision: result.revision,
+        documentKey: result.documentKey,
+        generation: result.generation,
+      };
     },
     apply: (input: RoomAddress & { update: Uint8Array }) => apply(input, true),
     receive: (input: RoomAddress & { update: Uint8Array }) => apply(input, false),
     async remove(input: RoomAddress) {
-      const removed = await db
-        .delete(native_document_rooms)
-        .where(roomWhere(input))
-        .returning({ id: native_document_rooms.id });
+      const removed = await db.transaction(async (tx) => {
+        const removed = await tx
+          .delete(native_document_rooms)
+          .where(roomWhere(input))
+          .returning({ id: native_document_rooms.id });
+        if (removed.length) await removeRoomGeneration(tx, input.owner, input.roomId);
+        return removed;
+      });
       cache.discard(JSON.stringify([input.owner, input.roomId]));
       return removed.length > 0;
     },
@@ -216,8 +240,15 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
           .where(cursor ? gt(native_document_rooms.id, cursor) : undefined)
           .orderBy(native_document_rooms.id)
           .limit(100);
-        for (const { id, workbenchId, extensionId, documentKey } of rows)
-          yield { id, owner: { workbenchId, extensionId }, documentKey };
+        for (const { id, workbenchId, extensionId, documentKey } of rows) {
+          const generation = await roomGeneration(db, { workbenchId, extensionId }, id);
+          yield {
+            id,
+            owner: { workbenchId, extensionId },
+            documentKey,
+            ...(generation === undefined ? {} : { generation }),
+          };
+        }
         if (rows.length < 100) return;
         cursor = rows.at(-1)!.id;
       }

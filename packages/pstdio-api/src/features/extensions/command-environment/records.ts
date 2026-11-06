@@ -19,8 +19,13 @@ export const createExtensionRecordsApi = (
     input.signal?.throwIfAborted();
     if (!record) throw new Error("Storage owner not found");
     const owner = { workbenchId: input.projectId, extensionId: record.installedSource.extension_id };
+    const snapshot = await deps.extensionRuntimeCatalog.get(input.projectId);
+    input.signal?.throwIfAborted();
+    const textFields = snapshot.runtime.extensions.find((extension) => extension.id === owner.extensionId)?.definition
+      .storage?.records?.text;
     const storage = await deps.extensionStorageService.open({
       owner,
+      textFields: textFields?.map(({ prefix, fields }) => ({ prefix, fields: [...fields] })),
       assets: createRecordAssets(deps.assetTransferService, owner, input.signal),
     });
     return storage.scopedRecords(input.scopeType, input.scopeId);
@@ -40,7 +45,10 @@ export const createExtensionRecordsApi = (
     query: (query) => read(async () => (await records()).query(query)),
     aggregate: (query) => read(async () => (await records()).aggregate(query)),
     readMany: (ids) => read(async () => (await records()).readMany(ids)),
-    commit: async (group) => (await records()).commit(group),
+    commit: async (group) => {
+      const owned = structuredClone(group);
+      return (await records()).commit(owned);
+    },
     outcome: (id) => read(async () => (await records()).outcome(id)),
     conflicts: () => read(async () => (await records()).conflicts()),
     inspect: (id) => read(async () => (await records()).inspect(id)),

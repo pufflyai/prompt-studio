@@ -33,10 +33,12 @@ test("incremental session updates preserve the primary workspace and unlinked se
       accountId: "alice",
       documents: source.deps.extensionStorageService.documents,
       files: source.deps.personalHistoryService.logs,
+      index: source.deps.extensionStorageService.personalHistoryIndex,
+      logs: source.deps.extensionStorageService.logs,
     });
     const input = {
       projectId: project.id,
-      device: { ownerId: "alice", id: "source", name: "Laptop" },
+      device: { ownerId: "alice", id: (await source.deps.environmentService.get()).environmentId, name: "Laptop" },
       history,
       references: createHistoryReferences(
         source.deps.extensionStorageService.documents.open(historyReferenceName),

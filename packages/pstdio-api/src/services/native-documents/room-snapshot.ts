@@ -4,11 +4,17 @@ import { readTextDocumentSeed } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import type { createNativeProjectionQueue } from "./projection-queue";
+import { NativeDocumentSourceError } from "./source-error";
 export interface Room {
   target: NativeTextTarget;
   editable: boolean;
   owner: StorageOwner;
   documentKey: string;
+  generation?: string;
+  syncDocument?: string;
+  recordField?: boolean;
+  /** Room history already integrated durably; received canonical frames are also clean. */
+  integratedRevision?: number;
   queue: Promise<unknown>;
   closeWatchers: Set<() => void>;
 }
@@ -23,9 +29,15 @@ export const createNativeRoomSnapshot = (
   files: ReturnType<typeof createNativeProjectionQueue>,
 ) => {
   const snapshot = async (room: Room, roomId: string) => {
-    const { state, revision } = await storage
+    const { state, revision, generation } = await storage
       .openNativeTextDocument({ owner: room.owner, fileId: room.documentKey })
       .snapshot();
+    if (generation !== room.generation)
+      throw new NativeDocumentSourceError(
+        409,
+        "source_retired",
+        "This local text replica has been retired; its edits remain recoverable",
+      );
     const document = new Y.Doc();
     try {
       Y.applyUpdate(document, state);
@@ -36,16 +48,18 @@ export const createNativeRoomSnapshot = (
         if (sourceSeedId === seedId) {
           // Persist the history sent to this browser before it can anchor its next edit.
           // Received updates retain their existing provenance rather than becoming local intent.
-          await storage.nativeRooms.receive({
+          const received = await storage.nativeRooms.receive({
             owner: room.owner,
             roomId,
             update: Y.encodeStateAsUpdate(document, Y.encodeStateVector(source.document)),
           });
+          if (source.revision === room.integratedRevision) room.integratedRevision = received.revision;
         }
-        if (room.editable) void files.request(room).catch(() => {});
+        if (room.editable && !room.recordField) void files.request(room).catch(() => {});
         return {
           state,
           revision,
+          generation,
           seedId,
           sourceSeedId,
           ...(sourceSeedId !== seedId && { sourceState: Y.encodeStateAsUpdate(source.document) }),

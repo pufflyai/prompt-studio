@@ -3,14 +3,20 @@ import { liveProtocolHeader, liveProtocolVersion, type StateInfo, type StoredUpd
 import { createDocumentPeerLive, type PeerLiveData } from "./document-peer-live.fixture";
 
 /** Blind wire peer: production client encryption, document merging and asset transfers run unchanged. */
-export const documentPeer = (projects: string[] = []) => {
-  const live = createDocumentPeerLive();
+export const documentPeer = (
+  projects: string[] = [],
+  options: {
+    beforeSubscribe?: (deviceId: string, topic: string) => Promise<void>;
+    onRead?: (id: string) => void;
+  } = {},
+) => {
+  const live = createDocumentPeerLive(options.beforeSubscribe);
   const documents = new Map<string, StoredUpdate[]>();
   // Latest states: the record stream founds itself with one and later compacts into new ones.
   const states = new Map<string, { info: StateInfo; payload: string }>();
   const blobs = new Map<
     string,
-    { parts: Map<number, Uint8Array>; complete: boolean; sha256: string; byteLength: number }
+    { parts: Map<number, Uint8Array>; complete: boolean; sha256: string; byteLength: number; children: string[] }
   >();
   const offsets: number[] = [];
   let missing = false;
@@ -41,25 +47,39 @@ export const documentPeer = (projects: string[] = []) => {
     }
     return new Response(bytes.subarray(offset));
   };
+  const beginBlob = async (request: Request, path: string, id: string) => {
+    const body = (await request.json()) as { sha256: string; byteLength: number; children?: string[] };
+    const children = path.endsWith("/begin-manifest") ? body.children : [];
+    if (
+      !Array.isArray(children) ||
+      children.length > 256 ||
+      new Set(children).size !== children.length ||
+      children.some((id) => !blobs.get(`~${id}`)?.complete)
+    )
+      return Response.json({ error: "invalid-children" }, { status: 400 });
+    let blob = blobs.get(id);
+    if (!blob) {
+      blob = { ...body, children, parts: new Map(), complete: false };
+      blobs.set(id, blob);
+    } else if (
+      blob.sha256 !== body.sha256 ||
+      blob.byteLength !== body.byteLength ||
+      JSON.stringify(blob.children) !== JSON.stringify(children)
+    )
+      return Response.json({ error: "immutable-blob" }, { status: 409 });
+    return Response.json({
+      partSize: 1_048_576,
+      completed: blob.complete,
+      parts: [...blob.parts].map(([number, bytes]) => ({
+        number,
+        sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
+        byteLength: bytes.length,
+      })),
+    });
+  };
   const blobRequest = async (request: Request, path: string, parts: string[]) => {
     const id = parts[5]!;
-    if (path.endsWith("/begin")) {
-      const body = (await request.json()) as { sha256: string; byteLength: number };
-      let blob = blobs.get(id);
-      if (!blob) {
-        blob = { ...body, parts: new Map(), complete: false };
-        blobs.set(id, blob);
-      }
-      return Response.json({
-        partSize: 1_048_576,
-        completed: blob.complete,
-        parts: [...blob.parts].map(([number, bytes]) => ({
-          number,
-          sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
-          byteLength: bytes.length,
-        })),
-      });
-    }
+    if (path.endsWith("/begin") || path.endsWith("/begin-manifest")) return beginBlob(request, path, id);
     const blob = blobs.get(id);
     if (!blob) return new Response(null, { status: 404 });
     if (parts[6] === "parts") {
@@ -111,6 +131,7 @@ export const documentPeer = (projects: string[] = []) => {
     if (path.includes("/states/")) return new Response(Buffer.from(states.get(id)!.payload, "base64"));
     if (path.endsWith("/state")) return stateRequest(request, id, spaceOwner);
     if (path.endsWith("/read")) {
+      options.onRead?.(id.slice(1));
       const { after } = (await request.json()) as { after: number };
       return Response.json({
         status: "updates",
@@ -139,6 +160,7 @@ export const documentPeer = (projects: string[] = []) => {
     return new Response(null, { status: 404 });
   };
   const managerRequest = (path: string) => {
+    if (path.endsWith("/capabilities")) return Response.json({ protocolVersion: 1, features: ["blob-references-v1"] });
     if (path === "/v1/account") return Response.json({ features: { relay: true } });
     if (path === "/v1/workbenches") return Response.json(projects.map((workbenchId) => ({ workbenchId })));
     if (path === "/v1/environment-access")

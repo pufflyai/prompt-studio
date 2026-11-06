@@ -8,7 +8,7 @@ export interface PeerLiveData {
 const topicKey = (spaceOwner: string | null, topic: string) => JSON.stringify([spaceOwner, topic]);
 
 /** Subscription peer for the publication integration fixture; production routing has separate coverage. */
-export const createDocumentPeerLive = () => {
+export const createDocumentPeerLive = (beforeSubscribe?: (deviceId: string, topic: string) => Promise<void>) => {
   const sockets = new Set<Bun.ServerWebSocket<PeerLiveData>>();
   const following = new Map<Bun.ServerWebSocket<PeerLiveData>, Set<string>>();
   const presence = (key: string) => {
@@ -64,10 +64,11 @@ export const createDocumentPeerLive = () => {
         sockets.add(socket);
         socket.send(JSON.stringify({ type: "ready", protocolVersion: liveProtocolVersion }));
       },
-      message(socket: Bun.ServerWebSocket<PeerLiveData>, data: string | Buffer) {
+      async message(socket: Bun.ServerWebSocket<PeerLiveData>, data: string | Buffer) {
         const message = liveClientMessageSchema.parse(JSON.parse(String(data)));
         if (message.type === "discover") socket.data.discovery.add(message.spaceOwner);
         if (message.type === "undiscover") socket.data.discovery.delete(message.spaceOwner);
+        if (message.type === "subscribe" && beforeSubscribe) await beforeSubscribe(socket.data.deviceId, message.topic);
         if ("topic" in message) topicMessage(socket, message);
         if (message.type === "publish")
           socket.publish(
