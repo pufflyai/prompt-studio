@@ -19,13 +19,7 @@ import {
   type OrderedLogAddress,
 } from "./ordered-log-sql";
 import { orderedLogStatistics } from "./ordered-log-statistics";
-
-const identityError = () => new Error("Log entry identity reused with changed content");
-const validateEntry = (entry: StorageLogEntry) => {
-  if (!entry.id || !entry.writerId || !Number.isFinite(Date.parse(entry.createdAt)))
-    throw new Error("Invalid log entry");
-  canonicalJson(entry.value);
-};
+import { appendOrderedLogEntries, identityError, validateEntry } from "./ordered-log-writes";
 
 const validateLogAddress = (input: OrderedLogAddress) => {
   if (
@@ -152,33 +146,12 @@ export const createOrderedLogStore = (db: DbClient, input: OrderedLogAddress) =>
   };
   const appendMany = async (items: { value: Json; id?: string }[]) => {
     if (items.length > 100) throw new Error("A local log batch holds at most 100 entries");
-    const owned = structuredClone(items);
+    const owned = structuredClone(items).map((item) => ({ ...item, id: item.id ?? crypto.randomUUID() }));
     for (const item of owned) canonicalJson(item.value);
     const result = await db.transaction(async (tx) => {
       await lockLogStream(tx, input);
-      const entries: StorageLogEntry[] = [];
-      let count = 0;
-      for (const item of owned) {
-        const id = item.id ?? crypto.randomUUID();
-        const previous = await entryRow(tx, id);
-        if (previous) {
-          const entry = await decodeLogPayload<StorageLogEntry>(input, previous.entry);
-          if (entry.writerId !== input.writerId || canonicalJson(entry.value) !== canonicalJson(item.value))
-            throw identityError();
-          entries.push(entry);
-          continue;
-        }
-        const entry = {
-          id,
-          writerId: input.writerId,
-          createdAt: new Date((input.now ?? Date.now)()).toISOString(),
-          value: item.value,
-        };
-        count += await write(entry, tx, true);
-        entries.push(entry);
-      }
-      count += await pruneLogEntries(tx, input);
-      return { entries, count };
+      const appended = await appendOrderedLogEntries(tx, input, owned);
+      return { entries: appended.entries, count: appended.count + (await pruneLogEntries(tx, input)) };
     });
     if (result.count) statistics.record(result.count);
     changed();

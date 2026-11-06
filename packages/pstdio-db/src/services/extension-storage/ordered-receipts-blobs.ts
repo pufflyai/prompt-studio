@@ -5,6 +5,7 @@ import { openBlob, type SyncSpace } from "pstdio-sync/encryption";
 import { type OrderedIndexBlobs, type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/relay";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_documents as documents } from "../../db/schemas.pg";
+import { createOrderedManifestRows } from "./ordered-manifest-rows";
 import { decodeOrderedJson, encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 export const orderedIndexBlobDocumentId = (id: string) => JSON.stringify(["ordered-index-blob", id]);
@@ -21,14 +22,29 @@ export const createOrderedManifestCache = (
   space: SyncSpace,
   remote: OrderedIndexBlobs,
 ) => {
-  const context = new AsyncLocalStorage<OrderedTransaction>();
-  const connection = () => context.getStore() ?? db;
+  const context = new AsyncLocalStorage<{
+    tx: OrderedTransaction;
+    rows?: ReturnType<typeof createOrderedManifestRows>;
+  }>();
+  const connection = () => context.getStore()?.tx ?? db;
+  const transaction = <T>(tx: OrderedTransaction, run: () => Promise<T>) => context.run({ tx }, run);
+  const batch = <T>(tx: OrderedTransaction, run: () => Promise<T>) => {
+    const rows = createOrderedManifestRows(tx, owner);
+    return context.run({ tx, rows }, async () => {
+      const result = await run();
+      await rows.flush();
+      return result;
+    });
+  };
   const where = (id: string) =>
     and(orderedOwnerWhere(documents, owner), eq(documents.document_id, orderedIndexBlobDocumentId(id)));
   const saved = async (id: string) => {
-    const [row] = await connection().select({ state: documents.state }).from(documents).where(where(id));
-    if (!row) return undefined;
-    const node = decodeOrderedJson<CachedNode>(row.state);
+    const page = context.getStore()?.rows;
+    const state = page
+      ? await page.read(orderedIndexBlobDocumentId(id))
+      : (await connection().select({ state: documents.state }).from(documents).where(where(id)))[0]?.state;
+    if (!state) return undefined;
+    const node = decodeOrderedJson<CachedNode>(state);
     if (
       !node ||
       node.version !== 1 ||
@@ -47,6 +63,8 @@ export const createOrderedManifestCache = (
       bytes: Buffer.from(node.bytes).toString("base64"),
       children: node.children,
     } satisfies CachedNode);
+    const page = context.getStore()?.rows;
+    if (page) return page.write({ id: orderedIndexBlobDocumentId(id), state });
     await connection()
       .insert(documents)
       .values({
@@ -66,6 +84,12 @@ export const createOrderedManifestCache = (
     if (!previous) await persist(id, { bytes: bytes.slice(), children: null });
   };
   const blobs: OrderedIndexBlobs = {
+    batch: (run) => {
+      const current = context.getStore();
+      if (current?.rows) return run();
+      if (current) return batch(current.tx, run);
+      return db.transaction((tx) => batch(tx, run));
+    },
     async get(id, extent) {
       const cached = await saved(id);
       const bytes = cached?.bytes ?? (await remote.get(id, extent));
@@ -89,7 +113,7 @@ export const createOrderedManifestCache = (
   };
   return {
     blobs,
-    transaction: <T>(tx: OrderedTransaction, run: () => Promise<T>) => context.run(tx, run),
+    transaction,
     async replay(input: OrderedIndexReference) {
       const root = readOrderedIndexReference(input);
       const tasks: { reference: OrderedIndexReference; finish: boolean }[] = [{ reference: root, finish: false }];

@@ -90,6 +90,7 @@ test("a local append batch retains distinct immutable identities and rolls back 
   const saved = await store.appendMany(items);
   expect(saved.map(({ id }) => id)).toEqual(["first", "second"]);
   expect(await store.appendMany(items)).toEqual(saved);
+  expect(await store.appendMany([items[0]!, items[0]!])).toEqual([saved[0], saved[0]]);
   expect((await store.pending(10)).map(({ entry }) => entry.id)).toEqual(["first", "second"]);
   await expect(
     store.appendMany([
@@ -97,5 +98,13 @@ test("a local append batch retains distinct immutable identities and rolls back 
       { id: "first", value: "changed" },
     ]),
   ).rejects.toThrow("identity");
+  expect((await store.read()).entries).toEqual(saved);
+  const error = await store
+    .appendMany([
+      { id: "duplicate", value: 1 },
+      { id: "duplicate", value: 2 },
+    ])
+    .catch((error: unknown) => error);
+  expect(error).toMatchObject({ message: "Log entry identity reused with changed content" });
   expect((await store.read()).entries).toEqual(saved);
 });

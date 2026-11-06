@@ -6,6 +6,8 @@ export interface OrderedIndexReference {
   byteLength: number;
 }
 export interface OrderedIndexBlobs {
+  /** Commit a bounded transfer page's local cache writes together. */
+  batch?<T>(run: () => Promise<T>): Promise<T>;
   put(blobId: string, bytes: Uint8Array, children: string[]): Promise<void>;
   /** The extent comes from the authenticated parent or checkpoint. */
   get(blobId: string, byteLength: number): Promise<Uint8Array>;

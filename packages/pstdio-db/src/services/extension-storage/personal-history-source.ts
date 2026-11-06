@@ -14,6 +14,7 @@ import {
   type PersonalIndexTransaction,
   personalIndexAddress,
 } from "./personal-history-index-rows";
+import { personalIndexPages } from "./personal-index-pages";
 
 const where = (owner: StorageOwner) =>
   and(eq(positions.workbench_id, owner.workbenchId), eq(positions.extension_id, owner.extensionId));
@@ -44,22 +45,23 @@ export const acceptPersonalSource = async (
   await tx.insert(positions).values(personalIndexAddress(owner)).onConflictDoNothing();
   const [position] = await tx.select().from(positions).where(where(owner)).for("update");
   const changes: { delta: PersonalIndexAccepted["delta"]; settledId: string }[] = [];
-  for (const entry of entries) {
-    const delta = entry.delta;
+  for (const page of personalIndexPages(entries)) {
     const updated = await tx
       .insert(sources)
-      .values({
-        ...personalIndexAddress(owner),
-        source_id: sourceId,
-        kind: delta.kind,
-        device_id: delta.deviceId,
-        record_id: delta.id,
-        value: delta.value,
-        seed_id: delta.seedId ?? null,
-        entry_id: entry.entryId,
-        sequence: entry.sequence,
-        entry_index: entry.index,
-      })
+      .values(
+        page.map((entry) => ({
+          ...personalIndexAddress(owner),
+          source_id: sourceId,
+          kind: entry.delta.kind,
+          device_id: entry.delta.deviceId,
+          record_id: entry.delta.id,
+          value: entry.delta.value,
+          seed_id: entry.delta.seedId ?? null,
+          entry_id: entry.entryId,
+          sequence: entry.sequence,
+          entry_index: entry.index,
+        })),
+      )
       .onConflictDoUpdate({
         target: [
           sources.workbench_id,
@@ -70,16 +72,26 @@ export const acceptPersonalSource = async (
           sources.record_id,
         ],
         set: {
-          value: delta.value,
-          seed_id: delta.seedId ?? null,
-          entry_id: entry.entryId,
-          sequence: entry.sequence,
-          entry_index: entry.index,
+          value: sql`excluded.value`,
+          seed_id: sql`excluded.seed_id`,
+          entry_id: sql`excluded.entry_id`,
+          sequence: sql`excluded.sequence`,
+          entry_index: sql`excluded.entry_index`,
         },
-        setWhere: sql`(${sources.sequence}, ${sources.entry_index}) <= (${entry.sequence}, ${entry.index})`,
+        setWhere: sql`(${sources.sequence}, ${sources.entry_index}) <= (excluded.sequence, excluded.entry_index)`,
       })
       .returning();
-    if (updated.length) changes.push({ delta, settledId: entry.entryId });
+    for (const row of updated)
+      changes.push({
+        delta: {
+          kind: row.kind,
+          deviceId: row.device_id,
+          id: row.record_id,
+          value: row.value,
+          ...(row.seed_id ? { seedId: row.seed_id } : {}),
+        },
+        settledId: row.entry_id,
+      });
   }
   const changed = await applyPersonalIndexRows(tx, owner, changes);
   if (after !== null) {

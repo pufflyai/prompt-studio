@@ -105,3 +105,39 @@ test("a private device index commits only changed rows with its cursor and retai
   expect(await restarted.read({ ...owner, extensionId: "private-bob" }, "sessions")).toEqual([]);
   expect(await restarted.device(owner, "sessions", "laptop")).toEqual([]);
 });
+
+test("one device page preserves repeated-row precedence and ignores older canonical occurrences", async () => {
+  const { db, close } = await createDb({ path: ":memory:" });
+  cleanup.push(close);
+  const now = new Date().toISOString();
+  await db
+    .insert(projects)
+    .values({ id: "repeated", name: "Repeated index changes", shorthand: "R", created_at: now, updated_at: now });
+  const owner = { workbenchId: "repeated", extensionId: "private" };
+  const index = createPersonalHistoryIndex(db);
+  const delta = (value: { id: string; title: string } | null, seedId?: string) => ({
+    kind: "sessions",
+    deviceId: "laptop",
+    id: "one",
+    value,
+    seedId,
+  });
+  await index.apply(owner, null, [
+    delta({ id: "one", title: "Seed B" }, "b"),
+    delta(null),
+    delta({ id: "one", title: "Seed A" }, "a"),
+  ]);
+  expect(await index.read(owner, "sessions")).toEqual([]);
+  await index.accept(owner, "laptop", 3, [
+    { entryId: "newer", sequence: 2, index: 0, delta: delta({ id: "one", title: "Newer" }) },
+    { entryId: "older", sequence: 1, index: 0, delta: delta({ id: "one", title: "Older" }) },
+    { entryId: "deleted", sequence: 3, index: 0, delta: delta(null) },
+  ]);
+  expect(await index.read(owner, "sessions")).toEqual([]);
+  expect((await index.sourcePage(owner, "laptop"))[0]).toMatchObject({
+    entryId: "deleted",
+    sequence: 3,
+    delta: { value: null },
+  });
+  expect(await index.sourcePosition(owner, "laptop")).toBe(3);
+});

@@ -5,6 +5,16 @@ import { encodeBytes } from "../shared";
 import type { LogIndexedEntry } from "./log-page-index";
 import type { LogDelivery, LogReceivedBatch, LogStreamStore, LogSyncInput } from "./log-types";
 import { decodeLogWire, encodeLogWire, type LogWireEntry, readLogPayload } from "./log-wire";
+
+const cachePage = <T>(blobs: OrderedIndexBlobs, run: () => Promise<T>) => blobs.batch?.(run) ?? run();
+const finishPage = async <T>(work: Promise<T>[]) => {
+  // Drain every page operation before a failed transaction releases its connection.
+  const results = await Promise.allSettled(work);
+  return results.map((result) => {
+    if (result.status === "rejected") throw result.reason;
+    return result.value;
+  });
+};
 export const createLogTransfers = (input: LogSyncInput) => {
   const { space, documentId, relay, store } = input;
   let connection:
@@ -30,21 +40,28 @@ export const createLogTransfers = (input: LogSyncInput) => {
         await blobs.put(id, bytes, children);
       },
     });
-    const entries = [];
+    const selected: typeof pending = [];
     let bytes = 0;
     for (const item of pending) {
       const size = new TextEncoder().encode(JSON.stringify(item.entry)).length;
-      if (entries.length && bytes + size > 4 * 1024 * 1024) break;
+      if (selected.length && bytes + size > 4 * 1024 * 1024) break;
       bytes += size;
-      const reference = await nodes.write(item.entry as unknown as Json, []);
-      entries.push({
-        id: item.entry.id,
-        writerId: item.entry.writerId,
-        createdAt: item.entry.createdAt,
-        fingerprint: await fingerprint(item.entry as unknown as Json),
-        reference,
-      });
+      selected.push(item);
     }
+    const entries = await cachePage(blobs, () =>
+      finishPage(
+        selected.map(async (item) => {
+          const reference = await nodes.write(item.entry as unknown as Json, []);
+          return {
+            id: item.entry.id,
+            writerId: item.entry.writerId,
+            createdAt: item.entry.createdAt,
+            fingerprint: await fingerprint(item.entry as unknown as Json),
+            reference,
+          };
+        }),
+      ),
+    );
     const envelope = await sealUpdate(
       space,
       documentId,
@@ -54,14 +71,16 @@ export const createLogTransfers = (input: LogSyncInput) => {
     return store.prepare(pending[0]!.entry.id, { envelope, blobs: saved });
   };
   const materialize = async (metadata: LogWireEntry[], selected: Set<number>) => {
-    const { nodes } = await connect();
-    return Promise.all(
-      metadata.map(async (entry, index) => {
-        if (!selected.has(index) || Date.parse(entry.createdAt) < store.cutoff()) return null;
-        const payload = await readLogPayload(await nodes.read(entry.reference), entry);
-        await nodes.retain(entry.reference, []);
-        return payload;
-      }),
+    const { blobs, nodes } = await connect();
+    return cachePage(blobs, () =>
+      finishPage(
+        metadata.map(async (entry, index) => {
+          if (!selected.has(index) || Date.parse(entry.createdAt) < store.cutoff()) return null;
+          const payload = await readLogPayload(await nodes.read(entry.reference), entry);
+          await nodes.retain(entry.reference, []);
+          return payload;
+        }),
+      ),
     );
   };
   const retained = (metadata: LogWireEntry[]) =>
