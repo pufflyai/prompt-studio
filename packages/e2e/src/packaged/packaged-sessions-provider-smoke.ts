@@ -20,7 +20,7 @@ export const expectPackagedSessionsProvider = async (input: {
     const response = await fetch(`${root}/commands/${commandId}/execute`, {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ params, ...(resource ? { resource } : {}) }),
+      body: JSON.stringify({ source: "dashboard", params, ...(resource ? { resource } : {}) }),
     });
     expect(response.status).toBe(200);
     const result = await response.json();
