@@ -1,7 +1,7 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -36,6 +36,16 @@ interface CoreExtensionsFixture {
   extensions: { canUpgrade: boolean; enabled: boolean; id: string; installName: string; name: string }[];
   metadata: WorkbenchExtensionMetadata;
 }
+
+const removeCoreFixture = async (root: string) => {
+  // The installed sources, private package cache, and projects are independent
+  // after shutdown. Remove their trees concurrently and await every result.
+  const removals = await Promise.allSettled(
+    (await readdir(root)).map((name) => rm(join(root, name), { recursive: true, force: true })),
+  );
+  for (const removal of removals) if (removal.status === "rejected") throw removal.reason;
+  await rm(root, { recursive: true, force: true });
+};
 
 export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFixture) => Promise<void>) => {
   const startedAt = Date.now();
@@ -105,7 +115,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
-    await rm(tempRoot, { recursive: true, force: true });
+    await removeCoreFixture(tempRoot);
     phase("files removed");
   }
 };
