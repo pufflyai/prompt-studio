@@ -263,3 +263,8 @@ remain owned by the workbench.
 The native owner retains an ordinary submitted input while its action is pending, including a sending queue row when the conversation is running. This presentation stays outside canonical transcript and queue indexes, survives placement changes, and hands off once to the matching saved request or canonical user message. Question replies do not create ordinary pending input or consume the message draft.
 
 A rejected queued input stays visible as unsent work. Dismiss restores its text, files and control settings while retaining newer work as a saved recovery. The host persists this recovery through the provider's existing `saveDraft` binding, so reloading can recover unsent work even after transient presentation has gone. No extra queue or execution service is needed.
+
+Canonical session link resolution can call `sessionBrowser.commands.resolve` with
+`{ resources: ResourceRef[] }`. The provider returns readable, unarchived
+`ResourceResolution[]` with its qualified page target while keeping core `pstdio`
+session identity. Treat a missing provider or an omitted resource as unavailable.
