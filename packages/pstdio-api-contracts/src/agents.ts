@@ -39,6 +39,10 @@ export const harnessParamsSchema = z.record(z.string(), harnessParamDescriptorSc
 export const agentInfoSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /** Exact registered owning extension, independent of the harness ID spelling. */
+  extensionId: z.string().optional(),
+  /** Installed manifest icon: named glyph or resolved package SVG data URL. */
+  icon: z.string().optional(),
   availability: z.object({
     type: agentAvailabilityTypeSchema,
     /** Why the harness cannot run, such as a missing or too-old CLI. */

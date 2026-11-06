@@ -26,3 +26,22 @@ test("chat model and harness parameters retain the compact toolbar", async ({ pa
   await expect(preview.locator('[contenteditable="true"]')).toHaveText("Keep this draft");
   await preview.locator("body").screenshot({ path: info.outputPath("compact-composer.png") });
 });
+
+// Critical risk: provider options must stay inside the workspace frame without replacing the unsent input.
+test("workspace provider fields and extension harness icon remain usable in the composer frame", async ({
+  page,
+}, info) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-dashboard/src/shared/command-params/workspace-param-field.canvas.tsx#ComposerWorkspace",
+  );
+  await expect(preview.getByText("Base branch", { exact: true })).toBeVisible();
+  await preview.getByRole("button", { name: "Select model", exact: true }).click();
+  const harness = preview.getByRole("menuitem", { name: "External harness", exact: true });
+  await expect(harness.locator('img[src^="data:image/svg+xml;base64,"]')).toBeVisible();
+  await preview.locator("body").press("Escape");
+  await preview.getByRole("button", { name: "Create workspace", exact: true }).last().click();
+  await expect(preview.getByText("Base branch", { exact: true })).toHaveCount(0);
+  await expect(preview.locator('[contenteditable="true"]')).toHaveText("Keep this draft");
+  await preview.locator("body").screenshot({ path: info.outputPath("workspace-composer.png") });
+});

@@ -62,3 +62,17 @@ test("chat snapshots use canonical messages and reject malformed controls and me
   );
   expect(chatRendererSnapshotSchema.safeParse({ controls: [{ type: "selection", id: "model" }] }).success).toBe(false);
 });
+
+test("workspace bindings keep provider-owned JSON values typed through drafts, actions and queued requests", () => {
+  const workspace = {
+    providerId: "acme.container",
+    params: { image: "custom", nested: { ports: [8080], enabled: true } },
+  };
+  const snapshot = chatRendererSnapshotSchema.parse({
+    workspace: { controlId: "target", deviceControlId: "machine", create: { actionId: "create-target" } },
+    values: { target: workspace },
+    queuedFollowUps: [{ id: "q", prompt: "Next", values: { target: workspace } }],
+  });
+  expect(snapshot.values?.target).toEqual(workspace);
+  expect(snapshot.queuedFollowUps?.[0]?.values?.target).toEqual(workspace);
+});

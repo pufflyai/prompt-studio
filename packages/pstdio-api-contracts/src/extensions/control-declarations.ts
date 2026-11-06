@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ControlParam, ControlsQueryResult } from "../extension-kernel";
+import { serializableJsonObjectSchema } from "./common";
 import { extensionResourceRefSchema } from "./execute";
 
 const base = { id: z.string(), name: z.string(), description: z.string().optional(), readOnly: z.boolean().optional() };
@@ -37,7 +38,18 @@ const readOnlyContent = z.union([
   z.strictObject({ type: z.literal("image-gallery"), images: z.array(image) }),
 ]);
 
-export const controlValueSchema = z.union([primitive, z.array(z.string()), range, vector, harness]);
+export const workspaceControlValueSchema = z.strictObject({
+  providerId: z.string(),
+  params: serializableJsonObjectSchema.optional(),
+});
+export const controlValueSchema = z.union([
+  primitive,
+  z.array(z.string()),
+  range,
+  vector,
+  harness,
+  workspaceControlValueSchema,
+]);
 export const controlValuesSchema = z.record(z.string(), controlValueSchema);
 export const controlParamSchema = z.discriminatedUnion("type", [
   z.strictObject({

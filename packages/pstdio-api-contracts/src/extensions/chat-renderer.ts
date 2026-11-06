@@ -88,6 +88,26 @@ export const chatRendererSnapshotSchema = z.strictObject({
   /** Use the host's scoped workspace link/image resolver. */
   workspaceId: z.string().optional(),
   nativeLinks: z.boolean().optional(),
+  /** Control IDs belong to the provider; the native host renders them once in the workspace hub. */
+  workspace: z
+    .strictObject({
+      controlId: z.string().min(1),
+      deviceControlId: z.string().min(1).optional(),
+      create: z
+        .strictObject({
+          actionId: z.string().min(1),
+          providers: z.array(z.string()).optional(),
+          disabledReason: z.string().optional(),
+        })
+        .optional(),
+      status: z.enum(["ready", "loading", "error"]).optional(),
+      statusLabel: z.string().optional(),
+      additions: z.number().optional(),
+      deletions: z.number().optional(),
+      openResourceId: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
   /** Opt in to trusted host account UI and its dedicated authentication channel. */
   nativeHarnessAccount: z.object({ controlId: z.string().min(1), remote: z.boolean().optional() }).optional(),
   harness: harnessCommandStateSchema.optional(),

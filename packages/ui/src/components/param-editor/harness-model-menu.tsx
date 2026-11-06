@@ -256,7 +256,7 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
       parentList={{
         items: agentMenuItems,
         selectedLabel: selectedAgentLabel,
-        selectedIcon: TerminalIcon,
+        selectedIcon: agentOptions.find((option) => option.value === selectedAgent)?.icon ?? TerminalIcon,
         ariaLabel: resolvedLabels.agentSelect,
         disabled: isSwitchDisabled,
         showSearch: false,

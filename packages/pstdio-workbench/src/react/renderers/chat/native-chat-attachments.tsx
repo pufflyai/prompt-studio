@@ -1,25 +1,29 @@
-import { Button, Dialog, IconButton, Image } from "@chakra-ui/react";
+import { Dialog, IconButton, Image } from "@chakra-ui/react";
 import type { ChatAttachment } from "@pstdio/sdk/extensions";
-import { ResourceBadge } from "@pstdio/ui";
+import { ResourceBadge, Tooltip } from "@pstdio/ui";
 import { AttachmentList } from "@pstdio/ui/chat-ui";
-import { X } from "lucide-react";
+import { FileIcon, X } from "lucide-react";
 import { useState } from "react";
+import type { ChatSession } from "../../../extensions/contributions/chat-session";
 
 export const NativeChatAttachmentActions = (props: { disabled: boolean; upload(files: File[]): void }) => (
-  <Button
-    size="xs"
-    variant="ghost"
-    disabled={props.disabled}
-    onClick={() => {
-      const picker = document.createElement("input");
-      picker.type = "file";
-      picker.multiple = true;
-      picker.onchange = () => props.upload(Array.from(picker.files ?? []));
-      picker.click();
-    }}
-  >
-    Attach files
-  </Button>
+  <Tooltip content="Attach files">
+    <IconButton
+      aria-label="Attach files"
+      size="xs"
+      variant="ghost"
+      disabled={props.disabled}
+      onClick={() => {
+        const picker = document.createElement("input");
+        picker.type = "file";
+        picker.multiple = true;
+        picker.onchange = () => props.upload(Array.from(picker.files ?? []));
+        picker.click();
+      }}
+    >
+      <FileIcon size={14} />
+    </IconButton>
+  </Tooltip>
 );
 
 const isImage = (attachment: ChatAttachment) =>
@@ -96,4 +100,24 @@ export const NativeChatAttachmentList = (props: {
       </Dialog.Root>
     </>
   );
+};
+
+export const uploadNativeChatAttachments = async (
+  files: File[],
+  run: ChatSession["run"],
+  receive: (attachment: ChatAttachment) => void,
+) => {
+  for (const file of files) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    const result = await run({ type: "upload", name: file.name, mediaType: file.type, data: btoa(binary) });
+    const attachment = result && "attachment" in result ? result.attachment : undefined;
+    if (!attachment) throw new Error("The attachment was not uploaded.");
+    receive(attachment);
+  }
+};
+
+export const nativeChatTextAttachment = (upload: (files: File[]) => Promise<void>) => (text: string) => {
+  void upload([new File([text], "pasted-text.txt", { type: "text/plain" })]).catch(() => undefined);
 };
