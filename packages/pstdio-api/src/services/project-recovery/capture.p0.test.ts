@@ -114,3 +114,29 @@ test("capture refuses an overlapping cache and included files changed during the
   ).rejects.toMatchObject({ code: "recovery_capture_incomplete", path: "changing" });
   expect(changed).toBe(true);
 });
+
+test("a later capture reuses unchanged files by source identity and reads changed files again", async () => {
+  const { folder, chunks, pages } = await fixture();
+  await writeFile(join(folder, "unchanged"), "same bytes");
+  await writeFile(join(folder, "edited"), "before");
+  await captureRecoveryFolder({ root: folder, chunks });
+  await writeFile(join(folder, "edited"), "after the edit");
+  const read: string[] = [];
+  const second = await captureRecoveryFolder({
+    root: folder,
+    chunks,
+    progress: (event) => {
+      read.push(event.path);
+    },
+  });
+  expect(read).toEqual(["edited"]);
+  const contents: Record<string, string> = {};
+  for await (const entry of pages.entries(second.inventory)) {
+    if (entry.kind !== "file") continue;
+    const parts: Uint8Array[] = [];
+    for await (const part of pages.parts(entry.content)) parts.push(await chunks.read(part));
+    contents[entry.path] = Buffer.concat(parts).toString();
+  }
+  expect(contents).toEqual({ unchanged: "same bytes", edited: "after the edit" });
+  expect(second).toMatchObject({ files: 2, bytes: "same bytes".length + "after the edit".length });
+});

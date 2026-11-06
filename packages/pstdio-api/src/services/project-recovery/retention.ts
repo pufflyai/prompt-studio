@@ -1,15 +1,20 @@
 import { readdir, readFile, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { type RecoveryChunk, recoveryChunkSchema } from "./chunks";
+import { recoveryFileCacheSchema, recoveryFileCacheSuffix } from "./file-cache";
 import type { RecoveryChunkStore } from "./manifest";
 import { walkRecoveryGraph } from "./transfer-graph";
 
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT";
 
+// Chunk descriptors name their blob; unchanged-file entries name their content root.
 const descriptorReachable = async (path: string, reachable: Set<string>) => {
   try {
-    const reference = recoveryChunkSchema.safeParse(JSON.parse(await readFile(path, "utf8")));
-    return reference.success && reachable.has(reference.data.blobId);
+    const value = JSON.parse(await readFile(path, "utf8"));
+    const blobId = path.endsWith(recoveryFileCacheSuffix)
+      ? recoveryFileCacheSchema.safeParse(value).data?.content?.blobId
+      : recoveryChunkSchema.safeParse(value).data?.blobId;
+    return !!blobId && reachable.has(blobId);
   } catch (error) {
     if (missing(error) || error instanceof SyntaxError) return false;
     throw error;

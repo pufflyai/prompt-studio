@@ -46,4 +46,7 @@ test("local retention keeps every current capture graph and removes only superse
   expect(removed).toBeGreaterThan(0);
   await verifyRecoveryCapture(chunks, await readRecoveryManifest(chunks, current));
   await expect(readRecoveryManifest(chunks, previous)).rejects.toThrow();
+  const read: string[] = [];
+  await captureRecoveryFolder({ root: folder, chunks, progress: (event) => void read.push(event.path) });
+  expect(read).toEqual([]);
 });

@@ -9,6 +9,7 @@ import {
   verifyRecoverySource,
 } from "./capture-source";
 import { type createRecoveryChunkStore, recoveryChunkBytes } from "./chunks";
+import type { createRecoveryFileCache } from "./file-cache";
 import { createRecoveryPages } from "./pages";
 import { createRecoveryPolicy } from "./policy";
 import { openRecoverySource, type RecoverySourceHandle } from "./source-posix";
@@ -39,6 +40,8 @@ export interface RecoveryScanInput {
   policy?: { text: string | null };
   /** Small included files whose text the caller validates after the scan, such as Git pointers. */
   pointer?: (path: string) => boolean;
+  /** Content of files whose source identity is unchanged since an earlier scan. */
+  reuse?: ReturnType<typeof createRecoveryFileCache>;
   /** Reports each visited entry with whether the policy included it. */
   visited?: (path: string, included: boolean) => void;
   signal?: AbortSignal;
@@ -74,6 +77,15 @@ export const scanRecoveryRoot = async (input: RecoveryScanInput) => {
     } catch {}
     pointers.push({ path, text });
   };
+  const reused = async (path: string, initial: BigIntStats) => {
+    if (!input.reuse || input.pointer?.(path)) return false;
+    const cached = await input.reuse.get(path, recoverySourceIdentity(initial));
+    if (!cached || cached.size !== Number(initial.size)) return false;
+    await inventory.add({ kind: "file", path, mode: mode(initial), ...cached });
+    files++;
+    bytes += cached.size;
+    return true;
+  };
   const captureFile = async (parent: RecoverySourceHandle, name: string, path: string, initial: BigIntStats) => {
     const file = await parent.open(name, true);
     try {
@@ -81,6 +93,7 @@ export const scanRecoveryRoot = async (input: RecoveryScanInput) => {
         throw new Error("The included file changed before capture");
       if (initial.size > BigInt(Number.MAX_SAFE_INTEGER))
         throw new Error("This included file exceeds supported offsets");
+      if (await reused(path, initial)) return;
       const parts = pages.file();
       const kept = pointerBuffer(path, initial.size);
       const digest = createHash("sha256");
@@ -104,14 +117,9 @@ export const scanRecoveryRoot = async (input: RecoveryScanInput) => {
         !unchangedRecoverySource(await file.stat(), recoverySourceIdentity(initial))
       )
         throw new Error("The included file changed during capture");
-      await inventory.add({
-        kind: "file",
-        path,
-        mode: mode(initial),
-        size: position,
-        sha256: digest.digest("hex"),
-        content: await parts.finish(),
-      });
+      const content = { size: position, sha256: digest.digest("hex"), content: await parts.finish() };
+      await inventory.add({ kind: "file", path, mode: mode(initial), ...content });
+      await input.reuse?.set(path, recoverySourceIdentity(initial), content);
       files++;
       if (kept !== undefined) retainPointer(path, kept);
     } finally {

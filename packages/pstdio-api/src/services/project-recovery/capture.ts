@@ -1,3 +1,4 @@
+import { createRecoveryFileCache } from "./file-cache";
 import {
   captureRecoveryGitDependencies,
   isRecoveryGitAdministration,
@@ -15,8 +16,10 @@ export const captureRecoveryFolder = async (
 ) => {
   let found = false;
   const excluded: string[] = [];
+  const reuse = createRecoveryFileCache(input.chunks);
   const { rootPath, pointers, ...scan } = await scanRecoveryRoot({
     ...input,
+    reuse,
     pointer: isRecoveryGitPointer,
     visited: (path, included) => {
       if (included) found ||= isRecoveryGitAdministration(path);
@@ -31,7 +34,7 @@ export const captureRecoveryFolder = async (
     excluded,
     signal: input.signal,
     capture: (root, policy, pointer) =>
-      scanRecoveryRoot({ root, chunks: input.chunks, policy: { text: policy }, pointer, signal: input.signal }),
+      scanRecoveryRoot({ root, chunks: input.chunks, policy: { text: policy }, pointer, reuse, signal: input.signal }),
   });
   return { ...scan, git };
 };
