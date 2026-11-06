@@ -106,6 +106,7 @@ const runPreparation = async (
   try {
     const run = await runBenchmarkCase({
       name: preparation,
+      preparation: true,
       command: process.execPath,
       args: [
         join(import.meta.dirname, "storage-scale-prepare.ts"),
