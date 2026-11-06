@@ -190,6 +190,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
       if (queueClock !== queuedAt) {
         delete snapshot.queuedFollowUps;
         delete snapshot.queueReadOnly;
+        delete snapshot.queueSteeringUnavailableReason;
         delete snapshot.operations;
       } else if (!refreshedQueue.error) {
         queue = refreshedQueue.queue;

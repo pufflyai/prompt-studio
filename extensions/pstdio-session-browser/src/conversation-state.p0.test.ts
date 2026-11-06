@@ -1,6 +1,40 @@
 import { expect, test } from "bun:test";
 import { conversationState } from "./conversation-state";
 
+test("conversation steering availability clears explicitly without clearing request restrictions", () => {
+  const queue = {
+    activeRunStartedAt: "run",
+    steeringAvailable: false,
+    steeringUnavailableReason: "Harness cannot accept live input",
+    requests: [
+      {
+        queuePosition: 1,
+        revision: "r",
+        prompt: "Next",
+        model: null,
+        params: {},
+        attachments: [],
+        steeringDelivery: null,
+        steeringUnavailableReason: "Request delivery pending",
+      },
+    ],
+  };
+  const messages = [
+    { id: "queued-prompt-s-1", role: "user" as const, parts: [{ type: "text" as const, text: "Next" }] },
+  ];
+  expect(conversationState("s", messages, queue).queueSteeringUnavailableReason).toBe(queue.steeringUnavailableReason);
+  const available = conversationState("s", messages, {
+    ...queue,
+    steeringAvailable: true,
+    steeringUnavailableReason: null,
+  });
+  expect(available.queueSteeringUnavailableReason).toBeNull();
+  expect(available.queuedFollowUps[0]?.steeringUnavailableReason).toBe("Request delivery pending");
+  expect(conversationState("s", messages, queue, "worker", true).queueSteeringUnavailableReason).toBe(
+    "Live steering is unavailable on another device.",
+  );
+});
+
 test("queue rows carry original revisions and files, and do not duplicate the transcript", () => {
   const state = conversationState(
     "s",

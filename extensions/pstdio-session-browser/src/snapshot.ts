@@ -76,6 +76,7 @@ export const readSessionSnapshot = async (
     ...(session.lastRequestStarted ? { streamingStartedAt: new Date(session.lastRequestStarted).getTime() } : {}),
     readOnly: !execution.available,
     queueReadOnly: display.queueReadOnly,
+    queueSteeringUnavailableReason: display.queueSteeringUnavailableReason,
     notice,
     values: {
       harness: {

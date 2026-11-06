@@ -72,5 +72,10 @@ export const conversationState = (
     const missing = handoff.parts.filter((part) => part.type === "file" && !knownFiles.has(part.fileId ?? part.url));
     return missing.length ? { ...message, parts: [...message.parts, ...missing] } : message;
   });
-  return { messages: displayed, queuedFollowUps, queueReadOnly: !queue || Boolean(queue.readOnly) };
+  return {
+    messages: displayed,
+    queuedFollowUps,
+    queueReadOnly: !queue || Boolean(queue.readOnly),
+    queueSteeringUnavailableReason: steeringReason(remote, queue) ?? null,
+  };
 };

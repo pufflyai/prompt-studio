@@ -420,3 +420,82 @@ test("a draft view keeps its declared shared watch until disposal without retain
   expect(ended).toBe(true);
   expect(retained).toBe(0);
 });
+
+test("a late queue refresh cannot overwrite a newer stream steering capability", async () => {
+  const controller = new AbortController();
+  const refreshing = Promise.withResolvers<void>();
+  const releaseRefresh = Promise.withResolvers<void>();
+  const connected = Promise.withResolvers<void>();
+  const queue = {
+    requests: [],
+    activeRunStartedAt: null,
+    steeringAvailable: false,
+    steeringUnavailableReason: "The harness cannot steer",
+  };
+  const events: Array<{ snapshot?: { queueSteeringUnavailableReason?: string | null } }> = [];
+  let onQueue: (() => Promise<void>) | undefined;
+  let reads = 0;
+  let closed = 0;
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
+    params: {},
+    overrides: {
+      signal: controller.signal,
+      stream: {
+        write: async (value) => {
+          events.push(value as never);
+          if (events.length === 3) controller.abort();
+        },
+      },
+      sessions: {
+        get: async () => session,
+        getExecutionState: async () => {
+          if (++reads === 2) {
+            refreshing.resolve();
+            await releaseRefresh.promise;
+          }
+          return { kind: "local", available: true };
+        },
+        getQueuedMessages: async () => ({ messages: [], queue }),
+        getForkState: async () => ({ supported: false, disabledReason: null }),
+        getHarnessCommands: async () => ({ harnessId: "agent", commands: [], modes: [], slashCommands: true }),
+        retainResources: async () => ({ close: () => closed++ }),
+        stream: async (_id, onEvent) => {
+          onQueue = async () => {
+            await onEvent({
+              event: "queued_messages",
+              data: {
+                messages: [],
+                queue: { ...queue, steeringAvailable: true, steeringUnavailableReason: null },
+              },
+            });
+          };
+          connected.resolve();
+          await new Promise<void>((resolve) =>
+            controller.signal.addEventListener("abort", () => resolve(), { once: true }),
+          );
+        },
+      },
+    },
+  });
+  const watching = watchConversation(ctx, { type: "session", id: "s" });
+  try {
+    await connected.promise;
+    await refreshing.promise;
+    await onQueue!();
+    releaseRefresh.resolve();
+    await watching;
+    expect(
+      events.flatMap((event) =>
+        event.snapshot && Object.hasOwn(event.snapshot, "queueSteeringUnavailableReason")
+          ? [event.snapshot.queueSteeringUnavailableReason]
+          : [],
+      ),
+    ).toEqual(["The harness cannot steer", null]);
+    expect(closed).toBe(1);
+  } finally {
+    releaseRefresh.resolve();
+    controller.abort();
+    await watching;
+  }
+});
