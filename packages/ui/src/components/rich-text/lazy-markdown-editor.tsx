@@ -9,6 +9,16 @@ type EditorLoadState =
   | { kind: "ready"; Editor: ComponentType<MarkdownEditorProps> }
   | { kind: "failed" };
 
+const loadMarkdownEditor = async () => {
+  await installPrismGlobal();
+  return import("./markdown-editor/markdown-editor");
+};
+
+/** Begin loading for an opened document while its content is still being read. */
+export const preloadMarkdownEditor = async () => {
+  await loadMarkdownEditor();
+};
+
 export const LazyMarkdownEditor = (props: MarkdownEditorProps) => {
   const [state, setState] = useState<EditorLoadState>({ kind: "loading" });
 
@@ -17,8 +27,7 @@ export const LazyMarkdownEditor = (props: MarkdownEditorProps) => {
 
     void (async () => {
       try {
-        await installPrismGlobal();
-        const module = await import("./markdown-editor/markdown-editor");
+        const module = await loadMarkdownEditor();
         if (!cancelled) setState({ kind: "ready", Editor: module.MarkdownEditor });
       } catch {
         if (!cancelled) setState({ kind: "failed" });

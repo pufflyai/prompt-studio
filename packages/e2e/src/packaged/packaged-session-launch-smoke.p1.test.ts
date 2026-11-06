@@ -39,6 +39,7 @@ test.each([false, true])(
           harnesses: [{
             id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker",
             capabilities: () => [], listModels: () => [],
+            dispose() { gate.resolve(); },
               resume() { throw new Error("Not used by the startup fixture"); },
             async start(_ctx, input) {
               await gate.promise;
@@ -92,10 +93,12 @@ test.each([false, true])(
         });
         if (restart) {
           // Stop while startup still belongs to the host, before releasing the fixture harness.
+          console.info("Packaged launch: stopping with harness startup pending");
           await stopProcess(child);
           child = undefined;
           started = await startPackagedServe(root, env);
           child = started.child;
+          console.info("Packaged launch: restart ready");
           await command("release");
           await expectEventually
             .poll(() => request(`/sessions/${result.outcome.value.id}`))
@@ -103,6 +106,7 @@ test.each([false, true])(
               status: "in_progress",
               agent_session_id: "accepted:Implement",
             });
+          console.info("Packaged launch: original prompt recovered");
         }
       } finally {
         await command("release");
