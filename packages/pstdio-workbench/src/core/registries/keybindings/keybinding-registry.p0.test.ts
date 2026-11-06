@@ -36,6 +36,32 @@ test("a hint resolves only the requested navigation target, including its argume
   expect(keybindings.listActiveKeybindings(first)).toEqual([]);
 });
 
+test("a direct hint does not inspect arguments belonging to other commands", () => {
+  const commands = createCommandRegistry();
+  commands.registerCommand({ id: "wanted", label: "Wanted" }, { execute() {} });
+  commands.registerCommand({ id: "other", label: "Other" }, { execute() {} });
+  const keybindings = createKeybindingRegistry({ commands, context: createContextKeyService() });
+  let argumentReads = 0;
+  keybindings.registerKeybinding({
+    action: {
+      kind: "command",
+      commandId: "other",
+      args: {
+        get resource() {
+          argumentReads++;
+          return "other";
+        },
+      },
+    },
+    keybinding: "Alt+K",
+  });
+  keybindings.registerKeybinding({ action: { kind: "command", commandId: "wanted" }, keybinding: "Alt+J" });
+  expect(keybindings.listActiveKeybindings({ kind: "command", commandId: "wanted" })).toMatchObject([
+    { keybinding: "Alt+J" },
+  ]);
+  expect(argumentReads).toBe(0);
+});
+
 test("assigning a chord makes a discovered command active without an explicit binding", async () => {
   const core = createWorkbench();
   core.commands.registerCommand({ id: "discovered", label: "Discovered" }, { execute() {} });
