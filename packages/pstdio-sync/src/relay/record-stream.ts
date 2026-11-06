@@ -272,7 +272,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
       const founded = await publish(cursor, true);
       if (founded) return founded;
     }
-    const downloaded = await download();
+    const downloaded = await download(undefined, first);
     if (!downloaded) return null;
     const { remote, snapshot, frames, updates, after, state, skipped, pendingBytes } = downloaded;
     // An older-format stream without an authenticated founding state cannot supply this
