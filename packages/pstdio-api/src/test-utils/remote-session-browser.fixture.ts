@@ -40,6 +40,7 @@ const approvals: unknown[] = [];
 let online = true;
 let queueUnavailable = false;
 let failedQueueReads = 0;
+let mirrorDeliveries = 0;
 let presence: Promise<void> | undefined;
 let releasePresence: (() => void) | undefined;
 let closing = false;
@@ -193,6 +194,7 @@ mirror = (fail = false) => {
         for (const [index, message] of content.entries())
           source.deps.personalHistoryService.messageReceived(row.id, { index, message, live: false });
       }
+      mirrorDeliveries++;
       const state = await source.deps.personalHistoryService.fullState(project.id);
       for (const row of state.sessions) source.deps.eventBus.emit("sessions", "set", row);
       for (const row of state.workspaces) source.deps.eventBus.emit("workspaces", "set", row);
@@ -227,7 +229,9 @@ source.deps.accountService.start(
     const result = await withDeviceCommandAttachments(source.deps, projectId, command, (value) =>
       execute(jsonSchema.parse(JSON.parse(JSON.stringify(value))), { signal }),
     );
-    await mirror();
+    // Target mutations already schedule a mirror through their real change feeds.
+    // Read-only relay calls must not republish history and refresh their own native query.
+    await syncing;
     return result;
   },
 );
@@ -249,16 +253,20 @@ const createSession = async (title: string) => {
 const session = await createSession("Remote conversation");
 const unrelated = await createSession("Other running session");
 await mirror();
-const snapshot = async () => ({
-  stops,
-  answers,
-  approvals,
-  online,
-  failedQueueReads,
-  sourceSessions: await source.deps.sessionService.list(project.id),
-  targetSessions: await target.deps.sessionService.list(project.id),
-  queue: await target.deps.sessionQueueEntriesService.listPendingBySession(session.id),
-});
+const snapshot = async () => {
+  await syncing;
+  return {
+    stops,
+    answers,
+    approvals,
+    online,
+    failedQueueReads,
+    mirrorDeliveries,
+    sourceSessions: await source.deps.sessionService.list(project.id),
+    targetSessions: await target.deps.sessionService.list(project.id),
+    queue: await target.deps.sessionQueueEntriesService.listPendingBySession(session.id),
+  };
+};
 const admin = async (request: Request) => {
   const input = (await request.json()) as { action: string };
   if (input.action === "hold-presence") {

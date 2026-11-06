@@ -127,3 +127,20 @@ test("browser queue failure injection crosses the owner relay and recovers its s
     await fixture.cleanup();
   }
 });
+
+test("reading the remote queue does not republish unchanged personal history", async () => {
+  const fixture = startFixture();
+  try {
+    const { origin, projectId, sessionId } = await fixture.ready;
+    const before = await (await fetch(`${origin}/fixture/state`)).json();
+    const response = await fetch(`${origin}/v1/sessions/${sessionId}/queued-messages?projectId=${projectId}`);
+    expect(response.ok).toBe(true);
+    expect((await response.json()).queue.readOnly).not.toBe(true);
+    const after = await (await fetch(`${origin}/fixture/state`)).json();
+    expect(after.mirrorDeliveries).toBe(before.mirrorDeliveries);
+    expect(after.targetSessions).toEqual(before.targetSessions);
+    expect(await fixture.stop()).toEqual([0, null]);
+  } finally {
+    await fixture.cleanup();
+  }
+});

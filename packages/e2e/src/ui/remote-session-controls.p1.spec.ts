@@ -41,7 +41,7 @@ test("remote primary controls keep commands, queues, questions and approvals on 
   await expect(page.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
   await expect(editor).toHaveAttribute("contenteditable", "true");
-  await expect(page.getByText("Working on Laptop.", { exact: true }).filter({ visible: true })).toBeVisible();
+  await expect(page.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await editor.fill("Queued from the browser");
   await send.click();
   const queued = page.getByRole("button", { name: "Edit queued message: Queued from the browser", exact: true });
