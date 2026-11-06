@@ -298,3 +298,9 @@ Canonical session link resolution can call `sessionBrowser.commands.resolve` wit
 session identity. Treat a missing provider or an omitted resource as unavailable.
 
 The native renderer bounds chat to its placement and owns transcript scrolling. Long history is virtualized inside that viewport; it does not enlarge the outer workbench region.
+
+The native owner includes accepted input in prompt recall while its queue receipt
+awaits canonical history. This projection uses the same transient submission
+identities and order; it does not insert queue rows into the transcript or its
+patch indexes. `ChatPanel.historyMessages` supplies this recall-only projection;
+ordinary callers continue to recall from `messages` by default.

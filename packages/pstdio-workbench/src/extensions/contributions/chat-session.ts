@@ -44,6 +44,7 @@ const initialChatState = (initial?: ChatRendererSnapshot) => ({
   },
   draft: { text: "", attachments: [], values: { ...initial?.values } } as ChatDraft,
   messages: (initial?.messages ?? []) as SessionMessage[],
+  historyMessages: (initial?.messages ?? []) as SessionMessage[],
   queuedFollowUps: initial?.queuedFollowUps ?? [],
   pending: undefined as ChatPendingSubmission[] | undefined,
   loading: false,

@@ -30,6 +30,8 @@ export interface ChatPanelProps extends ChatLinkProps {
   /** Stable conversation identity used to reset ready state when switching sessions. */
   conversationKey?: string;
   messages: SessionMessage[];
+  /** Submitted input for prompt recall while receipt handoff differs from the displayed transcript. Defaults to messages. */
+  historyMessages?: SessionMessage[];
   loading?: boolean;
   streaming?: boolean;
   /** Current run start in milliseconds. Without an anchor, elapsed time starts when streaming mounts. */
@@ -142,6 +144,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     chatInputQuestionPrompt,
     composerDecision,
     chatInputAutoFocus = false,
+    historyMessages = messages,
     queuedFollowUps = [],
     onQueuedFollowUpUpdate,
     onQueuedFollowUpCreate,
@@ -248,7 +251,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
                 {approvalPrompt}
                 <ChatPanelComposer
                   conversationKey={conversationKey ?? messages[0]?.id}
-                  recentUserMessages={getRecentUserPrompts(messages)}
+                  recentUserMessages={getRecentUserPrompts(historyMessages)}
                   actions={actions}
                   attachmentActions={attachmentActions}
                   composerHeader={composerHeader}
