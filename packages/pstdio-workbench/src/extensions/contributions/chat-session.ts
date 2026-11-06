@@ -1,16 +1,16 @@
-import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
+import type { ChatDraft, ChatRendererAction, ChatRendererEvent, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 import { applySessionMessagePatch, type SessionMessage } from "@pstdio/ui/chat-ui";
 import {
   chatDraftSchema,
   chatRendererActionResultSchema,
   chatRendererActionSchema,
-  chatRendererEventSchema,
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
 import { hydrateChatDraft, recoverChatDraft, restoreChatDraft } from "./chat-draft-recovery";
 import { clearDeliveredChatRecoveries, restoreFailedChatSubmission } from "./chat-failed-submission";
 import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./chat-pending-submission";
 import { createChatSnapshot } from "./chat-snapshot";
+import { createChatStreamReader } from "./chat-stream-reader";
 import { createChatSubmissionRunner } from "./chat-submission";
 import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
@@ -60,18 +60,24 @@ const assertChatActionAvailable = (conversation: ChatRendererSnapshot, action: C
 const watchChatSession = async (
   watch: NonNullable<ChatSessionInput["watch"]>,
   signal: AbortSignal,
-  accept: (event: unknown) => void,
+  active: () => boolean,
+  reader: ReturnType<typeof createChatStreamReader>,
   fail: (error: unknown) => void,
 ) => {
   try {
     const stream = watch(signal);
+    void stream.result?.catch(() => undefined);
     for await (const event of stream) {
       if (signal.aborted) break;
-      accept(event);
+      if (active()) reader.accept(event);
     }
+    if (active()) reader.finish();
     await stream.result;
   } catch (error) {
-    fail(error);
+    if (active()) {
+      reader.reset();
+      fail(error);
+    }
   }
 };
 
@@ -139,8 +145,7 @@ export const createChatSession = (input: ChatSessionInput) => {
       saveDraft();
     }
   };
-  const accept = (value: unknown) => {
-    const event = chatRendererEventSchema.parse(value);
+  const acceptEvent = (event: ChatRendererEvent, issued: number) => {
     if (event.revision <= revision) return;
     if ("patch" in event && !streamHasMessages)
       throw new Error("A chat stream must send its transcript snapshot before incremental message patches.");
@@ -156,11 +161,13 @@ export const createChatSession = (input: ChatSessionInput) => {
       recoverableDraft = undefined;
     } else if ("snapshot" in event) {
       if (event.snapshot.messages) streamHasMessages = true;
-      merge(event.snapshot);
+      merge(event.snapshot, issued);
     } else {
-      merge({ messages: applySessionMessagePatch(state.conversation.messages ?? [], event.patch) });
+      merge({ messages: applySessionMessagePatch(state.conversation.messages ?? [], event.patch) }, issued);
     }
   };
+  const reader = createChatStreamReader({ reserve: () => ++clock, accept: acceptEvent });
+  const accept = reader.accept;
   const saveDraft = () => {
     if (!input.saveDraft || persistedChanges === changes) return;
     save = save
@@ -190,6 +197,7 @@ export const createChatSession = (input: ChatSessionInput) => {
   const start = () => {
     controller?.abort();
     controller = new AbortController();
+    reader.reset();
     const current = ++generation;
     const signal = controller.signal;
     revision = -1;
@@ -235,17 +243,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     void Promise.all([query, hydration]).then(() => {
       if (active()) publish({ initializing: false });
     });
-    if (input.watch)
-      void watchChatSession(
-        input.watch,
-        signal,
-        (event) => {
-          if (active()) accept(event);
-        },
-        (error) => {
-          if (active()) fail(error);
-        },
-      );
+    if (input.watch) void watchChatSession(input.watch, signal, active, reader, fail);
     saveDraft();
   };
   const execute = async (action: ChatRendererAction, handler = input.action) => {
@@ -307,12 +305,14 @@ export const createChatSession = (input: ChatSessionInput) => {
         if (--holds === 0) {
           generation++;
           controller?.abort();
+          reader.reset();
         }
       };
     },
     dispose() {
       generation++;
       controller?.abort();
+      reader.reset();
       listeners.clear();
     },
   };
