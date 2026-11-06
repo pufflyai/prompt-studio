@@ -172,6 +172,7 @@ describe("project extension runtime snapshot integration", () => {
     // and the build makes the next read refresh the bundle URLs once.
     const after = await handle.deps.extensionRuntimeCatalog.get(projectId);
     expect(after.generation).toBeGreaterThan(before.generation);
+    expect(after.generation).toBeLessThanOrEqual(before.generation + 2);
     expect(await handle.deps.extensionRuntimeCatalog.get(projectId)).toBe(after);
 
     const commands = (await (await app.request(`/v1/projects/${projectId}/extensions/commands`)).json()) as {

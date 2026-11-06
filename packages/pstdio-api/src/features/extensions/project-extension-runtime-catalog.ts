@@ -62,8 +62,8 @@ const createProjectState = (): ProjectState => ({
 
 const markDirty = (state: ProjectState, reason: RuntimeInvalidationReason) => {
   state.revision += 1;
-  // A built bundle changes the module URL a snapshot serves, never what an extension
-  // contributes, so a load already in flight stays valid for the reads waiting on it.
+  // A webview build only refreshes later reads: the load in flight still serves the reads that
+  // started before the build, and the next read loads again and rechecks the source.
   if (reason !== "webviews_built") state.contributionRevision += 1;
   state.dirtyReason = reason;
 };

@@ -198,6 +198,34 @@ describe("project extension runtime catalog", () => {
     expect(await harness.catalog.get("p1")).toBe(second);
   });
 
+  test("a contribution change after a webview build still discards the in-flight result", async () => {
+    const dir = makeSourceDir();
+    const gate = Promise.withResolvers<void>();
+    const entered = Promise.withResolvers<void>();
+    let gated = false;
+    const harness = createHarness({
+      sourcesByProject: () => [sourceRow(dir)],
+      loadGate: () => {
+        if (gated) return Promise.resolve();
+        gated = true;
+        entered.resolve();
+        return gate.promise;
+      },
+    });
+
+    const waiting = harness.catalog.get("p1");
+    await entered.promise;
+    harness.catalog.invalidate({ sourcePath: dir, reason: "webviews_built" });
+    harness.catalog.invalidate({ projectId: "p1", reason: "enablement_changed" });
+    gate.resolve();
+
+    const snapshot = await waiting;
+    expect(snapshot.generation).toBe(1);
+    expect(harness.discards).toEqual(["p1"]);
+    expect(harness.loadStarts).toHaveLength(2);
+    expect(await harness.catalog.get("p1")).toBe(snapshot);
+  });
+
   test("work holding an old snapshot still reads its values after invalidation", async () => {
     const dir = makeSourceDir();
     const harness = createHarness({ sourcesByProject: () => [sourceRow(dir)] });
