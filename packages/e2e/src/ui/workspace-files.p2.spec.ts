@@ -78,13 +78,26 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     await tree.getByRole("option", { name: "README.md", exact: true }).click();
     const editor = page.locator(".monaco-editor").filter({ visible: true });
     await expect(editor).toBeVisible();
-    await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
-    await page.getByRole("menuitem", { name: "Rename workspace", exact: true }).click();
-    await page
-      .frameLocator('iframe[title="Workspace action"]')
-      .getByRole("button", { name: "Cancel", exact: true })
-      .click();
     await expect(page).toHaveURL(/document=README.md/);
+    const formRequested = Promise.withResolvers<void>();
+    const releaseForm = Promise.withResolvers<void>();
+    await page.route("**/*.command.read-form/execute", async (route) => {
+      formRequested.resolve();
+      await releaseForm.promise;
+      await route.continue();
+    });
+    try {
+      await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+      await page.getByRole("menuitem", { name: "Rename workspace", exact: true }).click();
+      await formRequested.promise;
+      const action = page.frameLocator('iframe[title="Workspace action"]');
+      await expect(action.getByText("Loading workspace…", { exact: true })).toBeVisible();
+      await action.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(page).toHaveURL(/document=README.md/);
+    } finally {
+      releaseForm.resolve();
+      await page.unrouteAll({ behavior: "wait" });
+    }
     await expectWorkspaceDocument(page, "README.md");
     await expect(editor.locator(".view-lines")).toContainText("Workspace files e2e");
     const writes = () => commands.filter((id) => id.includes(".view.file.file.save/")).length;
