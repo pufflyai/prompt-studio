@@ -86,13 +86,16 @@ test("remote edits imported by sync notify storage watchers, and a round with no
   await first.text.save("remote text");
   await first.synchronize();
 
-  // Each import path commits through the same storage transaction that local writes use.
+  // Imported records notify views without being mistaken for another local edit.
   await second.syncs.records.synchronize();
   expect((await second.records.read("ticket")).value).toEqual({ title: "Remote" });
-  expect(second.notified.slice(quiet)).toEqual([owner]);
+  expect(second.notified.slice(quiet)).toEqual([{ ...owner, origin: "relay" }]);
   await second.syncs.text.synchronize();
   expect(await second.text.read()).toBe("remote text");
-  expect(second.notified.slice(quiet)).toEqual([owner, { ...owner, documentId: textName }]);
+  expect(second.notified.slice(quiet)).toEqual([
+    { ...owner, origin: "relay" },
+    { ...owner, documentId: textName },
+  ]);
 
   // The text document's first write also registered it in the shared owner directory.
   await second.syncs.owner.synchronize();

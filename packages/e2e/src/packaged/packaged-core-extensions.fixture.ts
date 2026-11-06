@@ -85,6 +85,11 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     expect(createRes.status).toBe(201);
     const project = (await createRes.json()) as CoreExtensionsFixture["project"];
     phase("project created");
+    const workspacesRes = await fetch(`${started.baseUrl}/v1/workspaces?project_id=${project.id}`, { headers });
+    expect(workspacesRes.status).toBe(200);
+    expect(await workspacesRes.json()).toContainEqual(
+      expect.objectContaining({ is_default: true, initializing: false, provider_state: "ready", setup_error: null }),
+    );
     const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, { headers });
     expect(extensionsRes.status).toBe(200);
     const { extensions } = (await extensionsRes.json()) as { extensions: CoreExtensionsFixture["extensions"] };
