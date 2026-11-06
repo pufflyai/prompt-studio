@@ -27,7 +27,7 @@ defineSkill({
 });
 ```
 
-The host reads the folder from the installed extension and offers it as a project skill. `pst agents setup` and `pst agents install-skills` copy it into an agent's skill folder, such as `.agents/skills/` or `.claude/skills/`. Workspace setup keeps those copies in sync. The rules for installed copies are in [templates and skills](../../requirements/platform/0004-templates-and-skills.md#skills):
+The host reads the folder from the installed extension and offers it as a project skill. `pst agents setup` and `pst agents install-skills` copy it into an agent's skill folder, such as `.agents/skills/` or `.claude/skills/`. Workspace setup keeps those copies in sync. The rules for installed copies are in [templates and skills · RB 6.A.5](../../requirement-book/book.json):
 
 - Installed folders are derived copies. The extension's skill folder is the only source.
 - `setup` and `install-skills` install missing skill folders and keep existing ones unchanged.

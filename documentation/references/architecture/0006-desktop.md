@@ -214,7 +214,7 @@ Keep notarization and the complete four-target publish check enabled.
 The workflow builds and tests the planned release commit. Its Electron checks come
 from that same commit. To fix a failed release, merge the fix to `main`; the next
 release run builds the fixed commit, unless npm publishing already started. See
-[Versioning and releases](../../requirements/platform/0005-versioning-and-releases.md#done-marker-and-recovery).
+[Versioning and releases · RB 12.A.10](../../requirement-book/book.json).
 
 The native updater is configured in packaged macOS and Windows apps. It resolves
 the newest complete `pstdio@<version>` release on the device's update channel and
@@ -294,7 +294,7 @@ uploaded.
 Windows signing trusts the `main` branch's GitHub identity and release tags, so
 desktop release builds run only from `release-packages.yml` on `main`. A failed
 release resumes by re-running the failed jobs or with the next push to `main`; see
-[Versioning and releases](../../requirements/platform/0005-versioning-and-releases.md#done-marker-and-recovery).
+[Versioning and releases · RB 12.A.10](../../requirement-book/book.json).
 
 The secured compiled-runtime browser suite runs Chromium, Firefox, and WebKit.
 `bun run --cwd packages/e2e test:packaged` runs the compiled CLI checks with Bun and the browser checks with the Playwright runner.
@@ -324,7 +324,7 @@ Rebuild with `bun run --cwd clients/desktop package`. If an installed package re
 Release-only failures are fail closed. Missing signing credentials, an invalid
 native signature, a failed notarization staple, an incomplete artifact matrix,
 or version/checksum drift stops the release before anything is published. See [Desktop
-distribution and updates](../../requirements/platform/0002-desktop-distribution.md) for credential
+distribution and updates · RB 12.A.4](../../requirement-book/book.json) for credential
 names, verification commands, and operator recovery.
 
 ### External runtime process capture

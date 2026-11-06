@@ -13,17 +13,8 @@ import {
 } from "@pstdio/sdk/extensions";
 import { checkWorkspace } from "./src/checks";
 import { commands } from "./src/commands";
-import {
-  navigationTree,
-  navigationView,
-  openCommand,
-  page,
-  requirement,
-  resolveCommand,
-  resources,
-  rulePage,
-  view,
-} from "./src/navigation";
+import { navigationTree, navigationView, openCommand, page, view } from "./src/navigation";
+import { resourceContributions } from "./src/resources";
 
 const check = async (ctx: Parameters<typeof checkWorkspace>[0]) => {
   try {
@@ -41,11 +32,11 @@ export default defineExtension({
   },
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
-  commands: [...Object.values(commands), openCommand, resolveCommand],
-  resourceKinds: [requirement],
-  commandPaletteResources: [resources],
+  commands: [...Object.values(commands), openCommand, ...resourceContributions.map((item) => item.resolve)],
+  resourceKinds: resourceContributions.map((item) => item.kind),
+  commandPaletteResources: resourceContributions.map((item) => item.search),
   views: [view, navigationView],
-  pages: [page, rulePage],
+  pages: [page, ...resourceContributions.map((item) => item.page)],
   navigationTrees: [navigationTree],
   navigationItems: [
     defineNavigationItem({

@@ -1,6 +1,6 @@
 Read and follow this document before starting work:
 
-- [Mission](documentation/guidance/0001-mission.md)
+- [Requirement book](documentation/requirement-book/README.md), then the Mission and product boundaries rules (RB1) in [the canonical book](documentation/requirement-book/book.json).
 
 ## Work guidance
 
@@ -17,5 +17,5 @@ Read and follow this document before starting work:
 
 ## Rule references
 
-- Use `document.section.rule`: `001.1.1` means Mission → Purpose → rule 1.
+- Cite product intent by its stable RB identity. Guidance procedure references use `document.section.rule`.
 - Follow the [numbering format](documentation/guidance/0008-planning.md#5-rule-references).

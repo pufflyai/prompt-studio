@@ -126,7 +126,7 @@ When a public API changes, update these together in the same pull request:
 2. The walkthrough or example that uses the API.
 3. The skill that routes agents to it, including its links and offline essentials. See [maintaining skills](development/0009-maintaining-skills.md).
 
-When an authoring contract changes, such as the manifest, a context API, or an extension CLI command, also run a fresh-agent trial with the packaged skill before the release. Use an agent with no earlier context, as described in [PRD 0013](../requirements/platform/0013-documentation-and-skills-reliability.md#w8-final-fresh-agent-and-release-gate).
+When an authoring contract changes, such as the manifest, a context API, or an extension CLI command, also run a fresh-agent trial with the packaged skill before the release. Use an agent with no earlier context, as described in [0013 · RB 24.A.1](../requirement-book/book.json).
 
 ## Screenshots and GIFs
 
@@ -301,41 +301,9 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0004 — Navigation](../references/workbench/0004-navigation.md)
 - [0007 — Extension shortcuts](../references/workbench/0007-extension-shortcuts.md)
 
-## PRDs
+## Product requirements
 
-### API
-
-- [0001 — PRD: API and Runtime Logs](../requirements/api/0001-error-logs.md)
-
-### CLI
-
-- [0001 — PRD: CLI feedback and help](../requirements/cli/0001-feedback.md)
-
-### Dashboard
-
-- [0001 — PRD: Beta features](../requirements/dashboard/0001-beta-features.md)
-- [0003 — PRD: Dashboard browser page titles](../requirements/dashboard/0003-page-titles.md)
-- [0004 — PRD: Dashboard Sessions](../requirements/dashboard/0004-sessions.md)
-- [0005 — PRD: Dashboard settings and folder projects](../requirements/dashboard/0005-settings.md)
-- [0006 — PRD: Composer modes and provider state](../requirements/dashboard/0006-composer-modes.md)
-
-### Extensions
-
-- [0001 — PRD: Project extension runtime snapshot requirements](../requirements/extensions/0001-runtime-snapshots.md)
-- [0002 — PRD: Shared timeline renderer (proposed)](../requirements/extensions/0002-timeline-renderer.md)
-
-### Platform
-
-- [0001 — PRD: Cross-Platform Support](../requirements/platform/0001-cross-platform-support.md)
-- [0002 — PRD: Desktop distribution and updates](../requirements/platform/0002-desktop-distribution.md)
-- [0003 — PRD: Real-time Updates](../requirements/platform/0003-realtime-updates.md)
-- [0004 — PRD: Templates and skills](../requirements/platform/0004-templates-and-skills.md)
-- [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
-- [0013 — PRD: Reliable documentation and extension authoring](../requirements/platform/0013-documentation-and-skills-reliability.md)
-- [0014 — PRD: Local-first sync with a blind relay (proposed)](../requirements/platform/0014-local-first-sync.md)
-- [0015 — PRD: Restore project files without a Git host (proposed)](../requirements/platform/0015-project-data-recovery.md)
-
-- Extension API plans: [0009 — PRD: Standardize extension storage](../requirements/platform/0009-standardize-storage-api.md), [0010 — PRD: Bound client storage and isolate sync failures](../requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md), [0011 — PRD: Simplify extension APIs](../requirements/platform/0011-simplify-extension-apis.md), [0012 — PRD: Align extension API shapes](../requirements/platform/0012-align-extension-api-shapes.md)
+Use the [canonical Requirement book](../requirement-book/book.json), its [usage guide](../requirement-book/README.md), and [migration ledger](../requirement-book/migration.md). Product intent is edited once in the book; guides explain workflows and references explain APIs. Proposed entries do not establish implementation or release availability.
 
 ## ADRs
 

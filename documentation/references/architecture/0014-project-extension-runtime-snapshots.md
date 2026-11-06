@@ -46,4 +46,4 @@ Atomic install replacement briefly removes a source directory. While the source 
 
 Validate stable snapshot identity under repeated reads, shared imports under concurrent reads, targeted invalidation, in-flight stale-load rejection, source replacement, broken packages, disable/uninstall, and project separation. Check command execution and metadata from the same snapshot.
 
-See the [requirements](../../requirements/extensions/0001-runtime-snapshots.md) and the catalog tests beside [the runtime implementation](../../../packages/pstdio-api/src/features/extensions).
+See the [requirements · RB 6.A.1](../../requirement-book/book.json) and the catalog tests beside [the runtime implementation](../../../packages/pstdio-api/src/features/extensions).

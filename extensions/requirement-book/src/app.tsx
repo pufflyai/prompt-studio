@@ -68,6 +68,7 @@ export function BookApp(props: Props) {
               <ReviewList
                 data={data}
                 section={section}
+                focusedId={state.focusedId}
                 client={client}
                 run={state.run}
                 onOpen={state.open}

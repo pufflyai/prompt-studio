@@ -15,7 +15,7 @@ The descriptor under the active `PSTDIO_HOME` records the origin, instance ident
 
 The checked-in [embed configuration](../../../scripts/embed.json) lists the dashboard build, database migrations, and vendored PGlite assets. The build generates `_embed-manifest.generated.ts` with file imports and compiles it into the executable. Runtime asset resolution must work outside the source checkout.
 
-PGlite supplies the PostgreSQL database. This is not a SQLite build. Its WASM/data assets are vendored before compilation. Template content and extension skills belong to installed extensions; see [template ownership](../../requirements/platform/0004-templates-and-skills.md).
+PGlite supplies the PostgreSQL database. This is not a SQLite build. Its WASM/data assets are vendored before compilation. Template content and extension skills belong to installed extensions; see [template ownership · RB 6.A.5](../../requirement-book/book.json).
 
 The shared server serves API endpoints under `/v1` and the dashboard from the same origin. Browser sessions and CLI bearer authentication remain enforced in packaged mode. Do not copy an example server that routes `/api` or bypasses runtime authentication.
 
@@ -41,7 +41,7 @@ The configured targets are macOS arm64/x64, Linux arm64/x64, and Windows arm64/x
 
 The `pstdio` distribution wrapper selects a platform package. Platform packages and public packages follow the fixed release group. A wrapper install and a direct compiled executable have different bootstrap requirements; the compiled executable includes its Bun runtime. Desktop packages also bundle a sidecar and have their own signing, installer, and update checks.
 
-See [cross-platform requirements](../../requirements/platform/0001-cross-platform-support.md), [desktop distribution](../../requirements/platform/0002-desktop-distribution.md), and [versioning](../../requirements/platform/0005-versioning-and-releases.md). Do not infer that a target passed native execution checks merely because cross-compilation produced its binary.
+See [cross-platform requirements · RB 12.A.1](../../requirement-book/book.json), [desktop distribution · RB 12.A.4](../../requirement-book/book.json), and [versioning · RB 12.A.10](../../requirement-book/book.json). Do not infer that a target passed native execution checks merely because cross-compilation produced its binary.
 
 ## Packaged verification
 

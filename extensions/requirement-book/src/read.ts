@@ -50,7 +50,7 @@ export const readBook = async (
       })),
   );
   const findings = allFindings
-    .filter((item) => item.workspaceId === snapshot.workspaceId && !item.resolved)
+    .filter((item) => item.workspaceId === snapshot.workspaceId)
     .map((item) => ({ ...item, unread: !reads.some((read) => read.id === item.id && read.digest === digest(item)) }));
   const query = input.query?.trim().toLowerCase();
   const rules =
@@ -85,7 +85,7 @@ export const readBook = async (
         isDefault: item.isDefault ?? item.is_default,
       })),
     counts: {
-      Findings: findings.filter((item) => item.unread).length,
+      Findings: findings.filter((item) => !item.resolved && item.unread).length,
       Undocumented: observations.filter((item) => !item.requirements.length && item.unread).length,
       Suggestions: suggestions.filter((item) => item.unread).length,
     },

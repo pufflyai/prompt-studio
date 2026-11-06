@@ -1,12 +1,14 @@
 import "@pstdio/ui/style.css";
-import { Stack } from "@chakra-ui/react";
-import { ChakraProvider, psTheme } from "@pstdio/ui";
+import { Icon, Stack } from "@chakra-ui/react";
+import { ChakraProvider, psTheme, ResourceBadge, resolveIconComponent } from "@pstdio/ui";
 import { useState } from "react";
 import { BookBrowser } from "./book-browser";
+import { BookFinding } from "./book-findings";
 import { BookForm } from "./book-form";
 import { observationFields } from "./forms";
 import type { Rule } from "./model";
 import { bookFixture } from "./model.fixture";
+import { resourceSpecs } from "./resource-catalog";
 
 export default { title: "Extensions/Requirement book", fullscreen: true };
 export function Documentation() {
@@ -48,6 +50,43 @@ export function EvidenceForm() {
         onClose={() => {}}
         onSaveDraft={async () => {}}
         onDiscard={async () => {}}
+      />
+    </ChakraProvider>
+  );
+}
+
+export function Resources() {
+  return (
+    <ChakraProvider value={psTheme}>
+      <Stack p="lg" gap="md">
+        {resourceSpecs.map((spec) => (
+          <ResourceBadge key={spec.id} fileName={spec.label} icon={<Icon as={resolveIconComponent(spec.icon)} />} />
+        ))}
+      </Stack>
+    </ChakraProvider>
+  );
+}
+
+export function ResolvedFinding() {
+  return (
+    <ChakraProvider value={psTheme}>
+      <BookFinding
+        finding={{
+          id: "example",
+          workspaceId: "sample",
+          kind: "potential-conflict",
+          title: "Reviewed terminology",
+          explanation: "The naming difference was reconciled.",
+          requirements: [],
+          observations: [],
+          evidence: [],
+          resolved: true,
+          updatedAt: "2026-11-06",
+          unread: false,
+        }}
+        onRead={() => {}}
+        onOpen={() => {}}
+        onResolve={() => {}}
       />
     </ChakraProvider>
   );

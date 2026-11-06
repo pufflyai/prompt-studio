@@ -1,9 +1,7 @@
 import {
   defineCommand,
-  defineCommandPaletteResource,
   defineNavigationTree,
   definePage,
-  defineResourceKind,
   defineView,
   l10n,
   packageAsset,
@@ -13,13 +11,8 @@ import {
 import { bookMenu } from "./book-menu";
 import { readBook } from "./read";
 import { changed } from "./records";
+import { resourceTarget, ruleTarget } from "./resources";
 
-export const requirement = defineResourceKind({
-  id: "requirement",
-  label: l10n("book.requirement", "Requirement"),
-  icon: "book-open",
-  resolve: { kind: "command", id: "resolve" },
-});
 export const view = defineView({
   id: "book",
   title: l10n("book.title", "Requirement book"),
@@ -43,21 +36,6 @@ export const page = definePage({
   main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page", tab: bookMenu },
   slots: [],
 });
-export const rulePage = definePage({
-  id: "requirement",
-  title: l10n("book.requirement", "Requirement"),
-  path: "requirement",
-  mode: workbenchModes.project,
-  parent: page.ref,
-  resource: { kinds: [requirement.ref] },
-  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page", tab: bookMenu },
-  slots: [],
-});
-export const ruleTarget = (ref: string, title: string, projectId: string) => ({
-  kind: "page" as const,
-  page: rulePage.ref,
-  resource: { type: requirement.id, id: ref, label: title, extensionId: "pstdio.requirement-book", projectId },
-});
 export const openCommand = defineCommand({
   id: "open",
   title: l10n("book.open", "Open requirement book"),
@@ -71,41 +49,6 @@ export const openCommand = defineCommand({
       ctx.navigation.open(ruleTarget(rule.ref, rule.title, ctx.projectId));
     } else ctx.navigation.open({ kind: "page", page: page.ref });
     return { opened: true };
-  },
-});
-export const resolveCommand = defineCommand({
-  id: "resolve",
-  title: "Resolve a requirement",
-  params: { reference: params.text({ resolvedFrom: "resource" }) },
-  async run(ctx, input) {
-    const data = await readBook(ctx);
-    const rule = data.rules.find((item) => item.ref === (input.reference ?? ctx.resource?.id));
-    return rule
-      ? {
-          type: requirement.id,
-          id: rule.ref,
-          label: rule.title,
-          projectId: ctx.projectId,
-          extensionId: ctx.extensionId,
-        }
-      : null;
-  },
-});
-export const resources = defineCommandPaletteResource({
-  id: "requirements",
-  title: l10n("book.search", "Search requirements"),
-  resourceKind: requirement.ref,
-  refreshEvents: [changed],
-  async query(ctx, input) {
-    const data = await readBook(ctx, { query: input.query });
-    return {
-      items: data.rules.slice(0, input.limit).map((rule) => ({
-        id: rule.ref,
-        label: `${rule.ref} ${rule.title}`,
-        icon: "book-open",
-        target: ruleTarget(rule.ref, rule.title, ctx.projectId),
-      })),
-    };
   },
 });
 export const navigationView = defineView({
@@ -140,7 +83,8 @@ export const navigationView = defineView({
             .map((chapter) => ({
               id: `chapter-${chapter.id}`,
               label: `RB${chapter.id} ${chapter.title}`,
-              target: { kind: "page" as const, page: page.ref, params: { chapter: chapter.id, review: "" } },
+              icon: "library",
+              target: resourceTarget("chapter", String(chapter.id), chapter.title, ctx.projectId),
             })),
         })),
       ];

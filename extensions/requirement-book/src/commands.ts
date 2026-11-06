@@ -1,6 +1,7 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { checkWorkspace } from "./checks";
 import { evidenceCommands } from "./evidence-commands";
+import { bookCommands } from "./import";
 import { chapterSchema, emptyBook, findRule, ruleSchema } from "./model";
 import { readBook, requireBook } from "./read";
 import { announce, type Draft, deleteRecord, saveRecord } from "./records";
@@ -9,6 +10,7 @@ import { suggestionCommands } from "./suggestions";
 
 export const commands = {
   ...suggestionCommands,
+  ...bookCommands,
   ...evidenceCommands,
   "sources.read": defineCommand({
     id: "sources.read",

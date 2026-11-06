@@ -144,7 +144,7 @@ API. The workbench package itself does not depend on the API host.
    package graph treat a change to one of them as an e2e change. A scoped pull
    request then only lints the e2e package. The e2e jobs run in the full CI stage
    on `main`, or on a pull request labeled `ci:full`; see
-   [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
+   [CI scope · RB 12.A.1](../../requirement-book/book.json).
 
    Its compiled device-command test declares `pstdio-relay` as a development
    dependency and starts the exported live hub. This exercises the deployed

@@ -43,4 +43,4 @@ After a real committed change the host publishes `resource_anchor_events` with `
 
 External storage cannot share a host transaction. A racing link can outlive deletion. Owners and views must treat unresolved endpoints as unavailable, keep the stored ref visible, and permit removal. Disabling an owner preserves its edges.
 
-Reusable dashboard link controls and their command remain available for explicit view composition. Resource identity alone does not add an action to the shared header. View-owned ticket and session placements follow in a separate PR. See [ADR 0061](../../adrs/0061-project-resource-anchors.md) and the [PRD](../../requirements/platform/0006-resource-linking.md).
+Reusable dashboard link controls and their command remain available for explicit view composition. Resource identity alone does not add an action to the shared header. View-owned ticket and session placements follow in a separate PR. See [ADR 0061](../../adrs/0061-project-resource-anchors.md) and the [ · RB 15.A.1](../../requirement-book/book.json).

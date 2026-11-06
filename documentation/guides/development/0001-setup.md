@@ -210,7 +210,7 @@ Production release mode is available only through the native release workflow;
 `PSTDIO_DESKTOP_RELEASE=1` fails when the host signing or notarization credentials
 are incomplete. Do not place certificate files in the repository or weaken
 signature checks for local convenience. See [Desktop distribution and
-updates](../../requirements/platform/0002-desktop-distribution.md) for the native matrix and
+updates · RB 12.A.4](../../requirement-book/book.json) for the native matrix and
 required repository secrets.
 
 After creating a local package, run its benchmarks and packaged smoke suite with:

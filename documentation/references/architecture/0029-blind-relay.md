@@ -1,6 +1,6 @@
 # Blind relay
 
-The blind relay stores and forwards encrypted data for [PRD 0014](../../requirements/platform/0014-local-first-sync.md).
+The blind relay stores and forwards encrypted data for [0014 · RB 9.A.1](../../requirement-book/book.json).
 It cannot read project content. Clients encrypt, merge and decide what data means. The relay
 keeps one latest state per document and the updates after it, and it checks access, sizes and
 quotas from metadata alone.

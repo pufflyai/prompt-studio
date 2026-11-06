@@ -5,5 +5,22 @@
   "book.change": "Modifier le cahier",
   "book.check": "Vérifier les exigences",
   "book.search": "Rechercher des exigences",
-  "book.requirement": "Exigence"
+  "book.requirement": "Exigence",
+  "book.resource.requirement": "Règle",
+  "book.resolve.requirement": "Résoudre : Règle",
+  "book.search.requirement": "Rechercher des règles",
+  "book.resource.chapter": "Chapitre",
+  "book.resolve.chapter": "Résoudre : Chapitre",
+  "book.search.chapter": "Rechercher des chapitres",
+  "book.resource.finding": "Constat",
+  "book.resolve.finding": "Résoudre : Constat",
+  "book.search.finding": "Rechercher des constats",
+  "book.resource.observation": "Observation",
+  "book.resolve.observation": "Résoudre : Observation",
+  "book.search.observation": "Rechercher des observations",
+  "book.resource.suggestion": "Suggestion",
+  "book.resolve.suggestion": "Résoudre : Suggestion",
+  "book.search.suggestion": "Rechercher des suggestions",
+  "book.import": "Importer un cahier des exigences",
+  "book.validate": "Valider un cahier des exigences complet"
 }

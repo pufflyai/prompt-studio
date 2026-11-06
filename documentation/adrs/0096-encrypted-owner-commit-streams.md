@@ -83,5 +83,5 @@ The relay gains a reference graph and the client gains a durable outgoing-group 
 ## References
 
 - [Synchronization contracts](../references/architecture/0026-synchronization-contracts.md)
-- [Local-first sync requirements](../requirements/platform/0014-local-first-sync.md), R8–R29
+- [Local-first sync requirements · RB 9.A.1](../requirement-book/book.json), R8–R29
 - [Storage scale evidence contract](../references/performance/0005-storage-scale-diagnostic.md)

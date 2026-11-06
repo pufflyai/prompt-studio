@@ -12,7 +12,7 @@ The component implements part of PS-735. The relay verifies the manager's signed
 
 ## Devices and cloud projects
 
-A device is one client runtime. Its environment ID is its device ID. Logging in on a client registers it as a device of the user's account and gives it one device credential. That credential renews access to every cloud project of the account. There is no step per project ([PRD 0014](../../requirements/platform/0014-local-first-sync.md), R34, R35, R37).
+A device is one client runtime. Its environment ID is its device ID. Logging in on a client registers it as a device of the user's account and gives it one device credential. That credential renews access to every cloud project of the account. There is no step per project ([0014 · RB 9.A.1](../../requirement-book/book.json), R34, R35, R37).
 
 - `manager_devices` holds each device: account, ID, name, platform, created, last seen, removed, and the SHA-256 digest of its current credential. The plaintext credential is never stored.
 - Logging in again on the same device replaces its credential and undoes an earlier removal. The device keeps its name.

@@ -4,7 +4,7 @@ Each extension record is its own Yjs document ([ADR 0100](../../adrs/0100-one-do
 A declared text file uses its own document. An extension's records sync together through one
 encrypted record stream ([ADR 0102](../../adrs/0102-record-stream-sync.md)). The runtime owns merging and persistence. Extensions keep
 using `storage.records`, the deprecated KV and collection methods, and the file APIs.
-[PRD 0014](../../requirements/platform/0014-local-first-sync.md) defines the requirements.
+[0014 · RB 9.A.1](../../requirement-book/book.json) defines the requirements.
 
 ## Ownership
 

@@ -2,17 +2,17 @@ import type { WebviewHostProps } from "@pstdio/sdk/extensions";
 import { useEffect, useState } from "react";
 import type { FormMode } from "./authoring-form";
 import type { BookClient } from "./client";
-import { findRule, type Rule, removalOperations, type Section } from "./model";
+import { findRule, type Rule, removalOperations } from "./model";
+import { resourceSelection } from "./resource-catalog";
 import { useBook } from "./use-book";
 export function useAuthoring(client: BookClient, props: WebviewHostProps) {
   const book = useBook(client);
   const { data, run } = book;
   const resource = props.resource?.type === "requirement" ? props.resource.id : "";
-  const routeChapter = Number(props.pageParams.chapter ?? 1);
+  const route = resourceSelection(data, props.resource, props.pageParams);
+  const routeChapter = route.chapter;
   const review = String(props.pageParams.review ?? "");
-  const section: Section | null = ["Findings", "Undocumented", "Suggestions"].includes(review)
-    ? (review as Section)
-    : null;
+  const section = route.section;
   const [selected, setSelected] = useState(resource);
   const [editor, setEditor] = useState<Rule | null>(null);
   const [removing, setRemoving] = useState<Rule | null>(null);
@@ -142,6 +142,7 @@ export function useAuthoring(client: BookClient, props: WebviewHostProps) {
     setSource,
     chapter,
     section,
+    focusedId: route.focusedId,
     open,
     edit,
     save,

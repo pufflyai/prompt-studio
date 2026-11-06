@@ -21,7 +21,8 @@ export function BookFinding(props: Props) {
             <Badge colorPalette={finding.kind === "violation" ? "red" : "orange"}>
               {finding.kind.replaceAll("-", " ")}
             </Badge>
-            {finding.unread && <Badge colorPalette="blue">New</Badge>}
+            {finding.resolved && <Badge colorPalette="green">Resolved</Badge>}
+            {finding.unread && !finding.resolved && <Badge colorPalette="blue">New</Badge>}
           </HStack>
           <Text as="h2" textStyle="label/L/medium">
             {finding.title}
@@ -58,8 +59,8 @@ export function BookFinding(props: Props) {
             >
               {expanded ? "Hide details" : "Inspect details"}
             </Button>
-            <Button size="xs" variant="outline" onClick={onResolve}>
-              Resolve finding
+            <Button size="xs" variant="outline" disabled={finding.resolved} onClick={onResolve}>
+              {finding.resolved ? "Resolved" : "Resolve finding"}
             </Button>
           </HStack>
         </Stack>

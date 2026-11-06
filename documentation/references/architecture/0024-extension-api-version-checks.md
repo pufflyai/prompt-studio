@@ -37,4 +37,4 @@ git show "$(git describe --tags --match 'pstdio@*' --abbrev=0):packages/pstdio-a
 3. Move `EXTENSION_API_VERSION` one step from `R` if the current value does not already cover your level.
 4. Run `bun run verify:extension-api-report` and inspect `.api-report/api.diff`. Commit the source and version changes; leave generated reports ignored.
 5. For an additive change, leave manifests alone unless a first-party extension uses the new API. In that case, raise its minimum.
-6. For a breaking change, update every first-party extension and its manifest before the release. See [release versioning](../../requirements/platform/0005-versioning-and-releases.md) and [PR separation](../../guides/development/0004-pull-request-labels.md).
+6. For a breaking change, update every first-party extension and its manifest before the release. See [release versioning · RB 12.A.10](../../requirement-book/book.json) and [PR separation](../../guides/development/0004-pull-request-labels.md).

@@ -9,6 +9,7 @@ import type { BookData } from "./read";
 interface Props {
   data: BookData;
   section: Section;
+  focusedId?: string;
   client: BookClient;
   run: (action: () => Promise<unknown>) => void;
   onOpen: (ref: string) => void;
@@ -16,7 +17,7 @@ interface Props {
   onMap: (id: string, ref: string) => void;
 }
 export function ReviewList(props: Props) {
-  const { data, section, client, run, onOpen, onPromote, onMap } = props;
+  const { data, section, focusedId, client, run, onOpen, onPromote, onMap } = props;
   const markRead = (id: string) =>
     run(() => client.commands["review.mark-read"]({ workspaceId: data.workspaceId, ids: [id] }));
   const onAction = (id: string, action: SuggestionAction) => {
@@ -28,12 +29,16 @@ export function ReviewList(props: Props) {
       if (action === "discard") return client.commands["suggestions.discard"]({ id });
     });
   };
-  const observations = data.observations.filter((item) => !item.requirements.length);
+  const observations = data.observations.filter((item) =>
+    focusedId ? item.id === focusedId : !item.requirements.length,
+  );
+  const findings = data.findings.filter((item) => (focusedId ? item.id === focusedId : !item.resolved));
+  const suggestions = data.suggestions.filter((item) => !focusedId || item.id === focusedId);
   return (
     <Stack gap="md" maxW="6xl">
       {section === "Findings" && (
         <>
-          {data.findings.map((finding) => (
+          {findings.map((finding) => (
             <BookFinding
               key={finding.id}
               finding={finding}
@@ -42,7 +47,7 @@ export function ReviewList(props: Props) {
               onResolve={() => run(() => client.commands["findings.save"]({ ...finding, resolved: true }))}
             />
           ))}
-          {!data.findings.length && (
+          {!findings.length && (
             <Text color="fg.muted">No active findings. This does not establish complete compliance.</Text>
           )}
         </>
@@ -69,7 +74,7 @@ export function ReviewList(props: Props) {
       )}
       {section === "Suggestions" && (
         <>
-          {data.suggestions.map((item) => (
+          {suggestions.map((item) => (
             <BookSuggestion
               key={item.id}
               suggestion={item}
@@ -80,7 +85,7 @@ export function ReviewList(props: Props) {
               onAction={onAction}
             />
           ))}
-          {!data.suggestions.length && <Text color="fg.muted">No local suggestions.</Text>}
+          {!suggestions.length && <Text color="fg.muted">No local suggestions.</Text>}
         </>
       )}
     </Stack>

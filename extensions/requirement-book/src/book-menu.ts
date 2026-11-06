@@ -1,12 +1,11 @@
 import type { PlacementTabPresentation } from "@pstdio/sdk/extensions";
 import { readBook } from "./read";
+import { resourceSelection } from "./resource-catalog";
 
 export const bookMenu: PlacementTabPresentation = {
   async query(ctx, { renderer }) {
     const data = renderer.resource ? await readBook(ctx) : undefined;
-    const chapter =
-      data?.rules.find((rule) => rule.ref === renderer.resource?.id)?.chapter ??
-      Number(renderer.pageParams?.chapter ?? 1);
+    const { chapter } = resourceSelection(data, renderer.resource, renderer.pageParams ?? {});
     return {
       menu: [
         {

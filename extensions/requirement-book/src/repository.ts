@@ -99,7 +99,7 @@ export const replacementPatch = (before: string | null, after: string) => {
   const oldLines = before?.replace(/\n$/, "").split("\n") ?? [];
   const newLines = after.replace(/\n$/, "").split("\n");
   const header = before ? `--- a/${BOOK_PATH}` : "--- /dev/null";
-  return `diff --git a/${BOOK_PATH} b/${BOOK_PATH}\n${header}\n+++ b/${BOOK_PATH}\n@@ -${before ? 1 : 0},${oldLines.length} +1,${newLines.length} @@\n${oldLines.map((line) => `-${line}\n`).join("")}${newLines.map((line) => `+${line}\n`).join("")}`;
+  return `diff --git a/${BOOK_PATH} b/${BOOK_PATH}\n${before === null ? "new file mode 100644\n" : ""}${header}\n+++ b/${BOOK_PATH}\n@@ -${before ? 1 : 0},${oldLines.length} +1,${newLines.length} @@\n${oldLines.map((line) => `-${line}\n`).join("")}${newLines.map((line) => `+${line}\n`).join("")}`;
 };
 export const writeRepository = async (
   ctx: ExtensionContextBase,

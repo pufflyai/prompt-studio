@@ -26,4 +26,4 @@ This is a temporary adapter for saved-view metadata, not a native timeline rende
 
 ## Removal
 
-When a published SDK supports a collection's field definitions and saved views without running its renderer query, migrate Timeline to that contract and remove the hidden Kanban registration and its schema adapter. The [shared timeline renderer PRD](../requirements/extensions/0002-timeline-renderer.md) must include this independent schema contract.
+When a published SDK supports a collection's field definitions and saved views without running its renderer query, migrate Timeline to that contract and remove the hidden Kanban registration and its schema adapter. The [shared timeline renderer  · RB 26.A.1](../requirement-book/book.json) must include this independent schema contract.

@@ -52,20 +52,12 @@
 4. Use components instead of `render*` helpers. Move extracted UI logic into a component.
 5. Use kebab-case component filenames, such as `my-component.tsx`.
 6. Never use `NativeSelect`.
-7. Follow the [design and styling rules](0002-design.md#3-styling-rules).
+7. Follow the [canonical styling requirements](../requirement-book/book.json) (RB4).
 
 ## 6. Extension storage
 
-1. Keep all extension-owned project files under `.pstdio/extension-storage/<publisher>.<name>/`: configuration, caches, drafts, prototypes, screenshots, ticket and report checkouts, and migration backups.
-2. Use `ctx.extensionFiles` or declared artifact mounts for files and `ctx.storage` for structured project data. Both file APIs stay inside the full extension-ID directory.
-3. Prompt Studio 0.46 does not read the older `<name>/` or `.publishers/<publisher>/` folders.
-4. Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio.pstdio-artifacts/`. Put report evidence under the `filesPath` returned by `pst reports write`.
-5. Do not create extension data folders directly under `.pstdio/` or keep runtime data in extension source folders. `.pstdio/extensions/` holds extension source.
-6. Files an extension deliberately edits as project source, such as icon fonts, stay at their configured paths. The extension's own settings and working files stay in extension storage.
+Follow the [canonical book](../requirement-book/book.json), RB 7.A.11.
 
 ## 7. Public extension API
 
-1. The public `@pstdio/sdk/extensions` types, manifest rules, bridge capabilities, and event payloads support external extensions. Their compatibility rules override the general rules to remove old code and add compatibility only on request.
-2. Deprecate first. Add the replacement beside the old API and mark the old one `@deprecated`, naming its replacement.
-3. Remove deprecated APIs together in one breaking release, not one breaking release per removal.
-4. Follow the change levels and one-step-per-release rule in [API versioning](../references/extensions/0014-api-versioning.md).
+Follow the [canonical book](../requirement-book/book.json), RB 6.A.32. Public extension compatibility takes precedence over general code cleanup guidance.

@@ -1,6 +1,6 @@
 # Requirement book
 
-A working local prototype for PS-104. Install it in an isolated Git project to try the workflow before migrating existing requirements.
+A working local prototype for PS-104. The repository book is populated in the implementation workspace; use an isolated Git project to try changes before accepting them.
 
 ```sh
 pst extensions add /absolute/path/to/extensions/requirement-book --force
@@ -22,7 +22,7 @@ Use `pst pstdio.requirement-book --help` for the same actions from an agent. `re
 
 Focused checks compare source hashes and identify missing recorded measurements. They run after registered Git/session/project events and on the host schedule. They do not execute tests, infer complete semantics, or prove compliance. Assertions remain assertions; a linked test path is not an execution result. Evidence records preserve the source revision, conditions, limits, and many-to-many mappings. Retired-only mappings return observations to Undocumented without deleting their history.
 
-The prototype does not migrate this repository's requirements or replace its guidance. `initialize` rejects repositories that still contain tracked legacy requirements, so adoption needs one atomic migration. The example project is disposable sample intent, not Prompt Studio product policy. Accepted-target configuration supports existing local branch names only.
+The PS-104 working branch consolidates this repository’s product requirements in its canonical book and replaces superseded sources there. The accepted branch changes only through repository review. `initialize` rejects repositories that still contain tracked legacy requirements, so adoption needs one atomic migration. The example project is disposable sample intent, not Prompt Studio product policy. Accepted-target configuration supports existing local branch names only.
 
 Checks:
 
@@ -32,3 +32,7 @@ bun run typecheck
 pst extensions check /absolute/path/to/extensions/requirement-book
 pst extensions test /absolute/path/to/extensions/requirement-book
 ```
+
+Registered resources: rules (`list-checks`), chapters (`library`), findings (`triangle-alert`), observations (`microscope`), and suggestions (`git-pull-request`). Each kind has global search, resolution and its own page. Resolved findings and mapped observations stay directly accessible.
+
+`book.validate --path imports/book.json` checks a complete authored import stored in extension files. `book.import --path imports/book.json --workspace-id <id> --expected-digest <digest>` guards the target revision, preserves retirement history, and refuses surviving legacy requirement authorities. See [the repository book](../../documentation/requirement-book/README.md) for reading and editing.

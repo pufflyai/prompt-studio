@@ -10,10 +10,10 @@
 ## 2. Documentation
 
 1. Keep central documentation in `documentation/`. Start with the [documentation guide](../guides/0001-documentation.md).
-2. Use `guidance/` for shared rules, `guides/` for setup and workflows, `references/` for APIs and architecture, `requirements/` for PRDs, `adrs/` for decisions, and `lessons-learned/` for recurring failures.
+2. Use `guidance/` for shared rules, `guides/` for setup and workflows, `references/` for APIs and architecture, `requirement-book/book.json` for canonical product requirements, `adrs/` for decisions, and `lessons-learned/` for recurring failures.
 3. Group related documents in topic folders such as `references/architecture/`, `references/sdk/`, `guides/development/`, and `requirements/dashboard/`. Do not repeat the folder topic in every filename.
 4. Use `NNNN-kebab-case.md`. Number independently within each folder, preserve assigned numbers, and use the next available number. Do not reuse removed ADR or lesson numbers.
-5. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded ones. Keep remaining numbers stable.
+5. Keep product requirements in the canonical book. Preserve stable references; keep proposed intent distinct from accepted intent. Do not create parallel PRD authorities.
 6. Update links and check claims against current source when changing documentation.
 
 ## 3. Architecture decisions
@@ -30,7 +30,7 @@
 10. Delete obsolete workarounds with no lasting value. Put reusable failure findings in lessons learned.
 11. Preserve the surviving ADR's number and original proposal date. Note which records it absorbs; never reuse retired numbers.
 12. Update incoming links and heading references. Keep an old-path pointer only when known external links need it.
-13. Keep distinct active decisions separate. A replacement PRD marked proposed does not establish that its design shipped.
+13. Keep distinct active decisions separate. A proposed book entry does not establish that its design shipped.
 14. Give each ADR a unique number above the highest number used, including retired records. Resolve collisions with new numbers, preserve proposal dates, and update references. Documentation validation rejects duplicate ADR numbers.
 
 ## 4. Tickets and extension scope
@@ -42,7 +42,7 @@
 
 ## 5. Rule references
 
-1. Reference guidance as `NNN.S.R`: document number, section number, and rule number. For example, `001.1.1` means Mission → Purpose → rule 1.
+1. Reference product requirements by stable `RB chapter.section.id` identities. Guidance procedure references keep `NNN.S.R`: document, section and rule number. Historical guidance references map to the canonical book through its migration ledger.
 2. Start rule numbering at 1 in each section.
 
 ## 6. Lessons learned
