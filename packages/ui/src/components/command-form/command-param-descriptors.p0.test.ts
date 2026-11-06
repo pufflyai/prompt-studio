@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { CommandParamEntry } from "./command-palette-params";
-import { createCommandFilesParamValue } from "./command-palette-params";
 import { buildCommandParam, readCommandParamValue } from "./command-param-descriptors";
+import type { CommandParamEntry } from "./command-param-values";
+import { createCommandFilesParamValue } from "./command-param-values";
 
 const entry = (overrides: Partial<CommandParamEntry> & { key: string; type: string }): CommandParamEntry => ({
   label: overrides.key,

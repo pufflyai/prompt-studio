@@ -5,7 +5,7 @@ import { putTicket } from "../data/ticket-context.fixture";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
-import { requestHumanCommand } from "./review-requests";
+import { requestReviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 
 async function stoppedAttempt(status: string) {
@@ -50,9 +50,9 @@ test.each([
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);
 });
 
-test("open human input keeps a cancelled implementation paused", async () => {
+test("open review input keeps a cancelled implementation paused", async () => {
   const { ctx, task, started, followups } = await stoppedAttempt("cancelled");
-  await requestHumanCommand.run(ctx, {
+  await requestReviewCommand.run(ctx, {
     ticket: task.id,
     workspaceId: started.workspace.id,
     sessionId: started.session.id,
@@ -79,7 +79,7 @@ test("resumption uses the selected attempt instead of an older stopped attempt",
     ticketId: task.id,
     workspaceId: selected.workspaceId,
     selectedBy: { type: "human", id: "user", displayName: "User" },
-    humanRequestId: null,
+    reviewRequestId: null,
     selectedAt: new Date().toISOString(),
   });
   expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).toMatchObject({
@@ -112,7 +112,7 @@ test("a selected attempt in review does not restart an older implementation", as
     ticketId: task.id,
     workspaceId: selected.workspaceId,
     selectedBy: { type: "human", id: "user", displayName: "User" },
-    humanRequestId: null,
+    reviewRequestId: null,
     selectedAt: new Date().toISOString(),
   });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toEqual([]);

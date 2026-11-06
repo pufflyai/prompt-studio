@@ -29,6 +29,11 @@ export const hasErrorParts = (messages: SessionMessage[]) =>
 
 // The provider's own messages decide a turn's outcome. The published snapshot also
 // holds host-owned messages, such as earlier generated failures, that are not part of it.
+export const nativeWasInterrupted = (messages: OpencodeSessionMessage[]) => {
+  const last = messages.at(-1);
+  return !!last && "info" in last && last.info?.outcome === "interrupted";
+};
+
 export const nativeMessages = (observed: OpencodeSessionMessage[]) => observed.map(normalizeOpencodeMessage);
 
 export const waitForNextPoll = (abortSignal?: AbortSignal, intervalMs = OPENCODE_POLL_INTERVAL_MS) =>
@@ -238,6 +243,8 @@ export const pollOpencodeMessages = async (input: {
     });
   }
 
+  if (nativeWasInterrupted(lastObserved)) return cancelTurn(events);
+
   if (hasErrorParts(nativeMessages(lastObserved).slice(baselineCount))) {
     return failTurn(events);
   }
@@ -298,6 +305,8 @@ export const pollOpencodeUntilIdle = async (input: {
 
     await waitForNextPoll(abortSignal, pollIntervalMs);
   }
+
+  if (nativeWasInterrupted(lastObserved)) return cancelTurn(events);
 
   if (hasErrorParts(nativeMessages(lastObserved).slice(-1))) {
     return failTurn(events);

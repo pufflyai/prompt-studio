@@ -1,12 +1,15 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { resolveNavigationLevels } from "../../../core/controllers/page-location/navigation-level";
+import { reportUserActionError } from "../../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useSharedEqualValue } from "../share-equal-value";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
+import { loadTreeNodeChildren } from "./tree-child-loading";
+import { findNodeInSections } from "./tree-list-adapter";
 import { previewTreeResources } from "./tree-resource-preview";
 import {
   expandDefaultTreeSections,
@@ -93,7 +96,11 @@ export const useTreeData = (
 
   // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
   useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
-  const [expandedChildren, setExpandedChildren] = useState<{ queryKey: string; byNodeId: Record<string, TreeNode[]> }>({
+  const [expandedChildren, setExpandedChildren] = useState<{
+    queryKey: string;
+    request?: symbol;
+    byNodeId: Record<string, TreeNode[]>;
+  }>({
     queryKey: childrenKey,
     byNodeId: {},
   });
@@ -123,17 +130,64 @@ export const useTreeData = (
         if (event.treeId === treeViewId) refresh();
       }),
   });
-  // Expanding one folder loads only its children. The next full read already includes them.
-  const loadChildren = (node: TreeNode) => {
-    void getWorkbenchRenderers(workbench)
-      .getChildren(treeViewId, node, { resource, viewId, filter, pageParams })
-      .then((children) => {
-        setExpandedChildren((current) => ({
-          queryKey: childrenKey,
-          byNodeId: { ...(current.queryKey === childrenKey ? current.byNodeId : {}), [node.id]: children },
-        }));
-      });
-  };
+  const childLoader = useRef<((node: TreeNode) => void) | undefined>(undefined);
+  // Each provider snapshot owns its lazy reads. A replacement cancels them and repairs any expansion
+  // that happened while the replaced snapshot (or its optimistic move preview) was on screen.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Interactive cache updates belong to this snapshot and must not restart its read lifetime.
+  useEffect(() => {
+    const controller = new AbortController();
+    const trees = getWorkbenchRenderers(workbench);
+    const sections = [...(read.value?.header ?? []), ...(read.value?.body ?? []), ...(read.value?.footer ?? [])];
+    const children = {
+      ...read.value?.children,
+      ...(expandedChildren.queryKey === childrenKey && expandedChildren.request === read.request
+        ? expandedChildren.byNodeId
+        : {}),
+    };
+    const pending = new Set<string>();
+    const reconcile = () => {
+      for (const id of trees.getTreeState(treeViewId).expandedNodeIds) {
+        const node = findNodeInSections(sections, id, children);
+        if (node?.collapsible && !node.children && !children[id]) load(node);
+      }
+    };
+    const load = (node: TreeNode) => {
+      if (pending.has(node.id)) return;
+      pending.add(node.id);
+      void loadTreeNodeChildren(
+        trees,
+        treeViewId,
+        node,
+        { resource, viewId, filter, pageParams, signal: controller.signal },
+        sections,
+        children,
+      )
+        .then((value) => {
+          if (controller.signal.aborted) return;
+          children[node.id] = value;
+          setExpandedChildren((current) => ({
+            queryKey: childrenKey,
+            request: read.request,
+            byNodeId: {
+              ...(current.queryKey === childrenKey && current.request === read.request ? current.byNodeId : {}),
+              [node.id]: value,
+            },
+          }));
+          reconcile();
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted) reportUserActionError(workbench, "Load folder", error);
+        })
+        .finally(() => pending.delete(node.id));
+    };
+    childLoader.current = load;
+    reconcile();
+    return () => {
+      controller.abort();
+      childLoader.current = undefined;
+    };
+  }, [workbench, treeViewId, resource, viewId, filter, pageParams, childrenKey, read.request, read.value]);
+  const loadChildren = (node: TreeNode) => childLoader.current?.(node);
   useEffect(() => {
     const subscription = workbench.resources.preview.subscribeRefresh(async (resource) => {
       const contains = (nodes: TreeNode[]): boolean =>
@@ -151,8 +205,10 @@ export const useTreeData = (
     header: read.value?.header ?? structure.header,
     footer: read.value?.footer ?? structure.footer,
     children: {
-      ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
       ...read.value?.children,
+      ...(expandedChildren.queryKey === childrenKey && expandedChildren.request === read.request
+        ? expandedChildren.byNodeId
+        : {}),
     },
   };
   // The renderer's structure, cached reads, and each load step return new objects even when nothing changed.

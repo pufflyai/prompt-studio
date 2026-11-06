@@ -41,6 +41,10 @@ import {
   getWorkspaceDiffSummaryRoute,
 } from "../../features/workspaces/endpoints/get-workspace-diff-summary";
 import {
+  getWorkspaceCapacityHandler,
+  getWorkspaceCapacityRoute,
+} from "../../features/workspaces/endpoints/workspace-capacity";
+import {
   getWorkspaceFileHandler,
   getWorkspaceFileRoute,
   listWorkspaceFilesHandler,
@@ -51,6 +55,7 @@ import type { RelayDeps } from "./deps";
 import { executeWithDeviceAttachments } from "./device-command-attachments";
 
 const requestFor = (command: DeviceCommand) => {
+  if (command.type === "workspace.capacity") return { path: "/workspaces/capacity", method: "GET" };
   if (command.type === "session.create") return { path: "/sessions", method: "POST", body: command.input };
   if (command.type === "workspace.create") return { path: "/workspaces", method: "POST", body: command.input };
   const id = encodeURIComponent(command.id);
@@ -125,6 +130,7 @@ export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) 
   routes.openapi(approveSessionRoute, approveSessionHandler(deps));
   routes.openapi(updateSessionStatusRoute, updateSessionStatusHandler(deps));
   routes.openapi(createWorkspaceRoute, createWorkspaceHandler(deps));
+  routes.openapi(getWorkspaceCapacityRoute, getWorkspaceCapacityHandler(deps));
   routes.openapi(listWorkspaceFilesRoute, listWorkspaceFilesHandler(deps));
   routes.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
   routes.openapi(getWorkspaceDiffRoute, getWorkspaceDiffHandler(deps));
@@ -134,6 +140,7 @@ export const createDeviceCommandExecutor = (deps: RelayDeps, projectId: string) 
   const localSession = async (id: string) => (await deps.sessionService.get(id))?.project_id === projectId;
   const localWorkspace = async (id: string) => (await deps.workspaceService.get(id))?.project_id === projectId;
   const inScope = async (command: DeviceCommand) => {
+    if (command.type === "workspace.capacity") return Boolean(await deps.projectService.get(projectId));
     if (command.type === "session.create") {
       const input = command.input;
       return (

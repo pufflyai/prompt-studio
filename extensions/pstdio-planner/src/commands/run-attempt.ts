@@ -14,7 +14,7 @@ import type { AttemptRecord } from "../data/attempt-types";
 import { attemptWaitMessage } from "../data/attempt-wait-message";
 import { findTicket } from "../data/resolve";
 import { createReviewRequest, handoffRequest } from "../data/review-request-create";
-import type { HumanRequestReason } from "../data/review-request-types";
+import type { ReviewRequestReason } from "../data/review-request-types";
 import { renderOwnedTemplate } from "../data/template-store";
 import { withWriteGuard } from "../data/write-guard";
 import { ticketMenuSlots } from "../resource-kinds";
@@ -38,7 +38,7 @@ import {
   type WorkspaceRecovery,
 } from "./workspace-recovery";
 
-const humanReadinessReasons = new Set<HumanRequestReason>([
+const reviewReadinessReasons = new Set<ReviewRequestReason>([
   "ambiguous-dependency-attempt",
   "dependency-cycle",
   "dependency-missing",
@@ -158,19 +158,19 @@ async function launchAttempt(
   if (readiness.decision === "wait") {
     const message = attemptWaitMessage(ticketIdentity.shorthand, readiness, capacity);
     const storedTicket = await findTicket(ctx, ticketRef);
-    if (storedTicket?.statusId && humanReadinessReasons.has(readiness.reason as HumanRequestReason)) {
+    if (storedTicket?.statusId && reviewReadinessReasons.has(readiness.reason as ReviewRequestReason)) {
       // The readiness reason is what the person who started the attempt needs, so a
       // failed handoff must not replace it.
       await createReviewRequest(ctx, {
         ticket: storedTicket.id,
-        reason: readiness.reason as HumanRequestReason,
+        reason: readiness.reason as ReviewRequestReason,
         title: message,
         request: handoffRequest,
         instructions:
           "Repair the dependency graph or select the intended dependency attempt, then answer this request.",
         expectedTicketStatusId: storedTicket.statusId,
       }).catch((error: unknown) =>
-        ctx.logger.warn("Could not request human input for a ticket that cannot start", {
+        ctx.logger.warn("Could not request review input for a ticket that cannot start", {
           ticket: storedTicket.shorthand,
           error: error instanceof Error ? error.message : String(error),
         }),
@@ -217,7 +217,7 @@ async function launchAttempt(
         : []),
       ...(!options.workspaceId && !options.recovery && readiness.mode === "stacked"
         ? [
-            `This workspace starts at base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch. Verify the submitted dependency commits are present and use update-stack if needed. If their automatic combination conflicts, reconcile the code in this workspace, commit, and retry update-stack. Do not request human review for Git conflicts; ask only if features, concepts, plans, requirements, or architecture conflict. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
+            `This workspace starts at base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch. Verify the submitted dependency commits are present and use update-stack if needed. If their automatic combination conflicts, reconcile the code in this workspace, commit, and retry update-stack. Do not request review for Git conflicts; ask only if features, concepts, plans, requirements, or architecture conflict. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
           ]
         : []),
     ].join("\n\n"),

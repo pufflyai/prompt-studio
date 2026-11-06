@@ -7,6 +7,7 @@ import type { Disposable, KanbanRendererCreateSubmission, ResourceRef } from "..
 import { acceptRendererPage } from "../../core/registries/renderers/renderer-page";
 import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
+import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { collectionBadgeTarget } from "./collection-badge-navigation";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
@@ -35,6 +36,7 @@ const toCreateRowConfig = (record: WorkbenchExtensionKanbanRendererRecord, local
   if (!record.createRow) return undefined;
   return {
     title: localize(record.createRow.title, "Create row"),
+    presentation: record.createRow.presentation,
     submitLabel: localize(record.createRow.submitLabel, "Create"),
     fields: toCreateFields(record, localize),
     labels: {
@@ -191,6 +193,13 @@ export const registerWorkbenchExtensionKanbanRenderers = (
       localize,
       decorate,
       reportUnknownDisplay,
+      (target) => {
+        const mapped = toWorkbenchNavigationTarget(target, {
+          extensionId: record.extensionId,
+          projectId: context.projectId,
+        });
+        void context.workbench.navigation.openTarget(mapped);
+      },
     );
     let wireAttributes = record.attributes;
     const builtIns = kanbanBuiltInViews(record);

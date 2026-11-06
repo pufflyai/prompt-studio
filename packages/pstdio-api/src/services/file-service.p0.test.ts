@@ -29,6 +29,7 @@ const mockFilesStorageService = () =>
       const bytes = await new Response(data).arrayBuffer();
       return { storagePath: "/tmp/p1/file-id", byteLength: bytes.byteLength, hash: "fakehash" };
     }),
+    discardUpload: mock((_projectId: string, _fileId: string) => {}),
     deleteFile: mock(() => {}),
     computeHash: mock(() => "fakehash"),
   }) satisfies FileServiceDeps["filesStorageService"];

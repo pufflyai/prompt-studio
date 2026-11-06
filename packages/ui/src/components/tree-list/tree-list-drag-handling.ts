@@ -27,7 +27,17 @@ export const treeListCollisionDetection =
       x: args.collisionRect.left + args.collisionRect.width / 2,
       y: args.pointerCoordinates.y,
     };
-    const within = pointerCoordinates ? pointerWithin({ ...args, pointerCoordinates }).filter(valid) : [];
+    const candidates = pointerCoordinates ? pointerWithin({ ...args, pointerCoordinates }).filter(valid) : [];
+    // Virtual rows outside their scroll viewport can overlap another tree's drop zone.
+    // Only the visible element under the pointer can receive an in-bounds drop.
+    const document = args.droppableContainers.find((container) => container.node.current)?.node.current?.ownerDocument;
+    const hit = pointerCoordinates && document?.elementFromPoint(pointerCoordinates.x, pointerCoordinates.y);
+    const within = hit
+      ? candidates.filter(({ id }) =>
+          args.droppableContainers.find((container) => container.id === id)?.node.current?.contains(hit),
+        )
+      : candidates;
+    if (hit && candidates.length > 0 && within.length === 0) return [];
     if (within.length === 0) return closestCenter(args).filter(valid);
     return within.sort((left, right) => targetRank(String(left.id)) - targetRank(String(right.id)));
   };

@@ -94,7 +94,7 @@ async function updateStack(ctx: CommandContext, input: ParamsOf<typeof stackUpda
     });
     if (merged.exitCode !== 0)
       throw new Error(
-        `Dependency integration needs repair in this workspace. Reconcile the code, resolve and commit the merge, then retry update-stack. Do not request human review for Git conflicts; ask only for conflicting requirements or design decisions. ${merged.stdout.trim()} ${merged.stderr.trim()}`,
+        `Dependency integration needs repair in this workspace. Reconcile the code, resolve and commit the merge, then retry update-stack. Do not request review for Git conflicts; ask only for conflicting requirements or design decisions. ${merged.stdout.trim()} ${merged.stderr.trim()}`,
       );
   }
   const headSha = await workspaceHead(ctx, attempt.workspaceId);

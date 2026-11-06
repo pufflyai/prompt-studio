@@ -38,7 +38,14 @@ export const prepareOpencodeOperation = (
       };
       signal?.addEventListener("abort", stopNative, { once: true });
       try {
-        await service.runCommand({ sessionId: id, text: operation.text, model: input.model, cwd: input.cwd, signal });
+        await service.runCommand({
+          sessionId: id,
+          text: operation.text,
+          model: input.model,
+          params: input.params,
+          cwd: input.cwd,
+          signal,
+        });
       } finally {
         signal?.removeEventListener("abort", stopNative);
         await aborting;

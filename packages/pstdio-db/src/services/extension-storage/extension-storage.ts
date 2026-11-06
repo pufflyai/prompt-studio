@@ -82,6 +82,10 @@ export const createExtensionStorageDBService = (
     },
     deleteKv: async (scope: KvScope, key: string) => (await scopeFor(scope))?.kv.delete(key) ?? false,
     getCollectionItem,
+    readCollectionItem: async (scope: CollectionScope, itemId: string) => {
+      const item = await (await scopeFor(scope))?.collection(scope.collection).read(itemId);
+      return item ? { value_json: item.value, revision: item.revision } : undefined;
+    },
     listCollection: async (scope: CollectionScope) =>
       ((await (await scopeFor(scope))?.collection(scope.collection).list()) ?? []).map((item) => ({
         ...scope,
@@ -95,6 +99,8 @@ export const createExtensionStorageDBService = (
     },
     updateCollectionItem: async (input: SetCollectionItemInput) =>
       (await collectionFor(input)).update(input.item_id, input.value_json as Json),
+    updateCollectionItemIfUnchanged: async (input: SetCollectionItemInput & { revision: string }) =>
+      (await collectionFor(input)).updateIfUnchanged(input.item_id, input.revision, input.value_json as Json),
     createCollectionItemIfAbsent: async (input: SetCollectionItemInput) =>
       (await collectionFor(input)).createIfAbsent(input.item_id, input.value_json as Json, input.sort_order),
     deleteCollectionItem: async (scope: CollectionScope, itemId: string) => (await collectionFor(scope)).delete(itemId),

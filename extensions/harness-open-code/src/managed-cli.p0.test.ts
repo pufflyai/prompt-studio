@@ -12,7 +12,13 @@ for (const platform of ["darwin", "linux", "win32"] as const) {
       const command = resolveManagedOpencode({
         platform,
         arch,
-        resolvePackage: (name) => join("/packages", name, "package.json"),
+        resolvePackage: (name) => {
+          const os = platform === "win32" ? "windows" : platform;
+          const baseline = arch === "x64" ? "-baseline" : "";
+          expect(name).toBe(`@opencode/cli-${os}-${arch}${baseline}`);
+          return join("/packages", name, "package.json");
+        },
+        musl: false,
         exists: () => true,
       });
       expect(command).not.toBeNull();
@@ -81,6 +87,18 @@ test("uses a native executable for interactive sign-in through a Windows npm shi
       which: () => "C:\\npm\\cli.cmd",
       exists: () => false,
       managed: () => native,
+    }),
+  ).toBe(native);
+});
+
+test("uses the OpenCode 2 executable beside a Windows npm shim", () => {
+  const native = "C:\\npm\\node_modules\\@opencode\\cli\\bin\\opencode.exe";
+  expect(
+    resolveOpencodeCommand({
+      platform: "win32",
+      which: () => "C:\\npm\\opencode.cmd",
+      exists: (path) => path === native,
+      managed: () => "/private/cli",
     }),
   ).toBe(native);
 });

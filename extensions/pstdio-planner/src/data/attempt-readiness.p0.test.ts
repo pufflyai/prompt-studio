@@ -75,7 +75,7 @@ describe("attempt readiness", () => {
       ticketId: dependency.id,
       workspaceId,
       selectedAt: "2026-10-15T00:00:00Z",
-      humanRequestId: null,
+      reviewRequestId: null,
       selectedBy: { type: "human" as const, id: "user", displayName: "User" },
     });
     const input = {
@@ -123,7 +123,7 @@ describe("attempt readiness", () => {
             ticketId: dependency.id,
             workspaceId: "selected",
             selectedAt: "2026-10-15T00:00:00Z",
-            humanRequestId: null,
+            reviewRequestId: null,
             selectedBy: { type: "human", id: "user", displayName: "User" },
           },
         ],

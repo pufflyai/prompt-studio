@@ -108,7 +108,7 @@ try {
       assert(response.ok(), await response.text());
     }
     for (const ticket of tickets.slice(2, 6))
-      await executePlanner(api, project.id, "request-human", {
+      await executePlanner(api, project.id, "request-review", {
         ticket: ticket.id,
         title: "Synthetic review",
         instructions: "Confirm this synthetic task.",

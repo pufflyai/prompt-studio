@@ -1,4 +1,5 @@
 // packaged-page-params-during-mount.p2.test.ts covers host props changed during async guest initialization.
+// packaged-session-import.p1.test.ts restores JSONL session exports through the compiled CLI and API, including the on-disk metadata index.
 // packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 // packaged-collection-view-order-smoke.p2.test.ts keeps Save view clickable beneath explanatory tooltips.
 // packaged-extension-icons.p1.spec.ts covers public SVG assets and light/dark image colors.
@@ -48,6 +49,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-lab-selection.p2.spec.ts checks tabless selection, retained frames, shared edits and saved transforms.
 // packaged-scribble-pages.p2.spec.ts checks native Scribble pages, drafts, favorites and group operations.
 // performance-observer.p2.test.ts checks native CPU units and memory through the compiled observer's direct startup path.
+// packaged-core-extensions-smoke.p1.test.ts checks Onboarding's setup contribution and bundled webview.
 // packaged-core-extensions-smoke.p1.test.ts installs Home through packed public SDK/UI packages and checks its landing declaration.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
 // packaged-artifact-watch-limit.p2.test.ts checks watched mounts refresh when an initial tree exceeds the folder limit.
@@ -65,6 +67,10 @@ import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { expectPackagedProjectChoices, writePackagedChoiceSources } from "./packaged-project-setup-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import {
+  expectPackagedWorkspacePresentation,
+  writeWorkspacePresentationExtension,
+} from "./packaged-workspace-presentation-smoke";
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -148,6 +154,7 @@ test(
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
+          { source: writeWorkspacePresentationExtension(tempRoot), installName: "workspace-presentation" },
           { source: nativeActions, installName: "native-actions" },
           { source: writeNativeMarkdownExtension(tempRoot), installName: "native-markdown" },
           { source: otherNativeActions, installName: "other-native-actions" },
@@ -234,6 +241,11 @@ test(
       });
       await expectPackagedNativeMarkdown({
         projectFolder,
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      await expectPackagedWorkspacePresentation({
         baseUrl: started.baseUrl,
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),

@@ -45,8 +45,8 @@ const linksIn = (node: unknown) => {
   return links;
 };
 
-const linkOccurrencesIn = (markdown: string) =>
-  parseMarkdownSource(markdown).children.flatMap((block) =>
+const linkOccurrencesIn = (markdown: string, parse = parseMarkdownSource) =>
+  parse(markdown).children.flatMap((block) =>
     block.type === "table" ? [] : linksIn(block).map((node) => ({ block, node })),
   );
 
@@ -156,14 +156,19 @@ const findRemovedLinkReplacements = (
   return null;
 };
 
-export const collectMarkdownLinkChanges = (source: string, baseline: string, current: string): LinkChanges => {
-  const sourceLinks = linkOccurrencesIn(source);
-  if (linkOccurrencesIn(current).length >= linkOccurrencesIn(baseline).length) {
+export const collectMarkdownLinkChanges = (
+  source: string,
+  baseline: string,
+  current: string,
+  parse = parseMarkdownSource,
+): LinkChanges => {
+  const sourceLinks = linkOccurrencesIn(source, parse);
+  if (linkOccurrencesIn(current, parse).length >= linkOccurrencesIn(baseline, parse).length) {
     return { edits: [], normalizedCurrent: current };
   }
 
-  const baselineTree = parseMarkdownSource(baseline);
-  const currentTree = parseMarkdownSource(current);
+  const baselineTree = parse(baseline);
+  const currentTree = parse(current);
   const edits: TextEdit[] = [];
   const normalizations: TextEdit[] = [];
   const usedCurrentBlocks = new Set<number>();

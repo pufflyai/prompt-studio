@@ -282,7 +282,7 @@ The [context types](../../../packages/pstdio-api-contracts/src/extension-kernel/
 
 ### Other context services
 
-These are in 0.43.x and `main`:
+The table includes established services and the unreleased workspace presentation methods noted below:
 
 | Method | What it does |
 | --- | --- |
@@ -290,6 +290,15 @@ These are in 0.43.x and `main`:
 | `ctx.sessions.addAnchors(sessionId, anchors)` | Links a session to resources. |
 | `ctx.sessions.removeAnchors(sessionId, refs)` | Removes those links. |
 | `ctx.workspaces.get(id)` | Returns a workspace in this project, or `null`. |
+| `ctx.workspaces.rename(id, { name })` | Renames a local workspace record in this project. Its ID, shorthand and path stay the same. Default workspace names cannot change. |
+| `ctx.workspaces.listFiles(id, { path?, query?, limit? })` | Lists direct children, or finds entries recursively when `query` is supplied. The default and maximum limit is 500; `truncated` reports more matches. |
+| `ctx.workspaces.readFile(id, path)` | Reads supported text or an image preview. `editable` reflects both the format and the provider's file permissions. |
+| `ctx.workspaces.createDirectory(id, path)` / `createFile(id, path, { content })` | Creates a folder or text file without replacing an existing entry. |
+| `ctx.workspaces.writeFile(id, path, { content })` | Saves an existing supported text file; missing files are not recreated. |
+| `ctx.workspaces.moveEntry(id, path, destinationPath)` / `deleteEntry(id, path)` | Moves, renames or deletes an entry inside the workspace. An already existing destination is rejected before the move. |
+| `ctx.workspaces.diffFiles(id, mode)` | Returns lightweight changed-file metadata and counts without file bodies. |
+| `ctx.workspaces.diffFile(id, mode, path)` | Loads one changed file body, or `null` when the file has no change in this comparison. |
+| `ctx.workspaces.diffSummary(id, mode)` | Returns additions, deletions and changed-file count. |
 | `ctx.workspaces.addAnchors(workspaceId, anchors)` | Links a workspace to resources. |
 | `ctx.workspaces.removeAnchors(workspaceId, refs)` | Removes those links. |
 | `ctx.workspaces.resolve(id)` | Returns the provider state, execution kind, execution target, capabilities, and any provider error. |
@@ -299,6 +308,22 @@ These are in 0.43.x and `main`:
 | `ctx.logger.info`, `ctx.logger.warn`, `ctx.logger.error` | Write `(message, metadata?)` to the runtime log with event `extension.log`. The default log level, `error`, drops `info` and `warn`. |
 | `ctx.settings.delete(key)` | Removes the stored value of a setting. |
 
+The workspace presentation methods in the table are **unreleased**, added after 0.46.0 on
+the API 0.3.1 line. Publish the supporting host and SDK before adopting them in a
+separately released extension. They use the command's project and cancellation
+scope. File operations require a ready local file target and enforce the provider's
+read/write capabilities, path containment and Git metadata restrictions. They do
+not forward operations to another device's private history. Use the existing
+project/workspace file mounts when resolving a native text source.
+
+Diff operations require a ready local provider with `diff` enabled. The mode is
+`"current"` for uncommitted changes against HEAD or `"fork_point"` for all changes
+since branch creation. Git comparisons use the provider's worktree root, including
+when execution starts in a subfolder. Invalid, missing or unavailable workspace
+targets reject; `diffFile` returns `null` only for an unchanged or missing diff
+entry. Moves use the existing host rename operation; a concurrent writer changing
+the destination is not an exclusive transaction. Working-tree symlink bodies show the target text without reading the target file.
+
 On `main`, `ctx.resources.allocate({ kind, idPrefix: "tk" })` opts into a compact,
 case-sensitive ID while keeping the human shorthand unchanged. This additive option
 ships in the release after 0.44.0. It shares the core generator with
@@ -306,6 +331,14 @@ ships in the release after 0.44.0. It shares the core generator with
 [Resource identities](../sdk/0002-resources.md#resource-identities).
 
 ### Cloud account and sync status
+
+On `main`, `ctx.account.status().loginAttempt` and the webview account client expose
+the native device owner's latest sign-in request ID and `pending`, `complete` or
+`failed` status. No URL or credential is included. Listen to `accountEvents.changed`
+for start, completion, cancellation and expiry. A new sign-in replaces and drains
+the previous pending callback; sign-out closes it too. Different projects and
+extension copies observe the same operation. Do not persist another sign-in request
+in extension settings. Production consumers need a compatible published host and SDK.
 
 On `main`, `ctx.account` reads this device's Cloud account, the account's devices, and each project's sync status. It is an additive part of extension API 0.2.1 and ships in the release after 0.44.0. The native host owns the device credential; extensions never see it. Methods that take a `projectId` use the current project when it is omitted.
 
@@ -579,6 +612,15 @@ Without a workspace filter, `workspace_id` is the earliest linked workspace, wit
 
 Views can refresh on `viewDataEvents.sessionsChanged` (`view.sessions.changed`). Query with `updatedFrom` and merge by session ID. Webviews read sessions through an extension command using `commands.execute`.
 
+### Workspace presentation and device capacity
+
+`ctx.workspaces.getCapacity()` reads this device's live count and limit. Pass `{ deviceId }` to read another online account device through the existing authenticated project-device channel. Offline or unavailable devices reject the read; do not present their last synced history as a live count. `updateCapacity({ limit })` always updates the current device only.
+
+Native file views can declare `saveMode: "manual"` to retain drafts until an explicit save. Declare `document: { metadataKey: "path" }` when a resource contains several documents; this keeps editor identity stable when unrelated metadata changes. Match the page's document declaration. Workspace text sources accept `{ kind: "workspace", workspaceId, path }` for a selected local workspace; omitting `workspaceId` keeps the default project-folder behavior. Source validation enforces the current project, local execution, readiness and file capabilities. Resolve and project such a source through `ctx.workspaces.readFile(workspaceId, path)` and `writeFile(workspaceId, path, { content })`; these APIs observe the source bytes and reject stale writes. `ctx.workspaceFiles` continues to address the invocation workspace.
+
+Native tree nodes support `rowVariant: "file"`, a `fileName` icon hint and `showContextMenuTrigger`. An action with a single text input can declare `inputPresentation: { kind: "inline", field: "name", placement: "child" }` to create under the row, or `placement: "replace"` to rename it. The host owns pending input, Escape, validation errors and command submission. `copyText` copies a declared string during the user gesture.
+
+Use `workbenchCommands.openWorkspaceTerminal` with a workspace resource to open the persistent platform terminal. `workbenchCommands.revealWorkspaceEntry` takes `{ path }`, relative to that resource's authorized local workspace, and appears only when desktop reveal is available. Extensions must not call desktop globals. Resource-list enum options can declare `noteAction` to open details from a group note independently of expanding the group or Add.
 
 ## Project extension management (API 0.3.1 on main)
 

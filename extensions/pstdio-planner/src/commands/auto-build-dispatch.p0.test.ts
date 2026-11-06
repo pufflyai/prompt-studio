@@ -8,14 +8,14 @@ import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";
 import { createTicketCommand } from "./create-ticket";
-import { requestHumanCommand } from "./review-requests";
+import { requestReviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 import { sessionQuery } from "./session-query.fixture";
 
 const dispatch = (ctx: Awaited<ReturnType<typeof fixture>>["ctx"], ticket: string, revision = "test") =>
   autoBuildDispatchCommand.run(ctx, { ticket, revision });
 
-test("candidates include unattended In Progress and exclude ineligible statuses, drafts, gates, and human requests", async () => {
+test("candidates include unattended In Progress and exclude ineligible statuses, drafts, gates, and review requests", async () => {
   const { ctx, storage, ticket } = await fixture(10);
   await createTicketCommand.run(ctx, { title: "Backlog" });
   await createTicketCommand.run(ctx, { title: "Done", statusId: "done" });
@@ -26,7 +26,7 @@ test("candidates include unattended In Progress and exclude ineligible statuses,
   const gate = await ticket("Gate");
   await registerGate(ctx, gate.id);
   const human = await ticket("Question");
-  await requestHumanCommand.run(ctx, {
+  await requestReviewCommand.run(ctx, {
     ticket: human.id,
     title: "Confirm",
     instructions: "Choose scope",

@@ -7,7 +7,7 @@ import { createSessionResource, makeCommandArgs } from "./command-context.fixtur
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
 
-describe("runAttemptCommand human requests", () => {
+describe("runAttemptCommand review requests", () => {
   const ticketWithDeletedDependency = async () => {
     const storage = createMemoryStorage();
     await seedDefaultTags(storage);
@@ -36,7 +36,7 @@ describe("runAttemptCommand human requests", () => {
     ]);
   });
 
-  test("still reports why the ticket cannot start when the human request fails", async () => {
+  test("still reports why the ticket cannot start when the review request fails", async () => {
     const { storage, ticket } = await ticketWithDeletedDependency();
 
     const run = runAttemptCommand.run(

@@ -61,7 +61,7 @@ export const quarantineBunHosts = (channel: string) =>
 const harnessPackages = {
   "harness-codex": "@openai/codex",
   "harness-claude-code": "@anthropic-ai/claude-code",
-  "harness-open-code": "opencode-ai",
+  "harness-open-code": "@opencode/cli",
   "harness-pi": "@earendil-works/pi-coding-agent",
 };
 

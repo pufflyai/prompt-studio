@@ -4,7 +4,7 @@ import { milestoneEta } from "./milestone-eta";
 const atRisk = (row: PlanRow) =>
   !row.done &&
   row.flags.some(
-    (flag) => flag === "human-needed" || flag === "blocked" || flag === "waiting" || flag === "out-of-order",
+    (flag) => flag === "review-needed" || flag === "blocked" || flag === "waiting" || flag === "out-of-order",
   );
 
 export function summarizeSection(
@@ -18,7 +18,7 @@ export function summarizeSection(
     counts: {
       total: rows.length,
       done: rows.filter((row) => row.done).length,
-      humanNeeded: rows.filter((row) => row.flags.includes("human-needed")).length,
+      reviewNeeded: rows.filter((row) => row.flags.includes("review-needed")).length,
       blocked: rows.filter((row) => row.flags.includes("blocked")).length,
       // Risk is measured against a deadline, so unscheduled work has none.
       atRisk: deadline ? rows.filter(atRisk).length : 0,

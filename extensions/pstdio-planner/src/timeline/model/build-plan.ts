@@ -90,7 +90,7 @@ const requestsFor = (ticket: PlannerTicket, index: PlanIndex) =>
   index.requests.get(ticket.id) ?? { requests: [], errors: [] };
 
 // Only open or unreadable requests ask for input.
-const needsHuman = (ticket: PlannerTicket, index: PlanIndex) => hasPendingInput(requestsFor(ticket, index));
+const needsReview = (ticket: PlannerTicket, index: PlanIndex) => hasPendingInput(requestsFor(ticket, index));
 
 // Walk up the parent chain once; a cycle stops at the first repeated ticket.
 function ancestors(ticket: PlannerTicket, index: PlanIndex) {
@@ -119,8 +119,8 @@ function flagsFor(ticket: PlannerTicket, deadline: Deadline | undefined, late: P
     flags.push("due-soon");
   }
 
-  if (needsHuman(ticket, index)) {
-    flags.push("human-needed");
+  if (needsReview(ticket, index)) {
+    flags.push("review-needed");
   } else if (
     !waiting &&
     (index.workflow.blockedStatusIds.includes(ticket.statusId ?? "") || ticket.blockedReason?.trim())
@@ -153,7 +153,7 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
     late.map((ticket) => link(ticket, index)),
     index,
   );
-  const humanNeeded = flags.includes("human-needed");
+  const reviewNeeded = flags.includes("review-needed");
   const gate = index.gates.has(ticket.id);
   const status = index.statuses.get(ticket.statusId ?? "");
   return {
@@ -163,8 +163,8 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
     state: ticketState(
       ticket,
       {
-        humanNeeded,
-        inputReceived: !humanNeeded && requests.some((request) => request.state === "answered"),
+        reviewNeeded,
+        inputReceived: !reviewNeeded && requests.some((request) => request.state === "answered"),
         unmet: flags.includes("waiting"),
       },
       index.workflow,

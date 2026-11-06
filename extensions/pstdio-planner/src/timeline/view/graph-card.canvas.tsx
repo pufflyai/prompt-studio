@@ -72,7 +72,7 @@ export const CustomStatus: Story = {
 };
 export const ReviewRequested: Story = {
   id: "extensions-planner-timeline-card--review-requested",
-  args: { row: { ...row, flags: ["human-needed"], state: "await-input", requests: [cardReviewRequest] } },
+  args: { row: { ...row, flags: ["review-needed"], state: "await-input", requests: [cardReviewRequest] } },
 };
 export const ReviewAnswered: Story = {
   id: "extensions-planner-timeline-card--review-answered",

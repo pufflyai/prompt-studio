@@ -25,6 +25,7 @@ import {
   type RuntimeSecurity,
   runtimeOrigin,
 } from "./features/runtime/runtime-auth";
+import { createSessionImportRoutes } from "./features/sessions/imports/routes";
 import { createSessionRoutes } from "./features/sessions/routes";
 import { createSettingsRoutes } from "./features/settings/routes";
 import { createSkillRoutes } from "./features/skills/routes";
@@ -197,6 +198,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createNotificationsRoutes(deps));
   app.route("/v1", createBoardViewsRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
+  app.route("/v1", createSessionImportRoutes(deps.sessionImports));
   app.route("/v1", createSettingsRoutes(deps));
   app.route("/v1", createLinkIconRoutes());
   app.route("/v1", createWorkspaceRoutes(deps));

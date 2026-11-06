@@ -211,6 +211,8 @@ test("local overrides sync their edits but never run data migrations; older vers
       await storage.set("migration", true);
     });
     expect(migrations).toBe(0);
+    expect(await storage.canMigrate()).toBe(false);
+    expect(await storage.scope({ type: "custom", id: "scoped" }).canMigrate()).toBe(false);
     await storage.set("note", "private code, shared data");
     expect(await storage.get<string>("note")).toBe("private code, shared data");
     const file = await storage.files.put({ name: "existing.txt", data: new Uint8Array([1]) });
@@ -249,6 +251,7 @@ test("local overrides sync their edits but never run data migrations; older vers
       }),
     ).rejects.toThrow("Update");
     await expect(storage.collection("notes").put("one", {})).rejects.toThrow("Update");
+    await expect(storage.collection("notes").updateIfUnchanged("one", "revision", {})).rejects.toThrow("Update");
     await expect(storage.files.put({ name: "old.txt", data: new Uint8Array([1]) })).rejects.toThrow("Update");
     await expect(
       app.deps.extensionFileService.upload({

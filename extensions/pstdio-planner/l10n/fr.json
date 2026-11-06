@@ -80,5 +80,7 @@
   "timeline.autoBuild.resume": "Reprendre",
   "timeline.autoBuild.requests": "Attention requise",
   "timeline.autoBuild.openRequest": "Ouvrir la demande",
-  "displayMenu.propertyOptions.linkedResources": "Ressources liées"
+  "displayMenu.propertyOptions.linkedResources": "Ressources liées",
+  "commands.requestReview.title": "Demander une révision",
+  "commands.requestReview.description": "Crée une demande de révision et signale que le ticket nécessite une intervention."
 }

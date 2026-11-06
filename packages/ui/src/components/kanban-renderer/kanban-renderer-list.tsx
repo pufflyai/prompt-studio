@@ -16,6 +16,7 @@ export interface KanbanRendererListItem {
   highlight?: string;
   isGroup?: boolean;
   note?: string;
+  onNoteClick?: () => void;
   onCreate?: () => void;
   expandOnClick?: boolean;
   countBadge?: number;

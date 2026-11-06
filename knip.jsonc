@@ -315,7 +315,7 @@
         "src/theme/index.ts",
         // The Canvas build loads these themes by absolute path.
         "src/theme/custom/vscode-theme.canvas-fixture.ts",
-        "src/components/{canvas,charts,dependency-timeline,keyframe-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
+        "src/components/{canvas,charts,dependency-timeline,keyframe-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,command-form,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.canvas.tsx",
         "*.test.ts",
@@ -334,6 +334,8 @@
       "entry": [
         "extension.ts",
         "src/view/main.tsx",
+        // The packaged host compatibility test bundles this entry by path.
+        "src/legacy-layout.fixture.ts",
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "scripts/**/*.{ts,tsx}"
@@ -357,15 +359,27 @@
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"],
       // Harnesses resolve these native executables through package metadata rather than imports.
-      "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "opencode-ai"]
+      "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "@opencode/cli"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
+    "extensions/pstdio-onboarding": {
+      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
     "extensions/pstdio-home": {
       "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/view.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/extension-lab": {
-      "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/views/*.tsx"],
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "*.test.ts",
+        "src/**/*.test.ts",
+        // The packaged host compatibility test bundles this entry by path.
+        "src/legacy-state.fixture.ts",
+        "src/views/*.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-artifacts": {

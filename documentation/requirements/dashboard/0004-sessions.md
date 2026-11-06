@@ -148,4 +148,4 @@ Checked on 2026-10-18 against main commit `45580feb`. The newest stable release 
 
 ### Fork from a reply
 
-Every completed agent reply offers time, Copy, and Fork in its message footer. Fork opens an independent conversation through that reply, preserving agent, model, parameters, and workspace. Later turns stay in the source. It waits for a new prompt. The harness must support native forks, and pending work must settle first. Failures appear beside the Fork control.
+Every completed agent reply offers time, Copy, and Fork in its message footer. Fork opens an independent conversation through that reply, preserving agent, model, parameters, and workspace. Later turns stay in the source. It waits for a new prompt. The harness must support native forks. Forking through an earlier reply leaves later running or queued work in the source untouched. Failures appear beside the Fork control.
