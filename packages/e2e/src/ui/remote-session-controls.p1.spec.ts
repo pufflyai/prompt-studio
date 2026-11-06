@@ -182,8 +182,20 @@ test("remote workspaces open synced history; offline sessions stay readable and 
   ).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("offline-readable.png") });
-  await request.post(`${fixture.origin}/fixture/action`, { data: { action: "online" } });
-  await page.getByRole("button", { name: "Check connection", exact: true }).click();
+  // Keep automatic presence refreshes from removing the offline control before its click.
+  const reconnect = Promise.withResolvers<void>();
+  const reconnectRoute = "**/v1/account/devices";
+  await page.route(reconnectRoute, async (route) => {
+    await reconnect.promise;
+    await route.continue();
+  });
+  try {
+    await request.post(`${fixture.origin}/fixture/action`, { data: { action: "online" } });
+    await page.getByRole("button", { name: "Check connection", exact: true }).click();
+  } finally {
+    reconnect.resolve();
+    await page.unrouteAll({ behavior: "wait" });
+  }
   await expect(page.getByTestId("content-editable").filter({ visible: true }).last()).toBeEditable();
   await expect(page.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
   await expect(

@@ -18,7 +18,7 @@ Catalog-owned levels are frozen after publication. Nested loader and database re
 
 The [source cache](../../../packages/pstdio-api/src/features/extensions/project-extension-runtime-sources.ts) shares one import promise per canonical source path/version. Canonicalization handles the same installed source reached through a symlink or a watcher path.
 
-The project catalog resolves enablement/settings and normalizes those sources into one runtime. Concurrent reads join the same load. A generation invalidated during loading cannot publish after a newer request. Command volume on unchanged sources must not grow imported module identities.
+The project catalog resolves enablement/settings and normalizes those sources into one runtime. Concurrent reads join the same load. A read returns a snapshot that reflects every invalidation made before the read started. An invalidation that can change contributions discards the load in flight, so that load cannot publish after a newer request. A `webviews_built` invalidation only marks the snapshot for refresh: the load in flight still publishes for the reads already waiting on it, and the next read loads again and rechecks the source. Otherwise builds that finish one after another during project setup would discard every load until the last build ended. Command volume on unchanged sources must not grow imported module identities.
 
 Project command execution, metadata, settings, templates, scheduler, and harness consumers read this catalog. A project harness registry keys its cache by snapshot identity. Host-wide harness discovery is a separate scope.
 
@@ -44,6 +44,6 @@ Atomic install replacement briefly removes a source directory. While the source 
 
 ## Verification
 
-Validate stable snapshot identity under repeated reads, shared imports under concurrent reads, targeted invalidation, in-flight stale-load rejection, source replacement, broken packages, disable/uninstall, and project separation. Check command execution and metadata from the same snapshot.
+Validate stable snapshot identity under repeated reads, shared imports under concurrent reads, targeted invalidation, in-flight stale-load rejection, webview builds that keep the in-flight load, source replacement, broken packages, disable/uninstall, and project separation. Check command execution and metadata from the same snapshot.
 
 See the [requirements · RB 6.A.1](../../requirement-book/book.json) and the catalog tests beside [the runtime implementation](../../../packages/pstdio-api/src/features/extensions).

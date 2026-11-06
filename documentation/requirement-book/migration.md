@@ -456,3 +456,7 @@ Not carried as independent requirements: Illustrative architecture, external com
 - RB 12.A.19 ← 5. Signal Handling, normative Required behavior paragraph; surrounding historical implementation notes omitted.
 - RB 10.A.15 ← conversion Gate 1 conditions, retained as proposed with historical release context.
 - RB 9.A.66 ← Cloud Storage API change and its public deprecation boundary; proposed.
+
+## Main integration
+
+RB 6.A.1 carries the newer runtime-snapshot read-freshness clause from main: reads include prior invalidations; webview builds refresh later reads without invalidating the active contribution load. The superseded PRD remains removed.
