@@ -19,5 +19,6 @@
   "sessions.more": "Plus de conversations",
   "sessions.empty": "Aucune conversation",
   "actions.archiveExplanation": "La conversation enregistrée est conservée. Le travail dans la file d’attente sera annulé. Une exécution en cours ou attendant une réponse continuera.",
-  "actions.deleteExplanation": "La conversation enregistrée est supprimée. Les fichiers de l’espace de travail et l’historique de l’agent externe sont conservés."
+  "actions.deleteExplanation": "La conversation enregistrée est supprimée. Les fichiers de l’espace de travail et l’historique de l’agent externe sont conservés.",
+  "actions.sessionName": "Nom de la conversation"
 }

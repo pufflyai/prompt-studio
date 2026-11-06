@@ -10,7 +10,7 @@ import {
   workbenchResourceKinds,
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "../refs";
-import { archive, create, remove, rename } from "./navigation";
+import { create } from "./navigation";
 import { sessionResource, sessionTarget } from "./resource";
 
 const icons: Record<string, string> = {
@@ -46,31 +46,6 @@ const sessionNodes = (
       target: workspaceId
         ? { kind: "panel", panel: sessionBrowser.panels.conversation, resource, open: "preview" }
         : sessionTarget(resource),
-      contextMenuActions: [
-        {
-          id: "rename",
-          label: l10n("actions.rename", "Rename session"),
-          icon: "pencil",
-          command: rename.ref,
-          params: { sessionId: session.id },
-          input: { title: { type: "text", label: "Session name", required: true, defaultValue: session.title } },
-        },
-        {
-          id: "archive",
-          label: l10n("actions.archive", "Archive session"),
-          icon: "archive",
-          command: archive.ref,
-          params: { sessionId: session.id },
-        },
-        {
-          id: "delete",
-          label: l10n("actions.delete", "Delete session"),
-          icon: "trash-2",
-          command: remove.ref,
-          params: { sessionId: session.id },
-          disabled: ["in_progress", "awaiting_input", "queued"].includes(session.status),
-        },
-      ],
     });
   }
   return nodes;

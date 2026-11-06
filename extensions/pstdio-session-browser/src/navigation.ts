@@ -102,7 +102,7 @@ export const rename = defineCommand({
   menus: [{ slot: sessionSlots.headerOverflow, group: "session", icon: "pencil" }],
   params: {
     sessionId: params.text({ required: true, resolvedFrom: "resource" }),
-    title: params.text({ required: true }),
+    title: params.text({ required: true, label: l10n("actions.sessionName", "Session name") }),
   },
   resourceMutation: { kind: "rename", resourceType: "session", idParam: "sessionId", labelParam: "title" },
   async run(ctx, input) {
