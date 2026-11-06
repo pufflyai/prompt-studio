@@ -182,10 +182,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         const nextResolvedMetadata = localizeExtensionMetadata(nextMetadata, owner);
         rawMetadata = nextMetadata;
         // `metadata` holds only what registered, so a refresh after a failure always retries.
-        if (hasSameSerializedMetadata(metadata, nextResolvedMetadata)) {
-          commitMetadata(nextProjectId, nextResolvedMetadata);
-          return;
-        }
+        if (hasSameSerializedMetadata(metadata, nextResolvedMetadata)) return;
         const pageLocationBeforeRefresh = displacedPageLocation ?? ctx.pages.store.getState().location;
         const refreshLayout = captureExtensionContributionRefreshLayout(ctx);
         // Observers must see the completed refresh. A temporary missing page can
