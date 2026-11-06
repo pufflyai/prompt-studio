@@ -304,9 +304,14 @@ test("offline saves keep known pending counts and new documents invalidate disco
     access: async () => ({ token: "access", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
   });
   const listing = spyOn(app.deps.extensionStorageService.documents, "list");
+  const pendingLogs = spyOn(app.deps.extensionStorageService.logs, "pending");
   try {
     await sync.synchronize(new AbortController().signal);
     expect(await sync.status()).toMatchObject({ pendingItems: 0, download: { completed: 3, total: 3 } });
+    pendingLogs.mockClear();
+    await sync.status();
+    await sync.status();
+    expect(pendingLogs).not.toHaveBeenCalled();
     const storage = await app.deps.extensionStorageService.open({ owner });
     await storage.records.commit({
       operationId: "offline-save",
@@ -330,6 +335,7 @@ test("offline saves keep known pending counts and new documents invalidate disco
     expect(listing).not.toHaveBeenCalled();
   } finally {
     listing.mockRestore();
+    pendingLogs.mockRestore();
     sync.close();
     await peer.stop(true);
     await app.close();
