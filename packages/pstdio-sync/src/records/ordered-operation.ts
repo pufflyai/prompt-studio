@@ -96,7 +96,7 @@ const preparedChanges = async (edit: OrderedEdit, current: OrderedRecord | undef
   return replacementChanges(before.exists && !before.deleted ? before.value : undefined, edit.replace);
 };
 
-const lifetimeObservation = (revision: string): OrderedLifetime => {
+const lifetimeObservation = (revision: string) => {
   const { version, exists, deleted, lifetime } = readOrderedObservation(revision);
   return { version, exists, deleted, lifetime };
 };
