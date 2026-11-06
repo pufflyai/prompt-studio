@@ -53,7 +53,6 @@ const conversation = defineView({
       operations: [connectionRefresh],
       nativeHarnessAccount: { controlId: "harness" },
       controls: composerControls,
-      values: { harness: { harnessId: "" } },
     },
     refreshEvents: [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
     query: (ctx, { renderer }) => readSnapshot(ctx, renderer.resource),
