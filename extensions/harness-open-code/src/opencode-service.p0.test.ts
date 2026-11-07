@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { acceptedPrompt, emptyMessages } from "./native-api.test-helpers";
+import { acceptedPrompt, emptyMessages, nativeMessagesResponse } from "./native-api.test-helpers";
 import { createHarnessServerStore } from "./opencode-server";
 import { createOpencodeService } from "./opencode-service";
 
@@ -158,12 +158,12 @@ test("fork copies the native session without submitting a prompt", async () => {
     async fetch(request) {
       requests.push(`${request.method} ${new URL(request.url).pathname}`);
       if (request.method === "GET")
-        return Response.json([
+        return nativeMessagesResponse([
           { info: { id: "answer", role: "assistant" }, parts: [{ type: "text", text: "First" }] },
           { info: { id: "successor", role: "user" }, parts: [{ type: "text", text: "Later" }] },
         ]);
       copiedBody = await request.json();
-      return Response.json({ id: "forked" });
+      return Response.json({ data: { id: "forked" } });
     },
   });
   const service = createOpencodeService({
@@ -172,8 +172,8 @@ test("fork copies the native session without submitting a prompt", async () => {
   });
   try {
     expect(await service.forkSession("original", "/project", undefined, "answer")).toBe("forked");
-    expect(requests).toEqual(["GET /session/original/message", "POST /session/original/fork"]);
-    expect(copiedBody).toEqual({ messageID: "successor" });
+    expect(requests).toEqual(["GET /api/session/original/message", "POST /api/session/original/fork"]);
+    expect(copiedBody).toEqual({ before: "successor" });
   } finally {
     await service.dispose();
     server.stop(true);
