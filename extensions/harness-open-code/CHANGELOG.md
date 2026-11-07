@@ -1,5 +1,21 @@
 # harness-open-code
 
+## 0.47.0
+
+_2026-11-07_
+
+### Minor Changes
+
+- 8e68cbf: Support independent conversation forks through a selected agent reply without starting a model turn.
+
+### Patch Changes
+
+- 204885f: Upgrade to OpenCode 2.2.5 with native session, model, question, and sign-in support.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- 8d39903: Restore OpenCode 2 model discovery with native thinking choices and recovery after discovery failures.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+- ea3ad77: Bound native tool-result retention and publish only changed conversation messages.
+
 ## 0.46.0
 
 _2026-10-31_

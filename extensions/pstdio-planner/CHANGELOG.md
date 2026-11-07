@@ -1,5 +1,33 @@
 # pstdio-planner
 
+## 0.47.0
+
+_2026-11-07_
+
+### Minor Changes
+
+- 9ce305f: Keep review request text to 80 words with supporting document links and rename the creation command to request-review.
+- 429ade4: Keep ticket order consistent across offline moves using core order positions.
+
+### Patch Changes
+
+- ee368ab: Open workspace files, linked workspaces and workspace creation through the bundled Workspaces provider while preserving contextual ticket navigation and existing host links.
+- dd1529d: Open timeline tickets in an unpinned side-panel preview while keeping the planner visible and the selected ticket outlined.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- ebdce53: Use public shared-text providers for Notes and Planner while preserving titles and stable source identity.
+- 9f1605d: Close menus and popovers when their trigger is clicked again, including Auto Build activity, tab context menus, and controls with custom IDs.
+- afd5581: Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.
+- a24082b: Let ticket designs hand off through a proposal folder on the default branch as well as a pushed branch and commit.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+- 5a5d21b: Open review decisions from Auto Build and timeline attention indicators, show progress by status, defer Auto Build wakes while worker capacity is full, and let eligible blocked work be investigated.
+- 5022989: Keep document saving silent, ticket properties compact, and long dropdown values contained; hide empty review links.
+- 8bd04d8: Resume managed work manually when its previous workspace is unavailable.
+- c7a8149: Unify settings layouts, keep save and reset actions in the header, and protect unsaved settings when navigating or closing. Align Planner status and tag editors, group workflow and automation settings, and show visible loading skeletons.
+- b2fec01: Use the shared icon and title popover header in Performance and Auto Build, without a redundant close button.
+- 2d0cff8: Keep the project timeline from pinning the CPU: each ticket card loads its context-menu actions once and reloads them only when you use the card after a change, instead of every card reloading them after every workbench change.
+- e31eb66: Auto Build skips starting an attempt when this device's workspace limit is full and checks live capacity on the next dispatch. Sessions in an already active workspace can share its slot, while Planner's ticket concurrency setting stays unchanged.
+- 3bfc96b: Show ticket-linked workspaces, artifacts, and other resources in one badge list with owner navigation and unavailable states.
+
 ## 0.46.0
 
 _2026-10-31_
