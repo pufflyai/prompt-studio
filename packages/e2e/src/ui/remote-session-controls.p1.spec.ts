@@ -217,14 +217,16 @@ test("remote workspaces open synced history; offline sessions stay readable and 
   ).toBeVisible();
   await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
   await page.goto(`${fixture.origin}/projects/${fixture.projectId}/sessions/compose`);
-  // An empty local device value uses the native selection placeholder.
-  await page.locator('[data-workbench-panel="main"]').getByRole("button", { name: "Select", exact: true }).click();
-  await page.getByRole("menuitemradio", { name: "Laptop", exact: true }).click();
+  // Drafts expose the shared device selector only when this account has multiple devices.
+  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
+  await main.getByRole("button", { name: "Select device", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Laptop", exact: true }).click();
   const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
   await editor.fill("New session on Laptop");
   await page.reload();
   await expect(editor).toHaveText("New session on Laptop");
-  await expect(main.getByRole("button", { name: "Laptop", exact: true })).toBeVisible();
+  await expect(main.getByRole("button", { name: "Select device", exact: true })).toContainText("Laptop");
+  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
   await main.getByTestId("send-message-button").filter({ visible: true }).click();
   await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await expect(main.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
