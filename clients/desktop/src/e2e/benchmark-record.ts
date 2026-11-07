@@ -75,7 +75,8 @@ export const recordBenchmark = async (benchmark: Benchmark) => {
   try {
     expect(findBudgetFailures(benchmark.metrics), benchmark.name).toEqual([]);
   } catch (error) {
-    test.info().annotations.push({ type: "performance-budget-failure" });
+    if (error instanceof Error)
+      test.info().annotations.push({ type: "performance-budget-failure", description: String(error) });
     throw error;
   }
 };

@@ -101,9 +101,6 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
   for (const result of [close, reopen]) {
     expect(result.collapseStateTransitions).toBe(1);
     expect(result.duration).toBeGreaterThanOrEqual(0);
-    checkPerformance(() => {
-      expect(result.longTasks).toEqual([]);
-    });
   }
 
   await reportPageMemory(page, "side-panel");
@@ -120,6 +117,7 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
     ),
   );
   checkPerformance(() => {
+    for (const result of [close, reopen]) expect(result.longTasks).toEqual([]);
     expect(misses).toEqual([]);
   });
 });

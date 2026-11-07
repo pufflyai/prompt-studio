@@ -3,8 +3,8 @@ import { verifyBunQuarantineCases } from "./quarantine-reports";
 
 interface BenchmarkTest {
   expectedStatus?: string;
-  annotations?: { type: string }[];
-  results: { status: string }[];
+  annotations?: { type: string; description?: string }[];
+  results: { status: string; errors?: { message?: string }[] }[];
 }
 interface BenchmarkSuite {
   suites?: BenchmarkSuite[];
@@ -21,7 +21,7 @@ const benchmarkRecord = (spec: NonNullable<BenchmarkSuite["specs"]>[number], roo
   if (spec.tests.length !== 1) throw new Error("Browser benchmark must have one project and attempt");
   const test = spec.tests[0]!;
   if (test.results.length !== 1) throw new Error("Browser benchmark must execute once");
-  const status = test.results[0]!.status;
+  const { status, errors } = test.results[0]!;
   const outcomes: Record<string, string> = {
     passed: "success",
     failed: "failure",
@@ -37,7 +37,22 @@ const benchmarkRecord = (spec: NonNullable<BenchmarkSuite["specs"]>[number], roo
     title: spec.title,
     outcome,
     performanceFailure:
-      status === "failed" && test.annotations?.some((entry) => entry.type === "performance-budget-failure") === true,
+      status === "failed" &&
+      Boolean(errors?.length) &&
+      (errors ?? []).every((error) => {
+        const message = error.message?.replace(/^Error: /, "");
+        return (
+          typeof message === "string" &&
+          test.annotations?.some((entry) => {
+            const description = entry.description?.replace(/^Error: /, "");
+            return (
+              entry.type === "performance-budget-failure" &&
+              Boolean(description) &&
+              (description === message || message.startsWith(`${description}\n\n`))
+            );
+          })
+        );
+      }),
   };
 };
 

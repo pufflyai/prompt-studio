@@ -153,7 +153,8 @@ export const checkPerformance = (check: () => void) => {
   try {
     check();
   } catch (error) {
-    test.info().annotations.push({ type: "performance-budget-failure" });
+    if (error instanceof Error)
+      test.info().annotations.push({ type: "performance-budget-failure", description: String(error) });
     throw error;
   }
 };

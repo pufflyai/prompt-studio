@@ -81,16 +81,14 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
   );
   expect(finalTabs - initial.count).toBe(1);
   await expect(page.getByRole("textbox", { name: "Terminal input", exact: true })).toBeVisible();
-  checkPerformance(() => {
-    expect(result.longTasks).toEqual([]);
-  });
-
   await reportPageMemory(page, "panel-tabs");
 
   const results = [result.duration];
   expect(results).toHaveLength(1);
   // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 664 ms) plus about 20%.
+  const misses = budgetMisses("panel-tabs", "open-panel", results, workbenchBudgets.panelTabs.value);
   checkPerformance(() => {
-    expect(budgetMisses("panel-tabs", "open-panel", results, workbenchBudgets.panelTabs.value)).toEqual([]);
+    expect(result.longTasks).toEqual([]);
+    expect(misses).toEqual([]);
   });
 });

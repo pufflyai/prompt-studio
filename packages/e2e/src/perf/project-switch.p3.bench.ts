@@ -183,18 +183,6 @@ test("switches projects once and within budget", async ({ page, request }) => {
     const bToA = samples.filter((sample) => sample.direction === "b-to-a").map((sample) => sample.duration);
     expect(aToB).toHaveLength(10);
     expect(bToA).toHaveLength(10);
-    // Set from hosted ubuntu-24.04 runs (slowest 1,533 ms; slowest long task 419 ms, on the first switch after load)
-    // plus about 20%. The long-task cap was corrected on 2026-10-27: the first value missed samples.
-    checkPerformance(() => {
-      expect(
-        budgetMisses(
-          "project-switch",
-          "long-task",
-          samples.map((sample) => Math.max(0, ...sample.longTasks)),
-          workbenchBudgets.projectSwitchLongTask.value,
-        ),
-      ).toEqual([]);
-    });
     expect(samples.filter((sample) => !Object.values(sample.stableInstances).every(Boolean))).toEqual([]);
     const requestCount = (sample: ProjectSwitchSample, path: string) => {
       const targetId = sample.direction === "a-to-b" ? projectB.id : projectA.id;
@@ -203,11 +191,21 @@ test("switches projects once and within budget", async ({ page, request }) => {
     expect(samples.filter((sample) => requestCount(sample, "ui") !== 1)).toEqual([]);
     expect(samples.filter((sample) => requestCount(sample, "appearance") !== 1)).toEqual([]);
     await reportPageMemory(page, "project-switch");
+    // Set from hosted ubuntu-24.04 runs (slowest 1,533 ms; slowest long task 419 ms, on the first switch after load)
+    // plus about 20%. The long-task cap was corrected on 2026-10-27: the first value missed samples.
+    const longTaskMisses = budgetMisses(
+      "project-switch",
+      "long-task",
+      samples.map((sample) => Math.max(0, ...sample.longTasks)),
+      workbenchBudgets.projectSwitchLongTask.value,
+    );
+    const durationMisses = [
+      ...budgetMisses("project-switch", "a-to-b", aToB, workbenchBudgets.projectSwitch.value),
+      ...budgetMisses("project-switch", "b-to-a", bToA, workbenchBudgets.projectSwitch.value),
+    ];
     checkPerformance(() => {
-      expect([
-        ...budgetMisses("project-switch", "a-to-b", aToB, workbenchBudgets.projectSwitch.value),
-        ...budgetMisses("project-switch", "b-to-a", bToA, workbenchBudgets.projectSwitch.value),
-      ]).toEqual([]);
+      expect(longTaskMisses).toEqual([]);
+      expect(durationMisses).toEqual([]);
     });
   } finally {
     rmSync(projectA.repoRoot, { recursive: true, force: true });

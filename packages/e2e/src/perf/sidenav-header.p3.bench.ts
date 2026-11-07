@@ -77,17 +77,14 @@ test("navigates global collections within the interaction budget", async ({ page
   }
   await afterTwoFrames(page);
 
-  const samples: Array<{ collection: Collection; duration: number }> = [];
+  const samples: Array<{ collection: Collection } & Awaited<ReturnType<typeof readInteraction>>> = [];
   for (const collection of collections) {
     await resetInteraction(page);
     await settleWhenNavShows(page, collection);
     await collectionRow(page, collection).click();
     await expect(breadcrumb.getByText(collection, { exact: true })).toBeVisible();
     const result = await readInteraction(page);
-    checkPerformance(() => {
-      expect(result.longTasks).toEqual([]);
-    });
-    samples.push({ collection, duration: result.duration });
+    samples.push({ collection, ...result });
   }
 
   await reportPageMemory(page, "sidenav-header");
@@ -104,6 +101,7 @@ test("navigates global collections within the interaction budget", async ({ page
     ),
   );
   checkPerformance(() => {
+    for (const sample of samples) expect(sample.longTasks).toEqual([]);
     expect(misses).toEqual([]);
   });
 });
