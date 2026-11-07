@@ -49,7 +49,9 @@ export const createLegacyRecordStorage = (input: { records: LegacyRecords }) => 
         edits: [
           {
             recordId: id,
-            expectedRevision: current.revision,
+            ...(deleted
+              ? { expectedRevision: current.revision }
+              : { observedRevision: current.revision, expectedLifetime: current.revision }),
             replace: legacyJson(value),
             ...(current.deleted !== deleted && { deleted }),
           },
@@ -104,7 +106,10 @@ export const createLegacyRecordStorage = (input: { records: LegacyRecords }) => 
                 edits: [
                   {
                     recordId: id,
-                    expectedRevision: current.revision,
+                    // The boolean condition was checked under this local owner lock. Reuse
+                    // its baseline without later refusing the accepted save at relay order.
+                    observedRevision: current.revision,
+                    expectedLifetime: current.revision,
                     replace: legacyJson(valueFor(value, stored.sortOrder)),
                   },
                 ],
