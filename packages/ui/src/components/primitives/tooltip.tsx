@@ -66,7 +66,7 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
   const unavailable = disabled || isEmptyContent(content);
   if (unavailable && !overflowRef) return children;
   // Keep overflow labels mounted so their observers and keyboard focus survive eligibility changes.
-  const visibilityBlocked = Boolean(unavailable || (overflowRef && !overflowing));
+  const visibilityBlocked = Boolean(unavailable || (overflowRef !== undefined && !overflowing));
 
   const measureOnIntent = () => {
     const label = overflowRef?.current;
@@ -75,25 +75,6 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
     // Zag must see the enabled trigger before handling this same pointer/focus event.
     if (next) flushSync(() => setOverflowing(true));
   };
-  const child = children as React.ReactElement<React.HTMLAttributes<HTMLElement>> | undefined;
-  const trigger =
-    overflowRef && child
-      ? React.cloneElement(child, {
-          onPointerOverCapture(event) {
-            child.props.onPointerOverCapture?.(event);
-            measureOnIntent();
-          },
-          onPointerMoveCapture(event) {
-            child.props.onPointerMoveCapture?.(event);
-            measureOnIntent();
-          },
-          onFocusCapture(event) {
-            child.props.onFocusCapture?.(event);
-            measureOnIntent();
-          },
-        })
-      : children;
-
   // A trigger child's own id replaces the generated trigger id, and Zag finds the anchor by that id.
   const childId = (children?.props as { id?: string } | undefined)?.id;
 
@@ -107,7 +88,14 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
       open={visibilityBlocked && rest.open !== undefined ? false : rest.open}
     >
       <TooltipHoverReset disabled={visibilityBlocked} />
-      <ChakraTooltip.Trigger asChild>{trigger}</ChakraTooltip.Trigger>
+      <ChakraTooltip.Trigger
+        asChild
+        onPointerOverCapture={measureOnIntent}
+        onPointerMoveCapture={measureOnIntent}
+        onFocusCapture={measureOnIntent}
+      >
+        {children}
+      </ChakraTooltip.Trigger>
       <Portal disabled={!portalled} container={portalRef}>
         <ChakraTooltip.Positioner>
           <ChakraTooltip.Content ref={ref} {...contentProps}>
