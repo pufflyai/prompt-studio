@@ -1,5 +1,6 @@
 import { useTooltipContext } from "@chakra-ui/react";
 import * as React from "react";
+import { flushSync } from "react-dom";
 import { ScopedTooltip as ChakraTooltip } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
 
@@ -39,6 +40,8 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
   const [overflowing, setOverflowing] = React.useState(false);
 
   React.useLayoutEffect(() => {
+    // Closed labels need no layout work until someone points at or focuses them.
+    if (!overflowing && !rest.open && !rest.defaultOpen) return;
     const label = overflowRef?.current;
     if (!label) return;
     const measure = () => setOverflowing(label.scrollWidth > label.clientWidth);
@@ -51,7 +54,7 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
       observer.disconnect();
       textObserver.disconnect();
     };
-  }, [overflowRef]);
+  }, [overflowRef, overflowing, rest.open, rest.defaultOpen]);
 
   const isEmptyContent = (node: React.ReactNode): boolean => {
     if (node === null || node === undefined || node === false) return true;
@@ -64,6 +67,32 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
   if (unavailable && !overflowRef) return children;
   // Keep overflow labels mounted so their observers and keyboard focus survive eligibility changes.
   const visibilityBlocked = Boolean(unavailable || (overflowRef && !overflowing));
+
+  const measureOnIntent = () => {
+    const label = overflowRef?.current;
+    if (unavailable || !label || overflowing) return;
+    const next = label.scrollWidth > label.clientWidth;
+    // Zag must see the enabled trigger before handling this same pointer/focus event.
+    if (next) flushSync(() => setOverflowing(true));
+  };
+  const child = children as React.ReactElement<React.HTMLAttributes<HTMLElement>> | undefined;
+  const trigger =
+    overflowRef && child
+      ? React.cloneElement(child, {
+          onPointerOverCapture(event) {
+            child.props.onPointerOverCapture?.(event);
+            measureOnIntent();
+          },
+          onPointerMoveCapture(event) {
+            child.props.onPointerMoveCapture?.(event);
+            measureOnIntent();
+          },
+          onFocusCapture(event) {
+            child.props.onFocusCapture?.(event);
+            measureOnIntent();
+          },
+        })
+      : children;
 
   // A trigger child's own id replaces the generated trigger id, and Zag finds the anchor by that id.
   const childId = (children?.props as { id?: string } | undefined)?.id;
@@ -78,7 +107,7 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
       open={visibilityBlocked && rest.open !== undefined ? false : rest.open}
     >
       <TooltipHoverReset disabled={visibilityBlocked} />
-      <ChakraTooltip.Trigger asChild>{children}</ChakraTooltip.Trigger>
+      <ChakraTooltip.Trigger asChild>{trigger}</ChakraTooltip.Trigger>
       <Portal disabled={!portalled} container={portalRef}>
         <ChakraTooltip.Positioner>
           <ChakraTooltip.Content ref={ref} {...contentProps}>

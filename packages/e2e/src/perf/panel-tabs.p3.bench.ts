@@ -30,9 +30,15 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
       if (!header) throw new Error("Secondary Panel header is not mounted");
       const count = header.querySelectorAll('[role="tab"]').length;
       const observer = new MutationObserver(() => {
-        if (header.querySelectorAll('[role="tab"]').length <= count) return;
+        const selected = header.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+        if (header.querySelectorAll('[role="tab"]').length <= count || !selected?.checkVisibility()) return;
         observer.disconnect();
-        window.__perfSettled = performance.now();
+        // Include the selected tab's layout and first paint, rather than stopping at insertion.
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            window.__perfSettled = performance.now();
+          }),
+        );
       });
       observer.observe(header, { attributes: true, childList: true, subtree: true });
       return count;

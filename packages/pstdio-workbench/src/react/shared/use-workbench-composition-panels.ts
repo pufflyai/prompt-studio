@@ -1,33 +1,21 @@
+import { useSyncExternalStore } from "react";
 import type { WorkbenchCompositionRegionPanels, WorkbenchCore, WorkbenchPanelRegion } from "../../core";
-import { useWorkbenchStore } from "./use-workbench-store";
+import { compositionPanelSnapshot } from "./composition-panel-snapshot";
 
 export type WorkbenchCompositionPanelsByRegion = Record<WorkbenchPanelRegion, WorkbenchCompositionRegionPanels>;
-
-const useWorkbenchCompositionChanges = (workbench: WorkbenchCore) => {
-  "use no memo";
-
-  useWorkbenchStore(workbench.layout.store, (state) => state);
-  useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
-  useWorkbenchStore(workbench.pages.store, (state) => state);
-  useWorkbenchStore(workbench.commands.store, (state) => state);
-  useWorkbenchStore(workbench.context.store, (state) => state);
-};
+const empty: WorkbenchCompositionRegionPanels = { open: [], addable: [], closable: [] };
+const emptyReader = { refresh: () => empty, read: () => empty, subscribe: (_changed: () => void) => () => {} };
 
 export const useWorkbenchCompositionRegionPanels = (workbench: WorkbenchCore, region?: WorkbenchPanelRegion) => {
   "use no memo";
-
-  useWorkbenchCompositionChanges(workbench);
-  return region ? workbench.composition.panelsFor(region) : { open: [], addable: [], closable: [] };
+  const reader = region ? compositionPanelSnapshot(workbench, region) : emptyReader;
+  // Opening a palette can reveal live provider availability without another store transition.
+  reader.refresh();
+  return useSyncExternalStore(reader.subscribe, reader.read, reader.read);
 };
 
-export const useWorkbenchCompositionPanels = (workbench: WorkbenchCore): WorkbenchCompositionPanelsByRegion => {
-  "use no memo";
-
-  useWorkbenchCompositionChanges(workbench);
-
-  return {
-    main: workbench.composition.panelsFor("main"),
-    secondary: workbench.composition.panelsFor("secondary"),
-    side: workbench.composition.panelsFor("side"),
-  };
-};
+export const useWorkbenchCompositionPanels = (workbench: WorkbenchCore): WorkbenchCompositionPanelsByRegion => ({
+  main: useWorkbenchCompositionRegionPanels(workbench, "main"),
+  secondary: useWorkbenchCompositionRegionPanels(workbench, "secondary"),
+  side: useWorkbenchCompositionRegionPanels(workbench, "side"),
+});

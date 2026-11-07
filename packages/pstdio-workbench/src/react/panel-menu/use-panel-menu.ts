@@ -141,6 +141,7 @@ const useWorkbenchPanelMenuAttachment = (
   );
 
   useLayoutEffect(() => {
+    if (!leftHas && !rightHas) return;
     const element = (root?.current ?? document).querySelector<HTMLElement>(`[data-workbench-panel="${panel}"]`);
     if (!element) return;
 
@@ -148,14 +149,13 @@ const useWorkbenchPanelMenuAttachment = (
       { has: leftHas, open: !leftCollapsed, collapsible: leftCollapsible, minSize: leftMin },
       { has: rightHas, open: !rightCollapsed, collapsible: rightCollapsible, minSize: rightMin },
     ];
-    const measure = () => {
-      const width = element.clientWidth;
+    const measure = (entries: ResizeObserverEntry[]) => {
+      const width = entries[0]?.contentRect.width ?? 0;
       if (width === 0) return;
       const next = getWorkbenchPanelMenuAttachment(width, menus);
       // Split motion reports a width every frame; menus only change at attachment thresholds.
       setAttachment((previous) => (previous.every((value, index) => value === next[index]) ? previous : next));
     };
-    measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
@@ -172,5 +172,5 @@ const useWorkbenchPanelMenuAttachment = (
     rightMin,
   ]);
 
-  return attachment;
+  return [leftHas && attachment[0], rightHas && attachment[1]];
 };

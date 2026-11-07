@@ -99,14 +99,13 @@ interface WorkbenchRegionPlacementProps {
   workbench: WorkbenchCore;
   placement: WorkbenchWidgetPlacement;
   activeWidgetId?: string;
-  globalActiveWidgetId?: string;
   region: WorkbenchRegionId;
   visible: boolean;
   order: number;
 }
 
 const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
-  const { workbench, placement, activeWidgetId, globalActiveWidgetId, region, visible, order } = props;
+  const { workbench, placement, activeWidgetId, region, visible, order } = props;
   const renderState = resolveRegionPlacementRenderState(placement, activeWidgetId, region);
   const additive = region === "sidenav";
   const overlaysActivePlacement = !renderState.active && !additive;
@@ -115,7 +114,8 @@ const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
   else if (renderState.active) flex = "1 0 auto";
 
   const activatePlacement = () => {
-    if (placement.widgetId !== globalActiveWidgetId) workbench.layout.activatePanel(placement.widgetId);
+    if (placement.widgetId !== workbench.layout.getLayout().activeWidgetId)
+      workbench.layout.activatePanel(placement.widgetId);
   };
 
   return (
@@ -157,10 +157,10 @@ const activateRegionPlacement = (
   workbench: WorkbenchCore,
   content: WorkbenchWidgetPlacement | undefined,
   target: WorkbenchWidgetPlacement | undefined,
-  activeWidgetId: string | undefined,
 ) => {
   if (content) workbench.focus.setActiveRegion("main");
-  else if (target && target.widgetId !== activeWidgetId) workbench.layout.activatePanel(target.widgetId);
+  else if (target && target.widgetId !== workbench.layout.getLayout().activeWidgetId)
+    workbench.layout.activatePanel(target.widgetId);
 };
 
 export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
@@ -207,7 +207,6 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
         : false;
     }),
   };
-  const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
   const activePlacement = getActivePlacement(regionState.widgets, regionState.activeWidgetId, pageContent);
   const regionRef = useRef<HTMLDivElement>(null);
   const currentPresentation = useRef(activePlacement?.widgetId);
@@ -244,7 +243,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   // which only follows `main`. Placeholders are not real widgets, so only activate a real
   // placement that is not already active.
   const activatePlacement = (target: WorkbenchWidgetPlacement | undefined) =>
-    activateRegionPlacement(workbench, pageContent, target, globalActiveWidgetId);
+    activateRegionPlacement(workbench, pageContent, target);
   const additive = region === "sidenav";
   const hostPlaceholderView =
     placeholder && placement ? (
@@ -289,7 +288,6 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
               workbench={workbench}
               placement={renderedPlacement}
               activeWidgetId={activePlacement?.widgetId}
-              globalActiveWidgetId={globalActiveWidgetId}
               region={region}
             />
           ))}

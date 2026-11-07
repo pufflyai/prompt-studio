@@ -1,5 +1,6 @@
 import { filterVisibleTabs, getTabVisibilityStore, useHostStorage, useTabVisibilityStore } from "@pstdio/ui";
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   getActiveWorkbenchLocationPanel,
   getAnchorResource,
@@ -41,13 +42,14 @@ export const isPlacementEligibleForRegion = (
   placement: WorkbenchWidgetPlacement,
   resource = workbench.getPrimaryResource(),
   modeId = workbench.modes.getActiveModeId(),
+  widget = workbench.layout.getWidget(placement.contributionId),
+  location = getActiveWorkbenchLocationPanel(workbench.layout.getLayout()),
 ) => {
   if (placement.resource && !workbench.resources.preview.resolve(placement.resource)) return false;
-  const widget = workbench.layout.getWidget(placement.contributionId);
   return widget
     ? isWorkbenchPanelPlacementVisible(widget, resource, modeId, placement, {
         ignoreResourceLocation: region === "side" || region === "secondary",
-        location: getActiveWorkbenchLocationPanel(workbench.layout.getLayout()),
+        location,
       })
     : false;
 };
@@ -62,12 +64,21 @@ export const useWorkbenchRegionTabsState = (
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
+  const layoutState = useWorkbenchStore(
+    workbench.layout.store,
+    useShallow((state) => ({
+      region: state.layout.regions[region],
+      widgets: state.widgets,
+      location: getActiveWorkbenchLocationPanel(state.layout),
+      primaryResource: getAnchorResource(state.layout, "primary"),
+    })),
+  );
+  const scope = useWorkbenchStore(workbench.layout.store, () => workbench.layout.getPersistenceScope());
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
   const compositionPanels = useWorkbenchCompositionRegionPanels(workbench, panelRegion);
-  const storageKey = visibilityStorageKey ?? `${workbench.layout.getPersistenceScope() ?? "unscoped"}/${region}`;
+  const storageKey = visibilityStorageKey ?? `${scope ?? "unscoped"}/${region}`;
   const tabStore = useTabVisibilityStore(storageKey, (state) => state);
   useEffect(() => {
     const subscription = workbench.onDidResetLayout(() =>
@@ -75,14 +86,24 @@ export const useWorkbenchRegionTabsState = (
     );
     return () => subscription.dispose();
   }, [workbench, storageKey, hostStorage]);
-  const regionState = layoutState.layout.regions[region];
-  const pageState = useWorkbenchStore(workbench.pages.store, (state) => state);
-  const pageContent = region === "main" && isSingleViewPage(pageState.pages[pageState.activePageId ?? ""]);
+  const regionState = layoutState.region;
+  const pageContent = useWorkbenchStore(
+    workbench.pages.store,
+    (state) => region === "main" && isSingleViewPage(state.pages[state.activePageId ?? ""]),
+  );
   const subPanelPlacements = regionState.widgets.filter(
     (placement) =>
       placement.role === "sub-panel" &&
       (!placement.resource || Boolean(resolveResourcePreview(placement.resource, changes))) &&
-      isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
+      isPlacementEligibleForRegion(
+        workbench,
+        region,
+        placement,
+        resource,
+        modeId,
+        layoutState.widgets[placement.contributionId],
+        layoutState.location,
+      ),
   );
   const visibleSubPanels = filterVisibleTabs(subPanelPlacements, tabStore.tabOverrides, (placement) =>
     toTabKey(region, placement),
@@ -106,7 +127,7 @@ export const useWorkbenchRegionTabsState = (
   const hasTrailingActions =
     region === "main" &&
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, headerTrailingMenuPath(region), {
-      resource: getAnchorResource(layoutState.layout, "primary"),
+      resource: layoutState.primaryResource,
     }).length > 0;
 
   return {

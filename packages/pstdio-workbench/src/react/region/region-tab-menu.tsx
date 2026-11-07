@@ -1,21 +1,56 @@
 import { type UseMenuReturn, VisuallyHidden } from "@chakra-ui/react";
-import { ScopedMenu as Menu, Portal, type ResourceContextAction, ResourceMenuItems, useUiScope } from "@pstdio/ui";
-import { useId, useRef } from "react";
+import {
+  ScopedMenu as Menu,
+  Portal,
+  type ResourceContextAction,
+  ResourceMenuItems,
+  useScopedMenu,
+  useUiScope,
+} from "@pstdio/ui";
+import { useEffectEvent, useId, useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
 import { getPanelLabel } from "./panel-widget-open";
+import type { TabContextMenu } from "./use-tab-context-menu";
 
 interface RegionTabMenuProps {
-  menu: UseMenuReturn;
+  menu: TabContextMenu;
   label: string;
   groups: readonly WorkbenchTabMenuGroup[];
   placement: WorkbenchWidgetPlacement;
   workbench: WorkbenchCore;
 }
 export const RegionTabMenu = (props: RegionTabMenuProps) => {
+  return props.menu.state ? <RegionTabMenuMachine {...props} /> : null;
+};
+
+const RegionTabMenuMachine = (props: RegionTabMenuProps) => {
+  const { menu: controller } = props;
+  const menu = useScopedMenu({
+    ids: { contextTrigger: controller.triggerId },
+    positioning: { placement: "bottom-start", getAnchorRect: controller.getAnchorRect, offset: { mainAxis: 0 } },
+    onEscapeKeyDown: controller.onEscapeKeyDown,
+    onOpenChange: controller.onOpenChange,
+  });
+  const triggerProps = menu.api.getContextTriggerProps();
+  useLayoutEffect(() => controller.onTriggerPropsChange(triggerProps));
+  const publish = controller.onTriggerPropsChange;
+  useLayoutEffect(() => () => publish(null), [publish]);
+  const sendOpening = useEffectEvent((point: { x: number; y: number }) => {
+    menu.service.send({ type: "CONTEXT_MENU", point });
+    controller.onOpeningSent();
+  });
+  const opening = controller.state?.opening;
+  useLayoutEffect(() => {
+    if (opening) sendOpening(opening);
+  }, [opening]);
+  return <RegionTabMenuContent {...props} menu={menu} />;
+};
+
+const RegionTabMenuContent = (props: Omit<RegionTabMenuProps, "menu"> & { menu: UseMenuReturn }) => {
   const { menu, label, groups, placement, workbench } = props;
   const labelId = useId();
   useWorkbenchResourceActionResolver(workbench);
