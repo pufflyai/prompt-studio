@@ -15,28 +15,45 @@ export const runResourceMutation = async (
   const id = params?.[mutation.idParam] ?? execution?.resource?.id;
   if (typeof id !== "string") return persist();
   const subject = execution?.resource;
+  // A command can present a resource whose canonical identity belongs to another provider.
   const resource =
     subject?.type === mutation.resourceType &&
     subject.id === id &&
     (!subject.projectId || subject.projectId === context.projectId)
       ? { ...subject, projectId: context.projectId }
       : { type: mutation.resourceType, id, extensionId: command.extensionId, projectId: context.projectId };
-  if (mutation.kind === "remove") {
-    if (!(await context.workbench.commandPalette.requestConfirmation(text(command.title, "Delete")))) return;
-  }
   const rawLabel = mutation.kind === "rename" ? params?.[mutation.labelParam] : undefined;
   // Leave invalid input to the command; never display a title that it cannot save.
   if (mutation.kind === "rename" && (typeof rawLabel !== "string" || !rawLabel.trim())) return persist();
-  const preview = context.workbench.resources.preview.begin(
-    resource,
-    mutation.kind === "remove" ? { removed: true } : { label: (rawLabel as string).trim() },
+  const mutate = async () => {
+    const preview = context.workbench.resources.preview.begin(
+      resource,
+      mutation.kind === "remove" ? { removed: true } : { label: (rawLabel as string).trim() },
+    );
+    try {
+      const result = await context.workbench.resources.preview.persist(resource, persist);
+      await preview.commit();
+      return result;
+    } catch (error) {
+      preview.rollback();
+      throw error;
+    }
+  };
+  if (mutation.kind !== "remove") return mutate();
+  const title = text(command.title, "Delete");
+  let saved: Promise<unknown> | undefined;
+  const confirmed = await context.workbench.commandPalette.requestConfirmation(
+    resource.label ? `${title}: ${resource.label}` : title,
+    {
+      description: text(command.description),
+      buttonLabel: title,
+      onConfirm: async () => {
+        saved = mutate();
+        await saved;
+      },
+    },
   );
-  try {
-    const result = await context.workbench.resources.preview.persist(resource, persist);
-    await preview.commit();
-    return result;
-  } catch (error) {
-    preview.rollback();
-    throw error;
-  }
+  // Programmatic confirmation resolution remains supported; UI confirmation saves
+  // before closing, so a failed mutation stays in the dialog for a retry.
+  return confirmed ? (saved ?? mutate()) : undefined;
 };

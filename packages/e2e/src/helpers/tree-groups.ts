@@ -47,9 +47,13 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   await page.reload();
   await registered;
   await expect(tree.locator("section[aria-busy]")).toHaveAttribute("aria-busy", "false");
-  await revealTreeEntry(page, tree, group);
-  await expect(group).toBeVisible();
-  await expect(source).toBeVisible();
+  // Late navigation contributions can move restored rows outside the virtual window.
+  await expect(async () => {
+    await revealTreeEntry(page, tree, group);
+    await revealTreeEntry(page, tree, source);
+    await expect(group).toBeVisible();
+    await expect(source).toBeVisible();
+  }).toPass();
   // A raw bounding box can point outside the clipped tree after it scrolls. Use the
   // locator's hit-tested hover and the actual pointer-down, not later layout geometry.
   const pointerDown = await group.evaluateHandle((element) => {

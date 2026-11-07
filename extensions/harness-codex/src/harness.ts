@@ -106,7 +106,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
     },
     prepareOperation: (ctx, input, operation) => prepareCodexOperation(input, operation, deps.runtime, ctx),
     // Host-managed worktrees run without provider approvals.
-    capabilities: () => ["ContextUsage"],
+    capabilities: () => ["SessionFork", "ContextUsage"],
     detect: (ctx) => deps.detect(ctx),
     getAuthentication: getCodexAuthentication,
     authenticate: async (ctx, input, channel) => {
@@ -115,6 +115,9 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
       modelCache = undefined;
     },
     listModels,
+    fork: async (ctx, input) => ({
+      agentSessionId: await deps.runtime.fork({ ...input, env: sessionEnv(ctx, input.sessionId) }),
+    }),
 
     start: (ctx, input) =>
       deps.runtime.run({

@@ -74,9 +74,10 @@ test("a webview connects when its frame is reattached while the runtime loads", 
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
-    await page.goto(`/projects/${project.id}/`);
-    await scrollSidenavToEnd(page);
-    await page.getByRole("option", { name: "Lab mode", exact: true }).click();
+    // The runtime is deliberately held below; wait for the host document, not the iframe's load.
+    await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab-mode`, {
+      waitUntil: "domcontentloaded",
+    });
     await runtimeRequested.promise;
     // Reinserting an iframe gives it a new browsing context, as React StrictMode
     // and DOM moves without moveBefore do.

@@ -1,5 +1,5 @@
 import { type PlacementIdentity, workbenchPages } from "@pstdio/sdk/extensions";
-import { ChatSkeleton } from "@pstdio/ui/chat-ui";
+import { ChatSkeleton } from "@pstdio/ui/chat-skeleton";
 import type {
   ResourceRef,
   WorkbenchModuleContext,
@@ -74,7 +74,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
     {
       id: dashboardWidgetIds.sessionBubble,
       title: "New session",
-      icon: "MessageCircle",
+      icon: "message-circle",
       body: {
         kind: "react",
         render: (input) => (
@@ -129,7 +129,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
       id: dashboardCommandIds.openSessionPanel,
       label: "Open session panel",
       category: "Dashboard",
-      icon: "MessageCircle",
+      icon: "message-circle",
     },
     {
       execute: async (args, context) => {
@@ -167,7 +167,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
     },
   );
   ctx.commands.registerCommand(
-    { id: dashboardCommandIds.createSession, label: "New session", category: "Sessions", icon: "MessageSquarePlus" },
+    { id: dashboardCommandIds.createSession, label: "New session", category: "Sessions", icon: "message-circle" },
     {
       execute: async (args, context) => {
         const {

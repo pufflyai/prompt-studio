@@ -3,6 +3,7 @@ import i18n from "@/i18n";
 import { createRuntimeCollections } from "@/lib/sync/collections";
 import {
   getExtensionTranslationContext,
+  localizeExtensionAppearance,
   localizeExtensionValue,
   registerExtensionTranslationBundles,
   resolveLocalizableString,
@@ -127,4 +128,55 @@ test("runtime translation bundles keep the same extension's local revisions sepa
     await first.dispose();
     await second.dispose();
   }
+});
+
+test("appearance localization preserves literal theme payloads and translation keys", () => {
+  const tokens = { $l10n: "literal-token", "colors.bg": "#123456" };
+  const monacoTheme = {
+    base: "vs-dark" as const,
+    inherit: true as const,
+    rules: [{ $l10n: "literal-rule" }],
+    colors: {},
+  };
+  const definitions = { $l10n: "literal-icon", file: { iconPath: "data:image/svg+xml;base64,PHN2Zy8+" } };
+  const translations = [{ extensionId: "palette", defaultLocale: "en", bundles: { en: { $l10n: "A literal key" } } }];
+  const source = { kind: "package-asset" as const, path: "./theme.json", baseUrl: "file:///palette/extension.ts" };
+  const localized = localizeExtensionAppearance({
+    themes: [
+      {
+        id: "theme",
+        extensionId: "palette",
+        title: { $l10n: "title", default: "Palette" },
+        description: { $l10n: "description", default: "Description" },
+        format: "vscode-color-theme",
+        mode: "dark",
+        source,
+        tokens,
+        monacoTheme,
+      },
+    ],
+    fileIconThemes: [
+      {
+        id: "icons",
+        extensionId: "palette",
+        title: { $l10n: "icons", default: "Icons" },
+        format: "vscode-file-icon-theme",
+        source,
+        definitions,
+        fileExtensions: {},
+        fileNames: {},
+        defaults: {},
+        fonts: [],
+      },
+    ],
+    translations,
+    diagnostics: [],
+  });
+  expect(localized.themes[0]?.title).toBe("Palette");
+  expect(localized.themes[0]?.description).toBe("Description");
+  expect(localized.themes[0]?.tokens).toBe(tokens);
+  expect(localized.themes[0]?.monacoTheme).toBe(monacoTheme);
+  expect(localized.fileIconThemes[0]?.title).toBe("Icons");
+  expect(localized.fileIconThemes[0]?.definitions).toBe(definitions);
+  expect(localized.translations).toBe(translations);
 });

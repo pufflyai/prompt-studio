@@ -56,6 +56,22 @@ const toNativeViewBody = (
     emptyTitle: body.emptyTitle,
     emptyDescription: body.emptyDescription,
   };
+  if (body.kind === "chat") {
+    return {
+      kind: "chat",
+      ...common,
+      draftKey: body.draftKey,
+      legacySessionDraft: body.legacySessionDraft,
+      initial: body.initial,
+      queryHandlerId: String(handlers.queryHandlerId),
+      actionHandlerId: String(handlers.actionHandlerId),
+      loadDraftHandlerId: handlers.loadDraftHandlerId as string | undefined,
+      saveDraftHandlerId: handlers.saveDraftHandlerId as string | undefined,
+      resolveLinkHandlerId: handlers.resolveLinkHandlerId as string | undefined,
+      resolveImageHandlerId: handlers.resolveImageHandlerId as string | undefined,
+      stream: body.stream ? commandRef(body.stream, view.extensionId) : undefined,
+    };
+  }
   if (body.kind === "tree") {
     return {
       kind: "tree",

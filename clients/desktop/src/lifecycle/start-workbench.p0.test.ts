@@ -23,6 +23,7 @@ test("loads the attached workbench while lifecycle resources are still loading",
   const startup = startWorkbench(
     {
       showLifecycle: () => lifecycle.promise,
+      prepareWorkbench: async () => {},
       showWorkbench: async (descriptor) => {
         expect(descriptor).toBe(runtime.descriptor);
         workbenchLoaded = true;
@@ -38,4 +39,37 @@ test("loads the attached workbench while lifecycle resources are still loading",
     lifecycle.resolve();
     await expect(startup).resolves.toBe(runtime);
   }
+});
+
+test("prepares the workbench while its runtime starts and reveals it only after readiness", async () => {
+  const ready = Promise.withResolvers<ManagedRuntime>();
+  let prepared = false;
+  let revealed = false;
+  const startup = startWorkbench(
+    {
+      showLifecycle: async () => {},
+      prepareWorkbench: async (descriptor: ManagedRuntime["descriptor"]) => {
+        expect(descriptor).toBe(runtime.descriptor);
+        prepared = true;
+      },
+      showWorkbench: async () => {
+        revealed = true;
+      },
+    },
+    {
+      start: (onStarting?: (descriptor: ManagedRuntime["descriptor"]) => void) => {
+        onStarting?.(runtime.descriptor);
+        return ready.promise;
+      },
+    },
+  );
+  try {
+    await Promise.resolve();
+    expect(prepared).toBe(true);
+    expect(revealed).toBe(false);
+  } finally {
+    ready.resolve(runtime);
+    await startup;
+  }
+  expect(revealed).toBe(true);
 });

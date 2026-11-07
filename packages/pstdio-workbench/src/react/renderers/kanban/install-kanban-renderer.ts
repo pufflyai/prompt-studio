@@ -1,8 +1,16 @@
-import { createElement } from "react";
+import { Spinner } from "@chakra-ui/react";
+import { createElement, lazy, Suspense } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore } from "../../../core";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
-import { renderWorkbenchResourceList } from "../resource-list/install-resource-list-renderer";
-import { WorkbenchKanbanView } from "./kanban-view";
+
+const WorkbenchKanbanView = lazy(() =>
+  import("./kanban-view").then((module) => ({ default: module.WorkbenchKanbanView })),
+);
+const WorkbenchResourceListView = lazy(() =>
+  import("../resource-list/install-resource-list-renderer").then((module) => ({
+    default: module.renderWorkbenchResourceList,
+  })),
+);
 
 // Track per-core installation so repeated <Workbench> renders are idempotent.
 const installed = new WeakSet<WorkbenchCore>();
@@ -23,9 +31,14 @@ export const installWorkbenchKanbanRenderer = (
         placement: instance,
         renderParamField: options.renderParamField,
       };
-      return contribution.presentation === "resourceList"
-        ? renderWorkbenchResourceList(props)
-        : createElement(WorkbenchKanbanView, props);
+      return createElement(
+        Suspense,
+        { fallback: createElement(Spinner) },
+        createElement(
+          contribution.presentation === "resourceList" ? WorkbenchResourceListView : WorkbenchKanbanView,
+          props,
+        ),
+      );
     },
   );
 };

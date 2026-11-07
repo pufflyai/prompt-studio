@@ -233,8 +233,11 @@ The run keeps these workloads fixed:
 
 The runner keeps the normal relay limits, seven-day grace period, and production
 latest-state trigger. R23 counts the encrypted state envelope, chunk blobs, large-save
-frame blobs and retained updates. File blobs have a separate bound so the large files
-cannot hide record-history growth. Covered frame blobs count once in the grace copy.
+frame blobs, receipt-index nodes and retained updates. The runner records every index
+node the record stream writes as a manifest blob: the root a state names and the
+children no row references. Index nodes count in stored bytes but add nothing to the
+latest or grace allowance. File blobs have a separate bound so the large files cannot
+hide record-history growth; it counts only file blobs. Covered frame blobs count once in the grace copy.
 Physical object keys and lengths must match the database; unclassified blobs,
 unmatched objects and unfinished uploads prevent a passing result.
 

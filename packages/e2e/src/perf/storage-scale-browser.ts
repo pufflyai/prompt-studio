@@ -49,9 +49,9 @@ export const measureScaleNavigation = async (
     const details = await diagnostics();
     const query = replies.findLast((reply) => reply.path.includes(queryPath));
     const selected = owner === 9 ? query?.rows.filter((row) => row.attributes?.status === "ready") : query?.rows;
-    const dataCorrect =
-      JSON.stringify(selected?.map(({ id, title }) => ({ id, title }))) ===
-      JSON.stringify(expected.map(({ id, title }) => ({ id, title })));
+    // Planner shows its own ticket IDs; each fixture title names its generator row.
+    const shown = (row: { id: string; title?: string }) => (owner === 9 ? row.title : `${row.id} ${row.title}`);
+    const dataCorrect = JSON.stringify(selected?.map(shown)) === JSON.stringify(expected.map((row) => shown(row)));
     const body = await page.locator("body").innerText();
     const labelsCorrect = !/Unavailable field|\bdefault-ready\b|\bdefault-backlog\b/.test(body);
     const renderedTitles = expected.filter((row) => body.includes(row.title)).map((row) => row.id);

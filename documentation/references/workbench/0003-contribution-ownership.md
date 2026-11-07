@@ -35,6 +35,9 @@ Main snapshots use that declared document identity too. Restoring a snapshot rea
 
 The first page uses the current panel choices to initialize its mode unless that mode already has saved state. Later mode switches restore the destination mode's saved state, or its defaults on its first visit. Opening a panel into closed Side attaches it. Opening a panel into visible floating Side keeps it floating.
 
+Mode snapshots retain tabs whose independent placement declaration has not loaded yet. They become visible only after that declaration registers and validates them. Automatic fallback selection does not replace an unavailable saved selection; explicit activation does. Closing a registered tab, removing its resource, or resetting the layout remains authoritative, including while another provider is unavailable.
+
+
 ## Navigation tree ownership
 
 Mode and page Sidenav contributions carry opaque owner keys. TreeRenderer receives those keys through a configurable movement policy. It does not know mode or page semantics. The policy prevents a customized row from moving across owners while still allowing reorder and hide operations inside one owner.

@@ -25,8 +25,14 @@ export interface ExtensionsPanelViewProps {
   harnesses?: WorkbenchExtensionHarnessRecord[];
   agents?: AgentInfo[];
   togglingInstanceId?: string;
+  togglingAutomation?: boolean;
   upgradingInstanceIds?: string[];
   onToggle?: (extension: ProjectExtensionInstance, enabled: boolean) => void;
+  onToggleAutomation?: (
+    extension: ProjectExtensionInstance,
+    automation: WorkbenchExtensionAutomationRecord,
+    enabled: boolean,
+  ) => Promise<unknown>;
   onUpgrade?: (extension: ProjectExtensionInstance) => void;
   onOpen?: (extension: ProjectExtensionInstance) => void;
   installingMarketplaceNames?: string[];
@@ -78,9 +84,11 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     harnesses,
     agents,
     togglingInstanceId,
+    togglingAutomation,
     upgradingInstanceIds = [],
     installingMarketplaceNames = [],
     onToggle,
+    onToggleAutomation,
     onUpgrade,
     onOpen,
     onInstallMarketplace,
@@ -170,11 +178,13 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           key={extension.id}
           extension={extension}
           diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}
-          automations={automations.filter((automation) => automation.extensionId === extension.extensionId)}
+          automations={automations.filter((automation) => automation.extensionInstanceId === extension.id)}
           unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
           toggling={togglingInstanceId === extension.id}
+          togglingAutomation={togglingAutomation}
           upgrading={upgradingInstanceIds.includes(extension.id)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
+          onToggleAutomation={async (automation, enabled) => onToggleAutomation?.(extension, automation, enabled)}
           onUpgrade={() => onUpgrade?.(extension)}
           onOpen={() => onOpen?.(extension)}
         />

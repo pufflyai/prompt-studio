@@ -3,6 +3,7 @@ import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
 import { serializeWhenExpression } from "../../runtime/normalize/references";
 import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
+import { hasAbsentOptionalNavigationOwner } from "../../runtime/optional-navigation-owner";
 import type { ExtensionRuntime } from "../../types/runtime";
 import {
   commandRef,
@@ -222,14 +223,16 @@ export const createWorkbenchExtensionMetadata = (
     when: normalizeWhen(item.contribution.when, item.extensionId),
     action: normalizeTarget(item.contribution.action, item.extensionId),
   })),
-  navigationTrees: input.runtime.navigationTrees.map((tree) => ({
-    id: tree.id,
-    extensionId: tree.extensionId,
-    owner: normalizedRef(tree.contribution.owner, tree.extensionId),
-    slot: tree.contribution.slot ?? "content",
-    view: normalizedRef(tree.contribution.view, tree.extensionId),
-    ...(tree.contribution.resourceScope ? { resourceScope: tree.contribution.resourceScope } : {}),
-  })),
+  navigationTrees: input.runtime.navigationTrees
+    .filter((tree) => !hasAbsentOptionalNavigationOwner(tree, input.runtime.extensions))
+    .map((tree) => ({
+      id: tree.id,
+      extensionId: tree.extensionId,
+      owner: normalizedRef(tree.contribution.owner, tree.extensionId),
+      slot: tree.contribution.slot ?? "content",
+      view: normalizedRef(tree.contribution.view, tree.extensionId),
+      ...(tree.contribution.resourceScope ? { resourceScope: tree.contribution.resourceScope } : {}),
+    })),
   statusBarItems: input.runtime.statusBarItems.map((item) => ({
     id: item.id,
     extensionId: item.extensionId,

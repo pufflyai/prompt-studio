@@ -1,5 +1,5 @@
 import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
-import { ChatSkeleton } from "@pstdio/ui/chat-ui";
+import { ChatSkeleton } from "@pstdio/ui/chat-skeleton";
 import {
   type ResourceRef,
   type WorkbenchModuleContext,
@@ -123,7 +123,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       ctx.resources.registerKind({
         kind: "session",
         label: "Session",
-        icon: "MessageCircle",
+        icon: "message-circle",
         resolve: (resource) => findDashboardSession(resource.id)?.resource,
         subscribe: subscribeSessionListData,
       });

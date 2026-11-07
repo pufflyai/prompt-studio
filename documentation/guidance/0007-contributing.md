@@ -8,6 +8,7 @@
 4. Use PR titles `<category>(<PS-XXX>): <statement>`, such as `fix(PS-42): add new button component`.
 5. Use the headings in the [PR template](../../.github/pull_request_template.md), in the same order. `gh pr create --body` replaces the template, so include the headings yourself.
 6. Follow [PR and CI completion](0004-ci.md) through the latest commit.
+7. Agents must create worktrees through Prompt Studio workspaces, using `pst workspaces create` or **Create workspace**. Do not run `git worktree add` directly.
 
 ## 2. Generated files
 

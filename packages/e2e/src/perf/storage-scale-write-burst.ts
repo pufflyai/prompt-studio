@@ -1,7 +1,6 @@
 import { strict as assert } from "node:assert";
 import { randomUUID } from "node:crypto";
 import { contract, createRow, owners, workload } from "storage-scale-fixture";
-import { plannerValue } from "./storage-scale-extension";
 import { type ScaleFixture, type ScaleRuntime, startScaleRuntime } from "./storage-scale-runtime";
 
 export const sampleWriteBurst = async (
@@ -59,17 +58,16 @@ export const sampleWriteBurst = async (
       const saved = await reopened.execute(fixture.projectId, owner.id, "scale", {
         input: { action: "read", id: base.id, planner: owner.index === 9 },
       });
-      assert.deepEqual(saved.value, owner.index === 9 ? plannerValue(expected, owner.rows) : expected);
-      if (owner.index !== 9) {
-        const retry = await reopened.execute<{ outcome: { status: string } }>(fixture.projectId, owner.id, "scale", {
-          input,
-        });
-        assert.equal(retry.value.outcome.status, "saved-locally");
-        const repeated = await reopened.execute(fixture.projectId, owner.id, "scale", {
-          input: { action: "read", id: base.id },
-        });
-        assert.deepEqual(repeated.value, expected);
-      }
+      assert.deepEqual(saved.value, expected);
+      // Every owner, Planner included, saves through grouped commits with a durable retry identity.
+      const retry = await reopened.execute<{ outcome: { status: string } }>(fixture.projectId, owner.id, "scale", {
+        input,
+      });
+      assert.equal(retry.value.outcome.status, "saved-locally");
+      const repeated = await reopened.execute(fixture.projectId, owner.id, "scale", {
+        input: { action: "read", id: base.id, planner: owner.index === 9 },
+      });
+      assert.deepEqual(repeated.value, expected);
       await reopened.execute(fixture.projectId, owner.id, "scale", {
         input: { ...input, operationId: `restore-${input.operationId}`, rows: [base] },
       });
@@ -79,8 +77,7 @@ export const sampleWriteBurst = async (
       correctAfterKill: true,
       startupMs: runtime.startupMs,
       reopenedStartupMs: reopened.startupMs,
-      retryVerifiedOwners: 9,
-      plannerRetryVerified: false,
+      retryVerifiedOwners: 10,
       runtimeControl: {
         writer: runtime.controlEvidence,
         reopened: reopened.controlEvidence,
@@ -93,7 +90,6 @@ export const sampleWriteBurst = async (
       passed: false,
       failures: [
         ...(measured.replies.some((row) => row.acknowledgementMs >= contract.ceilingMs) ? ["durable-sdk-latency"] : []),
-        "planner-collection-retry-identity-unavailable",
         "index-work-unmeasured",
         "committed-visible-boundary-unavailable",
       ],

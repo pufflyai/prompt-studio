@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { chromium } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -13,6 +12,7 @@ import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { openCloudProjectInPicker, reopenPreparedProjectOffline } from "./packaged-cloud-project-picker";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { writeSharedNotesExtension } from "./packaged-shared-notes-extension.fixture";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { createPackagedSyncPeer, packagedProjectKey } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -28,29 +28,6 @@ const writeCertificate = (root: string) => {
   const options = ["-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", key, "-out", cert, "-days", "1"];
   expect(Bun.spawnSync(["openssl", "req", ...options, ...subject]).exitCode).toBe(0);
   return { key, cert };
-};
-
-const writeExtension = async (root: string) => {
-  const source = join(root, "source");
-  await mkdir(source);
-  const build = await Bun.build({
-    entrypoints: [join(import.meta.dir, "fixtures/grouped-storage-extension.ts")],
-    target: "bun",
-  });
-  if (!build.success) throw new AggregateError(build.logs, "Could not build storage fixture");
-  await Bun.write(join(source, "extension.js"), build.outputs[0]!);
-  await Bun.write(
-    join(source, "package.json"),
-    JSON.stringify({
-      name: "shared-notes",
-      publisher: "example",
-      version: "1.0.0",
-      type: "module",
-      main: "extension.js",
-      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-    }),
-  );
-  return source;
 };
 
 const startDevice = async (root: string, env: Record<string, string>) => {
@@ -168,7 +145,7 @@ test(
     let picker: Awaited<ReturnType<typeof openCloudProjectInPicker>> | undefined;
     const failures: unknown[] = [];
     try {
-      const source = await writeExtension(root);
+      const source = await writeSharedNotesExtension(root);
       const env = {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]),
         NODE_EXTRA_CA_CERTS: tls.cert,
@@ -208,6 +185,10 @@ test(
       expect((await second.client.projects.folder(project.id)).path).toBeNull();
       await waitFor(() => peer.failedReads() > 0);
       await second.reach(project.id, "first-download-incomplete");
+      expect(await second.client.account.projectSyncStatus(project.id)).toMatchObject({
+        state: "first-download-incomplete",
+        offlineReady: false,
+      });
       phase("new device waiting for download");
       const prematureOpen = await fetch(`${second.host.baseUrl}/v1/projects/${project.id}/open`, {
         method: "POST",
@@ -248,6 +229,8 @@ test(
       await first.reach(project.id, "synced");
       await second.reach(project.id, "synced");
       await picker.ready();
+      // Folder preparation can replace a synced owner; navigation does not await its next download.
+      await waitFor(async () => (await second.client.account.projectSyncStatus(project.id)).offlineReady);
       phase("project folder prepared");
       expect((await second.command<Record<string, StorageRecord>>(project.id, "read")).note?.value).toBe(
         "written on the first device",

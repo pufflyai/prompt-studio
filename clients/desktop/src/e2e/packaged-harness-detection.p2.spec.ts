@@ -16,7 +16,7 @@ import { createPackagedProject, openPackagedProject } from "./packaged-project-h
 const environments =
   process.platform === "win32" ? ["Windows PATH"] : ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"];
 // The oldest versions each harness accepts, so detection proves its minimum stays supported.
-const versions = { codex: "codex-cli 0.157.0", claude: "2.1.203 (Claude Code)", opencode: "1.0.175" };
+const versions = { codex: "codex-cli 0.157.0", claude: "2.1.203 (Claude Code)", opencode: "2.2.5" };
 const executableSuffix = process.platform === "win32" ? ".exe" : "";
 
 for (const shell of environments) {

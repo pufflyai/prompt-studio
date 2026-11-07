@@ -9,7 +9,9 @@ import {
   definePlacement,
   defineStatusBarItem,
   defineView,
+  type NavigationOwnerRef,
   packageAsset,
+  type ViewRef,
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
@@ -205,4 +207,43 @@ describe("extension convention diagnostics", () => {
       ]),
     );
   });
+});
+
+test("optional tree owners tolerate only an absent foreign extension", () => {
+  const tree = defineView({ id: "tree", title: "Items", body: { kind: "tree", body: async () => [] } });
+  const owner = { kind: "page", extensionId: "pstdio.provider", id: "workspace" } as const;
+  const consumer = (optionalOwner = true, selectedOwner: NavigationOwnerRef = owner, view: ViewRef = tree.ref) =>
+    wrap(
+      "consumer",
+      defineExtension({
+        views: [tree],
+        navigationTrees: [defineNavigationTree({ id: "items", owner: selectedOwner, view, optionalOwner })],
+      }),
+    );
+  const codes = (sources: LoadedExtensionSource[]) =>
+    collectConventionDiagnostics(normalizeExtensionSources(sources)).map((item) => item.code);
+  expect(codes([consumer()])).not.toContain("extension_navigation_owner_missing");
+  expect(codes([consumer(false)])).toContain("extension_navigation_owner_missing");
+  expect(codes([consumer(true, { ...owner, extensionId: "pstdio.consumer" })])).toContain(
+    "extension_navigation_owner_missing",
+  );
+  const provider = wrap(
+    "provider",
+    defineExtension({
+      views: [tree],
+      pages: [
+        definePage({
+          id: "workspace",
+          title: "Workspace",
+          path: "workspace",
+          mode: workbenchModes.project,
+          main: { kind: "view", view: tree.ref, cardinality: "one" },
+          slots: [],
+        }),
+      ],
+    }),
+  );
+  expect(codes([consumer(), provider])).not.toContain("extension_navigation_owner_missing");
+  expect(codes([consumer(true, { ...owner, id: "typo" }), provider])).toContain("extension_navigation_owner_missing");
+  expect(codes([consumer(true, owner, { kind: "view", id: "missing" })])).toContain("extension_view_reference_missing");
 });

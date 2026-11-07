@@ -12,4 +12,10 @@ export const createCoreLayoutCache = (input: createWorkbenchInput, resolve: () =
       const core = resolve();
       return migratePagePanelView(page, widget, core?.modePlacements, layout, core?.pages.resourceReferenceKey);
     },
+    (modeId) =>
+      new Set(
+        resolve()
+          ?.modePlacements.listPlacements(modeId)
+          .map((placement) => placement.id) ?? [],
+      ),
   );

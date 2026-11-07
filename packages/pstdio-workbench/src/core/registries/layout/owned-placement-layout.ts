@@ -166,6 +166,12 @@ export const renderDesiredPlacements = (
   return rendered;
 };
 
+// Reconciliation fallback is not an explicit activation: a newly available saved tab keeps its selection.
+const arrivingModeSelection = (
+  region: WorkbenchLayout["regions"][keyof WorkbenchLayout["regions"]],
+  selected?: string,
+) => (region.widgets.some((widget) => widget.widgetId === selected) ? undefined : selected);
+
 const reconcileRegions = (
   layout: WorkbenchLayout,
   desired: readonly RenderedOwnedPlacement[],
@@ -222,6 +228,7 @@ const reconcileRegions = (
     // Page caches omit mode tabs, so recover their shared selection from the mode's cache.
     const activeWidgetId =
       [
+        arrivingModeSelection(region, modeLayout?.regions[regionId].activeWidgetId),
         region.activeWidgetId,
         selected?.tabRetention === "preview"
           ? tray.widgets.find((widget) => widget.tabRetention === "preview")?.widgetId

@@ -109,6 +109,7 @@ export interface RuntimePrivateHandlerRecord {
   sourcePath: string;
   rendererId: string;
   rendererKind:
+    | "chat"
     | "commandPaletteResource"
     | "controls"
     | "dataTable"

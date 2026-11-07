@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
-import { owners, seedOwner, type Workload, workload } from "storage-scale-fixture";
+import { owners, type SeedTarget, seedOwner, type Workload, workload } from "storage-scale-fixture";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { preparePlannerSource } from "../packaged/packaged-planner-source";
@@ -109,6 +109,28 @@ export const startScaleRuntime = async (
 };
 export type ScaleRuntime = Awaited<ReturnType<typeof startScaleRuntime>>;
 
+const plannerFixtureImport = 'import { fixtureCommands, plannerStorageIndexes } from "./scale";\n';
+
+// Planner keeps its own entry; the fixture adds its commands and the shared scale indexes, which
+// install before any fixture ticket is written.
+export const extendPlannerSource = (planner: string) => {
+  const entry = join(planner, "extension.ts");
+  // Start from Planner's own entry, also when an older harness already extended it.
+  const original = readFileSync(entry, "utf8")
+    .replace(/^import \{[^}]*\} from "\.\/scale";\n/, "")
+    .replace(/\.\.\.fixtureCommands,\s*/, "")
+    .replace(/\n {2}storageIndexes: plannerStorageIndexes,/, "");
+  const extended = original
+    .replace(/commands: \[(\s*)\.\.\.plannerCommands,/, "commands: [$1...fixtureCommands,$1...plannerCommands,")
+    .replace(
+      "export default defineExtension({",
+      "export default defineExtension({\n  storageIndexes: plannerStorageIndexes,",
+    );
+  // Fail before seeding the other owners if Planner's entry no longer matches.
+  if (!extended.includes("...fixtureCommands,") || !extended.includes("storageIndexes: plannerStorageIndexes"))
+    throw new Error("Planner extension.ts no longer matches the fixture's command and index additions");
+  writeFileSync(entry, `${plannerFixtureImport}${extended}`);
+};
 const install = (runtime: ScaleRuntime, home: string, source: string, name: string) => {
   execFileSync(PACKAGED_BINARY_PATH, ["extensions", "add", source, "--name", name, "--force"], {
     cwd: join(home, "project"),
@@ -129,13 +151,14 @@ export const refreshScaleSources = async (home: string, kind: Workload) => {
   try {
     const planner = join(home, "sources", "extension-source");
     writeFileSync(join(planner, "scale.ts"), command);
+    extendPlannerSource(planner);
     install(runtime, home, planner, "pstdio-planner");
     for (const owner of owners(workload(kind)).filter((owner) => owner.index !== 9)) {
       const source = join(home, "sources", `scale-owner-${owner.index}`);
       writeFileSync(join(source, "scale.ts"), command);
       writeFileSync(
         join(source, "extension.ts"),
-        `import { defineExtension } from "@pstdio/sdk/extensions";\nimport { fixtureCommands, createScaleViews } from "./scale";\nconst ui = createScaleViews(${JSON.stringify(kind)}, ${owner.index}, ${owner.rows});\nexport default defineExtension({ ...ui, commands: [...fixtureCommands, ...ui.commands] });\n`,
+        `import { defineExtension } from "@pstdio/sdk/extensions";\nimport { fixtureCommands, createScaleViews, ownerStorageIndexes } from "./scale";\nconst ui = createScaleViews(${JSON.stringify(kind)}, ${owner.index}, ${owner.rows});\nexport default defineExtension({ ...ui, storageIndexes: ownerStorageIndexes, commands: [...fixtureCommands, ...ui.commands] });\n`,
       );
       install(runtime, home, source, `scale-owner-${owner.index}`);
     }
@@ -158,16 +181,7 @@ export const seedScaleRuntime = async (home: string, kind: Workload, churn: bool
       (await runtime.request<{ id: string }>("/v1/projects", "POST", folderProjectInput({ name: "Scale" }, folder)));
     const planner = await preparePlannerSource(join(home, "sources"));
     writeFileSync(join(planner, "scale.ts"), command);
-    const entry = join(planner, "extension.ts");
-    const original = readFileSync(entry, "utf8");
-    const extended = original.replace(
-      /commands: \[(\s*)\.\.\.plannerCommands,/,
-      "commands: [$1...fixtureCommands,$1...plannerCommands,",
-    );
-    // Fail before seeding the other owners if Planner's entry no longer matches.
-    if (extended === original)
-      throw new Error("Planner extension.ts no longer lists ...plannerCommands first in commands");
-    writeFileSync(entry, `import { fixtureCommands } from "./scale";\n${extended}`);
+    extendPlannerSource(planner);
     install(runtime, home, planner, "pstdio-planner");
     const manifest = JSON.parse(readFileSync(join(planner, "package.json"), "utf8"));
     for (const owner of owners(workload(kind))) {
@@ -189,12 +203,36 @@ export const seedScaleRuntime = async (home: string, kind: Workload, churn: bool
         install(runtime, home, source, `scale-owner-${owner.index}`);
       }
       const plannerOwner = owner.index === 9;
-      if (plannerOwner) await runtime.execute(project.id, owner.id, "ticket-status.read", {});
-      const target = {
-        commit: (input: Parameters<Parameters<typeof seedOwner>[0]["commit"]>[0]) =>
+      const target: SeedTarget = {
+        commit: (input) =>
           runtime.execute(project.id, owner.id, "scale", {
             input: { action: "seed", ...input, count: owner.rows, planner: plannerOwner },
           }),
+        // Planner creates each ticket, with its core number, through its public ticket command.
+        // Every ticket exists before any gains its generator row, so each creation stays small.
+        ...(plannerOwner && {
+          create: async (rows, edited, progress) => {
+            const tickets: string[] = [];
+            for (const row of rows) {
+              const { value } = await runtime.execute<{ id: string }>(project.id, owner.id, "create-ticket", {
+                title: row.title,
+              });
+              tickets.push(value.id);
+              if (tickets.length % 100 === 0) progress(tickets.length);
+            }
+            const batch = workload(kind).seedBatchRows;
+            for (let start = 0; start < rows.length; start += batch)
+              await runtime.execute(project.id, owner.id, "scale", {
+                input: {
+                  action: "adopt",
+                  rows: edited.slice(start, start + batch),
+                  tickets: tickets.slice(start, start + batch),
+                  count: owner.rows,
+                  planner: true,
+                },
+              });
+          },
+        }),
       };
       await seedOwner(target, kind, owner.index, owner.rows, false, (progress) => {
         if (progress.completed % 1_000 === 0)

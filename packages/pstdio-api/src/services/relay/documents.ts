@@ -10,7 +10,7 @@ import { createSyncQuarantine } from "./quarantine";
 import { traceDocumentProgress, traceDocumentSync, traceRecordStreamStore } from "./record-stream-progress";
 import type { RelayWorkbench } from "./runtime";
 
-export const createExtensionDocumentSync = (input: {
+interface ExtensionDocumentSyncInput {
   config: RelayWorkbench;
   owner: { workbenchId: string; extensionId: string };
   deps: ExtensionsRouteDeps;
@@ -18,125 +18,153 @@ export const createExtensionDocumentSync = (input: {
   discoveryNeeded?: () => void;
   subscribe?: SubscribeDocument;
   statusChanged?: () => void;
-}) => {
-  const initialize = async (signal: AbortSignal, space: Awaited<ReturnType<typeof fetchSyncSpaces>>["project"]) => {
-    const { config, owner, deps } = input;
-    const controller = new AbortController();
-    const workSignal = AbortSignal.any([signal, controller.signal]);
-    const relay = (documentId: string) =>
-      createDocumentRelay({
-        subscribe: input.subscribe,
-        origin: config.relayOrigin,
+}
+
+const initializeDocuments = async (
+  input: ExtensionDocumentSyncInput,
+  signal: AbortSignal,
+  space: Awaited<ReturnType<typeof fetchSyncSpaces>>["project"],
+) => {
+  const { config, owner, deps } = input;
+  const controller = new AbortController();
+  const workSignal = AbortSignal.any([signal, controller.signal]);
+  const relay = (documentId: string) =>
+    createDocumentRelay({
+      subscribe: input.subscribe,
+      origin: config.relayOrigin,
+      space,
+      documentId,
+      signal: workSignal,
+      token: async () => (await input.access()).token,
+    });
+  const quarantine = (documentId: string) =>
+    createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
+  const ownerId = await space.documentId(JSON.stringify([owner.extensionId, "owner"]));
+  const recordStreamId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream-v2"]));
+  let observation: Promise<ReturnType<typeof documentProgress>> | undefined;
+  const statusChanged = () => {
+    observation = undefined;
+    input.statusChanged?.();
+  };
+  const logs = createRelayLogs({
+    owner,
+    space,
+    service: deps.extensionStorageService.logs,
+    relay,
+    signal: workSignal,
+    subscribe: input.subscribe,
+    statusChanged,
+  });
+  const jobs = createRelayDocumentJobs({
+    signal: workSignal,
+    create: async (name) => {
+      const documentId =
+        name === "records" ? ownerId : await space.documentId(JSON.stringify([owner.extensionId, name]));
+      const sync = createDocumentSync({
+        owner,
         space,
         documentId,
-        signal: workSignal,
-        token: async () => (await input.access()).token,
+        store: deps.extensionStorageService.documents.open(name),
+        assets: createRecordAssets(deps.assetTransferService, owner, workSignal),
+        relay: relay(documentId),
+        quarantine: quarantine(documentId),
       });
-    const quarantine = (documentId: string) =>
-      createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
-    const ownerId = await space.documentId(JSON.stringify([owner.extensionId, "owner"]));
-    const recordStreamId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream-v2"]));
-    const logs = createRelayLogs({
-      owner,
-      space,
-      service: deps.extensionStorageService.logs,
-      relay,
-      signal: workSignal,
-      subscribe: input.subscribe,
-      statusChanged: input.statusChanged,
-    });
-    const jobs = createRelayDocumentJobs({
-      signal: workSignal,
-      create: async (name) => {
-        const documentId =
-          name === "records" ? ownerId : await space.documentId(JSON.stringify([owner.extensionId, name]));
-        const sync = createDocumentSync({
-          owner,
-          space,
-          documentId,
-          store: deps.extensionStorageService.documents.open(name),
-          assets: createRecordAssets(deps.assetTransferService, owner, workSignal),
-          relay: relay(documentId),
-          quarantine: quarantine(documentId),
-        });
-        return { documentId, sync: traceDocumentSync(owner, name === "records" ? "directory" : "document", sync) };
-      },
-    });
-    const records = createRecordStreamSync({
-      space,
-      documentId: recordStreamId,
-      relay: relay(recordStreamId),
-      store: traceRecordStreamStore(owner, deps.extensionStorageService.documents.recordStream(owner)),
-      assets: createRecordAssets(deps.assetTransferService, owner, workSignal),
-      quarantine: quarantine(recordStreamId),
-    });
-    let directory: string[] | undefined;
-    let running: Promise<void> | undefined;
-    const synchronize = () => {
-      if (running) return running;
-      const work = Promise.resolve().then(async () => {
-        try {
-          directory = undefined;
-          workSignal.throwIfAborted();
-          await deps.extensionStorageService.documents.list(owner);
-          workSignal.throwIfAborted();
-          await jobs.synchronize("records");
-          input.statusChanged?.();
-          workSignal.throwIfAborted();
-          await records.synchronize();
-          await logs.publish();
-          workSignal.throwIfAborted();
-          directory = await deps.extensionStorageService.documents.list(owner);
-          input.statusChanged?.();
-          for (const name of directory) {
-            workSignal.throwIfAborted();
-            if (name !== "records") {
-              await jobs.synchronize(name);
-              input.statusChanged?.();
-            }
-          }
-        } catch (error) {
-          if (error !== workSignal.reason || !(error instanceof RelayDocumentRetiredError)) throw error;
-        } finally {
-          running = undefined;
-        }
-      });
-      running = work;
-      return work;
-    };
-    return {
-      signal,
-      generation: space.generation,
-      jobs,
-      logs,
-      ownerId,
-      recordStreamId,
-      invalidate(name: string) {
-        if (!directory?.includes(name)) directory = undefined;
-      },
-      status: async () => {
-        const names = [...new Set(["records", ...jobs.names(), ...(directory ?? [])])];
-        const statuses = [...(await jobs.statuses(names)), await records.status(), await logs.status()];
-        traceDocumentProgress(owner, names, statuses);
-        return documentProgress(statuses, directory !== undefined);
-      },
-      synchronize,
-      async close() {
-        controller.abort(new RelayDocumentRetiredError("Document key generation retired"));
-        await running?.catch(() => {});
-        await jobs.close();
-        await logs.close();
-      },
-    };
+      return { documentId, sync: traceDocumentSync(owner, name === "records" ? "directory" : "document", sync) };
+    },
+  });
+  const records = createRecordStreamSync({
+    space,
+    documentId: recordStreamId,
+    relay: relay(recordStreamId),
+    store: traceRecordStreamStore(owner, deps.extensionStorageService.documents.recordStream(owner)),
+    assets: createRecordAssets(deps.assetTransferService, owner, workSignal),
+    quarantine: quarantine(recordStreamId),
+  });
+  let directory: string[] | undefined;
+  let running: Promise<void> | undefined;
+  const synchronizeDocument = async (name: string) => {
+    statusChanged();
+    try {
+      return await jobs.synchronize(name);
+    } finally {
+      statusChanged();
+    }
   };
-  let current: Awaited<ReturnType<typeof initialize>> | undefined;
+  const synchronize = () => {
+    if (running) return running;
+    const work = Promise.resolve().then(async () => {
+      try {
+        directory = undefined;
+        statusChanged();
+        workSignal.throwIfAborted();
+        await deps.extensionStorageService.documents.list(owner);
+        workSignal.throwIfAborted();
+        await synchronizeDocument("records");
+        workSignal.throwIfAborted();
+        await records.synchronize();
+        await logs.publish();
+        workSignal.throwIfAborted();
+        directory = await deps.extensionStorageService.documents.list(owner);
+        statusChanged();
+        for (const name of directory) {
+          workSignal.throwIfAborted();
+          if (name !== "records") {
+            await synchronizeDocument(name);
+          }
+        }
+      } catch (error) {
+        if (error !== workSignal.reason || !(error instanceof RelayDocumentRetiredError)) throw error;
+      } finally {
+        running = undefined;
+      }
+    });
+    running = work;
+    return work;
+  };
+  return {
+    signal,
+    generation: space.generation,
+    jobs,
+    logs,
+    ownerId,
+    recordStreamId,
+    synchronizeDocument,
+    invalidate(name?: string) {
+      if (name && !directory?.includes(name)) directory = undefined;
+      statusChanged();
+    },
+    // Storage commits and transport progress invalidate this owner's snapshot.
+    // Unrelated owners can then report progress without rereading its database rows.
+    status: () =>
+      (observation ??= readStatus().catch((error) => {
+        observation = undefined;
+        throw error;
+      })),
+    synchronize,
+    async close() {
+      controller.abort(new RelayDocumentRetiredError("Document key generation retired"));
+      await running?.catch(() => {});
+      await jobs.close();
+      await logs.close();
+    },
+  };
+  async function readStatus() {
+    const names = [...new Set(["records", ...jobs.names(), ...(directory ?? [])])];
+    const statuses = [...(await jobs.statuses(names)), await records.status(), await logs.status()];
+    traceDocumentProgress(owner, names, statuses);
+    return documentProgress(statuses, directory !== undefined);
+  }
+};
+
+export const createExtensionDocumentSync = (input: ExtensionDocumentSyncInput) => {
+  let current: Awaited<ReturnType<typeof initializeDocuments>> | undefined;
   const stop = input.deps.extensionStorageService.watch((owner) => {
     if (owner.workbenchId !== input.owner.workbenchId || owner.extensionId !== input.owner.extensionId) return;
-    if (owner.documentId) current?.invalidate(owner.documentId);
-    input.statusChanged?.();
+    if (current) current.invalidate(owner.documentId);
+    else input.statusChanged?.();
   });
   let firstDownloaded = false;
-  let preparing: { signal: AbortSignal; work: Promise<Awaited<ReturnType<typeof initialize>>> } | undefined;
+  let preparing: { signal: AbortSignal; work: Promise<Awaited<ReturnType<typeof initializeDocuments>>> } | undefined;
   const starting = new Map<string, { signal: AbortSignal; work: Promise<boolean>; dirty: boolean }>();
   const close = async () => {
     const previous = current;
@@ -156,7 +184,7 @@ export const createExtensionDocumentSync = (input: {
         while (request.dirty) {
           request.dirty = false;
           const active = await prepare(signal);
-          await active.jobs.synchronize(name);
+          await active.synchronizeDocument(name);
           if (current !== active) request.dirty = true;
         }
         return true;
@@ -176,7 +204,7 @@ export const createExtensionDocumentSync = (input: {
       if (!current || current.signal !== signal || current.generation !== space.generation) {
         await close();
         signal.throwIfAborted();
-        current = await initialize(signal, space);
+        current = await initializeDocuments(input, signal, space);
         input.discoveryNeeded?.();
       }
       return current;

@@ -1,4 +1,4 @@
-export { LazyMarkdownEditor } from "./lazy-markdown-editor";
+export { LazyMarkdownEditor, preloadMarkdownEditor } from "./lazy-markdown-editor";
 export type { MarkdownEditorProps } from "./markdown-editor/markdown-editor";
 export { MarkdownEditor } from "./markdown-editor/markdown-editor";
 export type {

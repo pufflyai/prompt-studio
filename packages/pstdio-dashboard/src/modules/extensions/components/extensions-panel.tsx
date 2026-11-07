@@ -15,6 +15,7 @@ import {
   useMarketplaceExtensionContributions,
   useProjectExtensionMetadata,
   useProjectExtensions,
+  useSetExtensionAutomationEnabled,
   useSetProjectExtensionEnabled,
   useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
@@ -41,6 +42,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const agentsQuery = useAgents(projectId);
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
   const setEnabled = useSetProjectExtensionEnabled(projectId);
+  const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
   const upgrade = useUpgradeProjectExtension(projectId);
   const installMarketplace = useInstallMarketplaceExtension(projectId);
   const addLocalFolder = useAddLocalExtensionFolder(projectId);
@@ -251,10 +253,14 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         automations={metadataQuery.data?.automations ?? []}
         harnesses={metadataQuery.isSuccess ? metadataQuery.data?.harnesses : undefined}
         agents={agents}
-        togglingInstanceId={setEnabled.isPending ? (setEnabled.variables?.instanceId ?? undefined) : undefined}
+        togglingInstanceId={setEnabled.isPending ? setEnabled.variables?.instanceId : undefined}
+        togglingAutomation={setAutomationEnabled.isPending}
         upgradingInstanceIds={upgradingInstanceIds}
         installingMarketplaceNames={installingMarketplaceNames}
         onToggle={handleToggle}
+        onToggleAutomation={(extension, automation, enabled) =>
+          setAutomationEnabled.mutateAsync({ instanceId: extension.id, automationId: automation.id, enabled })
+        }
         onUpgrade={(extension) => void handleUpgrade(extension)}
         onOpen={(extension) => openDetail(`installed:${extension.id}`, extension.displayName)}
         onInstallMarketplace={(extension) => void handleInstallMarketplace(extension)}

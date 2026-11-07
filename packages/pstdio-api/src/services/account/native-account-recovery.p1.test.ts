@@ -10,7 +10,7 @@ const waitFor = async (condition: () => boolean) => {
 };
 
 // A device whose account lists one cloud project that exists here and one that does not yet.
-const fixture = async () => {
+const fixture = async (missing = ["elsewhere"]) => {
   const root = await mkdtemp(join(tmpdir(), "native-account-recovery-"));
   const manager = Bun.serve({
     hostname: "127.0.0.1",
@@ -18,7 +18,7 @@ const fixture = async () => {
     fetch: (request) =>
       new URL(request.url).pathname === "/v1/account"
         ? Response.json({ features: { relay: true } })
-        : Response.json([{ workbenchId: "here" }, { workbenchId: "elsewhere" }]),
+        : Response.json(["here", ...missing].map((workbenchId) => ({ workbenchId }))),
   });
   const file = join(root, "native-account.json");
   await Bun.write(
@@ -46,14 +46,27 @@ const fixture = async () => {
     },
   });
   let synced: string[] = [];
-  const recoveries: { id: string; signal: AbortSignal; done: ReturnType<typeof Promise.withResolvers<void>> }[] = [];
+  const recoveries: {
+    id: string;
+    signal: AbortSignal;
+    created: () => void;
+    done: ReturnType<typeof Promise.withResolvers<void>>;
+  }[] = [];
   account.start(
     async (connections) => {
       synced = connections.map((connection) => connection.workbenchId);
     },
     async () => ({ state: "synced", offlineReady: true }),
-    async (connection, signal) => {
-      const recovery = { id: connection.workbenchId, signal, done: Promise.withResolvers<void>() };
+    async (connection, signal, created?: () => void) => {
+      const recovery = {
+        id: connection.workbenchId,
+        signal,
+        created: () => {
+          local.add(connection.workbenchId);
+          created?.();
+        },
+        done: Promise.withResolvers<void>(),
+      };
       recoveries.push(recovery);
       await recovery.done.promise;
     },
@@ -91,18 +104,27 @@ test("projects on this device sync while a missing cloud project is still being 
   }
 });
 
-test("a project does not sync while its recovery is still setting it up", async () => {
+test("recovered data downloads during tool setup while readiness stays incomplete", async () => {
   const device = await fixture();
   try {
     await device.account.refresh();
     await waitFor(() => device.recoveries.length === 1);
     // The project row exists, but its extensions are still being set up.
-    device.local.add("elsewhere");
+    device.recoveries[0]!.created();
+    await waitFor(() => device.synced().includes("elsewhere"));
+    expect(device.synced()).toEqual(["here", "elsewhere"]);
+    expect(device.recoveries[0]!.signal.aborted).toBe(false);
+    expect(await device.account.projectSyncStatus("elsewhere")).toMatchObject({
+      state: "first-download-incomplete",
+      offlineReady: false,
+    });
     await device.account.refresh();
-    expect(device.synced()).toEqual(["here"]);
+    expect(device.recoveries[0]!.signal.aborted).toBe(false);
 
     device.recoveries[0]!.done.resolve();
-    await waitFor(() => device.synced().includes("elsewhere"));
+    // Recovery completion publishes the readiness change.
+    await device.account.refresh();
+    expect(await device.account.projectSyncStatus("elsewhere")).toMatchObject({ state: "synced", offlineReady: true });
   } finally {
     await device.close();
   }
@@ -150,6 +172,55 @@ test("closing the account stops a recovery in progress", async () => {
     expect(device.recoveries[0]!.signal.aborted).toBe(true);
     device.recoveries[0]!.done.resolve();
     await closing;
+  } finally {
+    await device.close();
+  }
+});
+
+test("a rolled-back recovery stops owners started after row creation", async () => {
+  const device = await fixture();
+  try {
+    await device.account.refresh();
+    await waitFor(() => device.recoveries.length === 1);
+    device.recoveries[0]!.created();
+    await waitFor(() => device.synced().includes("elsewhere"));
+    device.local.delete("elsewhere");
+    device.recoveries[0]!.done.reject(new Error("Initialization rolled back"));
+    await waitFor(() => !device.synced().includes("elsewhere"));
+  } finally {
+    await device.close();
+  }
+});
+
+test("rollback stops early owners before the next project finishes recovery", async () => {
+  const device = await fixture(["elsewhere", "next"]);
+  try {
+    await device.account.refresh();
+    await waitFor(() => device.recoveries.length === 1);
+    device.recoveries[0]!.created();
+    await waitFor(() => device.synced().includes("elsewhere"));
+    device.local.delete("elsewhere");
+    device.recoveries[0]!.done.reject(new Error("Initialization rolled back"));
+    await waitFor(() => device.recoveries.some(({ id }) => id === "next"));
+    await waitFor(() => !device.synced().includes("elsewhere"));
+  } finally {
+    await device.close();
+  }
+});
+
+test("rollback cleanup waits for a later account refresh before retrying setup", async () => {
+  const device = await fixture();
+  try {
+    await waitFor(() => device.recoveries.length === 1);
+    device.recoveries[0]!.created();
+    await waitFor(() => device.synced().includes("elsewhere"));
+    device.local.delete("elsewhere");
+    device.recoveries[0]!.done.reject(new Error("Initialization rolled back"));
+    await waitFor(() => !device.synced().includes("elsewhere"));
+    await Bun.sleep(5);
+    expect(device.recoveries).toHaveLength(1);
+    await device.account.refresh();
+    await waitFor(() => device.recoveries.length === 2);
   } finally {
     await device.close();
   }

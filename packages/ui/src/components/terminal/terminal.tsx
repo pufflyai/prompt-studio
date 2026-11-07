@@ -1,8 +1,5 @@
-import { FitAddon } from "@xterm/addon-fit";
-import { WebLinksAddon } from "@xterm/addon-web-links";
-import type { ITheme } from "@xterm/xterm";
-import { Terminal as Xterm } from "@xterm/xterm";
-import "@xterm/xterm/css/xterm.css";
+import type { FitAddon } from "@xterm/addon-fit";
+import type { ITheme, Terminal as Xterm } from "@xterm/xterm";
 import "./terminal.css";
 import { useContext, useEffect, useRef, useState } from "react";
 import { SplitPanelMotionContext } from "../layout/split-panel-motion-context";
@@ -167,6 +164,7 @@ export const Terminal = (props: TerminalProps) => {
   const sinkRef = useRef<ReturnType<typeof createTerminalSink> | null>(null);
   const focusWhenReadyRef = useRef<(() => void) | null>(null);
   const [terminalReady, setTerminalReady] = useState(false);
+  const [initializationError, setInitializationError] = useState<Error | null>(null);
   const initialSessionRequestRef = useRef<TerminalSessionRequest | null>(null);
   const onSessionOpenRef = useRef(onSessionOpen);
   const onSessionExitRef = useRef(onSessionExit);
@@ -188,6 +186,7 @@ export const Terminal = (props: TerminalProps) => {
     const container = containerRef.current;
     if (!container) return;
 
+    let disposed = false;
     let xterm: Xterm | undefined;
     let sink: ReturnType<typeof createTerminalSink> | undefined;
     let measureAnimationFrame: number | undefined;
@@ -205,35 +204,43 @@ export const Terminal = (props: TerminalProps) => {
     // xterm schedules internal viewport work during construction that otherwise
     // runs after the probe instance has already been disposed.
     const initializationFrame = window.requestAnimationFrame(() => {
-      xterm = new Xterm({
-        cols: DEFAULT_COLS,
-        rows: DEFAULT_ROWS,
-        cursorBlink: true,
-        convertEol: true,
-        allowProposedApi: true,
-        linkHandler: { activate: openTerminalLink },
-      });
-      const fit = new FitAddon();
-      xterm.loadAddon(fit);
-      xterm.loadAddon(new WebLinksAddon(openTerminalLink));
-      xterm.open(container);
-      sink = createTerminalSink(xterm);
+      void import("./terminal-engine")
+        .then(({ Xterm, FitAddon, WebLinksAddon }) => {
+          if (disposed) return;
+          xterm = new Xterm({
+            cols: DEFAULT_COLS,
+            rows: DEFAULT_ROWS,
+            cursorBlink: true,
+            convertEol: true,
+            allowProposedApi: true,
+            linkHandler: { activate: openTerminalLink },
+          });
+          const fit = new FitAddon();
+          xterm.loadAddon(fit);
+          xterm.loadAddon(new WebLinksAddon(openTerminalLink));
+          xterm.open(container);
+          sink = createTerminalSink(xterm);
 
-      xtermRef.current = xterm;
-      fitRef.current = fit;
-      sinkRef.current = sink;
+          xtermRef.current = xterm;
+          fitRef.current = fit;
+          sinkRef.current = sink;
 
-      measure();
-      measureAnimationFrame = window.requestAnimationFrame(measure);
-      measureTimeout = window.setTimeout(measure, 50);
-      observer = new ResizeObserver(measure);
-      observer.observe(container);
-      focusWhenReadyRef.current?.();
-      focusWhenReadyRef.current = null;
-      setTerminalReady(true);
+          measure();
+          measureAnimationFrame = window.requestAnimationFrame(measure);
+          measureTimeout = window.setTimeout(measure, 50);
+          observer = new ResizeObserver(measure);
+          observer.observe(container);
+          focusWhenReadyRef.current?.();
+          focusWhenReadyRef.current = null;
+          setTerminalReady(true);
+        })
+        .catch((cause: unknown) => {
+          if (!disposed) setInitializationError(cause instanceof Error ? cause : new Error(String(cause)));
+        });
     });
 
     return () => {
+      disposed = true;
       window.cancelAnimationFrame(initializationFrame);
       if (measureAnimationFrame !== undefined) window.cancelAnimationFrame(measureAnimationFrame);
       if (measureTimeout !== undefined) window.clearTimeout(measureTimeout);
@@ -298,6 +305,8 @@ export const Terminal = (props: TerminalProps) => {
       focusWhenReadyRef.current = null;
     };
   }, [autoFocus]);
+
+  if (initializationError) throw initializationError;
 
   // The mount element fills its box absolutely so xterm sizes to the panel
   // rather than growing it: inside a scrollable host, a self-sized terminal

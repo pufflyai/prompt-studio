@@ -39,6 +39,10 @@
       "import": "./dist/rich-text.js",
       "types": "./dist/rich-text.d.ts"
     },
+    "./lazy-markdown-editor": {
+      "import": "./dist/lazy-markdown-editor.js",
+      "types": "./dist/lazy-markdown-editor.d.ts"
+    },
     "./theme": {
       "import": "./dist/theme.js",
       "types": "./dist/theme.d.ts"
@@ -46,6 +50,10 @@
     "./chat-ui": {
       "import": "./dist/chat-ui.js",
       "types": "./dist/chat-ui.d.ts"
+    },
+    "./chat-skeleton": {
+      "import": "./dist/chat-skeleton.js",
+      "types": "./dist/chat-skeleton.d.ts"
     },
     "./diff": {
       "import": "./dist/diff.js",

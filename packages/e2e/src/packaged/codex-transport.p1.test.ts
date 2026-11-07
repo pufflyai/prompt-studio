@@ -56,8 +56,10 @@ test("the packaged Codex harness preserves protocol loss and independent provide
         const session = await request(`/sessions/${id}`);
         if (session.status === status && session.agent_session_id === "transport-fixture" && existsSync(pidPath))
           return session;
-        if (["completed", "failed", "cancelled", "disconnected"].includes(session.status))
-          throw new Error(`Expected ${status}: ${JSON.stringify(session)}`);
+        if (["completed", "failed", "cancelled", "disconnected"].includes(session.status)) {
+          const conversation = await request(`/sessions/${id}/conversation`);
+          throw new Error(`Expected ${status}: ${JSON.stringify({ session, messages: conversation.messages })}`);
+        }
         await Bun.sleep(50);
       }
       throw new Error(`Session ${id} did not reach ${status}`);

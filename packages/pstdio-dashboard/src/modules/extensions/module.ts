@@ -9,6 +9,7 @@ import {
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
 } from "@pstdio/workbench";
+import { createWorkbenchExtensionChatRendererOwners } from "@pstdio/workbench/extensions";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
 import { getDashboardQueryClient } from "@/lib/query-client";
@@ -28,7 +29,9 @@ import {
 } from "@/shared/extensions/extension-localization";
 import {
   clearDashboardExtensionsReadyProject,
+  clearDashboardExtensionsRegisteredProject,
   setDashboardExtensionsReadyProject,
+  setDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
 import { invalidateExtensionQueries } from "@/shared/extensions/project-extension-cache";
 import { subscribeResourceViewDataEvents } from "@/shared/extensions/resource-view-data-events";
@@ -96,11 +99,13 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       let appearanceDisposable: ReturnType<typeof registerExtensionAppearance> | undefined;
       let translationDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
+      const chatRendererOwners = createWorkbenchExtensionChatRendererOwners();
       let displacedPageLocation: PageLocation | undefined;
 
-      const clearContributions = () => {
+      const clearContributions = (preserveChatOwners = false) => {
         disposeExtensionContributions(contributionDisposables);
         contributionDisposables = [];
+        if (!preserveChatOwners) chatRendererOwners.dispose();
       };
 
       const clearTranslations = () => {
@@ -137,7 +142,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
       // Returns what is registered now; a failed extension is left out so the next refresh retries it.
       const replaceContributions = (nextProjectId: string, nextMetadata: ResolvedWorkbenchExtensionMetadata) => {
-        clearContributions();
+        chatRendererOwners.reconcile(nextProjectId, nextMetadata);
+        clearContributions(true);
         try {
           const registration = registerHealthyExtensions({
             metadata: nextMetadata,
@@ -149,6 +155,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
                 activate: (contributionCtx) =>
                   registerExtensionContributions({
                     ctx: contributionCtx,
+                    chatRendererOwners,
                     executeCommand,
                     metadata,
                     projectId: nextProjectId,
@@ -157,9 +164,11 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
             onFailure: (extensionId, error) => registrationError(nextProjectId, error, extensionId),
           });
           contributionDisposables = [registration.disposable];
+          chatRendererOwners.reconcile(nextProjectId, registration.metadata);
           return registration.metadata;
         } catch (error) {
           registrationError(nextProjectId, error);
+          chatRendererOwners.dispose();
           return omitExtensionMetadata(nextMetadata, new Set(nextMetadata.extensions.map((extension) => extension.id)));
         }
       };
@@ -169,16 +178,14 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         setCachedDashboardExtensionMetadata(nextProjectId, registeredMetadata, owner);
         ctx.context.set(dashboardEditableTemplatesContextKey, hasEditableTemplateAssets(registeredMetadata));
         ctx.settings.refresh();
+        setDashboardExtensionsRegisteredProject(ctx, nextProjectId);
       };
 
       const applyMetadata = (nextProjectId: string, nextMetadata: DashboardExtensionMetadata) => {
         const nextResolvedMetadata = localizeExtensionMetadata(nextMetadata, owner);
         rawMetadata = nextMetadata;
         // `metadata` holds only what registered, so a refresh after a failure always retries.
-        if (hasSameSerializedMetadata(metadata, nextResolvedMetadata)) {
-          commitMetadata(nextProjectId, nextResolvedMetadata);
-          return;
-        }
+        if (hasSameSerializedMetadata(metadata, nextResolvedMetadata)) return;
         const pageLocationBeforeRefresh = displacedPageLocation ?? ctx.pages.store.getState().location;
         const refreshLayout = captureExtensionContributionRefreshLayout(ctx);
         // Observers must see the completed refresh. A temporary missing page can
@@ -238,6 +245,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           clearCachedDashboardExtensionMetadata(projectId, owner);
           ctx.context.delete(dashboardEditableTemplatesContextKey);
           clearDashboardExtensionsReadyProject(ctx);
+          clearDashboardExtensionsRegisteredProject(ctx);
           clearContributions();
           // Labels belong to this project; resolved visual themes can survive its loading gap.
           clearTranslations();
@@ -288,6 +296,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           clearCachedDashboardExtensionMetadata(projectId, owner);
           ctx.context.delete(dashboardEditableTemplatesContextKey);
           clearDashboardExtensionsReadyProject(ctx);
+          clearDashboardExtensionsRegisteredProject(ctx);
           clearContributions();
           clearAppearance();
           i18n.off("languageChanged", reapplyLocale);

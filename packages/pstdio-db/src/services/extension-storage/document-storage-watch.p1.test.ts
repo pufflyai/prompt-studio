@@ -1,10 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
-import type { StorageOwner } from "pstdio-sync";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentSync, createRecordStreamSync } from "pstdio-sync/relay";
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
-import { createDocumentStorageDBService } from "./document-storage";
+import { createDocumentStorageDBService, type StorageChange } from "./document-storage";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";
 
 const cleanup: (() => Promise<unknown>)[] = [];
@@ -62,8 +61,8 @@ const device = async () => {
       quarantine,
     }),
   };
-  const notified: (StorageOwner & { documentId?: string })[] = [];
-  const stop = service.watch((changed) => notified.push(changed));
+  const notified: (StorageChange & { origin?: "relay" })[] = [];
+  const stop = service.watch((changed, origin) => notified.push(origin ? { ...changed, origin } : changed));
   cleanup.push(async () => stop());
   return {
     records: service.open({ owner, assets: assets.store }).records,
@@ -86,13 +85,16 @@ test("remote edits imported by sync notify storage watchers, and a round with no
   await first.text.save("remote text");
   await first.synchronize();
 
-  // Each import path commits through the same storage transaction that local writes use.
+  // Imported records notify views without being mistaken for another local edit.
   await second.syncs.records.synchronize();
   expect((await second.records.read("ticket")).value).toEqual({ title: "Remote" });
-  expect(second.notified.slice(quiet)).toEqual([owner]);
+  expect(second.notified.slice(quiet)).toEqual([{ ...owner, origin: "relay" }]);
   await second.syncs.text.synchronize();
   expect(await second.text.read()).toBe("remote text");
-  expect(second.notified.slice(quiet)).toEqual([owner, { ...owner, documentId: textName }]);
+  expect(second.notified.slice(quiet)).toEqual([
+    { ...owner, origin: "relay" },
+    { ...owner, documentId: textName },
+  ]);
 
   // The text document's first write also registered it in the shared owner directory.
   await second.syncs.owner.synchronize();

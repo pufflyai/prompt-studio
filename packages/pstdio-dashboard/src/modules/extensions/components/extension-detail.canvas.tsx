@@ -162,6 +162,12 @@ export const LongHarnessReason: Story = {
 export const Loaded: Story = {
   id: "projectsettings-extensiondetail--loaded",
 };
+export const NoSettingsRegistered: Story = {
+  args: { settings: [], automations: [] },
+};
+export const AutomationsWithoutSettings: Story = {
+  args: { settings: [] },
+};
 export const CustomWorkflowSettings: Story = {
   id: "projectsettings-extensiondetail--custom-workflow-settings",
   args: {

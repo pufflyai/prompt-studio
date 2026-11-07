@@ -30,7 +30,7 @@ export const StatusItemContent = (props: {
       open={visible && open}
       onOpenChange={(event) => setOpen(event.open)}
       variant="widget"
-      lazyMount={false}
+      lazyMount
       unmountOnExit={false}
       positioning={{ placement: item.slot === "trailing" ? "top-end" : "top-start", offset: { mainAxis: 4 } }}
     >

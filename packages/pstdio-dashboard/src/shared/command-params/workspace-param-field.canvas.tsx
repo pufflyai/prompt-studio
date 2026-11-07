@@ -1,11 +1,20 @@
-import { Dialog, Stack, Text } from "@chakra-ui/react";
+import { Button, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
+import {
+  ChatDeviceMenu,
+  ChatInput,
+  ChatWorkspaceHub,
+  ChatWorkspaceMenu,
+  createSerializedPromptState,
+} from "@pstdio/ui/chat-ui";
+import { HarnessModelMenu } from "@pstdio/ui/param-editor";
 import { createWorkbench } from "@pstdio/workbench";
 import type { CommandParamEntry, CommandParamValue } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { ExtensionIcon } from "@/shared/components/extension-icon";
 import { workspaceProvidersQueryKey } from "@/shared/workspaces/workspace-providers";
 import { WorkspaceParamField } from "./workspace-param-field";
 
@@ -103,4 +112,56 @@ export const GitWorktreeOnly: Story = {
 export const NoMatchingType: Story = {
   id: "commandparams-workspaceparamfield--no-matching-type",
   args: { providerIds: ["acme.missing"] },
+};
+
+const CustomHarnessIcon = () => (
+  <ExtensionIcon name="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTYgMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTIgMmwxMiA2LTEyIDZ6IiBmaWxsPSJjdXJyZW50Q29sb3IiLz48L3N2Zz4=" />
+);
+// Existing-workspace selection only; global provider creation remains in WorkspaceParamField above.
+export const ComposerWorkspace = () => {
+  const [workspaceId, setWorkspaceId] = useState("main");
+  const [saved, setSaved] = useState(false);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Stack gap="0">
+        <ChatWorkspaceHub
+          additions={0}
+          deletions={0}
+          workspaceControl={
+            <HStack gap="2xs">
+              <ChatDeviceMenu devices={[{ id: "", name: "This device", current: true }]} selectedDeviceId="" />
+              <ChatWorkspaceMenu
+                workspaces={[
+                  { id: "main", title: "Main", shorthand: "MAIN", branch: "main" },
+                  { id: "docs", title: "Documentation", shorthand: "DOCS", branch: "docs" },
+                ]}
+                selectedWorkspaceId={workspaceId}
+                selectedWorkspaceLabel={workspaceId === "main" ? "Main" : "Documentation"}
+                onSelectWorkspace={setWorkspaceId}
+                isDisabled={saved}
+                onOpenWorkspace={saved ? () => {} : undefined}
+              />
+            </HStack>
+          }
+        />
+        <Button size="xs" onClick={() => setSaved(true)}>
+          View saved session
+        </Button>
+        <ChatInput
+          defaultState={createSerializedPromptState("Keep this draft")}
+          actions={
+            <HarnessModelMenu
+              agentOptions={[{ value: "custom", label: "External harness", icon: CustomHarnessIcon }]}
+              selectedAgent="custom"
+              onSelectAgent={() => {}}
+              modelOptions={[{ value: "model", label: "Saved model" }]}
+              selectedModel="model"
+              onSelectModel={() => {}}
+              size="xs"
+            />
+          }
+        />
+      </Stack>
+    </QueryClientProvider>
+  );
 };

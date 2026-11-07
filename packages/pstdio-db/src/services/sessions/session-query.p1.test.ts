@@ -15,7 +15,13 @@ beforeEach(async () => {
   projectId = (await createProjectsDBService(conn.db).create({ name: "query" })).id;
 });
 afterEach(async () => {
-  await conn.close();
+  try {
+    await conn.close();
+  } finally {
+    // Hooks recreate these owners; release closed engines between cases and files.
+    conn = undefined!;
+    service = undefined!;
+  }
 });
 
 const create = async (title: string, agent = "claude-code", date = "2026-10-01T00:00:00.000Z") => {
@@ -23,6 +29,18 @@ const create = async (title: string, agent = "claude-code", date = "2026-10-01T0
   await conn.db.update(sessions).set({ created_at: date, updated_at: date }).where(eq(sessions.id, row.id));
   return row;
 };
+
+test("title search filters before pagination and treats wildcard text literally", async () => {
+  await create("Unrelated", "codex", "2026-10-03T00:00:00.000Z");
+  const newer = await create("Fix 100%_ WORK", "codex", "2026-10-02T00:00:00.000Z");
+  const older = await create("Review 100%_ work");
+  await create("Review 100xy work");
+  const first = await service.query(projectId, { search: "100%_ work", limit: 1 });
+  expect(first.rows.map((row) => row.id)).toEqual([newer.id]);
+  const next = await service.query(projectId, { search: "100%_ work", limit: 1, cursor: first.nextCursor! });
+  expect(next.rows.map((row) => row.id)).toEqual([older.id]);
+  expect(next.nextCursor).toBeNull();
+});
 
 test("pages newest first without duplicates when timestamps tie and sessions arrive or are archived", async () => {
   const rows = await Promise.all([create("a"), create("b"), create("c")]);

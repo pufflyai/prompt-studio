@@ -23,6 +23,7 @@ test("the storage bound includes encrypted chunks once and keeps file bytes sepa
     stateRows: 2,
     updateRows: 1,
     chunkObjects: 2,
+    indexObjects: 0,
   });
 });
 

@@ -193,7 +193,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     return { messageComplete: admitted.then(() => waitForIdle(input.sessionId, directory, input.signal)) };
   };
 
-  const getSessionMessages = async (sessionId: string, cwd?: string) => {
+  const getSessionMessages = async (sessionId: string, cwd?: string, signal?: AbortSignal) => {
     const directory = cwd?.trim() || process.cwd();
 
     const fetchMessages = async (baseUrl: string) => {
@@ -207,6 +207,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
         const { response, text, parsed } = await requestJson<SessionMessagesResponse>(deps.fetcher, url.href, {
           method: "GET",
           headers,
+          signal,
         });
         requireResponseOk(response, text, "OpenCode getSessionMessages failed");
         if (!parsed || !Array.isArray(parsed.data)) throw new Error("OpenCode returned invalid session messages.");
@@ -237,6 +238,34 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     return withServerUrl(abortRunningSession, { retry: true });
   };
 
+  const forkSession = async (sessionId: string, cwd?: string, signal?: AbortSignal, messageId?: string) => {
+    const directory = cwd?.trim() || process.cwd();
+    let beforeMessageId: string | undefined;
+    if (messageId) {
+      const messages = await getSessionMessages(sessionId, cwd, signal);
+      const index = messages.findIndex((message) => ("info" in message ? message.info?.id : undefined) === messageId);
+      if (index < 0) throw new Error("The selected reply is missing from OpenCode history.");
+      const successor = messages[index + 1];
+      beforeMessageId = successor && ("info" in successor ? successor.info?.id : undefined);
+      signal?.throwIfAborted();
+    }
+    return withServerUrl(async (baseUrl) => {
+      const result = await requestJson<{ data: { id: string } }>(
+        deps.fetcher,
+        buildRequestUrl(baseUrl, `/api/session/${encodeURIComponent(sessionId)}/fork`, directory),
+        {
+          method: "POST",
+          headers: buildHeaders(directory),
+          body: beforeMessageId ? { before: beforeMessageId } : {},
+          signal,
+        },
+      );
+      requireResponseOk(result.response, result.text, "OpenCode session.fork failed");
+      if (!result.parsed?.data.id) throw new Error("OpenCode did not return the forked session.");
+      return result.parsed.data.id;
+    });
+  };
+
   const { listPendingQuestions, replyQuestion } = createQuestionApi({ fetcher: deps.fetcher, withServerUrl });
 
   return {
@@ -247,6 +276,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     sendSessionMessage,
     getSessionMessages,
     abortSession,
+    forkSession,
     listPendingQuestions,
     replyQuestion,
     ...createCommandApi({ fetcher: deps.fetcher, withServerUrl }),

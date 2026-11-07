@@ -29,7 +29,7 @@ contract or account for temporary OS handles after termination.
 
 ## Temporary workaround
 
-Use Node's built-in asynchronous `fs.rm` in the packaged-home cleanup. Its
+Use Node's built-in asynchronous `fs.rm` on Windows in the packaged-home cleanup. Its
 [implementation](https://github.com/nodejs/node/blob/v24.20.0/lib/internal/fs/rimraf.js#L28-L59)
 handles Windows permission errors and uses millisecond timers. Keep the existing
 `recursive`, `force`, `maxRetries: 5`, and `retryDelay: 100` options. Await removal
@@ -38,6 +38,15 @@ failed deletion, or change product runtime behavior.
 
 This is a temporary workaround for the upstream synchronous API, isolated to test fixtures. Cleanup yields while Windows releases handles instead of
 blocking the test worker. Tests still cannot finish before their home is removed.
+
+POSIX keeps native synchronous traversal with the same removal options. Native
+macOS ARM64 run 42171037317 reached the transport assertions, then spent 17.754s
+removing its home and exhausted the unchanged 45s allowance. In a local Node 24
+diagnostic, removing copies of an actual 856MB E2E home took 841ms through the
+asynchronous traversal and 277ms through the synchronous traversal. This local
+comparison motivates the change; native CI must still establish completion within
+the existing allowance. Cleanup continues to await complete deletion and propagate
+errors on every platform.
 
 The command-discovery fixture uses the same asynchronous removal policy after
 [Windows run 40010409328](https://github.com/pufflyai/prompt-studio/actions/runs/40010409328/job/120620966481)
