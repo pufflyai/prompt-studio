@@ -1,5 +1,17 @@
 [
   {
+    "runner": "packaged-desktop-benchmark",
+    "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
+    "name": "sidecar crash shows recovery within budget",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-1018 / desktop recovery performance",
+    "reason": "User-authorized performance quarantine on 2026-11-07. Hosted Linux completed both recovery scenarios, then measured recovery UI at 508 ms against the unchanged 500 ms budget (8 ms / 1.6% over). Only annotated numeric budget failures are exempt; launch, crash, recovery visibility, cleanup and whole-test timeouts remain blocking.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42380870548/job/128428068391"],
+    "removeWhen": "Fix recovery latency and complete both crash/recovery scenarios in one normal first-attempt hosted Linux run below the unchanged 500 ms budgets with all functional and cleanup assertions intact.",
+    "failureKind": "performance"
+  },
+  {
     "runner": "workbench-benchmark",
     "file": "packages/e2e/src/perf/panel-tabs.p3.bench.ts",
     "name": "opens one Panel tab within the interaction budget",
