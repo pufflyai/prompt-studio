@@ -29,17 +29,24 @@ export const prepareScaleSyncDevices = async (
   environment: Record<string, string>,
   origins: { primary: string; remote: string },
   emit: (row: object) => void,
+  started: (runtime: ScaleRuntime) => void = () => {},
 ) => {
   const primary = await startScaleRuntime(home, environment);
+  started(primary);
   try {
     mkdirSync(join(remoteHome, "project"), { recursive: true });
     // The producer models another device. It is deliberately outside the receiver's CPU cgroup.
     const remote = await startNativeScaleRuntime(remoteHome, environment);
+    started(remote);
     try {
       const started = performance.now();
+      const step = (name: string) =>
+        emit({ phase: "sync-preparation-step", step: name, elapsedMs: performance.now() - started });
       await signIn(primary, origins.primary);
       await primary.client.account.syncProject(fixture.projectId);
+      step("primary-sync-requested");
       await waitScaleSynced(primary, fixture.projectId);
+      step("primary-uploaded");
       await signIn(remote, origins.remote);
       const { environmentId } = await remote.client.runtime.environment();
       const folder = join(remoteHome, "project");
@@ -61,6 +68,7 @@ export const prepareScaleSyncDevices = async (
           installName: name,
         });
       }
+      step("remote-extensions-installed");
       await waitScaleSynced(remote, fixture.projectId);
       emit({
         phase: "initial-remote-download",
