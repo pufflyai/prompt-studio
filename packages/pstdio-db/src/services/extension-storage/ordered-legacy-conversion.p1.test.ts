@@ -6,6 +6,7 @@ import { resolveNativeRecordAddress } from "./native-source-address";
 import { ensureOrderedOwner } from "./ordered-conversion";
 import { readConversion } from "./ordered-conversion-state";
 import { peers } from "./ordered-legacy-pending.fixture";
+import { readOrderedPending } from "./ordered-stream-pending";
 import { createProjectionStatistics } from "./projection-statistics";
 import { installRecordIndexes } from "./record-index-installation";
 import { createResourceRecords } from "./resource-records";
@@ -107,7 +108,9 @@ test("a hot record's legacy lifecycles commit projection progress between queue 
   }
   expect(checkpoint).toBe(true);
   expect((await readConversion(first.db, first.owner))?.sequence).toBeGreaterThan(0);
+  expect(await readOrderedPending(first.db, first.owner)).toBeUndefined();
   expect((await first.upgrade().records.read("card")).value).toBe("saved");
+  expect(await readOrderedPending(first.db, first.owner)).toBe(true);
 });
 
 test("legacy core conversion preserves repaired number claims and their aliases", async () => {
