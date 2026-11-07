@@ -1,4 +1,10 @@
-import { defineCommand, defineExtension, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  defineExtension,
+  type ExtensionContextBase,
+  type ExtensionStorageApi,
+  params,
+} from "@pstdio/sdk/extensions";
 import {
   type FixtureRow,
   matches,
@@ -73,7 +79,11 @@ const adoptPlannerTickets = async (storage: ExtensionStorageApi, input: Input) =
   return { status: "saved-locally", atomic: false };
 };
 
-const saveRows = async (storage: ExtensionStorageApi, input: Input) => {
+const saveRows = async (
+  storage: ExtensionStorageApi,
+  resources: Pick<ExtensionContextBase["resources"], "removed">,
+  input: Input,
+) => {
   if (input.planner) {
     // Discover opaque addresses through the public indexed API and keep them unchanged.
     const addresses = await plannerAddresses(storage, [
@@ -85,7 +95,7 @@ const saveRows = async (storage: ExtensionStorageApi, input: Input) => {
       if (!record) throw new Error(`Planner seed record missing: ${id}`);
       return record;
     };
-    return storage.records.commit({
+    const outcome = await storage.records.commit({
       operationId: input.operationId!,
       edits: [
         ...(input.rows ?? []).map((row) => {
@@ -95,6 +105,10 @@ const saveRows = async (storage: ExtensionStorageApi, input: Input) => {
         ...(input.deleted ?? []).map((id) => ({ recordId: existing(id).recordId, deleted: true })),
       ],
     });
+    // Like Planner's own delete, tell open views each removed ticket is gone.
+    for (const id of input.deleted ?? [])
+      await resources.removed({ type: "ticket", id: String(existing(id).wrapper.value.id) });
+    return outcome;
   }
   return storage.records.commit({
     operationId: input.operationId!,
@@ -120,7 +134,7 @@ export const fixtureCommands = [
       if (input.action === "adopt") return adoptPlannerTickets(ctx.storage, input);
       if (input.action === "seed" || input.action === "commit") {
         const start = performance.now();
-        const outcome = await saveRows(ctx.storage, input);
+        const outcome = await saveRows(ctx.storage, ctx.resources, input);
         return { outcome, durableAckMs: performance.now() - start };
       }
       if (input.action === "outcome") return ctx.storage.records.outcome(input.operationId!);
@@ -131,24 +145,29 @@ export const fixtureCommands = [
           : (await ctx.storage.records.read(ctx.storage.records.id(input.id!))).value;
       }
       if (input.action === "stats") {
-        // Preparation verifies every stored row, so it alone reads whole owners.
-        const all = input.planner
-          ? (await ctx.storage.collection<PlannerTicket>("tickets").list()).flatMap(
-              (ticket) => ticket[plannerScaleField] ?? [],
-            )
+        // Preparation verifies every stored row, so it alone reads whole owners. Planner's sizes
+        // cover the whole stored ticket; its history comes from the generator row it holds.
+        const stored = input.planner
+          ? (await ctx.storage.collection<PlannerTicket>("tickets").list()).map((ticket) => ({
+              value: ticket as object,
+              row: ticket[plannerScaleField],
+            }))
           : (await ctx.storage.records.list())
               .filter((record) => !record.deleted)
-              .map((record) => record.value as FixtureRow);
-        const sizes = all.map((row) => Buffer.byteLength(JSON.stringify(row))).sort((a, b) => a - b);
+              .map((record) => ({ value: record.value as object, row: record.value as FixtureRow }));
+        const all = stored.flatMap(({ value, row }) => (row ? [{ value, row }] : []));
+        const sizes = all.map(({ value }) => Buffer.byteLength(JSON.stringify(value))).sort((a, b) => a - b);
         return {
           count: all.length,
+          // Planner tickets without a generator row are tickets the fixture did not adopt.
+          unadopted: stored.length - all.length,
           bytes: sizes.reduce((sum, bytes) => sum + bytes, 0),
           minBytes: sizes[0],
           medianBytes: sizes[Math.floor(sizes.length / 2)],
           maxBytes: sizes.at(-1),
           tail16KiB: sizes.filter((bytes) => bytes >= 16_384).length,
-          fieldCount: Object.keys(all[0] ?? {}).length,
-          historyCounts: all.reduce<Record<string, number>>((counts, row) => {
+          fieldCount: Object.keys(all[0]?.value ?? {}).length,
+          historyCounts: all.reduce<Record<string, number>>((counts, { row }) => {
             const history = String(row.history);
             counts[history] = (counts[history] ?? 0) + 1;
             return counts;

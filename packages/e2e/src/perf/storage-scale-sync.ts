@@ -110,6 +110,7 @@ export const createScaleSyncFixture = async (home: string, fixture: ScaleFixture
       const received = await runtime.execute(fixture.projectId, owner.id, "scale", {
         input: { action: "read", id: createRow(fixture.kind, ownerIndex, 83, 3).id, ...scope },
       });
+      assert(final.value, "The remote device lost the background row");
       assert.deepEqual(received.value, final.value);
     }
     const drainedAtMs = performance.now() - offeredAt;

@@ -209,18 +209,28 @@ export const seedScaleRuntime = async (home: string, kind: Workload, churn: bool
             input: { action: "seed", ...input, count: owner.rows, planner: plannerOwner },
           }),
         // Planner creates each ticket, with its core number, through its public ticket command.
+        // Every ticket exists before any gains its generator row, so each creation stays small.
         ...(plannerOwner && {
-          create: async (rows) => {
+          create: async (rows, edited, progress) => {
             const tickets: string[] = [];
             for (const row of rows) {
               const { value } = await runtime.execute<{ id: string }>(project.id, owner.id, "create-ticket", {
                 title: row.title,
               });
               tickets.push(value.id);
+              if (tickets.length % 100 === 0) progress(tickets.length);
             }
-            await runtime.execute(project.id, owner.id, "scale", {
-              input: { action: "adopt", rows, tickets, count: owner.rows, planner: true },
-            });
+            const batch = workload(kind).seedBatchRows;
+            for (let start = 0; start < rows.length; start += batch)
+              await runtime.execute(project.id, owner.id, "scale", {
+                input: {
+                  action: "adopt",
+                  rows: edited.slice(start, start + batch),
+                  tickets: tickets.slice(start, start + batch),
+                  count: owner.rows,
+                  planner: true,
+                },
+              });
           },
         }),
       };

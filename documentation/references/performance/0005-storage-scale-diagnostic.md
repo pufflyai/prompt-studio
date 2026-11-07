@@ -34,13 +34,17 @@ setup commits without removing rows or edit rounds. The separately measured
 atomic operation always changes exactly 100 rows.
 
 Planner creates each ticket, with its core ticket number, through its public
-`create-ticket` command, in view order (rank, then ID). The fixture then stores the
-generator row under the ticket's `scale` field beside Planner's own fields, and sets
-the ticket title and status the board shows. Later Planner seed edits find tickets
-through the identity index and keep their opaque record addresses in grouped
-commits. No code reconstructs a private collection address. The manifest describes
-generator inputs; Planner adds domain fields. `--verify-fixture` records actual stored counts, byte distributions, field
-counts and final history values after the full seed, in a process that then exits.
+`create-ticket` command, in view order (rank, then ID), before any ticket gains
+fixture data. Its first edit then stores the generator row under the ticket's `scale`
+field beside Planner's own fields and sets the title and status the board shows;
+Planner's own body stays empty. Later Planner edits find tickets through the identity
+index and keep their opaque record addresses in grouped commits. No code reconstructs
+a private collection address. The manifest describes generator inputs; Planner adds
+domain fields. Creating a Planner ticket reads every existing ticket, so rich seeding
+takes noticeably longer; it is preparation and is not timed. `--verify-fixture`
+records actual stored counts, byte distributions, field counts and final history
+values after the full seed, in a process that then exits. It fails if Planner holds a
+ticket the fixture did not adopt.
 
 A separate `--churn` seed creates and edits another complete set of distinct IDs,
 then deletes them. It retains all live rows. Never use churn as a smaller live
