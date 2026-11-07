@@ -443,7 +443,7 @@ test("a conditional child can use its pending observation after the parent recei
   expect(await first.records.outcome("child-after-acceptance")).toMatchObject({ state: "synced" });
 });
 
-test("declared record text merges both devices typing while an undeclared multiline field remains whole", async () => {
+test("declared record text merges both devices typing while an undeclared multiline field keeps the first save to reach Cloud", async () => {
   const [first, second] = await peers([{ prefix: "card:", fields: ["/description"] }]);
   const initial = { title: "Initial\ntitle", description: "first\nlast" };
   await first.records.commit({ operationId: "seed-text", edits: [{ recordId: "card:one", replace: initial }] });
@@ -462,7 +462,7 @@ test("declared record text merges both devices typing while an undeclared multil
   await first.sync.synchronize();
   for (const peer of [first, second]) {
     expect((await peer.records.read("card:one")).value).toEqual({
-      title: "Desktop\ntitle",
+      title: "Laptop\ntitle",
       description: "FIRSTfirst\nLASTlast",
     });
     expect(peer.failures).toEqual([]);
