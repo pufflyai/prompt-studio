@@ -27,7 +27,6 @@ const selectedWorkspaceId = (
   value !== "" &&
   value === openId &&
   workspace?.type === "selection" &&
-  workspace.readOnly &&
   workspace.options?.some((option) => option.id === value)
     ? value
     : undefined;
@@ -52,7 +51,7 @@ export const NativeChatWorkspace = (props: NativeChatWorkspaceProps) => {
   };
   const selectedId =
     workspace?.type === "selection" ? (draft.values[workspace.id] ?? workspace.defaultValue) : undefined;
-  const openId = locked ? undefined : selectedWorkspaceId(workspace, selectedId, binding.openResourceId);
+  const openId = selectedWorkspaceId(workspace, selectedId, binding.openResourceId);
   return (
     <>
       <ChatWorkspaceHub
