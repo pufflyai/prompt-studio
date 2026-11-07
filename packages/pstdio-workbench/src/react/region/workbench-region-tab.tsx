@@ -27,6 +27,8 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const triggerId = tabs.getTriggerProps({ value: placement.widgetId }).id!;
   const behavior = useRegionTab(props, triggerId);
   const { snapshot, drag, target, drop } = behavior;
+  const setDragNodeRef = drag.setNodeRef;
+  const setDropNodeRef = target.setNodeRef;
   const label = snapshot.label ?? placement.resource?.label ?? placement.title ?? placement.contributionId;
   const labelId = `workbench-tab-label-${placement.widgetId}`;
   const labelRef = useRef<HTMLSpanElement>(null);
@@ -45,8 +47,8 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
     <>
       <Box
         ref={(node: HTMLDivElement | null) => {
-          drag.setNodeRef(node);
-          target.setNodeRef(node);
+          setDragNodeRef(node);
+          setDropNodeRef(node);
         }}
         position="relative"
         data-workbench-tab={placement.widgetId}
