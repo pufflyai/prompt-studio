@@ -1,5 +1,11 @@
+import { Button, Stack, Text } from "@chakra-ui/react";
+import { EmptyState } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
+import { useState } from "react";
+import { createChatSession } from "../../../extensions/contributions/chat-session";
 import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
+import type { NativeChatHostProps } from "./native-chat-host";
+import { NativeChatView } from "./native-chat-view";
 
 export default { title: "Renderers/Native chat", fullscreen: true };
 const composer = {
@@ -39,3 +45,74 @@ export const RecoveredDraft = () => (
     }
   />
 );
+
+// Synthetic trusted-host states; no account or session service is contacted by these frames.
+type AccountPreviewState = "signed-out" | "checking" | "error" | "history" | "fork" | "unsupported";
+const PreviewAccountSetup = ({ state }: { state: AccountPreviewState }) => {
+  if (state === "checking") return null;
+  if (state === "error")
+    return (
+      <Stack>
+        <Text role="alert">Could not check harness authentication.</Text>
+        <Button>Retry</Button>
+      </Stack>
+    );
+  return (
+    <EmptyState
+      title="Sign in to Claude Code"
+      description="Sign in to send messages. You can also use /login in the chat."
+    >
+      <Button>Sign in</Button>
+    </EmptyState>
+  );
+};
+const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
+  const [forkedId, setForkedId] = useState("");
+  const forkable = props.state === "fork" || props.state === "unsupported";
+  const [session] = useState(() =>
+    createChatSession({
+      initial: {
+        messages:
+          props.state === "history" || forkable
+            ? [{ id: "completed-reply", role: "assistant", parts: [{ type: "text", text: "Earlier completed reply" }] }]
+            : [],
+        fork: forkable
+          ? {
+              disabledReason:
+                props.state === "unsupported" ? "This harness does not support forking conversations." : null,
+            }
+          : undefined,
+      },
+      query: async () => ({}),
+      action: async (action) => {
+        if (action.type === "fork") setForkedId(action.messageId);
+        return {};
+      },
+    }),
+  );
+  const Host = ({ children }: NativeChatHostProps) =>
+    children({
+      account: {
+        blocked: !forkable,
+        commands: [],
+        assertReady() {},
+        isCommand: () => false,
+        submit: () => undefined,
+        progress: null,
+        notice: null,
+        setup: forkable || props.state === "checking" ? undefined : <PreviewAccountSetup state={props.state} />,
+      },
+    });
+  return (
+    <>
+      <NativeChatView session={session} conversationKey={props.state} action={undefined} Host={Host} />
+      <Text data-testid="forked-message">{forkedId}</Text>
+    </>
+  );
+};
+export const SignInRequired = () => <NativeAccountPreview state="signed-out" />;
+export const AuthenticationChecking = () => <NativeAccountPreview state="checking" />;
+export const AuthenticationFailure = () => <NativeAccountPreview state="error" />;
+export const SignedOutHistory = () => <NativeAccountPreview state="history" />;
+export const ForkableReply = () => <NativeAccountPreview state="fork" />;
+export const UnsupportedFork = () => <NativeAccountPreview state="unsupported" />;
