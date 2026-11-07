@@ -117,6 +117,12 @@ test("keeps note titles independent of the body and renames them through the con
     await row.click();
     const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
     await expect(editor).toBeEmpty();
+    const mountedEditor = await editor.elementHandle();
+    const documentReads: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("pstdio.pstdio-notes.view.note-editor.file.load/execute"))
+        documentReads.push(request.url());
+    });
     const body = "Body text with a different name";
     await editor.fill(body);
     await expect
@@ -143,6 +149,8 @@ test("keeps note titles independent of the body and renames them through the con
       "true",
     );
     await expect(editor).toHaveText(body);
+    expect(await mountedEditor!.evaluate((node) => node.isConnected)).toBe(true);
+    expect(documentReads).toEqual([]);
 
     await page.reload();
     await expect(renamed).toHaveAttribute("aria-selected", "true");
@@ -151,6 +159,8 @@ test("keeps note titles independent of the body and renames them through the con
       "true",
     );
     await expect(editor).toHaveText(body);
+    documentReads.length = 0;
+    const reloadedEditor = await editor.elementHandle();
     await executeNoteCommand(request, project.id, "rename", { noteId: note.id, title: "Renamed remotely" });
     await expect(sidebar.getByRole("option", { name: "Renamed remotely", exact: true })).toHaveAttribute(
       "aria-selected",
@@ -160,6 +170,46 @@ test("keeps note titles independent of the body and renames them through the con
       "aria-selected",
       "true",
     );
+    expect(await reloadedEditor!.evaluate((node) => node.isConnected)).toBe(true);
+    expect(documentReads).toEqual([]);
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("keeps typing in the same editor when the first line names a new note", async ({ page, request }) => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-note-auto-title-"));
+  const response = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Automatic note title" }, repoRoot),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  try {
+    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-notes/notes`);
+    const sidebar = page.locator('[data-workbench-region="sidenav"]');
+    await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
+    await sidebar.getByRole("button", { name: "New note", exact: true }).click();
+    const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+    await expect(editor).toBeEmpty();
+    const mountedEditor = await editor.elementHandle();
+    const documentReads: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("pstdio.pstdio-notes.view.note-editor.file.load/execute"))
+        documentReads.push(request.url());
+    });
+    await editor.fill("First line title");
+    await expect(page.getByRole("tab", { name: "First line title", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(sidebar.getByRole("option", { name: "First line title", exact: true })).toBeVisible();
+    await expect(editor).toBeFocused();
+    expect(await mountedEditor!.evaluate((node) => node.isConnected)).toBe(true);
+    expect(documentReads).toEqual([]);
+    await page.keyboard.press("End");
+    await page.keyboard.type(" and keep typing");
+    await expect(editor).toHaveText("First line title and keep typing");
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }
