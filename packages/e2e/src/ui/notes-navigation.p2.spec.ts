@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type APIRequestContext, expect, test } from "@playwright/test";
@@ -41,6 +41,10 @@ test("opens notes in the project Sidenav tree and follows the active note throug
       .toBe(true);
     const first = await executeNoteCommand(request, project.id, "create", { title: "First note" });
     const second = await executeNoteCommand(request, project.id, "create", { title: "Second note" });
+    for (const note of [first, second]) {
+      const path = join(repoRoot, ".pstdio/extension-storage/pstdio.pstdio-notes/documents", note.id, "content.md");
+      writeFileSync(path, `${readFileSync(path, "utf8")}\n${note.title} body`);
+    }
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -59,8 +63,17 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: first.title, exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveText(`${first.title} body`);
+    // Opening content must not queue another read of every note in the project.
+    const noteListReads: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("pstdio.pstdio-notes.view.note-list.tree.body/execute"))
+        noteListReads.push(request.url());
+    });
     await secondRow.click();
     await expect(secondRow).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveText(`${second.title} body`);
+    expect(noteListReads).toEqual([]);
     await page.getByRole("tab", { name: first.title, exact: true }).click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await expect(secondRow).toHaveAttribute("aria-selected", "false");
