@@ -4,8 +4,8 @@ import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import {
-  getDashboardExtensionsReadyProjectId,
-  subscribeDashboardExtensionsReadyProject,
+  getDashboardExtensionsRegisteredProjectId,
+  subscribeDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 
@@ -81,7 +81,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
           // Restore only core page paths before this project's metadata arrives,
           // preserving extension URLs and saved parents until their pages register.
           if (
-            getDashboardExtensionsReadyProjectId(ctx) !== projectId &&
+            getDashboardExtensionsRegisteredProjectId(ctx) !== projectId &&
             !isCorePageLocation(ctx.pageLocations.getBootLocation(projectId))
           ) {
             return false;
@@ -100,7 +100,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
         };
 
         if (!boot()) {
-          readyUnsubscribe = subscribeDashboardExtensionsReadyProject(ctx, boot);
+          readyUnsubscribe = subscribeDashboardExtensionsRegisteredProject(ctx, boot);
         }
       };
 

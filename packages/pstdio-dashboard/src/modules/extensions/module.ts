@@ -29,7 +29,9 @@ import {
 } from "@/shared/extensions/extension-localization";
 import {
   clearDashboardExtensionsReadyProject,
+  clearDashboardExtensionsRegisteredProject,
   setDashboardExtensionsReadyProject,
+  setDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
 import { invalidateExtensionQueries } from "@/shared/extensions/project-extension-cache";
 import { subscribeResourceViewDataEvents } from "@/shared/extensions/resource-view-data-events";
@@ -176,6 +178,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         setCachedDashboardExtensionMetadata(nextProjectId, registeredMetadata, owner);
         ctx.context.set(dashboardEditableTemplatesContextKey, hasEditableTemplateAssets(registeredMetadata));
         ctx.settings.refresh();
+        setDashboardExtensionsRegisteredProject(ctx, nextProjectId);
       };
 
       const applyMetadata = (nextProjectId: string, nextMetadata: DashboardExtensionMetadata) => {
@@ -245,6 +248,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           clearCachedDashboardExtensionMetadata(projectId, owner);
           ctx.context.delete(dashboardEditableTemplatesContextKey);
           clearDashboardExtensionsReadyProject(ctx);
+          clearDashboardExtensionsRegisteredProject(ctx);
           clearContributions();
           // Labels belong to this project; resolved visual themes can survive its loading gap.
           clearTranslations();
@@ -295,6 +299,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           clearCachedDashboardExtensionMetadata(projectId, owner);
           ctx.context.delete(dashboardEditableTemplatesContextKey);
           clearDashboardExtensionsReadyProject(ctx);
+          clearDashboardExtensionsRegisteredProject(ctx);
           clearContributions();
           clearAppearance();
           i18n.off("languageChanged", reapplyLocale);

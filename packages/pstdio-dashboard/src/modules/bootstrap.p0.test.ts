@@ -1,9 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import { createHomeModule } from "@/home-page.fixture";
+import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardHomePage } from "@/shared/app/resources";
-import { setDashboardExtensionsReadyProject } from "@/shared/extensions/extension-readiness";
+import { setDashboardExtensionsRegisteredProject } from "@/shared/extensions/extension-readiness";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { resolveDashboardPersistenceScope } from "@/shared/workbench/dashboard-persistence-scope";
 import { createBootstrapModule } from "./bootstrap";
@@ -43,7 +44,7 @@ describe("createBootstrapModule", () => {
       await flushMicrotasks();
       expect(workbench.pages.store.getState().activePageId).toBeUndefined();
 
-      setDashboardExtensionsReadyProject(workbench, "project-1");
+      setDashboardExtensionsRegisteredProject(workbench, "project-1");
       await flushMicrotasks();
       expect(workbench.pages.store.getState().activePageId).toBe("pstdio.pstdio-home.page.home");
     } finally {
@@ -117,6 +118,43 @@ describe("createBootstrapModule", () => {
   }
 });
 
+test("restores an extension URL from the first applied metadata while a sync change reloads it", async () => {
+  const loads: PromiseWithResolvers<typeof metadata>[] = [];
+  const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
+  const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
+  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+  const start = workbench.registerModule(createHomeModule());
+  const extensions = workbench.registerModule(
+    createExtensionsModule({
+      loadAppearance: mock(async () => emptyAppearance),
+      loadMetadata: () => {
+        const load = Promise.withResolvers<typeof metadata>();
+        loads.push(load);
+        return load.promise;
+      },
+    }),
+  );
+  const bootstrap = workbench.registerModule(createBootstrapModule());
+  const writer = getWriter("extension_instances");
+  try {
+    await flushMicrotasks();
+    // The sync stream's first snapshot arrives while the first catalog read is still loading.
+    writer.truncateAndWrite([]);
+    loads[0]!.resolve(metadata);
+    await flushMicrotasks();
+    await flushMicrotasks();
+    expect(loads).toHaveLength(2);
+    expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
+  } finally {
+    for (const load of loads) load.resolve(metadata);
+    bootstrap.dispose();
+    extensions.dispose();
+    start.dispose();
+    clearCachedDashboardExtensionMetadata("project-1");
+  }
+});
+
 test("delayed boot preserves the active project recovery overlay", () => {
   const workbench = createWorkbench({
     startPage: { kind: "page", extensionId: "pstdio", id: "tools" },
@@ -140,7 +178,7 @@ test("delayed boot preserves the active project recovery overlay", () => {
   workbench.overlays.registerOverlay({ id: "opening", viewId: "opening", closable: false });
   const bootstrap = workbench.registerModule(createBootstrapModule());
   const opening = workbench.overlays.openOverlay("opening");
-  setDashboardExtensionsReadyProject(workbench, "project-1");
+  setDashboardExtensionsRegisteredProject(workbench, "project-1");
   expect(workbench.layout.getLayout().regions.overlay.widgets.some((placement) => placement.widgetId === opening)).toBe(
     true,
   );
