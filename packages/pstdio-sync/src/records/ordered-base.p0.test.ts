@@ -169,3 +169,31 @@ test("a folded save that supersedes a save already in Cloud keeps its later valu
   apply(records, await save(records, "desktop", { recordId: "PS-1", replace: { title: "Desktop" } }));
   expect(apply(records, again).skipped[0]!.paths).toEqual(["/title"]);
 });
+
+test("a save spanning several records stays atomic when the base rule drops any part of it", async () => {
+  const records = await seeded({ title: "Parent", children: [] });
+  // Laptop creates a child and links it from PS-1 in one save.
+  const laptop = await prepareOrderedOperation(
+    {
+      operationId: "laptop",
+      edits: [
+        { recordId: "PS-9", replace: { title: "Child" } },
+        { recordId: "PS-1", changes: [{ path: ["children"], set: ["PS-9"] }] },
+      ],
+    },
+    records,
+  );
+  apply(
+    records,
+    await save(records, "desktop", { recordId: "PS-1", changes: [{ path: ["children"], set: ["PS-5"] }] }),
+  );
+  expect(projectOrderedOperation(records, laptop)).toEqual([]);
+  const result = apply(records, laptop);
+  expect(result.decision.state).toBe("accepted");
+  expect(records.has("PS-9")).toBe(false);
+  expect(value(records)).toEqual({ title: "Parent", children: ["PS-5"] });
+  expect(result.skipped).toEqual([
+    { recordId: "PS-9", paths: ["/title"], whole: true },
+    { recordId: "PS-1", paths: ["/children"], whole: true },
+  ]);
+});

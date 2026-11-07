@@ -139,3 +139,35 @@ export const baseEdit = (
   if (lifecycleEdit(edit.deleted, base.deleted)) return lifecycleCurrent(record, base, check) ? { edit } : whole();
   return pathEdit(record, edit, base, check);
 };
+
+/**
+ * One save stays an atomic group (ADR 0137): when the base rule drops any part of a save that spans
+ * several records, the whole save is dropped, so a created record never lands without its link.
+ * Saves without a base keep the earlier rule, and saves with collaborative text keep per-edit skips
+ * because their text updates always merge.
+ */
+export const baseOperation = (
+  current: ReadonlyMap<string, OrderedRecord>,
+  operation: OrderedOperation,
+  normalize: (stamp: string) => string,
+) => {
+  const supersedes = new Set(operation.supersedes);
+  const results = operation.edits.map((input) => {
+    const before = current.get(input.recordId);
+    return { before, based: !!input.base, ...baseEdit(before, input, normalize, supersedes) };
+  });
+  const atomic = operation.edits.length > 1 && operation.edits.every((edit) => !edit.texts?.length);
+  if (atomic && results.some((result) => result.skip && result.based))
+    return {
+      edits: [],
+      skipped: operation.edits.flatMap((edit) =>
+        edit.changes.length || edit.deleted !== undefined
+          ? [{ recordId: edit.recordId, paths: edit.changes.map((change) => jsonPointer(change.path)), whole: true }]
+          : [],
+      ),
+    };
+  return {
+    edits: results.flatMap((result) => (result.edit ? [{ before: result.before, edit: result.edit }] : [])),
+    skipped: results.flatMap((result) => (result.skip ? [result.skip] : [])),
+  };
+};

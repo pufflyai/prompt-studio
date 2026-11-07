@@ -1,5 +1,5 @@
 import { fingerprint, type Json } from "pstdio-sync-contracts";
-import { baseEdit, type OrderedBase, type OrderedSkip, orderedBase } from "./ordered-base";
+import { baseOperation, type OrderedBase, type OrderedSkip, orderedBase } from "./ordered-base";
 import {
   applyJsonChanges,
   type JsonChange,
@@ -335,12 +335,9 @@ export const applyOrderedOperation = (
   const records: OrderedRecord[] = [];
   const skipped: OrderedSkip[] = [];
   if (decision.state === "refused") return { decision, records, skipped };
-  const supersedes = new Set(operation.supersedes);
-  for (const input of operation.edits) {
-    const before = current.get(input.recordId);
-    const { edit, skip } = baseEdit(before, input, baseNormalizer(dependencies, false), supersedes);
-    if (skip) skipped.push(skip);
-    if (!edit) continue;
+  const based = baseOperation(current, operation, baseNormalizer(dependencies, false));
+  skipped.push(...based.skipped);
+  for (const { before, edit } of based.edits) {
     const record = applyRecord(before, edit, canonicalStamp(epoch, operation.operationId));
     if (record) records.push(record);
   }
@@ -354,11 +351,8 @@ export const projectOrderedOperation = (
   dependencies: ReadonlyMap<string, OrderedDecision> = new Map(),
 ) => {
   if (!operation.edits.every((edit) => acceptsEdit(current.get(edit.recordId), edit, dependencies, true))) return [];
-  const supersedes = new Set(operation.supersedes);
-  return operation.edits.flatMap((input) => {
-    const before = current.get(input.recordId);
-    const { edit } = baseEdit(before, input, baseNormalizer(dependencies, true), supersedes);
-    const record = edit && applyRecord(before, edit, pendingStamp(operation));
+  return baseOperation(current, operation, baseNormalizer(dependencies, true)).edits.flatMap(({ before, edit }) => {
+    const record = applyRecord(before, edit, pendingStamp(operation));
     return record ? [record] : [];
   });
 };

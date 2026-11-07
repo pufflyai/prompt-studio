@@ -50,10 +50,19 @@ const liveCount = async (tx: OrderedTransaction, owner: StorageOwner) => {
   return row?.count ?? 0;
 };
 
-/** On reconnecting, a large return waits for review; anything smaller uploads under the base rule. */
+/**
+ * On reconnecting after time signed out, a large return waits for review; anything smaller uploads
+ * under the base rule. A signed-in device that only passed the unsent-save limit never left, so it
+ * uploads under the base rule without a hold.
+ */
 export const evaluateOrderedReturn = async (journal: OrderedJournal, tx: OrderedTransaction, owner: StorageOwner) => {
   const state = await readOrderedReturnState(tx, owner);
-  if (state !== "signed-out" && state !== "folded") return state;
+  if (state === "folded") {
+    await setOrderedReturnState(tx, owner, null);
+    return null;
+  }
+  // `signed-out` here means the connection started before the refresh marked the owner returning.
+  if (state !== "signed-out" && state !== "returning") return state;
   const summary = await orderedReturnSummary(journal);
   const limits = orderedReturnLimits;
   const held =

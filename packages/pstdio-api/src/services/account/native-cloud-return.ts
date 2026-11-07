@@ -17,11 +17,14 @@ export const createNativeCloudReturn = () => {
       cloud = next;
     },
     /** Signed in, it waits until the account's project list is known. */
-    async settle<Login>(login: Login | null, projectsFor: (login: Login) => string[] | undefined) {
+    async settle<Login extends { accountId: string }>(
+      login: Login | null,
+      projectsFor: (login: Login) => string[] | undefined,
+    ) {
       try {
         const projects = login ? projectsFor(login) : undefined;
         if (!login) await cloud?.signOut();
-        else if (projects) await cloud?.release(projects);
+        else if (projects) await cloud?.release(projects, login.accountId);
       } catch (error) {
         apiLogger.warn(
           { event: "account.cloud_return.failed", error },

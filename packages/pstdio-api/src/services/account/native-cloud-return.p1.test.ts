@@ -21,8 +21,8 @@ const fakeCloud = () => {
     signOut: async () => {
       calls.push(["signOut"]);
     },
-    release: async (ids: string[]) => {
-      calls.push(["release", ids]);
+    release: async (ids: string[], accountId?: string) => {
+      calls.push(["release", ids, accountId]);
     },
     status: async () => status,
     apply: async (id: string) => {
@@ -101,7 +101,8 @@ test("once the account's projects load, projects it does not sync are released",
   const host = await account(manager.url);
   try {
     await host.service.refresh();
-    expect(host.calls).toContainEqual(["release", ["kept"]]);
+    // The account decides whether an unlisted project stopped syncing or belongs to another account.
+    expect(host.calls).toContainEqual(["release", ["kept"], "account"]);
     await host.service.resolveReturnedChanges("kept", "apply");
     await host.service.resolveReturnedChanges("kept", "dismiss");
     expect(host.calls).toEqual(

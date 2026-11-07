@@ -263,24 +263,96 @@ test("a long offline period folds the queue at the limit and still keeps in-sync
   }
 });
 
-test("a project the signed-in account does not sync stays local with every edit", async () => {
-  const { laptop, desktop, sync, projectId } = await seeded({ "PS-1": { title: "Personal" } });
+test("a project the signed-in account does not sync stays here with every edit and uploads nothing", async () => {
+  const { laptop, desktop, projectId } = await seeded({ "PS-1": { title: "Personal" } });
   await laptop.service.cloudReturn.signOut();
   await laptop.save("PS-1", { set: { "/title": "Edited while signed out" } });
   await laptop.service.cloudReturn.release([crypto.randomUUID()]);
-  expect(await laptop.pending()).toBe(0);
-  expect(await laptop.state()).toBeNull();
+  // Kept as if signed out: the join stays, so the original account can take the changes back with their bases.
+  expect(await laptop.state()).toBe("signed-out");
   expect(await laptop.value("PS-1")).toEqual({ title: "Edited while signed out" });
-  expect((await laptop.status()).state).toBeNull();
+  expect((await laptop.status()).state).toBe("signed-out");
   await laptop.save("PS-1", { set: { "/title": "Local" } });
-  expect(await laptop.pending()).toBe(0);
+  expect(await laptop.pending()).toBe(1);
   await desktop.sync.synchronize();
   expect(await desktop.value("PS-1")).toEqual({ title: "Personal" });
   // A project the account still syncs is left alone.
   await desktop.service.cloudReturn.release([projectId]);
   await desktop.save("PS-1", { set: { "/title": "Desktop" } });
   expect(await desktop.pending()).toBe(1);
+  expect(await desktop.state()).toBeNull();
+});
+
+test("a project its own account stops syncing becomes local and settles every edit here", async () => {
+  const { laptop, desktop, projectId } = await seeded({ "PS-1": { title: "Personal" } });
+  await laptop.service.cloudReturn.release([projectId], "personal");
+  await laptop.save("PS-1", { set: { "/title": "Unsent" } });
+  // `pst projects local` on any device: the same account's list no longer has the project.
+  await laptop.service.cloudReturn.release([crypto.randomUUID()], "personal");
+  expect(await laptop.pending()).toBe(0);
+  expect(await laptop.state()).toBeNull();
+  expect(await laptop.value("PS-1")).toEqual({ title: "Unsent" });
+  expect((await laptop.status()).state).toBeNull();
+  await laptop.save("PS-1", { set: { "/title": "Local" } });
+  expect(await laptop.pending()).toBe(0);
+  await desktop.sync.synchronize();
+  expect(await desktop.value("PS-1")).toEqual({ title: "Personal" });
+});
+
+test("switching accounts keeps the original account's join, so switching back never overrides", async () => {
+  const { laptop, desktop, sync, projectId } = await seeded({ "PS-1": { title: "A", status: "Todo" } });
+  await laptop.service.cloudReturn.release([projectId], "personal");
+  await laptop.service.cloudReturn.release([crypto.randomUUID()], "work");
+  expect(await laptop.state()).toBe("signed-out");
+  await desktop.save("PS-1", { set: { "/status": "Done" } });
+  await desktop.sync.synchronize();
+  await laptop.service.cloudReturn.release([projectId], "personal");
+  expect(await laptop.state()).toBe("returning");
   await sync();
+  for (const device of [laptop, desktop]) expect(await device.value("PS-1")).toEqual({ title: "A", status: "Done" });
+});
+
+test("signing back in to the original account sends only this device's edits after a release", async () => {
+  const { laptop, desktop, sync, projectId } = await seeded({
+    "PS-1": { title: "A", status: "Todo" },
+    "PS-2": { title: "Two" },
+  });
+  // Laptop edits, then signs in to an account that does not sync this project.
+  await laptop.save("PS-1", { set: { "/title": "Laptop" } });
+  await laptop.service.cloudReturn.release([crypto.randomUUID()]);
+  await laptop.save("PS-2", { set: { "/assignee": "Ann" } });
+  await desktop.save("PS-1", { set: { "/status": "Done" } });
+  await desktop.save("PS-2", { set: { "/assignee": "Dev" } });
+  await desktop.sync.synchronize();
+  await laptop.service.cloudReturn.release([projectId]);
+  expect(await laptop.state()).toBe("returning");
+  await sync();
+  for (const device of [laptop, desktop]) {
+    expect(await device.value("PS-1")).toEqual({ title: "Laptop", status: "Done" });
+    expect(await device.value("PS-2")).toEqual({ title: "Two", assignee: "Dev" });
+  }
+  expect(await laptop.state()).toBeNull();
+});
+
+test("a signed-in device past the unsent-save limit uploads without a hold", async () => {
+  const tickets = { "PS-1": { title: "One" }, "PS-2": { title: "Two" }, "PS-3": { title: "Three" } };
+  const { laptop, desktop, sync } = await seeded(tickets);
+  const limits = { ...orderedReturnLimits };
+  orderedReturnLimits.fold = 5;
+  try {
+    // Deleting every record would hold a return from signing out, but this device never left.
+    for (const id of Object.keys(tickets)) await laptop.save(id, { deleted: true });
+    for (let index = 0; index < 5; index += 1) await laptop.save("PS-9", { replace: { n: index } });
+    expect(await laptop.state()).toBe("folded");
+    await sync();
+  } finally {
+    Object.assign(orderedReturnLimits, limits);
+  }
+  expect(await laptop.state()).toBeNull();
+  for (const device of [laptop, desktop]) {
+    for (const id of Object.keys(tickets)) expect(await device.value(id)).toBeUndefined();
+    expect(await device.value("PS-9")).toEqual({ n: 4 });
+  }
 });
 
 test("reverting a save whose upload reached Cloud without an answer still wins after folding", async () => {
@@ -333,7 +405,7 @@ test("signing in again stops reporting signed-out changes for a project that has
   await laptop.save("PS-1", { set: { "/title": "B" } });
   expect((await laptop.status()).state).toBe("signed-out");
   await laptop.service.cloudReturn.release([projectId]);
-  expect(await laptop.state()).toBe("folded");
+  expect(await laptop.state()).toBe("returning");
   expect((await laptop.status()).state).toBeNull();
   await laptop.save("PS-1", { set: { "/title": "C" } });
   expect(await laptop.pending()).toBe(1);

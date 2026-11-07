@@ -1,4 +1,4 @@
-import { and, eq, inArray, like, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import {
@@ -8,6 +8,7 @@ import {
   storage_ordered_owners as owners,
 } from "../../db/schemas.pg";
 import { createOrderedJournal, withOrderedOwner } from "./ordered-journal";
+import { readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
 import { initializeOrderedOwner } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import {
@@ -24,6 +25,9 @@ import {
   orderedReturnSummary,
 } from "./ordered-return-review";
 import { decodeOrderedJson, orderedOwnerWhere } from "./ordered-sql";
+
+/** The account whose project list last included this owner; private to this device. */
+const accountMarker = JSON.stringify(["ordered-account"]);
 
 /** How many changed or replaced records a status lists; totals still count all of them. */
 const listed = 50;
@@ -104,74 +108,81 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
     }
     if (failures.length) throw new AggregateError(failures, "Some Cloud data could not finish signing out");
   };
+  /**
+   * This device stops syncing the owner but keeps its join, cursor and receipts, so returning to the
+   * same account sends only its own changes with their bases. Later saves fold from here on; the
+   * existing backlog folds a page per transaction, so a large queue never holds the database long.
+   */
+  const leave = async (owner: StorageOwner) => {
+    const state = await readOrderedReturnState(db, owner);
+    if ((state === "signed-out" || state === "held") && !(await unfoldedOrderedRecords(db, owner)).length) return false;
+    const ids = await run(owner, async (_journal, tx) => {
+      if ((await readOrderedReturnState(tx, owner)) !== "held") await setOrderedReturnState(tx, owner, "signed-out");
+      return unfoldedOrderedRecords(tx, owner);
+    });
+    const done = new Set<string>();
+    for (let offset = 0; offset < ids.length; offset += orderedFoldPage) {
+      await run(owner, async (journal, tx) => {
+        const changed = await foldOrderedRecords(journal, tx, owner, ids.slice(offset, offset + orderedFoldPage), done);
+        if (changed.length) await rebaseOrderedProjection(journal, tx, owner, changed);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    return state !== "signed-out" || done.size > 0;
+  };
+  /** The project stopped syncing for its account: unsent saves settle here and the next join adopts. */
+  const settleLocally = (owner: StorageOwner) =>
+    run(owner, async (journal, tx) => {
+      await tx
+        .update(owners)
+        .set({
+          epoch: `local:${crypto.randomUUID()}`,
+          joined: false,
+          after: 0,
+          state_id: null,
+          through: 0,
+          pending_bytes: 0,
+          state_bytes: 0,
+          skipped: false,
+          receipt_root: null,
+        })
+        .where(orderedOwnerWhere(owners, owner));
+      await tx.update(legacy).set({ joined: false }).where(orderedOwnerWhere(legacy, owner));
+      await setOrderedReturnState(tx, owner, null);
+      await tx
+        .delete(documents)
+        .where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, accountMarker)));
+      // Rebasing settles every unsent save locally under the new local order.
+      await rebaseOrderedProjection(journal, tx, owner, []);
+      return true;
+    });
   return {
     async signOut() {
-      await each(await joinedOwners(db), async (owner) => {
-        // Later saves fold from here on; the existing backlog folds a page per transaction,
-        // so a large queue never holds the database for its whole length.
-        const ids = await run(owner, async (_journal, tx) => {
-          if ((await readOrderedReturnState(tx, owner)) !== "held")
-            await setOrderedReturnState(tx, owner, "signed-out");
-          return unfoldedOrderedRecords(tx, owner);
-        });
-        const done = new Set<string>();
-        for (let offset = 0; offset < ids.length; offset += orderedFoldPage) {
-          await run(owner, async (journal, tx) => {
-            const changed = await foldOrderedRecords(
-              journal,
-              tx,
-              owner,
-              ids.slice(offset, offset + orderedFoldPage),
-              done,
-            );
-            if (changed.length) await rebaseOrderedProjection(journal, tx, owner, changed);
-          });
-          await new Promise((resolve) => setTimeout(resolve, 0));
-        }
-        return done.size > 0;
-      });
+      await each(await joinedOwners(db), leave);
     },
     /**
-     * A project the signed-in account does not sync stays local: unsent saves settle here, nothing
-     * uploads, and syncing it again later joins it like any local project.
+     * Once a signed-in account's project list loads: projects it syncs that were signed out return on
+     * their next connection. A project the same account stopped syncing becomes local: unsent saves
+     * settle here and the join ends. A project another account joined stays on this device as if
+     * signed out, keeping its join and bases, so signing back in to that account never overrides
+     * the devices that stayed in sync. Without `accountId`, every unlisted project is kept that way.
      */
-    async release(keepProjectIds: string[]) {
-      // Signed in again: kept projects stop reporting signed-out and fold until they reconnect.
-      for (const row of await withStates(db, await joinedOwners(db, keepProjectIds)))
-        if (row.state === "signed-out") await run(row, (_journal, tx) => setOrderedReturnState(tx, row, "folded"));
-      const rows = await db
-        .select({ workbenchId: owners.workbench_id, extensionId: owners.extension_id })
-        .from(owners)
-        .where(keepProjectIds.length ? notInArray(owners.workbench_id, keepProjectIds) : undefined);
-      const joined = new Set(
-        (await joinedOwners(db, [...new Set(rows.map((row) => row.workbenchId))])).map((row) =>
-          JSON.stringify([row.workbenchId, row.extensionId]),
-        ),
-      );
+    async release(keepProjectIds: string[], accountId?: string) {
+      for (const row of await withStates(db, await joinedOwners(db, keepProjectIds))) {
+        const joinedBy = (await readOrderedMarker<{ accountId: string }>(db, row, accountMarker))?.value.accountId;
+        if (row.state !== "signed-out" && (!accountId || joinedBy === accountId)) continue;
+        await run(row, async (_journal, tx) => {
+          if (accountId && joinedBy !== accountId) await saveOrderedMarker(tx, row, accountMarker, { accountId });
+          if (row.state === "signed-out") await setOrderedReturnState(tx, row, "returning");
+        });
+      }
+      const kept = new Set(keepProjectIds);
       await each(
-        rows.filter((row) => joined.has(JSON.stringify([row.workbenchId, row.extensionId]))),
-        (owner) =>
-          run(owner, async (journal, tx) => {
-            await tx
-              .update(owners)
-              .set({
-                epoch: `local:${crypto.randomUUID()}`,
-                joined: false,
-                after: 0,
-                state_id: null,
-                through: 0,
-                pending_bytes: 0,
-                state_bytes: 0,
-                skipped: false,
-                receipt_root: null,
-              })
-              .where(orderedOwnerWhere(owners, owner));
-            await tx.update(legacy).set({ joined: false }).where(orderedOwnerWhere(legacy, owner));
-            await setOrderedReturnState(tx, owner, null);
-            // Rebasing settles every unsent save locally under the new local order.
-            await rebaseOrderedProjection(journal, tx, owner, []);
-            return true;
-          }),
+        (await joinedOwners(db)).filter((row) => !kept.has(row.workbenchId)),
+        async (owner) => {
+          const joinedBy = (await readOrderedMarker<{ accountId: string }>(db, owner, accountMarker))?.value.accountId;
+          return accountId && joinedBy === accountId ? settleLocally(owner) : leave(owner);
+        },
       );
     },
     async status(projectId: string): Promise<CloudReturnStatus> {

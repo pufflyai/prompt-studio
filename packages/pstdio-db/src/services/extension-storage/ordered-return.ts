@@ -26,10 +26,14 @@ import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 
 /**
- * Why a joined owner is away from Cloud. `signed-out` and `folded` keep at most one folded save per
- * record; `held` uploads nothing until someone applies or discards it. Absent while syncing normally.
+ * Why a joined owner keeps one folded save per record instead of a queue. Absent while syncing normally.
+ * - `signed-out`: no signed-in account syncs this project here (signed out, rejected, removed, or
+ *   another account signed in). The join, cursor and receipts stay, so returning keeps every base.
+ * - `returning`: an account that syncs it signed in again; the next upload decides whether to hold.
+ * - `folded`: a signed-in device passed the unsent-save limit. It never left, so it is never held.
+ * - `held`: a large return uploads nothing until someone applies or discards it.
  */
-export type OrderedReturnState = "signed-out" | "folded" | "held";
+export type OrderedReturnState = "signed-out" | "returning" | "folded" | "held";
 const returnMarker = JSON.stringify(["ordered-return"]);
 
 export const readOrderedReturnState = async (tx: Pick<OrderedTransaction, "select">, owner: StorageOwner) =>
@@ -286,7 +290,7 @@ const foldScope = async (journal: OrderedJournal, tx: OrderedTransaction, owner:
   return [...perRecord.keys()];
 };
 
-const unfoldedRecords = async (tx: OrderedTransaction, owner: StorageOwner) => {
+const unfoldedRecords = async (tx: Pick<OrderedTransaction, "selectDistinct">, owner: StorageOwner) => {
   const rows = await tx
     .selectDistinct({ recordId: touches.record_id })
     .from(touches)
