@@ -15,7 +15,13 @@ beforeEach(async () => {
   projectId = (await createProjectsDBService(conn.db).create({ name: "query" })).id;
 });
 afterEach(async () => {
-  await conn.close();
+  try {
+    await conn.close();
+  } finally {
+    // Hooks recreate these owners; release closed engines between cases and files.
+    conn = undefined!;
+    service = undefined!;
+  }
 });
 
 const create = async (title: string, agent = "claude-code", date = "2026-10-01T00:00:00.000Z") => {

@@ -24,7 +24,15 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await close();
+  try {
+    await close();
+  } finally {
+    // Hooks recreate these owners; release closed engines between cases and files.
+    db = undefined!;
+    close = undefined!;
+    sessionsService = undefined!;
+    projectsService = undefined!;
+  }
 });
 
 describe("sessions service", () => {

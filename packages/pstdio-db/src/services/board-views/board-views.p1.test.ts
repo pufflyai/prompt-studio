@@ -45,7 +45,13 @@ beforeEach(async () => {
   scope = { project_id: project.id, extension_instance_id: instance.id, board_id: "tasks" };
 });
 afterEach(async () => {
-  await connection?.close();
+  try {
+    await connection?.close();
+  } finally {
+    // Hooks recreate these owners; release closed engines between cases and files.
+    connection = undefined!;
+    service = undefined!;
+  }
 });
 
 test("persists scoped views in order and clears a deleted default atomically", async () => {

@@ -16,7 +16,13 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await close?.();
+  try {
+    await close?.();
+  } finally {
+    // Hooks recreate these owners; release closed engines between cases and files.
+    close = undefined!;
+    workspacesService = undefined!;
+  }
 });
 
 describe("workspace provider operations", () => {
