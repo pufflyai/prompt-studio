@@ -6,7 +6,14 @@ import type { PGlite } from "@electric-sql/pglite";
 // and local conversation files have separate owners and must survive this cleanup.
 const legacyOwnerPrefix = '["pstdio.personal-history",';
 
-export const maintainDatabase = async (db: PGlite, path: string, fresh: boolean) => {
+export type DatabaseMaintenancePhase = "database_cleaning" | "database_compacting";
+
+export const maintainDatabase = async (
+  db: PGlite,
+  path: string,
+  fresh: boolean,
+  onPhase: (phase: DatabaseMaintenancePhase) => void,
+) => {
   if (path === ":memory:") return;
   const marker = join(path, ".pstdio-maintenance.json");
   const { rows } = await db.query<{ migration: string; legacy: boolean }>(
@@ -25,12 +32,17 @@ export const maintainDatabase = async (db: PGlite, path: string, fresh: boolean)
   // Invalidate completion before deleting anything. A crash after deletion or migration
   // must still vacuum on the next start, even when no obsolete documents remain.
   await rm(marker, { force: true });
-  if (rows[0].legacy)
+  if (rows[0].legacy) {
+    onPhase("database_cleaning");
     await db.query("DELETE FROM storage_documents WHERE starts_with(extension_id, $1)", [legacyOwnerPrefix]);
+  }
 
   // The migrator has committed and the runtime still owns the exclusive database lock.
   // FULL returns unused table/index/TOAST space to disk; a fresh image has none to reclaim.
-  if (!fresh || rows[0].legacy) await db.exec("VACUUM (FULL, ANALYZE)");
+  if (!fresh || rows[0].legacy) {
+    onPhase("database_compacting");
+    await db.exec("VACUUM (FULL, ANALYZE)");
+  }
   const temporary = `${marker}.tmp`;
   try {
     await writeFile(temporary, expected);

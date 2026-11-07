@@ -13,7 +13,7 @@ import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-c
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
-import { maintainDatabase } from "./startup-maintenance";
+import { type DatabaseMaintenancePhase, maintainDatabase } from "./startup-maintenance";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
@@ -130,6 +130,7 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
 // Startup steps in order. The runtime publishes itself once the database is locked and logs every step.
 export type DbOpenPhase =
   | PgliteRetirementPhase
+  | DatabaseMaintenancePhase
   | "database_locked"
   | "database_engine_loaded"
   | "database_image_restored"
@@ -178,7 +179,7 @@ export const createDb = async (options?: {
     await withMigrationsFolder(async (migrationsFolder) => {
       if (fs.existsSync(migrationsFolder)) {
         await migrate(db, { migrationsFolder });
-        await maintainDatabase(openedPglite, dbPath, fresh);
+        await maintainDatabase(openedPglite, dbPath, fresh, onPhase);
       }
     });
     onPhase("database_migrated");

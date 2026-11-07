@@ -51,7 +51,8 @@ test(
         await seed.close();
       }
       const before = await directoryBytes(join(path, "base"));
-      host = await startPackagedServe(root);
+      const log = join(root, "startup.jsonl");
+      host = await startPackagedServe(root, { PSTDIO_LOG_PATH: log });
       const projects = await fetch(`${host.baseUrl}/v1/projects`, {
         headers: { authorization: `Bearer ${host.descriptor.token}` },
       });
@@ -59,6 +60,16 @@ test(
       expect(await projects.json()).toEqual([expect.objectContaining({ id: "offline", name: "Offline project" })]);
       await stopProcess(host.child);
       host = undefined;
+      const phases = (await Bun.file(log).text())
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as { event?: string; phase?: string })
+        .filter((entry) => entry.event === "runtime.startup.phase")
+        .map((entry) => entry.phase);
+      expect(phases.filter((phase) => phase === "database_cleaning" || phase === "database_compacting")).toEqual([
+        "database_cleaning",
+        "database_compacting",
+      ]);
       // Measure before opening a source connection so source cleanup cannot hide a broken binary.
       expect(await directoryBytes(join(path, "base"))).toBeLessThan(before - 1024 * 1024);
       const inspect = await createDb({ path });

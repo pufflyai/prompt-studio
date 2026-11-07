@@ -60,6 +60,18 @@ and writes the marker atomically after vacuum, so interrupted work retries on th
 next start. An unchanged startup skips vacuum. Fresh databases record completion
 without rewriting their newly created tables.
 
+Desktop shows “Updating Prompt Studio” during migrations, removal of previous-version
+data and space reclamation. The runtime emits `database_cleaning` before deleting
+retired documents and `database_compacting` before vacuum, so a long pass has a visible
+startup state rather than an unexplained wait.
+
+Full compaction stays before readiness. PostgreSQL `VACUUM FULL` takes exclusive
+table locks, and PGlite uses a single connection; scheduling the same command after
+readiness would still pause normal database work. Ordinary vacuum can make dead
+space reusable but usually does not return it to the operating system. See
+[PostgreSQL vacuum](https://www.postgresql.org/docs/17/sql-vacuum.html) and
+[PGlite's single connection](https://pglite.dev/docs/).
+
 A home written by the latest published nightly must open in the next build. `packages/e2e/src/packaged/packaged-nightly-home.p1.test.ts` runs in the P1 packaged CLI suite in the merge queue and nightly validation. It downloads that nightly and creates a project with it. It then starts the candidate build on the same home and fails if the candidate retires it. If the nightly cannot be downloaded or cannot write a home, the test skips with a warning, so a broken nightly cannot block its own fix. A pull request that starts a new baseline adds the published marker to `deliberateRetirements` in that test, in the same pull request as its ADR. Remove the entry once a nightly with the new baseline ships. This way nightly users lose their home only after a recorded decision. The rule exists because the 0.46 baseline marker reached nightly users one day after the previous marker, and their homes were retired without a decision.
 
 ## Extension data belongs to extensions

@@ -10,6 +10,8 @@ const phaseCopy: Record<DesktopStartupPhase, string> = {
   database: "Preparing your local data…",
   retiring: "Backing up data from your previous version…",
   migrations: "Updating your local data…",
+  cleanup: "Removing data from a previous version…",
+  compacting: "Reclaiming space after the update…",
   extensions: "Loading your tools…",
   readiness: "Preparing your workbench…",
 };
@@ -21,11 +23,12 @@ interface DesktopStartupProgressProps {
 
 export const DesktopStartupProgress = (props: DesktopStartupProgressProps) => {
   const { phase, takingLonger = false } = props;
+  const updating = phase === "migrations" || phase === "cleanup" || phase === "compacting";
   return (
     <Stack align="center" gap="lg" role="status" aria-live="polite">
       <Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />
       <Stack align="center" gap="xs" textAlign="center">
-        <Heading textStyle="heading/M">Opening Prompt Studio</Heading>
+        <Heading textStyle="heading/M">{updating ? "Updating Prompt Studio" : "Opening Prompt Studio"}</Heading>
         <Text color="fg.muted" textStyle="paragraph/M/regular">
           {phaseCopy[phase]}
         </Text>

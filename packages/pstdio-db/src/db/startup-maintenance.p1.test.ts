@@ -56,7 +56,14 @@ test(
       }
       const before = await relation(client);
       await client.close();
-      client = await createDb({ path });
+      const phases: string[] = [];
+      client = await createDb({ path, onPhase: (phase) => phases.push(phase) });
+      expect(phases.filter((phase) => ["database_cleaning", "database_compacting"].includes(phase))).toEqual([
+        "database_cleaning",
+        "database_compacting",
+      ]);
+      expect(phases.indexOf("database_cleaning")).toBeGreaterThan(phases.indexOf("database_opened"));
+      expect(phases.indexOf("database_compacting")).toBeLessThan(phases.indexOf("database_migrated"));
       const remaining = await client.pglite.query<{ extension_id: string }>(
         "SELECT extension_id FROM storage_documents ORDER BY extension_id",
       );
