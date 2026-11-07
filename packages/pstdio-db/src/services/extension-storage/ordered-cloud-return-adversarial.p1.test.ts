@@ -76,8 +76,7 @@ test("three devices with interleaved away edits and deletions converge and keep 
   const { devices, syncAll } = await network(3);
   const [away, offline, online] = devices as [(typeof devices)[0], (typeof devices)[0], (typeof devices)[0]];
   const seed: Record<string, Json> = { R1: { t: "0", s: "0" }, R2: { t: "0" }, R3: { t: "0" }, R4: { t: "0" } };
-  for (const [id, value] of Object.entries(seed))
-    await online.save(id, { replace: value });
+  for (const [id, value] of Object.entries(seed)) await online.save(id, { replace: value });
   await syncAll();
 
   // Away signs out and keeps editing.
