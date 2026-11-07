@@ -15,6 +15,21 @@ export const BackingUpPreviousData: Story = {
   id: "patterns-desktop-startup-progress--backing-up-previous-data",
   args: { phase: "retiring" },
 };
+export const UpdatingLocalData: Story = {
+  args: { phase: "migrations" },
+};
+export const UpdateTakingLonger: Story = {
+  args: { phase: "migrations", takingLonger: true },
+};
+export const RemovingPreviousData: Story = {
+  args: { phase: "cleanup" },
+};
+export const ReclaimingSpace: Story = {
+  args: { phase: "compacting" },
+};
+export const ReclaimingSpaceTakingLonger: Story = {
+  args: { phase: "compacting", takingLonger: true },
+};
 export const BackupTakingLonger: Story = {
   id: "patterns-desktop-startup-progress--backup-taking-longer",
   args: { phase: "retiring", takingLonger: true },
