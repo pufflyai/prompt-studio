@@ -13,7 +13,7 @@ const extensionSource = (name: string) => {
   if (name === "workbench-fixture") return "packages/workbench-fixture";
   return name.includes("/") ? name : `extensions/${name}`;
 };
-const e2eExtension = (name: string) => {
+export const e2eExtension = (name: string) => {
   const installName = name.split("/").at(-1) as string;
   const prepared = preparedSources[installName];
   return {
