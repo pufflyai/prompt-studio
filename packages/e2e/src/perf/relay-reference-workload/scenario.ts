@@ -46,6 +46,7 @@ const uploadWithSecondAccount = async (
     chunks: new Set(),
     frames: new Set(),
     files: new Set(),
+    index: new Set(),
   });
   await stream.records.commit({ operationId: "concurrent", edits: [{ recordId: "record-0", replace: value(0) }] });
   const transfer = traffic.nextPart("reference-source");
@@ -172,6 +173,7 @@ export const runScenario = async (input: {
         chunks: new Set(),
         frames: new Set(),
         files: new Set(),
+        index: new Set(),
       };
       const peers = {
         input: ownerInput,
@@ -209,6 +211,7 @@ export const runScenario = async (input: {
         stored.rows,
         owner.source.documentId,
         new Set([...owner.input.chunks, ...owner.input.frames]),
+        owner.input.index,
       );
       checkpoints.push({ owner: ownerIndex, edits: editsPerOwner, ...bound });
       log(
