@@ -70,6 +70,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-board-panning-smoke.p2.test.ts retains card opening and dragging; the UI Card Gestures story covers nested-control pointer ownership.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
+import { expectPackagedProjectComposition } from "./packaged-project-composition-smoke";
 import { expectPackagedProjectChoices, writePackagedChoiceSources } from "./packaged-project-setup-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -238,6 +239,12 @@ test(
       expect(extension).toMatchObject({
         enabled: true,
         name: "dep-ext",
+      });
+      await expectPackagedProjectComposition({
+        projectFolder,
+        projectId: project.id,
+        baseUrl: started.baseUrl,
+        headers: runtimeAuthorization(started.descriptor),
       });
       await expectPackagedNativeActions({
         projectFolder,

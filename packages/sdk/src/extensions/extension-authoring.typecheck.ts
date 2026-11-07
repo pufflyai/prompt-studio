@@ -24,6 +24,7 @@ import {
   params,
   projectSlots,
   workbenchModes,
+  workbenchPages,
   workspaceSlots,
 } from "./index";
 
@@ -229,7 +230,7 @@ const ticketsPage = definePage({
   title: "Tickets",
   path: "tickets",
   mode: reviewMode.ref,
-  parent: { kind: "page", id: "landing" },
+  parent: workbenchPages.start,
   resource: {
     kinds: [ticketKind.ref],
   },

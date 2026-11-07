@@ -20,12 +20,12 @@ export const { command, describe, subcommands, builder, handler } = defineComman
   cloudCommand,
   compositionCommand,
   localCommand,
-  returnedChangesCommand,
   environmentCommand,
   deleteCommand,
   listCommand,
   viewCommand,
   recoveryPointsCommand,
   restoreCommand,
+  returnedChangesCommand,
   folderCommand,
 );

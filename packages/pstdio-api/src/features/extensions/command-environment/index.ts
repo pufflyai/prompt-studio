@@ -85,6 +85,11 @@ export const createCommandEnvironment = (
 
   const scopedHostApis = (scope?: InvocationScope) => {
     const signal = scope?.signal;
+    // Presentation lookups may dispatch another tool. They must stop when their caller returns,
+    // without aborting ctx.signal that durable host work can keep using after that return.
+    const resourceReads = new AbortController();
+    scope?.register(() => resourceReads.abort());
+    const resourceSignal = signal ? AbortSignal.any([signal, resourceReads.signal]) : undefined;
     const provisioningWorkspaceId = input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined;
     const resolveWorkingPath = (access: FileAccess) =>
       resolveWorkspaceFilesPath(
@@ -123,6 +128,7 @@ export const createCommandEnvironment = (
     });
 
     return {
+      resources: createResourcesApi(deps, { ...input, signal: resourceSignal }),
       storage,
       artifacts: createArtifactsApi(
         resolveProjectPath,
@@ -180,7 +186,6 @@ export const createCommandEnvironment = (
     project: input.project,
     workspaceId: input.workspaceId,
     ...hostApis,
-    resources: createResourcesApi(deps, input),
     views: createViewsApi(deps, input),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),

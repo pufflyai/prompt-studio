@@ -69,16 +69,24 @@ test("configured public openers present host and extension resources independent
       });
     expect(openings[0]?.resource.label).toBe("Existing work");
     expect(openings[1]?.resource.label).toBe("Current entry");
-    const requestOpenings = (resources: typeof refs) => fixture.app.request(`/v1/projects/${project.id}/resource-openings`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ resources }),
-    });
+    const requestOpenings = (resources: typeof refs) =>
+      fixture.app.request(`/v1/projects/${project.id}/resource-openings`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ resources }),
+      });
     const response = await requestOpenings(refs);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(openings);
-    expect((await fixture.app.request(`/v1/projects/${project.id}/resource-openings`, {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ resources: [{ ...refs[0]!, projectId: "another" }] }),
-    })).status).toBe(400);
+    expect(
+      (
+        await fixture.app.request(`/v1/projects/${project.id}/resource-openings`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ resources: [{ ...refs[0]!, projectId: "another" }] }),
+        })
+      ).status,
+    ).toBe(400);
     bindings[0]!.opener = { kind: "page", extensionId: "example.reader", id: "alternate" };
     await fixture.deps.projectInfoService.write(project.id, {
       composition: JSON.stringify({ resourceOpeners: bindings }),

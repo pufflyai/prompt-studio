@@ -1,4 +1,4 @@
-import { definePage, defineResourceKind, defineView, workbenchModes } from "./index";
+import { definePage, defineResourceKind, defineView, workbenchModes, workbenchPages } from "./index";
 
 const ticket = defineResourceKind({ id: "ticket" });
 const view = defineView({
@@ -19,7 +19,7 @@ definePage({
 definePage({ ...base, main: { kind: "view", view: view.ref, cardinality: "many" }, slots: [] });
 const page = definePage({
   ...base,
-  parent: { kind: "page", id: "landing" },
+  parent: workbenchPages.start,
   resource: { kinds: [ticket.ref] },
   main: { kind: "view", view: view.ref, cardinality: "many" },
   slots: [{ id: "inspector", region: "side", item: { kind: "view", view: view.ref, presence: "closed" } }],

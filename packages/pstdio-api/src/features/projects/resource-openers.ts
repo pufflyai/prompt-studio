@@ -6,7 +6,7 @@ import {
   qualifyNavigationTarget,
   resourceKey,
 } from "pstdio-api-contracts/extension-kernel";
-import { isRuntimeNavigationTargetAvailable } from "pstdio-extensions";
+import { createReadBoundary, isRuntimeNavigationTargetAvailable } from "pstdio-extensions";
 import { resolveResourceRecords } from "../extensions/command-environment/resource-resolution";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
@@ -46,7 +46,7 @@ const resolveOpening = async (
   if (opener.kind === "page") value = { kind: "page", page: opener, resource };
   else {
     const commandId = commandRefId(opener);
-    const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
+    const { runtime } = await createReadBoundary(input.signal)(() => deps.extensionRuntimeCatalog.get(input.projectId));
     if (!runtime.commands.some((command) => command.id === commandId)) return undefined;
     try {
       const response = await executeProjectExtensionCommand(deps, {
@@ -72,9 +72,10 @@ export const resolveResourceOpenings = async (
   input: OpeningContext,
   resources: ResourceRef[],
 ) => {
-  const { requested, resolved } = await resolveResourceRecords(deps, input, resources);
-  const composition = await readProjectComposition(deps, input.projectId);
-  const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
+  const read = createReadBoundary(input.signal);
+  const { requested, resolved } = await read(() => resolveResourceRecords(deps, input, resources));
+  const composition = await read(() => readProjectComposition(deps, input.projectId));
+  const { runtime } = await read(() => deps.extensionRuntimeCatalog.get(input.projectId));
   const records = new Map(resolved.map((entry) => [resourceKey(entry.resource), entry.resource]));
   // Data owners can decorate references. An ordinary kind needs no batch resolver just to have an opener.
   for (const resource of requested) {
@@ -91,8 +92,8 @@ export const resolveResourceOpenings = async (
     }),
   );
   input.signal?.throwIfAborted();
-  const current = await readProjectComposition(deps, input.projectId);
-  const snapshot = await deps.extensionRuntimeCatalog.get(input.projectId);
+  const current = await read(() => readProjectComposition(deps, input.projectId));
+  const snapshot = await read(() => deps.extensionRuntimeCatalog.get(input.projectId));
   return candidates.map(({ resource, binding, target }) => {
     const selected = bindingFor(current.resourceOpeners, resource)?.opener;
     const unchanged =
@@ -100,7 +101,9 @@ export const resolveResourceOpenings = async (
       binding &&
       selected.kind === binding.opener.kind &&
       selected.extensionId === binding.opener.extensionId &&
-      selected.id === binding.opener.id;
+      selected.id === binding.opener.id &&
+      (selected.kind !== "command" ||
+        snapshot.runtime.commands.some((command) => command.id === commandRefId(selected)));
     return {
       resource,
       ...(target && unchanged && isRuntimeNavigationTargetAvailable(snapshot.runtime, target) ? { target } : {}),
