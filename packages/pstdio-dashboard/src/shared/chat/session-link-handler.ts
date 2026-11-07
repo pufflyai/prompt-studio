@@ -1,0 +1,224 @@
+import { PstdioApiError } from "@pstdio/sdk/client";
+import { type ChatLinkCandidate, type ChatLinkHandler, isGuessedChatLink, parseChatLink } from "@pstdio/ui/chat-ui";
+import type { WorkbenchCore } from "@pstdio/workbench";
+import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
+import { defaultPageResourceCodec, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "pstdio-api-contracts";
+import { getApiClient } from "@/lib/api";
+import { getDashboardQueryClient } from "@/lib/query-client";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { executeExtensionCommand } from "@/shared/extensions/api";
+import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { openProjectPageUrl } from "@/shared/workbench/open-project-page-url";
+import { workspacePageForResource } from "@/shared/workbench/page-navigation";
+import { workspaceFileQueryOptions, workspaceFolderQueryOptions } from "@/shared/workspaces/workspace-file-query";
+import { workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
+import { workspaceLinkPath } from "@/shared/workspaces/workspace-link-path";
+import {
+  createDashboardWorkspaceOptionResource,
+  type DashboardWorkspaceOption,
+} from "@/shared/workspaces/workspace-options";
+import { resolveResourcePath } from "./resource-path-resolution";
+
+interface SessionLinkHandlerInput {
+  workbench: WorkbenchCore;
+  projectId?: string;
+  workspace?: DashboardWorkspaceOption;
+  origin: string;
+  onError(message: string): void;
+}
+
+const sessionWorkspace = (input: SessionLinkHandlerInput) => {
+  const { workspace } = input;
+  if (!workspace) throw new Error("The conversation workspace is unavailable.");
+  if (workspace.executionKind !== "local") throw new Error("Remote workspace files are unavailable.");
+  if (!workspace.supportsFiles) throw new Error("This workspace does not support files.");
+  return workspace;
+};
+
+const resolveWorkspaceFile = (
+  input: SessionLinkHandlerInput,
+  parsed: Extract<ReturnType<typeof parseChatLink>, { kind: "file" }>,
+  pages: ReturnType<WorkbenchCore["pages"]["listPages"]>,
+  resources: typeof defaultPageResourceCodec,
+) => {
+  const workspace = sessionWorkspace(input);
+  const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
+  const resource = workspaceFileResource(createDashboardWorkspaceOptionResource(workspace, input.projectId), path);
+  const target = {
+    kind: "page" as const,
+    page: workspacePageForResource(resource, input.workbench),
+    resource,
+    position: parsed.position,
+  };
+  return {
+    kind: "page" as const,
+    target,
+    href: serializeWorkbenchPageUrl({ projectId: input.projectId!, location: target, pages, resources }),
+  };
+};
+
+export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLinkHandler => {
+  const resolveOwnedPath = async (candidate: ChatLinkCandidate) => {
+    const parsed = parseChatLink(candidate, input.origin);
+    if (parsed?.kind !== "file" || !input.projectId) return null;
+    const workspace = sessionWorkspace(input);
+    const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
+    return resolveResourcePath({
+      projectId: input.projectId,
+      workspaceId: workspace.id,
+      path,
+      position: parsed.position,
+      kinds: getCachedDashboardExtensionMetadata(input.projectId)?.resourceKinds ?? [],
+      documentKey: (page) =>
+        input.workbench.pages
+          .listPages()
+          .find((item) => item.ref.id === page.id && item.ref.extensionId === page.extensionId)?.document?.metadataKey,
+      execute: async (command, params) => {
+        const response = await executeExtensionCommand(input.projectId!, command, { params, source: "dashboard" });
+        if (!response.outcome.ok) throw new Error("Could not resolve the resource path.");
+        return response.outcome.value;
+      },
+    });
+  };
+  const hasWorkspaceFile = async (linkPath: string) => {
+    const workspace = sessionWorkspace(input);
+    const path = workspaceLinkPath(linkPath, workspace.workspacePath);
+    const folder = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+    const queries = getDashboardQueryClient();
+    const listing = await queries.fetchQuery(workspaceFolderQueryOptions(workspace.id, folder));
+    if (listing.entries.some((entry) => entry.type === "file" && entry.path === path)) return true;
+    if (!listing.truncated) return false;
+    // Listings stop at 500 entries, so ask a large folder for the file itself.
+    return queries.fetchQuery(workspaceFileQueryOptions(workspace.id, path)).then(
+      () => true,
+      (error) => error instanceof PstdioApiError && (error.status === 413 || error.status === 415),
+    );
+  };
+  const resolve = (candidate: ChatLinkCandidate) => {
+    const parsed = parseChatLink(candidate, input.origin);
+    if (!parsed) throw new Error("This text is not a file link.");
+    if (parsed.kind === "invalid") throw new Error(parsed.reason);
+    if (!input.projectId) throw new Error("The conversation has no project.");
+    const pages = input.workbench.pages.listPages();
+    const resources = defaultPageResourceCodec;
+    if (parsed.kind === "page" || parsed.kind === "external") {
+      const url = new URL(parsed.href, input.origin);
+      if (url.origin !== input.origin || !url.pathname.startsWith("/projects/")) return undefined;
+      const projectId = decodeURIComponent(url.pathname.split("/")[2] ?? "");
+      if (projectId !== input.projectId)
+        return { kind: "project" as const, projectId, href: url.pathname + url.search };
+      const destination = parseWorkbenchPageUrl({
+        url: url.pathname + url.search,
+        projectId: input.projectId,
+        pages,
+        resources,
+      });
+      if (!destination) throw new Error("This page or document link is unavailable in the conversation project.");
+      const page = pages.find((page) => page.id === destination.pageId)!;
+      const target = {
+        kind: "page" as const,
+        page: page.ref,
+        resource: destination.resource,
+        section: destination.section,
+        position: destination.position,
+      };
+      return {
+        kind: "page" as const,
+        target,
+        href: serializeWorkbenchPageUrl({ projectId: input.projectId, location: target, pages, resources }),
+      };
+    }
+    return resolveWorkspaceFile(input, parsed, pages, resources);
+  };
+  return {
+    async resolveResource(candidate) {
+      try {
+        const owned = await resolveOwnedPath(candidate);
+        if (owned)
+          return {
+            label: owned.resource.label ?? owned.resource.shorthand ?? owned.resource.id,
+            icon: owned.resource.icon,
+            href:
+              owned.target.kind === "page"
+                ? serializeWorkbenchPageUrl({
+                    projectId: input.projectId!,
+                    location: owned.target,
+                    pages: input.workbench.pages.listPages(),
+                    resources: defaultPageResourceCodec,
+                  })
+                : null,
+          };
+        const parsed = parseChatLink(candidate, input.origin);
+        if (parsed?.kind === "file" && isGuessedChatLink(candidate) && !(await hasWorkspaceFile(parsed.path)))
+          return null;
+        const href = resolve(candidate)?.href;
+        return href ? { href } : null;
+      } catch {
+        return null;
+      }
+    },
+    async resolveImageSource(source) {
+      try {
+        const parsed = parseChatLink({ source, origin: "markdown" }, input.origin);
+        if (parsed?.kind !== "file" || parsed.position) return null;
+        const workspace = sessionWorkspace(input);
+        const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
+        const file = await getDashboardQueryClient().fetchQuery(workspaceFileQueryOptions(workspace.id, path));
+        return file.encoding === "base64" ? (file.data_url ?? null) : null;
+      } catch {
+        return null;
+      }
+    },
+    // Sites usually share one icon, so each site is asked once. A failed answer is remembered as no icon,
+    // because messages render often and would otherwise ask again each time.
+    async resolveIcon(href) {
+      return getDashboardQueryClient().fetchQuery({
+        queryKey: ["link-icons", new URL(href).origin],
+        queryFn: ({ signal }) =>
+          getApiClient()
+            .linkIcons.get(href, { signal })
+            .then(
+              (icon) => icon.data_url,
+              () => null,
+            ),
+        staleTime: Number.POSITIVE_INFINITY,
+      });
+    },
+    describe(candidate) {
+      return `Open ${candidate.source}${input.workspace ? ` in workspace ${input.workspace.title}` : ""}`;
+    },
+    resolveHref(candidate) {
+      try {
+        return resolve(candidate)?.href ?? null;
+      } catch {
+        return null;
+      }
+    },
+    async open(candidate) {
+      try {
+        if (getDashboardSelectedProjectId(input.workbench) !== input.projectId) return;
+        const owned = await resolveOwnedPath(candidate);
+        if (getDashboardSelectedProjectId(input.workbench) !== input.projectId) return;
+        if (owned) {
+          await input.workbench.navigation.openTarget(toWorkbenchNavigationTarget(owned.target));
+          return;
+        }
+        const destination = resolve(candidate);
+        if (!destination) return;
+        if (destination.kind === "project") {
+          await openProjectPageUrl({
+            workbench: input.workbench,
+            href: destination.href,
+            projectId: destination.projectId,
+            sourceProjectId: input.projectId!,
+          });
+          return;
+        }
+        const result = input.workbench.pageLocations.navigate(destination.target);
+        if (!result.ok) throw new Error(result.diagnostic.message);
+      } catch (error) {
+        input.onError(`${candidate.source}: ${error instanceof Error ? error.message : "Could not open this link."}`);
+      }
+    },
+  };
+};

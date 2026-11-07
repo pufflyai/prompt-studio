@@ -334,6 +334,7 @@ export const createWorkbenchViewerController = (resolveCore: () => WorkbenchCore
       }
       return batchWorkbenchChanges(() => {
         updateViewerResource(core, viewer, request, content);
+        if (request.operation === "replace") context?.onViewerReplace?.(request.resource);
         return "changed" as const;
       });
     },

@@ -48,9 +48,13 @@ export const workbenchResourceKinds = {
 
 export const workbenchPages = {
   start: hostRef("page", "start"),
+  /** @deprecated Use sessionBrowser.pages.sessions; the legacy target delegates to the installed provider. */
   sessions: hostRef("page", "sessions"),
+  /** @deprecated Use sessionBrowser.pages.session; the legacy target delegates to the installed provider. */
   session: hostRef("page", "session"),
+  /** @deprecated Use sessionBrowser.pages.draft; the legacy target delegates to the installed provider. */
   newSession: hostRef("page", "new-session"),
+  /** @deprecated Use sessionBrowser.pages.compose; the legacy target delegates to the installed provider. */
   sessionComposer: hostRef("page", "session-composer"),
   /** @deprecated Use workspacePages.list from the Workspaces provider. */
   workspaces: hostRef("page", "workspaces"),
@@ -106,6 +110,7 @@ export const workbenchPageDefinitions = {
 } as const;
 
 export const workbenchPanels = {
+  /** @deprecated Use sessionBrowser.panels.conversation. */
   projectSession: hostRef("placement", "project-session"),
 };
 
@@ -154,6 +159,7 @@ export const workbenchCommands = {
     extensionId: "pstdio",
     id: "workbench.resources.recent",
   }),
+  /** @deprecated Use sessionBrowser.commands.create through ctx.commands.run or a navigation target. */
   newConversation: commandRef<Record<string, never>, void>({ extensionId: "pstdio", id: "dashboard.createSession" }),
   openToolSearch: commandRef<Record<string, never>, void>({
     extensionId: "pstdio",

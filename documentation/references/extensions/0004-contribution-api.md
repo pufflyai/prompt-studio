@@ -11,7 +11,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `middlewares`                                     | Pre-command checks that may continue, patch params, replace invocation data, or reject.           |
 | `hooks`                                           | Event observers that run after a product event is emitted.                                        |
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
-| `views`                                           | Reusable webview, tree, file, controls, table, and Kanban bodies.                                  |
+| `views`                                           | Reusable webview, tree, file, controls, chat, table, and Kanban bodies.                                  |
 | `viewMenus`                                       | View bodies attached as menus owned by another view.                                               |
 | `pages`                                           | Routed screens with resource constraints, Main presentation, and extra panel slots.                                 |
 | `placements`                                      | Mode-wide static views or resource bindings.                                                        |
@@ -22,7 +22,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `statuses`                                        | Deprecated workflow providers; use query-owned enums and an extension settings panel.                     |
 | `settings`, `settingsSections` | Extension setting definitions and grouped settings sections. |
 | `templateTypes` | Commands and metadata for extension-owned template editing. |
-| `commandPaletteResources` | Searchable resources with explicit activation targets. |
+| `commandPaletteResources` | Searchable resources with explicit activation targets and optional accessible status `indicator` (`icon`, `color`, `label`). Declare `resourceKind` to supply matching resource-parameter pickers. |
 | `translations`, `defaultLocale` | Localized contribution labels and the fallback locale. |
 | `settingsPanels`                                  | References that place views in host-owned settings slots.                                          |
 | `modes`                                           | Typed Workbench mode contributions.                                                                |
@@ -33,6 +33,9 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `connections`                                     | Host-managed HTTP access to a declared remote control plane.                                       |
 
 UI contributions attach to targets that the host owns. [Workbench composition](0008-contextual-workbench-composition.md) explains how views, pages, modes, and panels fit together.
+
+[Native chat](0028-native-chat.md) provides immediate composers and canonical
+conversations with scoped callbacks to the existing session services.
 
 ## Replace bundled presentation
 
@@ -304,6 +307,14 @@ current host capability data, including default-workspace restrictions, when res
 The owner can be a mode or page ref. A mode-owned tree adds sections to that mode's navigation. A page-owned
 `content` tree starts a [Sidenav level](#sidenav-levels) instead. The Sidenav renders one tree with pinned
 `header` and `footer` slots and one scrolling `content` slot.
+
+On `main` (API 0.4.0), a navigation tree can declare `optionalOwner: true` when its page or mode
+belongs to another extension. The tree stays inactive while that extension is absent, disabled, or removed,
+and attaches through normal registration when the provider returns. This supports independent installation
+and default-install ordering. It does not make the view optional: the consumer must still supply its tree view.
+Missing local owners and missing pages/modes in a present foreign extension remain validation errors.
+Without this opt-in, missing owners retain their existing validation error.
+
 
 Inside a command declaration, use a typed menu slot and limit visibility with `when`. Import `workspaceSlots` and `workbenchResourceKinds` from `@pstdio/sdk/extensions`:
 
@@ -782,3 +793,13 @@ API 0.3.1 and `project-setup.v1`.
 Dashboard webviews with `commands.execute` can use public `workbenchCommands` refs: `newConversation`, `openToolSearch`, `retryProjectSetup`, and `recentResources`. Pass the ref's `id` to the host capability. Commands run in the webview's selected project; stale project invocations are rejected. Setup retry uses the existing project setup service and returns only after it finishes. `recentResources` returns the five most recently opened resources in the selected project with their explicit navigation targets. It uses this device’s saved navigation activity, preserves resource ownership, and uses live built-in metadata and last-seen extension presentation refreshed by the normal view lifecycle. Removed or unavailable resources are omitted. Subscribe to `viewDataEvents.recentResourcesChanged` to refresh while a view remains open. These are dashboard commands, not server-side extension commands or CLI actions. Publish the SDK and host before extensions adopt these additions.
 
 `ctx.sessions.query({ orderBy: "updated", limit: 5 })` returns the most recently updated conversations. Unlike `lastActivity`, this order uses only `updatedAt`, with descending IDs to break ties. Its cursor preserves that order across local and synced personal history.
+
+### Sessions provider navigation
+
+`sessionBrowser` and `sessionBrowserId` are implementation-free public refs for `pstdio.pstdio-session-browser`. Use `sessionBrowser.pages.sessions` for browsing, `pages.session` with a canonical `pstdio` session resource for a full conversation, and `panels.conversation` for shared Side chat. `pages.compose` is the landing composer; `pages.draft` accepts a canonical `pstdio` session-draft resource. `views.conversation` and `views.list` let compatibility definitions use the same installed renderer without another chat or persistence owner. Missing or disabled providers use ordinary unavailable-target feedback.
+
+`sessionBrowser.commands.create` accepts optional `workspaceId`, `harnessId`, `deviceId`, `side`, and `replace`. `commands.open` accepts a required `sessionId` plus optional `side` and `replace`. Use command refs through public command/navigation APIs; `replace` switches the invoking viewer and preserves its placement. These refs declare the provider contract; the SDK/host prerequisite does not install that provider. Publish supporting SDK packages before production adoption.
+
+The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `workbenchPanels.projectSession`, and `workbenchCommands.newConversation` refs remain at their original identities and are deprecated in favor of these provider refs. The adoption stage supplies thin legacy definitions; remove deprecated public refs only together in a breaking release.
+
+Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.

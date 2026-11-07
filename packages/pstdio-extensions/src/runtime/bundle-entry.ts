@@ -1,4 +1,5 @@
 import { readFileSync, realpathSync } from "node:fs";
+import { rename } from "node:fs/promises";
 import { basename, extname, isAbsolute, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -64,7 +65,9 @@ const buildEntry = async (entryPath: string, packagePath: string, outDir: string
     target: "bun",
     throw: false,
     outdir: outDir,
-    naming: `[name]${RUNTIME_BUNDLE_SUFFIX}`,
+    // Bun uses entry naming for both JS and incidental CSS. Preserve their extensions
+    // while building, then move only the JS entry to our stable cached module path.
+    naming: "[name].pstdio-runtime-bundle.[ext]",
     plugins: [preserveImportMetaUrlPlugin(packagePath)],
   });
 
@@ -74,6 +77,9 @@ const buildEntry = async (entryPath: string, packagePath: string, outDir: string
     );
   }
 
+  const entry = result.outputs.find((output) => output.kind === "entry-point" && extname(output.path) === ".js");
+  if (!entry) throw new Error(`Extension bundle did not emit a JavaScript entry: ${entryPath}`);
+  await rename(entry.path, bundlePath);
   return bundlePath;
 };
 

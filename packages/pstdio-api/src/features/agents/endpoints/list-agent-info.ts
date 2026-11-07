@@ -1,6 +1,6 @@
 import { createRoute } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import { toAgentInfo } from "../agent-info";
+import { agentExtensionIcons, toAgentInfo } from "../agent-info";
 import type { AgentsRouteDeps } from "../deps";
 import { agentInfoListResponseSchema, agentProjectQuerySchema } from "../dto";
 
@@ -27,7 +27,8 @@ export const listAgentInfoHandler = (deps: AgentsRouteDeps): AppRouteHandler<typ
     const query = c.req.valid("query");
     const projectId = query.projectId ?? query.project;
     const harnesses = await deps.harnessRegistry.list({ projectId });
-    const result = await Promise.all(harnesses.map((harness) => toAgentInfo(harness, projectId)));
+    const icons = await agentExtensionIcons(deps, projectId);
+    const result = await Promise.all(harnesses.map((harness) => toAgentInfo(harness, projectId, icons)));
     return c.json(result, 200);
   };
 };

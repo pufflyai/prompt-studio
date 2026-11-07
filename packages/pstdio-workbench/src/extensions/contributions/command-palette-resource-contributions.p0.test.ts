@@ -121,3 +121,35 @@ test("passes search cancellation to the owner command", async () => {
   await workbench.commandPaletteResources.queryProviders({ query: "", limit: 25, signal });
   expect(received).toBe(signal);
 });
+
+test("resource queries retain the declared kind and live accessible indicator", async () => {
+  const workbench = createWorkbench();
+  registerWorkbenchExtensionCommandPaletteResources(
+    {
+      projectId: "p1",
+      workbench,
+      executeCommand: () => ({
+        items: [
+          {
+            id: "saved",
+            label: "Saved",
+            indicator: { icon: "circle-check", color: "fg.success", label: "Completed" },
+            target: {
+              kind: "page",
+              page: { kind: "page", id: "slides" },
+              resource: { type: "lab.slide", extensionId: "owner", projectId: "p1", id: "saved" },
+            },
+          },
+        ],
+      }),
+    },
+    [record],
+  );
+  expect(workbench.commandPaletteResources.listProviders()[0]).toMatchObject({ resourceKind: "lab.slide" });
+  const groups = await workbench.commandPaletteResources.queryProviders({ query: "", limit: 100 });
+  expect(groups[0]?.results[0]).toMatchObject({
+    indicator: { icon: "circle-check", color: "fg.success", label: "Completed" },
+    resource: { extensionId: "owner", projectId: "p1", id: "saved" },
+  });
+  await workbench.dispose();
+});

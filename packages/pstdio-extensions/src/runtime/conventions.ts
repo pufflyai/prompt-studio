@@ -2,6 +2,7 @@ import { contributionRefId } from "@pstdio/sdk/extensions";
 import { isValidLocalContributionId, localContributionIdGrammar } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic, ExtensionRuntime } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
+import { hasAbsentOptionalNavigationOwner } from "./optional-navigation-owner";
 import { workbenchIconNames } from "./workbench-icon-names";
 
 // Convention diagnostics for `extensions check`: invalid icon names, contribution ids
@@ -213,10 +214,16 @@ const collectNavigationOwnerDiagnostics = (runtime: ExtensionRuntime) => {
     ...runtime.modes.map((record) => record.id),
     ...runtime.pages.map((record) => record.id),
   ]);
+  const deferredTrees = new Set(
+    runtime.navigationTrees
+      .filter((tree) => hasAbsentOptionalNavigationOwner(tree, runtime.extensions))
+      .map((tree) => tree.id),
+  );
   const sites = [...runtime.navigationItems, ...runtime.navigationTrees];
   for (const record of sites) {
     const reference = referencedContributionId(record.contribution.owner);
     if (!reference || knownOwners.has(reference)) continue;
+    if (deferredTrees.has(record.id)) continue;
     diagnostics.push(
       createDiagnostic({
         code: "extension_navigation_owner_missing",

@@ -129,7 +129,7 @@ for (const action of ["Delete workspace"]) {
       (response) => response.url().includes(".command.show-delete/execute") && response.request().method() === "POST",
     );
     await page.getByRole("menuitem", { name: action, exact: true }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete workspace", exact: true }).click();
     expect((await response).ok()).toBe(true);
     await openTicket(page, fixture.project.id);
     await expect(workspaceRow).toHaveCount(0);
