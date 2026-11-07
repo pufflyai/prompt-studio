@@ -6,7 +6,7 @@ import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { getApiClient } from "@/lib/api";
-import { storeBrowserSession, takeBrowserLoginCode } from "@/lib/browser-session";
+import { storeBrowserSession, takeBrowserLoginCode, waitForBrowserLoginLink } from "@/lib/browser-session";
 import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
@@ -25,8 +25,7 @@ import "./i18n";
 
 // `pst` and the desktop app open a login link with a single-use code in the fragment (ADR 0057).
 // The code leaves the address bar first, so a reload or a copied URL never carries it.
-const signInFromLoginLink = async () => {
-  const { code, hash } = takeBrowserLoginCode(window.location.hash);
+const signInFromLoginLink = async ({ code, hash }: ReturnType<typeof takeBrowserLoginCode>) => {
   if (!code) return;
   window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${hash}`);
   try {
@@ -50,11 +49,19 @@ const isBrowserSignedOut = async () => {
 
 const renderDashboard = async () => {
   const root = createRoot(document.getElementById("root")!);
-  // Login links must work when an old dashboard remains mounted after its runtime restarts.
+  const initialLink = takeBrowserLoginCode(window.location.hash);
+  const url = new URL(window.location.href);
+  const preparingDesktop = Boolean(window.promptStudioDesktop) && url.searchParams.has("desktop-startup");
+  if (preparingDesktop) {
+    url.searchParams.delete("desktop-startup");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+  const login = preparingDesktop && !initialLink.code ? await waitForBrowserLoginLink() : initialLink;
+  // After the initial native link arrives, later links restart an already loading or mounted dashboard.
   window.addEventListener("hashchange", () => {
     if (takeBrowserLoginCode(window.location.hash).code) window.location.reload();
   });
-  await signInFromLoginLink();
+  await signInFromLoginLink(login);
   if (await isBrowserSignedOut()) {
     root.render(
       <StrictMode>
@@ -66,8 +73,10 @@ const renderDashboard = async () => {
     return;
   }
 
-  const storage = await createDesktopWorkbenchStorage(window.promptStudioDesktop);
-  const projectTabs = await createDesktopProjectTabs(window.promptStudioDesktop);
+  const [storage, projectTabs] = await Promise.all([
+    createDesktopWorkbenchStorage(window.promptStudioDesktop),
+    createDesktopProjectTabs(window.promptStudioDesktop),
+  ]);
   const desktopLifecycle = resolveDesktopLifecycleBridge(window.promptStudioDesktop);
   const dashboardWorkbench = createDashboardWorkbench({
     storage,

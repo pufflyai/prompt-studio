@@ -8,10 +8,11 @@ test("status details retain their state across closing and reopening", async ({ 
     "packages/pstdio-workbench/src/react/workbench/workbench-status-bar.canvas.tsx#DetailPopover",
   );
   const trigger = preview.getByRole("button", { name: "Activity", exact: true });
-  await expect(preview.getByRole("button", { name: "Activity checked 0 times", includeHidden: true })).toHaveCount(1);
+  await expect(preview.getByRole("button", { name: "Activity checked 0 times", includeHidden: true })).toHaveCount(0);
   const ticks = preview.locator("[data-activity-ticks]");
-  await expect(ticks).toHaveAttribute("data-activity-ticks", "0");
+  await expect(ticks).toHaveCount(0);
   await trigger.click();
+  await expect(preview.getByRole("button", { name: "Activity checked 0 times" })).toBeVisible();
   await expect(ticks).not.toHaveAttribute("data-activity-ticks", "0");
   await preview.getByRole("button", { name: "Activity checked 0 times" }).click();
   await page.keyboard.press("Escape");
@@ -49,7 +50,13 @@ test("resource previews share a tray and retain pinned tabs", async ({ page }) =
   );
   const header = preview.locator('[data-workbench-panel-header="secondary"]');
   await preview.getByRole("button", { name: "Preview Alpha" }).click();
-  await expect(header.getByRole("tab", { name: "Alpha.md" })).toBeVisible();
+  const alpha = header.getByRole("tab", { name: "Alpha.md" });
+  await expect(alpha).toBeVisible();
+  await alpha.press("Shift+F10");
+  await expect(preview.getByRole("menu", { name: "Alpha.md context menu" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(preview.getByRole("menu")).toHaveCount(0);
+  await expect(alpha).toBeFocused();
   await preview.getByRole("button", { name: "Preview Beta" }).click();
   await expect(header.getByRole("tab", { name: "Alpha.md" })).toHaveCount(0);
   const beta = header.getByRole("tab", { name: "Beta.md" });

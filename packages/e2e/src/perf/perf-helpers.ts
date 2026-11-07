@@ -46,7 +46,7 @@ export const reportPageMemory = (page: Page, metric: string) =>
   recordPageMemory(page, { metric: `${metric}/js-heap`, label: metricLabel(metric, "page heap") });
 
 // Records long tasks and the input event on a marked element in the page clock.
-const installInteractionClock = (page: Page) =>
+export const installInteractionClock = (page: Page) =>
   page.addInitScript((startAttribute) => {
     window.__longTasks = [];
     new PerformanceObserver((list) => {
@@ -55,7 +55,11 @@ const installInteractionClock = (page: Page) =>
       );
     }).observe({ type: "longtask", buffered: true });
     const recordStart = (event: Event) => {
-      if (event.target instanceof Element && event.target.closest(`[${startAttribute}]`)) {
+      if (
+        window.__perfStart === undefined &&
+        event.target instanceof Element &&
+        event.target.closest(`[${startAttribute}]`)
+      ) {
         window.__perfStart = performance.now();
       }
     };
@@ -86,19 +90,32 @@ export const settleWhenVisible = (page: Page, selector: string) =>
 
 // The page stamps both the input event and the settled state, so automation waits never add to
 // a sample.
+export const summarizeInteraction = (input: {
+  start?: number;
+  settled?: number;
+  longTasks: Array<{ duration: number; startTime: number }>;
+}) => {
+  const { start, settled, longTasks } = input;
+  if (start === undefined || settled === undefined) throw new Error("Interaction timing was not captured");
+  return {
+    duration: settled - start,
+    longTasks: longTasks
+      // The task starts before its input handler stamps the event. Count every
+      // overlapping task in full: splitting it would hide its responsiveness cost.
+      .filter((task) => task.startTime + task.duration > start && task.startTime < settled)
+      .map((task) => task.duration),
+  };
+};
+
 export const readInteraction = async (page: Page) => {
   await page.waitForFunction(() => window.__perfSettled !== undefined);
-  return page.evaluate(() => {
-    const start = window.__perfStart;
-    const settled = window.__perfSettled;
-    if (start === undefined || settled === undefined) throw new Error("Interaction timing was not captured");
-    return {
-      duration: settled - start,
-      longTasks: (window.__longTasks ?? [])
-        .filter((task) => task.startTime >= start && task.startTime < settled)
-        .map((task) => task.duration),
-    };
-  });
+  return summarizeInteraction(
+    await page.evaluate(() => ({
+      start: window.__perfStart,
+      settled: window.__perfSettled,
+      longTasks: window.__longTasks ?? [],
+    })),
+  );
 };
 
 export const afterTwoFrames = (page: Page) =>

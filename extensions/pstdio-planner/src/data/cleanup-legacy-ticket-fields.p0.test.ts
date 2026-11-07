@@ -41,11 +41,15 @@ test("keeps an edit made after the tickets were listed", async () => {
   const list = tickets.list.bind(tickets);
   tickets.list = async () => {
     const listed = await list();
-    await putTicket(storage, { ...storedTicket, title: "Edited", parallelizable: "no" } as Ticket);
+    await putTicket(storage, { ...storedTicket, title: "Edited", content: "# Edited", parallelizable: "no" } as Ticket);
     return listed;
   };
 
   await cleanupLegacyTicketFields({ ...storage, collection: () => tickets } as typeof storage);
 
-  expect(await ticketsCollection(storage).get("ticket-1")).toEqual({ ...storedTicket, title: "Edited" });
+  expect(await ticketsCollection(storage).get("ticket-1")).toEqual({
+    ...storedTicket,
+    title: "Edited",
+    content: "# Edited",
+  });
 });

@@ -2,14 +2,19 @@ import { Box, Stack } from "@chakra-ui/react";
 import type { ComponentProps } from "react";
 import type { TreeListNode } from "./tree-list.types";
 import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
-import { getNodeChildren } from "./tree-list-model";
+import { getNodeChildren, hasExpandableChildren, isActiveNode } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import { TreeListReveal } from "./tree-list-reveal";
 import { canStartTreeListDrag, DropLine, SortableHost } from "./tree-list-sortable-host";
 
 interface TreeListNodesProps
-  extends Omit<ComponentProps<typeof TreeListNodeRow>, "node" | "level" | "onFocus" | "tabIndex"> {
+  extends Omit<
+    ComponentProps<typeof TreeListNodeRow>,
+    "node" | "level" | "onFocus" | "tabIndex" | "active" | "expanded"
+  > {
   nodes: TreeListNode[];
+  expandedNodeIds: string[];
+  activeNodeId?: string | string[] | null;
   level?: number;
   focusRowId?: string;
   onRowFocus?: (id: string) => void;
@@ -18,7 +23,18 @@ interface TreeListNodesProps
 }
 
 const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) => {
-  const { node, nodes: _nodes, level = 0, focusRowId, onRowFocus, sortable, indicator = null, ...rowProps } = props;
+  const {
+    node,
+    nodes: _nodes,
+    level = 0,
+    focusRowId,
+    onRowFocus,
+    sortable,
+    indicator = null,
+    expandedNodeIds,
+    activeNodeId,
+    ...rowProps
+  } = props;
   const children = getNodeChildren(node);
   let tabIndex: number | undefined;
   if (focusRowId !== undefined) tabIndex = node.id === focusRowId ? 0 : -1;
@@ -26,13 +42,15 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
     <TreeListNodeRow
       {...rowProps}
       node={node}
+      active={isActiveNode(node.id, activeNodeId)}
+      expanded={hasExpandableChildren(node) && expandedNodeIds.includes(node.id)}
       level={level}
       tabIndex={tabIndex}
       onFocus={() => onRowFocus?.(node.id)}
     />
   );
   const descendants = children.length ? (
-    <TreeListReveal open={rowProps.expandedNodeIds.includes(node.id)}>
+    <TreeListReveal open={expandedNodeIds.includes(node.id)}>
       <Box pt={rowProps.nodeGap}>
         <TreeListNodes {...props} nodes={children} level={level + 1} />
       </Box>

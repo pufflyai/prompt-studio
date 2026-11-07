@@ -21,7 +21,6 @@ const Default: Story = {
   id: "components-overlays-tooltip--default",
   args: { content: "Reasoning effort", children: <Button>High</Button> },
 };
-// ResizeObserver must finish measuring before the next synthetic pointer event.
 const ResizingLabel = () => {
   const labelRef = useRef<HTMLSpanElement>(null);
   const [narrow, setNarrow] = useState(true);

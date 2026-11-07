@@ -1,5 +1,5 @@
 import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
-import { ChatSkeleton } from "@pstdio/ui/chat-ui";
+import { ChatSkeleton } from "@pstdio/ui/chat-skeleton";
 import {
   type ResourceRef,
   type WorkbenchModuleContext,

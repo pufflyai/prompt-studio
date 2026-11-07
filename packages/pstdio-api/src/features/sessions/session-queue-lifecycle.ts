@@ -3,6 +3,7 @@ export const createSessionQueueLifecycle = () => {
   let closing = false;
 
   return {
+    isClosing: () => closing,
     run(operation: () => Promise<void>) {
       if (closing) return Promise.resolve();
       const task = operation();

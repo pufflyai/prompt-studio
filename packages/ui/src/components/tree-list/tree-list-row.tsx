@@ -1,7 +1,7 @@
 import type { StackProps } from "@chakra-ui/react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { TreeListLinkComponent, TreeListNavigateEvent } from "./tree-list.types";
-import type { VirtualRow } from "./tree-list-model";
+import { hasExpandableChildren, isActiveNode, isInList, type VirtualRow } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import { TreeListSectionHeader } from "./tree-list-section-header";
 
@@ -62,8 +62,8 @@ export const TreeListRow = (props: TreeListRowProps) => {
       sectionId={row.sectionId}
       node={row.node}
       level={row.level}
-      expandedNodeIds={expandedNodeIds}
-      activeNodeId={activeNodeId}
+      expanded={hasExpandableChildren(row.node) && isInList(row.node.id, expandedNodeIds)}
+      active={isActiveNode(row.node.id, activeNodeId)}
       rowVariant={rowVariant}
       nodeGap={nodeGap}
       linkComponent={linkComponent}

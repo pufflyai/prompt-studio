@@ -29,10 +29,20 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
       const header = document.querySelector<HTMLElement>(selector);
       if (!header) throw new Error("Secondary Panel header is not mounted");
       const count = header.querySelectorAll('[role="tab"]').length;
-      const observer = new MutationObserver(() => {
-        if (header.querySelectorAll('[role="tab"]').length <= count) return;
+      let frame: number | undefined;
+      const check = () => {
+        frame = undefined;
+        const selected = header.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+        if (header.querySelectorAll('[role="tab"]').length <= count || !selected?.checkVisibility()) return;
         observer.disconnect();
-        window.__perfSettled = performance.now();
+        // Check layout in a frame, then include its paint before ending the sample.
+        requestAnimationFrame(() => {
+          window.__perfSettled = performance.now();
+        });
+      };
+      const observer = new MutationObserver(() => {
+        // Reading visibility in the mutation microtask forces layout inside the input task.
+        if (frame === undefined) frame = requestAnimationFrame(check);
       });
       observer.observe(header, { attributes: true, childList: true, subtree: true });
       return count;

@@ -67,9 +67,11 @@ const parseStatusLine = (line: string): ParsedEntry => {
 
 // Discover all changed files: committed + uncommitted + untracked
 const discoverChangedFiles = async (worktreePath: string, base: string) => {
-  const committedRaw = await git(worktreePath, ["diff", "--name-status", base, "HEAD"]).catch(() => "");
-  const uncommittedRaw = await git(worktreePath, ["diff", "--name-status", "HEAD"]).catch(() => "");
-  const untrackedRaw = await git(worktreePath, ["ls-files", "--others", "--exclude-standard"]).catch(() => "");
+  const [committedRaw, uncommittedRaw, untrackedRaw] = await Promise.all([
+    git(worktreePath, ["diff", "--name-status", base, "HEAD"]).catch(() => ""),
+    git(worktreePath, ["diff", "--name-status", "HEAD"]).catch(() => ""),
+    git(worktreePath, ["ls-files", "--others", "--exclude-standard"]).catch(() => ""),
+  ]);
 
   const fileMap = new Map<string, ParsedEntry>();
 

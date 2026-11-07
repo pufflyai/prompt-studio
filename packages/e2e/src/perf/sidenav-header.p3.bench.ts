@@ -27,12 +27,29 @@ const settleWhenNavShows = (page: Page, collection: Collection) =>
   page.evaluate((expectedCollection) => {
     const nav = document.querySelector<HTMLElement>('[data-workbench-region="nav"]');
     if (!nav) throw new Error("Nav Chrome is not mounted");
-    const observer = new MutationObserver(() => {
+    let frame: number | undefined;
+    const check = () => {
+      frame = undefined;
       if (!nav.textContent?.includes(expectedCollection)) return;
+      const header = document.querySelector<HTMLElement>('[data-workbench-panel-header="main"]');
+      if (expectedCollection === "Workspaces") {
+        const selected = header?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+        if (!selected?.checkVisibility() || !selected.textContent?.includes(expectedCollection)) return;
+      } else if (header?.checkVisibility()) return;
       observer.disconnect();
-      window.__perfSettled = performance.now();
+      requestAnimationFrame(() => {
+        window.__perfSettled = performance.now();
+      });
+    };
+    const observer = new MutationObserver(() => {
+      // Match the rendered state without forcing layout in the input's mutation microtask.
+      if (frame === undefined) frame = requestAnimationFrame(check);
     });
-    observer.observe(nav, { attributes: true, childList: true, subtree: true });
+    observer.observe(nav.closest('[data-workbench-panel="main"]') ?? nav, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
   }, collection);
 
 test("navigates global collections within the interaction budget", async ({ page, request }) => {

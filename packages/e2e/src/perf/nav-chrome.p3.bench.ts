@@ -54,7 +54,7 @@ test("settles the persistent Nav Chrome after navigating back within budget", as
       observer.disconnect();
       window.__perfSettled = performance.now();
     });
-    if (nav) observer.observe(nav, { attributes: true, childList: true, subtree: true });
+    if (nav) observer.observe(nav, { attributes: true, childList: true, characterData: true, subtree: true });
   }, PERF_START_ATTRIBUTE);
   await back.click();
   const result = await readInteraction(page);

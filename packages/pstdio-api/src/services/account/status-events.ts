@@ -8,22 +8,32 @@ export const createStatusEvents = <T>(input: {
   const dirty = new Set<string>();
   let running: Promise<void> | undefined;
   let closed = false;
+  const observe = async (projectId: string) => {
+    const status = await input.status(projectId).catch(() => null);
+    // A project that cannot be read now starts again from its next observation.
+    if (!status) {
+      known.delete(projectId);
+      return;
+    }
+    const key = JSON.stringify(status);
+    const previous = known.get(projectId);
+    known.set(projectId, key);
+    // Extensions read the initial value themselves; later differences are changes.
+    if (!closed && previous !== undefined && previous !== key) await input.publish(projectId, status);
+  };
   const run = async () => {
     try {
-      for (const projectId of dirty) {
+      while (dirty.size && !closed) {
+        // Let the producing turn finish before observing it. Reading each owner's
+        // intermediate state competes with the synchronization the status describes.
+        await new Promise<void>((resolve) => setImmediate(resolve));
         if (closed) return;
-        dirty.delete(projectId);
-        const status = await input.status(projectId).catch(() => null);
-        // A project that cannot be read now, for example a deleted one, starts again from its next read.
-        if (!status) {
-          known.delete(projectId);
-          continue;
+        const projects = [...dirty];
+        for (const projectId of projects) {
+          if (closed) return;
+          dirty.delete(projectId);
+          await observe(projectId);
         }
-        const key = JSON.stringify(status);
-        const previous = known.get(projectId);
-        known.set(projectId, key);
-        // The first read is where extensions start; they read it themselves. Later differences are changes.
-        if (!closed && previous !== undefined && previous !== key) await input.publish(projectId, status);
       }
     } finally {
       running = undefined;

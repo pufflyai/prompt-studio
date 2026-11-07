@@ -1,6 +1,7 @@
 import { Box, Input, Text, useSlotRecipe } from "@chakra-ui/react";
 import { ScopedDialog as Dialog, Portal, ScrollArea, useUiScope } from "@pstdio/ui";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import type { WorkbenchCore } from "../../core";
 import { shortcutMenuEntries, shortcutPathLabels } from "../../core/controllers/keyboard/shortcut-menu";
 import { runUserAction } from "../../core/shared/run-user-action";
@@ -15,9 +16,11 @@ import { useShortcutCatalog } from "./use-shortcut-catalog";
 export const WorkbenchKeyboardLayer = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const active = useUiScope()?.active ?? true;
-  const state = useWorkbenchStore(workbench.keyboard.store, (state) => state);
+  const state = useWorkbenchStore(
+    workbench.keyboard.store,
+    useShallow((state) => state),
+  );
   const { catalog } = useShortcutCatalog(workbench, active && (state.active || state.preview));
-  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const bubble = useSlotRecipe({ key: "keyboardBubble" })();
   const palette = useSlotRecipe({ key: "palette" })();
   const content = useRef<HTMLDivElement>(null);

@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 export const useKeyboardTabStrip = (
   workbench: WorkbenchCore,
@@ -9,7 +8,6 @@ export const useKeyboardTabStrip = (
   placements: WorkbenchWidgetPlacement[],
   viewport: HTMLDivElement | null,
 ) => {
-  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const current = useRef({ visible, placements, viewport });
   useLayoutEffect(() => {
     current.current = { visible, placements, viewport };
@@ -35,10 +33,21 @@ export const useKeyboardTabStrip = (
       window.removeEventListener("resize", resize);
     };
   }, [workbench, region, viewport]);
-  // The reader keeps current placements; notify consumers after its geometry inputs commit.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: these inputs change the transient geometry reader.
+  // Geometry invalidation does not require rerendering every tab strip for every layout change.
   useLayoutEffect(() => {
-    const frame = requestAnimationFrame(() => workbench.keyboard.refresh());
-    return () => cancelAnimationFrame(frame);
-  }, [workbench, layout, visible]);
+    if (!region || !visible) return;
+    let frame: number | undefined;
+    const schedule = () => {
+      frame ??= requestAnimationFrame(() => {
+        frame = undefined;
+        workbench.keyboard.refresh();
+      });
+    };
+    const stop = workbench.layout.store.subscribe(schedule);
+    schedule();
+    return () => {
+      stop();
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
+  }, [workbench, region, visible]);
 };
