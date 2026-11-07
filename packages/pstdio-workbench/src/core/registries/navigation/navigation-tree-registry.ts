@@ -3,6 +3,7 @@ import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-regis
 import type { ResourceRef } from "../resources/resource-registry";
 import { settleReadBatch } from "../views/settle-read-batch";
 import type { NavigationTarget } from "./navigation-registry";
+import { stableNavigationValue } from "./navigation-target-key";
 import { getNavigationTreeNodeSource, setNavigationTreeNodeSource } from "./navigation-tree-node-source";
 import { createNavigationTreeSnapshots } from "./navigation-tree-snapshots";
 
@@ -235,8 +236,10 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
 
     getReadKey(owner, context = {}) {
       return JSON.stringify(
-        (["header", "content", "footer"] as const).flatMap((slot) =>
-          matching(owner, slot).map((contribution) => [contribution.id, readContext(contribution, context).resource]),
+        stableNavigationValue(
+          (["header", "content", "footer"] as const).flatMap((slot) =>
+            matching(owner, slot).map((contribution) => [contribution.id, readContext(contribution, context).resource]),
+          ),
         ),
       );
     },

@@ -52,6 +52,10 @@ test("resource-dependent contributions retain isolation even beside shared navig
   expect(registry.getReadKey(owner, { resource: first })).not.toBe(registry.getReadKey(owner, { resource: second }));
   const document = { ...first, metadata: { documentId: "notes.md" } };
   expect(registry.getReadKey(owner, { resource: first })).not.toBe(registry.getReadKey(owner, { resource: document }));
+  const reorderedDocument = { metadata: { documentId: "notes.md" }, id: first.id, type: first.type };
+  expect(registry.getReadKey(owner, { resource: reorderedDocument })).toBe(
+    registry.getReadKey(owner, { resource: document }),
+  );
   dependent.dispose();
   expect(registry.getReadKey(owner, { resource: first })).toBe(sharedKey);
   expect(registry.getReadKey(owner, { resource: document })).toBe(sharedKey);

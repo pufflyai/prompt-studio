@@ -116,6 +116,7 @@ export const startPackagedServe = async (
   env: Record<string, string> = {},
   binaryPath = PACKAGED_BINARY_PATH,
   observe?: (process: PackagedRuntimeObservation) => void,
+  onOutput?: (chunk: Buffer) => void,
 ) => {
   const descriptorPath = join(tempRoot, "runtime.json");
   const {
@@ -147,6 +148,10 @@ export const startPackagedServe = async (
       stdio: "pipe",
     },
   );
+  if (onOutput) {
+    child.stdout?.on("data", onOutput);
+    child.stderr?.on("data", onOutput);
+  }
   try {
     if (child.pid !== undefined) observe?.({ pid: child.pid, descriptor: null });
     const descriptor = await waitForPackagedReady(descriptorPath, child, observe);

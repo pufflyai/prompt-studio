@@ -1,13 +1,13 @@
 // Run with E2E_PACKAGED_BINARY_PATH=<production binary> NOTE_OPEN_LABEL=<unique label>
 // bun packages/e2e/src/perf/note-opening.diagnostic.ts
 // BENCHMARK_SAMPLES defaults to five fresh browser contexts. Results land under
-// __test-tmp__/note-opening/<label>. Timing covers the click through the correct visible
+// __test-tmp__/note-opening/<label>-<run>. Timing covers the click through the correct visible
 // editor content plus two animation frames, after the initial project tree has loaded.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { cpus } from "node:os";
 import { join, resolve } from "node:path";
-import { chromium, expect, type Page } from "@playwright/test";
+import { type Browser, chromium, expect, type Page } from "@playwright/test";
 import { PROVISIONED_CHROMIUM } from "../packaged/packaged-chromium";
 import { preparePackagedExtensionSource } from "../packaged/packaged-extension-source";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
@@ -20,32 +20,44 @@ import {
 
 const repo = resolve(import.meta.dirname, "../../../..");
 const label = process.env.NOTE_OPEN_LABEL ?? "baseline";
-const root = join(repo, "__test-tmp__", "note-opening", label);
+const sampleCount = Number(process.env.BENCHMARK_SAMPLES ?? 5);
+if (!Number.isSafeInteger(sampleCount) || sampleCount < 1) {
+  throw new Error("BENCHMARK_SAMPLES must be a positive integer");
+}
+const runs = join(repo, "__test-tmp__", "note-opening");
+mkdirSync(runs, { recursive: true });
+const root = mkdtempSync(join(runs, `${label}-`));
+console.log(`Diagnostic output: ${root}`);
 const projectPath = join(root, "project");
 mkdirSync(projectPath, { recursive: true });
 const source = await preparePackagedExtensionSource(join(root, "source"), join(repo, "extensions/pstdio-notes"), {
   install: true,
 });
-const started = await startPackagedServe(root, {
-  PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "pstdio-notes" }]),
-});
 const log = Bun.file(join(root, "runtime.log")).writer();
-started.child.stdout?.on("data", (chunk) => log.write(chunk));
-started.child.stderr?.on("data", (chunk) => log.write(chunk));
-const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
-const request = async (path: string, body?: unknown) => {
-  const response = await fetch(`${started.baseUrl}/v1${path}`, {
-    headers,
-    method: body === undefined ? "GET" : "POST",
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-  if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
-  return response.json();
-};
-const samples: Record<string, unknown>[] = [];
-const errors: string[] = [];
-const browser = await chromium.launch(PROVISIONED_CHROMIUM);
+let started: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
+let browser: Browser | undefined;
 try {
+  started = await startPackagedServe(
+    root,
+    { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "pstdio-notes" }]) },
+    PACKAGED_BINARY_PATH,
+    undefined,
+    (chunk) => log.write(chunk),
+  );
+  const runtime = started;
+  const headers = { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" };
+  const request = async (path: string, body?: unknown) => {
+    const response = await fetch(`${runtime.baseUrl}/v1${path}`, {
+      headers,
+      method: body === undefined ? "GET" : "POST",
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    if (!response.ok) throw new Error(`${path}: ${response.status} ${await response.text()}`);
+    return response.json();
+  };
+  const samples: Record<string, unknown>[] = [];
+  const errors: string[] = [];
+  browser = await chromium.launch(PROVISIONED_CHROMIUM);
   const project = await request("/projects", {
     name: "Note opening diagnostic",
     initial_workspace: { provider_id: "pstdio.root", params: { path: projectPath } },
@@ -150,11 +162,13 @@ try {
     samples.push(result);
     console.log(JSON.stringify(result));
   };
-  for (let iteration = 0; iteration < Number(process.env.BENCHMARK_SAMPLES ?? 5); iteration++) {
+  for (let iteration = 0; iteration < sampleCount; iteration++) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.addInitScript(() => {
+      if (window === window.top) localStorage.setItem("onboarding-complete", "true");
+    });
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.pstdio-notes/notes`);
     await page.locator('[data-workbench-region="sidenav"]').getByRole("option", { name: "Notes", exact: true }).click();
@@ -183,7 +197,13 @@ try {
   );
   if (errors.length) throw new Error(errors.join("\n"));
 } finally {
-  await browser.close();
-  await stopProcess(started.child);
-  await log.end();
+  try {
+    await browser?.close();
+  } finally {
+    try {
+      if (started) await stopProcess(started.child);
+    } finally {
+      await log.end();
+    }
+  }
 }
