@@ -1,121 +1,40 @@
 import { expect, test } from "bun:test";
-import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { resolveLinkedResources } from "./resource-link-resolution";
 
-test("keeps canonical identity when resolving a host resource", async () => {
-  const ctx = createWorkbench();
-  ctx.resources.registerProvider({
-    id: "workspaces",
-    kind: "workspace",
-    list: () => [{ resource: { type: "workspace", id: "one", label: "WS-1" } }],
-  });
-  const ref = { type: "workspace", id: "one", projectId: "project", extensionId: "pstdio" };
-  const result = await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [ref]);
-  expect(resourceKey(result[0]!.resource)).toBe(resourceKey(ref));
-});
-
-test("resolves an owner batch once and keeps unavailable endpoints out", async () => {
-  const { resolveOwnerBatch } = await import("./resource-link-resolution");
-  const resources = ["one", "two", "missing"].map((id) => ({
-    type: "note",
-    id,
-    extensionId: "notes",
-    projectId: "project",
-  }));
-  let reads = 0;
-  const result = await resolveOwnerBatch({
-    resources,
-    navigate: async () => {},
-    resolve: async () => {
-      reads += 1;
-      return [
-        { resource: { ...resources[0], label: "One" } },
-        { resource: { ...resources[1], label: "Foreign", projectId: "other-project" } },
-      ];
-    },
-  });
-  expect(reads).toBe(1);
-  expect(result.map((item) => item.resource.id)).toEqual(["one"]);
-});
-
-test("omits malformed owner presentation fields", async () => {
-  const { resolveOwnerBatch } = await import("./resource-link-resolution");
-  const resource = { type: "note", id: "one", extensionId: "notes", projectId: "project" };
-  const result = await resolveOwnerBatch({
-    resources: [resource],
-    navigate: async () => {},
-    resolve: async () => [{ resource: { ...resource, label: { text: "One" } } }],
-  });
-  expect(result).toEqual([]);
-});
-
-test("canonical sessions resolve through their installed public provider without a second host browse list", async () => {
-  const { contributionRefId, sessionBrowser } = await import("@pstdio/sdk/extensions");
-  const ctx = createWorkbench();
-  ctx.pageLocations.setProject("project");
-  const ref = { type: "session", id: "s", extensionId: "pstdio", projectId: "project" };
-  const target = { kind: "page" as const, page: sessionBrowser.pages.session, resource: ref };
+test("bare links use the public configured-opener API once and preserve its ordinary navigation target", async () => {
   const calls: unknown[] = [];
-  const provider = ctx.commands.registerCommand(
-    { id: contributionRefId(sessionBrowser.commands.resolve), label: "Resolve session" },
-    {
-      execute: (args, context) => {
-        calls.push({ args, context });
-        return [{ resource: ref, target }];
-      },
+  const refs = ["one", "two"].map((id) => ({ type: "workspace", id, extensionId: "pstdio", projectId: "project" }));
+  const target = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: "example.viewer", id: "inspect" },
+    resource: refs[0],
+  };
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+  const previous = runtime.__PSTDIO_CONFIG__;
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      calls.push({ path: new URL(request.url).pathname, body: await request.json() });
+      return Response.json([{ resource: refs[1] }, { resource: refs[0], target }]);
     },
-  );
-  const result = await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [ref]);
-  expect(result).toMatchObject([{ resource: ref, target }]);
-  expect(calls).toMatchObject([{ args: { resources: [ref] }, context: { projectId: "project" } }]);
-  const { setDashboardExtensionsReadyProject } = await import("@/shared/extensions/extension-readiness");
-  setDashboardExtensionsReadyProject(ctx as WorkbenchModuleContext, "project");
-  provider.dispose();
-  expect(await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [ref])).toEqual([]);
-  expect(
-    await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [{ ...ref, projectId: "foreign" }]),
-  ).toEqual([]);
-  expect(calls).toHaveLength(1);
-});
-
-test("a workspace boot waits for installed provider registration", async () => {
-  const { contributionRefId, sessionBrowser } = await import("@pstdio/sdk/extensions");
-  const { setDashboardExtensionsReadyProject } = await import("@/shared/extensions/extension-readiness");
-  const ctx = createWorkbench();
-  ctx.pageLocations.setProject("project");
-  const ref = { type: "session", id: "s", extensionId: "pstdio", projectId: "project" };
-  const target = { kind: "page" as const, page: sessionBrowser.pages.session, resource: ref };
-  let settled = false;
-  const resolving = resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [ref]);
-  void resolving.then(() => {
-    settled = true;
   });
-  await Bun.sleep(0);
-  expect(settled).toBe(false);
-  ctx.commands.registerCommand(
-    { id: contributionRefId(sessionBrowser.commands.resolve), label: "Resolve" },
-    {
-      execute: () => [{ resource: ref, target }],
-    },
-  );
-  setDashboardExtensionsReadyProject(ctx as WorkbenchModuleContext, "project");
-  expect(await resolving).toMatchObject([{ resource: ref, target }]);
-});
-
-test("cancels an unresolved provider lookup and leaves an explicitly disabled provider unavailable", async () => {
-  const { setDashboardExtensionsReadyProject } = await import("@/shared/extensions/extension-readiness");
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
   const ctx = createWorkbench();
-  ctx.pageLocations.setProject("project");
-  const ref = { type: "session", id: "s", extensionId: "pstdio", projectId: "project" };
-  const controller = new AbortController();
-  const pending = resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [ref], controller.signal);
-  await Bun.sleep(0);
-  controller.abort();
-  await expect(pending).rejects.toThrow();
-  await expect(
-    resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [ref], controller.signal),
-  ).rejects.toThrow();
-  setDashboardExtensionsReadyProject(ctx as WorkbenchModuleContext, "project");
-  expect(await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [ref])).toEqual([]);
+  try {
+    const result = await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [
+      refs[0]!,
+      refs[1]!,
+      refs[0]!,
+    ]);
+    expect(calls).toEqual([{ path: "/v1/projects/project/resource-openings", body: { resources: refs } }]);
+    expect(result).toMatchObject([
+      { resource: refs[0], target },
+      { resource: refs[1], target: undefined, open: undefined },
+    ]);
+  } finally {
+    ctx.dispose();
+    runtime.__PSTDIO_CONFIG__ = previous;
+    await server.stop(true);
+  }
 });

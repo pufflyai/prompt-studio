@@ -42,7 +42,7 @@ The native file renderer uses the scoped workspace read and shared Monaco editor
 
 The extension's native resource list groups workspace rows by device. Compact removes grouping. Sessions belong to workspace navigation and the separate history view. Related ticket chips use scoped, paginated resource links. Browsing this list does not calculate Git diffs. The Workspaces title and sidebar menus open the existing creation dialog. The local device header also offers creation. Capacity controls and device-details entry points are omitted.
 
-Workspace resources keep their host-owned kind and provider capabilities. The project folder opens the separate Files page, without Changes. Foreign workspaces open session history. New callers use `workspacePages` and `workspaceCommands`; deprecated `workbenchPages.workspace` and `workbenchPages.workspaces` remain compatibility declarations using provider-owned views, available only while that provider is installed.
+Workspace resources keep their host-owned kind and provider capabilities. The project folder opens the separate Files page, without Changes. Foreign workspaces open session history. Bare workspace links use the project’s configured opener. Workspaces owns its page and command references and chooses the destination from workspace capabilities. The alpha API removes the old host page aliases.
 
 ## End-to-End Flow
 

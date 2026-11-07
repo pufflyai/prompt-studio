@@ -7,7 +7,7 @@ const createPanelWorkbench = (
   options: { changes?: boolean; collapsed?: boolean; action?: boolean; panelResource?: boolean } = {},
 ) => {
   const page = { kind: "page", extensionId: "preview", id: "panel-header" } as const;
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   workbench.modes.registerMode({
     id: "panel-header",
     label: "Panel header",
@@ -109,7 +109,7 @@ export const SinglePageHeader: Story = {
   args: {
     workbench: (() => {
       const page = { kind: "page", extensionId: "preview", id: "start" } as const;
-      const core = createWorkbench({ startPage: page });
+      const core = createWorkbench({ defaultPage: page });
       core.modes.registerMode({
         id: "start",
         label: "Start",

@@ -1,8 +1,9 @@
 import {
   defineCommand,
+  l10n,
   params,
+  sessionBrowser,
   workbenchCommands,
-  workbenchPages,
   workbenchResourceKinds,
   workspaceSlots,
 } from "@pstdio/sdk/extensions";
@@ -74,7 +75,7 @@ export const openSession = defineCommand({
     }
     ctx.navigation.open({
       kind: "page",
-      page: workbenchPages.newSession,
+      page: sessionBrowser.pages.draft,
       resource: {
         type: "session-draft",
         extensionId: "pstdio",
@@ -153,5 +154,19 @@ export const openTerminal = defineCommand({
       kind: "command",
       target: { command: workbenchCommands.openWorkspaceTerminal, params: { workspaceId: workspace.id } },
     });
+  },
+});
+
+export const resolveOpening = defineCommand({
+  id: "resolve-opening",
+  title: l10n("command.resolveOpening", "Resolve workspace opening"),
+  cli: true,
+  async run(ctx) {
+    const resource = ctx.resource;
+    if (!resource || resource.type !== "workspace" || resource.extensionId !== "pstdio")
+      throw new Error("Choose a workspace.");
+    const workspace = await ctx.workspaces.get(resource.id);
+    if (!workspace) throw new Error("Workspace not found.");
+    return workspaceTarget(workspace, ctx.project.id, resource.metadata);
   },
 });

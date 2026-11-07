@@ -5,6 +5,7 @@ import { action, createPage, devicePage, files, history, overview, workspace, wo
 import { fileSearch } from "./src/search";
 import { sidebar, sidebarView } from "./src/sidebar";
 import { actionView, changesView, historyView, summaryView, workspacesView } from "./src/views";
+import { workspaceSessionTrees } from "./src/workspace-sessions";
 
 const target = { kind: "page" as const, page: workspaces.ref };
 export default defineExtension({
@@ -15,7 +16,7 @@ export default defineExtension({
   views: [fileView, filesTree, workspacesView, historyView, summaryView, changesView, actionView, sidebarView],
   pages: [workspaces, workspace, files, history, overview, action, createPage, devicePage],
   viewMenus: [defineViewMenu({ id: "file-tree", owner: fileView.ref, view: filesTree.ref, side: "left" })],
-  navigationTrees: [sidebar],
+  navigationTrees: [sidebar, ...workspaceSessionTrees],
   keybindings: [
     defineKeybinding({ id: "go-workspaces", layer: "go", key: "W", sticky: true, action: target }),
     defineKeybinding({

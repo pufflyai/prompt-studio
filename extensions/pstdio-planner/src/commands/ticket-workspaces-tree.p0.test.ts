@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { workspaceCommands, workspacePages } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
+import { createWorkspaceCommand } from "./ticket-workspaces-tree";
 
 const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
   renderer: {
@@ -64,7 +64,7 @@ describe("ticket files tree workspace commands", () => {
       actions: [
         expect.objectContaining({
           id: "create-workspace",
-          command: workspaceCommands.create,
+          command: createWorkspaceCommand,
           params: {
             shorthand_base: ticket.shorthand,
             anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],
@@ -78,7 +78,7 @@ describe("ticket files tree workspace commands", () => {
           icon: "GitBranch",
           target: {
             kind: "page",
-            page: workspacePages.workspace,
+            page: { kind: "page", extensionId: "example.reader", id: "inspect" },
             parent: {
               kind: "page",
               page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
@@ -194,7 +194,7 @@ describe("ticket files tree workspace commands", () => {
       actions: [
         expect.objectContaining({
           id: "create-workspace",
-          command: workspaceCommands.create,
+          command: createWorkspaceCommand,
           params: {
             shorthand_base: ticket.shorthand,
             anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],

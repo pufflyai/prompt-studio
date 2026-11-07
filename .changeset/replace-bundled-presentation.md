@@ -1,6 +1,12 @@
 ---
 "pstdio": minor
+"@pstdio/sdk": minor
 "@pstdio/workbench": minor
+"pstdio-workspaces": minor
+"pstdio-planner": minor
+"pstdio-session-browser": patch
+"extension-lab": patch
+"pstdio-skills": patch
 ---
 
-Allow independently identified Home, Workspaces, and Cloud tools to replace bundled presentation while preserving saved links and host-owned work.
+Configure an ordinary project default page and public resource openers; let tools own workspace presentation and remove the alpha presentation aliases.

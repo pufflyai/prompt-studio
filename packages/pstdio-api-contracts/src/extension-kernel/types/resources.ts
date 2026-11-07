@@ -88,6 +88,8 @@ export type ResourceAnchorQueryPage = Page<ResourceAnchorPage["items"][number]>;
 export interface ExtensionResourcesApi {
   /** Resolve up to 100 references through enabled owners. Missing resources are omitted. */
   resolveMany(resources: ResourceRef[]): Promise<ResourceResolution[]>;
+  /** Resolve bare-resource navigation through the project's configured public openers. */
+  resolveOpenings(resources: ResourceRef[]): Promise<ResourceResolution[]>;
   addAnchors(resource: ResourceRef, anchors: ResourceAnchor[]): Promise<void>;
   removeAnchors(resource: ResourceRef, refs: ResourceRef[]): Promise<void>;
   queryAnchors(input: ResourceAnchorQuery): Promise<ResourceAnchorQueryPage>;

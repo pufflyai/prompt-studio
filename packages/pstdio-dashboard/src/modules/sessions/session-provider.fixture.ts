@@ -22,9 +22,13 @@ const allMetadata = createWorkbenchExtensionMetadata({ runtime });
 const metadata = Object.fromEntries(
   Object.entries(allMetadata).map(([key, records]) => [
     key,
-    records?.filter((record: { extensionId?: string; id?: string }) =>
-      key === "extensions" ? record.id === sessionBrowserId : record.extensionId === sessionBrowserId,
-    ),
+    Array.isArray(records)
+      ? records.filter((record: { extensionId?: string; id?: string; view?: { extensionId?: string } }) => {
+          if (key === "navigationTrees" && record.extensionId === "pstdio.pstdio-workspaces")
+            return record.view?.extensionId === sessionBrowserId;
+          return key === "extensions" ? record.id === sessionBrowserId : record.extensionId === sessionBrowserId;
+        })
+      : records,
   ]),
 ) as typeof allMetadata;
 

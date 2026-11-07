@@ -14,23 +14,11 @@ import { resolvePageGroupDefault } from "./page-group-default";
 
 export const workbenchPageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:page:${ref.id}`;
 
-const pageForRef = (pages: readonly WorkbenchPageContribution[], ref: PageRef, resource?: ResourceRef) => {
-  const seen = new Set<string>();
-  let target = ref;
-  for (;;) {
-    const key = workbenchPageRefKey(target);
-    if (seen.has(key)) throw new Error(`Page redirect cycle reaches ${key}`);
-    seen.add(key);
-    const page = pages.find((page) => workbenchPageRefKey(page.ref) === key);
-    if (!page?.redirect) return page;
-    target = typeof page.redirect === "function" ? page.redirect(resource) : page.redirect;
-  }
-};
+const pageForRef = (pages: readonly WorkbenchPageContribution[], ref: PageRef) =>
+  pages.find((page) => workbenchPageRefKey(page.ref) === workbenchPageRefKey(ref));
 
-const pageForId = (pages: readonly WorkbenchPageContribution[], pageId: string, resource?: ResourceRef) => {
-  const page = pages.find((page) => page.id === pageId);
-  return page && pageForRef(pages, page.ref, resource);
-};
+const pageForId = (pages: readonly WorkbenchPageContribution[], pageId: string) =>
+  pages.find((page) => page.id === pageId);
 
 const canonicalSection = (section: FileRendererSectionTarget | undefined) => {
   if (!section) return undefined;
@@ -84,7 +72,7 @@ export const workbenchPageLocationRouteKey = (
   resources: WorkbenchPageResourceCodec,
   pages: readonly WorkbenchPageContribution[] = [],
 ) => {
-  const declaration = pageForRef(pages, location.page, location.resource)?.document;
+  const declaration = pageForRef(pages, location.page)?.document;
   const document = declaration ? location.resource?.metadata?.[declaration.metadataKey] : undefined;
   return JSON.stringify([
     workbenchPageRefKey(location.page),
@@ -244,7 +232,7 @@ const normalizePageTarget = (input: {
   seen: Set<string>;
   active?: PageLocation;
 }): { pageId: string; location: PageLocation; open?: NavigationTargetPage["open"] } => {
-  const page = pageForRef(input.pages, input.target.page, input.target.resource);
+  const page = pageForRef(input.pages, input.target.page);
   if (!page) throw new Error(`Unknown page: ${workbenchPageRefKey(input.target.page)}`);
   const candidate = createLocation({
     page,
@@ -291,7 +279,7 @@ export const normalizeWorkbenchPageLocation = (input: {
   resources: WorkbenchPageResourceCodec;
 }) => {
   const normalize = (location: PageLocation, seen: Set<string>): { pageId: string; location: PageLocation } => {
-    const page = pageForRef(input.pages, location.page, location.resource);
+    const page = pageForRef(input.pages, location.page);
     if (!page) throw new Error(`Unknown page: ${workbenchPageRefKey(location.page)}`);
     const candidate = createLocation({
       page,
@@ -331,7 +319,7 @@ export const normalizeDirectWorkbenchPageLocation = (input: {
   position?: FileSourcePosition;
   params?: PageParams;
 }) => {
-  const page = pageForId(input.pages, input.pageId, input.resource);
+  const page = pageForId(input.pages, input.pageId);
   if (!page) throw new Error(`Unknown page: ${input.pageId}`);
   return resolvePageGroupDefault(
     {

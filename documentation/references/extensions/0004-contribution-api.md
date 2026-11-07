@@ -37,50 +37,55 @@ UI contributions attach to targets that the host owns. [Workbench composition](0
 [Native chat](0028-native-chat.md) provides immediate composers and canonical
 conversations with scoped callbacks to the existing session services.
 
-## Replace bundled presentation
+## Configure project composition
 
-On `main`, after Prompt Studio 0.46.0, Home, Workspaces, and Cloud can be disabled
-or replaced through ordinary extension enablement. Their shared host services and
-saved project data remain available. With no presentation provider, the existing
-empty workbench and Extensions controls remain usable.
+Extension API 0.4 treats Home, Workspaces, and Cloud as ordinary optional tools.
+The project chooses a fully qualified, resource-free page as its default. Page
+names, paths, parents, panels, and navigation order belong to extensions.
 
-A compatible replacement uses its own package identity and existing public contributions:
+Read or replace the same public configuration from the CLI or SDK:
 
-- Home declares a resource-free root page in `workbenchModes.project` with `path: "home"`.
-  Startup and `workbenchPages.start` open that page. Its local page ID is unrestricted.
-- Workspaces declares a resource-free project root with `path: "workspaces"`.
-  Its resource pages have that root as `parent`, the same extension identity, and the
-  `workbenchResourceKinds.workspace` constraint. Paths `workspace`, `files`, `history`,
-  and `overview` identify the Git, folder/files-only, other-device, and remote/no-files
-  destinations. Preserve the `workspaceFilePath` document metadata for file links.
-  Optional `create`, `action`, and `device` child routes retain their corresponding
-  saved entry points. The provider owns their contents and controls.
-- Workspaces' legacy host command aliases delegate to the selected provider's `open`,
-  `show-create`, `show-rename`, and `show-delete` commands. Declare those local command
-  IDs to support these older entry points; new actions can reference the provider's
-  commands directly. Mutation aliases retain the invoking resource and viewer guard.
-- Cloud contributes status views through `workbenchSlots.statusBarTrailing` and settings
-  through `workbenchSlots.globalSettings`. Use `ctx.account` or the typed webview
-  account client with `account.read`/`account.manage`. These services belong to the host.
+```sh
+pst projects composition
+pst projects composition --value '{"defaultPage":{"kind":"page","extensionId":"example.space","id":"desk"},"resourceOpeners":[{"resourceKind":{"kind":"resource-kind","extensionId":"pstdio","id":"workspace"},"opener":{"kind":"command","extensionId":"example.reader","id":"inspect"}}]}'
+```
 
-Disable the bundled presentation before using a replacement as the default. While
-several compatible page providers are enabled, the bundled page wins; otherwise the
-host selects the first qualified page reference in lexical order. A Workspaces root
-selects its whole page family, so pages from different providers are never mixed.
-Missing required destinations report unavailable operations rather than selecting an
-unrelated tool. Cloud slot contributions use normal slot behavior and can coexist.
+The SDK client exposes `projects.composition(projectId)` and
+`projects.setComposition(projectId, value)`. The HTTP endpoints are
+`GET` and `PUT /v1/projects/{projectId}/composition`. Configuration is synced with
+the existing project information. An explicit empty configuration stays empty.
+Catalog defaults are editable distribution data; enabling an extension preserves
+an existing choice.
 
-`homePages` and `workspacePages` remain explicit references to the bundled tools.
-They are not requirements on a replacement's identity. Supported saved host routes
-and absent bundled page routes redirect to compatible selected pages, including
-resource, parent, document, position, and parameter context. These compatibility
-aliases remain until saved-link migration and the public deprecation window permit
-removal. Navigating an old link writes the selected provider's canonical URL.
-Re-enabling a bundled provider restores its normal default priority.
+The default opens when there is no explicit destination or valid saved location.
+A missing, disabled, or resource-bound default leaves the existing empty workbench.
+Extension management and other available navigation remain usable. The public
+`workbenchCommands.openDefaultPage` command opens the configured default explicitly.
 
-This composition uses page, command, settings, status, and account contracts already
-available in the published SDK; it adds no SDK dependency requirement to those tools.
-The host providing the selection behavior must be delivered before relying on it.
+Each `resourceOpeners` entry binds a fully qualified resource kind to an ordinary
+page or command. An opener command reads `ctx.resource` and returns a normal page,
+panel, or compound navigation target. It can belong to another extension than the
+data owner. A missing opener or unavailable target makes the operation unavailable.
+Explicit navigation targets keep their declared destination.
+
+Use `ctx.resources.resolveOpenings(refs)` or the SDK client's
+`projects.resolveResourceOpenings(projectId, refs)` for bare resource links.
+`resolveMany` remains the data-owner metadata API. An opener can present an ordinary
+kind without a batch metadata resolver. Its command owns any further data lookup.
+
+A binding can also name a `relatedOpenings` command returning
+`RelatedResourceOpenings`. This selects automatic previews through the same saved
+workbench preferences. Workspaces owns its workspace page choices and related
+session selection. It declares scoped conversation navigation through the public
+Sessions renderer. Cloud uses normal status/settings slots and the public account
+API. Core keeps execution, records, account services, sync, and extension management
+independent of those presentation contributions.
+
+This alpha API change removes the old host Start/Home/Workspaces aliases, presentation
+selectors, redirects, and replaced SDK references. Update callers to configured
+openers or explicit ordinary targets. Existing presentation URLs and saved page
+references may become unavailable. Workspace and session data stay in their existing
+stores.
 
 ## Kanban create results
 
@@ -676,7 +681,7 @@ export default defineExtension({
 
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
 
-Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or the configured default when no root-level page has been used. The breadcrumb and browser history also remain available.
 
 The same action is available with **Alt+Shift+Up**, both outside and inside shortcut mode. Its shortcut hint appears on the return row in keyboard mode, and it is listed under the current mode's name in shortcut discovery and the command palette.
 

@@ -159,6 +159,7 @@ describe("workbench core pages", () => {
   });
   test("removes an active page while its persistence scope changes", () => {
     const workbench = createWorkbench({
+      defaultPage: { extensionId: "pstdio", kind: "page", id: "start" },
       resolvePagePersistenceScope: ({ pageId, projectId }) => ({
         scope: projectId && pageId ? `${projectId}/${pageId}` : projectId,
       }),

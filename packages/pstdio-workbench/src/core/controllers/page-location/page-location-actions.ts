@@ -2,6 +2,7 @@ import type { NavigationTargetPage, PageLocation, PlacementIdentity, ResourceRef
 import { isWorkbenchProjectUrl, normalizePageParams } from "pstdio-api-contracts";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { createWorkbenchEvent } from "../../shared/workbench-event";
+import { eligibleDefaultPage } from "./default-page";
 import type {
   CreateWorkbenchPageLocationControllerInput,
   ResolvedPageLocation,
@@ -11,6 +12,7 @@ import type {
   WorkbenchPageLocationHistoryState,
   WorkbenchPageNavigationResult,
 } from "./page-location-types";
+import { isExplicitPageUrl } from "./page-url-resolver";
 
 interface PageLocationControllerActionsInput<Value> {
   input: CreateWorkbenchPageLocationControllerInput<Value>;
@@ -84,12 +86,13 @@ export const createPageLocationControllerActions = <Value>(
     hasCurrentPageUrl: (projectId) => hasResolvableCurrentPageUrl(actions, projectId),
     getBootLocation(projectId) {
       try {
-        if (isWorkbenchProjectUrl(input.browser.current().url, projectId)) {
+        if (isExplicitPageUrl(input.browser.current().url, projectId)) {
           return actions.resolveUrl(projectId, input.browser.current())?.location;
         }
         const saved = input.persistence.load(projectId);
         if (saved) return actions.normalizeStored(saved.location).location;
-        return actions.normalizeTarget({ kind: "page", page: input.startPage }).location;
+        const page = eligibleDefaultPage(input);
+        return page ? actions.normalizeTarget({ kind: "page", page: page.ref }).location : undefined;
       } catch {
         return undefined;
       }
@@ -167,6 +170,27 @@ export const createPageLocationControllerActions = <Value>(
             actions.normalizeStored(current.location.parent),
             "replace",
             "navigateToParentPageLocation",
+          ),
+        );
+      } catch (error) {
+        return actions.fail("navigation", error);
+      }
+    },
+    navigateToDefaultPage() {
+      const { projectId } = input.registry.store.getState();
+      if (!projectId) return actions.fail("navigation", new Error("Cannot navigate before a project is active"));
+      const page = eligibleDefaultPage(input);
+      if (!page) {
+        if (actions.clearMissingPage()) input.activateLocation?.();
+        return actions.fail("navigation", new Error("The configured default page is unavailable"));
+      }
+      try {
+        return navigated(
+          actions.commit(
+            projectId,
+            actions.normalizeTarget({ kind: "page", page: page.ref }),
+            "push",
+            "navigateDefaultPage",
           ),
         );
       } catch (error) {

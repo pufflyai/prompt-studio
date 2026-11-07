@@ -217,7 +217,8 @@ export interface createWorkbenchInput {
   /** Default floating policy. The active mode may override it. */
   floatingPanels?: "visible" | "hidden";
   initialSidePanelMode?: WorkbenchSidePanelMode;
-  startPage?: PageRef;
+  /** Project composition chooses a resource-free page. Missing choices leave an empty workbench. */
+  defaultPage?: PageRef | (() => PageRef | undefined);
 }
 
 type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;

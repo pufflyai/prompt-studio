@@ -32,7 +32,6 @@ export {
 export { resolveDataTableComparableValue, resolveDataTableFieldKind } from "./data-table-values";
 export { applyEditingChanges, diffEditingState, rebaseEditingChanges } from "./editing-state";
 export * from "./event-reference";
-export { homePages } from "./home-refs";
 export type {
   CommitPayload,
   ConflictPayload,
@@ -89,4 +88,3 @@ export {
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
 } from "./types/webview-capabilities";
 export { artifactMountId, EXTENSION_EVENTS_SCOPE, RESOURCE_ACTIONS_EVENTS_SCOPE } from "./webview-protocol";
-export { workspaceCommands, workspacePages, workspaceViews } from "./workspace-refs";

@@ -390,18 +390,15 @@ slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
 
-## Bundled presentation compatibility
+## Project composition in API 0.4
 
-On `main`, after 0.46.0, the default catalog keeps Home, Workspaces, and Cloud optional.
-Compatible independently identified tools use existing public contributions; no new
-extension contribution field or capability is required. See [presentation replacement](0004-contribution-api.md#replace-bundled-presentation)
-for the host's route selection contract and deployment requirement.
+The coordinated alpha break removes the host Start/Home/Workspaces aliases and
+bundled presentation references from the SDK. Projects choose an ordinary default
+page and public resource openers. Paths, parents, navigation order, and workspace
+presentation decisions belong to extensions. Existing presentation links may become
+unavailable; shared workspace and session records keep their identity and storage.
 
-`homePages` and `workspacePages` keep their published bundled identities and exports.
-The generic Start entry resolves through host composition. Existing deprecated host
-Workspaces page and command entry points remain supported through redirects/delegation.
-The host also resolves missing bundled page routes through a compatible replacement.
-Remove these aliases only after supported stored links have migrated and published
-consumers have completed the normal deprecation window in a coordinated breaking release.
-The renderer's optional `WorkbenchPageContribution.redirect` is host infrastructure;
-installed extensions continue declaring ordinary pages and their own references.
+`ctx.resources.resolveOpenings` and the SDK project composition client require the
+matching SDK and host. Validate consumer PRs against the candidate SDK, then update
+their published dependency ranges before release. See
+[project composition](0004-contribution-api.md#configure-project-composition).

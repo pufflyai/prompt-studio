@@ -33,24 +33,17 @@ export const registerWorkbenchPage = <Value>(input: {
   const { page, store } = input;
   validateWorkbenchPage(page);
   const current = store.getState();
-  const replacesAlias = current.pages[page.id]?.redirect && !page.redirect;
-  if (current.pages[page.id] && !replacesAlias) throw new Error(`Page already registered: ${page.id}`);
+  if (current.pages[page.id]) throw new Error(`Page already registered: ${page.id}`);
   if (
     Object.values(current.pages).some(
-      (candidate) =>
-        candidate.id !== (replacesAlias ? page.id : undefined) &&
-        candidate.ref.extensionId === page.ref.extensionId &&
-        candidate.ref.id === page.ref.id,
+      (candidate) => candidate.ref.extensionId === page.ref.extensionId && candidate.ref.id === page.ref.id,
     )
   ) {
     throw new Error(`Page ref already registered: ${page.ref.extensionId}.${page.ref.id}`);
   }
   if (
     Object.values(current.pages).some(
-      (candidate) =>
-        candidate.id !== (replacesAlias ? page.id : undefined) &&
-        candidate.ref.extensionId === page.ref.extensionId &&
-        candidate.path === page.path,
+      (candidate) => candidate.ref.extensionId === page.ref.extensionId && candidate.path === page.path,
     )
   ) {
     throw new Error(`Page route already registered: ${page.ref.extensionId}.${page.path}`);

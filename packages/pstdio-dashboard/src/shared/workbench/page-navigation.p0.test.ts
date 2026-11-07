@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
-import { workbenchPages, workspacePages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { workspacePages } from "@/workspaces-provider.test-support";
 import { navigateDashboardPage } from "./page-navigation";
-import { workspacePresentationPath } from "./presentation-pages";
 
 for (const { type, page, root } of [
   { type: "session", page: workbenchPages.session, root: workbenchPages.sessions },
@@ -45,17 +45,3 @@ for (const { type, page, root } of [
     w.dispose();
   });
 }
-
-test("workspace links choose only the pages supported by the provider", () => {
-  const resource = { type: "workspace", id: "one" };
-  expect(workspacePresentationPath({ ...resource, metadata: { workspaceSupportsFiles: false } })).toEqual("overview");
-  expect(workspacePresentationPath({ ...resource, metadata: { workspaceExecutionKind: "remote" } })).toEqual(
-    "overview",
-  );
-  expect(workspacePresentationPath({ ...resource, metadata: { workspaceSupportsDiff: false } })).toEqual("files");
-  expect(workspacePresentationPath({ ...resource, metadata: { workspaceIsDefault: true } })).toEqual("files");
-  expect(
-    workspacePresentationPath({ ...resource, metadata: { workspaceReadOnly: true, workspaceSupportsFiles: false } }),
-  ).toEqual("history");
-  expect(workspacePresentationPath(resource)).toEqual("workspace");
-});

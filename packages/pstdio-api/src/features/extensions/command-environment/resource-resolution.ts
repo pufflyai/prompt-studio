@@ -6,7 +6,6 @@ import {
   type ResourceResolution,
   resourceKey,
   workbenchPages,
-  workspacePages,
 } from "pstdio-api-contracts/extension-kernel";
 import { type ExtensionRuntime, isRuntimeNavigationTargetAvailable } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -36,11 +35,7 @@ const resolveHostResource = async (deps: ExtensionsRouteDeps, ref: ResourceRef) 
         workspaceError: record.setup_error,
       },
     };
-    let page = workspacePages.workspace;
-    if (record.execution_kind === "remote" || record.provider_capabilities_json?.files === "none")
-      page = workspacePages.overview;
-    else if (record.is_default || !record.provider_capabilities_json?.diff) page = workspacePages.files;
-    return { resource, target: { kind: "page" as const, page, resource } };
+    return { resource };
   }
   if (ref.type === "session") {
     const session = await deps.sessionService.get(ref.id);
@@ -78,11 +73,12 @@ const ownerResolutions = (batch: ResourceRef[], value: unknown, runtime: Extensi
   return [...results.values()];
 };
 
-export const resolveResources = async (
+export const resolveResourceRecords = async (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; extensionId: string },
+  input: { projectId: string; extensionId?: string; signal?: AbortSignal },
   resources: ResourceRef[],
 ) => {
+  input.signal?.throwIfAborted();
   if (!Array.isArray(resources) || resources.length > 100) throw new Error("Resolve at most 100 resources.");
   const refs = await Promise.all(
     resources.map((ref) => canonicalResource(deps, input, extensionResourceRefSchema.parse(ref))),
@@ -114,14 +110,23 @@ export const resolveResources = async (
         const response = await executeProjectExtensionCommand(deps, {
           projectId: input.projectId,
           commandId,
+          signal: input.signal,
           body: { params: { resources: batch }, source: "api" },
         });
         value = response.outcome.ok ? response.outcome.value : undefined;
       } catch {
+        input.signal?.throwIfAborted();
         return [];
       }
       return ownerResolutions(batch, value, runtime);
     }),
   );
-  return [...resolved, ...batches.flat()];
+  input.signal?.throwIfAborted();
+  return { requested: [...requested.values()], resolved: [...resolved, ...batches.flat()] };
 };
+
+export const resolveResources = async (
+  deps: ExtensionsRouteDeps,
+  input: { projectId: string; extensionId?: string; signal?: AbortSignal },
+  resources: ResourceRef[],
+) => (await resolveResourceRecords(deps, input, resources)).resolved;

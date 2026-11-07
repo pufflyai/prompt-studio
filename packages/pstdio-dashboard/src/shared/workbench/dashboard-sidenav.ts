@@ -1,13 +1,7 @@
-import {
-  createLevelNavigation,
-  type TreeNode,
-  type TreeViewSection,
-  type WorkbenchModuleContext,
-} from "@pstdio/workbench";
+import { createLevelNavigation, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { subscribeSessionListData } from "@/modules/sessions/data/session-data-subscription";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { resolvePresentationPage } from "./presentation-pages";
 
 // Mode and page contributions share one host navigation view.
 export const updateDashboardSidenav = (
@@ -32,19 +26,6 @@ export const setDashboardSidenavSelection = (ctx: WorkbenchModuleContext, nodeId
   ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
 };
 export const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
-const isHome = (ctx: WorkbenchModuleContext, node: TreeNode) =>
-  node.target?.kind === "page" &&
-  node.target.page.id === resolvePresentationPage(ctx, "home")?.ref.id &&
-  node.target.page.extensionId === resolvePresentationPage(ctx, "home")?.ref.extensionId;
-// This is Prompt Studio's default order; saved tree customization still takes precedence.
-const homeFirst = (ctx: WorkbenchModuleContext, sections: TreeViewSection[]) =>
-  sections.map((section) => ({
-    ...section,
-    nodes: [
-      ...section.nodes.filter((node) => isHome(ctx, node)),
-      ...section.nodes.filter((node) => !isHome(ctx, node)),
-    ],
-  }));
 const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
   const navigation = createLevelNavigation(ctx);
   ctx.views.registerView(
@@ -55,16 +36,10 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
         kind: "tree",
         getReadKey: () => navigation.getReadKey(),
         getStructure: () => navigation.getStructure("content"),
-        getHeaderStructure: () => homeFirst(ctx, navigation.getStructure("header")),
+        getHeaderStructure: () => navigation.getStructure("header"),
         getFooterStructure: () => navigation.getStructure("footer"),
         canMove: ({ source, destination }) => source.moveScope === destination.moveScope,
-        getHeader: async (context) =>
-          homeFirst(
-            ctx,
-            await navigation.getSections("header", context.signal, (sections) =>
-              context.onProgress?.(homeFirst(ctx, sections)),
-            ),
-          ),
+        getHeader: (context) => navigation.getSections("header", context.signal, context.onProgress),
         getBody: (context) => navigation.getSections("content", context.signal, context.onProgress),
         getFooter: (context) => navigation.getSections("footer", context.signal, context.onProgress),
         getChildren: (node, context) => ctx.navigationTrees.getChildren(node, context),

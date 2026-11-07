@@ -1,5 +1,6 @@
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
-import { dashboardHomePage } from "@/shared/app/resources";
+export const dashboardHomePage = { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" } as const;
+
 import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,

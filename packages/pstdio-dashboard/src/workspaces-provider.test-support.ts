@@ -1,5 +1,29 @@
-import { contributionRefId, workspacePages, workspaceViews } from "@pstdio/sdk/extensions";
+import type { PageRef, ResourceRef, ViewRef } from "@pstdio/sdk/extensions";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "@pstdio/workbench";
+
+const extensionId = "pstdio.pstdio-workspaces";
+const page = (id: string): PageRef => ({ kind: "page", extensionId, id });
+const view = (id: string): ViewRef => ({ kind: "view", extensionId, id });
+export const workspacePages = {
+  create: page("create"),
+  list: page("workspaces"),
+  files: page("files"),
+  workspace: page("workspace"),
+  overview: page("overview"),
+  history: page("history"),
+  form: page("action"),
+  device: page("device"),
+};
+export const workspaceViews = {
+  list: view("workspaces"),
+  file: view("file"),
+  tree: view("file-tree"),
+  changes: view("changes"),
+  summary: view("summary"),
+  history: view("history"),
+};
+
 /** Core composition tests supply provider declarations; installed UI is exercised by extension E2E. */
 export const registerWorkspaceProviderViews = (workbench: WorkbenchCore) => {
   const views = Object.values(workspaceViews).map((view) =>
@@ -44,4 +68,14 @@ export const registerWorkspaceProviderViews = (workbench: WorkbenchCore) => {
     }),
   );
   return [...views, ...pages];
+};
+
+export const openWorkspaceFixture = (workbench: WorkbenchCore, resource?: ResourceRef) => {
+  const projectId = workbench.pages.store.getState().projectId ?? "project-1";
+  workbench.pageLocations.setProject(projectId);
+  return workbench.pageLocations.navigate({
+    kind: "page",
+    page: resource ? workspacePages.workspace : workspacePages.list,
+    ...(resource ? { resource } : {}),
+  });
 };

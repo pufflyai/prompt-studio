@@ -9,7 +9,6 @@ import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { openProjectPageUrl } from "@/shared/workbench/open-project-page-url";
-import { workspacePageForResource } from "@/shared/workbench/page-navigation";
 import { workspaceFileQueryOptions, workspaceFolderQueryOptions } from "@/shared/workspaces/workspace-file-query";
 import { workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
 import { workspaceLinkPath } from "@/shared/workspaces/workspace-link-path";
@@ -35,7 +34,7 @@ const sessionWorkspace = (input: SessionLinkHandlerInput) => {
   return workspace;
 };
 
-const resolveWorkspaceFile = (
+const resolveWorkspaceFile = async (
   input: SessionLinkHandlerInput,
   parsed: Extract<ReturnType<typeof parseChatLink>, { kind: "file" }>,
   pages: ReturnType<WorkbenchCore["pages"]["listPages"]>,
@@ -44,12 +43,9 @@ const resolveWorkspaceFile = (
   const workspace = sessionWorkspace(input);
   const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
   const resource = workspaceFileResource(createDashboardWorkspaceOptionResource(workspace, input.projectId), path);
-  const target = {
-    kind: "page" as const,
-    page: workspacePageForResource(resource, input.workbench),
-    resource,
-    position: parsed.position,
-  };
+  const [opening] = await getApiClient().projects.resolveResourceOpenings(input.projectId!, [resource]);
+  if (opening?.target?.kind !== "page") throw new Error("The configured workspace file opener is unavailable.");
+  const target = { ...opening.target, position: parsed.position };
   return {
     kind: "page" as const,
     target,
@@ -128,7 +124,13 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
         href: serializeWorkbenchPageUrl({ projectId: input.projectId, location: target, pages, resources }),
       };
     }
-    return resolveWorkspaceFile(input, parsed, pages, resources);
+    return undefined;
+  };
+  const resolveFile = (candidate: ChatLinkCandidate) => {
+    const parsed = parseChatLink(candidate, input.origin);
+    return parsed?.kind === "file" && input.projectId
+      ? resolveWorkspaceFile(input, parsed, input.workbench.pages.listPages(), defaultPageResourceCodec)
+      : undefined;
   };
   return {
     async resolveResource(candidate) {
@@ -151,7 +153,7 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
         const parsed = parseChatLink(candidate, input.origin);
         if (parsed?.kind === "file" && isGuessedChatLink(candidate) && !(await hasWorkspaceFile(parsed.path)))
           return null;
-        const href = resolve(candidate)?.href;
+        const href = (resolve(candidate) ?? (await resolveFile(candidate)))?.href;
         return href ? { href } : null;
       } catch {
         return null;
@@ -203,8 +205,8 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
           await input.workbench.navigation.openTarget(toWorkbenchNavigationTarget(owned.target));
           return;
         }
-        const destination = resolve(candidate);
-        if (!destination) return;
+        const destination = resolve(candidate) ?? (await resolveFile(candidate));
+        if (getDashboardSelectedProjectId(input.workbench) !== input.projectId || !destination) return;
         if (destination.kind === "project") {
           await openProjectPageUrl({
             workbench: input.workbench,

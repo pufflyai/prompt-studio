@@ -12,7 +12,6 @@ import {
   workbenchModes,
   workbenchPages,
   workbenchResourceKinds,
-  workspacePages,
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
@@ -158,13 +157,6 @@ export default defineExtension({
   ],
   navigationTrees: [
     defineNavigationTree({ id: "sessions", owner: sessions.ref, view: list.ref, resourceScope: "project" }),
-    defineNavigationTree({
-      id: "workspace-sessions",
-      owner: workspacePages.workspace,
-      optionalOwner: true,
-      view: list.ref,
-    }),
-    defineNavigationTree({ id: "legacy-workspace-sessions", owner: workbenchPages.workspace, view: list.ref }),
     defineNavigationTree({
       id: "legacy-sessions",
       owner: workbenchPages.sessions,

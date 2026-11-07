@@ -1,13 +1,15 @@
 import type { ExtensionResourcesApi } from "pstdio-api-contracts/extension-kernel";
+import { resolveResourceOpenings } from "../../projects/resource-openers";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createResourceLinksApi } from "./resource-links";
 import { resolveResources } from "./resource-resolution";
 
 export const createResourcesApi = (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; extensionId: string },
+  input: { projectId: string; extensionId: string; signal?: AbortSignal },
 ): ExtensionResourcesApi => ({
   resolveMany: (resources) => resolveResources(deps, input, resources),
+  resolveOpenings: (resources) => resolveResourceOpenings(deps, input, resources),
   ...createResourceLinksApi(deps, input),
   removed: async (resource) => {
     if (resource.projectId && resource.projectId !== input.projectId)

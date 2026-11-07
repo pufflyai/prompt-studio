@@ -1,0 +1,62 @@
+{
+  "defaultPage": {
+    "kind": "page",
+    "extensionId": "pstdio.pstdio-home",
+    "id": "home"
+  },
+  "resourceOpeners": [
+    {
+      "resourceKind": {
+        "kind": "resource-kind",
+        "extensionId": "pstdio",
+        "id": "workspace"
+      },
+      "opener": {
+        "kind": "command",
+        "extensionId": "pstdio.pstdio-workspaces",
+        "id": "resolve-opening"
+      },
+      "relatedOpenings": {
+        "kind": "command",
+        "extensionId": "pstdio.pstdio-workspaces",
+        "id": "related-openings"
+      }
+    },
+    {
+      "resourceKind": {
+        "kind": "resource-kind",
+        "extensionId": "pstdio",
+        "id": "session"
+      },
+      "opener": {
+        "kind": "page",
+        "extensionId": "pstdio.pstdio-session-browser",
+        "id": "conversation"
+      }
+    },
+    {
+      "resourceKind": {
+        "kind": "resource-kind",
+        "extensionId": "pstdio.pstdio-planner",
+        "id": "ticket"
+      },
+      "opener": {
+        "kind": "command",
+        "extensionId": "pstdio.pstdio-planner",
+        "id": "resolve-ticket-opening"
+      }
+    },
+    {
+      "resourceKind": {
+        "kind": "resource-kind",
+        "extensionId": "pstdio.pstdio-artifacts",
+        "id": "artifact"
+      },
+      "opener": {
+        "kind": "page",
+        "extensionId": "pstdio.pstdio-artifacts",
+        "id": "artifact"
+      }
+    }
+  ]
+}

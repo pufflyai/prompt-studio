@@ -3,6 +3,7 @@ import { isWorkbenchProjectUrl } from "pstdio-api-contracts";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { createWorkbenchEvent } from "../../shared/workbench-event";
+import { configuredDefaultPage, eligibleDefaultPage } from "./default-page";
 import { createPageHistoryReplay } from "./page-history-replay";
 import { createPageLocationControllerActions } from "./page-location-actions";
 import {
@@ -35,7 +36,7 @@ import { createPageNavigationMemory } from "./page-navigation-memory";
 import { connectPageOwnerRemoval } from "./page-owner-removal";
 import { createPagePlacementCloser } from "./page-placement-closer";
 import { createPageResourceRemover } from "./page-resource-remover";
-import { createPageUrlResolver, isPageHistoryState } from "./page-url-resolver";
+import { createPageUrlResolver, isPageHistoryState, isExplicitPageUrl } from "./page-url-resolver";
 
 export type {
   CreateWorkbenchPageLocationControllerInput,
@@ -69,10 +70,9 @@ const clearMissingPage = <Value>(
     )
       return false;
     const location = isPageHistoryState(current.state) ? current.state.location : undefined;
+    const defaultPage = configuredDefaultPage(input);
     const removedDefault =
-      location?.page &&
-      location.page.extensionId === input.startPage.extensionId &&
-      location.page.id === input.startPage.id;
+      location?.page && location.page.extensionId === defaultPage?.extensionId && location.page.id === defaultPage?.id;
     if (
       !removedDefault &&
       new URL(current.url, "http://workbench.local").pathname.replace(/\/$/, "") !==
@@ -80,12 +80,7 @@ const clearMissingPage = <Value>(
     )
       return false;
   }
-  if (
-    input.registry
-      .listPages()
-      .some((page) => page.ref.extensionId === input.startPage.extensionId && page.ref.id === input.startPage.id)
-  )
-    return false;
+  if (eligibleDefaultPage(input)) return false;
   return batchWorkbenchChanges(() => {
     const current = input.registry.store.getState();
     const state = internals.prepare.compose(current, {
@@ -180,12 +175,15 @@ export const createWorkbenchPageLocationController = <Value>(
       (location) => input.restoreLocation?.(location, projectId, removalVersion) ?? location,
     );
 
-  const start = (): ResolvedPageLocation =>
-    normalizeWorkbenchPageTarget({
-      target: { kind: "page", page: input.startPage },
+  const start = (): ResolvedPageLocation => {
+    const page = eligibleDefaultPage(input);
+    if (!page) throw new Error("The configured default page is unavailable");
+    return normalizeWorkbenchPageTarget({
+      target: { kind: "page", page: page.ref },
       pages: pages(),
       resources,
     });
+  };
 
   const missingPage = (projectId: string | undefined, operation: "push" | "replace" | "none", modeId?: string) =>
     clearMissingPage(input, history, historyEntry, projectId, operation, modeId);
@@ -208,7 +206,7 @@ export const createWorkbenchPageLocationController = <Value>(
       if (isPageHistoryState(browserEntry.state) && browserEntry.state.projectId === projectId)
         history.adopt(browserEntry.state.index);
       else history.reset();
-      const hasProjectUrl = useCurrentUrl && isWorkbenchProjectUrl(browserEntry.url, projectId);
+      const hasProjectUrl = useCurrentUrl && isExplicitPageUrl(browserEntry.url, projectId);
       const fromUrl = hasProjectUrl ? resolveUrl(projectId, browserEntry) : undefined;
       if (hasProjectUrl && !fromUrl) throw new Error(`Cannot resolve page URL: ${browserEntry.url}`);
       // A URL wins over the saved location, but the saved root level still names the way out of a level.

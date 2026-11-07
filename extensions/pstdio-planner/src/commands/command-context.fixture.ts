@@ -14,6 +14,11 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
       extensionId: "pstdio-planner",
       resources: {
         ...ticketContext(input.storage).resources,
+        resolveOpenings: async (refs) =>
+          refs.map((resource) => ({
+            resource,
+            target: { kind: "page", page: { kind: "page", extensionId: "example.reader", id: "inspect" }, resource },
+          })),
         allocate: makeContext({
           ...input,
           resourcePrefixes: { ticket: input.overrides?.project?.shorthand ?? "T", report: "RP" },

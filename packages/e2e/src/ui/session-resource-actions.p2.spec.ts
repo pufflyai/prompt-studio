@@ -56,7 +56,9 @@ test("drafts omit management actions and workspace session rows explain guarded 
   await page.keyboard.press("Escape");
   const [workspace] = await (await request.get(`/v1/workspaces?project_id=${project.id}`)).json();
   const resource = `pstdio://extension-resource/workspace/${workspace.id}`;
-  await page.goto(`/projects/${project.id}/workspace?resource=${encodeURIComponent(resource)}`);
+  await page.goto(
+    `/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspace?resource=${encodeURIComponent(resource)}`,
+  );
   await page
     .locator('[data-workbench-region="sidenav"]')
     .getByRole("option", { name: "Sessions", exact: true })

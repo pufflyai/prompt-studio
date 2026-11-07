@@ -3,6 +3,13 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame, homePage } from "../helpers/home-loading";
 import { installPresentationTool } from "../helpers/presentation-tool";
 
+const openDefaultPage = async (page: Page) => {
+  await page.keyboard.press("Alt+Shift+K");
+  const palette = page.getByRole("dialog", { name: "Command palette" });
+  await palette.getByRole("textbox").fill(">Open default page");
+  await palette.getByRole("option", { name: /Open default page/ }).click();
+};
+
 const emptyMain = (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   return main
@@ -124,7 +131,7 @@ test("uninstalled Home leaves the project root on the existing empty panel", asy
   await expect(emptyMain(page)).toBeVisible();
   await expect(page.getByRole("option", { name: "Notes", exact: true })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}$`));
-  await page.goto(`/projects/${project.id}/workspaces`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces$`));
   await expect(
     page.locator('[data-workbench-region="main"] [data-workbench-view="pstdio.pstdio-workspaces.view.workspaces"]'),
@@ -206,6 +213,22 @@ const presentationProject = async (page: Page, request: APIRequestContext) => {
     project,
     before,
     toggle,
+    chooseDefault: async (alternative: boolean) => {
+      const response = await request.put(`/v1/projects/${project.id}/composition`, {
+        data: {
+          defaultPage: alternative
+            ? { kind: "page", extensionId: "test.presentation-tool", id: "welcome" }
+            : { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" },
+          resourceOpeners: [
+            {
+              resourceKind: { kind: "resource-kind", extensionId: "pstdio", id: "workspace" },
+              opener: { kind: "command", extensionId: "test.presentation-tool", id: "inspect-record" },
+            },
+          ],
+        },
+      });
+      expect(response.ok(), await response.text()).toBe(true);
+    },
     assertRetained: async () => {
       expect(await (await request.get(workspacesUrl)).json()).toEqual(before);
       expect((await (await request.get(`/v1/sessions/${session.id}`)).json()).status).toBe("in_progress");
@@ -221,14 +244,15 @@ const presentationProject = async (page: Page, request: APIRequestContext) => {
 };
 const bundledPresentation = ["Home", "Workspaces", "Prompt Studio Cloud"];
 
-// Critical risk: independently installed tools must restore startup and supported saved links.
-test("independently installed presentation tools replace defaults and restore saved links", async ({
+// Critical risk: explicit project choices must work with independently installed pages and arbitrary paths.
+test("configured ordinary tools open the default and workspace resources without reserved page roles", async ({
   page,
   request,
 }) => {
   const fixture = await presentationProject(page, request);
   const { project } = fixture;
   try {
+    await fixture.chooseDefault(true);
     await fixture.toggle(bundledPresentation);
     const alternative = page
       .getByRole("region", { name: "Main", exact: true })
@@ -237,16 +261,20 @@ test("independently installed presentation tools replace defaults and restore sa
     await expect(alternative.getByRole("heading", { name: "Alternative welcome" })).toBeVisible();
     await page.reload();
     await expect(alternative.getByRole("heading", { name: "Alternative welcome" })).toBeVisible();
-    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-home/home`);
-    await expect(alternative.getByRole("heading", { name: "Alternative welcome" })).toBeVisible();
-    await page.goto(`/projects/${project.id}/workspaces`);
-    await expect(alternative.getByRole("heading", { name: "Alternative browse" })).toBeVisible();
-    await expect(page).toHaveURL(/\/extensions\/test.presentation-tool\/workspaces$/);
+    await page.goto(`/projects/${project.id}/extensions/test.presentation-tool/collection`);
+    await expect(alternative.getByRole("heading", { name: "Alternative catalog" })).toBeVisible();
     const workspace = fixture.before.find((item) => item.isDefault)!;
-    expect(workspace).toBeTruthy();
+    const response = await request.post(`/v1/projects/${project.id}/resource-openings`, {
+      data: {
+        resources: [{ type: "workspace", extensionId: "pstdio", projectId: project.id, id: workspace.id }],
+      },
+    });
+    expect(response.ok(), await response.text()).toBe(true);
+    const [opening] = await response.json();
+    expect(opening.target.page).toEqual({ kind: "page", extensionId: "test.presentation-tool", id: "inspect" });
     const resource = encodeURIComponent(`pstdio://extension-resource/workspace/${workspace.id}?extensionId=pstdio`);
-    await page.goto(`/projects/${project.id}/workspace?resource=${resource}`);
-    await expect(alternative.getByRole("heading", { name: "Alternative show-files" })).toBeVisible();
+    await page.goto(`/projects/${project.id}/extensions/test.presentation-tool/reading-room?resource=${resource}`);
+    await expect(alternative.getByRole("heading", { name: "Alternative inspect" })).toBeVisible();
     const cloud = page
       .getByRole("group", { name: "Alternative presentation", exact: true })
       .frameLocator('iframe[title="Alternative presentation"]');
@@ -262,17 +290,21 @@ test("independently installed presentation tools replace defaults and restore sa
 // Critical risk: absence must retain recovery controls, shared records, and a live session.
 test("disabled presentation preserves host work and recovers through extension controls", async ({ page, request }) => {
   const fixture = await presentationProject(page, request);
-  const { project } = fixture;
   try {
+    await fixture.chooseDefault(true);
     await fixture.toggle(bundledPresentation);
     await fixture.toggle(["Alternative presentation"]);
-    await page.goto(`/projects/${project.id}`);
+    await openDefaultPage(page);
     await expect(emptyMain(page)).toBeVisible();
     await expect(page.getByRole("option", { name: "Notes", exact: true })).toBeVisible();
     await expect(page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
     await fixture.assertRetained();
     await fixture.toggle(bundledPresentation);
-    await page.goto(`/projects/${project.id}`);
+    await openDefaultPage(page);
+    await expect(emptyMain(page)).toBeVisible();
+    await fixture.chooseDefault(false);
+    await page.reload();
+    await openDefaultPage(page);
     await expect(homePage(page)).toBeVisible();
     await expect(page.locator('iframe[title="Home"]')).toHaveCount(1);
     await fixture.assertRetained();

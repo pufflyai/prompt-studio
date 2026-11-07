@@ -17,19 +17,16 @@ ready-to-use defaults; their identities are not required to keep a project usabl
 Core owns workspace records, execution, account services, synchronization, and extension
 management independently of these tools.
 
-Dashboard composition selects project pages through their public route declarations.
-It prefers the bundled defaults while enabled, then sorts compatible independently
-owned pages by qualified reference. Workspace resource navigation stays within one
-selected provider's page family. The provider owns the views, panels, menus, and commands.
-Core registers navigation redirects for supported old routes instead of recreating
-Workspaces composition. The workbench normalizes redirects before validating destination
-parameters and opening resources, so saved links retain their context.
+Project composition stores an explicit default page and resource-opener bindings in
+core's existing synced project information. The default is an ordinary resource-free
+page. Openers return normal navigation targets independently of data ownership.
+Names, paths, navigation order, and workspace capability-to-page decisions belong to
+tools. Missing contributions leave the existing empty workbench and recovery controls.
 
-The compatibility map includes host Workspaces routes and missing bundled page refs.
-Retain it until stored links have a migration and published callers have passed the
-public API deprecation window. Removing a presentation extension removes its views;
-it does not delete shared workspaces or sessions or stop account and sync services.
-See [presentation replacement](../extensions/0004-contribution-api.md#replace-bundled-presentation).
+The catalog supplies editable defaults. Enabling or disabling a tool preserves an
+explicit project choice and the shared workspace/session records. The alpha API
+removes old presentation aliases and selectors together with their callers.
+See [project composition](../extensions/0004-contribution-api.md#configure-project-composition).
 
 ## Layers
 

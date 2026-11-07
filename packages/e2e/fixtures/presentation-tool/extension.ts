@@ -26,25 +26,29 @@ const page = (id: string, path: string) =>
     main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
     slots: [],
   });
-const home = page("welcome", "home");
-const workspaces = page("browse", "workspaces");
-const children = ["workspace", "files", "history", "overview"].map((path) =>
-  definePage({
-    id: `show-${path}`,
-    path,
-    title: `Alternative ${path}`,
-    mode: workbenchModes.project,
-    parent: workspaces.ref,
-    resource: { kinds: [workbenchResourceKinds.workspace] },
-    document: { metadataKey: "workspaceFilePath" },
-    main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
-    slots: [],
-  }),
-);
+const home = page("welcome", "desk");
+const workspaces = page("catalog", "collection");
+const inspect = definePage({
+  id: "inspect",
+  path: "reading-room",
+  title: "Alternative resource viewer",
+  mode: workbenchModes.project,
+  parent: workspaces.ref,
+  resource: { kinds: [workbenchResourceKinds.workspace] },
+  document: { metadataKey: "workspaceFilePath" },
+  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
+  slots: [],
+});
 export default defineExtension({
   views: [view],
-  pages: [home, workspaces, ...children],
+  pages: [home, workspaces, inspect],
   commands: [
+    defineCommand({
+      id: "inspect-record",
+      title: "Inspect a resource",
+      cli: true,
+      run: (ctx) => ({ kind: "page", page: inspect.ref, resource: ctx.resource }),
+    }),
     defineCommand({
       id: "open",
       title: "Alternative workspaces",

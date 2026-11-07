@@ -1,6 +1,5 @@
 import type { KanbanRendererResourceRef } from "@pstdio/sdk/extensions";
-import { sessionBrowser } from "@pstdio/sdk/extensions";
-import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
+import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import {
   type MenuPath,
   type ResourceRef,
@@ -12,37 +11,14 @@ import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/
 import { getApiClient } from "@/lib/api";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
-import { canonicalDashboardPageTarget, canonicalDashboardResource } from "@/shared/extensions/resource-identity";
+import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
-import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
 import { createSharedBoardViews } from "./extension-board-views";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
-import { createBadgeListRenderer } from "./extension-workspace-badge-renderer";
 
 type KanbanRecord = Parameters<NonNullable<WorkbenchExtensionKanbanRendererAdapter["resolveRowResource"]>>[0];
 type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistrations>["registrations"][number];
-const hasOnlyLegacyWorkspaceBadges = (value: unknown) =>
-  Array.isArray(value) &&
-  value.length > 0 &&
-  value.every((item) => {
-    if (!item || typeof item !== "object") return false;
-    if ("action" in item && item.action) return false;
-    const resource = (
-      item as {
-        resource?: unknown;
-      }
-    ).resource;
-    return Boolean(
-      resource &&
-        typeof resource === "object" &&
-        (
-          resource as {
-            type?: unknown;
-          }
-        ).type === "workspace",
-    );
-  });
 export const toDashboardExtensionResource = (
   resource: unknown,
   projectId: string,
@@ -97,43 +73,6 @@ const matchingRowAction = (registrations: MenuRegistration[], record: KanbanReco
       registration.menuItems.some((item) => sameMenuPath(item.menuPath, path)),
   );
 };
-const decorateAttribute = (
-  ctx: WorkbenchModuleContext,
-  projectId: string,
-  attribute: AttributeDescriptor,
-): AttributeDescriptor => {
-  if (attribute.display?.kind !== "badge-list") return attribute;
-  const genericRender = attribute.render;
-  const itemsAttributeId = attribute.display.itemsAttributeId;
-  const workspaceRender = createBadgeListRenderer({
-    itemsAttributeId,
-    projectId,
-    navigate: (resource, target) => {
-      if (target) {
-        void ctx.navigation.openTarget(canonicalDashboardPageTarget(target, projectId));
-        return;
-      }
-      if (resource.type === "workspace") {
-        openWorkspacesPage(ctx, resource);
-        return;
-      }
-      if (resource.type === "session") {
-        void ctx.navigation.openTarget({
-          kind: "panel",
-          panel: sessionBrowser.panels.conversation,
-          resource: resource,
-        });
-      }
-    },
-  });
-  return {
-    ...attribute,
-    render: (value, row) => {
-      const items = row.attributes[itemsAttributeId];
-      return hasOnlyLegacyWorkspaceBadges(items) ? workspaceRender(value, row) : (genericRender?.(value, row) ?? null);
-    },
-  };
-};
 const uploadCreatedFile = async (input: {
   extensionInstanceId: string;
   file: File;
@@ -187,7 +126,6 @@ export const createDashboardKanbanAdapter = (input: {
   const menuRegistrations = buildDashboardExtensionMenuRegistrations(metadata).registrations;
   const adapter: WorkbenchExtensionKanbanRendererAdapter = {
     createViewsProvider: (record) => createSharedBoardViews(projectId, record, metadata),
-    decorateAttribute: (_record, attribute) => decorateAttribute(ctx, projectId, attribute),
     resolveRowResource: (_record, row) => toDashboardExtensionResource(row.resource, projectId, metadata.resourceKinds),
     resolveRowActionResource: (record, row) => rowResource(record, row, projectId, metadata.resourceKinds),
     executeRowAction: ({ record, action, row, resource, runDefault }) => {

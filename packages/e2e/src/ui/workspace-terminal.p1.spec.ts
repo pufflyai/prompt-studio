@@ -94,7 +94,7 @@ test("opens default and worktree terminals in their effective workspace director
     };
 
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}/workspaces`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
 
     await openWorkspaceTerminal(page, "Project folder");
     await expectTerminalPwd(page, repoRoot);
@@ -163,7 +163,7 @@ test("keeps a workspace terminal in its worktree and alive when the workspace is
     };
 
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}/workspaces`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     await openWorkspace(page, workspace.workspace_shorthand);
     await showSecondaryPanel(page);
     await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();

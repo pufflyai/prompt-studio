@@ -19,7 +19,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, first!.id);
   try {
-    await page.goto(`/projects/${first!.id}/workspaces`);
+    await page.goto(`/projects/${first!.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     await expect(page.getByRole("button", { name: "Add view", exact: true })).toBeEnabled();
     await page.getByRole("button", { name: "Add view", exact: true }).click();
     const savedTab = page.getByRole("tab", { name: "View 3", exact: true });
@@ -68,7 +68,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
         localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
       }, first!.id);
       const otherPage = await otherClient.newPage();
-      await otherPage.goto(`/projects/${first!.id}/workspaces`);
+      await otherPage.goto(`/projects/${first!.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
       await otherPage.getByRole("tab", { name: "Release workspaces", exact: true }).click();
       await expect(otherPage.getByRole("tab", { name: "Release workspaces", exact: true })).toHaveAttribute(
         "aria-selected",
@@ -82,7 +82,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
     await page.getByRole("button", { name: "Switch project", exact: true }).click();
     const projectPicker = page.getByRole("dialog", { name: "Projects", exact: true });
     await projectPicker.getByText("Other workspace views", { exact: true }).click();
-    await page.goto(`/projects/${second!.id}/workspaces`);
+    await page.goto(`/projects/${second!.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     await expect(page.getByRole("tab", { name: "By device", exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(releaseTab).toHaveCount(0);
     await expect(page.getByRole("tab", { name: "Compact", exact: true })).toBeVisible();
@@ -90,7 +90,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
     expect(otherViews.views).toHaveLength(2);
     await page.getByRole("button", { name: "Switch project", exact: true }).click();
     await projectPicker.getByText("Saved workspace views", { exact: true }).click();
-    await page.goto(`/projects/${first!.id}/workspaces`);
+    await page.goto(`/projects/${first!.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     await expect(releaseTab).toHaveAttribute("aria-selected", "true");
   } finally {
     for (const project of projects) await request.delete(`/v1/projects/${project.id}`);

@@ -4,7 +4,7 @@ import { createWorkbench } from "./workbench-core";
 const page = { extensionId: "example.mail", kind: "page" as const, id: "inbox" };
 const home = { ...page, id: "home" };
 const createInbox = (cardinality: "one" | "many" = "one") => {
-  const workbench = createWorkbench({ startPage: home });
+  const workbench = createWorkbench({ defaultPage: home });
   workbench.modes.registerMode({ id: "mail", activate: () => undefined });
   for (const id of ["inbox", "reader", "tools"]) {
     workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });

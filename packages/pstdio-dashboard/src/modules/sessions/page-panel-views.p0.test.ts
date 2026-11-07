@@ -1,17 +1,17 @@
 import { expect, test } from "bun:test";
 import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
-import { createHomeModule } from "@/home-page.fixture";
+import { createHomeModule, dashboardHomePage } from "@/home-page.fixture";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardSessionResource, dashboardHomePage } from "@/shared/app/resources";
+import { createDashboardSessionResource } from "@/shared/app/resources";
 import { navigateDashboardPage, openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
 import { registerSessionProvider } from "./session-provider.fixture";
 
 const fixture = () => {
-  const w = createWorkbench({ startPage: dashboardHomePage });
+  const w = createWorkbench({ defaultPage: dashboardHomePage });
   w.registerModule(createWorkspacesModule());
   w.registerModule(createHomeModule());
   w.registerModule(createSessionsModule());

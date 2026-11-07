@@ -1,103 +1,8 @@
-import {
-  contributionRefId,
-  isNavigationTarget,
-  type ResourceRef,
-  type ResourceResolution,
-  resourceKey,
-  sessionBrowser,
-} from "@pstdio/sdk/extensions";
+import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
-import type { ResourceLinkCandidate } from "@pstdio/workbench/react";
-import { extensionResourceRefSchema, qualifyNavigationTarget } from "pstdio-api-contracts";
-import { executeExtensionCommand } from "@/shared/extensions/api";
-import {
-  getDashboardExtensionsReadyProjectId,
-  subscribeDashboardExtensionsReadyProject,
-} from "@/shared/extensions/extension-readiness";
+import { getApiClient } from "@/lib/api";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
-import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-
-const qualifiedResourceTarget = (value: unknown, source: ResourceRef) => {
-  if (!isNavigationTarget(value)) return;
-  const target = qualifyNavigationTarget(value, source.extensionId!, source.projectId);
-  if (target.kind === "page" || target.kind === "panel" || target.kind === "compound") return target;
-};
-
-export const resolveOwnerBatch = async (input: {
-  resources: ResourceRef[];
-  resolve(): Promise<unknown>;
-  navigate(target: NonNullable<ResourceResolution["target"]>): Promise<void>;
-}) => {
-  const requested = new Map(input.resources.map((ref) => [resourceKey(ref), ref]));
-  let value: unknown;
-  try {
-    value = await input.resolve();
-  } catch {
-    return [];
-  }
-  if (!Array.isArray(value)) return [];
-  const resolved: ResourceLinkCandidate[] = [];
-  for (const item of value as ResourceResolution[]) {
-    if (!item?.resource) continue;
-    const parsed = extensionResourceRefSchema.safeParse(item.resource);
-    if (!parsed.success) continue;
-    const resource = parsed.data;
-    const source = input.resources[0]!;
-    const canonical = {
-      ...resource,
-      extensionId: resource.extensionId ?? source.extensionId,
-      projectId: resource.projectId ?? source.projectId,
-    };
-    const original = requested.get(resourceKey(canonical));
-    if (!original) continue;
-    const target = qualifiedResourceTarget(item.target, source);
-    resolved.push({
-      target: target ? toWorkbenchNavigationTarget(target) : undefined,
-      resource: { ...original, label: resource.label, icon: resource.icon, shorthand: resource.shorthand },
-      open: target ? () => input.navigate(target) : undefined,
-    });
-  }
-  return resolved;
-};
-
-// Canonical identity stays in core; the installed provider owns its destination.
-const resolveCanonicalSessions = async (
-  ctx: WorkbenchModuleContext,
-  projectId: string,
-  resources: ResourceRef[],
-  signal?: AbortSignal,
-) => {
-  signal?.throwIfAborted();
-  const command = contributionRefId(sessionBrowser.commands.resolve);
-  if (!resources.length) return [];
-  // Core routes may boot before provider declarations; wait for that registration,
-  // then treat a missing or explicitly disabled provider as unavailable.
-  if (!ctx.commands.getCommand(command) && getDashboardExtensionsReadyProjectId(ctx) !== projectId) {
-    await new Promise<void>((resolve, reject) => {
-      const finish = (error?: unknown) => {
-        stop();
-        signal?.removeEventListener("abort", abort);
-        if (error) reject(error);
-        else resolve();
-      };
-      const abort = () => finish(signal?.reason);
-      const stop = subscribeDashboardExtensionsReadyProject(ctx, () => {
-        if (getDashboardExtensionsReadyProjectId(ctx) === projectId) finish();
-      });
-      signal?.addEventListener("abort", abort, { once: true });
-    });
-  }
-  signal?.throwIfAborted();
-  if (!ctx.commands.getCommand(command)) return [];
-  return resolveOwnerBatch({
-    resources,
-    resolve: () => ctx.commands.executeCommand(command, { resources }, { projectId, signal }),
-    navigate: async (target) => {
-      await ctx.navigation.openTarget(toWorkbenchNavigationTarget(target));
-    },
-  });
-};
 
 export const resolveLinkedResources = async (
   ctx: WorkbenchModuleContext,
@@ -106,68 +11,26 @@ export const resolveLinkedResources = async (
   signal?: AbortSignal,
 ) => {
   signal?.throwIfAborted();
-  const unique = new Map(resources.map((ref) => [resourceKey(ref), ref]));
-  const host = new Map(
-    ctx.resources.listResources("").map((entry) => {
-      const resource = canonicalDashboardResource(entry.resource, projectId);
-      return [resourceKey(resource), { ...entry, resource }] as const;
-    }),
-  );
-  const candidates: ResourceLinkCandidate[] = [];
-  const sessions: ResourceRef[] = [];
-  const batches = new Map<string, { command: string; resources: ResourceRef[] }>();
-  const metadata = getCachedDashboardExtensionMetadata(projectId);
-  for (const ref of unique.values()) {
-    if (ref.extensionId === "pstdio") {
-      const entry = host.get(resourceKey(ref));
-      if (entry)
-        candidates.push({
-          resource: entry.resource,
-          target: entry.target,
-          open: entry.activate
-            ? async () => {
-                await entry.activate!(entry.resource);
-              }
-            : undefined,
-        });
-      else if (ref.type === "session" && (!ref.projectId || ref.projectId === projectId))
-        sessions.push(canonicalDashboardResource(ref, projectId));
-      continue;
-    }
-    const kind = metadata?.resourceKinds.find(
-      (kind) => kind.extensionId === ref.extensionId && kind.localId === ref.type,
-    );
-    if (!kind?.resolveManyCommand) continue;
-    const batch = batches.get(kind.resolveManyCommand) ?? { command: kind.resolveManyCommand, resources: [] };
-    batch.resources.push(ref);
-    batches.set(kind.resolveManyCommand, batch);
-  }
-  const owners = await Promise.all(
-    [...batches.values()].map((batch) =>
-      resolveOwnerBatch({
-        resources: batch.resources,
-        resolve: async () => {
-          signal?.throwIfAborted();
-          const response = await executeExtensionCommand(
-            projectId,
-            batch.command,
-            {
-              params: { resources: batch.resources },
-              source: "dashboard",
-            },
-            signal,
-          );
-          return response.outcome.ok ? response.outcome.value : undefined;
-        },
-        navigate: async (target) => {
-          await ctx.navigation.openTarget(toWorkbenchNavigationTarget(target));
-        },
+  const refs = [
+    ...new Map(
+      resources.map((ref) => {
+        const resource = canonicalDashboardResource(ref, projectId);
+        return [resourceKey(resource), resource] as const;
       }),
-    ),
-  );
-  const hostOrder = new Map([...host.keys()].map((key, index) => [key, index]));
-  candidates.sort(
-    (left, right) => hostOrder.get(resourceKey(left.resource))! - hostOrder.get(resourceKey(right.resource))!,
-  );
-  return [...candidates, ...owners.flat(), ...(await resolveCanonicalSessions(ctx, projectId, sessions, signal))];
+    ).values(),
+  ];
+  const resolved = await getApiClient().projects.resolveResourceOpenings(projectId, refs, { signal });
+  signal?.throwIfAborted();
+  const order = new Map(refs.map((ref, index) => [resourceKey(ref), index]));
+  return resolved
+    .sort((a, b) => order.get(resourceKey(a.resource))! - order.get(resourceKey(b.resource))!)
+    .map(({ resource, target }) => ({
+      resource,
+      target: target ? toWorkbenchNavigationTarget(target) : undefined,
+      open: target
+        ? async () => {
+            await ctx.navigation.openTarget(toWorkbenchNavigationTarget(target));
+          }
+        : undefined,
+    }));
 };

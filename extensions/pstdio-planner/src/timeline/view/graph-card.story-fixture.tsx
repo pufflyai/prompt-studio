@@ -1,9 +1,4 @@
-import {
-  createWebviewClient,
-  type GuestHost,
-  type WebviewCommandsExecuteParams,
-  workspacePages,
-} from "@pstdio/sdk/extensions";
+import { createWebviewClient, type GuestHost, type WebviewCommandsExecuteParams } from "@pstdio/sdk/extensions";
 import type { ComponentProps } from "react";
 import { useState } from "react";
 import type { ReviewRequestView } from "../../data/review-request-types";
@@ -54,7 +49,11 @@ export function EditableCardPreview(props: EditableCardPreviewProps) {
         {
           id: "workspace",
           label: "P-1_A1",
-          action: { kind: "page", page: workspacePages.workspace, resource: { type: "workspace", id: "workspace" } },
+          action: {
+            kind: "page",
+            page: { kind: "page", extensionId: "example.reader", id: "inspect" },
+            resource: { type: "workspace", id: "workspace" },
+          },
         },
       ],
     },

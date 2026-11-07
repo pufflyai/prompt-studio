@@ -78,6 +78,7 @@ export const createMemoryResourceLinks = (input: {
   return {
     ...api,
     resolveMany: async () => [],
+    resolveOpenings: async () => [],
     queryAnchorsMany: async (query: Omit<ResourceAnchorQuery, "resource"> & { resources: ResourceRef[] }) => {
       if (query.resources.length > 100) throw new Error("Query at most 100 resources.");
       const page = await list(query);
