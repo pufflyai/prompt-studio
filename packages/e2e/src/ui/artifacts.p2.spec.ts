@@ -213,13 +213,13 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Delete artifact", exact: true }).click();
     await expect(frame.getByRole("button", { name: "Reference", exact: true })).toBeVisible();
     expect((await execute("list", {})).map((item: { url: string }) => item.url)).toEqual([reference.url]);
     await frame.getByRole("button", { name: "Reference", exact: true }).click();
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
-    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Delete artifact", exact: true }).click();
     await expect(frame.getByText("Your first artifact starts with an idea", { exact: true })).toBeVisible();
     expect(await execute("list", {})).toEqual([]);
   } finally {
