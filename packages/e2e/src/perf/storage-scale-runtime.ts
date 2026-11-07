@@ -62,6 +62,25 @@ const connectScaleRuntime = (runtime: ScaleBackend, startupMs: number) => {
   return { ...runtime, client, startupMs, request, execute };
 };
 
+/** A client for a runtime another process owns, such as the prepared sync service's second device. */
+export const attachScaleRuntime = (descriptor: ScaleBackend["descriptor"], baseUrl: string) =>
+  connectScaleRuntime(
+    {
+      descriptor,
+      baseUrl,
+      controlEvidence: {},
+      controlPreparationMs: 0,
+      stop: async () => {},
+      crash: async () => {
+        throw new Error("An attached runtime belongs to another process");
+      },
+      completeLoginCallback: async () => {
+        throw new Error("An attached runtime belongs to another process");
+      },
+    },
+    0,
+  );
+
 export const startNativeScaleRuntime = async (
   home: string,
   environment: Record<string, string> = {},

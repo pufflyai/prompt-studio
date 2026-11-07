@@ -10,6 +10,7 @@ import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-suppo
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
+import { registerSessionProvider } from "./session-provider.fixture";
 
 afterEach(() => {
   for (const table of ["workspaces", "sessions", "workspace_sessions"] as const) getWriter(table)?.truncateAndWrite([]);
@@ -20,6 +21,30 @@ test("project folder navigation keeps project links; opening a workspace replace
   registerWorkspaceProviderViews(workbench);
   for (const module of [createSidenavModule(), createWorkspacesModule(), createSessionsModule()])
     workbench.registerModule(module);
+  registerSessionProvider(workbench, {
+    projectId: "project",
+    sessions: {
+      query: async ({ workspaceId } = {}) => ({
+        items: [
+          {
+            id: "workspace-session",
+            title: "Workspace session",
+            workspaceId: "workspace",
+            status: "completed",
+            updatedAt: "2026-11-06T10:00:00Z",
+          },
+          {
+            id: "folder-session",
+            title: "Folder session",
+            workspaceId: "folder",
+            status: "completed",
+            updatedAt: "2026-11-06T10:00:00Z",
+          },
+        ].filter((session) => session.workspaceId === workspaceId) as never,
+        nextCursor: null,
+      }),
+    },
+  });
   selectDashboardProject(workbench, { id: "project", name: "Project" });
   getWriter("workspaces")?.truncateAndWrite([
     { id: "folder", project_id: "project", name: "Project folder", is_default: true, archived: false },
@@ -66,24 +91,28 @@ test("project folder navigation keeps project links; opening a workspace replace
     workbench.pageLocations.navigate({ kind: "page", page: workspacePages.files, resource: folder }),
   ).toMatchObject({ ok: true });
   const nodes = async () =>
-    (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
+    (
+      await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav, {
+        resource: workbench.pages.store.getState().location?.resource,
+      })
+    )
       .flatMap((section) => section.nodes)
       .filter((node) => !node.pinnedOnly);
   expect((await nodes()).map((node) => node.label)).toContain("Workspaces");
-  expect((await nodes()).find((node) => node.id === "workspace-sessions")).toBeUndefined();
+  expect((await nodes()).find((node) => node.id.endsWith(":workspace-sessions"))).toBeUndefined();
 
   openWorkspacesPage(workbench, { type: "workspace", id: "workspace", label: "Workspace" });
   const workspaceNodes = await nodes();
   expect(workspaceNodes.map((node) => node.label)).not.toContain("Workspaces");
   expect(
     workspaceNodes
-      .find((node) => node.id === "workspace-sessions")
+      .find((node) => node.id.endsWith(":workspace-sessions"))
       ?.children?.filter((node) => node.resource)
       .map((node) => node.label),
   ).toEqual(["Workspace session"]);
   workbench.pageLocations.goBack();
   expect(workbench.pages.store.getState().location?.page).toEqual(workspacePages.files);
   expect((await nodes()).map((node) => node.label)).toContain("Workspaces");
-  expect((await nodes()).find((node) => node.id === "workspace-sessions")).toBeUndefined();
+  expect((await nodes()).find((node) => node.id.endsWith(":workspace-sessions"))).toBeUndefined();
   workbench.dispose();
 });

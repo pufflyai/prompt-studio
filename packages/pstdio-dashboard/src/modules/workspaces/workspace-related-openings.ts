@@ -3,6 +3,7 @@ import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { getIndexedRows } from "@/lib/sync/collections";
 import { waitForInitialCollectionsSync } from "@/lib/sync/initial-collections-sync";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { createDashboardSessions } from "../sessions/data/dashboard-sessions";
 
 export const workspaceRelatedOpenings = async (
   ctx: WorkbenchModuleContext,
@@ -16,15 +17,8 @@ export const workspaceRelatedOpenings = async (
   const sessions = new Set(
     getIndexedRows("workspace_sessions", "workspace_id", source.id).map((row) => row.session_id),
   );
-  const latest = ctx.resources
-    .listResources("")
-    .find(
-      (entry) =>
-        entry.resource.extensionId === "pstdio" &&
-        entry.resource.type === "session" &&
-        entry.resource.projectId === projectId &&
-        sessions.has(entry.resource.id),
-    );
+  // Workspace membership is core data; it must not depend on the Sessions search provider being installed.
+  const latest = createDashboardSessions(projectId).find((session) => sessions.has(session.id));
   return (
     latest ? [{ resource: latest.resource, autoOpen: true, region: "side", open: "preview" }] : []
   ) satisfies RelatedResourceOpenings;

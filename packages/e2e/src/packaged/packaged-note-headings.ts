@@ -79,7 +79,8 @@ export const verifyPackagedNoteHeadings = async (page: Page, origin: string, pro
   });
   await row.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete note", exact: true }).click();
   await expect(row).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Heading formatting", exact: true })).toHaveCount(0);
   await expect.poll(() => execute("pstdio.pstdio-notes.command.notes.resolve", { noteId: note.id })).toBeNull();

@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -92,7 +93,9 @@ export const createPackagedQueueFixture = async () => {
     );
 
     logQueuedPhase("setup", "start packaged host");
-    const started = await startPackagedServe(root);
+    const started = await startPackagedServe(root, {
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-session-browser"),
+    });
     host = started;
     logQueuedPhase("setup", "host ready; create project and enable harness");
     const request = async (path: string, method = "GET", body?: unknown) => {

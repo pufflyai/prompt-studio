@@ -71,6 +71,9 @@ test.describe("Session bubble workspace selection", () => {
     await bypassOnboarding(page, projectId);
 
     const workspace = await createWorkspaceViaApi(request, projectId);
+    const available = await (await request.get(`${apiBase}/v1/workspaces?project_id=${projectId}`)).json();
+    const current = available.find((item: { isDefault: boolean }) => item.isDefault);
+    expect(current).toBeTruthy();
     const ticket = await createPlannerTicket(request, apiBase, projectId, {
       content: "Choose a session workspace",
     });
@@ -87,12 +90,17 @@ test.describe("Session bubble workspace selection", () => {
     const sidePanel = page.getByTestId("workbench-side-panel-attached");
     await expect(sidePanel).toBeVisible();
 
-    await sidePanel.getByRole("button", { name: "Select workspace" }).click();
-    await page.locator("[data-testid='session-workspace-options']").getByText(workspace.workspace_shorthand).click();
+    // Shared Main menu parity: selecting an existing draft workspace never exposes navigation or creation.
+    await expect(sidePanel.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
+    await expect(sidePanel.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
+    await sidePanel.getByRole("button", { name: "Select workspace", exact: true }).click();
+    await expect(page.getByRole("menuitem", { name: "New workspace", exact: true })).toHaveCount(0);
+    await page.getByRole("menuitem", { name: workspace.workspace_shorthand, exact: true }).click();
 
+    await expect(sidePanel.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
     await expect(page).toHaveURL(ticketUrl);
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).not.toContainText(workspace.workspace_shorthand);
-    await expect(sidePanel.getByRole("button", { name: "Select workspace" })).toContainText(
+    await expect(sidePanel.getByRole("button", { name: "Select workspace", exact: true })).toContainText(
       workspace.workspace_shorthand,
     );
   });

@@ -1,9 +1,14 @@
-import { type NavigationTargetPage, type PageLocation, type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
+import {
+  type NavigationTargetPage,
+  type PageLocation,
+  type PageRef,
+  sessionBrowser,
+  workspacePages,
+} from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardExtensionsPage } from "@/shared/app/resources";
 import { canonicalDashboardPageTarget } from "@/shared/extensions/resource-identity";
-import { resolveWorkspacePresentation } from "./presentation-pages";
 export const pageTargetFromLocation = (location: PageLocation): NavigationTargetPage => ({
   kind: "page",
   page: location.page,
@@ -37,25 +42,30 @@ export const navigateDashboardPage = (ctx: WorkbenchModuleContext, input: Naviga
   return result.location;
 };
 export const openSessionsPage = (ctx: WorkbenchModuleContext, resource?: ResourceRef) => {
-  let page: PageRef = workbenchPages.sessions;
-  if (resource?.type === "session") page = workbenchPages.session;
-  if (resource?.type === "session-draft") page = workbenchPages.newSession;
+  let page: PageRef = sessionBrowser.pages.sessions;
+  if (resource?.type === "session") page = sessionBrowser.pages.session;
+  if (resource?.type === "session-draft") page = sessionBrowser.pages.draft;
   return navigateDashboardPage(ctx, {
     page,
     ...(resource ? { resource } : {}),
   });
 };
-export const workspacePageForResource = (
-  resource: ResourceRef | undefined,
-  ctx: Pick<WorkbenchModuleContext, "pages" | "resources">,
-) => resolveWorkspacePresentation(ctx, resource);
+export const workspacePageForResource = (resource?: ResourceRef) => {
+  if (!resource) return workspacePages.list;
+  if (resource.device || resource.metadata?.workspaceReadOnly === true) return workspacePages.history;
+  if (resource.metadata?.workspaceExecutionKind === "remote" || resource.metadata?.workspaceSupportsFiles === false)
+    return workspacePages.overview;
+  if (resource.metadata?.workspaceIsDefault === true || resource.metadata?.workspaceSupportsDiff === false)
+    return workspacePages.files;
+  return workspacePages.workspace;
+};
 export const openWorkspacesPage = (
   ctx: WorkbenchModuleContext,
   resource?: ResourceRef,
   parent?: NavigationTargetPage,
 ) =>
   navigateDashboardPage(ctx, {
-    page: workspacePageForResource(resource, ctx),
+    page: workspacePageForResource(resource),
     ...(resource ? { resource } : {}),
     ...(parent ? { parent } : {}),
   });

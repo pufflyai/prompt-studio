@@ -17,6 +17,11 @@ test("packaged CLI file selection executes each selected test once without unrel
     for (const file of ["run-packaged-cli-tests.ts", "packaged-test-timeout.ts"]) {
       await copyFile(join(import.meta.dir, file), join(directory, file));
     }
+    // This fixture exercises selection, without provisioning real public packages.
+    await writeFile(
+      join(directory, "prepared-packaged-consumers.ts"),
+      "export const preparePackagedConsumers = async () => ({env: process.env, close: async () => {}});",
+    );
     await mkdir(join(owner, "src/scripts"), { recursive: true });
     await writeFile(join(owner, "src/scripts/bun-process-cleanup.ts"), "export {};");
     for (const file of [
