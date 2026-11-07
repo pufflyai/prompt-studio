@@ -141,6 +141,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
               (conversation.readOnly ? "This conversation is read only." : undefined)
             }
             loading={loading}
+            emptyStateContent={host.account?.setup ?? host.account?.progress}
             emptyStateTitle={props.emptyTitle ?? "No messages yet"}
             emptyStateDescription={props.emptyDescription ?? "Send a message to start this session."}
             chatInputPlaceholder="Reply to the agent..."

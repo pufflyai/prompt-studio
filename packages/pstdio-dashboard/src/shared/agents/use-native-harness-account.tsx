@@ -3,6 +3,7 @@ import type { ChatRendererSnapshot, ControlValue } from "@pstdio/sdk/extensions"
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { NativeChatHostProps, NativeChatHostServices } from "@pstdio/workbench/extensions";
 import type { AgentInfo } from "pstdio-api-contracts";
+import type { ReactNode } from "react";
 import { openExtensionsPage } from "@/shared/workbench/page-navigation";
 import { nativeHarnessReady } from "./native-harness-readiness";
 import { SessionHarnessSignIn } from "./session-harness-sign-in";
@@ -33,10 +34,10 @@ const NativeHarnessSetup = (props: {
         </Button>
       </Stack>
     );
-  if (!agentsChecked) return <Text>Checking harness authentication…</Text>;
+  if (!agentsChecked) return null;
   if (agent?.availability.type !== "INSTALLED")
     return <SessionHarnessUnavailable onReviewExtensions={() => openExtensionsPage(workbench)} />;
-  if (!account.checked) return <Text>Checking harness authentication…</Text>;
+  if (!account.checked) return null;
   if (account.authentication?.status === "signed_out")
     return <SessionHarnessSignIn name={agent.name} onLogin={() => account.start("login")} />;
   return null;
@@ -69,6 +70,27 @@ export const useNativeHarnessAccount = (props: {
       authenticating: Boolean(account.progress),
     });
   if (!binding) return undefined;
+  const selectionPending = Boolean(props.initializing || (!harness.harnessId && agents.length));
+  const needsSetup =
+    !selectionPending &&
+    agentsChecked &&
+    (agent?.availability.type !== "INSTALLED" ||
+      account.authenticationError ||
+      account.authentication?.status === "signed_out");
+  let setup: ReactNode;
+  if (!binding.remote && !readOnly) {
+    if (account.progress) setup = account.progress;
+    else if (needsSetup)
+      setup = (
+        <NativeHarnessSetup
+          account={account}
+          agent={agent}
+          agentsChecked={agentsChecked}
+          selectionPending={selectionPending}
+          workbench={workbench}
+        />
+      );
+  }
   return {
     commands: account.commands,
     blocked: !ready,
@@ -81,19 +103,7 @@ export const useNativeHarnessAccount = (props: {
         if (session.getSnapshot().draft.text === text) session.changeDraft({ text: "" });
       }),
     progress: account.progress,
-    notice: (
-      <>
-        {binding.remote ? null : (
-          <NativeHarnessSetup
-            account={account}
-            agent={agent}
-            agentsChecked={agentsChecked}
-            selectionPending={Boolean(props.initializing || (!harness.harnessId && agents.length))}
-            workbench={workbench}
-          />
-        )}
-        {account.notice}
-      </>
-    ),
+    notice: account.notice,
+    setup,
   };
 };

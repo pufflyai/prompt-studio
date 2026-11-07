@@ -17,6 +17,8 @@ export interface NativeChatHostServices {
     submit(text: string): Promise<void> | undefined;
     progress: ReactNode;
     notice: ReactNode;
+    /** Trusted setup replaces the empty state, and accompanies history only when messages exist. */
+    setup?: ReactNode;
   };
   linkNotice?: ReactNode;
 }

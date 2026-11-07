@@ -20,8 +20,8 @@ export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesPro
   } = state;
   return (
     <>
-      {host.account?.progress}
       {host.account?.notice}
+      {(host.messages ?? state.messages).length > 0 ? (host.account?.setup ?? host.account?.progress) : null}
       {host.linkNotice}
       <NativeChatDraftRecovery
         recovered={draft.recovered}

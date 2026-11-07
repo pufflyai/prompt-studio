@@ -232,7 +232,10 @@ the host account progress, browser and secret-input UI. Authentication replies u
 the dedicated authentication channel, never chat actions, command history or
 transcripts. Normal submission waits for harness/account discovery and is disabled when
 signed out, missing a harness/model, or authenticating. Login/setup remains
-available. For an online remote owner, set `remote: true` in this binding and
+available. Discovery stays quiet and keeps the normal empty content; readiness can block submission
+without replacing it. Sign-in, missing-harness setup, authentication progress and retryable
+authentication errors replace empty content, or appear beside existing history without hiding it.
+For an online remote owner, set `remote: true` in this binding and
 use `getExecutionState` for device availability instead of local harness discovery. Omit
 this opt-in for a provider with its own command semantics.
 
@@ -265,7 +268,9 @@ keeps generic settings forms sparse, including removing an override on reset.
 
 Set `snapshot.fork` to expose per-message fork actions, with a nullable
 `disabledReason`. For per-reply controls use `ctx.sessions.getForkState(id, { scope: "reply" })`
-and `ctx.sessions.fork(id, messageId)`: completed earlier replies remain available
+and `ctx.sessions.fork(id, messageId)`: keep local saved-session metadata present with its
+disabled reason when unsupported, so the message action can explain why it is unavailable.
+Drafts and foreign-device sessions omit this action. Completed earlier replies remain available
 while later work runs. The shared native UI hides the current streaming reply's
 fork control; the service authoritatively rejects that unfinished reply. Omit the
 scope (or use `"conversation"`) for a whole-conversation copy, which retains its

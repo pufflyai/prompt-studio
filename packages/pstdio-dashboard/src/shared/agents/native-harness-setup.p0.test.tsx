@@ -20,7 +20,12 @@ const setup = (initializing: boolean, agents: unknown[] = [], value?: { harnessI
       session: {} as NativeChatHostProps["session"],
       initializing,
     });
-    return <>{account?.notice}</>;
+    return (
+      <>
+        {account?.setup}
+        {account?.notice}
+      </>
+    );
   };
   return renderToStaticMarkup(
     <QueryClientProvider client={queries}>
