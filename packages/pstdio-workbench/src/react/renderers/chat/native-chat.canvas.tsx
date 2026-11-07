@@ -47,7 +47,7 @@ export const RecoveredDraft = () => (
 );
 
 // Synthetic trusted-host states; no account or session service is contacted by these frames.
-type AccountPreviewState = "signed-out" | "checking" | "error" | "history" | "fork" | "read-only";
+type AccountPreviewState = "signed-out" | "checking" | "error" | "history" | "fork" | "fork-failure" | "read-only";
 const PreviewAccountSetup = ({ state }: { state: AccountPreviewState }) => {
   if (state === "checking") return null;
   if (state === "error")
@@ -68,7 +68,7 @@ const PreviewAccountSetup = ({ state }: { state: AccountPreviewState }) => {
 };
 const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
   const [forkedId, setForkedId] = useState("");
-  const forkable = props.state === "fork" || props.state === "read-only";
+  const forkable = props.state === "fork" || props.state === "fork-failure" || props.state === "read-only";
   const [session] = useState(() =>
     createChatSession({
       initial: {
@@ -81,7 +81,10 @@ const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
       },
       query: async () => ({}),
       action: async (action) => {
-        if (action.type === "fork") setForkedId(action.messageId);
+        if (action.type === "fork") {
+          if (props.state === "fork-failure") throw new Error("This harness does not support forking conversations.");
+          setForkedId(action.messageId);
+        }
         return {};
       },
     }),
@@ -111,4 +114,5 @@ export const AuthenticationChecking = () => <NativeAccountPreview state="checkin
 export const AuthenticationFailure = () => <NativeAccountPreview state="error" />;
 export const SignedOutHistory = () => <NativeAccountPreview state="history" />;
 export const ForkableReply = () => <NativeAccountPreview state="fork" />;
+export const ForkFailure = () => <NativeAccountPreview state="fork-failure" />;
 export const ReadOnlyFork = () => <NativeAccountPreview state="read-only" />;

@@ -27,3 +27,17 @@ test("native account setup and completed-reply fork retain their own surfaces", 
   await fork.dispatchEvent("click");
   await expect(preview.getByTestId("forked-message")).toHaveText("");
 });
+
+// Critical: a failed message action must not create a misleading transcript-reconnection failure.
+test("failed reply fork stays beside its message without a conversation Retry footer", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#ForkFailure`);
+  const editor = preview.locator('[contenteditable="true"]');
+  await editor.fill("Keep my unsent draft");
+  const reply = preview.locator('[data-chat-message-id="completed-reply"]');
+  await reply.hover();
+  await reply.getByRole("button", { name: "Fork conversation", exact: true }).click();
+  await expect(reply.getByRole("alert")).toHaveText("This harness does not support forking conversations.");
+  await expect(preview.getByRole("alert")).toHaveCount(1);
+  await expect(preview.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
+  await expect(editor).toHaveText("Keep my unsent draft");
+});
