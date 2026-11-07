@@ -10,6 +10,27 @@ Cross-package native editor integration tests live in `packages/e2e`. They may
 start the real `pstdio-api/app` host and use the public `@pstdio/workbench` session
 API. The workbench package itself does not depend on the API host.
 
+## Bundled presentation ownership
+
+Home, Workspaces, and Cloud are optional presentation extensions. The catalog supplies
+ready-to-use defaults; their identities are not required to keep a project usable.
+Core owns workspace records, execution, account services, synchronization, and extension
+management independently of these tools.
+
+Dashboard composition selects project pages through their public route declarations.
+It prefers the bundled defaults while enabled, then sorts compatible independently
+owned pages by qualified reference. Workspace resource navigation stays within one
+selected provider's page family. The provider owns the views, panels, menus, and commands.
+Core registers navigation redirects for supported old routes instead of recreating
+Workspaces composition. The workbench normalizes redirects before validating destination
+parameters and opening resources, so saved links retain their context.
+
+The compatibility map includes host Workspaces routes and missing bundled page refs.
+Retain it until stored links have a migration and published callers have passed the
+public API deprecation window. Removing a presentation extension removes its views;
+it does not delete shared workspaces or sessions or stop account and sync services.
+See [presentation replacement](../extensions/0004-contribution-api.md#replace-bundled-presentation).
+
 ## Layers
 
 1. **Contracts and utilities**

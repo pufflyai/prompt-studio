@@ -34,6 +34,51 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 
 UI contributions attach to targets that the host owns. [Workbench composition](0008-contextual-workbench-composition.md) explains how views, pages, modes, and panels fit together.
 
+## Replace bundled presentation
+
+On `main`, after Prompt Studio 0.46.0, Home, Workspaces, and Cloud can be disabled
+or replaced through ordinary extension enablement. Their shared host services and
+saved project data remain available. With no presentation provider, the existing
+empty workbench and Extensions controls remain usable.
+
+A compatible replacement uses its own package identity and existing public contributions:
+
+- Home declares a resource-free root page in `workbenchModes.project` with `path: "home"`.
+  Startup and `workbenchPages.start` open that page. Its local page ID is unrestricted.
+- Workspaces declares a resource-free project root with `path: "workspaces"`.
+  Its resource pages have that root as `parent`, the same extension identity, and the
+  `workbenchResourceKinds.workspace` constraint. Paths `workspace`, `files`, `history`,
+  and `overview` identify the Git, folder/files-only, other-device, and remote/no-files
+  destinations. Preserve the `workspaceFilePath` document metadata for file links.
+  Optional `create`, `action`, and `device` child routes retain their corresponding
+  saved entry points. The provider owns their contents and controls.
+- Workspaces' legacy host command aliases delegate to the selected provider's `open`,
+  `show-create`, `show-rename`, and `show-delete` commands. Declare those local command
+  IDs to support these older entry points; new actions can reference the provider's
+  commands directly. Mutation aliases retain the invoking resource and viewer guard.
+- Cloud contributes status views through `workbenchSlots.statusBarTrailing` and settings
+  through `workbenchSlots.globalSettings`. Use `ctx.account` or the typed webview
+  account client with `account.read`/`account.manage`. These services belong to the host.
+
+Disable the bundled presentation before using a replacement as the default. While
+several compatible page providers are enabled, the bundled page wins; otherwise the
+host selects the first qualified page reference in lexical order. A Workspaces root
+selects its whole page family, so pages from different providers are never mixed.
+Missing required destinations report unavailable operations rather than selecting an
+unrelated tool. Cloud slot contributions use normal slot behavior and can coexist.
+
+`homePages` and `workspacePages` remain explicit references to the bundled tools.
+They are not requirements on a replacement's identity. Supported saved host routes
+and absent bundled page routes redirect to compatible selected pages, including
+resource, parent, document, position, and parameter context. These compatibility
+aliases remain until saved-link migration and the public deprecation window permit
+removal. Navigating an old link writes the selected provider's canonical URL.
+Re-enabling a bundled provider restores its normal default priority.
+
+This composition uses page, command, settings, status, and account contracts already
+available in the published SDK; it adds no SDK dependency requirement to those tools.
+The host providing the selection behavior must be delivered before relying on it.
+
 ## Kanban create results
 
 A successful `createRow` result with string `id` and `title` is passed to the renderer's declared `onRowActivate` callback. That callback owns navigation through `ctx.navigation.open` with an explicit page or panel target. Creating a resource does not choose its presentation. Use the same activation callback for opening an existing row and a newly created row.

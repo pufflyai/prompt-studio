@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages, workspacePages } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { setDashboardExtensionsReadyProject } from "@/shared/extensions/extension-readiness";
@@ -54,7 +54,7 @@ test("switching projects restores a saved destination before the Home default", 
   expect(workbench.pageLocations.switchProject("project-2").ok).toBe(true);
   expect(workbench.pages.store.getState().location?.page).toEqual(home);
   expect(workbench.pageLocations.switchProject("project-1").ok).toBe(true);
-  expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.workspaces);
+  expect(workbench.pages.store.getState().location?.page).toEqual(workspacePages.list);
   await workbench.dispose();
 });
 

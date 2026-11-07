@@ -9,7 +9,7 @@ export const registerWorkspaceProviderViews = (workbench: WorkbenchCore) => {
       body: { kind: "react" as const, render: () => null },
     }),
   );
-  for (const page of Object.values(workspacePages))
+  const pages = Object.values(workspacePages).map((page) =>
     workbench.pages.registerPage({
       id: contributionRefId(page),
       ref: page,
@@ -22,12 +22,26 @@ export const registerWorkspaceProviderViews = (workbench: WorkbenchCore) => {
             resource: { kinds: [{ kind: "resource-kind" as const, id: "workspace" }] },
           }),
       ...(page === workspacePages.list ? {} : { document: { metadataKey: "workspaceFilePath" } }),
-      main: {
-        kind: "view",
-        view: page === workspacePages.list ? workspaceViews.list : workspaceViews.file,
-        cardinality: "one",
-      },
-      slots: [],
-    });
-  return views;
+      main:
+        page === workspacePages.workspace
+          ? { kind: "panels", landing: "files", empty: workspaceViews.summary }
+          : {
+              kind: "view",
+              view:
+                { workspaces: workspaceViews.list, history: workspaceViews.history, overview: workspaceViews.summary }[
+                  page.id
+                ] ?? workspaceViews.file,
+              cardinality: "one",
+              presentation: page === workspacePages.list ? "tabs" : "page",
+            },
+      slots:
+        page === workspacePages.workspace
+          ? [
+              { id: "files", region: "main", item: { kind: "view", view: workspaceViews.file, presence: "open" } },
+              { id: "changes", region: "main", item: { kind: "view", view: workspaceViews.changes, presence: "open" } },
+            ]
+          : [],
+    }),
+  );
+  return [...views, ...pages];
 };

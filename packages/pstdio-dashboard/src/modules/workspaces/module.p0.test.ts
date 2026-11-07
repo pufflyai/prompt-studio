@@ -1,24 +1,58 @@
 import { expect, test } from "bun:test";
-import { commandRefId, workbenchPages, workspaceCommands, workspaceViews } from "@pstdio/sdk/extensions";
+import { commandRefId, workbenchPages, workspaceCommands, workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
+import { getCollection, getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { selectDashboardProject } from "@/shared/app/project-context";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "./module";
+
+test("workspace search offers only installed presentation while retaining the host's records", () => {
+  getCollection("workspaces");
+  const row = {
+    id: "retained",
+    project_id: "presentation-absence",
+    name: "Retained workspace",
+    workspace_shorthand: "WS-1",
+    is_default: true,
+  };
+  getWriter("workspaces")!.upsert(row);
+  const w = createWorkbench();
+  w.registerModule(createWorkspacesModule());
+  selectDashboardProject(w, { id: row.project_id, name: "Absence" });
+  const resource = { type: "workspace", id: row.id, extensionId: "pstdio" };
+  try {
+    expect(w.resources.listResources("")).toEqual([]);
+    expect(() => openWorkspacesPage(w, resource)).toThrow("Workspace presentation is unavailable");
+    const provider = registerWorkspaceProviderViews(w);
+    expect(w.resources.listResources("")).toContainEqual(
+      expect.objectContaining({ resource: expect.objectContaining({ id: row.id }) }),
+    );
+    for (const registration of provider.reverse()) registration.dispose();
+    expect(w.resources.listResources("")).toEqual([]);
+    expect(w.resources.getKind("workspace", "pstdio")!.resolve!(resource)?.label).toBe(row.name);
+  } finally {
+    getWriter("workspaces")!.remove(row.id);
+    w.dispose();
+  }
+});
 
 test("workspace infrastructure preserves old public page refs using provider views without core presentation", () => {
   const workbench = createWorkbench();
   registerWorkspaceProviderViews(workbench);
   workbench.registerModule(createWorkspacesModule());
-  expect(workbench.pages.getPage(workbenchPages.workspaces.id)?.main).toMatchObject({
-    kind: "view",
-    view: workspaceViews.list,
-  });
-  expect(workbench.pages.getPage(workbenchPages.workspace.id)?.slots.map((slot) => slot.item)).toEqual([
-    { kind: "view", view: workspaceViews.history, presence: "open" },
-    { kind: "view", view: workspaceViews.file, presence: "open" },
-    { kind: "view", view: workspaceViews.changes, presence: "open" },
-  ]);
-  expect(workbench.views.getView(workspaceViews.file.id)).toBeUndefined();
+  workbench.pageLocations.setProject("p1");
+  expect(workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.workspaces }).ok).toBe(true);
+  expect(workbench.pages.store.getState().location?.page).toEqual(workspacePages.list);
+  expect(
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page: workbenchPages.workspace,
+      resource: { type: "workspace", id: "one" },
+    }).ok,
+  ).toBe(true);
+  expect(workbench.pages.store.getState().location?.page).toEqual(workspacePages.workspace);
   workbench.dispose();
 });
 test("legacy create command delegates to the provider command without owning another form", async () => {
@@ -98,31 +132,8 @@ test("workspace palette navigation follows provider availability", () => {
     expect(entries()).toHaveLength(0);
     const views = registerWorkspaceProviderViews(workbench);
     expect(entries()).toHaveLength(1);
-    views[0]!.dispose();
+    for (const registration of views.reverse()) registration.dispose();
     expect(entries()).toHaveLength(0);
-  } finally {
-    workbench.dispose();
-  }
-});
-
-test("saved Workspaces URLs keep the provider's creation action in the title menu", () => {
-  const workbench = createWorkbench();
-  try {
-    registerWorkspaceProviderViews(workbench);
-    workbench.registerModule(createWorkspacesModule());
-    const main = workbench.pages.getPage(workbenchPages.workspaces.id)!.main;
-    if (main.kind !== "view") throw new Error("Expected workspace collection");
-    expect(main.tab?.getSnapshot?.({ instanceId: "list", panelId: "workspaces", closable: false }).menu).toContainEqual(
-      expect.objectContaining({
-        rows: expect.arrayContaining([
-          expect.objectContaining({
-            id: "create-workspace",
-            icon: "plus",
-            action: { kind: "command", commandId: commandRefId(workspaceCommands.create) },
-          }),
-        ]),
-      }),
-    );
   } finally {
     workbench.dispose();
   }

@@ -1,14 +1,9 @@
-import {
-  type NavigationTargetPage,
-  type PageLocation,
-  type PageRef,
-  workbenchPages,
-  workspacePages,
-} from "@pstdio/sdk/extensions";
+import { type NavigationTargetPage, type PageLocation, type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardExtensionsPage } from "@/shared/app/resources";
 import { canonicalDashboardPageTarget } from "@/shared/extensions/resource-identity";
+import { resolveWorkspacePresentation } from "./presentation-pages";
 export const pageTargetFromLocation = (location: PageLocation): NavigationTargetPage => ({
   kind: "page",
   page: location.page,
@@ -50,22 +45,17 @@ export const openSessionsPage = (ctx: WorkbenchModuleContext, resource?: Resourc
     ...(resource ? { resource } : {}),
   });
 };
-export const workspacePageForResource = (resource?: ResourceRef) => {
-  if (!resource) return workspacePages.list;
-  if (resource.device || resource.metadata?.workspaceReadOnly === true) return workspacePages.history;
-  if (resource.metadata?.workspaceExecutionKind === "remote" || resource.metadata?.workspaceSupportsFiles === false)
-    return workspacePages.overview;
-  if (resource.metadata?.workspaceIsDefault === true || resource.metadata?.workspaceSupportsDiff === false)
-    return workspacePages.files;
-  return workspacePages.workspace;
-};
+export const workspacePageForResource = (
+  resource: ResourceRef | undefined,
+  ctx: Pick<WorkbenchModuleContext, "pages" | "resources">,
+) => resolveWorkspacePresentation(ctx, resource);
 export const openWorkspacesPage = (
   ctx: WorkbenchModuleContext,
   resource?: ResourceRef,
   parent?: NavigationTargetPage,
 ) =>
   navigateDashboardPage(ctx, {
-    page: workspacePageForResource(resource),
+    page: workspacePageForResource(resource, ctx),
     ...(resource ? { resource } : {}),
     ...(parent ? { parent } : {}),
   });

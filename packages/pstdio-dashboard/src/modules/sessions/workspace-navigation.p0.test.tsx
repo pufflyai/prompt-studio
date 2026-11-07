@@ -23,7 +23,15 @@ test("project folder navigation keeps project links; opening a workspace replace
   selectDashboardProject(workbench, { id: "project", name: "Project" });
   getWriter("workspaces")?.truncateAndWrite([
     { id: "folder", project_id: "project", name: "Project folder", is_default: true, archived: false },
-    { id: "workspace", project_id: "project", name: "Workspace", archived: false },
+    {
+      id: "workspace",
+      project_id: "project",
+      name: "Workspace",
+      archived: false,
+      is_default: false,
+      branch: "feature/work",
+      provider_capabilities_json: { files: "write", diff: true },
+    },
   ]);
   getWriter("sessions")?.truncateAndWrite([
     {

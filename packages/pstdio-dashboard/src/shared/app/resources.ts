@@ -1,3 +1,4 @@
+import { homePages } from "@pstdio/sdk/extensions";
 import { type ResourceRef, standardResourceIcons } from "@pstdio/workbench";
 export const dashboardCollectionsProjectId = "dashboard-project";
 export const createDashboardResource = (
@@ -33,4 +34,5 @@ export const dashboardViews = {
 export const dashboardExtensionsPage = { kind: "page", extensionId: "pstdio", id: "extensions" } as const;
 export const dashboardExtensionDetailPage = { ...dashboardExtensionsPage, id: "extension-detail" } as const;
 
-export const dashboardHomePage = { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" } as const;
+/** Explicit reference for bundled Home consumers; startup uses workbenchPages.start. */
+export const dashboardHomePage = homePages.home;

@@ -43,6 +43,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.
 // It also imports the packed SDK's browser-free theme converter, checks both packed UI contrast palettes, and bundles the charts entry with a Gantt consumer.
 // packaged-session-tools.p1.spec.ts checks draft/session/tool tab restoration across navigation and reload, creation, closure and New session tools.
+// home-extension.p1.spec.ts checks installed presentation replacements, public SDK dependencies, and recovery after disabling all presentation.
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.
 // packaged-notes-page.p2.spec.ts checks immediate palette creation, Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.

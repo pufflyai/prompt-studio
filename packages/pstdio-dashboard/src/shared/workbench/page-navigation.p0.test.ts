@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import { workbenchPages, workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { navigateDashboardPage, workspacePageForResource } from "./page-navigation";
+import { navigateDashboardPage } from "./page-navigation";
+import { workspacePresentationPath } from "./presentation-pages";
 
 for (const { type, page, root } of [
   { type: "session", page: workbenchPages.session, root: workbenchPages.sessions },
@@ -47,20 +48,14 @@ for (const { type, page, root } of [
 
 test("workspace links choose only the pages supported by the provider", () => {
   const resource = { type: "workspace", id: "one" };
-  expect(workspacePageForResource({ ...resource, metadata: { workspaceSupportsFiles: false } })).toEqual(
-    workspacePages.overview,
+  expect(workspacePresentationPath({ ...resource, metadata: { workspaceSupportsFiles: false } })).toEqual("overview");
+  expect(workspacePresentationPath({ ...resource, metadata: { workspaceExecutionKind: "remote" } })).toEqual(
+    "overview",
   );
-  expect(workspacePageForResource({ ...resource, metadata: { workspaceExecutionKind: "remote" } })).toEqual(
-    workspacePages.overview,
-  );
-  expect(workspacePageForResource({ ...resource, metadata: { workspaceSupportsDiff: false } })).toEqual(
-    workspacePages.files,
-  );
-  expect(workspacePageForResource({ ...resource, metadata: { workspaceIsDefault: true } })).toEqual(
-    workspacePages.files,
-  );
+  expect(workspacePresentationPath({ ...resource, metadata: { workspaceSupportsDiff: false } })).toEqual("files");
+  expect(workspacePresentationPath({ ...resource, metadata: { workspaceIsDefault: true } })).toEqual("files");
   expect(
-    workspacePageForResource({ ...resource, metadata: { workspaceReadOnly: true, workspaceSupportsFiles: false } }),
-  ).toEqual(workspacePages.history);
-  expect(workspacePageForResource(resource)).toEqual(workspacePages.workspace);
+    workspacePresentationPath({ ...resource, metadata: { workspaceReadOnly: true, workspaceSupportsFiles: false } }),
+  ).toEqual("history");
+  expect(workspacePresentationPath(resource)).toEqual("workspace");
 });

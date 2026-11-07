@@ -48,6 +48,8 @@ export interface WorkbenchPageContribution {
   icon?: string;
   path: string;
   modeId: string;
+  /** Host route compatibility. Navigation uses the destination's composition and resource rules. */
+  redirect?: PageRef | ((resource: ResourceRef | undefined) => PageRef);
   parentId?: string;
   resource?: ResourceConstraint;
   document?: PageDocumentDeclaration;

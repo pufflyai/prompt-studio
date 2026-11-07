@@ -46,7 +46,7 @@ const resolveWorkspaceFile = (
   const resource = workspaceFileResource(createDashboardWorkspaceOptionResource(workspace, input.projectId), path);
   const target = {
     kind: "page" as const,
-    page: workspacePageForResource(resource),
+    page: workspacePageForResource(resource, input.workbench),
     resource,
     position: parsed.position,
   };

@@ -1,6 +1,6 @@
 import type { PageRef } from "./types/contribution-identity";
 
-/** Public landing owned by the bundled Home provider. */
+/** Explicit bundled Home references. Use workbenchPages.start for the host-selected landing. */
 export const homePages = {
   home: { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" } satisfies PageRef,
 };

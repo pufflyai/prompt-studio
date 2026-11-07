@@ -250,14 +250,17 @@ test("renders aggregate sessions in the Sessions level and scoped sessions for a
   expect(await nodeIdsForContext("project", workspace)).not.toContain("workspace-sessions");
   expect(await nodeIdsForContext("project", ticket)).not.toContain("workspace-sessions");
   expect(await nodeIdsForContext("project")).not.toContain("workspace-sessions");
+  workbench.pageLocations.setProject("project-1");
   for (const page of [
     workspacePages.workspace,
     workspacePages.overview,
     workspacePages.history,
     workbenchPages.workspace,
   ]) {
+    expect(workbench.pageLocations.navigate({ kind: "page", page, resource: workspace }).ok).toBe(true);
+    const destination = workbench.pages.store.getState().location!.page;
     const workspaceSections = await workbench.navigationTrees.getSections(
-      { kind: "page", id: contributionRefId(page), extensionId: page.extensionId ?? "pstdio" },
+      { kind: "page", id: contributionRefId(destination), extensionId: destination.extensionId ?? "pstdio" },
       "content",
       { resource: workspace },
     );

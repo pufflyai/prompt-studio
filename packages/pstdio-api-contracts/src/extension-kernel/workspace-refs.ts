@@ -5,7 +5,7 @@ const extensionId = "pstdio.pstdio-workspaces";
 const page = (id: string): PageRef => ({ kind: "page", extensionId, id });
 const view = (id: string): ViewRef => ({ kind: "view", extensionId, id });
 const command = (id: string): CommandRef => ({ kind: "command", extensionId, id });
-/** Public destinations owned by the bundled Workspaces provider. */
+/** Explicit bundled Workspaces destinations; compatible presentation tools own different references. */
 export const workspacePages = {
   create: page("create"),
   list: page("workspaces"),

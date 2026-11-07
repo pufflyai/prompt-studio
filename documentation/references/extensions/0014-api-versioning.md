@@ -385,3 +385,19 @@ project/global settings, extension detail panels, and published custom global
 slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
+
+## Bundled presentation compatibility
+
+On `main`, after 0.46.0, the default catalog keeps Home, Workspaces, and Cloud optional.
+Compatible independently identified tools use existing public contributions; no new
+extension contribution field or capability is required. See [presentation replacement](0004-contribution-api.md#replace-bundled-presentation)
+for the host's route selection contract and deployment requirement.
+
+`homePages` and `workspacePages` keep their published bundled identities and exports.
+The generic Start entry resolves through host composition. Existing deprecated host
+Workspaces page and command entry points remain supported through redirects/delegation.
+The host also resolves missing bundled page routes through a compatible replacement.
+Remove these aliases only after supported stored links have migrated and published
+consumers have completed the normal deprecation window in a coordinated breaking release.
+The renderer's optional `WorkbenchPageContribution.redirect` is host infrastructure;
+installed extensions continue declaring ordinary pages and their own references.

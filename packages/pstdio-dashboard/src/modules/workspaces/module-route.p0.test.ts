@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import {
   contributionRefId,
-  pagePlaceholderView,
   type ResourceRef,
   resourceKey,
   workbenchPages,
+  workspacePages,
   workspaceViews,
 } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
@@ -44,11 +44,11 @@ test("opens the Workspaces view and workspace resources with stable identities",
   }
 });
 
-const routeCases: { name: string; resource: ResourceRef; views: string[] }[] = [
+const routeCases: { name: string; resource: ResourceRef; page: typeof workspacePages.list }[] = [
   {
     name: "local pointer before metadata",
     resource: { type: "workspace", id: "unhydrated" },
-    views: ["file", "changes"],
+    page: workspacePages.workspace,
   },
   {
     name: "foreign device before metadata",
@@ -58,7 +58,7 @@ const routeCases: { name: string; resource: ResourceRef; views: string[] }[] = [
       device: { id: "other", ownerId: "owner", name: "Other" },
       metadata: { workspaceSupportsFiles: true, workspaceSupportsDiff: true },
     },
-    views: ["history"],
+    page: workspacePages.history,
   },
   {
     name: "remote execution",
@@ -67,7 +67,7 @@ const routeCases: { name: string; resource: ResourceRef; views: string[] }[] = [
       id: "remote",
       metadata: { workspaceExecutionKind: "remote", workspaceSupportsFiles: true, workspaceSupportsDiff: true },
     },
-    views: [],
+    page: workspacePages.overview,
   },
   {
     name: "provider without files",
@@ -76,7 +76,7 @@ const routeCases: { name: string; resource: ResourceRef; views: string[] }[] = [
       id: "no-files",
       metadata: { workspaceSupportsFiles: false, workspaceSupportsDiff: true },
     },
-    views: [],
+    page: workspacePages.overview,
   },
   {
     name: "provider without diff",
@@ -85,10 +85,10 @@ const routeCases: { name: string; resource: ResourceRef; views: string[] }[] = [
       id: "no-diff",
       metadata: { workspaceSupportsFiles: true, workspaceSupportsDiff: false },
     },
-    views: ["file"],
+    page: workspacePages.files,
   },
 ];
-for (const { name, resource, views } of routeCases) {
+for (const { name, resource, page } of routeCases) {
   test(`saved workspace links keep supported views for ${name}`, () => {
     const workbench = createWorkbench();
     try {
@@ -101,18 +101,10 @@ for (const { name, resource, views } of routeCases) {
         page: workbenchPages.workspace,
         resource: canonicalDashboardResource(resource, "route-project"),
       });
-      expect(
-        workbench.layout
-          .getLayout()
-          .regions.main.widgets.map((placement) => placement.viewId)
-          .sort(),
-      ).toEqual(
-        views.map((id) => contributionRefId({ kind: "view", extensionId: "pstdio.pstdio-workspaces", id })).sort(),
+      expect(workbench.pages.store.getState().location?.page).toEqual(page);
+      expect(resourceKey(workbench.getPrimaryResource())).toBe(
+        resourceKey(canonicalDashboardResource(resource, "route-project")),
       );
-      if (!views.length) {
-        const page = workbench.pages.getPage(workbench.pages.store.getState().activePageId!);
-        expect(pagePlaceholderView(page?.main.empty)).toEqual(workspaceViews.summary);
-      }
     } finally {
       workbench.dispose();
     }

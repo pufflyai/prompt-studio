@@ -110,7 +110,7 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
     modes: ["project"],
     getSections: () => [{ ...dashboardNavigationSections.root, nodes: [createSessionsNavigationNode()] }],
   });
-  registerWorkspaceSessionNavigation(ctx);
+  return registerWorkspaceSessionNavigation(ctx);
 };
 interface CreateSessionsModuleInput {
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
@@ -131,7 +131,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       ctx.registerChildModule(createSessionBubbleModule({ sessionDraftPersistence: input.sessionDraftPersistence }));
       registerSessionView(ctx, input.sessionDraftPersistence);
       registerSessionPages(ctx);
-      registerSidenavSessions(ctx);
+      const workspaceNavigation = registerSidenavSessions(ctx);
       registerSessionResourceActions(ctx);
       const unsubscribeResourceSync = registerSessionResourceSync(ctx);
       const unsubscribeRetention = registerSessionResourceRetention(ctx);
@@ -184,6 +184,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       return {
         dispose: () => {
           unsubscribeDashboardData();
+          workspaceNavigation.dispose();
           unsubscribeResourceSync();
           unsubscribeRetention();
           unsubscribePage();
