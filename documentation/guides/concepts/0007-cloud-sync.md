@@ -23,7 +23,24 @@ The status describes this project's current state:
 | Synced | This device has finished its current sync work. |
 | Needs attention | Open Cloud settings to check the account and project state. |
 
-Cloud synchronizes project data used by your tools. It does not provide a complete backup of your local project folder. See [restore project data](0006-restore-project-data.md) for local recovery points.
+Cloud synchronizes project data used by your tools. Each computer also uploads an encrypted copy of its project folder, which another of your computers can restore; see [restore a project folder](#restore-a-project-folder-on-another-computer). See [restore project data](0006-restore-project-data.md) for local recovery points of project data.
+
+## Restore a project folder on another computer
+
+On macOS and Linux, each computer that has a synced project's folder captures it and uploads an encrypted copy. Only your own computers can read it; other members of a shared project cannot. Your other computers download every completed copy automatically, so a copy can be restored while the computer that made it is off. You do not need a Git host, a commit or a push.
+
+A copy includes every file and folder in the project folder, including hidden files, `.env` files, build output and the whole `.git` folder with unpushed commits, staged changes, branches, reflogs and local Git settings. `.gitignore` does not apply. Only the root `.pstignore` file excludes paths. The first time a folder is captured without a copy in Cloud, Prompt Studio creates `.pstignore` with `node_modules/`; it never overwrites or recreates the file. It uses `.gitignore` patterns: `#` comments, `*`, `?` and `**`, a leading `/` for paths from the root, a trailing `/` for folders, and `!` to include a path again. Symlinks are saved as links with their target text and are never followed. A file that keeps changing or cannot be read is never skipped: the new copy stays pending and the previous copy stays restorable.
+
+Restore with the CLI. The app has no restore screen yet.
+
+```sh
+pst projects folder sources <project-id>
+pst projects folder restore <project-id> --device <device-id> --source <source-id> --path <new-folder>
+```
+
+`sources` lists each computer's copy with its capture time, size, `.pstignore`, Git state and whether every byte is already on this computer. Restore into a folder that does not exist yet. Its parent folder must exist. The folder appears only after every file has been verified. If the project has no folder on this computer yet, the restored folder becomes its folder; otherwise it stays beside the current one. Restore a copy before you open the project, because opening it creates an empty project folder. A restored folder's hooks, scripts and automations do not run, and extensions in its `.pstdio/extensions` folder stay disabled until you enable them. Restored files keep their permission bits but not setuid, setgid or sticky bits.
+
+Cloud keeps each computer's latest complete copy, plus the previous one during the relay's grace period. Folder copies are not part of recovery points. Windows and musl-based Linux cannot capture or restore folders yet.
 
 ## Manage devices
 

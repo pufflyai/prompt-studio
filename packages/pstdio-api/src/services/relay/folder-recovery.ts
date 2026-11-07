@@ -183,7 +183,8 @@ export const startFolderRecovery = (input: {
   const stopWorkspaces = deps.eventBus.subscribe((event) => {
     if (event.table !== "workspaces") return;
     const workspace = event.data as { project_id?: unknown } | null;
-    if (event.op === "delete" || workspace?.project_id === config.workbenchId) local.request("watcher-lost");
+    if (event.op === "delete" || workspace?.project_id === config.workbenchId)
+      void local.workspaceChanged().catch(() => local.request("watcher-lost"));
   });
   const stopCatalog = deps.extensionStorageService.watch((owner, origin) => {
     if (owner.workbenchId !== config.workbenchId || owner.extensionId !== catalog.owner.extensionId) return;

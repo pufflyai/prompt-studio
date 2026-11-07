@@ -108,18 +108,27 @@ const applyToolResult = (tool: ToolPart, original: PiMessage) => {
     };
 };
 
-export const normalizePiMessages = (native: PiMessage[], offset = 0) => {
+export const normalizePiMessages = (
+  native: PiMessage[],
+  offset = 0,
+  onMessage?: (messageId: string, nativeIndex: number) => void,
+) => {
   const messages: SessionMessage[] = [];
-  const tools = new Map<string, ToolPart>();
-  for (const message of native) {
+  const tools = new Map<string, { part: ToolPart; messageId: string }>();
+  for (const [nativeIndex, message] of native.entries()) {
     if (message.role === "custom" && message.display === false) continue;
     if (message.role === "toolResult") {
       const tool = tools.get(message.toolCallId ?? "");
-      if (tool) applyToolResult(tool, message);
+      if (tool) {
+        applyToolResult(tool.part, message);
+        onMessage?.(tool.messageId, nativeIndex);
+      }
       continue;
     }
     const normalized = normalizeMessage(message, offset + messages.length);
-    for (const part of normalized.parts) if (part.type === "tool" && part.callId) tools.set(part.callId, part);
+    onMessage?.(normalized.id, nativeIndex);
+    for (const part of normalized.parts)
+      if (part.type === "tool" && part.callId) tools.set(part.callId, { part, messageId: normalized.id });
     messages.push(normalized);
   }
   return messages;

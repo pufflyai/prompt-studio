@@ -10,6 +10,64 @@ afterEach(async () => {
   await fixture?.close();
 });
 
+test("fork copies native context without a model request and resumes independently", async () => {
+  fixture = await piFixture();
+  const input = {
+    prompt: "Use the tool",
+    sessionId: "source",
+    cwd: fixture.root,
+    model: "fixture/test",
+    events: fixture.sink(),
+  };
+  const source = await fixture.harness.start(fixture.context, input);
+  await source.done;
+  const original = await fixture.harness.getMessages(fixture.context, {
+    agentSessionId: source.agentSessionId!,
+    cwd: fixture.root,
+  });
+  const selectedIndex = original.findIndex((message) => message.parts.some((part) => part.type === "tool"));
+  expect(selectedIndex).toBeGreaterThan(0);
+  const prefix = original.slice(0, selectedIndex + 1);
+  const laterEvents = fixture.sink(original);
+  const later = await fixture.harness.resume(fixture.context, {
+    ...input,
+    agentSessionId: source.agentSessionId!,
+    prompt: "A later question",
+    events: laterEvents,
+  });
+  await later.done;
+  const fullHistory = structuredClone(laterEvents.getMessages());
+  const requests = fixture.requests.length;
+  // Both operations read the completed source. Keep the live snapshot as an independent baseline.
+  const [nativeHistory, fork] = await Promise.all([
+    fixture.harness.getMessages(fixture.context, {
+      agentSessionId: source.agentSessionId!,
+      cwd: fixture.root,
+    }),
+    fixture.harness.fork(fixture.context, {
+      sessionId: "source",
+      agentSessionId: source.agentSessionId!,
+      cwd: fixture.root,
+      messageId: prefix.at(-1)!.id,
+    }),
+  ]);
+  expect(nativeHistory).toEqual(fullHistory);
+  expect(fork.agentSessionId).not.toBe(source.agentSessionId);
+  expect(fixture.requests).toHaveLength(requests);
+  expect(await fixture.harness.getMessages(fixture.context, { ...fork, cwd: fixture.root })).toEqual(prefix);
+  const resumed = await fixture.harness.resume(fixture.context, {
+    ...input,
+    ...fork,
+    sessionId: "fork",
+    prompt: "Another approach",
+    events: fixture.sink(prefix),
+  });
+  await resumed.done;
+  expect(
+    await fixture.harness.getMessages(fixture.context, { agentSessionId: source.agentSessionId!, cwd: fixture.root }),
+  ).toEqual(fullHistory);
+}, 10_000);
+
 test.each(["start", "resume", "getMessages"] as const)("refuses vulnerable Pi during %s", async (action) => {
   fixture = await piFixture();
   const entry = `${fixture.root}/unsupported.ts`;
