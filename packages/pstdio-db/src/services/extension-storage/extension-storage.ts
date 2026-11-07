@@ -57,6 +57,8 @@ export const createExtensionStorageDBService = (
     watch: documents.watch,
     flushStatistics: documents.flushStatistics,
     documents: documents.documents,
+    /** Sign-out, return review and replaced-change notices for Cloud projects on this device. */
+    cloudReturn: documents.cloudReturn,
     logs: documents.logs,
     personalHistoryIndex: createPersonalHistoryIndex(db),
     openTextDocument: documents.openTextDocument,

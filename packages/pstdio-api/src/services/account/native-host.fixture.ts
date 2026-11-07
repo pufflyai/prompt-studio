@@ -28,6 +28,10 @@ export const createAccountHostFixture = async (root: string) => {
     },
     async () => ({ state: "first-download-incomplete", offlineReady: false }),
     async () => {},
+    undefined,
+    undefined,
+    undefined,
+    extensionStorageService.cloudReturn,
   );
   await account.refresh();
   const app = new OpenAPIHono().route("/v1", createAccountRoutes(account));

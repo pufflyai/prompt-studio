@@ -12,6 +12,20 @@ export type ProjectSyncState =
   | "first-download-incomplete"
   | "needs-attention";
 
+/** One record this device changed, named by its resource number when it has one. */
+export interface ProjectReturnRecord {
+  extensionId: string;
+  recordId: string;
+  /** Resource number such as `PS-2`. */
+  label?: string;
+  /** JSON Pointers inside the record value, such as `/assignee`. */
+  fields: string[];
+  deleted: boolean;
+}
+
+/** What a device does with changes from its time away: upload held ones, drop them, or clear replaced notices. */
+export type ProjectReturnAction = "apply" | "discard" | "dismiss";
+
 export interface ProjectSyncStatus {
   state: ProjectSyncState;
   /** All known documents and required asset bytes have been verified locally. */
@@ -25,4 +39,17 @@ export interface ProjectSyncStatus {
    * ready while folder bytes are still pending. Absent until this project connects to Cloud.
    */
   folder?: ProjectFolderRecoveryStatus;
+  /**
+   * Changes this device made while signed out, or a return held for review. Signed-out changes upload
+   * when the device signs in again; held changes upload only after someone applies them here.
+   * Lists are capped; totals count every record.
+   */
+  away?: {
+    state: "signed-out" | "held";
+    total: number;
+    deletions: number;
+    records: (ProjectReturnRecord & { created: boolean })[];
+  };
+  /** This device's changes that Cloud did not apply because another device changed them first. */
+  replaced?: { total: number; records: (ProjectReturnRecord & { whole: boolean; replacedAt: number })[] };
 }
