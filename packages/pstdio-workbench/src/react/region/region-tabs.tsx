@@ -10,7 +10,7 @@ import {
   Tooltip,
 } from "@pstdio/ui";
 import type { MouseEvent as ReactMouseEvent } from "react";
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import {
   type WorkbenchCore,
   type WorkbenchPanelRegion,
@@ -69,6 +69,9 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
     showTabs,
     hasActions,
   } = state;
+  // Only defer the empty-to-populated strip mount, never its controlled selection or placements.
+  const presentedTabs = useDeferredValue(showTabs);
+  const renderTabs = showTabs && presentedTabs;
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
@@ -128,7 +131,7 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
     });
     return () => cancelAnimationFrame(frame);
   }, [activeWidgetId, viewport]);
-  if (!showTabs && !hasActions) return null;
+  if (!renderTabs && !hasActions) return null;
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
     if (command && hasCommandParameters(command.params)) {
@@ -155,7 +158,7 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
       </IconButton>
     </Tooltip>
   ));
-  if (!showTabs) {
+  if (!renderTabs) {
     return (
       <HStack flex="1" h="full" minW="0" gap="2xs">
         {panelRegion ? (
