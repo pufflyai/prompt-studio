@@ -63,8 +63,9 @@ const workspace: ChatRendererSnapshot["workspace"] = {
 
 Workspace selections are existing workspace string IDs. The native composer reuses the shared
 workspace menu; workspace creation stays in the existing global workspace commands/forms.
-Only an existing session with a bound read-only workspace control, an available selected workspace
-and matching `openResourceId` exposes Open workspace. Draft/default/empty/stale selections do not.
+Sessions supplies `openResourceId` only for an existing session with an available selected workspace;
+it omits the binding action for new drafts, including auto-selected defaults. The generic host
+validates the visible matching option and retains owner-provided navigation in read-only chats.
 Saved sessions display the selected workspace as the Open button. Device selection appears only
 with multiple devices; a saved session's owning device remains a readable, read-only identity.
 These controls use the native owner's existing draft values and per-control action clocks.

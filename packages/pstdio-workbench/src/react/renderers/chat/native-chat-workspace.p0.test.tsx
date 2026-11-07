@@ -101,7 +101,7 @@ test("a workspace menu opened before another control edit dispatches the latest 
   expect(session.getSnapshot().draft.values.target).toBe("a");
 });
 
-test("drafts never expose Open and only a saved available selected workspace opens", () => {
+test("owner-provided workspace navigation remains available in read-only chat with a visible matching choice", () => {
   const render = (
     readOnly: boolean,
     value: string | undefined,
@@ -123,12 +123,12 @@ test("drafts never expose Open and only a saved available selected workspace ope
         />
       </WorkbenchThemeProvider>,
     );
-  expect(render(false, undefined)).not.toContain('aria-label="Open workspace"');
+  expect(render(false, undefined)).toContain('aria-label="Open workspace"');
   expect(render(false, "unknown")).not.toContain('aria-label="Open workspace"');
-  expect(render(false, "a")).not.toContain('aria-label="Open workspace"');
+  expect(render(false, "a")).toContain('aria-label="Open workspace"');
   expect(render(false, "")).not.toContain('aria-label="Open workspace"');
   expect(render(true, "a", [])).not.toContain('aria-label="Open workspace"');
-  expect(render(true, "a", undefined, true)).not.toContain('aria-label="Open workspace"');
+  expect(render(true, "a", undefined, true)).toContain('aria-label="Open workspace"');
   expect(render(true, "a")).toContain('aria-label="Open workspace"');
 });
 
