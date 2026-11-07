@@ -15,6 +15,8 @@ export interface OwnerInput {
   chunks: Set<string>;
   frames: Set<string>;
   files: Set<string>;
+  /** Receipt-index nodes the record stream writes as manifest blobs; they are record storage. */
+  index: Set<string>;
 }
 
 export const createDevice = async (input: {
@@ -36,7 +38,7 @@ export const createDevice = async (input: {
   return {
     files,
     async owner(unit: OwnerInput) {
-      const { owner, secret, chunks, frames, files: fileIds } = unit;
+      const { owner, secret, chunks, frames, files: fileIds, index } = unit;
       if (!knownProjects.has(owner.workbenchId)) {
         const now = new Date().toISOString();
         await db.insert(projects).values({
@@ -71,10 +73,20 @@ export const createDevice = async (input: {
         store: storage.documents.recordStream(owner),
         relay: {
           ...relay,
+          async manifestBlobs() {
+            const blobs = await relay.manifestBlobs();
+            return {
+              ...blobs,
+              put(blobId: string, bytes: Uint8Array, children: string[]) {
+                index.add(blobId);
+                return blobs.put(blobId, bytes, children);
+              },
+            };
+          },
           async update(update) {
             const frame = decodeRecordFrame(await openUpdate(space, documentId, update));
             if (frame.blob) frames.add(frame.blob.blobId);
-            for (const id of update.blobIds) if (id !== frame.blob?.blobId) fileIds.add(id);
+            for (const id of update.blobIds) if (id !== frame.blob?.blobId && !index.has(id)) fileIds.add(id);
             return relay.update(update);
           },
           async replace(state) {
@@ -89,7 +101,7 @@ export const createDevice = async (input: {
               const manifest = JSON.parse(new TextDecoder().decode(bytes)) as { chunks: { blobId: string }[] };
               for (const chunk of manifest.chunks) chunks.add(chunk.blobId);
               const current = new Set(manifest.chunks.map((chunk) => chunk.blobId));
-              for (const id of state.blobIds) if (!current.has(id)) fileIds.add(id);
+              for (const id of state.blobIds) if (!current.has(id) && !index.has(id)) fileIds.add(id);
             }
             return accepted;
           },

@@ -52,7 +52,8 @@ export const measureFiles = (rows: StorageRows, documentId: string, files: Set<s
 export const auditStorage = (storage: Awaited<ReturnType<typeof inspectStorage>>, units: Map<string, OwnerInput>) => {
   const classified = new Set<string>();
   const documents = [...units].map(([documentId, unit]) => {
-    const transport = new Set([...unit.chunks, ...unit.frames]);
+    // The receipt index belongs to the record stream: its nodes count against the record bound.
+    const transport = new Set([...unit.chunks, ...unit.frames, ...unit.index]);
     for (const id of [...transport, ...unit.files]) classified.add(id);
     return {
       documentId,
@@ -60,6 +61,7 @@ export const auditStorage = (storage: Awaited<ReturnType<typeof inspectStorage>>
       files: measureFiles(storage.rows, documentId, unit.files),
       chunkIds: [...unit.chunks],
       frameIds: [...unit.frames],
+      indexIds: [...unit.index],
       fileIds: [...unit.files],
     };
   });
