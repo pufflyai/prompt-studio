@@ -44,7 +44,7 @@ owner/project scopes remain distinct. Other hosts retain their supplied identiti
 
 ## Workspace contribution
 
-An optional snapshot `workspace` binding places workspace/device identity, creation inputs,
+An optional snapshot `workspace` binding places workspace/device identity,
 setup status, diff counts and opening in the shared workspace hub. It references provider-owned
 selection controls by `controlId` and optional `deviceControlId`; those controls are consumed
 there once instead of appearing among generic composer fields. Existing conversations can keep

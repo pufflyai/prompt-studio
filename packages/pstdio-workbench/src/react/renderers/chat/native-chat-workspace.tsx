@@ -17,7 +17,7 @@ const workspaceLabel = (workspace: SelectionControl, value: unknown) => {
   return workspace.options.find((option) => option.id === value)?.name ?? workspace.placeholder ?? "Select workspace";
 };
 
-// Metadata can arrive before the current local selection or creation form settles.
+// Metadata can arrive before the current local selection settles.
 const selectedWorkspaceId = (
   workspace: NonNullable<ChatRendererSnapshot["controls"]>[number] | undefined,
   value: unknown,
