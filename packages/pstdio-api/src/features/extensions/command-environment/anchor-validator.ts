@@ -28,6 +28,12 @@ export const runAnchorValidator = async (
       });
       const scoped = (apis: ReturnType<typeof environment.withScope>) => ({
         ...apis,
+        resources: {
+          ...apis.resources,
+          addAnchors: rejectLinkMutation,
+          removeAnchors: rejectLinkMutation,
+          removed: rejectLinkMutation,
+        },
         workspaces: {
           ...apis.workspaces,
           create: rejectLinkMutation,
@@ -45,12 +51,6 @@ export const runAnchorValidator = async (
       return {
         ...environment,
         ...scoped(environment),
-        resources: {
-          ...environment.resources,
-          addAnchors: rejectLinkMutation,
-          removeAnchors: rejectLinkMutation,
-          removed: rejectLinkMutation,
-        },
         withScope: (scope) => scoped(environment.withScope(scope)),
       };
     },
