@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
-import { type ChildProcess, spawnSync } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
+import { runTestCommand } from "../scripts/run-test-command";
 import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -32,6 +33,20 @@ const readSnapshot = async (baseUrl: string, headers: Record<string, string>) =>
     controller.abort();
   }
 };
+
+const createViewsCli =
+  (input: { folder: string; root: string; projectId: string; baseUrl: () => string }) =>
+  async (...args: string[]) => {
+    const started = performance.now();
+    // Keep the test event loop available to drain the API process's output and I/O.
+    const result = await runTestCommand(PACKAGED_BINARY_PATH, ["views", ...args, "--project-id", input.projectId], {
+      cwd: input.folder,
+      env: { ...process.env, HOME: input.root, PSTDIO_HOME: input.root, PSTDIO_API_URL: input.baseUrl() },
+    });
+    console.info(`Packaged board views ${args[0]}: ${Math.round(performance.now() - started)} ms`);
+    expect(result.status, result.stderr).toBe(0);
+    return JSON.parse(result.stdout);
+  };
 
 let sources: string;
 let env: Record<string, string>;
@@ -69,19 +84,11 @@ test("packaged collection views include native Workspaces and survive a runtime 
     expect(response.status).toBe(201);
     const { id: projectId } = (await response.json()) as { id: string };
     const board = "pstdio.pstdio-planner.view.tickets";
-    const cli = (...args: string[]) => {
-      const result = spawnSync(PACKAGED_BINARY_PATH, ["views", ...args, "--project-id", projectId], {
-        cwd: folder,
-        encoding: "utf8",
-        env: { ...process.env, HOME: root, PSTDIO_HOME: root, PSTDIO_API_URL: runtime.baseUrl },
-      });
-      expect(result.status, result.stderr).toBe(0);
-      return JSON.parse(result.stdout);
-    };
-    const boards = cli("boards");
-    const initial = cli("list", "--board", board).views[0];
+    const cli = createViewsCli({ folder, root, projectId, baseUrl: () => runtime.baseUrl });
+    const boards = await cli("boards");
+    const initial = (await cli("list", "--board", board)).views[0];
     expect(initial.builtIn).toBe(false);
-    expect(cli("update", "--id", initial.id, "--title", "My tickets", "--filter", "none")).toMatchObject({
+    expect(await cli("update", "--id", initial.id, "--title", "My tickets", "--filter", "none")).toMatchObject({
       title: "My tickets",
       filter: { conjunction: "and", rules: [] },
     });
@@ -108,7 +115,7 @@ test("packaged collection views include native Workspaces and survive a runtime 
       },
     );
     expect(refusedDiff.status).toBe(400);
-    const workspaces = cli(
+    const workspaces = await cli(
       "create",
       "--board",
       WORKSPACES_COLLECTION_ID,
@@ -123,8 +130,8 @@ test("packaged collection views include native Workspaces and survive a runtime 
       "--stats",
       "on",
     );
-    cli("set-default", "--board", WORKSPACES_COLLECTION_ID, "--id", workspaces.id);
-    const created = cli(
+    await cli("set-default", "--board", WORKSPACES_COLLECTION_ID, "--id", workspaces.id);
+    const created = await cli(
       "create",
       "--board",
       board,
@@ -152,7 +159,7 @@ test("packaged collection views include native Workspaces and survive a runtime 
       sorts: [{ attributeId: "updated", direction: "desc" }],
       settings: { viewMode: "list" },
     });
-    const invalidSort = spawnSync(
+    const invalidSort = await runTestCommand(
       PACKAGED_BINARY_PATH,
       [
         "views",
@@ -168,13 +175,13 @@ test("packaged collection views include native Workspaces and survive a runtime 
       ],
       {
         cwd: folder,
-        encoding: "utf8",
         env: { ...process.env, HOME: root, PSTDIO_HOME: root, PSTDIO_API_URL: runtime.baseUrl },
       },
+      1,
     );
     expect(invalidSort.status).not.toBe(0);
     expect(invalidSort.stderr).toContain("one sort");
-    cli("set-default", "--board", board, "--id", created.id);
+    await cli("set-default", "--board", board, "--id", created.id);
     const filter = {
       conjunction: "and",
       rules: [{ attributeId: "title", condition: "does-not-contain", value: "archived" }],
@@ -188,7 +195,7 @@ test("packaged collection views include native Workspaces and survive a runtime 
         },
       ],
     };
-    const updated = cli(
+    const updated = await cli(
       "update",
       "--id",
       created.id,
@@ -201,7 +208,7 @@ test("packaged collection views include native Workspaces and survive a runtime 
     await stopProcess(child);
     runtime = await startPackagedServe(root, env);
     child = runtime.child;
-    const persisted = cli("list", "--board", board);
+    const persisted = await cli("list", "--board", board);
     expect(persisted.views).toContainEqual(expect.objectContaining({ id: initial.id, title: "My tickets" }));
     expect(persisted.defaultViewId).toBe(created.id);
     expect(persisted.views).toContainEqual(
@@ -213,7 +220,7 @@ test("packaged collection views include native Workspaces and survive a runtime 
       }),
     );
     const snapshot = await readSnapshot(runtime.baseUrl, runtimeAuthorization(runtime.descriptor));
-    expect(cli("list", "--board", WORKSPACES_COLLECTION_ID)).toMatchObject({ defaultViewId: workspaces.id });
+    expect(await cli("list", "--board", WORKSPACES_COLLECTION_ID)).toMatchObject({ defaultViewId: workspaces.id });
     expect(snapshot.board_views).toContainEqual(
       expect.objectContaining({
         id: workspaces.id,
@@ -239,21 +246,21 @@ test("packaged collection views include native Workspaces and survive a runtime 
     expect(snapshot.board_default_views).toContainEqual(
       expect.objectContaining({ id: expect.any(String), default_view_id: created.id }),
     );
-    const copy = cli("create", "--board", board, "--title", "Copy", "--copy-from", created.id);
+    const copy = await cli("create", "--board", board, "--title", "Copy", "--copy-from", created.id);
     expect(copy).toMatchObject({ filter, sorts: created.sorts });
-    const ordered = cli("reorder", "--board", board, "--ids", `${copy.id},${created.id},${initial.id}`);
+    const ordered = await cli("reorder", "--board", board, "--ids", `${copy.id},${created.id},${initial.id}`);
     expect(
       ordered.views.filter((view: { builtIn: boolean }) => !view.builtIn).map((view: { id: string }) => view.id),
     ).toEqual([copy.id, created.id, initial.id]);
-    cli("delete", "--id", initial.id);
-    cli("delete", "--id", created.id);
-    expect(cli("list", "--board", board)).toMatchObject({ defaultViewId: copy.id, views: [{ id: copy.id }] });
+    await cli("delete", "--id", initial.id);
+    await cli("delete", "--id", created.id);
+    expect(await cli("list", "--board", board)).toMatchObject({ defaultViewId: copy.id, views: [{ id: copy.id }] });
     const last = await fetch(`${runtime.baseUrl}/v1/projects/${projectId}/board-views/${copy.id}`, {
       method: "DELETE",
       headers: runtimeAuthorization(runtime.descriptor),
     });
     expect(last.status).toBe(409);
-    expect(cli("list", "--board", board).views).toHaveLength(1);
+    expect((await cli("list", "--board", board)).views).toHaveLength(1);
   } finally {
     if (child) await stopProcess(child);
     rmSync(root, { recursive: true, force: true });
