@@ -42,7 +42,7 @@ const fixture = async () => {
       published.push(candidate);
     },
   } as unknown as ReturnType<typeof createRecoveryCatalog>;
-  const workspace = {
+  const workspace: { id: string; root_path: string | null; [key: string]: unknown } = {
     id: "workspace",
     root_path: folder,
     execution_kind: "local",
@@ -50,7 +50,7 @@ const fixture = async () => {
     provider_state: "ready",
   };
   const sourceId = `workspace:${createHash("sha256").update(folder).digest("hex").slice(0, 16)}`;
-  const start = (journalRoot = join(root, "recovery")) => {
+  const start = (journalRoot = join(root, "recovery"), gapMs = 0) => {
     let captured = 0;
     const local = createLocalRecoverySource({
       workbenchId: "project",
@@ -61,7 +61,7 @@ const fixture = async () => {
       catalog,
       chunks: () => store,
       signal: new AbortController().signal,
-      schedule: { quietMs: 5, gapMs: 0 },
+      schedule: { quietMs: 5, gapMs },
       captured: () => {
         captured++;
       },
@@ -73,6 +73,21 @@ const fixture = async () => {
     openRecoveryJournal({ root: journalRoot, source: ["project", "account", "laptop", sourceId] });
   return { root, folder, store, entries, published, start, journal, sourceId, workspace };
 };
+
+test("a folder that becomes the project's folder, such as a restored one, is captured at once instead of after the rescan gap", async () => {
+  const f = await fixture();
+  const previous = join(f.root, "previous");
+  await mkdir(previous);
+  f.workspace.root_path = previous;
+  const owner = f.start(undefined, 60_000);
+  owner.local.request("startup");
+  await until(() => owner.captured() > 0);
+  await until(async () => !(await owner.local.status()).capturing);
+  f.workspace.root_path = f.folder;
+  await owner.local.workspaceChanged();
+  await until(async () => !!(await (await f.journal()).read()).candidate);
+  await owner.local.close();
+});
 
 test("a candidate saved before a restart is published even when the folder did not change", async () => {
   const f = await fixture();

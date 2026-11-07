@@ -226,6 +226,12 @@ export const createLocalRecoverySource = (input: {
 
   return {
     request: scheduler.request,
+    /** The project's workspaces changed here. A different folder, such as a restored one that
+     * became the project's folder, is scanned at once; the watched folder rescans after the gap. */
+    async workspaceChanged() {
+      const current = await source();
+      scheduler.request(current && current.folder !== watching?.folder ? "folder" : "watcher-lost");
+    },
     publish,
     prune,
     async status() {

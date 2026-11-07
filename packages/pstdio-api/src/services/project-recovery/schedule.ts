@@ -1,7 +1,7 @@
-export type RecoveryScanReason = "startup" | "reconnect" | "change" | "watcher-lost" | "explicit";
+export type RecoveryScanReason = "startup" | "reconnect" | "change" | "watcher-lost" | "explicit" | "folder";
 
-/** Watch notifications are hints. Startup, reconnect and an explicit request run a
- * full scan promptly; watcher loss waits for the gap and change hints for a quiet period. */
+/** Watch notifications are hints. Startup, reconnect, a new project folder and an explicit request
+ * run a full scan promptly; watcher loss waits for the gap and change hints for a quiet period. */
 export const createRecoveryScheduler = (input: {
   run: (reasons: RecoveryScanReason[], signal: AbortSignal) => Promise<void>;
   watch: (changed: () => void, lost: () => void) => { close(): void };
