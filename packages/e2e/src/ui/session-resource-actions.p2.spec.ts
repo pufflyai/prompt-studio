@@ -43,7 +43,10 @@ test("drafts omit management actions and workspace session rows explain guarded 
   await page.keyboard.press("Escape");
   const [workspace] = await (await request.get(`/v1/workspaces?project_id=${project.id}`)).json();
   const resource = `pstdio://extension-resource/workspace/${workspace.id}`;
-  await page.goto(`/projects/${project.id}/workspace?resource=${encodeURIComponent(resource)}`);
+  // Scoped session actions belong to the workspace context; generic folder links open project Files.
+  await page.goto(
+    `/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspace?resource=${encodeURIComponent(resource)}`,
+  );
   await row(page, session.title).click({ button: "right" });
   await expect(menuItem(page, "Rename session")).toBeVisible();
   await expect(menuItem(page, "Archive session")).toBeVisible();
