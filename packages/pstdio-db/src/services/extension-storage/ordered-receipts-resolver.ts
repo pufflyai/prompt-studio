@@ -78,9 +78,11 @@ export const createOrderedReceiptResolver = (
       const known = new Map<string, OrderedDecision>();
       const refusing = operationDependencies(operation, { base: false });
       for (const [id, fingerprint] of operationDependencies(operation)) {
+        // An own save still ahead in this order has no receipt yet; never search the receipt index for it.
+        if (!refusing.has(id) && ordered.has(id)) continue;
         const decision = await findDependency(id, fingerprint, epoch);
-        if (decision) known.set(id, decision);
-        else if (refusing.has(id) || !ordered.has(id)) return;
+        if (!decision) return;
+        known.set(id, decision);
       }
       return known;
     },

@@ -1,8 +1,8 @@
 import { fingerprint, type Json } from "pstdio-sync-contracts";
+import { baseEdit, type OrderedBase, type OrderedSkip, orderedBase } from "./ordered-base";
 import {
   applyJsonChanges,
   type JsonChange,
-  jsonPointer,
   type ObservedJson,
   observeJson,
   overlappingJsonStamps,
@@ -12,6 +12,9 @@ import {
   validateJsonChanges,
 } from "./ordered-json";
 import { readOrderedObservation } from "./ordered-operation-wire";
+
+export { type OrderedBase, type OrderedSkip, orderedBase } from "./ordered-base";
+
 import { mergeOrderedText, type OrderedTextChange, type OrderedTextState, retainOrderedTexts } from "./ordered-text";
 
 /** Canonical plain data. A query projection can overlay unresolved local operations on this state. */
@@ -32,22 +35,6 @@ export interface OrderedLifetime {
 export interface OrderedObservation extends OrderedLifetime {
   value: ObservedJson;
   stamps: Record<string, string>;
-}
-/**
- * The record lifetime and the write stamps of every changed path as the author saw them.
- * Relay order applies a path only while it still has these stamps, so a device that saved
- * from an old view never overrides a later write it had not seen.
- */
-export interface OrderedBase extends OrderedLifetime {
-  stamps: Record<string, string>;
-}
-/** Paths a relay-ordered save did not apply because another write reached Cloud after its base. */
-export interface OrderedSkip {
-  recordId: string;
-  /** JSON Pointers of plain changes that were not applied. */
-  paths: string[];
-  /** The whole edit was dropped: its record was deleted, recreated or (for a deletion) edited after the base. */
-  whole: boolean;
 }
 export interface OrderedEdit {
   recordId: string;
@@ -124,30 +111,27 @@ const preparedChanges = async (edit: OrderedEdit, current: OrderedRecord | undef
   return replacementChanges(before.exists && !before.deleted ? before.value : undefined, edit.replace);
 };
 
-/** Lifecycle edits guard the whole record; plain edits guard only the paths they write. */
-const lifecycleEdit = (deleted: boolean | undefined, wasDeleted: boolean) =>
-  deleted === true || (deleted === false && wasDeleted);
-
-/** Text-only edits merge as CRDT updates and need no base. */
-export const orderedBase = (
-  record: OrderedRecord | undefined,
-  changes: JsonChange[],
-  deleted: boolean | undefined,
-): OrderedBase | undefined => {
-  if (!changes.length && deleted === undefined) return undefined;
-  const whole = lifecycleEdit(deleted, record?.deleted ?? false);
-  return {
-    version: 1,
-    exists: !!record,
-    deleted: record?.deleted ?? false,
-    lifetime: record?.lifetime ?? null,
-    stamps: overlappingJsonStamps(record?.stamps ?? {}, whole ? [{ path: [], remove: true }] : changes),
-  };
-};
-
 const lifetimeObservation = (revision: string) => {
   const { version, exists, deleted, lifetime } = readOrderedObservation(revision);
   return { version, exists, deleted, lifetime };
+};
+
+const preparedEdit = async (edit: OrderedEdit, current: OrderedRecord | undefined) => {
+  if (edit.replace === undefined && edit.changes === undefined && edit.deleted === undefined)
+    throw new Error("Empty record edit");
+  const changes = await preparedChanges(edit, current);
+  const base = edit.base === undefined ? orderedBase(current, changes, edit.deleted) : (edit.base ?? undefined);
+  let condition: OrderedObservation | OrderedLifetime | undefined;
+  if (edit.expectedRevision !== undefined) condition = readOrderedObservation(edit.expectedRevision);
+  else if (edit.expectedLifetime !== undefined) condition = lifetimeObservation(edit.expectedLifetime);
+  return {
+    recordId: edit.recordId,
+    changes,
+    ...(edit.texts?.length ? { texts: structuredClone(edit.texts) } : {}),
+    ...(edit.deleted === undefined ? {} : { deleted: edit.deleted }),
+    ...(condition ? { condition } : {}),
+    ...(base ? { base } : {}),
+  } satisfies OrderedOperation["edits"][number];
 };
 
 /** Prepare once and persist this immutable envelope before opening transport. */
@@ -159,24 +143,7 @@ export const prepareOrderedOperation = async (
   const ids = group.edits.map(({ recordId }) => recordId);
   if (ids.some((id) => !id) || new Set(ids).size !== ids.length) throw new Error("A commit must name each record once");
   const edits: OrderedOperation["edits"] = [];
-  for (const edit of group.edits) {
-    if (edit.replace === undefined && edit.changes === undefined && edit.deleted === undefined)
-      throw new Error("Empty record edit");
-    const current = records.get(edit.recordId);
-    const changes = await preparedChanges(edit, current);
-    const base = edit.base === undefined ? orderedBase(current, changes, edit.deleted) : (edit.base ?? undefined);
-    edits.push({
-      recordId: edit.recordId,
-      changes,
-      ...(edit.texts?.length ? { texts: structuredClone(edit.texts) } : {}),
-      ...(edit.deleted === undefined ? {} : { deleted: edit.deleted }),
-      ...(edit.expectedRevision === undefined ? {} : { condition: readOrderedObservation(edit.expectedRevision) }),
-      ...(edit.expectedRevision === undefined && edit.expectedLifetime !== undefined
-        ? { condition: lifetimeObservation(edit.expectedLifetime) }
-        : {}),
-      ...(base ? { base } : {}),
-    });
-  }
+  for (const edit of group.edits) edits.push(await preparedEdit(edit, records.get(edit.recordId)));
   const supersedes = [...new Set(group.supersedes ?? [])].sort();
   const envelope = {
     version: 1 as const,
@@ -295,98 +262,14 @@ const acceptsEdit = (
 
 type OrderedEditInput = OrderedOperation["edits"][number];
 
-const stampOperation = (stamp: string) => {
-  if (stamp === "initial") return undefined;
-  const [kind, first, second] = JSON.parse(stamp) as string[];
-  return kind === "canonical" ? second : kind === "pending" ? first : undefined;
-};
-
-const sameStamps = (
-  base: Record<string, string>,
-  current: Record<string, string>,
-  paths: JsonChange[],
-  normalize: (stamp: string) => string,
-  superseded: (stamp: string) => boolean,
-) => {
-  // The root stamp marks the record's lifecycle, which the base lifetime already guards. Two devices
-  // creating the same record keep each other's unrelated fields.
-  const root = paths.some((change) => !change.path.length);
-  const resolve = (stamps: Record<string, string>) =>
-    Object.fromEntries(
-      Object.entries(overlappingJsonStamps(stamps, paths)).flatMap(([pointer, stamp]) =>
-        pointer === "" && !root ? [] : [[pointer, stamp] as const],
-      ),
-    );
-  const before = resolve(base);
-  const after = resolve(current);
-  // Writes by the saves this one replaces are this device's own and leave the base current.
-  for (const [pointer, stamp] of Object.entries(after))
-    if (superseded(stamp)) {
-      if (Object.hasOwn(before, pointer)) after[pointer] = before[pointer]!;
-      else delete after[pointer];
-    }
-  const normalized = (stamps: Record<string, string>) =>
-    Object.fromEntries(Object.entries(stamps).map(([pointer, stamp]) => [pointer, normalize(stamp)]));
-  return unchangedJsonPaths(normalized(before), normalized(after), paths);
-};
-
-/**
- * In-sync devices win: a path applies only while its write stamps still match the author's base.
- * Every device evaluates this identically in relay order, so the blind relay needs no rule.
- */
-const baseEdit = (
-  record: OrderedRecord | undefined,
-  edit: OrderedEditInput,
-  decisions: ReadonlyMap<string, OrderedDecision>,
-  optimistic: boolean,
-  supersedes: ReadonlySet<string>,
-): { edit?: OrderedEditInput; skip?: OrderedSkip } => {
-  const whole = (): { skip?: OrderedSkip } =>
-    edit.changes.length || edit.deleted !== undefined
-      ? {
-          skip: { recordId: edit.recordId, paths: edit.changes.map((change) => jsonPointer(change.path)), whole: true },
-        }
-      : {};
-  // Ordinary stale writes never resurrect a deleted record. Recreating it is explicit.
-  if (record?.deleted && edit.deleted === undefined) return whole();
-  const base = edit.base;
-  if (!base) return { edit };
-  const superseded = (stamp: string) => {
-    const id = stampOperation(stamp);
-    return id !== undefined && supersedes.has(id);
-  };
-  // A refused dependency never became canonical, so a base written over it is no longer current.
-  const normalize = (stamp: string) => {
-    try {
-      return resolveStamp(stamp, decisions, optimistic);
-    } catch (error) {
-      if (error instanceof RefusedDependency) return JSON.stringify(["refused", stamp]);
-      throw error;
-    }
-  };
-  // Deleting or restoring decides the whole record, so any change after the base keeps the in-sync record.
-  // Plain edits compare only their own paths: a restore elsewhere leaves untouched fields writable.
-  if (lifecycleEdit(edit.deleted, base.deleted)) {
-    const moved =
-      base.exists &&
-      !(record && superseded(record.lifetime)) &&
-      (!record ||
-        base.deleted !== record.deleted ||
-        (base.lifetime === null ? null : normalize(base.lifetime)) !== normalize(record.lifetime));
-    const all = [{ path: [], remove: true as const }];
-    return !moved && sameStamps(base.stamps, record?.stamps ?? {}, all, normalize, superseded) ? { edit } : whole();
+/** A refused dependency never became canonical, so a base written over it is no longer current. */
+const baseNormalizer = (decisions: ReadonlyMap<string, OrderedDecision>, optimistic: boolean) => (stamp: string) => {
+  try {
+    return resolveStamp(stamp, decisions, optimistic);
+  } catch (error) {
+    if (error instanceof RefusedDependency) return JSON.stringify(["refused", stamp]);
+    throw error;
   }
-  const kept: JsonChange[] = [];
-  const skipped: string[] = [];
-  for (const change of edit.changes) {
-    if (sameStamps(base.stamps, record?.stamps ?? {}, [change], normalize, superseded)) kept.push(change);
-    else skipped.push(jsonPointer(change.path));
-  }
-  if (!skipped.length) return { edit };
-  const skip = { recordId: edit.recordId, paths: skipped, whole: false };
-  // Nothing left to write: keep the record exactly as the in-sync devices left it.
-  if (record && !kept.length && !edit.texts?.length && edit.deleted === undefined) return { skip };
-  return { edit: { ...edit, changes: kept }, skip };
 };
 
 const applyRecord = (before: OrderedRecord | undefined, edit: OrderedEditInput, stamp: string) => {
@@ -455,7 +338,7 @@ export const applyOrderedOperation = (
   const supersedes = new Set(operation.supersedes);
   for (const input of operation.edits) {
     const before = current.get(input.recordId);
-    const { edit, skip } = baseEdit(before, input, dependencies, false, supersedes);
+    const { edit, skip } = baseEdit(before, input, baseNormalizer(dependencies, false), supersedes);
     if (skip) skipped.push(skip);
     if (!edit) continue;
     const record = applyRecord(before, edit, canonicalStamp(epoch, operation.operationId));
@@ -474,7 +357,7 @@ export const projectOrderedOperation = (
   const supersedes = new Set(operation.supersedes);
   return operation.edits.flatMap((input) => {
     const before = current.get(input.recordId);
-    const { edit } = baseEdit(before, input, dependencies, true, supersedes);
+    const { edit } = baseEdit(before, input, baseNormalizer(dependencies, true), supersedes);
     const record = edit && applyRecord(before, edit, pendingStamp(operation));
     return record ? [record] : [];
   });
