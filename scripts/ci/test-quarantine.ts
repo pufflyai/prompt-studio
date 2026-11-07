@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 export interface QuarantinedTest {
   runner: string;
+  failureKind?: "performance";
   file: string;
   name: string;
   platforms: string[];

@@ -71,10 +71,10 @@ test.beforeAll(() => {
 
 const synced = (device: CloudAcceptanceDevice, projectId: string) =>
   expect
-    .poll(async () => (await device.client.account.projectSyncStatus(projectId)).state, {
+    .poll(() => device.client.account.projectSyncStatus(projectId), {
       message: `${device.name}: waiting for Cloud sync`,
     })
-    .toBe("synced");
+    .toMatchObject({ state: "synced" });
 const read = <T>(device: CloudAcceptanceDevice, projectId: string) =>
   device.command<T>(projectId, acceptanceOwner, "read-acceptance");
 const noteCopy = (device: CloudAcceptanceDevice, noteId: string) => {

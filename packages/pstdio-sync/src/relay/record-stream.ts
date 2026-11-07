@@ -266,13 +266,15 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
    * Null while the stream does not exist and this device has nothing to found it with.
    */
   const join = async (cursor: RecordStreamCursor) => {
-    const first = await relay.read(0);
+    let first = await relay.read(0);
     if (!first.state && first.lastSequence === 0) {
       if (!(await store.hasRecords())) return null;
       const founded = await publish(cursor, true);
       if (founded) return founded;
+      // The winning founding state was published after our empty read.
+      first = await relay.read(0);
     }
-    const downloaded = await download();
+    const downloaded = await download(undefined, first);
     if (!downloaded) return null;
     const { remote, snapshot, frames, updates, after, state, skipped, pendingBytes } = downloaded;
     // An older-format stream without an authenticated founding state cannot supply this

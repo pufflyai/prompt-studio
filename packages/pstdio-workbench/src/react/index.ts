@@ -44,7 +44,7 @@ export { WorkbenchNotificationHost } from "./notifications/notification-host";
 export { WorkbenchRegion } from "./region/region";
 export { WorkbenchRegionTabs } from "./region/region-tabs";
 export { WorkbenchWidgetHost } from "./region/widget-host";
-export { WorkbenchDataTableView } from "./renderers/data-table/data-table-view";
+export { WorkbenchDataTableView } from "./renderers/data-table/lazy-data-table-view";
 export type {
   ReactAttributeDescriptor,
   ReactAttributesSource,

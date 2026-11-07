@@ -1,14 +1,14 @@
 import { createPerformanceRecording, type PerformanceBackend, PerformanceCaptureCollector } from "pstdio-diagnostics";
 import { createProcessObserver } from "./process-observer";
 
-export const createDesktopCapture = (input: {
+export const createDesktopCapture = async (input: {
   backend: () => PerformanceBackend | null;
   executable: string;
   recordingDirectory: string;
   hostVersion: string;
   onError: (error: unknown) => void;
 }) => {
-  const recorder = createPerformanceRecording(input.recordingDirectory);
+  const recorder = await createPerformanceRecording(input.recordingDirectory);
   let observer: ReturnType<typeof createProcessObserver> | null = null;
   const capture = new PerformanceCaptureCollector({
     backend: input.backend,

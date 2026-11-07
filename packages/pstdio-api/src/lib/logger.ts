@@ -64,3 +64,6 @@ export const sessionLogger = forComponent("sessions");
 export const startupLogger = forComponent("startup", "info");
 // A setup stall needs its last entered step even when ordinary request logs are disabled.
 export const setupLogger = forComponent("setup", "info");
+
+// Shutdown stalls need the last entered step even when request logs are disabled.
+export const shutdownLogger = forComponent("shutdown", "info");

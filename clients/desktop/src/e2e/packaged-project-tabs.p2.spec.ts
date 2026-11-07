@@ -12,9 +12,11 @@ import {
   readDescriptor,
   removePackagedHome,
 } from "./packaged-app-helpers";
+import { homePage } from "./packaged-performance-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
 
 test(
   "opens and closes project tabs while preserving pages and terminals",
@@ -25,13 +27,16 @@ test(
     try {
       app = await launchPackagedApp(home, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-          defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
+          defaultExtensions: [
+            { source: fixturePath, installName: "workbench-fixture", skipInstall: true },
+            { source: homePath, installName: "pstdio-home", skipInstall: true },
+          ],
         }),
       });
       const first = await createPackagedProject(app, "Docs");
       const second = await createPackagedProject(app, "Agentic design");
       await openPackagedProject(app.page, first);
-      await expect(app.page.getByTestId("start-page")).toBeVisible();
+      await expect(homePage(app.page)).toBeVisible();
       // Electron combines drag regions from both renderers, even when the
       // workbench covers the lifecycle page. Chromium clicks bypass that hit test.
       await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
@@ -81,7 +86,7 @@ test(
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
       await expect(app.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
       await app.page.getByRole("button", { name: "Navigate back", exact: true }).click();
-      await expect(app.page.getByTestId("start-page")).toBeVisible();
+      await expect(homePage(app.page)).toBeVisible();
       await app.page.getByRole("option", { name: "Lab", exact: true }).click();
       await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
       const lab = app.page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" });
@@ -120,7 +125,7 @@ test(
       // Sessions is a Sidenav level. Clicking the tab of the project the user is already in leaves it
       // for the last root-level page; clicking it again there changes nothing.
       await app.page.getByRole("tab", { name: second.name, exact: true }).click();
-      await expect(app.page.getByTestId("start-page")).toBeVisible();
+      await expect(homePage(app.page)).toBeVisible();
       const secondRootUrl = app.page.url();
       await app.page.getByRole("tab", { name: second.name, exact: true }).click();
       await expect(app.page).toHaveURL(secondRootUrl);
