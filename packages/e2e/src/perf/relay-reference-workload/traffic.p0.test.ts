@@ -10,24 +10,30 @@ test("traffic measurements count actual streamed bytes and identify the start of
     traffic.actor("fixture-token", "sender");
     traffic.phase("large-upload");
     const started = traffic.nextPart("sender");
-    const response = fetch(
-      `${origin}${syncPath({ kind: "part", projectId: "project", spaceOwner: null, blobId: "b".repeat(16), number: 1 })}`,
-      {
-        method: "PUT",
-        headers: { authorization: "Bearer fixture-token" },
-        body: new Uint8Array(10),
-      },
-    );
+    const send = async (route: Parameters<typeof syncPath>[0], body?: Uint8Array) =>
+      (
+        await fetch(`${origin}${syncPath(route)}`, {
+          method: body ? "PUT" : "POST",
+          headers: { authorization: "Bearer fixture-token" },
+          body,
+        })
+      ).arrayBuffer();
+    const space = { projectId: "project", spaceOwner: null };
+    // A record-stream chunk uploads first; only the file upload's first part starts the transfer window.
+    await send({ kind: "blob", ...space, blobId: "c".repeat(16), operation: "begin-manifest" });
+    await send({ kind: "part", ...space, blobId: "c".repeat(16), number: 1 }, new Uint8Array(4));
+    await send({ kind: "blob", ...space, blobId: "b".repeat(16), operation: "begin" });
+    const response = send({ kind: "part", ...space, blobId: "b".repeat(16), number: 1 }, new Uint8Array(10));
     expect((await started).blobId).toBe("b".repeat(16));
-    await (await response).arrayBuffer();
-    expect(traffic.summary()).toEqual([
+    await response;
+    expect(traffic.summary().filter((row) => row.operation === "part")).toEqual([
       {
         actor: "sender",
         phase: "large-upload",
         operation: "part",
-        requests: 1,
-        sentBytes: 10,
-        receivedBytes: 3,
+        requests: 2,
+        sentBytes: 14,
+        receivedBytes: 6,
         failures: 0,
       },
     ]);

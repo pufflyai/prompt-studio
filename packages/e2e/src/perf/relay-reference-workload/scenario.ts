@@ -67,6 +67,8 @@ const uploadWithSecondAccount = async (
       (sample) =>
         sample.actor === "reference-source" && sample.operation === "part" && sample.blobId === firstPart.blobId,
     );
+    const largeFileBytes = parts.reduce((sum, part) => sum + part.sentBytes, 0);
+    assert(largeFileBytes >= 1024 ** 3, `Observed transfer sent ${largeFileBytes} bytes, not the 1 GiB file`);
     const transferEnd = Math.max(...parts.map((part) => part.startedAt + part.elapsedMs));
     const overlapped = start >= firstPart.startedAt && end <= transferEnd;
     assert(overlapped, "Second account did not sync inside the 1 GiB multipart transfer window");
@@ -75,6 +77,7 @@ const uploadWithSecondAccount = async (
       elapsedMs: end - start,
       overlapped,
       largeFilePartRequests: parts.length,
+      largeFileBytes,
       transferMs: transferEnd - firstPart.startedAt,
     };
   } finally {
