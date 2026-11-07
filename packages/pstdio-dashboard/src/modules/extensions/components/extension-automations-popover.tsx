@@ -1,20 +1,19 @@
-import { Button, HStack, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
-import { Switch } from "@pstdio/ui";
+import { ScopedPopover as Popover, PopoverHeader, Portal, ScrollArea, Switch } from "@pstdio/ui";
 import { Timer } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useActionError } from "@/shared/components/use-action-error";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 
 export interface ExtensionAutomationsPopoverProps {
-  extensionName: string;
   automations: WorkbenchExtensionAutomationRecord[];
   togglingAutomation?: boolean;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => Promise<unknown>;
 }
 
 export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverProps) => {
-  const { extensionName, automations, togglingAutomation = false, onToggleAutomation } = props;
+  const { automations, togglingAutomation = false, onToggleAutomation } = props;
   const { t } = useTranslation("projects");
   const { showError, errorNotice, clearError } = useActionError();
 
@@ -32,7 +31,7 @@ export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverPr
   const enabledCount = automations.filter((automation) => automation.enabled).length;
 
   return (
-    <Popover.Root positioning={{ placement: "bottom-end" }}>
+    <Popover.Root variant="widget" positioning={{ placement: "bottom-end" }}>
       <Popover.Trigger asChild>
         <Button
           variant="ghost"
@@ -55,22 +54,24 @@ export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverPr
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content width="320px" data-testid="extension-automations-popover">
-            <Popover.Body padding="0">
-              <Stack gap="0">
-                <HStack paddingX="md" paddingY="sm" borderBottomWidth="1px" borderColor="border.subtle" gap="xs">
-                  <Icon boxSize="3.5" color="fg.subtle">
-                    <Timer />
-                  </Icon>
-                  <Text textStyle="label/S/medium">{t("projectSettings.extensionsPanel.automations.title")}</Text>
-                  <Text textStyle="label/XS" color="fg.subtle" marginLeft="auto">
-                    {extensionName}
-                  </Text>
-                </HStack>
-                <Stack paddingX="md" paddingY="sm" gap="xs">
+          <Popover.Content
+            width="popover-panel"
+            maxW="calc(100vw - var(--chakra-spacing-md) * 2)"
+            display="flex"
+            flexDirection="column"
+            maxH="min({sizes.filter-picker-height}, var(--available-height))"
+            data-testid="extension-automations-popover"
+          >
+            <PopoverHeader
+              icon={<Timer />}
+              title={<Popover.Title>{t("projectSettings.extensionsPanel.automations.title")}</Popover.Title>}
+            />
+            <Popover.Body display="flex" flexDirection="column" minH="0" flex="1" p="0">
+              <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
+                <Stack padding="sm" gap="sm">
                   {errorNotice}
                   {automations.map((automation) => (
-                    <HStack key={automation.id} gap="sm">
+                    <HStack key={automation.id} gap="md" paddingX="sm" paddingY="xs">
                       <Stack gap="0" flex="1" minW="0">
                         <Text textStyle="label/S/regular" truncate>
                           {resolveLocalizableString(automation.title, automation.extensionId)}
@@ -91,7 +92,7 @@ export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverPr
                     </HStack>
                   ))}
                 </Stack>
-              </Stack>
+              </ScrollArea>
             </Popover.Body>
           </Popover.Content>
         </Popover.Positioner>

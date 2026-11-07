@@ -74,6 +74,32 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   return (await projectResponse.json()) as { id: string };
 };
 
+// Critical risk: late settings must not replace the panel the user selected.
+test("preserves the Contributions tab selected while extension settings load", async ({ page, request }) => {
+  const project = await createProject(request);
+  await openExtensions(page, project.id);
+  const release = Promise.withResolvers<void>();
+  let held = 0;
+  await page.route(
+    new RegExp(`/v1/projects/${project.id}/extensions/[^/]+/(settings|contributions)$`),
+    async (route) => {
+      held += 1;
+      await release.promise;
+      await route.continue();
+    },
+  );
+  await page.getByTestId("extension-entry").filter({ hasText: "Workbench fixture" }).click();
+  const contributions = page.getByRole("tab", { name: "Contributions", exact: true });
+  try {
+    await expect.poll(() => held).toBe(2);
+    await contributions.click();
+  } finally {
+    release.resolve();
+  }
+  await expect(page.getByRole("tab", { name: "Settings", exact: true })).toBeVisible();
+  await expect(contributions).toHaveAttribute("aria-selected", "true");
+});
+
 test("disables and enables an extension automation", async ({ page, request }) => {
   const project = await createProject(request);
   await openExtensions(page, project.id);

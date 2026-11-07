@@ -101,7 +101,6 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         data-testid="extension-automation-status"
       >
         <ExtensionAutomationsPopover
-          extensionName={extension.displayName}
           automations={automations}
           togglingAutomation={togglingAutomation}
           onToggleAutomation={onToggleAutomation}

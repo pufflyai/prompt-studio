@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Align extension list switches, hide extension identifiers while keeping version numbers, and toggle automations from the dropdown.
+Align extension controls, hide identifiers while keeping versions, add automation switches in shared popovers, and omit empty settings sections.
