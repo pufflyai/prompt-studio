@@ -4,7 +4,10 @@ import { createHomeModule } from "@/home-page.fixture";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardHomePage } from "@/shared/app/resources";
-import { setDashboardExtensionsRegisteredProject } from "@/shared/extensions/extension-readiness";
+import {
+  getDashboardExtensionsReadyProjectId,
+  setDashboardExtensionsRegisteredProject,
+} from "@/shared/extensions/extension-readiness";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { resolveDashboardPersistenceScope } from "@/shared/workbench/dashboard-persistence-scope";
 import { createBootstrapModule } from "./bootstrap";
@@ -145,6 +148,46 @@ test("restores an extension URL from the first applied metadata while a sync cha
     await flushMicrotasks();
     await flushMicrotasks();
     expect(loads).toHaveLength(2);
+    expect(getDashboardExtensionsReadyProjectId(workbench)).toBeUndefined();
+    expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
+  } finally {
+    for (const load of loads) load.resolve(metadata);
+    bootstrap.dispose();
+    extensions.dispose();
+    start.dispose();
+    clearCachedDashboardExtensionMetadata("project-1");
+  }
+});
+
+test("an extension URL the first catalog read cannot serve waits for the newest read", async () => {
+  const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
+  const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
+  const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
+  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+  const start = workbench.registerModule(createHomeModule());
+  const extensions = workbench.registerModule(
+    createExtensionsModule({
+      loadAppearance: mock(async () => emptyAppearance),
+      loadMetadata: () => {
+        const load = Promise.withResolvers<typeof metadata>();
+        loads.push(load);
+        return load.promise;
+      },
+    }),
+  );
+  const bootstrap = workbench.registerModule(createBootstrapModule());
+  const writer = getWriter("extension_instances");
+  try {
+    await flushMicrotasks();
+    writer?.truncateAndWrite([]);
+    loads[0]!.reject(new Error("Catalog unavailable"));
+    await flushMicrotasks();
+    await flushMicrotasks();
+    expect(workbench.pages.store.getState().activePageId).toBeUndefined();
+    loads[1]!.resolve(metadata);
+    await flushMicrotasks();
+    await flushMicrotasks();
     expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
   } finally {
     for (const load of loads) load.resolve(metadata);
