@@ -119,7 +119,7 @@ describe("createBootstrapModule", () => {
 });
 
 test("restores an extension URL from the first applied metadata while a sync change reloads it", async () => {
-  const loads: PromiseWithResolvers<typeof metadata>[] = [];
+  const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
   const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
   const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
@@ -140,7 +140,7 @@ test("restores an extension URL from the first applied metadata while a sync cha
   try {
     await flushMicrotasks();
     // The sync stream's first snapshot arrives while the first catalog read is still loading.
-    writer.truncateAndWrite([]);
+    writer?.truncateAndWrite([]);
     loads[0]!.resolve(metadata);
     await flushMicrotasks();
     await flushMicrotasks();
