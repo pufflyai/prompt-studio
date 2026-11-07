@@ -1,17 +1,31 @@
 import { Button, HStack, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
+import { Switch } from "@pstdio/ui";
 import { Timer } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useActionError } from "@/shared/components/use-action-error";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 
 export interface ExtensionAutomationsPopoverProps {
   extensionName: string;
   automations: WorkbenchExtensionAutomationRecord[];
+  togglingAutomation?: boolean;
+  onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => Promise<unknown>;
 }
 
 export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverProps) => {
-  const { extensionName, automations } = props;
+  const { extensionName, automations, togglingAutomation = false, onToggleAutomation } = props;
   const { t } = useTranslation("projects");
+  const { showError, errorNotice, clearError } = useActionError();
+
+  const handleToggle = async (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => {
+    clearError();
+    try {
+      await onToggleAutomation(automation, enabled);
+    } catch (error) {
+      showError({ title: error instanceof Error ? error.message : String(error) });
+    }
+  };
 
   if (automations.length === 0) return null;
 
@@ -54,6 +68,7 @@ export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverPr
                   </Text>
                 </HStack>
                 <Stack paddingX="md" paddingY="sm" gap="xs">
+                  {errorNotice}
                   {automations.map((automation) => (
                     <HStack key={automation.id} gap="sm">
                       <Stack gap="0" flex="1" minW="0">
@@ -64,15 +79,15 @@ export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverPr
                           {t("projectSettings.extensionsPanel.automations.cron", { cron: automation.cron })}
                         </Text>
                       </Stack>
-                      <Text
-                        textStyle="label/XS"
-                        fontFamily="mono"
-                        color={automation.enabled ? "fg.success" : "fg.subtle"}
-                      >
-                        {automation.enabled
-                          ? t("projectSettings.extensionsPanel.automations.stateOn")
-                          : t("projectSettings.extensionsPanel.automations.stateOff")}
-                      </Text>
+                      <Switch
+                        size="sm"
+                        checked={automation.enabled}
+                        disabled={togglingAutomation}
+                        onCheckedChange={(details) => void handleToggle(automation, details.checked)}
+                        aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
+                          name: resolveLocalizableString(automation.title, automation.extensionId),
+                        })}
+                      />
                     </HStack>
                   ))}
                 </Stack>

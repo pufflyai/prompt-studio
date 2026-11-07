@@ -119,3 +119,72 @@ test("disables and enables an extension automation", async ({ page, request }) =
   await openExtensions(page, project.id);
   await expect(installedRow.getByTestId("extension-automation-status")).toContainText("1/1");
 });
+
+// Critical risk: overlapping saves can overwrite an automation preference.
+test("keeps all dropdown automation switches disabled while a change is saving", async ({ page, request }) => {
+  const project = await createProject(request);
+  await openExtensions(page, project.id);
+  const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Project Planner" });
+  await installedRow.getByTestId("extension-automations-trigger").click();
+  const checkboxes = page.getByTestId("extension-automations-popover").filter({ visible: true }).getByRole("checkbox");
+  await expect(checkboxes.nth(1)).toBeEnabled();
+
+  const patch = Promise.withResolvers<import("@playwright/test").Route>();
+  await page.route("**/automations/**", (route) => patch.resolve(route), { times: 1 });
+  const response = page.waitForResponse(
+    (entry) => entry.request().method() === "PATCH" && entry.url().includes("/automations/"),
+  );
+  await checkboxes.first().focus();
+  await page.keyboard.press("Space");
+  const heldPatch = await patch.promise;
+  try {
+    await expect(checkboxes.first()).toBeDisabled();
+    await expect(checkboxes.nth(1)).toBeDisabled();
+  } finally {
+    await heldPatch.continue();
+  }
+  expect((await response).status()).toBe(200);
+  await expect(checkboxes.first()).toBeEnabled();
+  await expect(checkboxes.nth(1)).toBeEnabled();
+});
+
+// Critical risk: automation controls must be reachable without leaving the extension list.
+test("turns automations off and on in the extension list dropdown", async ({ page, request }) => {
+  const project = await createProject(request);
+  await openExtensions(page, project.id);
+  const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Workbench fixture" });
+  const trigger = installedRow.getByTestId("extension-automations-trigger");
+  await trigger.click();
+  const popover = page.getByTestId("extension-automations-popover").filter({ visible: true });
+  await expect(popover).toBeVisible();
+  const checkbox = popover.getByRole("checkbox", { name: "Toggle automation Lab heartbeat" });
+  await expect(checkbox).toBeChecked();
+
+  for (const enabled of [false, true]) {
+    const reads = await holdProjectExtensionReads(page, project.id);
+    const patch = Promise.withResolvers<import("@playwright/test").Route>();
+    await page.route("**/automations/**", (route) => patch.resolve(route), { times: 1 });
+    const response = page.waitForResponse(
+      (entry) => entry.request().method() === "PATCH" && entry.url().includes("/automations/"),
+    );
+    await checkbox.focus();
+    await page.keyboard.press("Space");
+    const heldPatch = await patch.promise;
+    await expect(checkbox).toBeDisabled();
+    await heldPatch.continue();
+    expect((await response).status()).toBe(200);
+    await expect(checkbox).toBeChecked({ checked: enabled });
+    await expect(trigger).toContainText(enabled ? "1/1" : "0/1");
+    await expect(popover).toBeVisible();
+    await expect(page.getByTestId("extensions-panel")).toBeVisible();
+    await reads.wait();
+    await reads.release();
+  }
+
+  await trigger.click();
+  await expect(popover).not.toBeVisible();
+  await installedRow.click();
+  await expect(page.getByTestId("extension-automation-row").getByRole("checkbox")).toBeChecked();
+  await openExtensions(page, project.id);
+  await expect(installedRow.getByTestId("extension-automation-status")).toContainText("1/1");
+});

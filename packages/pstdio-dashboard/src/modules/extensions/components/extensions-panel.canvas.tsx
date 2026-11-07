@@ -5,6 +5,7 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import type { AgentInfo } from "pstdio-api-contracts";
+import { useState } from "react";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 
 const installedExtensions: ProjectExtensionInstance[] = [
@@ -336,4 +337,27 @@ export const LongIdentities: Story = {
     diagnostics: [],
     automations: [],
   },
+};
+
+export const InteractiveAutomations = () => {
+  const [extensions, setExtensions] = useState(installedExtensions);
+  const [schedules, setSchedules] = useState(automations);
+  return (
+    <ExtensionsPanelView
+      extensions={extensions}
+      marketplace={marketplace}
+      diagnostics={diagnostics}
+      automations={schedules}
+      onToggle={(extension, enabled) =>
+        setExtensions((current) => current.map((entry) => (entry.id === extension.id ? { ...entry, enabled } : entry)))
+      }
+      onToggleAutomation={async (_extension, automation, enabled) =>
+        setSchedules((current) => current.map((entry) => (entry.id === automation.id ? { ...entry, enabled } : entry)))
+      }
+    />
+  );
+};
+
+export const AutomationSaving: Story = {
+  args: { ...Populated.args, togglingAutomation: true },
 };

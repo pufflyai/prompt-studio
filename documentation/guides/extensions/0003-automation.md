@@ -107,7 +107,7 @@ export default defineExtension({ commands: [writeReport], schedules: [nightlyRep
 ```
 
 The dashboard shows schedules as automations. People turn each one on or off per
-project on the extension's page in **Extensions**. Automations are on
+project from the automation dropdown in the **Extensions** list or on the extension's page. Automations are on
 by default. Set `disabled: true` to ship one turned off. A person's choice always
 wins over the default, and the scheduler skips automations that are off.
 
