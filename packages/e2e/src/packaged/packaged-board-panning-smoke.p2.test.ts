@@ -1,6 +1,6 @@
 import { test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { chromium, expect } from "@playwright/test";
@@ -20,19 +20,21 @@ test(
   "packaged Planner board pans with a mouse and keeps ticket and column actions",
   async () => {
     const startedAt = Date.now();
-    const phase = (name: string) => console.log(`Packaged board: ${name} (${Date.now() - startedAt}ms)`);
     const root = mkdtempSync(join(tmpdir(), "packaged-board-panning-"));
+    const evidence = join(import.meta.dirname, "../../test-results/packaged-board-panning");
+    mkdirSync(evidence, { recursive: true });
+    const phase = (name: string) => {
+      const elapsedMs = Date.now() - startedAt;
+      console.log(`Packaged board: ${name} (${elapsedMs}ms)`);
+      appendFileSync(join(evidence, `${basename(root)}-phases.jsonl`), `${JSON.stringify({ name, elapsedMs })}\n`);
+    };
     let child: ChildProcess | undefined;
     let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
     try {
       const runtime = await startPackagedServe(root, {
         PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner"),
         // Keep the measured setup phases after timeout cleanup removes the disposable home.
-        PSTDIO_LOG_PATH: join(
-          import.meta.dirname,
-          "../../test-results/packaged-board-panning",
-          `${basename(root)}.jsonl`,
-        ),
+        PSTDIO_LOG_PATH: join(evidence, `${basename(root)}.jsonl`),
       });
       child = runtime.child;
       phase("runtime ready");
@@ -61,19 +63,22 @@ test(
       if (browserSetup.status === "rejected") throw browserSetup.reason;
       const id = projectSetup.value;
       const page = browserSetup.value;
-      await Promise.all([
-        createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" }),
-        createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" }),
-        createPlannerTicket(page.request, runtime.baseUrl, id, {
-          content: "# Completed board ticket",
-          statusId: "done",
-        }),
-      ]);
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-      phase("tickets created");
-      await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
-      phase("browser signed in");
-      await page.getByRole("option", { name: "Tickets", exact: true }).click();
+      await Promise.all([
+        Promise.all([
+          createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" }),
+          createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" }),
+          createPlannerTicket(page.request, runtime.baseUrl, id, {
+            content: "# Completed board ticket",
+            statusId: "done",
+          }),
+        ]).then(() => phase("tickets created")),
+        (async () => {
+          await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
+          phase("browser signed in");
+          await page.getByRole("option", { name: "Tickets", exact: true }).click();
+        })(),
+      ]);
       phase("board opened");
       await verifyBoardPanning(page);
       phase("panning checked");
@@ -84,6 +89,7 @@ test(
       await page.getByRole("button", { name: "Column actions for Done", exact: true }).click();
       await page.getByRole("menuitem", { name: "Archive all", exact: true }).click();
       await expect(doneCard).toBeHidden();
+      phase("column archive checked");
       await page.getByTestId("board-column-backlog").scrollIntoViewIfNeeded();
       await verifyTicketCreation(page);
       phase("ticket creation checked");

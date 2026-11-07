@@ -16,7 +16,6 @@
   "status.syncing": "Synchronisation",
   "status.syncingCount": "Synchronisation {{count}}",
   "status.synced": "Synchronisé",
-  "access.comingSoonLine": "Synchronisation Cloud · Bientôt disponible",
   "access.title": "Accès Cloud",
   "access.loading": "Vérification de l’accès Cloud…",
   "access.enabled": "Accès anticipé activé",

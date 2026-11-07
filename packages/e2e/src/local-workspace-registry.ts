@@ -129,17 +129,12 @@ export const startLocalWorkspaceRegistry = async (input: {
 
       // Lockfiles resolved against npm request published tarballs from this scope registry.
       if (requestPath.includes("/-/")) {
-        try {
-          const published = await fetch(new URL(requestPath, `${upstreamOrigin}/`), {
-            signal,
-          });
-          if (published.ok) {
-            const bytes = Buffer.from(await published.arrayBuffer());
-            response.setHeader("content-type", "application/octet-stream");
-            response.end(bytes);
-            return;
-          }
-        } catch {}
+        const published = await fetch(new URL(requestPath, `${upstreamOrigin}/`), { signal });
+        const bytes = Buffer.from(await published.arrayBuffer());
+        response.statusCode = published.status;
+        response.setHeader("content-type", published.headers.get("content-type") ?? "application/octet-stream");
+        response.end(bytes);
+        return;
       }
 
       response.statusCode = 404;

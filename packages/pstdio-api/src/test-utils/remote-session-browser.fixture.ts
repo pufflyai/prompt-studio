@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import type { HarnessExit, HarnessStartInput, SessionMessage, ToolPart } from "pstdio-api-contracts";
 import { jsonSchema } from "pstdio-sync-contracts";
+import { installExtensionSource, toExtensionEnableInput } from "../features/extensions/install-extension-source";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -39,6 +40,9 @@ const approvals: unknown[] = [];
 let online = true;
 let queueUnavailable = false;
 let failedQueueReads = 0;
+let mirrorDeliveries = 0;
+let presence: Promise<void> | undefined;
+let releasePresence: (() => void) | undefined;
 let closing = false;
 let mirror: (fail?: boolean) => Promise<void> = async () => {};
 const record = () =>
@@ -86,9 +90,12 @@ const devices = () => [
 const manager = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,
-  fetch: (request) => {
+  fetch: async (request) => {
     const path = new URL(request.url).pathname;
-    if (path === "/v1/devices") return Response.json({ deviceId: sourceId, devices: devices() });
+    if (path === "/v1/devices") {
+      await presence;
+      return Response.json({ deviceId: sourceId, devices: devices() });
+    }
     if (path === "/v1/account") return Response.json({ features: { relay: true } });
     if (path === "/v1/workbenches") return Response.json([]);
     return Response.json({ ok: true });
@@ -125,6 +132,23 @@ await source.deps.projectService.create({
 });
 await target.deps.projectService.setDefaults(project.id, { default_agent_id: testHarnessId("browser-remote") });
 await source.deps.projectService.setDefaults(project.id, { default_agent_id: testHarnessId("browser-remote") });
+// Browser qualification installs the production provider from maintained staged public artifacts.
+// Backend mirror/cleanup unit tests omit this optional source because they exercise no presentation.
+if (process.argv[2]) {
+  const installed = await installExtensionSource({
+    source: process.argv[2],
+    scope: "user",
+    installName: "pstdio-session-browser",
+    env: process.env,
+    bunCacheDir: process.env.E2E_BUN_CACHE_DIR,
+  });
+  await source.deps.extensionService.enableInstalledSourceForProject({
+    projectId: project.id,
+    installName: installed.installName,
+    ...toExtensionEnableInput(installed),
+  });
+}
+
 const workspace = await target.deps.workspaceService.createStandalone({
   project_id: project.id,
   name: "Laptop workspace",
@@ -172,6 +196,7 @@ mirror = (fail = false) => {
         for (const [index, message] of content.entries())
           source.deps.personalHistoryService.messageReceived(row.id, { index, message, live: false });
       }
+      mirrorDeliveries++;
       const state = await source.deps.personalHistoryService.fullState(project.id);
       for (const row of state.sessions) source.deps.eventBus.emit("sessions", "set", row);
       for (const row of state.workspaces) source.deps.eventBus.emit("workspaces", "set", row);
@@ -201,12 +226,14 @@ source.deps.accountService.start(
       throw new AccountRequestError("Laptop is offline");
     if (command.type === "session.queuedMessages" && queueUnavailable) {
       failedQueueReads++;
-      throw new AccountRequestError("Queue access is renewing");
+      throw new AccountRequestError("Queue relay access is renewing");
     }
     const result = await withDeviceCommandAttachments(source.deps, projectId, command, (value) =>
       execute(jsonSchema.parse(JSON.parse(JSON.stringify(value))), { signal }),
     );
-    await mirror();
+    // Target mutations already schedule a mirror through their real change feeds.
+    // Read-only relay calls must not republish history and refresh their own native query.
+    await syncing;
     return result;
   },
 );
@@ -252,18 +279,34 @@ if (workspacesSource) {
   );
   if (!installedWorkspaces.ok) throw new Error(await installedWorkspaces.text());
 }
-const snapshot = async () => ({
-  stops,
-  answers,
-  approvals,
-  online,
-  failedQueueReads,
-  sourceSessions: await source.deps.sessionService.list(project.id),
-  targetSessions: await target.deps.sessionService.list(project.id),
-  queue: await target.deps.sessionQueueEntriesService.listPendingBySession(session.id),
-});
+const snapshot = async () => {
+  await syncing;
+  return {
+    stops,
+    answers,
+    approvals,
+    online,
+    failedQueueReads,
+    mirrorDeliveries,
+    sourceSessions: await source.deps.sessionService.list(project.id),
+    targetSessions: await target.deps.sessionService.list(project.id),
+    queue: await target.deps.sessionQueueEntriesService.listPendingBySession(session.id),
+  };
+};
 const admin = async (request: Request) => {
   const input = (await request.json()) as { action: string };
+  if (input.action === "hold-presence") {
+    presence = new Promise<void>((done) => {
+      releasePresence = done;
+    });
+    return Response.json({ ok: true });
+  }
+  if (input.action === "release-presence") {
+    releasePresence?.();
+    presence = undefined;
+    releasePresence = undefined;
+    return Response.json({ ok: true });
+  }
   const entry = target.deps.sessionService.store.get(session.id);
   if (input.action === "fail-mirror") {
     await mirror(true);
@@ -353,6 +396,7 @@ console.log(
 const close = async () => {
   if (closing) return;
   closing = true;
+  releasePresence?.();
   control.close();
   unsubscribe();
   unwatch();

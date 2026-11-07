@@ -27,8 +27,11 @@ export const workChoices: { id: OnboardingWorkArea; key: string; icon: Component
   { id: "planning", key: "planning", icon: SquareKanban },
 ];
 export const extensions: Record<string, { name: string; icon?: string }> = {
+  "pstdio-home": { name: "Home" },
+  "pstdio-onboarding": { name: "Onboarding" },
   "pstdio-base-themes": { name: "Themes" },
   "pstdio-skills": { name: "Prompt Studio Skills" },
+  "pstdio-workspaces": { name: "Workspaces" },
   "pstdio-planner": { name: "Project Planner" },
   "pstdio-reports": { name: "Agent Reports" },
   "pstdio-artifacts": { name: "Artifacts" },

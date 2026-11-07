@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { measureFiles, reconcileObjects } from "./storage-audit";
+import { auditStorage, measureFiles, reconcileObjects } from "./storage-audit";
 
 test("physical object accounting rejects unreferenced bytes, missing bytes and changed lengths", () => {
   const expected = [
@@ -31,5 +31,41 @@ test("file blobs have their own bound and shared current/grace references count 
     storedBytes: 1190,
     limitBytes: 290,
     passed: false,
+  });
+});
+
+test("receipt-index nodes count in record storage but add nothing to its allowance or the file bound", () => {
+  const rows = {
+    states: [
+      { documentId: "owner", stateId: "new", byteLength: 1_000, blobIds: ["chunk", "root"], replacedAt: null },
+      { documentId: "owner", stateId: "old", byteLength: 900, blobIds: ["old-chunk", "old-root"], replacedAt: "today" },
+    ],
+    updates: [{ documentId: "owner", byteLength: 100, coveredAt: null, blobIds: ["file"] }],
+    blobs: [
+      { blobId: "chunk", byteLength: 4_000 },
+      { blobId: "old-chunk", byteLength: 3_000 },
+      { blobId: "root", byteLength: 1_043 },
+      { blobId: "old-root", byteLength: 1_041 },
+      { blobId: "leaf", byteLength: 3_600 },
+      { blobId: "file", byteLength: 50_000 },
+    ],
+  };
+  const unit = {
+    owner: { workbenchId: "project", extensionId: "owner" },
+    secret: "secret",
+    chunks: new Set(["chunk", "old-chunk"]),
+    frames: new Set<string>(),
+    files: new Set(["file"]),
+    index: new Set(["root", "old-root", "leaf"]),
+  };
+  const storage = { rows, expectedObjects: [], objects: [], missingBlobMappings: [], unfinishedUploads: [] };
+  const audit = auditStorage(storage as unknown as Parameters<typeof auditStorage>[0], new Map([["owner", unit]]));
+  expect(audit.unknownBlobs).toEqual([]);
+  expect(audit.documents[0]?.files).toMatchObject({ storedBytes: 50_000, latestBytes: 50_000, passed: true });
+  expect(audit.documents[0]?.records).toMatchObject({
+    latestBytes: 1_000 + 4_000,
+    graceBytes: 900 + 3_000,
+    storedBytes: 1_000 + 900 + 100 + 4_000 + 3_000 + 1_043 + 1_041 + 3_600,
+    indexObjects: 3,
   });
 });

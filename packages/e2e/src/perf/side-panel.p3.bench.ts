@@ -5,6 +5,7 @@ import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-fo
 import {
   afterTwoFrames,
   budgetMisses,
+  checkPerformance,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -100,7 +101,6 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
   for (const result of [close, reopen]) {
     expect(result.collapseStateTransitions).toBe(1);
     expect(result.duration).toBeGreaterThanOrEqual(0);
-    expect(result.longTasks).toEqual([]);
   }
 
   await reportPageMemory(page, "side-panel");
@@ -116,5 +116,8 @@ test("closes and reopens the live Side Panel within budget", async ({ page, requ
       workbenchBudgets.sidePanel.value,
     ),
   );
-  expect(misses).toEqual([]);
+  checkPerformance(() => {
+    for (const result of [close, reopen]) expect(result.longTasks).toEqual([]);
+    expect(misses).toEqual([]);
+  });
 });

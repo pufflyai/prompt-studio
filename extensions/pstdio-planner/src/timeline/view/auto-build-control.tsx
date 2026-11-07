@@ -1,4 +1,4 @@
-import { type GuestHost, workbenchPanels } from "@pstdio/sdk/extensions";
+import { type GuestHost, sessionBrowser } from "@pstdio/sdk/extensions";
 import { AutoBuildButton } from "./auto-build-button";
 import type { timelineQueryData } from "./timeline-query";
 import { useAutoBuild } from "./use-auto-build";
@@ -40,7 +40,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
         void host.call("navigation.open", {
           target: {
             kind: "panel",
-            panel: workbenchPanels.projectSession,
+            panel: sessionBrowser.panels.conversation,
             open: "preview",
             resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
           },

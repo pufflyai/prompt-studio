@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, statSync, unlinkSync } from "node:fs";
-import { cp, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
@@ -10,7 +10,8 @@ import {
 } from "pstdio-extensions";
 import { parseRegistrySourceRef, unpackExtension } from "pstdio-extensions/distribution";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
-import { createExtensionIgnoreMatcher } from "./extension-ignore";
+import { traceSetupPhase } from "../../lib/setup-phase";
+import { copyExtensionSource } from "./copy-extension-source";
 import {
   checkExtensionSource,
   checkExtensionsRoot,
@@ -138,22 +139,6 @@ const assertCanCopy = (sourcePath: string, targetPath: string) => {
   if (nested(sourceToTarget) || nested(targetToSource)) {
     throw new Error("Refusing to copy an extension into itself");
   }
-};
-
-const copyExtensionSource = async (sourcePath: string, targetPath: string) => {
-  mkdirSync(dirname(targetPath), { recursive: true });
-  const matcher = createExtensionIgnoreMatcher(sourcePath, { ignoreGit: false });
-  await cp(sourcePath, targetPath, {
-    filter: (path) => {
-      const rel = relative(sourcePath, path).replaceAll("\\", "/");
-      if (!rel) return true;
-      if (rel === ".git" || rel.startsWith(".git/")) return true;
-      if (rel === "node_modules" || rel.startsWith("node_modules/")) return false;
-      if (matcher.ignores(rel)) return false;
-      return true;
-    },
-    recursive: true,
-  });
 };
 
 const removeDirectory = (path: string) => rm(path, { recursive: true, force: true });
@@ -297,27 +282,34 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       mkdirSync(extensionsRoot, { recursive: true });
       stagingRoot = mkdtempSync(join(dirname(extensionsRoot), ".extension-install-"));
       installPath = join(stagingRoot, directoryName);
-      await copyExtensionSource(resolvedSource.path, installPath);
+      await traceSetupPhase("extension.source_copy", { extension: installName }, () =>
+        copyExtensionSource(resolvedSource.path, installPath),
+      );
     }
 
-    const linkedInstalledDependencies = await prepareInstallDependencies({
-      installInput: input,
-      installPath,
-      source: resolvedSource,
-      targetPath,
-    });
+    const linkedInstalledDependencies = await traceSetupPhase(
+      "extension.prepare_dependencies",
+      { extension: installName },
+      () =>
+        prepareInstallDependencies({
+          installInput: input,
+          installPath,
+          source: resolvedSource,
+          targetPath,
+        }),
+    );
     input.signal?.throwIfAborted();
 
-    const { check, loaded } = await validatePreparedInstall(
-      installPath,
-      extensionsRoot,
-      input.allowUnsupportedApiVersion === true,
+    const { check, loaded } = await traceSetupPhase("extension.validate", { extension: installName }, () =>
+      validatePreparedInstall(installPath, extensionsRoot, input.allowUnsupportedApiVersion === true),
     );
     input.signal?.throwIfAborted();
 
     // A replacement must activate every managed view before the working source is replaced.
     if (targetExists && !reuseExisting) await validateExtensionWebviews(loaded, installPath, installName, input.signal);
-    const sourceHash = hashExtensionSource(installPath);
+    const sourceHash = await traceSetupPhase("extension.source_hash", { extension: installName }, async () =>
+      hashExtensionSource(installPath),
+    );
     let snapshot = { check, manifest: loaded.manifest };
     if (installPath !== targetPath) {
       // Resolve asset bases while staging still exists, before its folder is promoted.

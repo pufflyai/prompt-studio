@@ -6,8 +6,8 @@ import {
   storage_ordered_resource_numbers as numbers,
   storage_ordered_owners as owners,
 } from "../../db/schemas.pg";
+import { ensureOrderedOwner } from "./ordered-conversion";
 import { createOrderedJournal, withOrderedOwner } from "./ordered-journal";
-import { initializeOrderedOwner } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import {
   foldOrderedRecords,
@@ -86,10 +86,7 @@ const labels = async (db: Pick<DbClient, "select">, projectId: string, recordIds
  */
 export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: StorageOwner) => void }) => {
   const run = <T>(owner: StorageOwner, action: Parameters<typeof withOrderedOwner<T>>[2]) =>
-    withOrderedOwner(db, owner, async (journal, tx, created) => {
-      await initializeOrderedOwner(journal, tx, owner, created);
-      return action(journal, tx, created);
-    });
+    withOrderedOwner(db, owner, action);
   const each = async (
     rows: { workbenchId: string; extensionId: string }[],
     action: (owner: StorageOwner) => Promise<boolean>,
@@ -160,7 +157,8 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
       const changed: CloudReturnStatus["changed"] = { total: 0, deletions: 0, records: [] };
       for (const row of rows) {
         const owner = { workbenchId: row.workbenchId, extensionId: row.extensionId };
-        // Status reads never take the owner's write lock that synchronization holds.
+        // Status reads never take the owner's write lock that synchronization holds, but wait for conversion.
+        await ensureOrderedOwner(db, owner);
         const summary = await db.transaction((tx) => orderedReturnSummary(createOrderedJournal(tx, owner)));
         changed.total += summary.records.length;
         changed.deletions += summary.deletions;

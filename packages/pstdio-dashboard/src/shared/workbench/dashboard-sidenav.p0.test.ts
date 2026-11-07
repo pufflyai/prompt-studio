@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -53,13 +53,37 @@ describe("registerDashboardSidenav", () => {
       ]);
     }
   });
-  test("defaults the Sessions group to expanded", () => {
+  test("applies provider node defaults once using their scoped navigation IDs", () => {
     const workbench = createWorkbench();
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    const page = registerModePage(workbench, "project", "workspace");
     registerDashboardSidenav(workbench);
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav)).toMatchObject({
-      expandedNodeIds: ["workspace-sessions"],
-      expandedSectionIds: ["sessions-wrap"],
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({ kind: "page", page });
+    workbench.views.registerView({
+      id: "provider.sessions",
+      title: "Sessions",
+      body: {
+        kind: "tree",
+        defaultExpandedNodeIds: ["sessions"],
+        getBody: () => [{ id: "group", nodes: [{ id: "sessions", label: "Sessions", collapsible: true }] }],
+        getChildren: () => [],
+      },
     });
+    workbench.navigationTrees.registerContribution({
+      id: "provider.tree",
+      idScope: "provider.tree",
+      owner: { kind: "page", id: "test.page.workspace", extensionId: "test" },
+      sourceExtensionId: "provider",
+      declarationIndex: 0,
+      viewId: "provider.sessions",
+    });
+    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedNodeIds).toEqual([
+      "provider.tree:sessions",
+    ]);
+    workbench.treeViews.setNodeExpanded(dashboardWidgetIds.dashboardSidenav, "provider.tree:sessions", false);
+    workbench.views.refreshView("provider.sessions");
+    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedNodeIds).toEqual([]);
   });
   test("applies section defaults from contributions registered after the sidenav", () => {
     const workbench = createWorkbench();
@@ -77,7 +101,6 @@ describe("registerDashboardSidenav", () => {
       getSections: () => [],
     });
     expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toEqual([
-      "sessions-wrap",
       "files",
       "sessions",
     ]);
@@ -222,4 +245,50 @@ test("the default project header puts ordinary Home before Search and keeps Sear
   expect((await header()).flatMap((section) => section.nodes).map((node) => node.id)).toEqual(["home", "search"]);
   home.dispose();
   expect((await header()).flatMap((section) => section.nodes).map((node) => node.id)).toEqual(["search"]);
+});
+
+test("opening project-scoped notes keeps the sidebar data while dependent resources refresh", () => {
+  const workbench = createWorkbench();
+  workbench.modes.registerMode({ id: "project", activate() {} });
+  const page = registerModePage(workbench, "project", "notes", "note");
+  workbench.navigationTrees.registerContribution({
+    id: "notes",
+    owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+    sourceExtensionId: "notes",
+    declarationIndex: 0,
+    resolveResource: () => undefined,
+    getSections: () => [{ id: "notes", nodes: [] }],
+  });
+  const registration = registerDashboardSidenav(workbench);
+  workbench.pageLocations.setProject("project-1");
+  const open = (id: string) => workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "note", id } });
+  open("first");
+  const refresh = spyOn(workbench.views, "refreshView");
+  try {
+    open("second");
+    expect(refresh).not.toHaveBeenCalled();
+    workbench.views.registerView({
+      id: "dependent",
+      title: "Dependent",
+      body: { kind: "tree", getBody: () => [], getChildren: () => [] },
+    });
+    workbench.navigationTrees.registerContribution({
+      id: "dependent",
+      owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+      sourceExtensionId: "dependent",
+      declarationIndex: 1,
+      viewId: "dependent",
+    });
+    expect(refresh).toHaveBeenCalledWith(dashboardWidgetIds.dashboardSidenav);
+    refresh.mockClear();
+    open("third");
+    expect(refresh).toHaveBeenCalledWith(dashboardWidgetIds.dashboardSidenav);
+    refresh.mockClear();
+    workbench.views.refreshView("dependent");
+    expect(refresh).toHaveBeenCalledWith(dashboardWidgetIds.dashboardSidenav);
+  } finally {
+    refresh.mockRestore();
+    registration.dispose();
+    workbench.dispose();
+  }
 });

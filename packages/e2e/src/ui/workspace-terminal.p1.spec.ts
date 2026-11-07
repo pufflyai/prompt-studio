@@ -255,3 +255,47 @@ test("closing a terminal tab leaves no shell process behind", async ({ page, req
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
   }
 });
+
+// Critical: completing a delayed terminal load must respect a newer keyboard focus choice.
+test("keeps tab-menu focus when the terminal renderer finishes loading", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Terminal focus ownership" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  const requested = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  await page.route(/\/assets\/[^/]*terminal[^/]*\.js$/, async (route) => {
+    requested.resolve();
+    await release.promise;
+    await route.continue();
+  });
+  try {
+    await prepareDashboard(page, project.id);
+    await page.goto(`/projects/${project.id}`);
+    await expect(homePage(page)).toBeVisible();
+    const showBottom = page.getByRole("button", { name: "Show Bottom Panel", exact: true });
+    if (await showBottom.isVisible()) await showBottom.click();
+    const header = page.locator('[data-workbench-panel-header="secondary"]');
+    await header.getByRole("button", { name: "Add panel", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
+    await requested.promise;
+    const tab = header.getByRole("tab").first();
+    await tab.focus();
+    await page.keyboard.press("Shift+F10");
+    const reset = page.getByRole("menuitem", { name: "Reset layout", exact: true });
+    await expect(reset).toBeVisible();
+    const menu = page.getByRole("menu");
+    await menu.press("End");
+    await expect(reset).toHaveAttribute("data-highlighted", "");
+    await expect(menu).toBeFocused();
+    release.resolve();
+    await expect(page.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
+    await expect(menu).toBeFocused();
+    await reset.click();
+    await expect(tab).toHaveCount(0);
+  } finally {
+    release.resolve();
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+  }
+});

@@ -211,6 +211,7 @@ export const suites: BenchmarkSuite[] = [
     label: "Storage",
     files: [
       "packages/pstdio-db/src/services/extension-storage/document-storage.p3.bench.ts",
+      "packages/pstdio-db/src/services/extension-storage/ordered-legacy-backlog.p3.bench.ts",
       "packages/pstdio-db/src/services/sessions/session-query.p3.bench.ts",
     ],
     sample: (_context, files) =>

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { workbenchPanels } from "@pstdio/sdk/extensions";
+import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import { WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardHomePage } from "@/shared/app/resources";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerHomePage } from "./home-page.test-support";
+import { registerSessionProvider } from "./modules/sessions/session-provider.fixture";
 import { createDashboardWorkbench } from "./workbench";
 
 describe("createDashboardWorkbench", () => {
@@ -18,21 +18,22 @@ describe("createDashboardWorkbench", () => {
     const workbench = createDashboardWorkbench();
 
     registerHomePage(workbench);
+    registerSessionProvider(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Project" });
     workbench.pageLocations.setProject("project-1");
     expect(workbench.pageLocations.navigate({ kind: "page", page: dashboardHomePage }).ok).toBe(true);
 
     expect(workbench.getPrimaryResource()).toBeUndefined();
-    const sessionBubble = workbench.modePlacements.getPlacement(workbenchPanels.projectSession);
+    const sessionBubble = workbench.modePlacements.getPlacement(sessionBrowser.panels.conversation);
     expect(sessionBubble?.region).toBe("side");
     expect(sessionBubble?.item).toMatchObject({
       kind: "binding",
-      binding: { view: { id: dashboardWidgetIds.sessionBubble } },
+      binding: { view: sessionBrowser.views.conversation },
     });
     const addableViews = workbench.composition
       .panelsFor("side")
       .addable.map((panel) => workbench.layout.getPanel(panel.panelId)?.rendererId);
-    expect(addableViews).toContain(dashboardWidgetIds.sessionBubble);
+    expect(addableViews).toContain(contributionRefId(sessionBrowser.views.conversation));
   });
 
   test("starts the Secondary Panel closed", () => {

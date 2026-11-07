@@ -101,9 +101,9 @@ export const createCloudAcceptanceFixture = async (
   // Diagnostic collection has its own stricter deadline so a dead peer cannot prevent teardown.
   const diagnostics = async (projectId?: string) => {
     const signal = AbortSignal.timeout(1_000);
-    return {
-      relay: await peer.inspect(signal).catch((error) => ({ error: String(error) })),
-      devices: await Promise.all(
+    const [relay, snapshots] = await Promise.all([
+      peer.inspect(signal).catch((error) => ({ error: String(error) })),
+      Promise.all(
         devices.map(async (device) => ({
           name: device.name,
           environmentId: device.environmentId,
@@ -127,7 +127,8 @@ export const createCloudAcceptanceFixture = async (
           })(),
         })),
       ),
-    };
+    ]);
+    return { relay, devices: snapshots };
   };
   return { peer, start, devices, diagnostics };
 };

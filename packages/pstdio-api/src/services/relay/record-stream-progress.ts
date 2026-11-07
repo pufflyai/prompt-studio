@@ -3,6 +3,18 @@ import type { createDocumentSync, RecordStreamStore } from "pstdio-sync/relay";
 import { apiLogger } from "../../lib/logger";
 import type { documentProgress } from "./document-progress";
 
+export const traceRelayOwnerPhase = async <T>(owner: StorageOwner, phase: string, work: () => Promise<T>) => {
+  const started = performance.now();
+  try {
+    return await work();
+  } finally {
+    apiLogger.debug(
+      { event: "relay.owner.phase", ...owner, phase, elapsedMs: performance.now() - started },
+      "Owner storage progress",
+    );
+  }
+};
+
 export const traceDocumentSync = (
   owner: StorageOwner,
   role: "directory" | "document",

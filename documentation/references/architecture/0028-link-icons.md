@@ -69,4 +69,4 @@ Sites usually use one icon, so the first page asked for a site decides the icon 
 
 While a message streams, bare links still grow, so their host names are not final. Bubbles show the globe and ask for icons only when the message stops streaming.
 
-Bubbles keep a native `<a href target="_blank" rel="noopener noreferrer">`, so the browser opens the tab and modified clicks work. In the desktop app, the window-open handler opens the link in the system browser. The session chat implements it in [session-link-handler.ts](../../../packages/pstdio-dashboard/src/modules/sessions/chat/session-link-handler.ts). Requirements are in [PRD 0008](../../requirements/platform/0008-resource-path-opening.md).
+Bubbles keep a native `<a href target="_blank" rel="noopener noreferrer">`, so the browser opens the tab and modified clicks work. In the desktop app, the window-open handler opens the link in the system browser. The session chat implements it in [session-link-handler.ts](../../../packages/pstdio-dashboard/src/shared/chat/session-link-handler.ts). Requirements are in [PRD 0008](../../requirements/platform/0008-resource-path-opening.md).

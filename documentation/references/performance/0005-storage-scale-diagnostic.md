@@ -33,12 +33,18 @@ before accepted measurement; the small preparation group avoids thousands of
 setup commits without removing rows or edit rounds. The separately measured
 atomic operation always changes exactly 100 rows.
 
-Planner creation uses its public collection API, one resource per commit. Later
-Planner seed edits discover opaque record addresses through the public API and
-preserve those addresses in grouped commits. No code reconstructs a private
-collection address. The manifest describes generator inputs; Planner adds domain
-fields. `--verify-fixture` records actual stored counts, byte distributions, field
-counts and final history values after the full seed, in a process that then exits.
+Planner creates each ticket, with its core ticket number, through its public
+`create-ticket` command, in view order (rank, then ID), before any ticket gains
+fixture data. Its first edit then stores the generator row under the ticket's `scale`
+field beside Planner's own fields and sets the title and status the board shows;
+Planner's own body stays empty. Later Planner edits find tickets through the identity
+index and keep their opaque record addresses in grouped commits. No code reconstructs
+a private collection address. The manifest describes generator inputs; Planner adds
+domain fields. Creating a Planner ticket reads every existing ticket, so rich seeding
+takes noticeably longer; it is preparation and is not timed. `--verify-fixture`
+records actual stored counts, byte distributions, field counts and final history
+values after the full seed, in a process that then exits. It fails if Planner holds a
+ticket the fixture did not adopt.
 
 A separate `--churn` seed creates and edits another complete set of distinct IDs,
 then deletes them. It retains all live rows. Never use churn as a smaller live
@@ -49,9 +55,18 @@ The focus predicate selects 100 distributed rows. The broader predicate selects
 more than 100, so page two is distinct and sorting is real. Sort ties use record
 ID. B view measurements target the 100,000-row owner. A also measures Planner.
 Simultaneous public queries target all ten owners.
+
+Every owner declares the shared `scaleStorageIndexes` before its first write. For
+Planner, the fixture adds them beside its commands, so Planner writes in this fixture
+also maintain these indexes. Fixture views use the paged collection contract, and
+fixture page, count and burst reads use `records.query` and `records.aggregate`. They
+read one bounded page and its counts, never the whole owner. When a write lands between
+a page and its counts, the read is repeated until both describe one revision. Planner
+fixture edits find ticket addresses through the identity index. Only fixture
+verification during preparation lists every stored row.
 The `all-owner-edit-burst` shard also submits one durable write per owner together,
-records each acknowledgement and fairness, then kills/reopens and restores them.
-Planner's legacy collection retry-identity gap remains an explicit failure.
+records each acknowledgement and fairness, then kills/reopens, retries each
+acknowledged write with its operation ID and restores them.
 
 ## Exclusive machine timing window
 
@@ -174,7 +189,8 @@ and worker cleanup all consume that same allowance.
 | Case boundary | Included work |
 | --- | --- |
 | One database sample process | Database open/close, cold and warm operations, verification and shutdown. Fixture construction and copying finish before the process starts. Ten independent cold cases are still required. |
-| Application and sync layer controllers | These still include some fixture work inside their old case wrappers. PS-909 must move initial relay download, extension/view preparation and sync-layer seeding outside measured workers before claiming compliance with the corrected boundary. |
+| Application cases | Runtime startup, the offered background, foreground operations, drain, restoration and reset propagation. Rich board and list cases also save Planner's view settings before the timer. Initial relay upload and download and the second device's extension installation finish in `--prepare-sync` first. |
+| Sync layer controllers | These still include sync-layer seeding inside their case wrappers. PS-909 must move it outside measured workers before claiming compliance with the corrected boundary. |
 
 Separate binary and fixture extension builds run before these cases under their existing build limits.
 Run `perf:storage-scale:build` again after changing the fixture consumer; seed and
@@ -258,15 +274,14 @@ virtualized rows, labels and controls are ready.
 
 The second-page driver clicks the native table's next-page control and checks the
 new first row and absence of the prior page's first row. Its API companion checks
-all 100 IDs, sort order and owner. Legacy client paging and unproved complete
-virtualized-row readiness remain failures; this is not evidence of indexed cursor
-paging.
+all 100 IDs, sort order and owner. The table requests each page from its provider.
+Unproved complete row readiness remains a failure.
 
 Every edit kind has separate public SDK and UI observations. The SDK timer starts
 at request and ends at durable local response. The first-write case performs no
 owner read after restart. UI timing starts at Save and waits for durable response
 and committed visible values. Assertions check titles, nested/tag/multiline
-summaries, membership and order. The legacy editor loads its owner before Save;
+summaries, membership and order. The editor loads its board page before Save, so
 requested cold UI edits are explicitly marked unavailable, even if fast. The
 separate direct cold SDK case prevents editor preparation from hiding hydration.
 
@@ -278,8 +293,25 @@ A scenario exception records the error and invalidates the fixture rather than
 retrying or continuing with unproved restoration. Missing remaining samples stay
 missing in the coverage ledger.
 
-`--sync` prepares a local TLS relay and a second full device through public APIs.
-Initial upload/download is separate preparation. The offered incoming workload is
+Sync shards need a prepared sync service. `--prepare-sync` starts it for one seeded
+home: a local TLS relay and a second full device, signed in through public APIs. It
+returns once the fixture is uploaded, the second device has installed every owner
+and downloaded the whole fixture. The service keeps running between shards, so each
+`--sync` case attaches to two devices that are already synced; initial upload,
+download and extension installation stay outside the 60-second case cap.
+`--stop-sync` stops it, waits for its devices to stop and removes the second device;
+it also clears a service that crashed or was interrupted while preparing. Sync cases
+refuse a service that is still preparing, has stopped, or runs another runtime build.
+Run idle shards before preparing sync: the home stays signed in to the service's relay,
+also after it stops, so idle measurement afterwards needs a fresh seed.
+
+```sh
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/sync-service --home /path/native-small --prepare-sync --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/incoming-board --home /path/native-small --measure --profile native --operation board --background incoming --sync --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/sync-service --home /path/native-small --stop-sync --timing-owner /path/owner.json
+```
+
+The offered incoming workload is
 100 operations at 100 ms intervals over ten seconds. Fold pressure offers 129
 writes to cross the current persisted threshold. Driver offered/completed counts,
 failures, backlog and drain are recorded. Drain requires both sync statuses and

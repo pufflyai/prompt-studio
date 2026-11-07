@@ -11,6 +11,7 @@ import { createDocumentDirectory } from "./document-directory";
 import { createDocumentTransactions } from "./document-transactions";
 import { createNativeDocumentStore, openNativeDocument } from "./native-document-storage";
 import { createOrderedCloudReturn } from "./ordered-cloud-return";
+import { convertLegacyOwners } from "./ordered-conversion";
 import { createOrderedLogs } from "./ordered-logs";
 import { createOrderedResourceRecords } from "./ordered-resource-records";
 import { createOrderedStreamStore } from "./ordered-stream-store";
@@ -52,7 +53,7 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
     .limit(1);
   return !!record;
 };
-type StorageChange = StorageOwner & { documentId?: string };
+export type StorageChange = StorageOwner & { documentId?: string };
 
 const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
   const [row] = await db
@@ -126,6 +127,7 @@ export const createDocumentStorageDBService = (
   const nativeStore = (id: string) => createNativeDocumentStore(db, id, transactionFor, documentRevision(db, id));
   const isResourceDocument = (id: string) =>
     id.startsWith(resourceDocumentId("").slice(0, -2)) ||
+    id.startsWith('["ordered-conversion') ||
     id.startsWith('["ordered-index-blob",') ||
     id.startsWith('["ordered-native-field",') ||
     id.startsWith('["ordered-native-room",') ||
@@ -153,6 +155,7 @@ export const createDocumentStorageDBService = (
   });
   return {
     transaction,
+    convertLegacyOwners: (options: Parameters<typeof convertLegacyOwners>[1]) => convertLegacyOwners(db, options),
     logs,
     cloudReturn,
     observer,

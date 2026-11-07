@@ -1,8 +1,14 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
+
+const actionPath = "/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.onAction/execute";
+const isSubmit = (request: Request) =>
+  request.method() === "POST" &&
+  request.url().endsWith(actionPath) &&
+  request.postDataJSON()?.params?.action?.type === "submit";
 
 // Critical: a submitted message must remain visible while its draft becomes the created session.
 test("keeps sent messages visible through session creation, redirect and follow-up confirmation", async ({
@@ -98,16 +104,18 @@ test("keeps sent messages visible through session creation, redirect and follow-
         };
         requestAnimationFrame(frame);
       }, prompt);
-      const saved = page.waitForResponse(
-        (response) =>
-          response.request().method() === "POST" &&
-          (response.url().endsWith("/v1/sessions") || response.url().endsWith("/follow-up")),
-      );
+      const saved = page.waitForResponse((response) => isSubmit(response.request()));
       await send.click();
       const response = await saved;
       expect(response.ok()).toBe(true);
-      if (!sessionId) sessionId = (await response.json()).id;
-      await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/session\\?`));
+      const outcome = (await response.json()).outcome;
+      expect(outcome.ok).toBe(true);
+      if (!sessionId) sessionId = outcome.navigationRequests[0].resource.id;
+      await expect(page).toHaveURL(
+        (url) =>
+          url.pathname === `/projects/${projectId}/extensions/pstdio.pstdio-session-browser/conversation` &&
+          Boolean(url.searchParams.get("resource")?.includes(sessionId!)),
+      );
       const confirmed = main.locator('[data-chat-message-list-item="user"]:visible').filter({ hasText: prompt });
       await expect(confirmed).toHaveAttribute("data-chat-message-id", /^optimistic-fake-/);
       await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));

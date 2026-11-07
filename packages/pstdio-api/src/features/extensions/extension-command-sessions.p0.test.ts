@@ -2,6 +2,7 @@ import { afterAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createSessionQueueLifecycle } from "../sessions/session-queue-lifecycle";
 import { createTrackedSessionStore } from "../sessions/session-store.test-utils";
 import { createCommandEnvironment } from "./command-environment";
 
@@ -72,6 +73,7 @@ const createSessionEnvironment = (
   const environment = createCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
+      sessionQueueLifecycle: createSessionQueueLifecycle(),
       extensionSettingsDBService: {
         getValue: async () => (harness.defaults ? { value_json: harness.defaults } : null),
       },

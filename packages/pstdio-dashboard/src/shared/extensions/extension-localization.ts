@@ -17,7 +17,14 @@ export type ResolvedLocalizable<T> = JsonValue extends T
         : T;
 
 export type ResolvedWorkbenchExtensionMetadata = ResolvedLocalizable<WorkbenchExtensionMetadata>;
-export type ResolvedWorkbenchExtensionAppearance = ResolvedLocalizable<ListExtensionAppearanceResponse>;
+type ResolvedAppearanceRecord<T> = Omit<T, "title" | "description"> & { title: string; description?: string };
+export type ResolvedWorkbenchExtensionAppearance = Omit<
+  ListExtensionAppearanceResponse,
+  "themes" | "fileIconThemes"
+> & {
+  themes: ResolvedAppearanceRecord<ListExtensionAppearanceResponse["themes"][number]>[];
+  fileIconThemes: ResolvedAppearanceRecord<ListExtensionAppearanceResponse["fileIconThemes"][number]>[];
+};
 
 type TranslationRecord = ListExtensionAppearanceResponse["translations"][number];
 // Registration disposers need their revisions intact when the owner is disposed.
@@ -111,10 +118,30 @@ export const localizeExtensionMetadata = (metadata: WorkbenchExtensionMetadata, 
 export const localizeExtensionValue = (value: unknown, extensionId?: string, owner = getRuntimeCollections()) =>
   resolveValue(value, extensionId, owner);
 
+const localizeAppearanceRecord = <
+  T extends { extensionId: string; title: LocalizableString; description?: LocalizableString },
+>(
+  record: T,
+  owner: ReturnType<typeof getRuntimeCollections>,
+) => ({
+  ...record,
+  title: resolveLocalizableString(record.title, record.extensionId, undefined, owner),
+  description:
+    record.description === undefined
+      ? undefined
+      : resolveLocalizableString(record.description, record.extensionId, undefined, owner),
+});
+
 export const localizeExtensionAppearance = (
   appearance: ListExtensionAppearanceResponse,
   owner = getRuntimeCollections(),
-) => resolveValue(appearance, undefined, owner) as ResolvedWorkbenchExtensionAppearance;
+) => ({
+  ...appearance,
+  // Theme assets, icon definitions and translation dictionaries contain literal data.
+  // Only the record's declared labels accept localization tokens.
+  themes: appearance.themes.map((record) => localizeAppearanceRecord(record, owner)),
+  fileIconThemes: appearance.fileIconThemes.map((record) => localizeAppearanceRecord(record, owner)),
+});
 
 export const registerExtensionTranslationBundles = (
   appearance: ListExtensionAppearanceResponse,

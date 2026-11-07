@@ -184,8 +184,6 @@ test.describe
       const { localRow } = await openLocalExtensionToggle(page);
       await localRow.click();
       await expect(page.getByTestId("extension-detail")).toBeVisible();
-      await page.getByRole("tab", { name: "Settings" }).click();
-
       const heldReads = await holdProjectExtensionReads(page);
       await page.getByTestId("extension-delete").click();
       const dialog = page.getByRole("dialog").last();
