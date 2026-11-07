@@ -1,5 +1,71 @@
 # @pstdio/workbench
 
+## 0.47.0
+
+_2026-11-07_
+
+### Minor Changes
+
+- f917d92: Support resource-group context menus and content-sized page dialogs with shared headers and form actions.
+- 2f798b7: Let extensions offer a setup view for new projects and install catalog extensions for their project with `ctx.extensions`. New projects enable only the configured defaults.
+- 7516ff7: Let extensions display grouped resource lists with nested children and shared saved views.
+- 29f08d1: Let extensions declare native conversations with immediate composers and scoped data, draft, and action bindings.
+- e68fb45: Let extensions use public dashboard commands for conversations, tools, setup recovery, and recently opened resources, with exact update-time conversation queries.
+- 0edb970: Share declared Markdown sources live across devices with durable offline edits and transient cursors.
+- 39796d3: Let extensions browse workspace files, rename workspaces, review changes, read device capacity and retain native file, tree and terminal interactions through scoped host services.
+- 121c013: Let extensions present single-view pages in host modals with scoped resources and parameters while preserving the current page. Numeric controls can follow an enabling boolean control without losing their value.
+
+### Patch Changes
+
+- be09ff4: Keep shared editor refreshes current when another unchanged view requests a save.
+- 69a70df: Use public text sessions for legacy Markdown and retain correct editor presence across delayed lifecycle replies. Retain native and installed recovery views through resource removal and allow explicit closure after the person has recovered their text.
+
+  Stop cancelled Cloud transports locally while draining their admitted synchronization work.
+
+  Preserve each retained Markdown view’s scroll and private recovery while releasing its previous public session before a successor opens.
+
+- be79dba: Create notes immediately from the command palette and respect bound palette arguments.
+- 70f26ed: Open and leave Sessions faster: tree rows whose data did not change no longer render again while the sidenav loads, and each row starts its context menu only when you first open it.
+- 6df39fc: Open Tickets and other kanban pages faster: returning to an unchanged board no longer re-renders every card, and an open command palette updates when extension results change.
+- 094a099: Keep nested navigation's back button in a separate fixed group above the scrolling content.
+- 8cf242e: Focus new-session chat inputs, show session skeletons during mount, narrow chat content, match user messages to workspace rounding, improve workspace and command-menu controls, and prevent sent-message entrance animations from replaying.
+- b118f4b: Keep workbench interactions responsive as saved preferences grow.
+- 9f47beb: Keep document errors and recovery notices in a sticky footer without moving the editor's first line.
+- c3a5eb3: Keep status details loaded after closing so they reopen without restarting their views.
+- 9f1605d: Close menus and popovers when their trigger is clicked again, including Auto Build activity, tab context menus, and controls with custom IDs.
+- d55065f: Keep the navigation header inside Main and preserve embedded views when panels change sides.
+- 29f08d1: Keep failed message forks beside their Fork control without duplicating the error as a conversation Retry footer.
+- 29f08d1: Preserve native chat queue settings, session forks, optional working folders, remote device controls, authentication channels, workspace links and durable legacy draft transfer for independently installed Sessions views. Keep dependent command pickers open, focused and keyboard-accessible while their options refresh, and apply command destination-page hints only to their captured Main viewer. Preserve live, virtualized resource-argument search with accessible status and captured command context. Send large native chat events as bounded stream frames and publish them atomically without interrupting visible history or newer local work. Recover unacknowledged native drafts after immediate reload and preserve newer work across owner replacement.
+
+  Expose the existing pure session message patch reducer through the SDK so backend native-chat providers can omit UI runtime dependencies, preserving the UI export and prompt animation identity.
+
+- 29f08d1: Restore compact native chat model and inline parameter controls using shared UI components, retain empty conversation guidance, and suppress unavailable-harness feedback while draft selection is still initializing.
+- 29f08d1: Keep resolved native session controls when typing starts before draft hydration finishes.
+- 29f08d1: Keep accepted native chat input in prompt history while its queue receipt awaits canonical delivery.
+- 29f08d1: Add an optional native chat workspace hub binding for existing workspace/device selection, setup status and diff information. Reuse compact workspace menus, retain existing-session-only opening and keep global workspace creation separate. Resolve harness selection icons from their exact installed extension source and make attachment upload an accessible Paperclip action. Use messages-circle for Sessions extension/collection identity and message-circle for individual sessions and the bubble.
+
+  Keep native authentication setup exclusive with empty content while preserving history and quiet discovery. Retain message-level fork explanations for unsupported local harnesses.
+
+- 8de4621: Dismiss closed dialogs after their exit animations finish, including when WebKit misses an animation event.
+- afd5581: Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.
+- 2f798b7: Keep project setup overlays transient across reloads and open them only after an enabled setup contribution is known.
+- e03b165: Reconnect ticket text editing when its viewer reopens after navigation.
+- 121c013: Keep retained tool visibility in sync when navigating between pages.
+- cd4d565: Keep concurrent shared-editor refreshes responsive when content is unchanged.
+- 39796d3: Expose reusable command form fields and dynamic options through the public UI package so extensions can render provider forms without depending on Workbench. Preserve Workbench's contextual defaults and field renderer API. Keep the selected panel open when a webview updates its page parameters. Preserve the acted-on resource's owner during shared mutation confirmation, and reveal new inline inputs in long trees.
+
+  Keep sidebar drag targets inside their visible scroll viewport so virtualized rows cannot intercept moves into an empty header or footer.
+
+  Load complete lazy folder contents after optimistic moves and retain expanded branches when a provider snapshot refreshes.
+
+  Keep queued tree move previews on one provider snapshot, and report completion of startup extension registration.
+
+- 5022989: Keep document saving silent, ticket properties compact, and long dropdown values contained; hide empty review links.
+- c3a5eb3: Prepare status details before the first click, preserve their state, and pause hidden views through shared presentation visibility.
+- a2ee01c: Respect header and footer placement across navigation levels and align extension list status tags with location last.
+- c7a8149: Unify settings layouts, keep save and reset actions in the header, and protect unsaved settings when navigating or closing. Align Planner status and tag editors, group workflow and automation settings, and show visible loading skeletons.
+- 671e777: Provide a shared icon and title header for popovers and use it for System errors.
+
 ## 0.46.0
 
 _2026-10-31_

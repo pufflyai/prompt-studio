@@ -1,5 +1,17 @@
 # pstdio-notes
 
+## 0.46.1
+
+_2026-11-07_
+
+### Patch Changes
+
+- be79dba: Create notes immediately from the command palette and respect bound palette arguments.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- ebdce53: Use public shared-text providers for Notes and Planner while preserving titles and stable source identity.
+- 56b3d3e: Clicking Notes in the sidebar now only expands or collapses the note list; it no longer opens the Notes page.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+
 ## 0.46.0
 
 _2026-10-31_
