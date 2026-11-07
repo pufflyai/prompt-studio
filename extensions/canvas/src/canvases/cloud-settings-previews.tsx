@@ -90,7 +90,7 @@ const CloudSettings = (props: CloudSettingsProps) => {
                   )}
                 </Stack>
                 <Button size="sm" variant="outline" onClick={() => setSignedIn(!signedIn)}>
-                  <CloudIcon name={signedIn ? "log-out" : "log-in"} />
+                  <CloudIcon name={signedIn ? "log-out" : "user-round-key"} />
                   {signedIn ? "Sign out" : "Sign in"}
                 </Button>
               </HStack>
