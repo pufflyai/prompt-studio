@@ -35,10 +35,24 @@ const devices = async () => {
     const service = createDocumentStorageDBService(db);
     const records = service.open({ owner }).records;
     const failures: unknown[] = [];
+    // Simulates a relay that accepts an upload but whose answer, or the next read, never arrives.
+    const network = { loseAcknowledgement: false, failReads: false, failReadsAfterUpload: false };
     const sync = createRecordStreamSync({
       space,
       documentId,
-      relay,
+      relay: {
+        ...relay,
+        read: async (...input: Parameters<typeof relay.read>) => {
+          if (network.failReads) throw new Error("Offline");
+          return relay.read(...input);
+        },
+        update: async (...input: Parameters<typeof relay.update>) => {
+          const result = await relay.update(...input);
+          if (network.loseAcknowledgement) throw new Error("Acknowledgement lost");
+          network.failReads = network.failReadsAfterUpload;
+          return result;
+        },
+      },
       store: service.documents.recordStream(owner),
       quarantine: async (failure) => {
         failures.push(failure);
@@ -66,6 +80,7 @@ const devices = async () => {
       records,
       sync,
       failures,
+      network,
       pending,
       state,
       save,
@@ -266,4 +281,60 @@ test("a project the signed-in account does not sync stays local with every edit"
   await desktop.save("PS-1", { set: { "/title": "Desktop" } });
   expect(await desktop.pending()).toBe(1);
   await sync();
+});
+
+test("reverting a save whose upload reached Cloud without an answer still wins after folding", async () => {
+  const { laptop, desktop, sync } = await seeded({ "PS-1": { title: "A" } });
+  laptop.network.loseAcknowledgement = true;
+  await laptop.save("PS-1", { set: { "/title": "B" } });
+  await laptop.sync.synchronize().catch(() => {});
+  laptop.network.loseAcknowledgement = false;
+  await laptop.save("PS-1", { set: { "/title": "A" } });
+  await laptop.service.cloudReturn.signOut();
+  await sync();
+  for (const device of [laptop, desktop]) expect(await device.value("PS-1")).toEqual({ title: "A" });
+});
+
+test("deleting a record whose creation was delivered but not yet confirmed still deletes it", async () => {
+  const { laptop, desktop, sync } = await seeded({ "PS-1": { title: "A" } });
+  laptop.network.failReadsAfterUpload = true;
+  await laptop.save("PS-9", { replace: { title: "New" } });
+  await laptop.sync.synchronize().catch(() => {});
+  laptop.network.failReadsAfterUpload = false;
+  laptop.network.failReads = false;
+  await laptop.save("PS-9", { deleted: true });
+  await laptop.service.cloudReturn.signOut();
+  await sync();
+  for (const device of [laptop, desktop]) expect(await device.value("PS-9")).toBeUndefined();
+});
+
+test("an edit made while held after seeing another device's change wins over that change", async () => {
+  const tickets = { "PS-1": { title: "A" }, "PS-2": { title: "Two" }, "PS-3": { title: "Three" }, "PS-4": {} };
+  const { laptop, desktop, sync, projectId } = await seeded(tickets);
+  await laptop.service.cloudReturn.signOut();
+  await laptop.save("PS-1", { set: { "/title": "Laptop" } });
+  for (const id of ["PS-2", "PS-3", "PS-4"]) await laptop.save(id, { deleted: true });
+  await desktop.save("PS-1", { set: { "/title": "Desktop" } });
+  await desktop.sync.synchronize();
+  await sync();
+  expect(await laptop.state()).toBe("held");
+  expect(await laptop.value("PS-1")).toEqual({ title: "Desktop" });
+  await laptop.save("PS-1", { set: { "/title": "Laptop after seeing Desktop" } });
+  expect(await laptop.value("PS-1")).toEqual({ title: "Laptop after seeing Desktop" });
+  await laptop.service.cloudReturn.apply(projectId);
+  await sync();
+  for (const device of [laptop, desktop])
+    expect(await device.value("PS-1")).toEqual({ title: "Laptop after seeing Desktop" });
+});
+
+test("signing in again stops reporting signed-out changes for a project that has not reconnected", async () => {
+  const { laptop, projectId } = await seeded({ "PS-1": { title: "A" } });
+  await laptop.service.cloudReturn.signOut();
+  await laptop.save("PS-1", { set: { "/title": "B" } });
+  expect((await laptop.status()).state).toBe("signed-out");
+  await laptop.service.cloudReturn.release([projectId]);
+  expect(await laptop.state()).toBe("folded");
+  expect((await laptop.status()).state).toBeNull();
+  await laptop.save("PS-1", { set: { "/title": "C" } });
+  expect(await laptop.pending()).toBe(1);
 });

@@ -1,7 +1,7 @@
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { jsonPointer, type OrderedOperation, type OrderedSkip } from "pstdio-sync/records";
-import { storage_ordered_records as records } from "../../db/schemas.pg";
+import { storage_current_records as current } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { saveOrderedMarker } from "./ordered-native-metadata";
 import { pendingOrderedOperations } from "./ordered-pending";
@@ -41,11 +41,12 @@ export const orderedReturnSummary = async (journal: OrderedJournal) => {
   return { records: list, deletions: list.filter((entry) => entry.deleted).length } satisfies OrderedReturnSummary;
 };
 
-const canonicalCount = async (tx: OrderedTransaction, owner: StorageOwner) => {
+/** Live records as this device shows them; tombstones do not dilute the share of deletions. */
+const liveCount = async (tx: OrderedTransaction, owner: StorageOwner) => {
   const [row] = await tx
     .select({ count: sql<number>`count(*)::int` })
-    .from(records)
-    .where(orderedOwnerWhere(records, owner));
+    .from(current)
+    .where(and(orderedOwnerWhere(current, owner), eq(current.deleted, false)));
   return row?.count ?? 0;
 };
 
@@ -58,7 +59,8 @@ export const evaluateOrderedReturn = async (journal: OrderedJournal, tx: Ordered
   const held =
     summary.deletions > limits.deletions ||
     summary.records.length > limits.records ||
-    (summary.deletions >= limits.minimumDeletions && summary.deletions * 2 >= (await canonicalCount(tx, owner)));
+    (summary.deletions >= limits.minimumDeletions &&
+      summary.deletions * 2 >= (await liveCount(tx, owner)) + summary.deletions);
   const next = held ? "held" : null;
   await setOrderedReturnState(tx, owner, next);
   return next;

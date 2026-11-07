@@ -70,10 +70,15 @@ const overFoldLimit = async (tx: OrderedTransaction, owner: StorageOwner) => {
   return rows.length > 0;
 };
 
-export const setOrderedReturnState = (tx: OrderedTransaction, owner: StorageOwner, state: OrderedReturnState | null) =>
-  state
-    ? saveOrderedMarker(tx, owner, returnMarker, { state })
-    : tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, returnMarker)));
+export const setOrderedReturnState = async (
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  state: OrderedReturnState | null,
+) => {
+  if (state) await saveOrderedMarker(tx, owner, returnMarker, { state });
+  else
+    await tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, returnMarker)));
+};
 
 export const editRecords = (local: Local) => local.operation.edits.map((edit) => edit.recordId);
 const foldable = (local: Local) =>
@@ -120,20 +125,23 @@ const foldedChanges = (
   edits: OrderedOperation["edits"],
   before: OrderedRecord | undefined,
   view: OrderedRecord,
-  restoring: boolean,
+  restate: boolean,
 ) => {
   const changes: OrderedOperation["edits"][number]["changes"] = [];
   if (view.deleted) return changes;
   const visible = before && !before.deleted ? before.value : undefined;
   for (const path of minimalPaths(edits.flatMap((edit) => edit.changes.map((change) => change.path)))) {
     const next = readOrderedPath(view.value, path);
-    if (!restoring && same(next, visible === undefined ? undefined : readOrderedPath(visible, path))) continue;
+    if (!restate && same(next, visible === undefined ? undefined : readOrderedPath(visible, path))) continue;
     changes.push(next === undefined ? { path, remove: true } : { path, set: structuredClone(next) });
   }
   return changes;
 };
 
-/** Each pointer keeps the stamp the earliest folded save saw; stamps of folded saves are their own writes. */
+/**
+ * Each pointer keeps the latest stamp a folded save saw that is not one of the folded saves' own
+ * writes: an edit made after seeing another device's change is based on that change.
+ */
 const foldedBase = (
   edits: OrderedOperation["edits"],
   before: OrderedRecord | undefined,
@@ -150,10 +158,9 @@ const foldedBase = (
     // Saves from before bases existed observed at most the canonical state they are folded over.
     const base = authored.base ?? orderedBase(before, authored.changes, authored.deleted);
     if (!base) continue;
-    if (!observed && !own(base.lifetime))
+    if (!own(base.lifetime))
       observed = { version: 1, exists: base.exists, deleted: base.deleted, lifetime: base.lifetime };
-    for (const [pointer, stamp] of Object.entries(base.stamps))
-      if (!Object.hasOwn(stamps, pointer) && !own(stamp)) stamps[pointer] = stamp;
+    for (const [pointer, stamp] of Object.entries(base.stamps)) if (!own(stamp)) stamps[pointer] = stamp;
   }
   observed ??= {
     version: 1,
@@ -173,13 +180,16 @@ const foldedEdit = (
   before: OrderedRecord | undefined,
   view: OrderedRecord | undefined,
   folded: ReadonlySet<string>,
+  landed: boolean,
 ) => {
-  // A record created and deleted while away never reached Cloud.
-  if (!view || (!before && view.deleted)) return;
+  // A record created and deleted while away never reached Cloud, unless one of its saves may have.
+  if (!view || (!before && view.deleted && !landed)) return;
   const lifecycle = edits.some((edit) => edit.deleted !== undefined);
-  const deleted = lifecycle && before && view.deleted !== before.deleted ? view.deleted : undefined;
+  // A folded save that may follow its own saves in Cloud restates the visible state instead of a difference.
+  const changedLifecycle = before ? view.deleted !== before.deleted : view.deleted;
+  const deleted = lifecycle && (landed || changedLifecycle) ? view.deleted : undefined;
   if (view.deleted && deleted === undefined) return;
-  const changes = foldedChanges(edits, before, view, deleted === false);
+  const changes = foldedChanges(edits, before, view, landed || deleted === false);
   if (!changes.length && deleted === undefined) return;
   const edit = { changes, ...(deleted === undefined ? {} : { deleted }) };
   return { recordId, ...edit, base: foldedBase(edits, before, folded, edit) };
@@ -251,16 +261,22 @@ const foldScope = async (journal: OrderedJournal, tx: OrderedTransaction, owner:
   const canonical = await journal.canonical(ids);
   const views = await projectedViews(journal, groups, ids);
   const foldedIds = new Set(folding.map((local) => local.operation.operationId));
+  // Saves that stay, such as delivered ones, reach Cloud before the folded save.
+  const kept = await projectedViews(
+    journal,
+    groups.filter((local) => !foldedIds.has(local.operation.operationId)),
+    ids,
+  );
   const replacements: OrderedOperation[] = [];
   for (const [recordId, locals] of perRecord) {
-    const edits = locals.flatMap((local) => local.operation.edits.filter((edit) => edit.recordId === recordId));
-    const edit = foldedEdit(recordId, edits, canonical.get(recordId), views.get(recordId), foldedIds);
-    if (!edit) continue;
     // Saves that may already be in Cloud: admitted for upload, or replaced by an earlier fold.
     const supersedes = locals.flatMap((local) => [
       ...(local.admission ? [local.operation.operationId] : []),
       ...(local.operation.supersedes ?? []),
     ]);
+    const edits = locals.flatMap((local) => local.operation.edits.filter((edit) => edit.recordId === recordId));
+    const edit = foldedEdit(recordId, edits, kept.get(recordId), views.get(recordId), foldedIds, supersedes.length > 0);
+    if (!edit) continue;
     replacements.push(
       await prepareOrderedOperation({ operationId: crypto.randomUUID(), supersedes, edits: [edit] }, canonical),
     );
@@ -287,14 +303,35 @@ const unfoldedRecords = async (tx: OrderedTransaction, owner: StorageOwner) => {
 };
 
 /** Fold every unsent save of this owner, a bounded page of records at a time. */
+export const orderedFoldPage = 200;
+
+/** Records with unsent saves that are not folded yet; callers fold them a page at a time. */
+export { unfoldedRecords as unfoldedOrderedRecords };
+
+/** Fold one page of records; skip records an earlier page already folded through a shared group. */
+export const foldOrderedRecords = async (
+  journal: OrderedJournal,
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  ids: string[],
+  done = new Set<string>(),
+) => {
+  const changed = await foldScope(
+    journal,
+    tx,
+    owner,
+    ids.filter((id) => !done.has(id)),
+  );
+  for (const id of changed) done.add(id);
+  return changed;
+};
+
 export const foldAllOrderedSaves = async (journal: OrderedJournal, tx: OrderedTransaction, owner: StorageOwner) => {
-  const changed = new Set<string>();
+  const done = new Set<string>();
   const ids = await unfoldedRecords(tx, owner);
-  for (let offset = 0; offset < ids.length; offset += 200) {
-    const page = ids.slice(offset, offset + 200).filter((id) => !changed.has(id));
-    for (const id of await foldScope(journal, tx, owner, page)) changed.add(id);
-  }
-  return [...changed];
+  for (let offset = 0; offset < ids.length; offset += orderedFoldPage)
+    await foldOrderedRecords(journal, tx, owner, ids.slice(offset, offset + orderedFoldPage), done);
+  return [...done];
 };
 
 /**

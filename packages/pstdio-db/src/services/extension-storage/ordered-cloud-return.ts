@@ -10,7 +10,13 @@ import {
 import { createOrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { initializeOrderedOwner } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
-import { foldAllOrderedSaves, readOrderedReturnState, setOrderedReturnState } from "./ordered-return";
+import {
+  foldOrderedRecords,
+  orderedFoldPage,
+  readOrderedReturnState,
+  setOrderedReturnState,
+  unfoldedOrderedRecords,
+} from "./ordered-return";
 import {
   discardOrderedReturn,
   type OrderedReplacedNotice,
@@ -100,21 +106,39 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
   };
   return {
     async signOut() {
-      await each(await joinedOwners(db), (owner) =>
-        run(owner, async (journal, tx) => {
+      await each(await joinedOwners(db), async (owner) => {
+        // Later saves fold from here on; the existing backlog folds a page per transaction,
+        // so a large queue never holds the database for its whole length.
+        const ids = await run(owner, async (_journal, tx) => {
           if ((await readOrderedReturnState(tx, owner)) !== "held")
             await setOrderedReturnState(tx, owner, "signed-out");
-          const changed = await foldAllOrderedSaves(journal, tx, owner);
-          if (changed.length) await rebaseOrderedProjection(journal, tx, owner, changed);
-          return changed.length > 0;
-        }),
-      );
+          return unfoldedOrderedRecords(tx, owner);
+        });
+        const done = new Set<string>();
+        for (let offset = 0; offset < ids.length; offset += orderedFoldPage) {
+          await run(owner, async (journal, tx) => {
+            const changed = await foldOrderedRecords(
+              journal,
+              tx,
+              owner,
+              ids.slice(offset, offset + orderedFoldPage),
+              done,
+            );
+            if (changed.length) await rebaseOrderedProjection(journal, tx, owner, changed);
+          });
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        return done.size > 0;
+      });
     },
     /**
      * A project the signed-in account does not sync stays local: unsent saves settle here, nothing
      * uploads, and syncing it again later joins it like any local project.
      */
     async release(keepProjectIds: string[]) {
+      // Signed in again: kept projects stop reporting signed-out and fold until they reconnect.
+      for (const row of await withStates(db, await joinedOwners(db, keepProjectIds)))
+        if (row.state === "signed-out") await run(row, (_journal, tx) => setOrderedReturnState(tx, row, "folded"));
       const rows = await db
         .select({ workbenchId: owners.workbench_id, extensionId: owners.extension_id })
         .from(owners)
