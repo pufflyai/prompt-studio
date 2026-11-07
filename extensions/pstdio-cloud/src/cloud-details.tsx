@@ -4,7 +4,7 @@ import { AlertMessage, PopoverHeader } from "@pstdio/ui";
 import { useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
-import { CloudIcon, CloudLabel } from "./cloud-label";
+import { CloudIcon } from "./cloud-label";
 import { useCloud } from "./use-cloud";
 
 // The workbench's public settings command opens the registered panel in the shared settings surface.
@@ -33,11 +33,6 @@ export const CloudDetails = (props: { projectId?: string }) => {
     <Stack gap="0">
       <PopoverHeader icon={<CloudIcon name="cloud" />} title={t("popover.title", "Prompt Studio Cloud")} />
       <Stack gap="md" px="md" pb="sm">
-        {data?.account.login && data.account.features?.relay === false ? (
-          <Text color="fg.muted">{t("access.comingSoonLine", "Cloud sync · Coming soon")}</Text>
-        ) : (
-          <CloudLabel data={data} error={error} />
-        )}
         {error && <AlertMessage status="error">{error}</AlertMessage>}
         {connected && (
           <Stack gap="xs">

@@ -127,3 +127,49 @@ test("explicit catalog selection again re-enables a harness after its completed 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("selecting Workspaces installs it in the requesting project's folder", async () => {
+  const root = await mkdtemp(join(tmpdir(), "onboarding-workspaces-"));
+  const previous = {
+    home: process.env.PSTDIO_HOME,
+    defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS,
+    sourceMode: process.env.PSTDIO_DISABLE_EMBED_MANIFEST,
+  };
+  process.env.PSTDIO_HOME = join(root, "home");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
+  const handle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(root, "storage"),
+    release: { source: "workspace", root: join(import.meta.dir, "../../../../.."), ref: "main" },
+  });
+  try {
+    const created = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(folderProjectInput({ name: "Coding" })),
+    });
+    expect(created.status).toBe(201);
+    const project = await created.json();
+    const workspace = await handle.deps.workspaceService.getDefault(project.id);
+    await enqueueCatalogExtensions(handle.deps.extensionInstallations, ["pstdio-workspaces"], project.id);
+    const job = handle.deps.extensionInstallations.list().find((job) => job.projectId === project.id)!;
+    await handle.deps.extensionInstallations.wait(job.id);
+    const selected = (await handle.deps.extensionService.listProjectExtensionInstances(project.id)).find(
+      ({ installedSource }) => installedSource.extension_id === "pstdio.pstdio-workspaces",
+    );
+    expect(selected).toMatchObject({
+      instance: { enabled: true },
+      installedSource: { source_path: join(workspace!.root_path!, ".pstdio/extensions/pstdio-workspaces") },
+    });
+  } finally {
+    await handle.close();
+    if (previous.home === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previous.home;
+    if (previous.defaults === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+    else process.env.PSTDIO_DEFAULT_EXTENSIONS = previous.defaults;
+    if (previous.sourceMode === undefined) delete process.env.PSTDIO_DISABLE_EMBED_MANIFEST;
+    else process.env.PSTDIO_DISABLE_EMBED_MANIFEST = previous.sourceMode;
+    await rm(root, { recursive: true, force: true });
+  }
+});

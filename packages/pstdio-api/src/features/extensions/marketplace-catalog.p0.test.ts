@@ -106,24 +106,11 @@ describe("extension catalog", () => {
     }
   });
 
-  test("keeps bundled Workspaces enabled through the ordinary catalog policy", () => {
-    expect(
-      packagedExtensionCatalog.extensions.find((entry) => entry.installName === "pstdio-workspaces"),
-    ).toMatchObject({ default: true, alwaysEnabled: true, extensionId: "pstdio.pstdio-workspaces" });
-  });
   test("ships onboarding and platform defaults so projects choose their own harnesses", () => {
     const defaults = packagedExtensionCatalog.extensions
       .filter((catalogEntry) => catalogEntry.default)
       .map((catalogEntry) => catalogEntry.installName);
 
-    expect(defaults).toEqual([
-      "pstdio-cloud",
-      "pstdio-home",
-      "pstdio-onboarding",
-      "pstdio-workspaces",
-      "pstdio-base-themes",
-      "pstdio-skills",
-      "pstdio-performance",
-    ]);
+    expect(defaults).toEqual(["pstdio-home", "pstdio-onboarding", "pstdio-base-themes", "pstdio-skills"]);
   });
 });
