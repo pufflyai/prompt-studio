@@ -49,6 +49,15 @@ The focus predicate selects 100 distributed rows. The broader predicate selects
 more than 100, so page two is distinct and sorting is real. Sort ties use record
 ID. B view measurements target the 100,000-row owner. A also measures Planner.
 Simultaneous public queries target all ten owners.
+
+Every owner declares the shared `scaleStorageIndexes` before its first write. For
+Planner, the fixture adds them beside its commands, so Planner writes in this fixture
+also maintain these indexes. Fixture views use the paged collection contract, and
+fixture page, count and burst reads use `records.query` and `records.aggregate`. They
+read one bounded page and its counts, never the whole owner. When a write lands between
+a page and its counts, the read is repeated until both describe one revision. Planner
+fixture edits find ticket addresses through the identity index. Only fixture
+verification during preparation lists every stored row.
 The `all-owner-edit-burst` shard also submits one durable write per owner together,
 records each acknowledgement and fairness, then kills/reopens and restores them.
 Planner's legacy collection retry-identity gap remains an explicit failure.
@@ -258,15 +267,14 @@ virtualized rows, labels and controls are ready.
 
 The second-page driver clicks the native table's next-page control and checks the
 new first row and absence of the prior page's first row. Its API companion checks
-all 100 IDs, sort order and owner. Legacy client paging and unproved complete
-virtualized-row readiness remain failures; this is not evidence of indexed cursor
-paging.
+all 100 IDs, sort order and owner. The table requests each page from its provider.
+Unproved complete row readiness remains a failure.
 
 Every edit kind has separate public SDK and UI observations. The SDK timer starts
 at request and ends at durable local response. The first-write case performs no
 owner read after restart. UI timing starts at Save and waits for durable response
 and committed visible values. Assertions check titles, nested/tag/multiline
-summaries, membership and order. The legacy editor loads its owner before Save;
+summaries, membership and order. The editor loads its board page before Save, so
 requested cold UI edits are explicitly marked unavailable, even if fast. The
 separate direct cold SDK case prevents editor preparation from hiding hydration.
 

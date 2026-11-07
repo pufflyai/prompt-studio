@@ -113,7 +113,7 @@ const measureEdit = async (ctx: Context, scenario: Scenario) => {
     failures: [
       ...measured.failures,
       ...(visible?.failures ?? []),
-      ...(visible && scenario.temperature === "cold" ? ["cold-visible-edit-unavailable-owner-preloaded"] : []),
+      ...(visible && scenario.temperature === "cold" ? ["cold-visible-edit-unavailable-board-preloaded"] : []),
     ],
     durationMs: visible?.durationMs ?? measured.acknowledgementMs,
     status: "measured",
